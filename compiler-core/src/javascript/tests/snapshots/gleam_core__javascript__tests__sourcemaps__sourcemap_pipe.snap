@@ -1,0 +1,73 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+expression: "\nfn add_2(x) {\n  x + 2\n}\n\npub fn go(x) {\n  x |> add_2\n}\n"
+---
+----- SOURCE CODE
+0 |
+1 |fn add_2(x) {
+2 |  x + 2
+3 |}
+4 |
+5 |pub fn go(x) {
+6 |  x |> add_2
+7 |}
+
+----- COMPILED JAVASCRIPT
+0 |//# sourceMappingURL=mod.mjs.map
+1 |function add_2(x) {
+2 |  return x + 2;
+3 |}
+4 |
+5 |export function go(x) {
+6 |  let _pipe = x;
+7 |  return add_2(_pipe);
+8 |}
+
+----- SOURCE MAP
+Mappings:
+----- 
+
+
+⏷
+//# sourceMappingURL=mod.mjs.map
+
+----- 
+fn add_2(x) {
+  
+⏷
+function add_2(x) {
+  
+----- 
+x + 
+⏷
+return x + 
+----- 
+2
+}
+
+
+⏷
+2;
+}
+
+
+----- 
+pub fn go(x) {
+  
+⏷
+export function go(x) {
+  
+----- 
+x |> 
+⏷
+let _pipe = x;
+  
+----- 
+add_2
+}
+
+⏷
+return add_2(_pipe);
+}
+
+-----

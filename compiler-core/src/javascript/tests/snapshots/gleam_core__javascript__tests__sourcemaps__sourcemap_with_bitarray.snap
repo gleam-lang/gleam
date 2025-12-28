@@ -1,0 +1,43 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+expression: "\npub fn go(x) {\n  <<256:int>>\n}\n"
+---
+----- SOURCE CODE
+0 |
+1 |pub fn go(x) {
+2 |  <<256:int>>
+3 |}
+
+----- COMPILED JAVASCRIPT
+0 |//# sourceMappingURL=mod.mjs.map
+1 |import { toBitArray } from "../gleam.mjs";
+2 |
+3 |export function go(x) {
+4 |  return toBitArray([0]);
+5 |}
+
+----- SOURCE MAP
+Mappings:
+----- 
+
+
+⏷
+//# sourceMappingURL=mod.mjs.map
+import { toBitArray } from "../gleam.mjs";
+
+
+----- 
+pub fn go(x) {
+  
+⏷
+export function go(x) {
+  
+----- 
+<<256:int>>
+}
+
+⏷
+return toBitArray([0]);
+}
+
+-----

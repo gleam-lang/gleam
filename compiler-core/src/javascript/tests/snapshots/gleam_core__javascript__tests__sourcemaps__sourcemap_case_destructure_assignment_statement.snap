@@ -1,0 +1,113 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+expression: "\npub type Wibble {\n  Wibble(Int, Int)\n}\n\npub fn go(x) {\n  case Wibble(1, 2) {\n    Wibble(wibble, wobble) -> wibble + wobble\n  }\n}\n"
+---
+----- SOURCE CODE
+0 |
+1 |pub type Wibble {
+2 |  Wibble(Int, Int)
+3 |}
+4 |
+5 |pub fn go(x) {
+6 |  case Wibble(1, 2) {
+7 |    Wibble(wibble, wobble) -> wibble + wobble
+8 |  }
+9 |}
+
+----- COMPILED JAVASCRIPT
+0 |//# sourceMappingURL=mod.mjs.map
+1 |import { CustomType as $CustomType } from "../gleam.mjs";
+2 |
+3 |export class Wibble extends $CustomType {
+4 |  constructor($0, $1) {
+5 |    super();
+6 |    this[0] = $0;
+7 |    this[1] = $1;
+8 |  }
+9 |}
+10 |export const Wibble$Wibble = ($0, $1) => new Wibble($0, $1);
+11 |export const Wibble$isWibble = (value) => value instanceof Wibble;
+12 |export const Wibble$Wibble$0 = (value) => value[0];
+13 |export const Wibble$Wibble$1 = (value) => value[1];
+14 |
+15 |export function go(x) {
+16 |  let $ = new Wibble(1, 2);
+17 |  let wibble = $[0];
+18 |  let wobble = $[1];
+19 |  return wibble + wobble;
+20 |}
+
+----- SOURCE MAP
+Mappings:
+----- 
+
+pub type Wibble {
+  
+⏷
+//# sourceMappingURL=mod.mjs.map
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+
+----- 
+Wibble(Int, Int)
+}
+
+
+⏷
+export class Wibble extends $CustomType {
+  constructor($0, $1) {
+    super();
+    this[0] = $0;
+    this[1] = $1;
+  }
+}
+export const Wibble$Wibble = ($0, $1) => new Wibble($0, $1);
+export const Wibble$isWibble = (value) => value instanceof Wibble;
+export const Wibble$Wibble$0 = (value) => value[0];
+export const Wibble$Wibble$1 = (value) => value[1];
+
+
+----- 
+pub fn go(x) {
+  
+⏷
+export function go(x) {
+  
+----- 
+case 
+⏷
+
+----- 
+Wibble(
+⏷
+let $ = new Wibble(
+----- 
+1, 
+⏷
+1, 
+----- 
+2) {
+    
+⏷
+2);
+  
+----- 
+Wibble(wibble, wobble) -> 
+⏷
+let wibble = $[0];
+  let wobble = $[1];
+  
+----- 
+wibble + 
+⏷
+return wibble + 
+----- 
+wobble
+  }
+}
+
+⏷
+wobble;
+}
+
+-----
