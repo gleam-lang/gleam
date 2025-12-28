@@ -5,11 +5,14 @@ mod import;
 mod tests;
 mod typescript;
 
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use debug_ignore::DebugIgnore;
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
+use sourcemap::SourceMap;
 
 use crate::build::Target;
 use crate::build::package_compiler::StdlibPackage;
@@ -50,15 +53,15 @@ impl CursorPositionObserver for NullCursorPositionObserver {
     }
 }
 
-pub struct SourceMapCursorPositionObserver<'a> {
+pub struct SourceMapCursorPositionObserver {
     source_start_location: LineColumn,
-    source_map_builder: &'a mut sourcemap::SourceMapBuilder,
+    source_map_builder: Rc<RefCell<sourcemap::SourceMapBuilder>>,
 }
 
-impl<'a> SourceMapCursorPositionObserver<'a> {
+impl SourceMapCursorPositionObserver {
     pub fn new(
         source_start_location: LineColumn,
-        source_map_builder: &'a mut sourcemap::SourceMapBuilder,
+        source_map_builder: Rc<RefCell<sourcemap::SourceMapBuilder>>,
     ) -> Self {
         Self {
             source_start_location,
@@ -67,7 +70,7 @@ impl<'a> SourceMapCursorPositionObserver<'a> {
     }
 }
 
-impl<'a> std::fmt::Debug for SourceMapCursorPositionObserver<'a> {
+impl std::fmt::Debug for SourceMapCursorPositionObserver {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SourceMapCursorPositionObserver")
             .field("source_start_location", &self.source_start_location)
@@ -75,13 +78,14 @@ impl<'a> std::fmt::Debug for SourceMapCursorPositionObserver<'a> {
     }
 }
 
-impl<'a> CursorPositionObserver for SourceMapCursorPositionObserver<'a> {
+impl CursorPositionObserver for SourceMapCursorPositionObserver {
     fn observe_cursor_position(&mut self, line: isize, column: isize) {
-        let _ = self.source_map_builder.add(
+        let _ = self.source_map_builder.borrow_mut().add(
             line as u32,
             column as u32,
-            self.source_start_location.line,
-            self.source_start_location.column,
+            // SourceMapBuilder expects 0-based line and column numbers and we use 1-based ones
+            self.source_start_location.line - 1,
+            self.source_start_location.column - 1,
             None,
             None,
             false,
@@ -97,7 +101,7 @@ pub struct Generator<'a> {
     module_scope: im::HashMap<EcoString, usize>,
     current_module_name_segments_count: usize,
     typescript: TypeScriptDeclarations,
-    source_map_builder: DebugIgnore<Option<sourcemap::SourceMapBuilder>>,
+    source_map_builder: DebugIgnore<Option<Rc<RefCell<sourcemap::SourceMapBuilder>>>>,
     stdlib_package: StdlibPackage,
     /// Relative path to the module, surrounded in `"`s to make it a string, and with `\`s escaped
     /// to `\\`.
@@ -133,11 +137,27 @@ impl<'a> Generator<'a> {
             module_scope: Default::default(),
             typescript,
             source_map_builder: if source_map {
-                DebugIgnore(Some(sourcemap::SourceMapBuilder::new(None)))
+                DebugIgnore(Some(Rc::new(RefCell::new(
+                    sourcemap::SourceMapBuilder::new(None),
+                ))))
             } else {
                 DebugIgnore(None)
             },
             stdlib_package,
+        }
+    }
+
+    fn create_cursor_position_observer(&self, start_index: u32) -> Document<'a> {
+        let start_location = self.line_numbers.line_and_column_number(start_index);
+        let DebugIgnore(builder) = &self.source_map_builder;
+        Document::CursorPositionObserver {
+            observer: DebugIgnore(match builder {
+                None => Rc::new(RefCell::new(NullCursorPositionObserver)),
+                Some(builder) => Rc::new(RefCell::new(SourceMapCursorPositionObserver::new(
+                    start_location,
+                    builder.clone(),
+                ))),
+            }),
         }
     }
 
@@ -156,6 +176,24 @@ impl<'a> Generator<'a> {
             .expect("JavaScript generator could not identify imported module name.");
 
         docvec!["/// <reference types=\"./", module, ".d.mts\" />", line()]
+    }
+
+    fn sourcemap_reference(&self) -> Document<'a> {
+        match self.source_map_builder {
+            DebugIgnore(None) => "".to_doc(),
+            DebugIgnore(Some(_)) => {
+                // Get the name of the module relative the directory (similar to basename)
+                let module = self
+                    .module
+                    .name
+                    .as_str()
+                    .split('/')
+                    .last()
+                    .expect("JavaScript generator could not identify imported module name.");
+
+                docvec!["//# sourceMappingURL=", module, ".mjs.map", line()]
+            }
+        }
     }
 
     pub fn compile(&mut self) -> Document<'a> {
@@ -272,6 +310,7 @@ impl<'a> Generator<'a> {
         }
 
         let echo_definition = self.echo_definition(&mut imports);
+        let sourcemap_reference = self.sourcemap_reference();
         let type_reference = self.type_reference();
         let filepath_definition = self.filepath_definition();
 
@@ -279,6 +318,7 @@ impl<'a> Generator<'a> {
 
         if imports.is_empty() && statements.is_empty() {
             docvec![
+                sourcemap_reference,
                 type_reference,
                 filepath_definition,
                 "export {}",
@@ -288,6 +328,7 @@ impl<'a> Generator<'a> {
         } else if imports.is_empty() {
             statements.push(line());
             docvec![
+                sourcemap_reference,
                 type_reference,
                 filepath_definition,
                 statements,
@@ -295,6 +336,7 @@ impl<'a> Generator<'a> {
             ]
         } else if statements.is_empty() {
             docvec![
+                sourcemap_reference,
                 type_reference,
                 imports.into_doc(JavaScriptCodegenTarget::JavaScript),
                 filepath_definition,
@@ -302,6 +344,7 @@ impl<'a> Generator<'a> {
             ]
         } else {
             docvec![
+                sourcemap_reference,
                 type_reference,
                 imports.into_doc(JavaScriptCodegenTarget::JavaScript),
                 line(),
@@ -405,12 +448,14 @@ impl<'a> Generator<'a> {
         type_name: &'a str,
         publicity: Publicity,
     ) -> Document<'a> {
+        let sourcemap_cursor_position_observer =
+            self.create_cursor_position_observer(constructor.location.start);
         let class_definition = self.variant_class_definition(constructor, publicity);
 
         // If the custom type is private or opaque, we don't need to generate API
         // functions for it.
         if publicity.is_private() {
-            return class_definition;
+            return docvec![sourcemap_cursor_position_observer, class_definition];
         }
 
         let constructor_definition = self.variant_constructor_definition(constructor, type_name);
@@ -418,6 +463,7 @@ impl<'a> Generator<'a> {
         let fields_definition = self.variant_fields_definition(constructor, type_name);
 
         docvec![
+            sourcemap_cursor_position_observer,
             class_definition,
             line(),
             constructor_definition,
@@ -725,7 +771,7 @@ impl<'a> Generator<'a> {
         let unqualified_imports = unqualified.iter().map(|i| {
             let alias = i.as_name.as_ref().map(|n| {
                 self.register_in_scope(n);
-                maybe_escape_identifier(n).to_doc()
+                docvec![self.create_cursor_position_observer(i.location.start), maybe_escape_identifier(n).to_doc()]
             });
             let name = maybe_escape_identifier(&i.name).to_doc();
             Member { name, alias }
@@ -943,28 +989,23 @@ pub struct ModuleConfig<'a> {
     pub project_root: &'a Utf8Path,
 }
 
-pub fn module(config: ModuleConfig<'_>) -> (String, Option<String>) {
-    let mut generator = Generator::new(config);
-    let document = generator.compile();
-    let source_map = if let DebugIgnore(Some(builder)) = generator.source_map_builder {
-        let sourcemap = builder.into_sourcemap();
-        let mut output = Vec::new();
-        // We first write to a vector then build a string, hoping that
-        // the `sourcemap` crate generated a valid sourcemap. If it
-        // did not, it is a bug that should be reported.
-        //
-        // SourceMap currently does not support being written directly
-        // to a string.
-        sourcemap
-            .to_writer(&mut output)
-            .expect("Failed to write sourcemap to memory.");
-        let content =
-            String::from_utf8(output).expect("Sourcemap did not generate valid UTF-8.");
-        Some(content)
+pub fn module(config: ModuleConfig<'_>) -> (String, Option<SourceMap>) {
+    let (output, sourcemap_builder) = {
+        let mut generator = Generator::new(config);
+        let document = generator.compile();
+        let DebugIgnore(builder) = generator.source_map_builder;
+        (document.to_pretty_string(80), builder)
+    };
+    let source_map = if let Some(builder) = sourcemap_builder {
+        // We have completed the generation of the module, so we can now take ownership of the builder.
+        Some(Rc::try_unwrap(builder)
+            .unwrap_or_else(|_| panic!("Failed to take ownership of sourcemap builder"))
+            .into_inner()
+            .into_sourcemap())
     } else {
         None
     };
-    (document.to_pretty_string(80), source_map)
+    (output, source_map)
 }
 
 pub fn ts_declaration(module: &TypedModule) -> String {

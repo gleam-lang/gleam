@@ -8,3 +8,25 @@ fn sourcemap_function_definition() {
 }"
     )
 }
+
+#[test]
+fn sourcemap_custom_type_definition() {
+    assert_source_map!(
+        "pub type Wibble {
+  Wibble
+  Wobble(field: Int)
+  Wabble(Wibble)
+}"
+    )
+}
+
+#[test]
+fn sourcemap_import_module() {
+    assert_source_map!(
+        ("rocket_ship", r#"pub fn launch() { 1 }"#),
+        r#"import rocket_ship.{launch}
+pub fn go() { launch() }
+"#,
+    )
+
+}

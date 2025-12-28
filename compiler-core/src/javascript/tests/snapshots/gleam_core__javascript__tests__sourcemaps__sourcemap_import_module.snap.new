@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+assertion_line: 25
+expression: "import rocket_ship.{launch}\npub fn go() { launch() }\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+-- rocket_ship.gleam
+pub fn launch() { 1 }
+
+-- main.gleam
+import rocket_ship.{launch}
+pub fn go() { launch() }
+
+
+----- COMPILED JAVASCRIPT
+//# sourceMappingURL=mod.mjs.map
+import * as $rocket_ship from "../rocket_ship.mjs";
+import { launch } from "../rocket_ship.mjs";
+
+export function go() {
+  return launch();
+}
+----- SOURCE MAP
+Mappings Raw:

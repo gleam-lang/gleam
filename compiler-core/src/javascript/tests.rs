@@ -31,12 +31,12 @@ mod prelude;
 mod records;
 mod recursion;
 mod results;
+mod sourcemaps;
 mod strings;
 mod todo;
 mod tuples;
 mod type_alias;
 mod use_;
-mod sourcemaps;
 
 pub static CURRENT_PACKAGE: &str = "thepackage";
 
@@ -86,15 +86,26 @@ macro_rules! assert_js {
     }};
 }
 
-
 #[macro_export]
 macro_rules! assert_source_map {
+    ($(($name:literal, $module_src:literal)),+, $src:literal $(,)?) => {{        let (compiled, source_map) =
+            $crate::javascript::tests::compile_js_with_source_map($src, vec![$(($crate::javascript::tests::CURRENT_PACKAGE, $name, $module_src)),*]);
+        let mut output = String::from("----- SOURCE CODE\n");
+        for (name, src) in [$(($name, $module_src)),*] {
+            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+        }
+        let source_map_string = $crate::javascript::tests::source_map_to_string(source_map);
+        output.push_str(&format!("-- main.gleam\n{}\n\n----- COMPILED JAVASCRIPT\n{compiled}----- SOURCE MAP\n{source_map_string}", $src));
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    }};
+
     ($src:expr $(,)?) => {{
         let (compiled, source_map) =
             $crate::javascript::tests::compile_js_with_source_map($src, vec![]);
+
         let output = format!(
             "----- SOURCE CODE\n{}\n\n----- COMPILED JAVASCRIPT\n{}----- SOURCE MAP\n{}",
-            $src, compiled, source_map
+            $src, compiled, crate::javascript::tests::source_map_to_string(source_map)
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
@@ -227,7 +238,7 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
     )
 }
 
-pub fn compile_js_with_source_map(src: &str, deps: Vec<(&str, &str, &str)>) -> (String, String) {
+pub fn compile_js_with_source_map(src: &str, deps: Vec<(&str, &str, &str)>) -> (String, SourceMap) {
     let ast = compile(src, deps);
     let line_numbers = LineNumbers::new(src);
     let stdlib_package = StdlibPackage::Present;
@@ -253,4 +264,20 @@ pub fn compile_js_with_source_map(src: &str, deps: Vec<(&str, &str, &str)>) -> (
 pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
     let ast = compile(src, deps);
     ts_declaration(&ast)
+}
+
+// Pretty-print a sourcemap to a string that might be readable by humans.
+pub fn source_map_to_string(source_map: SourceMap) -> String {
+    let mut output = String::new();
+    output.push_str("Mappings Raw:\n");
+    source_map.tokens().for_each(|token| {
+        output.push_str(&format!(
+            "{}:{} -> {}:{}\n",
+            token.get_src_line(),
+            token.get_src_col(),
+            token.get_dst_line(),
+            token.get_dst_col()
+        ));
+    });
+    output
 }

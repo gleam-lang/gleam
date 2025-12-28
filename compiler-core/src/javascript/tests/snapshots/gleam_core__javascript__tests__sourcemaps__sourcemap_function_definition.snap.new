@@ -10,6 +10,7 @@ pub fn add_2(x) {
 }
 
 ----- COMPILED JAVASCRIPT
+//# sourceMappingURL=mod.mjs.map
 export function add_2(x) {
   return x + 2;
 }

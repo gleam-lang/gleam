@@ -262,7 +262,7 @@ impl<'a> JavaScript<'a> {
         let name = format!("{js_name}.mjs");
         let path = self.output_directory.join(name);
         let line_numbers = LineNumbers::new(&module.code);
-        let (output , source_map) = javascript::module(ModuleConfig {
+        let (output, source_map) = javascript::module(ModuleConfig {
             module: &module.ast,
             line_numbers: &line_numbers,
             path: &module.input_path,
@@ -276,9 +276,21 @@ impl<'a> JavaScript<'a> {
         writer.write(&path, &output)?;
 
         if let Some(source_map) = source_map {
+            let mut output = Vec::new();
+            // We first write to a vector then build a string, hoping that
+            // the `sourcemap` crate generated a valid sourcemap. If it
+            // did not, it is a bug that should be reported.
+            //
+            // SourceMap currently does not support being written directly
+            // to a string.
+            source_map
+                .to_writer(&mut output)
+                .expect("Failed to write sourcemap to memory.");
+            let content =
+                String::from_utf8(output).expect("Sourcemap did not generate valid UTF-8.");
             let source_map_path = self.output_directory.join(format!("{js_name}.mjs.map"));
             tracing::debug!(path = ?source_map_path, name = ?js_name, "Emitting sourcemap for module");
-            writer.write(&source_map_path, &source_map)?;
+            writer.write(&source_map_path, &content)?;
         }
         Ok(())
     }

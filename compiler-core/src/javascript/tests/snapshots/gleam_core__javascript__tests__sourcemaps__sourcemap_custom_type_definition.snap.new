@@ -1,0 +1,46 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+assertion_line: 14
+expression: "pub type Wibble {\n  Wibble\n  Wobble(field: Int)\n  Wabble(Wibble)\n}"
+snapshot_kind: text
+---
+----- SOURCE CODE
+pub type Wibble {
+  Wibble
+  Wobble(field: Int)
+  Wabble(Wibble)
+}
+
+----- COMPILED JAVASCRIPT
+//# sourceMappingURL=mod.mjs.map
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Wibble extends $CustomType {}
+export const Wibble$Wibble = () => new Wibble();
+export const Wibble$isWibble = (value) => value instanceof Wibble;
+
+export class Wobble extends $CustomType {
+  constructor(field) {
+    super();
+    this.field = field;
+  }
+}
+export const Wibble$Wobble = (field) => new Wobble(field);
+export const Wibble$isWobble = (value) => value instanceof Wobble;
+export const Wibble$Wobble$field = (value) => value.field;
+export const Wibble$Wobble$0 = (value) => value.field;
+
+export class Wabble extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+export const Wibble$Wabble = ($0) => new Wabble($0);
+export const Wibble$isWabble = (value) => value instanceof Wabble;
+export const Wibble$Wabble$0 = (value) => value[0];
+----- SOURCE MAP
+Mappings Raw:
+1:2 -> 5:66
+2:2 -> 16:54
+3:2 -> 26:51
