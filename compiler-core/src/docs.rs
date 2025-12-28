@@ -758,6 +758,7 @@ extra_applications = ["inets", "ssl"]
 
 [javascript]
 typescript_declarations = true
+source_maps = true
 runtime = "node"
 
 [javascript.deno]

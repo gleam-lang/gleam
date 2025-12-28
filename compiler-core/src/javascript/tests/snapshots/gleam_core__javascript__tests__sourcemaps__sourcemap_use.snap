@@ -1,0 +1,89 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+expression: "\nfn add_3_to_result(i, f) {\n    f(i) + 3\n}\n\npub fn go(x) {\n  use a <- add_3_to_result(1)\n  a + 2\n}\n"
+---
+----- SOURCE CODE
+0 |
+1 |fn add_3_to_result(i, f) {
+2 |    f(i) + 3
+3 |}
+4 |
+5 |pub fn go(x) {
+6 |  use a <- add_3_to_result(1)
+7 |  a + 2
+8 |}
+
+----- COMPILED JAVASCRIPT
+0 |//# sourceMappingURL=mod.mjs.map
+1 |function add_3_to_result(i, f) {
+2 |  return f(i) + 3;
+3 |}
+4 |
+5 |export function go(x) {
+6 |  return add_3_to_result(1, (a) => { return a + 2; });
+7 |}
+
+----- SOURCE MAP
+Mappings:
+----- 
+
+
+⏷
+//# sourceMappingURL=mod.mjs.map
+
+----- 
+fn add_3_to_result(i, f) {
+    
+⏷
+function add_3_to_result(i, f) {
+  
+----- 
+f(
+⏷
+return f(
+----- 
+i) + 
+⏷
+i) + 
+----- 
+3
+}
+
+
+⏷
+3;
+}
+
+
+----- 
+pub fn go(x) {
+  
+⏷
+export function go(x) {
+  
+----- 
+use a <- 
+⏷
+return 
+----- 
+add_3_to_result(
+⏷
+add_3_to_result(
+----- 
+1)
+  
+⏷
+1, 
+----- 
+a + 
+⏷
+(a) => { return a + 
+----- 
+2
+}
+
+⏷
+2; });
+}
+
+-----

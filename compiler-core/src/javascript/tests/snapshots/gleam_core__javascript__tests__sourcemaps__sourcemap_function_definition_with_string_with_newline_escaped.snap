@@ -1,0 +1,62 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+expression: "\n/// my function\npub fn wibble() {\n  let wibble = \"hello\\nworld\"\n  wibble <> \"!\"\n}"
+---
+----- SOURCE CODE
+0 |
+1 |/// my function
+2 |pub fn wibble() {
+3 |  let wibble = "hello\nworld"
+4 |  wibble <> "!"
+5 |}
+
+----- COMPILED JAVASCRIPT
+0 |//# sourceMappingURL=mod.mjs.map
+1 |/**
+2 | * my function
+3 | */
+4 |export function wibble() {
+5 |  let wibble$1 = "hello\nworld";
+6 |  return wibble$1 + "!";
+7 |}
+
+----- SOURCE MAP
+Mappings:
+----- 
+
+/// my function
+
+⏷
+//# sourceMappingURL=mod.mjs.map
+/**
+ * my function
+ */
+
+----- 
+pub fn wibble() {
+  
+⏷
+export function wibble() {
+  
+----- 
+let wibble = 
+⏷
+let wibble$1 = 
+----- 
+"hello\nworld"
+  
+⏷
+"hello\nworld";
+  
+----- 
+wibble <> 
+⏷
+return wibble$1 + 
+----- 
+"!"
+}
+⏷
+"!";
+}
+
+-----
