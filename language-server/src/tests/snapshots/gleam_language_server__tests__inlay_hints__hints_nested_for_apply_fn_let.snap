@@ -1,24 +1,16 @@
 ---
-source: compiler-core/src/language_server/tests/inlay_hints.rs
+source: language-server/src/tests/inlay_hints.rs
 expression: hints
 ---
-[
-  {
-    "position": {
-      "line": 9,
-      "character": 21
-    },
-    "label": "Int",
-    "kind": 1,
-    "paddingLeft": true
-  },
-  {
-    "position": {
-      "line": 10,
-      "character": 27
-    },
-    "label": "Int",
-    "kind": 1,
-    "paddingLeft": true
-  }
-]
+const int_val = 0
+
+fn identity(x) {
+  x
+}
+
+fn main() {
+  let f = identity(fn() {
+    int_val "Int"
+    |> identity() "Int"
+  })
+}

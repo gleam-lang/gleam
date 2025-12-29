@@ -1,15 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/inlay_hints.rs
+source: language-server/src/tests/inlay_hints.rs
 expression: hints
 ---
-[
-  {
-    "position": {
-      "line": 1,
-      "character": 21
-    },
-    "label": "-> Int",
-    "kind": 1,
-    "paddingLeft": true
-  }
-]
+fn example_fn() "-> Int" { 0 }

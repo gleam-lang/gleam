@@ -1,24 +1,18 @@
 ---
-source: compiler-core/src/language_server/tests/inlay_hints.rs
+source: language-server/src/tests/inlay_hints.rs
 expression: hints
 ---
-[
-  {
-    "position": {
-      "line": 10,
-      "character": 25
-    },
-    "label": "Int",
-    "kind": 1,
-    "paddingLeft": true
-  },
-  {
-    "position": {
-      "line": 11,
-      "character": 31
-    },
-    "label": "Int",
-    "kind": 1,
-    "paddingLeft": true
+const int_val = 0
+
+fn identity(x) {
+  x
+}
+
+fn main(a) {
+  case a {
+    _ -> {
+        int_val "Int"
+        |> identity() "Int"
+    }
   }
-]
+}

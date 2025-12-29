@@ -1,42 +1,14 @@
 ---
-source: compiler-core/src/language_server/tests/inlay_hints.rs
+source: language-server/src/tests/inlay_hints.rs
 expression: hints
 ---
-[
-  {
-    "position": {
-      "line": 6,
-      "character": 11
-    },
-    "label": ": a",
-    "kind": 1,
-    "paddingLeft": false
-  },
-  {
-    "position": {
-      "line": 7,
-      "character": 9
-    },
-    "label": "-> #(b, rigid_type_var, a)",
-    "kind": 1,
-    "paddingLeft": true
-  },
-  {
-    "position": {
-      "line": 2,
-      "character": 9
-    },
-    "label": ": b",
-    "kind": 1,
-    "paddingLeft": false
-  },
-  {
-    "position": {
-      "line": 4,
-      "character": 7
-    },
-    "label": "-> fn(a) -> #(b, rigid_type_var, a)",
-    "kind": 1,
-    "paddingLeft": true
+fn complex(
+  x": b", //: b
+  y: rigid_type_var, //: rigid_type_var
+) "-> fn(a) -> #(b, rigid_type_var, a)" { //-> fn(a, rigid_type_var) -> #(b, rigid_type_var, a)
+  fn(
+    z": a", //: a
+  ) "-> #(b, rigid_type_var, a)" { //-> #(b, rigid_type_var, a)
+    #(x, y, z)
   }
-]
+}

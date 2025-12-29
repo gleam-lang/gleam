@@ -1,42 +1,23 @@
 ---
-source: compiler-core/src/language_server/tests/inlay_hints.rs
+source: language-server/src/tests/inlay_hints.rs
 expression: hints
 ---
-[
-  {
-    "position": {
-      "line": 3,
-      "character": 13
-    },
-    "label": "a",
-    "kind": 1,
-    "paddingLeft": true
-  },
-  {
-    "position": {
-      "line": 8,
-      "character": 13
-    },
-    "label": "a",
-    "kind": 1,
-    "paddingLeft": true
-  },
-  {
-    "position": {
-      "line": 13,
-      "character": 13
-    },
-    "label": "a",
-    "kind": 1,
-    "paddingLeft": true
-  },
-  {
-    "position": {
-      "line": 18,
-      "character": 13
-    },
-    "label": "a",
-    "kind": 1,
-    "paddingLeft": true
-  }
-]
+pub fn ret_str(f1) {
+  "abc"
+  |> f1() "a"
+}
+
+pub fn ret_int(f2) {
+  42
+  |> f2() "a"
+}
+
+pub fn ret_float(f3) {
+  42.2
+  |> f3() "a"
+}
+
+pub fn ret_bit_array(f4) {
+  <<1, 2>>
+  |> f4() "a"
+}

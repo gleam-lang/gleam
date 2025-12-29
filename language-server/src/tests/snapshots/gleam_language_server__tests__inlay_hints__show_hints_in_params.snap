@@ -1,15 +1,8 @@
 ---
-source: compiler-core/src/language_server/tests/inlay_hints.rs
+source: language-server/src/tests/inlay_hints.rs
 expression: hints
 ---
-[
-  {
-    "position": {
-      "line": 2,
-      "character": 21
-    },
-    "label": ": a",
-    "kind": 1,
-    "paddingLeft": false
-  }
-]
+fn example_fn(
+  flex_type_arg": a",
+  b: do_not_show_this,
+) { 0 }
