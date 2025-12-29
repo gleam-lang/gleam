@@ -9,6 +9,7 @@ use super::{
     router::Router,
     src_span_to_lsp_range,
 };
+use crate::messages::{Response, ResponseHandler};
 use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
 use gleam_core::{
@@ -27,7 +28,6 @@ use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, RwLock},
 };
-use crate::messages::{Response, ResponseHandler};
 
 /// This class is responsible for handling the language server protocol and
 /// delegating the work to the engine.
@@ -518,7 +518,10 @@ where
         self.respond_with_engine(path, |engine| engine.document_symbol(params))
     }
 
-    fn show_inlay_hints(&mut self, params: lsp::InlayHintParams) -> (Result<Json, ResponseError>, Feedback) {
+    fn show_inlay_hints(
+        &mut self,
+        params: lsp::InlayHintParams,
+    ) -> (Result<Json, ResponseError>, Feedback) {
         let path = super::path(&params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.inlay_hints(params))
     }

@@ -1,6 +1,6 @@
 use crate::{
     configuration::{InlayHintsConfig, UserConfiguration},
-    tests::{setup_engine, LanguageServerTestIO, TestProject},
+    tests::{LanguageServerTestIO, TestProject, setup_engine},
 };
 use itertools::Itertools;
 use lsp_types::{InlayHint, InlayHintParams, Position, Range};
@@ -286,7 +286,8 @@ fn render_inlay_hints_on_code(src: &str, hints: Vec<InlayHint>) -> String {
         let mut line_to_add = String::new();
         let mut last_pos: usize = 0;
 
-        let sorted = hints.iter()
+        let sorted = hints
+            .iter()
             .filter(|hint| hint.position.line == (line_number as u32))
             .sorted_by_key(|hint| hint.position.character)
             .collect::<Vec<&InlayHint>>();
@@ -296,7 +297,11 @@ fn render_inlay_hints_on_code(src: &str, hints: Vec<InlayHint>) -> String {
             if hint.padding_left == Some(true) {
                 line_to_add.push(' ');
             }
-            line_to_add.push_str(serde_json::to_string(&hint.label).expect("show inlay hint label").as_str());
+            line_to_add.push_str(
+                serde_json::to_string(&hint.label)
+                    .expect("show inlay hint label")
+                    .as_str(),
+            );
             last_pos = hint.position.character as usize;
         }
         line_to_add.push_str(&line[last_pos..]);
@@ -307,4 +312,3 @@ fn render_inlay_hints_on_code(src: &str, hints: Vec<InlayHint>) -> String {
 
     buffer
 }
-

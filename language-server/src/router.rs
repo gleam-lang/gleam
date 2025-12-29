@@ -14,8 +14,9 @@ use std::{
 use camino::{Utf8Path, Utf8PathBuf};
 
 use super::{
-    DownloadDependencies, MakeLocker, configuration::UserConfiguration, engine::LanguageServerEngine, feedback::FeedbackBookKeeper,
-    files::FileSystemProxy, progress::ProgressReporter,
+    DownloadDependencies, MakeLocker, configuration::UserConfiguration,
+    engine::LanguageServerEngine, feedback::FeedbackBookKeeper, files::FileSystemProxy,
+    progress::ProgressReporter,
 };
 
 /// The language server instance serves a language client, typically a text

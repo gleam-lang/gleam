@@ -3,8 +3,8 @@ use std::time::SystemTime;
 
 use gleam_core::{Error, io::FileSystemWriter, paths::ProjectPaths};
 
-use crate::{files::FileSystemProxy, tests::Action, configuration::UserConfiguration};
 use super::LanguageServerTestIO;
+use crate::{configuration::UserConfiguration, files::FileSystemProxy, tests::Action};
 
 type Router = crate::router::Router<LanguageServerTestIO, LanguageServerTestIO>;
 

@@ -1,5 +1,6 @@
 use lsp_types::{InlayHint, InlayHintKind, InlayHintLabel};
 
+use super::{configuration::InlayHintsConfig, src_offset_to_lsp_position};
 use gleam_core::{
     ast::{
         PipelineAssignmentKind, SrcSpan, Statement, TypeAst, TypedExpr, TypedModule,
@@ -8,7 +9,6 @@ use gleam_core::{
     line_numbers::LineNumbers,
     type_::{self, Type},
 };
-use super::{configuration::InlayHintsConfig, src_offset_to_lsp_position};
 
 struct InlayHintsVisitor<'a> {
     config: InlayHintsConfig,
@@ -129,11 +129,17 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
 
         if self.config.function_parameter_types {
             for argument in args {
-                self.push_binding_annotation(&argument.type_, argument.annotation.as_ref(), &argument.location);
+                self.push_binding_annotation(
+                    &argument.type_,
+                    argument.annotation.as_ref(),
+                    &argument.location,
+                );
             }
         }
 
-        if self.config.function_return_types && let Some((_arguments, ret_type)) = type_.fn_types() {
+        if self.config.function_return_types
+            && let Some((_arguments, ret_type)) = type_.fn_types()
+        {
             self.push_return_annotation(&ret_type, return_annotation.as_ref(), head);
         }
     }

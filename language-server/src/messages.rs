@@ -166,9 +166,9 @@ impl Notification {
                 Some(Message::Notification(notification))
             }
 
-            "workspace/didChangeConfiguration" => {
-                Some(Message::Notification(Notification::UserConfigurationChanged))
-            }
+            "workspace/didChangeConfiguration" => Some(Message::Notification(
+                Notification::UserConfigurationChanged,
+            )),
 
             _ => None,
         }
