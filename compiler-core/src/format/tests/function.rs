@@ -343,8 +343,8 @@ fn comment_in_tuple_return_type() {
 }
 "#,
         r#"pub fn main() -> #(
-  String,
   // This is a string
+  String,
   // This is an awesome string
 ) {
   todo
@@ -356,16 +356,10 @@ fn comment_in_tuple_return_type() {
 // https://github.com/gleam-lang/gleam/issues/5225
 #[test]
 fn comments_between_function_params() {
-  assert_format!(
-    r#"pub fn main(
-  // a is some useful string
-  a: String,
-  // b is some useful int
-  b: Int,
-  // c is some useful bool
-  c: Bool,
-  // d is some useful function
-  d: fn(
+    assert_format!(
+        r#"pub fn main(
+  // a function with argument comments
+  a: fn(
     // Int,
     String,
     Int,
@@ -373,7 +367,20 @@ fn comments_between_function_params() {
     String,
     // this is B
     String,
+    fn(
+      // an inner fn, fn arg
+      Int,
+      // trailing comment
+    ) -> String,
+    // multiple lines
+    // for a really interesting
+    // comment
+    Bool,
+    // trailing comment
   ) -> Nil,
+  // a function with no argument comments
+  b: fn(Int) -> Nil,
+  c: fn() -> Nil,
 ) {
   todo
 }
