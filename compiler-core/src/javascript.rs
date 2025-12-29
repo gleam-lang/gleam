@@ -117,13 +117,13 @@ impl<'a> Generator<'a> {
             module,
             line_numbers,
             src: _,
-            path: _,
+            path,
             project_root,
         } = config;
         let current_module_name_segments_count = module.name.split('/').count();
 
         let src_path = &module.type_info.src_path;
-        let src_path_str = src_path
+        let src_path = src_path
             .strip_prefix(project_root)
             .unwrap_or(src_path)
             .as_str();
@@ -138,6 +138,7 @@ impl<'a> Generator<'a> {
             typescript,
             source_map_builder: if source_map {
                 let module_name = module.name.clone();
+                let src_path_str = path.as_str();
                 let output_path = format!("{module_name}.mjs");
                 let mut source_map_builder = sourcemap::SourceMapBuilder::new(Some(&output_path.clone()));
                 let _ = source_map_builder.add_source(src_path_str);
@@ -450,14 +451,12 @@ impl<'a> Generator<'a> {
         type_name: &'a str,
         publicity: Publicity,
     ) -> Document<'a> {
-        let sourcemap_cursor_position_observer =
-            self.create_cursor_position_observer(constructor.location.start);
         let class_definition = self.variant_class_definition(constructor, publicity);
 
         // If the custom type is private or opaque, we don't need to generate API
         // functions for it.
         if publicity.is_private() {
-            return docvec![sourcemap_cursor_position_observer, class_definition];
+            return docvec![class_definition];
         }
 
         let constructor_definition = self.variant_constructor_definition(constructor, type_name);
@@ -465,7 +464,6 @@ impl<'a> Generator<'a> {
         let fields_definition = self.variant_fields_definition(constructor, type_name);
 
         docvec![
-            sourcemap_cursor_position_observer,
             class_definition,
             line(),
             constructor_definition,
@@ -639,7 +637,11 @@ impl<'a> Generator<'a> {
         } else {
             "class "
         };
-        let head = docvec![head, &constructor.name, " extends $CustomType {"];
+
+        let sourcemap_cursor_position_observer =
+            self.create_cursor_position_observer(constructor.location.start);
+
+        let head = docvec![sourcemap_cursor_position_observer, head, &constructor.name, " extends $CustomType {"];
 
         if constructor.arguments.is_empty() {
             return head.append("}");

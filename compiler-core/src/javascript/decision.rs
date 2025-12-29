@@ -39,7 +39,16 @@ pub fn case<'a>(
         kind: DecisionKind::Case { clauses },
     }
     .decision(&compiled_case.tree);
-    docvec![assignments_to_doc(assignments), decision.into_doc()].force_break()
+    docvec![
+        subjects
+            .first()
+            .map(|subject| expression_generator
+                .create_cursor_position_observer(subject.location().start))
+            .unwrap_or_else(|| nil()),
+        assignments_to_doc(expression_generator, assignments),
+        decision.into_doc()
+    ]
+    .force_break()
 }
 
 /// The generated code for a decision tree.
@@ -280,7 +289,21 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
                 }
             }
             Decision::Run { body } => {
-                let bindings = self.variables.bindings_doc(&body.bindings);
+                let location = match self.kind {
+                    DecisionKind::Case { clauses } => clauses
+                        .get(body.clause_index)
+                        .expect("invalid clause index")
+                        .location(),
+                    DecisionKind::LetAssert {
+                        subject_location, ..
+                    } => subject_location,
+                };
+                let bindings = docvec![
+                    self.variables
+                        .expression_generator
+                        .create_cursor_position_observer(location.start),
+                    self.variables.bindings_doc(&body.bindings)
+                ];
                 let body = self.body_expression(body.clause_index);
                 let body = match body {
                     BodyExpression::Variable(variable) => variable,
@@ -675,18 +698,20 @@ pub fn let_<'a>(
     let assignment = variables.assign_let_subject(compiled_case, subject);
     let assignment_name = assignment.name();
     let assignments = vec![assignment];
-
+    let pattern_location = pattern.location();
     let decision = CasePrinter {
         variables,
         assignments: &assignments,
         kind: DecisionKind::LetAssert {
             kind,
             subject_location: subject.location(),
-            pattern_location: pattern.location(),
+            pattern_location,
             subject: assignment_name.clone(),
         },
     }
     .decision(&compiled_case.tree);
+
+    let assignments_doc = assignments_to_doc(expression_generator, assignments);
 
     // When we generate `let assert` statements, we want to produce code like
     // this:
@@ -714,7 +739,7 @@ pub fn let_<'a>(
     });
 
     let doc = docvec![
-        assignments_to_doc(assignments),
+        assignments_doc,
         concat(beginning_assignments),
         decision.into_doc()
     ];
@@ -1715,6 +1740,7 @@ enum SubjectAssignment<'a> {
     BindToVariable {
         name: EcoString,
         value: Document<'a>,
+        location: SrcSpan,
     },
     /// The subject is already a simple variable with the given name, we will
     /// keep using that name to reference it.
@@ -1724,7 +1750,11 @@ enum SubjectAssignment<'a> {
 impl SubjectAssignment<'_> {
     fn name(&self) -> EcoString {
         match self {
-            SubjectAssignment::BindToVariable { name, value: _ }
+            SubjectAssignment::BindToVariable {
+                name,
+                value: _,
+                location: _,
+            }
             | SubjectAssignment::AlreadyAVariable { name } => name.clone(),
         }
     }
@@ -1756,17 +1786,33 @@ fn assign_subject<'a>(
         let value = expression_generator
             .not_in_tail_position(Some(ordering), |this| this.wrap_expression(subject));
 
-        SubjectAssignment::BindToVariable { value, name }
+        SubjectAssignment::BindToVariable {
+            value,
+            name,
+            location: subject.location(),
+        }
     }
 }
 
-fn assignments_to_doc(assignments: Vec<SubjectAssignment<'_>>) -> Document<'_> {
+fn assignments_to_doc<'a>(
+    expression_generator: &mut Generator<'_, 'a>,
+    assignments: Vec<SubjectAssignment<'a>>,
+) -> Document<'a> {
     let mut assignments_docs = vec![];
     for assignment in assignments.into_iter() {
-        let SubjectAssignment::BindToVariable { name, value } = assignment else {
+        let SubjectAssignment::BindToVariable {
+            name,
+            value,
+            location,
+        } = assignment
+        else {
             continue;
         };
-        assignments_docs.push(docvec![let_doc(name, value), line()])
+        assignments_docs.push(docvec![
+            expression_generator.create_cursor_position_observer(location.start),
+            let_doc(name, value),
+            line()
+        ])
     }
     assignments_docs.to_doc()
 }
@@ -1789,6 +1835,7 @@ fn reassignment_doc(variable_name: EcoString, value: Document<'_>) -> Document<'
 }
 
 fn let_doc(variable_name: EcoString, value: Document<'_>) -> Document<'_> {
+    let var = variable_name.as_str();
     docvec!["let ", variable_name, " = ", value, ";"]
 }
 

@@ -221,7 +221,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         }
     }
 
-    fn create_cursor_position_observer(&self, start_index: u32) -> Document<'a> {
+    pub fn create_cursor_position_observer(&self, start_index: u32) -> Document<'a> {
         let start_location = self.line_numbers.line_and_column_number(start_index);
         let DebugIgnore(builder) = &self.source_map_builder;
         Document::CursorPositionObserver {
@@ -773,9 +773,13 @@ impl<'module, 'a> Generator<'module, 'a> {
                 }))
             } else {
                 // Otherwise we assign the intermediate pipe value to a variable.
-                let assignment_document = self
-                    .not_in_tail_position(Some(Ordering::Strict), |this| {
-                        this.simple_variable_assignment(&assignment.name, &assignment.value, &assignment.location)
+                let assignment_document =
+                    self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                        this.simple_variable_assignment(
+                            &assignment.name,
+                            &assignment.value,
+                            &assignment.location,
+                        )
                     });
                 documents.push(self.add_statement_level(assignment_document));
                 latest_local_var = Some(self.local_var(&assignment.name));
@@ -953,7 +957,10 @@ impl<'module, 'a> Generator<'module, 'a> {
             return self.simple_variable_assignment(name, value, location);
         }
 
-        decision::let_(compiled_case, value, kind, self, pattern)
+        docvec![
+            self.create_cursor_position_observer(location.start),
+            decision::let_(compiled_case, value, kind, self, pattern)
+        ]
     }
 
     fn assert(&mut self, assert: &'a TypedAssert) -> Document<'a> {
@@ -1127,6 +1134,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         fields.push(("expression_start", subject.location().start.to_doc()));
 
         docvec![
+            self.create_cursor_position_observer(location.start),
             "if (",
             docvec!["!", subject_document].nest(INDENT),
             break_("", ""),
@@ -1231,6 +1239,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         ];
 
         docvec![
+            self.create_cursor_position_observer(location.start),
             "if (",
             left_value.nest(INDENT),
             ") {",
@@ -1294,6 +1303,7 @@ impl<'module, 'a> Generator<'module, 'a> {
 
         docvec![
             line(),
+            self.create_cursor_position_observer(location.start),
             "if (",
             docvec!["!(", left_value, " || ", right_value, ")"].nest(INDENT),
             ") {",
@@ -1892,6 +1902,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         let fields = wrap_object(fields.into_iter().map(|(k, v)| (k.to_doc(), Some(v))));
 
         docvec![
+            self.create_cursor_position_observer(location.start),
             "throw makeError",
             wrap_arguments([
                 string(error_name),

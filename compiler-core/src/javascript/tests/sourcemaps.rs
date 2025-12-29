@@ -17,7 +17,7 @@ fn sourcemap_function_definition_with_variable_assignment() {
         "
 // my function
 pub fn wibble() {
-  let wibble = 1;
+  let wibble = 1
   wibble + 2
 }"
     )
@@ -44,5 +44,45 @@ fn sourcemap_module_constant() {
 pub const wibble = 1
 const wobble = 2
 pub const wabble = 3"
+    )
+}
+
+#[test]
+fn sourcemap_assert() {
+    assert_source_map!(
+        "
+pub fn main() {
+  let x = True
+  assert x
+}
+"
+    )
+}
+
+#[test]
+fn sourcemap_let_assert() {
+    assert_source_map!(
+        r#"
+pub fn go(x) {
+  let assert #(wibble, wobble) = x
+}
+"#
+    )
+}
+
+#[test]
+fn sourcemap_case_destructure_assignment_statement() {
+    assert_source_map!(
+        "
+pub type Wibble {
+  Wibble(Int, Int)
+}
+
+pub fn go(x) {
+  case Wibble(1, 2) {
+    Wibble(wibble, wobble) -> wibble + wobble
+  }
+}
+"
     )
 }
