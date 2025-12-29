@@ -704,7 +704,7 @@ pub struct FillInMissingLabelledArgs<'a> {
     edits: TextEdits<'a>,
     use_right_hand_side_location: Option<SrcSpan>,
     selected_call: Option<SelectedCall<'a>>,
-    containing_function: Option<&'a TypedFunction>,
+    current_function: Option<&'a TypedFunction>,
 }
 
 struct SelectedCall<'a> {
@@ -713,7 +713,7 @@ struct SelectedCall<'a> {
     arguments: Vec<CallArg<()>>,
     kind: SelectedCallKind,
     fun_type: Option<Arc<Type>>,
-    containing_function: Option<&'a TypedFunction>,
+    enclosing_function: Option<&'a TypedFunction>,
 }
 
 enum SelectedCallKind {
@@ -733,7 +733,7 @@ impl<'a> FillInMissingLabelledArgs<'a> {
             edits: TextEdits::new(line_numbers),
             use_right_hand_side_location: None,
             selected_call: None,
-            containing_function: None,
+            current_function: None,
         }
     }
 
@@ -746,7 +746,7 @@ impl<'a> FillInMissingLabelledArgs<'a> {
             arguments,
             kind,
             fun_type,
-            containing_function,
+            enclosing_function,
         }) = self.selected_call
         {
             let is_use_call = arguments.iter().any(|arg| arg.is_use_implicit_callback());
@@ -804,7 +804,7 @@ impl<'a> FillInMissingLabelledArgs<'a> {
                     false
                 };
 
-            let variables_in_scope = containing_function
+            let variables_in_scope = enclosing_function
                 .map(|fun| {
                     ScopeVariableCollector::new(call_location.start).collect_from_function(fun)
                 })
@@ -896,10 +896,10 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
     fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
         // We store the current function as the containing function while we traverse
         // it, allowing handling nested functions correctly.
-        let previous = self.containing_function;
-        self.containing_function = Some(fun);
+        let previous_function = self.current_function;
+        self.current_function = Some(fun);
         ast::visit::visit_typed_function(self, fun);
-        self.containing_function = previous;
+        self.current_function = previous_function;
     }
 
     fn visit_typed_use(&mut self, use_: &'ast TypedUse) {
@@ -932,7 +932,7 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
                 arguments: arguments.iter().map(Self::empty_argument).collect(),
                 kind: SelectedCallKind::Value,
                 fun_type: Some(fun.type_()),
-                containing_function: self.containing_function,
+                enclosing_function: self.current_function,
             })
         }
 
@@ -969,7 +969,7 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
                 arguments: arguments.iter().map(Self::empty_argument).collect(),
                 kind: SelectedCallKind::Pattern,
                 fun_type: None,
-                containing_function: self.containing_function,
+                enclosing_function: self.current_function,
             })
         }
 
