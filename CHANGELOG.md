@@ -148,6 +148,12 @@
 
   ([Vladislav Shakitskiy](https://github.com/vshakitskiy))
 
+- The "Fill labels" code action now uses variables from scope when they match
+  the label name and expected type, using shorthand syntax (`name:`) instead of
+  `name: todo`.
+
+  ([Vladislav Shakitskiy](https://github.com/vshakitskiy))
+
 ### Formatter
 
 ### Bug fixes

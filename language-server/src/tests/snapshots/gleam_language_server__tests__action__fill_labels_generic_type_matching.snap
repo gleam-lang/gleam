@@ -1,0 +1,29 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub type Container(a) {\n    Container(value: a, label: String)\n}\n\npub fn main() {\n    let value = 42\n    let label = \"test\"\n    Container()\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Container(a) {
+    Container(value: a, label: String)
+}
+
+pub fn main() {
+    let value = 42
+    let label = "test"
+    Container()
+    ↑          
+}
+
+
+----- AFTER ACTION
+
+pub type Container(a) {
+    Container(value: a, label: String)
+}
+
+pub fn main() {
+    let value = 42
+    let label = "test"
+    Container(value:, label:)
+}

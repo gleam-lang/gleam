@@ -2208,6 +2208,182 @@ pub fn main() {
 }
 
 #[test]
+fn fill_labels_multiple_fields_some_matching() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub type Player {
+    Player(name: String, age: Int, team: String)
+}
+
+pub fn main() {
+    let name = "Priya"
+    let age = "not an int"
+    Player()
+}
+"#,
+        find_position_of("Player").nth_occurrence(3).to_selection(),
+    );
+}
+
+#[test]
+fn fill_labels_all_fields_have_matching_variables() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub type Player {
+    Player(name: String, age: Int, team: String)
+}
+
+pub fn main() {
+    let name = "Priya"
+    let age = 25
+    let team = "BLU"
+    Player()
+}
+"#,
+        find_position_of("Player").nth_occurrence(3).to_selection(),
+    );
+}
+
+#[test]
+fn fill_labels_inside_anonymous_function() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub type Player {
+    Player(name: String, team: String)
+}
+
+pub fn main() {
+    let name = "Outer"
+    let callback = fn() {
+        let name = "Inner"
+        Player(team: "BLU")
+    }
+}
+"#,
+        find_position_of("Player").nth_occurrence(3).to_selection(),
+    );
+}
+
+#[test]
+fn fill_labels_variable_from_outer_scope_not_shadowed() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub type Player {
+    Player(name: String, team: String)
+}
+
+pub fn main() {
+    let name = "Outer"
+    let callback = fn() {
+        Player(team: "BLU")
+    }
+}
+"#,
+        find_position_of("Player").nth_occurrence(3).to_selection(),
+    );
+}
+
+#[test]
+fn fill_labels_inside_assignment_with_same_name_as_field() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub type Player {
+    Player(name: String, team: String)
+}
+
+pub fn main() {
+    let name = Player(team: "BLU")
+}
+"#,
+        find_position_of("Player").nth_occurrence(3).to_selection(),
+    );
+}
+
+#[test]
+fn fill_labels_ignores_underscore_prefixed_variables() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub type Player {
+    Player(name: String, team: String)
+}
+
+pub fn main() {
+    let _name = "Priya"
+    Player(team: "BLU")
+}
+"#,
+        find_position_of("Player").nth_occurrence(3).to_selection(),
+    );
+}
+
+#[test]
+fn fill_labels_variable_out_of_scope_in_block() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub type Player {
+    Player(name: String, team: String)
+}
+
+pub fn main() {
+    {
+        let name = "Priya"
+    }
+    Player(team: "BLU")
+}
+"#,
+        find_position_of("Player").nth_occurrence(3).to_selection(),
+    );
+}
+
+#[test]
+fn fill_labels_variable_in_scope_from_case_pattern() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub type Player {
+    Player(name: String, team: String)
+}
+
+pub fn main(result: Result(String, Nil)) {
+    case result {
+        Ok(name) -> Player(team: "BLU")
+        Error(_) -> Player(team: "RED", name: "Unknown")
+    }
+}
+"#,
+        find_position_of("Player").nth_occurrence(3).to_selection(),
+    );
+}
+
+#[test]
+fn fill_labels_generic_type_matching() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub type Container(a) {
+    Container(value: a, label: String)
+}
+
+pub fn main() {
+    let value = 42
+    let label = "test"
+    Container()
+}
+"#,
+        find_position_of("Container")
+            .nth_occurrence(3)
+            .to_selection(),
+    );
+}
+
+#[test]
 fn use_label_shorthand_works_for_nested_calls() {
     assert_code_action!(
         USE_LABEL_SHORTHAND_SYNTAX,

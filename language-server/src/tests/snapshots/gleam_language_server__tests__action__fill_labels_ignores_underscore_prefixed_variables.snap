@@ -1,0 +1,27 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub type Player {\n    Player(name: String, team: String)\n}\n\npub fn main() {\n    let _name = \"Priya\"\n    Player(team: \"BLU\")\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Player {
+    Player(name: String, team: String)
+}
+
+pub fn main() {
+    let _name = "Priya"
+    Player(team: "BLU")
+    ↑                  
+}
+
+
+----- AFTER ACTION
+
+pub type Player {
+    Player(name: String, team: String)
+}
+
+pub fn main() {
+    let _name = "Priya"
+    Player(team: "BLU", name: todo)
+}
