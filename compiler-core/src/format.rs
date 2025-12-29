@@ -375,9 +375,7 @@ impl<'comments> Formatter<'comments> {
                 as_name,
                 unqualified_values,
                 unqualified_types,
-                documentation: _,
-                location: _,
-                package: _,
+                ..
             }) => {
                 let second = if unqualified_values.is_empty() && unqualified_types.is_empty() {
                     nil()

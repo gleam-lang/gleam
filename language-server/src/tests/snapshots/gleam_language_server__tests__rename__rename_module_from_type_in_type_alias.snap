@@ -1,0 +1,27 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\nimport option\n\ntype Option(a) =\n  option.Option(a)\n"
+---
+----- BEFORE RENAME
+-- option.gleam
+pub type Option(a) { Some(a) None }
+
+-- app.gleam
+
+import option
+
+type Option(a) =
+  option.Option(a)
+  ↑▔▔▔▔▔          
+
+
+----- AFTER RENAME
+-- option.gleam
+pub type Option(a) { Some(a) None }
+
+-- app.gleam
+
+import option as opt
+
+type Option(a) =
+  opt.Option(a)

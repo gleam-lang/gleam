@@ -499,8 +499,8 @@ impl TypeAst {
             TypeAst::Constructor(TypeAstConstructor {
                 arguments, module, ..
             }) => type_
-                .constructor_types()
-                .and_then(|arg_types| {
+                .named_type_information()
+                .and_then(|(module_name, _, arg_types)| {
                     if let Some(arg) = arguments
                         .iter()
                         .zip(arg_types)
@@ -509,19 +509,19 @@ impl TypeAst {
                         return Some(arg);
                     }
 
+                    if let Some((module_alias, location)) = module
+                        && location.contains(byte_index)
+                    {
+                        return Some(Located::ModuleName {
+                            location: *location,
+                            module_name,
+                            module_alias: module_alias.clone(),
+                            layer: Layer::Type,
+                        });
+                    }
+
                     None
                 })
-                .or(module.as_ref().and_then(|(name, location)| {
-                    if location.contains(byte_index) {
-                        Some(Located::ModuleName {
-                            location: *location,
-                            name,
-                            layer: Layer::Type,
-                        })
-                    } else {
-                        None
-                    }
-                }))
                 .or(Some(Located::Annotation { ast: self, type_ })),
             TypeAst::Tuple(TypeAstTuple { elements, .. }) => type_
                 .tuple_types()
@@ -856,6 +856,7 @@ pub type TypedImport = Import<EcoString>;
 pub struct Import<PackageName> {
     pub documentation: Option<EcoString>,
     pub location: SrcSpan,
+    pub module_location: SrcSpan,
     pub module: EcoString,
     pub as_name: Option<(AssignName, SrcSpan)>,
     pub unqualified_values: Vec<UnqualifiedImport>,
@@ -1761,6 +1762,11 @@ impl TypedClause {
                     .flat_map(|p| p.iter())
                     .find_map(|p| p.find_node(byte_index))
             })
+            .or_else(|| {
+                self.guard
+                    .as_ref()
+                    .and_then(|guard| guard.find_node(byte_index))
+            })
             .or_else(|| self.then.find_node(byte_index))
     }
 
@@ -2418,6 +2424,68 @@ impl TypedClauseGuard {
             | ClauseGuard::GtEqFloat { .. }
             | ClauseGuard::LtFloat { .. }
             | ClauseGuard::LtEqFloat { .. } => type_::bool(),
+        }
+    }
+
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        if !self.location().contains(byte_index) {
+            return None;
+        }
+
+        match self {
+            ClauseGuard::ModuleSelect {
+                location,
+                module_name,
+                module_alias,
+                ..
+            } => {
+                let module_span =
+                    SrcSpan::new(location.start, location.start + (module_alias.len() as u32));
+
+                if module_span.contains(byte_index) {
+                    Some(Located::ModuleName {
+                        location: module_span,
+                        module_name: module_name.clone(),
+                        module_alias: module_alias.clone(),
+                        layer: Layer::Value,
+                    })
+                } else {
+                    None
+                }
+            }
+            ClauseGuard::Equals { left, right, .. }
+            | ClauseGuard::NotEquals { left, right, .. }
+            | ClauseGuard::GtInt { left, right, .. }
+            | ClauseGuard::GtEqInt { left, right, .. }
+            | ClauseGuard::LtInt { left, right, .. }
+            | ClauseGuard::LtEqInt { left, right, .. }
+            | ClauseGuard::GtFloat { left, right, .. }
+            | ClauseGuard::GtEqFloat { left, right, .. }
+            | ClauseGuard::LtFloat { left, right, .. }
+            | ClauseGuard::LtEqFloat { left, right, .. }
+            | ClauseGuard::AddInt { left, right, .. }
+            | ClauseGuard::AddFloat { left, right, .. }
+            | ClauseGuard::SubInt { left, right, .. }
+            | ClauseGuard::SubFloat { left, right, .. }
+            | ClauseGuard::MultInt { left, right, .. }
+            | ClauseGuard::MultFloat { left, right, .. }
+            | ClauseGuard::DivInt { left, right, .. }
+            | ClauseGuard::DivFloat { left, right, .. }
+            | ClauseGuard::RemainderInt { left, right, .. }
+            | ClauseGuard::Or { left, right, .. }
+            | ClauseGuard::And { left, right, .. } => left
+                .find_node(byte_index)
+                .or_else(|| right.find_node(byte_index)),
+            ClauseGuard::Not {
+                expression: value, ..
+            }
+            | ClauseGuard::TupleIndex { tuple: value, .. }
+            | ClauseGuard::FieldAccess {
+                container: value, ..
+            }
+            | ClauseGuard::Block { value, .. } => value.find_node(byte_index),
+            ClauseGuard::Constant(constant) => constant.find_node(byte_index),
+            ClauseGuard::Var { .. } => None,
         }
     }
 
@@ -3401,7 +3469,23 @@ impl TypedPattern {
             | Pattern::Invalid { .. } => Some(Located::Pattern(self)),
 
             Pattern::Constructor {
-                arguments, spread, ..
+                module: Some((module_alias, module_location)),
+                constructor: Inferred::Known(constructor),
+                ..
+            } => {
+                if !module_location.contains(byte_index) {
+                    return None;
+                }
+
+                Some(Located::ModuleName {
+                    location: *module_location,
+                    module_name: constructor.module.clone(),
+                    module_alias: module_alias.clone(),
+                    layer: Layer::Value,
+                })
+            }
+            Pattern::Constructor {
+                spread, arguments, ..
             } => match spread {
                 Some(spread_location) if spread_location.contains(byte_index) => {
                     Some(Located::PatternSpread {
@@ -3414,6 +3498,7 @@ impl TypedPattern {
                     .iter()
                     .find_map(|argument| argument.find_node(byte_index)),
             },
+
             Pattern::List { elements, tail, .. } => elements
                 .iter()
                 .find_map(|element| element.find_node(byte_index))

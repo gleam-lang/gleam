@@ -16,6 +16,10 @@ Parsed {
                             start: 0,
                             end: 48,
                         },
+                        module_location: SrcSpan {
+                            start: 7,
+                            end: 13,
+                        },
                         module: "wibble",
                         as_name: None,
                         unqualified_values: [
