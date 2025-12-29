@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn wibble(a, b) {\n  let x: Nil = []\n}\n"
+---
+----- SOURCE CODE
+
+pub fn wibble(a, b) {
+  let x: Nil = []
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:16
+  │
+3 │   let x: Nil = []
+  │                ^^
+
+Expected type:
+
+    Nil
+
+Found type:
+
+    List(a)
