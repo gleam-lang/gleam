@@ -6,12 +6,12 @@ use gleam_core::{
     analyse::Inferred,
     ast::{
         self, ArgNames, AssignName, AssignmentKind, BitArraySegmentTruncation, BoundVariable,
-        BoundVariableName, CallArg, CustomType, FunctionLiteralKind, ImplicitCallArgOrigin, Import,
-        InvalidExpression, PIPE_PRECEDENCE, Pattern, PatternUnusedArguments,
-        PipelineAssignmentKind, Publicity, RecordConstructor, SrcSpan, TodoKind, TypedArg,
-        TypedAssignment, TypedClauseGuard, TypedDefinitions, TypedExpr, TypedModuleConstant,
-        TypedPattern, TypedPipelineAssignment, TypedRecordConstructor, TypedStatement,
-        TypedTailPattern, TypedUse, visit::Visit as _,
+        BoundVariableName, CallArg, CustomType, Function, FunctionLiteralKind,
+        ImplicitCallArgOrigin, Import, InvalidExpression, PIPE_PRECEDENCE, Pattern,
+        PatternUnusedArguments, PipelineAssignmentKind, Publicity, RecordConstructor, SrcSpan,
+        TodoKind, TypedArg, TypedAssignment, TypedClauseGuard, TypedDefinitions, TypedExpr,
+        TypedFunction, TypedModuleConstant, TypedPattern, TypedPipelineAssignment,
+        TypedRecordConstructor, TypedStatement, TypedTailPattern, TypedUse, visit::Visit as _,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -704,6 +704,7 @@ pub struct FillInMissingLabelledArgs<'a> {
     edits: TextEdits<'a>,
     use_right_hand_side_location: Option<SrcSpan>,
     selected_call: Option<SelectedCall<'a>>,
+    containing_function: Option<&'a TypedFunction>,
 }
 
 struct SelectedCall<'a> {
@@ -711,6 +712,8 @@ struct SelectedCall<'a> {
     field_map: &'a FieldMap,
     arguments: Vec<CallArg<()>>,
     kind: SelectedCallKind,
+    fun_type: Option<Arc<Type>>,
+    containing_function: Option<&'a TypedFunction>,
 }
 
 enum SelectedCallKind {
@@ -730,6 +733,7 @@ impl<'a> FillInMissingLabelledArgs<'a> {
             edits: TextEdits::new(line_numbers),
             use_right_hand_side_location: None,
             selected_call: None,
+            containing_function: None,
         }
     }
 
@@ -741,6 +745,8 @@ impl<'a> FillInMissingLabelledArgs<'a> {
             field_map,
             arguments,
             kind,
+            fun_type,
+            containing_function,
         }) = self.selected_call
         {
             let is_use_call = arguments.iter().any(|arg| arg.is_use_implicit_callback());
@@ -798,12 +804,17 @@ impl<'a> FillInMissingLabelledArgs<'a> {
                     false
                 };
 
-            let format_label = match kind {
-                SelectedCallKind::Value => |label| format!("{label}: todo"),
-                SelectedCallKind::Pattern => |label| format!("{label}:"),
-            };
+            let variables_in_scope = containing_function
+                .map(|fun| {
+                    ScopeVariableCollector::new(call_location.start).collect_from_function(fun)
+                })
+                .unwrap_or_default();
 
-            let labels_list = missing_labels.map(format_label).join(", ");
+            let labels_list = missing_labels
+                .map(|label| {
+                    Self::format_label(label, &kind, &fun_type, field_map, &variables_in_scope)
+                })
+                .join(", ");
 
             let has_no_explicit_arguments = arguments
                 .iter()
@@ -841,6 +852,36 @@ impl<'a> FillInMissingLabelledArgs<'a> {
         vec![]
     }
 
+    /// Formats a label for insertion. Uses `label:` syntax if there's a variable
+    /// in scope with matching name and type, otherwise uses `label: todo`.
+    fn format_label(
+        label: &EcoString,
+        kind: &SelectedCallKind,
+        fun_type: &Option<Arc<Type>>,
+        field_map: &FieldMap,
+        variables_in_scope: &HashMap<EcoString, Arc<Type>>,
+    ) -> String {
+        if matches!(kind, SelectedCallKind::Pattern) {
+            return format!("{label}:");
+        }
+
+        if let Some(var_type) = variables_in_scope.get(label) {
+            let expected_type = fun_type.as_ref().and_then(|ft| {
+                let (arg_types, _) = ft.fn_types()?;
+                let &index = field_map.fields.get(label)?;
+                arg_types.get(index as usize).cloned()
+            });
+
+            if let Some(expected) = expected_type {
+                if expected.same_as(var_type) {
+                    return format!("{label}:");
+                }
+            }
+        }
+
+        format!("{label}: todo")
+    }
+
     fn empty_argument<A>(argument: &CallArg<A>) -> CallArg<()> {
         CallArg {
             label: argument.label.clone(),
@@ -852,6 +893,15 @@ impl<'a> FillInMissingLabelledArgs<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
+    fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
+        // We store the current function as the containing function while we traverse
+        // it, allowing handling nested functions correctly.
+        let previous = self.containing_function;
+        self.containing_function = Some(fun);
+        ast::visit::visit_typed_function(self, fun);
+        self.containing_function = previous;
+    }
+
     fn visit_typed_use(&mut self, use_: &'ast TypedUse) {
         // If we're adding labels to a use call the correct location of the
         // function we need to add labels to is `use_right_hand_side_location`.
@@ -881,6 +931,8 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
                 field_map,
                 arguments: arguments.iter().map(Self::empty_argument).collect(),
                 kind: SelectedCallKind::Value,
+                fun_type: Some(fun.type_()),
+                containing_function: self.containing_function,
             })
         }
 
@@ -916,6 +968,8 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
                 field_map,
                 arguments: arguments.iter().map(Self::empty_argument).collect(),
                 kind: SelectedCallKind::Pattern,
+                fun_type: None,
+                containing_function: self.containing_function,
             })
         }
 
@@ -930,6 +984,108 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
             spread,
             type_,
         );
+    }
+}
+
+/// Collects variables that are in scope at a given cursor position.
+struct ScopeVariableCollector {
+    cursor: u32,
+    variables: HashMap<EcoString, Arc<Type>>,
+}
+
+impl ScopeVariableCollector {
+    fn new(cursor: u32) -> Self {
+        Self {
+            cursor,
+            variables: HashMap::new(),
+        }
+    }
+
+    fn collect_from_function(mut self, fun: &TypedFunction) -> HashMap<EcoString, Arc<Type>> {
+        for arg in &fun.arguments {
+            if let Some(name) = arg.get_variable_name() {
+                _ = self.variables.insert(name.clone(), arg.type_.clone());
+            }
+        }
+
+        for statement in &fun.body {
+            self.visit_typed_statement(statement);
+        }
+
+        self.variables
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for ScopeVariableCollector {
+    fn visit_typed_statement(&mut self, statement: &'ast TypedStatement) {
+        // We need to consider variables defined only before the cursor
+        if statement.location().start >= self.cursor {
+            return;
+        }
+
+        ast::visit::visit_typed_statement(self, statement);
+    }
+
+    fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
+        // if cursor is inside the assignment, we only visit the value expression,
+        // because the variable being defined isn't in scope yet.
+        if assignment.location.contains(self.cursor) {
+            self.visit_typed_expr(&assignment.value);
+        } else {
+            self.visit_typed_pattern(&assignment.pattern);
+        }
+    }
+
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        _type_: &'ast Arc<Type>,
+        _kind: &'ast FunctionLiteralKind,
+        _arguments: &'ast [TypedArg],
+        _body: &'ast Vec1<TypedStatement>,
+        _return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        if self.cursor >= location.end {
+            return;
+        }
+
+        // We don't descend into nested functions, as their variables aren't in
+        // our scope
+    }
+
+    fn visit_typed_expr_block(
+        &mut self,
+        location: &'ast SrcSpan,
+        statements: &'ast [TypedStatement],
+    ) {
+        if self.cursor >= location.end {
+            return;
+        }
+        ast::visit::visit_typed_expr_block(self, location, statements);
+    }
+
+    fn visit_typed_pattern_variable(
+        &mut self,
+        _location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        type_: &'ast Arc<Type>,
+        _origin: &'ast VariableOrigin,
+    ) {
+        if !name.starts_with('_') {
+            _ = self.variables.insert(name.clone(), type_.clone());
+        }
+    }
+
+    fn visit_typed_pattern_assign(
+        &mut self,
+        _location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        pattern: &'ast Pattern<Arc<Type>>,
+    ) {
+        self.visit_typed_pattern(pattern);
+        if !name.starts_with('_') {
+            _ = self.variables.insert(name.clone(), pattern.type_().clone());
+        }
     }
 }
 
@@ -1224,7 +1380,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
         );
     }
 
-    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+    fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
         // Since type variable names are local to definitions, any type variables
         // in other parts of the module shouldn't affect what we print for the
         // annotations of this functions. The only variables which cannot clash
@@ -1432,7 +1588,7 @@ impl<'ast> ast::visit::Visit<'ast> for AnnotateTopLevelDefinitions<'_> {
         );
     }
 
-    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+    fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
         // Don't annotate already annotated arguments
         let arguments_to_annotate = fun
             .arguments
@@ -1478,7 +1634,7 @@ struct TypeVariableCollector<'a, 'b> {
 
 /// Collect type variables defined within a function and register them for a
 /// `Printer`
-fn collect_type_variables(printer: &mut Printer<'_>, function: &ast::TypedFunction) {
+fn collect_type_variables(printer: &mut Printer<'_>, function: &TypedFunction) {
     TypeVariableCollector { printer }.visit_typed_function(function);
 }
 
@@ -2850,7 +3006,7 @@ impl<'a> ConvertToUse<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for ConvertToUse<'ast> {
-    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+    fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
         // The cursor has to be inside the last statement of the function to
         // offer the code action.
         if let Some(last) = &fun.body.last()
@@ -3186,7 +3342,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         });
     }
 
-    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+    fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
         let fun_range = self.edits.src_span_to_lsp_range(SrcSpan {
             start: fun.location.start,
             end: fun.end_position,
@@ -3769,7 +3925,7 @@ impl<'a> ExtractConstant<'a> {
 impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
     /// To get the position of the function containing the value or assignment
     /// to extract
-    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+    fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
         let fun_location = fun.location;
         let fun_range = self.edits.src_span_to_lsp_range(SrcSpan {
             start: fun_location.start,
@@ -5309,7 +5465,7 @@ fn code_at(module: &Module, span: SrcSpan) -> &str {
 }
 
 impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
-    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+    fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
         // If we're not inside the function there's no point in exploring its
         // ast further.
         let function_span = SrcSpan {
@@ -5852,7 +6008,7 @@ impl<'a> GenerateFunction<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
-    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+    fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
         self.last_visited_definition_end = Some(fun.end_position);
         ast::visit::visit_typed_function(self, fun);
     }
@@ -7682,7 +7838,7 @@ impl<'a> RemoveEchos<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for RemoveEchos<'ast> {
-    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+    fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
         self.visit_function_statements(&fun.body);
     }
 
@@ -9944,7 +10100,7 @@ impl<'a> ExtractFunction<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
-    fn visit_typed_function(&mut self, function: &'ast ast::TypedFunction) {
+    fn visit_typed_function(&mut self, function: &'ast TypedFunction) {
         let range = self.edits.src_span_to_lsp_range(function.full_location());
 
         if within(self.params.range, range) {
