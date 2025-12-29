@@ -44,7 +44,7 @@ pub fn case<'a>(
             .first()
             .map(|subject| expression_generator
                 .create_cursor_position_observer(subject.location().start))
-            .unwrap_or_else(|| nil()),
+            .unwrap_or_else(nil),
         assignments_to_doc(expression_generator, assignments),
         decision.into_doc()
     ]
@@ -1835,7 +1835,6 @@ fn reassignment_doc(variable_name: EcoString, value: Document<'_>) -> Document<'
 }
 
 fn let_doc(variable_name: EcoString, value: Document<'_>) -> Document<'_> {
-    let var = variable_name.as_str();
     docvec!["let ", variable_name, " = ", value, ";"]
 }
 

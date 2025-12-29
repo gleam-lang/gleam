@@ -30,7 +30,6 @@
 #[cfg(test)]
 mod tests;
 
-
 use std::{cell::RefCell, rc::Rc};
 
 use debug_ignore::DebugIgnore;

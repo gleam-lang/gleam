@@ -458,10 +458,14 @@ fn module_function<'a>(
     let file_attribute = file_attribute(src_path, function, line_numbers);
 
     let mut env = Env::new(module, function_name, line_numbers);
-    let type_printer = TypePrinter::new_with_var_usages(module, collect_type_var_usages(
-        HashMap::new(),
-        std::iter::once(&function.return_type).chain(function.arguments.iter().map(|a| &a.type_)),
-    ));
+    let type_printer = TypePrinter::new_with_var_usages(
+        module,
+        collect_type_var_usages(
+            HashMap::new(),
+            std::iter::once(&function.return_type)
+                .chain(function.arguments.iter().map(|a| &a.type_)),
+        ),
+    );
     let arguments_spec = function
         .arguments
         .iter()
@@ -3301,12 +3305,7 @@ impl<'a> TypePrinter<'a> {
         }
     }
 
-    fn print_type_app(
-        &self,
-        module: &str,
-        name: &str,
-        arguments: &[Arc<Type>],
-    ) -> Document<'a> {
+    fn print_type_app(&self, module: &str, name: &str, arguments: &[Arc<Type>]) -> Document<'a> {
         let arguments = join(
             arguments.iter().map(|argument| self.print(argument)),
             ", ".to_doc(),

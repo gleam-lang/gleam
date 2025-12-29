@@ -432,11 +432,15 @@ where
             TypeScriptDeclarations::Emit
         } else {
             TypeScriptDeclarations::None
-        };        JavaScript::new(&self.out, typescript, sourcemap, prelude_location, &self.root).render(
-            &self.io,
-            modules,
-            self.stdlib_package(),
-        )?;
+        };
+        JavaScript::new(
+            &self.out,
+            typescript,
+            sourcemap,
+            prelude_location,
+            &self.root,
+        )
+        .render(&self.io, modules, self.stdlib_package())?;
 
         if self.copy_native_files {
             self.copy_project_native_files(&self.out, &mut written)?;

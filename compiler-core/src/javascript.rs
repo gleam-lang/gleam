@@ -44,6 +44,9 @@ pub enum JavaScriptCodegenTarget {
     TypeScriptDeclarations,
 }
 
+/// A cursor position observer that does nothing.
+/// Mainly used to allow us to create a cursor position observer that does
+/// nothing without having to check if the source map builder is present.
 #[derive(Debug, Clone, Copy)]
 pub struct NullCursorPositionObserver;
 
@@ -53,6 +56,10 @@ impl CursorPositionObserver for NullCursorPositionObserver {
     }
 }
 
+/// A cursor position observer that observes the cursor position and adds it
+/// to the source map builder. When notified it will take the destination
+/// location and map it to the initial source location given when
+/// creating the observer.
 pub struct SourceMapCursorPositionObserver {
     source_start_location: LineColumn,
     source_map_builder: Rc<RefCell<sourcemap::SourceMapBuilder>>,
@@ -86,6 +93,8 @@ impl CursorPositionObserver for SourceMapCursorPositionObserver {
             // SourceMapBuilder expects 0-based line and column numbers and we use 1-based ones
             self.source_start_location.line - 1,
             self.source_start_location.column - 1,
+            // Since we have a 1-1 mapping between source and destination locations
+            // We always use 0 for the source index.
             Some(0),
             None,
             false,
@@ -138,9 +147,12 @@ impl<'a> Generator<'a> {
             typescript,
             source_map_builder: if source_map {
                 let module_name = module.name.clone();
+                // Need the absolute path to the module to be able to map the
+                // destination location back to the source location.
                 let src_path_str = path.as_str();
                 let output_path = format!("{module_name}.mjs");
-                let mut source_map_builder = sourcemap::SourceMapBuilder::new(Some(&output_path.clone()));
+                let mut source_map_builder =
+                    sourcemap::SourceMapBuilder::new(Some(&output_path.clone()));
                 let _ = source_map_builder.add_source(src_path_str);
                 DebugIgnore(Some(Rc::new(RefCell::new(source_map_builder))))
             } else {
@@ -191,7 +203,7 @@ impl<'a> Generator<'a> {
                     .name
                     .as_str()
                     .split('/')
-                    .last()
+                    .next_back()
                     .expect("JavaScript generator could not identify imported module name.");
 
                 docvec!["//# sourceMappingURL=", module, ".mjs.map", line()]
@@ -456,7 +468,7 @@ impl<'a> Generator<'a> {
         // If the custom type is private or opaque, we don't need to generate API
         // functions for it.
         if publicity.is_private() {
-            return docvec![class_definition];
+            return class_definition;
         }
 
         let constructor_definition = self.variant_constructor_definition(constructor, type_name);
@@ -641,7 +653,12 @@ impl<'a> Generator<'a> {
         let sourcemap_cursor_position_observer =
             self.create_cursor_position_observer(constructor.location.start);
 
-        let head = docvec![sourcemap_cursor_position_observer, head, &constructor.name, " extends $CustomType {"];
+        let head = docvec![
+            sourcemap_cursor_position_observer,
+            head,
+            &constructor.name,
+            " extends $CustomType {"
+        ];
 
         if constructor.arguments.is_empty() {
             return head.append("}");
@@ -1009,21 +1026,17 @@ pub fn module(config: ModuleConfig<'_>) -> (String, Option<SourceMap>) {
         let DebugIgnore(builder) = generator.source_map_builder;
         (document.to_pretty_string(80), builder)
     };
-    let source_map = if let Some(builder) = sourcemap_builder {
+    let source_map = sourcemap_builder.map(|builder| {
         // We have completed the generation of the module, so we can now take ownership of the builder.
-        Some(
-            Rc::try_unwrap(builder)
-                .unwrap_or_else(|_| panic!("Failed to take ownership of sourcemap builder"))
-                .into_inner()
-                .into_sourcemap(),
-        )
-    } else {
-        None
-    };
+        Rc::try_unwrap(builder)
+            .unwrap_or_else(|_| panic!("Failed to take ownership of sourcemap builder"))
+            .into_inner()
+            .into_sourcemap()
+    });
     (output, source_map)
 }
 
-pub fn ts_declaration<'a>(module: &TypedModule) -> String {
+pub fn ts_declaration(module: &TypedModule) -> String {
     let document = typescript::TypeScriptGenerator::new(module).compile();
     document.to_pretty_string(80)
 }
