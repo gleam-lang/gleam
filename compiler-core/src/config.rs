@@ -981,10 +981,43 @@ pub struct DocsPage {
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
+#[serde(untagged)]
+pub enum Href {
+    #[serde(with = "uri_serde")]
+    External(Uri),
+    Internal(std::path::PathBuf),
+}
+
+impl fmt::Display for Href {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Href::External(uri) => write!(f, "{}", uri),
+            Href::Internal(path) => write!(f, "{}", path.display()),
+        }
+    }
+}
+
+impl Href {
+    pub fn is_internal(&self) -> bool {
+        match self {
+            Href::Internal(_) => true,
+            Href::External(_) => false,
+        }
+    }
+
+    // only URIs are considered as external links
+    pub fn as_uri(&self) -> Option<Uri> {
+        match self {
+            Href::External(uri) => Some(uri.clone()),
+            Href::Internal(_) => None,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct Link {
     pub title: String,
-    #[serde(with = "uri_serde")]
-    pub href: Uri,
+    pub href: Href,
 }
 
 // Note we don't use http-serde since we also want to validate the scheme and host is set.
@@ -1141,7 +1174,7 @@ licences = ["Apache-2.0", "MIT"]
 description = "Pretty complex config"
 target = "erlang"
 repository = { type = "github", user = "example", repo = "my_dep" }
-links = [{ title = "Home page", href = "https://example.com" }]
+links = [{ title = "Home page", href = "https://example.com" }, { title = "Internal link", href = "./internal" }, { title = "Second internal link", href = "../internal" }, { title = "Third internal link", href = "internal" } ]
 internal_modules = ["my_app/internal"]
 gleam = ">= 0.30.0"
 

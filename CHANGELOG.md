@@ -26,3 +26,7 @@
 - The compiler now correctly tracks the minimum required version for expressions
   in `BitArray`s' `size` option to be `>= 1.12.0`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Made link href validation in gleam.toml files less strict so developers can
+  use relative links for internal documentation.
+  ([Tristan-Mihai Radulescu](https://github.com/Courtcircuits))

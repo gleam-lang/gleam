@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/config.rs
-assertion_line: 1171
 expression: output
-snapshot_kind: text
 ---
 --- GLEAM.TOML
 
@@ -12,7 +10,7 @@ licences = ["Apache-2.0", "MIT"]
 description = "Pretty complex config"
 target = "erlang"
 repository = { type = "github", user = "example", repo = "my_dep" }
-links = [{ title = "Home page", href = "https://example.com" }]
+links = [{ title = "Home page", href = "https://example.com" }, { title = "Internal link", href = "./internal" }, { title = "Second internal link", href = "../internal" }, { title = "Third internal link", href = "internal" } ]
 internal_modules = ["my_app/internal"]
 gleam = ">= 0.30.0"
 
@@ -86,6 +84,18 @@ allow_read = ["./database.sqlite"]
     {
       "title": "Home page",
       "href": "https://example.com/"
+    },
+    {
+      "title": "Internal link",
+      "href": "./internal"
+    },
+    {
+      "title": "Second internal link",
+      "href": "../internal"
+    },
+    {
+      "title": "Third internal link",
+      "href": "internal"
     }
   ],
   "erlang": {
