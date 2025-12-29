@@ -872,10 +872,10 @@ impl<'a> FillInMissingLabelledArgs<'a> {
                 arg_types.get(index as usize).cloned()
             });
 
-            if let Some(expected) = expected_type {
-                if expected.same_as(var_type) {
-                    return format!("{label}:");
-                }
+            if let Some(expected) = expected_type
+                && expected.same_as(var_type)
+            {
+                return format!("{label}:");
             }
         }
 
@@ -1038,17 +1038,13 @@ impl<'ast> ast::visit::Visit<'ast> for ScopeVariableCollector {
 
     fn visit_typed_expr_fn(
         &mut self,
-        location: &'ast SrcSpan,
+        _location: &'ast SrcSpan,
         _type_: &'ast Arc<Type>,
         _kind: &'ast FunctionLiteralKind,
         _arguments: &'ast [TypedArg],
         _body: &'ast Vec1<TypedStatement>,
         _return_annotation: &'ast Option<ast::TypeAst>,
     ) {
-        if self.cursor >= location.end {
-            return;
-        }
-
         // We don't descend into nested functions, as their variables aren't in
         // our scope
     }
