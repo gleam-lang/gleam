@@ -790,11 +790,27 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn type_arguments<'a>(&mut self, arguments: &'a [TypeAst], location: &SrcSpan) -> Document<'a> {
+        let mut has_comments = false;
+
         let arguments = arguments
             .iter()
-            .map(|type_| self.type_ast(type_))
+            .map(|type_| {
+                // Grab any comments we have and ensure we insert a line between the comment and type
+                let comments: Vec<_> = self.pop_comments(type_.location().start).collect();
+                has_comments = has_comments || !comments.is_empty();
+                match printed_comments(comments, false) {
+                    Some(c) => c.append(line()).append(self.type_ast(type_)),
+                    None => self.type_ast(type_),
+                }
+            })
             .collect_vec();
-        self.wrap_arguments(arguments, location.end)
+
+        // When comments are present ensure the force_break isn't propagated to parent
+        if has_comments {
+            self.wrap_arguments_with_line_breaks(arguments, location.end)
+        } else {
+            self.wrap_arguments(arguments, location.end)
+        }
     }
 
     pub fn type_alias<'a, A>(&mut self, alias: &'a TypeAlias<A>) -> Document<'a> {
@@ -3011,6 +3027,30 @@ impl<'comments> Formatter<'comments> {
                 .append(break_(",", ""))
                 .append(")"),
         }
+    }
+
+    fn wrap_arguments_with_line_breaks<'a, I>(
+        &mut self,
+        arguments: I,
+        comments_limit: u32,
+    ) -> Document<'a>
+    where
+        I: IntoIterator<Item = Document<'a>>,
+    {
+        let doc = break_("(", "(")
+            .append(line())
+            .append(join(arguments, ",".to_doc().append(line())))
+            .append(",");
+
+        // Include trailing comments if there are any
+        let comments = self.pop_comments(comments_limit);
+        match printed_comments(comments, false) {
+            Some(trailing_comments) => doc.append(line()).append(trailing_comments),
+            None => doc,
+        }
+        .nest(INDENT)
+        .append(line())
+        .append(")")
     }
 
     /// Given some regular comments it pretty prints those with any respective
