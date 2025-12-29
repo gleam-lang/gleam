@@ -1,5 +1,5 @@
 use crate::{
-    configuration::{Configuration, InlayHintsConfig},
+    configuration::{UserConfiguration, InlayHintsConfig},
     tests::{LanguageServerTestIO, TestProject, setup_engine},
 };
 use lsp_types::{InlayHintParams, Position, Range};
@@ -248,7 +248,7 @@ fn inlay_hints_for_config(src: &str, inlay_hints_config: InlayHintsConfig) -> St
     let mut engine = setup_engine(&io);
     {
         let mut config = engine.user_config.write().expect("cannot write config");
-        *config = Configuration {
+        *config = UserConfiguration {
             inlay_hints: inlay_hints_config,
             ..Default::default()
         };

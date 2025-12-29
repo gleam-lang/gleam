@@ -52,7 +52,7 @@ use super::{
     },
     compiler::LspProjectCompiler,
     completer::Completer,
-    configuration::Configuration,
+    configuration::UserConfiguration,
     files::FileSystemProxy,
     inlay_hints,
     progress::ProgressReporter,
@@ -101,7 +101,7 @@ pub struct LanguageServerEngine<IO, Reporter> {
     hex_deps: HashSet<EcoString>,
 
     /// Configuration the user has set in their editor.
-    pub(crate) user_config: Arc<RwLock<Configuration>>,
+    pub(crate) user_config: Arc<RwLock<UserConfiguration>>,
 }
 
 impl<'a, IO, Reporter> LanguageServerEngine<IO, Reporter>
@@ -122,7 +122,7 @@ where
         progress_reporter: Reporter,
         io: FileSystemProxy<IO>,
         paths: ProjectPaths,
-        user_config: Arc<RwLock<Configuration>>,
+        user_config: Arc<RwLock<UserConfiguration>>,
     ) -> Result<Self> {
         let locker = io.inner().make_locker(&paths, config.target)?;
 

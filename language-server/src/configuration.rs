@@ -3,7 +3,7 @@ use serde::Deserialize;
 #[derive(Debug, Default, Clone, Deserialize, PartialEq, Eq)]
 #[serde(default)]
 #[serde(rename_all = "camelCase")]
-pub struct Configuration {
+pub struct UserConfiguration {
     pub inlay_hints: InlayHintsConfig,
 }
 

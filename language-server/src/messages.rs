@@ -1,4 +1,4 @@
-use crate::configuration::Configuration;
+use crate::configuration::UserConfiguration;
 use camino::Utf8PathBuf;
 use lsp::{
     notification::{DidChangeWatchedFiles, DidOpenTextDocument},
@@ -39,8 +39,17 @@ pub enum Request {
 }
 
 #[derive(Debug)]
+/// Responses from the language server client
 pub enum Response {
-    Configuration(Configuration),
+    /// Content for a response to a `workspace/configuration` request
+    Configuration(UserConfiguration),
+}
+
+#[derive(Debug)]
+/// Handlers for responses from the language server client
+pub enum ResponseHandler {
+    /// Handle a response to a `workspace/configuration` request
+    UpdateConfiguration,
 }
 
 impl Request {
@@ -109,7 +118,7 @@ pub enum Notification {
     /// gleam.toml has changed.
     ConfigFileChanged { path: Utf8PathBuf },
     /// The user edited a client config option
-    ConfigChanged,
+    UserConfigurationChanged,
     /// It's time to compile all open projects.
     CompilePlease,
 }
@@ -158,7 +167,7 @@ impl Notification {
             }
 
             "workspace/didChangeConfiguration" => {
-                Some(Message::Notification(Notification::ConfigChanged))
+                Some(Message::Notification(Notification::UserConfigurationChanged))
             }
 
             _ => None,
@@ -178,6 +187,8 @@ pub enum Next {
 /// - A short pause in messages is detected, indicating the programmer has
 ///   stopped typing for a moment and would benefit from feedback.
 /// - A request type message is received, which requires an immediate response.
+///
+/// If a response is received, it will be handled by a previously registered response handler.
 #[derive(Debug)]
 pub struct MessageBuffer {
     messages: Vec<Message>,
@@ -272,8 +283,9 @@ impl MessageBuffer {
     }
 
     fn configuration_update_received(&mut self, result: serde_json::Value) -> Next {
-        let parsed_update_items: Result<(Configuration,), _> = serde_json::from_value(result);
+        let parsed_update_items: Result<(UserConfiguration,), _> = serde_json::from_value(result);
         let Ok((parsed_config,)) = parsed_update_items else {
+            // TODO how can we present an error here without crashing with a panic?
             return Next::MorePlease;
         };
 
@@ -296,7 +308,6 @@ impl MessageBuffer {
             }
         }
 
-        // We do not use or expect responses from the client currently.
         Next::MorePlease
     }
 
@@ -339,9 +350,4 @@ where
     notification
         .extract::<N::Params>(N::METHOD)
         .expect("cast notification")
-}
-
-#[derive(Debug)]
-pub enum ResponseHandler {
-    UpdateConfiguration,
 }

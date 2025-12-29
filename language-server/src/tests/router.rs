@@ -3,7 +3,7 @@ use std::time::SystemTime;
 
 use gleam_core::{Error, io::FileSystemWriter, paths::ProjectPaths};
 
-use crate::{files::FileSystemProxy, tests::Action, configuration::Configuration};
+use crate::{files::FileSystemProxy, tests::Action, configuration::UserConfiguration};
 use super::LanguageServerTestIO;
 
 type Router = crate::router::Router<LanguageServerTestIO, LanguageServerTestIO>;
@@ -109,7 +109,7 @@ fn compile(router: &mut Router, paths: &ProjectPaths) -> Result<(), Error> {
 
 fn set_up_minimal_router(paths: &ProjectPaths) -> (LanguageServerTestIO, Router) {
     let io = LanguageServerTestIO::new();
-    let config: Arc<RwLock<Configuration>> = Default::default();
+    let config: Arc<RwLock<UserConfiguration>> = Default::default();
     let router = Router::new(io.clone(), FileSystemProxy::new(io.clone()), config);
 
     let toml = r#"name = "wibble"

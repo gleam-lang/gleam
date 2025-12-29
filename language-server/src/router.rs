@@ -14,7 +14,7 @@ use std::{
 use camino::{Utf8Path, Utf8PathBuf};
 
 use super::{
-    DownloadDependencies, MakeLocker, configuration::Configuration, engine::LanguageServerEngine, feedback::FeedbackBookKeeper,
+    DownloadDependencies, MakeLocker, configuration::UserConfiguration, engine::LanguageServerEngine, feedback::FeedbackBookKeeper,
     files::FileSystemProxy, progress::ProgressReporter,
 };
 
@@ -30,7 +30,7 @@ pub(crate) struct Router<IO, Reporter> {
     io: FileSystemProxy<IO>,
     engines: HashMap<Utf8PathBuf, Project<IO, Reporter>>,
     progress_reporter: Reporter,
-    user_config: Arc<RwLock<Configuration>>,
+    user_config: Arc<RwLock<UserConfiguration>>,
 }
 
 impl<IO, Reporter> Router<IO, Reporter>
@@ -49,7 +49,7 @@ where
     pub fn new(
         progress_reporter: Reporter,
         io: FileSystemProxy<IO>,
-        user_config: Arc<RwLock<Configuration>>,
+        user_config: Arc<RwLock<UserConfiguration>>,
     ) -> Self {
         Self {
             io,
@@ -138,7 +138,7 @@ where
         path: Utf8PathBuf,
         io: FileSystemProxy<IO>,
         progress_reporter: Reporter,
-        user_config: Arc<RwLock<Configuration>>,
+        user_config: Arc<RwLock<UserConfiguration>>,
     ) -> Result<Project<IO, Reporter>, Error> {
         tracing::info!(?path, "creating_new_language_server_engine");
         let paths = ProjectPaths::new(path);

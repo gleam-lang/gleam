@@ -1,6 +1,6 @@
 use super::{
     DownloadDependencies, MakeLocker,
-    configuration::Configuration,
+    configuration::UserConfiguration,
     engine::{self, LanguageServerEngine},
     feedback::{Feedback, FeedbackBookKeeper},
     files::FileSystemProxy,
@@ -48,7 +48,7 @@ pub struct LanguageServer<'a, IO> {
     changed_projects: HashSet<Utf8PathBuf>,
     io: FileSystemProxy<IO>,
     message_buffer: MessageBuffer,
-    config: Arc<RwLock<Configuration>>,
+    config: Arc<RwLock<UserConfiguration>>,
 }
 
 impl<'a, IO> LanguageServer<'a, IO>
@@ -66,7 +66,7 @@ where
         let reporter = ConnectionProgressReporter::new(connection, &initialise_params);
         let io = FileSystemProxy::new(io);
 
-        let config: Arc<RwLock<Configuration>> = Default::default();
+        let config: Arc<RwLock<UserConfiguration>> = Default::default();
         let router = Router::new(reporter, io.clone(), config.clone());
 
         Ok(Self {
@@ -83,8 +83,8 @@ where
 
     pub fn run(&mut self) -> Result<()> {
         self.start_watching_gleam_toml();
-        self.start_watching_config();
-        let _ = self.request_configuration();
+        self.start_watching_user_configuration();
+        self.request_configuration();
 
         loop {
             match self.message_buffer.receive(*self.connection) {
@@ -133,7 +133,7 @@ where
         self.connection
             .sender
             .send(lsp_server::Message::Request(request))
-            .unwrap_or_else(|_| panic!("send {method}"));
+            .expect(format!("send {method}").as_str());
     }
 
     fn handle_request(&mut self, id: lsp_server::RequestId, request: Request) {
@@ -181,7 +181,10 @@ where
                 self.cache_file_in_memory(path, text)
             }
             Notification::ConfigFileChanged { path } => self.watched_files_changed(path),
-            Notification::ConfigChanged => self.request_configuration(),
+            Notification::UserConfigurationChanged => {
+                self.request_configuration();
+                Feedback::none()
+            }
         };
         self.publish_feedback(feedback);
     }
@@ -217,7 +220,7 @@ where
         }
     }
 
-    fn start_watching_config(&mut self) {
+    fn start_watching_user_configuration(&mut self) {
         let supports_configuration = self
             .initialise_params
             .capabilities
@@ -228,7 +231,7 @@ where
             .unwrap_or(false);
 
         if !supports_configuration {
-            tracing::warn!("lsp_client_cannot_watch_configuration");
+            tracing::warn!("lsp_client_cannot_watch_user_configuration");
             return;
         }
 
@@ -390,7 +393,7 @@ where
         }
     }
 
-    fn request_configuration(&mut self) -> Feedback {
+    fn request_configuration(&mut self) {
         let supports_configuration = self
             .initialise_params
             .capabilities
@@ -401,7 +404,7 @@ where
 
         if !supports_configuration {
             tracing::warn!("lsp_client_cannot_request_configuration");
-            return Feedback::default();
+            return;
         }
 
         self.send_request(
@@ -414,8 +417,6 @@ where
             },
             Some(ResponseHandler::UpdateConfiguration),
         );
-
-        Feedback::default()
     }
 
     fn path_error_response(

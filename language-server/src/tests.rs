@@ -23,7 +23,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use itertools::Itertools;
 use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
 
-use super::configuration::Configuration;
+use super::configuration::UserConfiguration;
 use gleam_core::{
     Result,
     config::PackageConfig,
@@ -411,7 +411,7 @@ fn setup_engine(
         io.clone(),
         FileSystemProxy::new(io.clone()),
         io.paths.clone(),
-        Arc::new(RwLock::new(Configuration::default())),
+        Arc::new(RwLock::new(UserConfiguration::default())),
     )
     .unwrap()
 }

@@ -35,6 +35,7 @@ fn default_inlay_hint(line_numbers: &LineNumbers, offset: u32, label: String) ->
 }
 
 impl InlayHintsVisitor<'_> {
+    /// Add an inlay hint for function parameter bindings
     pub fn push_binding_annotation(
         &mut self,
         type_: &Type,
@@ -53,6 +54,7 @@ impl InlayHintsVisitor<'_> {
         self.hints.push(hint);
     }
 
+    /// Add an inlay hint for the return type of a function
     pub fn push_return_annotation(
         &mut self,
         type_: &Type,
@@ -117,8 +119,8 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
         body: &'ast vec1::Vec1<gleam_core::ast::TypedStatement>,
         return_annotation: &'ast Option<TypeAst>,
     ) {
-        for st in body {
-            self.visit_typed_statement(st);
+        for statement in body {
+            self.visit_typed_statement(statement);
         }
 
         let gleam_core::ast::FunctionLiteralKind::Anonymous { head } = kind else {
@@ -126,15 +128,13 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
         };
 
         if self.config.function_parameter_types {
-            for arg in args {
-                self.push_binding_annotation(&arg.type_, arg.annotation.as_ref(), &arg.location);
+            for argument in args {
+                self.push_binding_annotation(&argument.type_, argument.annotation.as_ref(), &argument.location);
             }
         }
 
-        if self.config.function_return_types {
-            if let Some((_arguments, ret_type)) = type_.fn_types() {
-                self.push_return_annotation(&ret_type, return_annotation.as_ref(), head);
-            }
+        if self.config.function_return_types && let Some((_arguments, ret_type)) = type_.fn_types() {
+            self.push_return_annotation(&ret_type, return_annotation.as_ref(), head);
         }
     }
 
@@ -158,10 +158,10 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
 
         let mut prev_hint: Option<(u32, Option<InlayHint>)> = None;
 
-        let assigments_values =
+        let assignments_values =
             std::iter::once(first_value).chain(assignments.iter().map(|p| &p.0));
 
-        for assign in assigments_values {
+        for assign in assignments_values {
             let this_line: u32 = self
                 .line_numbers
                 .line_and_column_number(assign.location.end)
