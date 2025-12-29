@@ -2137,6 +2137,77 @@ pub fn wibble(arg1 arg1, arg2 arg2) { Nil }
 }
 
 #[test]
+fn fill_labels_uses_variable_in_scope_with_matching_type() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub type Player {
+    Player(name: String, team: String)
+}
+
+pub fn main() {
+    let name = "Priya"
+    Player(team: "BLU")
+}
+"#,
+        find_position_of("Player").nth_occurrence(3).to_selection(),
+    );
+}
+
+#[test]
+fn fill_labels_falls_back_to_todo_when_type_does_not_match() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub type Player {
+    Player(name: String, team: String)
+}
+
+pub fn main() {
+    let name = 1
+    Player(team: "BLU")
+}
+"#,
+        find_position_of("Player").nth_occurrence(3).to_selection(),
+    );
+}
+
+#[test]
+fn fill_labels_uses_function_argument_in_scope() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub type Player {
+    Player(name: String, team: String)
+}
+
+pub fn create_player(name: String) {
+    Player(team: "BLU")
+}
+"#,
+        find_position_of("Player").nth_occurrence(3).to_selection(),
+    );
+}
+
+#[test]
+fn fill_labels_ignores_variable_defined_after_call() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub type Player {
+    Player(name: String, team: String)
+}
+
+pub fn main() {
+    Player(team: "BLU")
+    let name = "Priya"
+}
+"#,
+        find_position_of("Player").nth_occurrence(3).to_selection(),
+    );
+}
+
+#[test]
 fn use_label_shorthand_works_for_nested_calls() {
     assert_code_action!(
         USE_LABEL_SHORTHAND_SYNTAX,
