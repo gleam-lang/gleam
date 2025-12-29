@@ -147,6 +147,13 @@ jobs:
           echo "ok: Architecture match"
         if: ${{ matrix.run-integration-tests }}
 
+      - name: Install Cargo Insta
+        uses: clechasseur/rs-cargo@v4
+        with:
+          command: install
+          args: cargo-insta --locked
+        if: ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
+
       - name: Run tests
         uses: clechasseur/rs-cargo@v4
         with:
@@ -163,6 +170,18 @@ jobs:
                   && ' ')
                   || '--exclude test-output' }}
           tool: ${{ matrix.cargo-tool }}
+        if: ${{ matrix.target != 'x86_64-unknown-linux-gnu' }}
+
+      - name: Run tests and check unreferenced insta snapshots
+        uses: clechasseur/rs-cargo@v4
+        with:
+          command: insta
+          args: >-
+            test
+            --unreferenced=reject
+            --workspace
+            --target ${{ matrix.target }}
+        if: ${{ matrix.target == 'x86_64-unknown-linux-gnu' }}
 
       - name: test/project_erlang (non-windows)
         run: |
