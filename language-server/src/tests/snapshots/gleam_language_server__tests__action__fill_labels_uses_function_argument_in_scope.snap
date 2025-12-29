@@ -1,0 +1,25 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub type Player {\n    Player(name: String, team: String)\n}\n\npub fn create_player(name: String) {\n    Player(team: \"BLU\")\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Player {
+    Player(name: String, team: String)
+}
+
+pub fn create_player(name: String) {
+    Player(team: "BLU")
+    ↑                  
+}
+
+
+----- AFTER ACTION
+
+pub type Player {
+    Player(name: String, team: String)
+}
+
+pub fn create_player(name: String) {
+    Player(team: "BLU", name:)
+}
