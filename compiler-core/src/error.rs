@@ -205,6 +205,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Packages not exist: {}", packages.iter().join(", "))]
     RemovedPackagesNotExist { packages: Vec<String> },
 
+    #[error("Packages to update not exist: {}", packages.iter().join(", "))]
+    PackagesToUpdateNotExist { packages: Vec<EcoString> },
+
     #[error("unable to find project root")]
     UnableToFindProjectRoot { path: String },
 
@@ -1011,6 +1014,24 @@ If you want to overwrite these files, delete them and run the command again.
                 text: format!(
                     "These packages are not dependencies of your package so they could not
 be removed.
+
+{}
+",
+                    packages
+                        .iter()
+                        .map(|p| format!("  - {}", p.as_str()))
+                        .join("\n")
+                ),
+                level: Level::Error,
+                hint: None,
+                location: None,
+            }],
+
+            Error::PackagesToUpdateNotExist { packages } => vec![Diagnostic {
+                title: "Packages to update not found".into(),
+                text: format!(
+                    "These packages are not dependencies of your package so they could not
+be updated.
 
 {}
 ",

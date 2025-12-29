@@ -26,3 +26,7 @@
 - The compiler now correctly tracks the minimum required version for expressions
   in `BitArray`s' `size` option to be `>= 1.12.0`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Added an error message when attempting to update packages that are not dependencies
+  of the project, instead of failing silently.
+  ([Etienne Boutet](https://github.com/EtienneBoutet)) and ([Vladislav Shakitskiy](https://github.com/vshakitskiy))
