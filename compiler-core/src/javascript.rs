@@ -876,8 +876,8 @@ impl<'a> Generator<'a> {
         };
 
         Some(docvec![
-            self.create_cursor_position_observer(location.start),
             jsdoc,
+            self.create_cursor_position_observer(location.start),
             head,
             maybe_escape_identifier(name),
             " = ",

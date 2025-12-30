@@ -1,22 +1,25 @@
 ---
 source: compiler-core/src/javascript/tests/sourcemaps.rs
-expression: "\n// my add function\npub fn add_2(x) {\n  x + 2\n}"
+expression: "\n/// my add function\npub fn add_2(x) {\n  x + 2\n}"
 ---
 ----- SOURCE CODE
 
-// my add function
+/// my add function
 pub fn add_2(x) {
   x + 2
 }
 
 ----- COMPILED JAVASCRIPT
 //# sourceMappingURL=mod.mjs.map
+/**
+ * my add function
+ */
 export function add_2(x) {
   return x + 2;
 }
 ----- SOURCE MAP
 Mappings Raw:
-2:0 -> 1:0
-3:2 -> 2:2
-3:2 -> 2:9
-3:6 -> 2:13
+2:0 -> 4:0
+3:2 -> 5:2
+3:2 -> 5:9
+3:6 -> 5:13

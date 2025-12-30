@@ -1,20 +1,28 @@
 ---
 source: compiler-core/src/javascript/tests/sourcemaps.rs
-expression: "\n// my constant\npub const wibble = 1\nconst wobble = 2\npub const wabble = 3"
+expression: "\n/// my constant\npub const wibble = 1\n/// wobble\nconst wobble = 2\n/// wabble\npub const wabble = 3"
 ---
 ----- SOURCE CODE
 
-// my constant
+/// my constant
 pub const wibble = 1
+/// wobble
 const wobble = 2
+/// wabble
 pub const wabble = 3
 
 ----- COMPILED JAVASCRIPT
 //# sourceMappingURL=mod.mjs.map
+/**
+ * my constant
+ */
 export const wibble = 1;
 
+/**
+ * wabble
+ */
 export const wabble = 3;
 ----- SOURCE MAP
 Mappings Raw:
-2:0 -> 1:0
-4:0 -> 3:0
+2:0 -> 4:0
+6:0 -> 9:0

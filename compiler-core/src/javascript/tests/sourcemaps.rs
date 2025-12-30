@@ -4,7 +4,7 @@ use crate::assert_source_map;
 fn sourcemap_function_definition() {
     assert_source_map!(
         "
-// my add function
+/// my add function
 pub fn add_2(x) {
   x + 2
 }"
@@ -15,7 +15,7 @@ pub fn add_2(x) {
 fn sourcemap_function_definition_with_variable_assignment() {
     assert_source_map!(
         "
-// my function
+/// my function
 pub fn wibble() {
   let wibble = 1
   wibble + 2
@@ -27,10 +27,13 @@ pub fn wibble() {
 fn sourcemap_custom_type_definition() {
     assert_source_map!(
         "
-// my custom type
+/// my custom type
 pub type Wibble {
+  /// Wibble
   Wibble
+  /// Wobble
   Wobble(field: Int)
+  /// Wabble
   Wabble(Wibble)
 }"
     )
@@ -40,9 +43,11 @@ pub type Wibble {
 fn sourcemap_module_constant() {
     assert_source_map!(
         "
-// my constant
+/// my constant
 pub const wibble = 1
+/// wobble
 const wobble = 2
+/// wabble
 pub const wabble = 3"
     )
 }
