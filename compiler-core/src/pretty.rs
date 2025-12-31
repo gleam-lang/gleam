@@ -32,7 +32,6 @@ mod tests;
 
 use std::{cell::RefCell, rc::Rc};
 
-use debug_ignore::DebugIgnore;
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use num_bigint::BigInt;
@@ -185,7 +184,7 @@ pub fn join<'a>(
 /// A trait that allows for objects to observe the cursor position as it is being formatted.
 /// This is useful for any operations that need to track the exact position a document is
 /// being written to in a buffer such as for source mapping.
-pub trait CursorPositionObserver {
+pub trait CursorPositionObserver : std::fmt::Debug {
     fn observe_cursor_position(&mut self, line: isize, width: isize);
 }
 
@@ -278,7 +277,7 @@ pub enum Document<'a> {
     /// the cursor position and perform actions based on it, such as recording
     /// the span of the node in the generated source code for a source mapping.
     CursorPositionObserver {
-        observer: DebugIgnore<Rc<RefCell<dyn CursorPositionObserver>>>,
+        observer: Rc<RefCell<dyn CursorPositionObserver>>,
     },
 }
 

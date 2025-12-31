@@ -110,6 +110,7 @@ pub struct Generator<'a> {
     module_scope: im::HashMap<EcoString, usize>,
     current_module_name_segments_count: usize,
     typescript: TypeScriptDeclarations,
+    // Debug ignored since SourceMapBuilder doesn't implement debug
     source_map_builder: DebugIgnore<Option<Rc<RefCell<sourcemap::SourceMapBuilder>>>>,
     stdlib_package: StdlibPackage,
     /// Relative path to the module, surrounded in `"`s to make it a string, and with `\`s escaped
@@ -180,9 +181,9 @@ impl<'a> Generator<'a> {
     }
 
     fn sourcemap_reference(&self) -> Document<'a> {
-        match self.source_map_builder {
-            DebugIgnore(None) => "".to_doc(),
-            DebugIgnore(Some(_)) => {
+        match self.source_map_builder.0 {
+            None => "".to_doc(),
+            Some(_) => {
                 // Get the name of the module relative the directory (similar to basename)
                 let module = self
                     .module
@@ -1036,7 +1037,7 @@ pub fn module(config: ModuleConfig<'_>) -> (String, Option<SourceMap>) {
     let (output, sourcemap_builder) = {
         let mut generator = Generator::new(config);
         let document = generator.compile();
-        let DebugIgnore(builder) = generator.source_map_builder;
+        let builder = generator.source_map_builder.0;
         (document.to_pretty_string(80), builder)
     };
     let source_map = sourcemap_builder.map(|builder| {
@@ -1061,13 +1062,13 @@ fn create_cursor_position_observer<'a>(
 ) -> Document<'a> {
     let start_location = line_numbers.line_and_column_number(start_index);
     Document::CursorPositionObserver {
-        observer: DebugIgnore(match builder {
+        observer: match builder {
             None => Rc::new(RefCell::new(NullCursorPositionObserver)),
             Some(builder) => Rc::new(RefCell::new(SourceMapCursorPositionObserver::new(
                 start_location,
                 builder.clone(),
             ))),
-        }),
+        },
     }
 }
 
