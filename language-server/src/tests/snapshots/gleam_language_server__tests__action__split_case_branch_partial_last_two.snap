@@ -17,9 +17,9 @@ pub fn go(n: Int) {
 
 pub fn go(n: Int) {
   case n {
+    1 | 2 -> todo
     3 -> todo
     4 -> todo
-    1 | 2 -> todo
     _ -> todo
   }
 }
