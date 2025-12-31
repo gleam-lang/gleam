@@ -41,7 +41,7 @@ use super::{
         FixTruncatedBitArraySegment, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
         GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase, MergeCaseBranches,
         PatternMatchOnValue, RedundantTupleInCaseSubject, RemoveBlock, RemoveEchos,
-        RemovePrivateOpaque, RemoveUnreachableCaseClauses, RemoveUnusedImports,
+        RemovePrivateOpaque, RemoveUnreachableCaseClauses, RemoveUnusedImports, SplitCaseBranches,
         UseLabelShorthandSyntax, WrapInBlock, code_action_add_missing_patterns,
         code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
@@ -418,6 +418,7 @@ where
                 &mut actions,
             );
             actions.extend(MergeCaseBranches::new(module, &lines, &params).code_actions());
+            actions.extend(SplitCaseBranches::new(module, &lines, &params).code_actions());
             actions.extend(FixBinaryOperation::new(module, &lines, &params).code_actions());
             actions
                 .extend(FixTruncatedBitArraySegment::new(module, &lines, &params).code_actions());

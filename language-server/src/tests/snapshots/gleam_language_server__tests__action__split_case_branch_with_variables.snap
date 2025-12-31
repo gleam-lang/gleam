@@ -1,0 +1,24 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn go(result: Result(Int, Int)) {\n  case result {\n    Ok(n) | Error(n) -> n\n    _ -> 0\n  }\n}"
+---
+----- BEFORE ACTION
+
+pub fn go(result: Result(Int, Int)) {
+  case result {
+    Ok(n) | Error(n) -> n
+    ▔▔▔▔▔▔▔▔↑            
+    _ -> 0
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn go(result: Result(Int, Int)) {
+  case result {
+    Ok(n) -> n
+    Error(n) -> n
+    _ -> 0
+  }
+}
