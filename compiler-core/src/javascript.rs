@@ -162,20 +162,6 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn create_cursor_position_observer(&self, start_index: u32) -> Document<'a> {
-        let start_location = self.line_numbers.line_and_column_number(start_index);
-        let DebugIgnore(builder) = &self.source_map_builder;
-        Document::CursorPositionObserver {
-            observer: DebugIgnore(match builder {
-                None => Rc::new(RefCell::new(NullCursorPositionObserver)),
-                Some(builder) => Rc::new(RefCell::new(SourceMapCursorPositionObserver::new(
-                    start_location,
-                    builder.clone(),
-                ))),
-            }),
-        }
-    }
-
     fn type_reference(&self) -> Document<'a> {
         if self.typescript == TypeScriptDeclarations::None {
             return nil();
@@ -511,7 +497,11 @@ impl<'a> Generator<'a> {
         .group();
 
         docvec![
-            self.create_cursor_position_observer(constructor.location.start),
+            create_cursor_position_observer(
+                &self.source_map_builder.0,
+                self.line_numbers,
+                constructor.location.start
+            ),
             "export const ",
             type_name,
             "$",
@@ -537,7 +527,11 @@ impl<'a> Generator<'a> {
         .group();
 
         docvec![
-            self.create_cursor_position_observer(constructor.location.start),
+            create_cursor_position_observer(
+                &self.source_map_builder.0,
+                self.line_numbers,
+                constructor.location.start
+            ),
             "export const ",
             type_name,
             "$is",
@@ -581,7 +575,11 @@ impl<'a> Generator<'a> {
 
                 functions.push(docvec![
                     line(),
-                    self.create_cursor_position_observer(constructor.location.start),
+                    create_cursor_position_observer(
+                        &self.source_map_builder.0,
+                        self.line_numbers,
+                        constructor.location.start
+                    ),
                     "export const ",
                     function_name,
                     " = (value) =>",
@@ -593,7 +591,11 @@ impl<'a> Generator<'a> {
 
             functions.push(docvec![
                 line(),
-                self.create_cursor_position_observer(constructor.location.start),
+                create_cursor_position_observer(
+                    &self.source_map_builder.0,
+                    self.line_numbers,
+                    constructor.location.start
+                ),
                 "export const ",
                 function_name,
                 " = (value) =>",
@@ -650,8 +652,11 @@ impl<'a> Generator<'a> {
             "class "
         };
 
-        let sourcemap_cursor_position_observer =
-            self.create_cursor_position_observer(constructor.location.start);
+        let sourcemap_cursor_position_observer = create_cursor_position_observer(
+            &self.source_map_builder.0,
+            self.line_numbers,
+            constructor.location.start,
+        );
 
         let head = docvec![
             sourcemap_cursor_position_observer,
@@ -877,7 +882,11 @@ impl<'a> Generator<'a> {
 
         Some(docvec![
             jsdoc,
-            self.create_cursor_position_observer(location.start),
+            create_cursor_position_observer(
+                &self.source_map_builder.0,
+                self.line_numbers,
+                location.start
+            ),
             head,
             maybe_escape_identifier(name),
             " = ",
@@ -911,7 +920,11 @@ impl<'a> Generator<'a> {
         if !function.implementations.supports(Target::JavaScript) {
             return None;
         }
-        let function_source_mapping = self.create_cursor_position_observer(function.location.start);
+        let function_source_mapping = create_cursor_position_observer(
+            &self.source_map_builder.0,
+            self.line_numbers,
+            function.location.start,
+        );
 
         let (_, name) = function
             .name
@@ -1039,6 +1052,23 @@ pub fn module(config: ModuleConfig<'_>) -> (String, Option<SourceMap>) {
 pub fn ts_declaration(module: &TypedModule) -> String {
     let document = typescript::TypeScriptGenerator::new(module).compile();
     document.to_pretty_string(80)
+}
+
+fn create_cursor_position_observer<'a>(
+    builder: &Option<Rc<RefCell<sourcemap::SourceMapBuilder>>>,
+    line_numbers: &LineNumbers,
+    start_index: u32,
+) -> Document<'a> {
+    let start_location = line_numbers.line_and_column_number(start_index);
+    Document::CursorPositionObserver {
+        observer: DebugIgnore(match builder {
+            None => Rc::new(RefCell::new(NullCursorPositionObserver)),
+            Some(builder) => Rc::new(RefCell::new(SourceMapCursorPositionObserver::new(
+                start_location,
+                builder.clone(),
+            ))),
+        }),
+    }
 }
 
 fn fun_arguments(arguments: &'_ [TypedArg], tail_recursion_used: bool) -> Document<'_> {

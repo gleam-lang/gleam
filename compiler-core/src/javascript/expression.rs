@@ -133,7 +133,7 @@ impl CurrentFunction {
 pub(crate) struct Generator<'module, 'ast> {
     module_name: EcoString,
     src_path: EcoString,
-    line_numbers: &'module LineNumbers,
+    pub line_numbers: &'module LineNumbers,
     function_name: EcoString,
     function_arguments: Vec<Option<&'module EcoString>>,
     current_function: CurrentFunction,
@@ -177,7 +177,7 @@ pub(crate) struct Generator<'module, 'ast> {
     /// in the same block!
     pub let_assert_always_panics: bool,
 
-    source_map_builder: DebugIgnore<Option<Rc<RefCell<sourcemap::SourceMapBuilder>>>>,
+    pub source_map_builder: DebugIgnore<Option<Rc<RefCell<sourcemap::SourceMapBuilder>>>>,
 }
 
 impl<'module, 'a> Generator<'module, 'a> {
@@ -221,20 +221,6 @@ impl<'module, 'a> Generator<'module, 'a> {
         }
     }
 
-    pub fn create_cursor_position_observer(&self, start_index: u32) -> Document<'a> {
-        let start_location = self.line_numbers.line_and_column_number(start_index);
-        let DebugIgnore(builder) = &self.source_map_builder;
-        Document::CursorPositionObserver {
-            observer: DebugIgnore(match builder {
-                None => Rc::new(RefCell::new(NullCursorPositionObserver)),
-                Some(builder) => Rc::new(RefCell::new(SourceMapCursorPositionObserver::new(
-                    start_location,
-                    builder.clone(),
-                ))),
-            }),
-        }
-    }
-
     pub fn local_var(&mut self, name: &EcoString) -> EcoString {
         match self.current_scope_vars.get(name) {
             None => {
@@ -271,7 +257,11 @@ impl<'module, 'a> Generator<'module, 'a> {
             arg.get_variable_name().map(|name| {
                 let var = maybe_escape_identifier(name);
                 docvec![
-                    self.create_cursor_position_observer(arg.location.start),
+                    create_cursor_position_observer(
+                        &self.source_map_builder.0,
+                        self.line_numbers,
+                        arg.location.start
+                    ),
                     "let ",
                     var,
                     " = loop$",
@@ -419,12 +409,20 @@ impl<'module, 'a> Generator<'module, 'a> {
         };
         if expression.handles_own_return() {
             docvec![
-                self.create_cursor_position_observer(expression.location().start),
+                create_cursor_position_observer(
+                    &self.source_map_builder.0,
+                    self.line_numbers,
+                    expression.location().start
+                ),
                 document
             ]
         } else {
             docvec![
-                self.create_cursor_position_observer(expression.location().start),
+                create_cursor_position_observer(
+                    &self.source_map_builder.0,
+                    self.line_numbers,
+                    expression.location().start
+                ),
                 self.wrap_return(document)
             ]
         }
@@ -917,7 +915,11 @@ impl<'module, 'a> Generator<'module, 'a> {
             self.not_in_tail_position(Some(Ordering::Loose), |this| this.wrap_expression(value));
         let js_name = self.next_local_var(name);
         let assignment = docvec![
-            self.create_cursor_position_observer(location.start),
+            create_cursor_position_observer(
+                &self.source_map_builder.0,
+                &self.line_numbers,
+                location.start
+            ),
             "let ",
             js_name.clone(),
             " = ",
@@ -958,7 +960,11 @@ impl<'module, 'a> Generator<'module, 'a> {
         }
 
         docvec![
-            self.create_cursor_position_observer(location.start),
+            create_cursor_position_observer(
+                &self.source_map_builder.0,
+                self.line_numbers,
+                location.start
+            ),
             decision::let_(compiled_case, value, kind, self, pattern)
         ]
     }
@@ -1134,7 +1140,11 @@ impl<'module, 'a> Generator<'module, 'a> {
         fields.push(("expression_start", subject.location().start.to_doc()));
 
         docvec![
-            self.create_cursor_position_observer(location.start),
+            create_cursor_position_observer(
+                &self.source_map_builder.0,
+                self.line_numbers,
+                location.start
+            ),
             "if (",
             docvec!["!", subject_document].nest(INDENT),
             break_("", ""),
@@ -1239,7 +1249,11 @@ impl<'module, 'a> Generator<'module, 'a> {
         ];
 
         docvec![
-            self.create_cursor_position_observer(location.start),
+            create_cursor_position_observer(
+                &self.source_map_builder.0,
+                self.line_numbers,
+                location.start
+            ),
             "if (",
             left_value.nest(INDENT),
             ") {",
@@ -1303,7 +1317,11 @@ impl<'module, 'a> Generator<'module, 'a> {
 
         docvec![
             line(),
-            self.create_cursor_position_observer(location.start),
+            create_cursor_position_observer(
+                &self.source_map_builder.0,
+                self.line_numbers,
+                location.start
+            ),
             "if (",
             docvec!["!(", left_value, " || ", right_value, ")"].nest(INDENT),
             ") {",
@@ -1902,7 +1920,11 @@ impl<'module, 'a> Generator<'module, 'a> {
         let fields = wrap_object(fields.into_iter().map(|(k, v)| (k.to_doc(), Some(v))));
 
         docvec![
-            self.create_cursor_position_observer(location.start),
+            create_cursor_position_observer(
+                &self.source_map_builder.0,
+                self.line_numbers,
+                location.start
+            ),
             "throw makeError",
             wrap_arguments([
                 string(error_name),
