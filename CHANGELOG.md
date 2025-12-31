@@ -15,6 +15,10 @@
   variable.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now provides a code action to split alternative case
+  patterns into separate branches.
+  ([Vladislav Shakitskiy](https://github.com/vshakitskiy))
+
 ### Formatter
 
 ### Bug fixes

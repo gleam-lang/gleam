@@ -1,0 +1,33 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn go(n: Int) {\n  case n {\n    1 | 2 -> {\n      let x = n * 2\n      x + 1\n    }\n    _ -> 0\n  }\n}"
+---
+----- BEFORE ACTION
+
+pub fn go(n: Int) {
+  case n {
+    1 | 2 -> {
+    ▔▔▔▔↑     
+      let x = n * 2
+      x + 1
+    }
+    _ -> 0
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn go(n: Int) {
+  case n {
+    1 -> {
+      let x = n * 2
+      x + 1
+    }
+    2 -> {
+      let x = n * 2
+      x + 1
+    }
+    _ -> 0
+  }
+}
