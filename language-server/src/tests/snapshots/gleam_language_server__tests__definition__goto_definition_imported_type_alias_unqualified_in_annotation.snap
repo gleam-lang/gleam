@@ -1,0 +1,16 @@
+---
+source: language-server/src/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+import wibble
+
+pub fn main() {
+  let _: wibble.Wibble = #(1, "Test")
+                ↑                    
+}
+
+----- Jumped to `src/wibble.gleam`
+pub type Wibble = #(Int, String)
+↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔

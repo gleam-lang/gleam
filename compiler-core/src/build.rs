@@ -495,9 +495,9 @@ impl<'a> Located<'a> {
                 ..
             }) => importable_modules.get(*module).and_then(|m| {
                 if *is_type {
-                    m.types.get(*name).map(|t| DefinitionLocation {
+                    m.get_type_origin(name).map(|span| DefinitionLocation {
                         module: Some((*module).clone()),
-                        span: t.origin,
+                        span,
                     })
                 } else {
                     m.values.get(*name).map(|v| DefinitionLocation {
@@ -507,7 +507,19 @@ impl<'a> Located<'a> {
                 }
             }),
             Self::Arg(_) => None,
-            Self::Annotation { type_, .. } => self.type_location(importable_modules, type_.clone()),
+            Self::Annotation { ast, type_ } => {
+                if let TypeAst::Constructor(ast::TypeAstConstructor { module, name, .. }) = ast {
+                    let module_name = module.as_ref().map(|(name, _)| name);
+
+                    let definition =
+                        type_definition_from_ast(importable_modules, module_name, name);
+                    if definition.is_some() {
+                        return definition;
+                    }
+                }
+
+                self.type_location(importable_modules, type_.clone())
+            }
             Self::Label(_, _) => None,
             Self::ModuleName { name, .. } => Some(DefinitionLocation {
                 module: Some((*name).clone()),
@@ -639,6 +651,37 @@ pub fn type_constructor_from_modules(
             .get(module)
             .and_then(|i| i.types.get(name)),
         _ => None,
+    }
+}
+
+/// Finds the definition location of a type from its AST representation. Checks
+/// both custom types and type aliases.
+fn type_definition_from_ast(
+    importable_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
+    module: Option<&EcoString>,
+    name: &EcoString,
+) -> Option<DefinitionLocation> {
+    match module {
+        Some(module_name) => importable_modules
+            .get(module_name)
+            .and_then(|module_interface| {
+                module_interface
+                    .get_type_origin(name)
+                    .map(|span| DefinitionLocation {
+                        module: Some(module_name.clone()),
+                        span,
+                    })
+            }),
+        None => importable_modules
+            .iter()
+            .find_map(|(module_name, module_interface)| {
+                module_interface
+                    .get_type_origin(name)
+                    .map(|span| DefinitionLocation {
+                        module: Some(module_name.clone()),
+                        span,
+                    })
+            }),
     }
 }
 
