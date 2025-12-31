@@ -184,7 +184,7 @@ pub fn join<'a>(
 /// A trait that allows for objects to observe the cursor position as it is being formatted.
 /// This is useful for any operations that need to track the exact position a document is
 /// being written to in a buffer such as for source mapping.
-pub trait CursorPositionObserver : std::fmt::Debug {
+pub trait CursorPositionObserver: std::fmt::Debug {
     fn observe_cursor_position(&mut self, line: isize, width: isize);
 }
 

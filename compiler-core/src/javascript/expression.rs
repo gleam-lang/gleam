@@ -917,7 +917,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         let assignment = docvec![
             create_cursor_position_observer(
                 &self.source_map_builder.0,
-                &self.line_numbers,
+                self.line_numbers,
                 location.start
             ),
             "let ",
