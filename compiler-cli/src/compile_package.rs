@@ -29,6 +29,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
         Target::Erlang => TargetCodegenConfiguration::Erlang { app_file: None },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
             emit_typescript_definitions: false,
+            emit_source_maps: false,
             prelude_location: options
                 .javascript_prelude
                 .ok_or_else(|| Error::JavaScriptPreludeRequired)?,

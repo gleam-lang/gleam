@@ -4,6 +4,10 @@
 
 ### Compiler
 
+- Compiler can now emit source maps when targeting javascript. This can be enabled
+  in the gleam.toml with the `source_maps` setting under the `javascript` section.
+  ([Ameen Radwan](https://github.com/Acepie))
+
 ### Build tool
 
 - When adding a package that does not exist on Hex, the message is a bit friendlier.

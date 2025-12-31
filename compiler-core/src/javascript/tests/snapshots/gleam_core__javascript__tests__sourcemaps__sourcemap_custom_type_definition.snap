@@ -1,0 +1,64 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+expression: "\n/// my custom type\npub type Wibble {\n  /// Wibble\n  Wibble\n  /// Wobble\n  Wobble(field: Int)\n  /// Wabble\n  Wabble(Wibble)\n}"
+---
+----- SOURCE CODE
+
+/// my custom type
+pub type Wibble {
+  /// Wibble
+  Wibble
+  /// Wobble
+  Wobble(field: Int)
+  /// Wabble
+  Wabble(Wibble)
+}
+
+----- COMPILED JAVASCRIPT
+//# sourceMappingURL=mod.mjs.map
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Wibble extends $CustomType {}
+export const Wibble$Wibble = () => new Wibble();
+export const Wibble$isWibble = (value) => value instanceof Wibble;
+
+/**
+ * Wobble
+ */
+export class Wobble extends $CustomType {
+  constructor(field) {
+    super();
+    this.field = field;
+  }
+}
+export const Wibble$Wobble = (field) => new Wobble(field);
+export const Wibble$isWobble = (value) => value instanceof Wobble;
+export const Wibble$Wobble$field = (value) => value.field;
+export const Wibble$Wobble$0 = (value) => value.field;
+
+/**
+ * Wabble
+ */
+export class Wabble extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+export const Wibble$Wabble = ($0) => new Wabble($0);
+export const Wibble$isWabble = (value) => value instanceof Wabble;
+export const Wibble$Wabble$0 = (value) => value[0];
+----- SOURCE MAP
+Mappings Raw:
+4:2 -> 3:0
+4:2 -> 4:0
+4:2 -> 5:0
+6:2 -> 10:0
+6:2 -> 16:0
+6:2 -> 17:0
+6:2 -> 18:0
+6:2 -> 19:0
+8:2 -> 24:0
+8:2 -> 30:0
+8:2 -> 31:0
+8:2 -> 32:0

@@ -48,6 +48,8 @@ radix_trie = "0.2.1"
 stacker = "0.1.21"
 # Manipulating bit arrays
 bitvec = { version = "1", features = ["serde"] }
+# Sourcemap generation
+sourcemap = "9"
 
 async-trait.workspace = true
 base16.workspace = true

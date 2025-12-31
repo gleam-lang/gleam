@@ -133,7 +133,7 @@ impl CurrentFunction {
 pub(crate) struct Generator<'module, 'ast> {
     module_name: EcoString,
     src_path: EcoString,
-    line_numbers: &'module LineNumbers,
+    pub line_numbers: &'module LineNumbers,
     function_name: EcoString,
     function_arguments: Vec<Option<&'module EcoString>>,
     current_function: CurrentFunction,
@@ -176,6 +176,8 @@ pub(crate) struct Generator<'module, 'ast> {
     /// This means we can stop code generation for all the following statements
     /// in the same block!
     pub let_assert_always_panics: bool,
+
+    pub source_map_builder: DebugIgnore<Option<Rc<RefCell<sourcemap::SourceMapBuilder>>>>,
 }
 
 impl<'module, 'a> Generator<'module, 'a> {
@@ -188,6 +190,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         function_arguments: Vec<Option<&'module EcoString>>,
         tracker: &'module mut UsageTracker,
         mut current_scope_vars: im::HashMap<EcoString, usize>,
+        source_map_builder: DebugIgnore<Option<Rc<RefCell<sourcemap::SourceMapBuilder>>>>,
     ) -> Self {
         let mut current_function = CurrentFunction::Module;
         for &name in function_arguments.iter().flatten() {
@@ -214,6 +217,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             scope_position: Position::Tail,
             statement_level: Vec::new(),
             let_assert_always_panics: false,
+            source_map_builder,
         }
     }
 
@@ -249,12 +253,24 @@ impl<'module, 'a> Generator<'module, 'a> {
     }
 
     fn tail_call_loop(&mut self, body: Document<'a>, arguments: &'a [TypedArg]) -> Document<'a> {
-        let loop_assignments = concat(arguments.iter().flat_map(Arg::get_variable_name).map(
-            |name| {
+        let loop_assignments = concat(arguments.iter().flat_map(|arg| {
+            arg.get_variable_name().map(|name| {
                 let var = maybe_escape_identifier(name);
-                docvec!["let ", var, " = loop$", name, ";", line()]
-            },
-        ));
+                docvec![
+                    create_cursor_position_observer(
+                        &self.source_map_builder.0,
+                        self.line_numbers,
+                        arg.location.start
+                    ),
+                    "let ",
+                    var,
+                    " = loop$",
+                    name,
+                    ";",
+                    line()
+                ]
+            })
+        }));
         docvec![
             "while (true) {",
             docvec![line(), loop_assignments, body].nest(INDENT),
@@ -392,9 +408,23 @@ impl<'module, 'a> Generator<'module, 'a> {
             }
         };
         if expression.handles_own_return() {
-            document
+            docvec![
+                create_cursor_position_observer(
+                    &self.source_map_builder.0,
+                    self.line_numbers,
+                    expression.location().start
+                ),
+                document
+            ]
         } else {
-            self.wrap_return(document)
+            docvec![
+                create_cursor_position_observer(
+                    &self.source_map_builder.0,
+                    self.line_numbers,
+                    expression.location().start
+                ),
+                self.wrap_return(document)
+            ]
         }
     }
 
@@ -741,9 +771,13 @@ impl<'module, 'a> Generator<'module, 'a> {
                 }))
             } else {
                 // Otherwise we assign the intermediate pipe value to a variable.
-                let assignment_document = self
-                    .not_in_tail_position(Some(Ordering::Strict), |this| {
-                        this.simple_variable_assignment(&assignment.name, &assignment.value)
+                let assignment_document =
+                    self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                        this.simple_variable_assignment(
+                            &assignment.name,
+                            &assignment.value,
+                            &assignment.location,
+                        )
                     });
                 documents.push(self.add_statement_level(assignment_document));
                 latest_local_var = Some(self.local_var(&assignment.name));
@@ -874,12 +908,24 @@ impl<'module, 'a> Generator<'module, 'a> {
         &mut self,
         name: &'a EcoString,
         value: &'a TypedExpr,
+        location: &'a SrcSpan,
     ) -> Document<'a> {
         // Subject must be rendered before the variable for variable numbering
         let subject =
             self.not_in_tail_position(Some(Ordering::Loose), |this| this.wrap_expression(value));
         let js_name = self.next_local_var(name);
-        let assignment = docvec!["let ", js_name.clone(), " = ", subject, ";"];
+        let assignment = docvec![
+            create_cursor_position_observer(
+                &self.source_map_builder.0,
+                self.line_numbers,
+                location.start
+            ),
+            "let ",
+            js_name.clone(),
+            " = ",
+            subject,
+            ";"
+        ];
         let assignment = match &self.scope_position {
             Position::Expression(_) | Position::Statement => assignment,
             Position::Tail => docvec![assignment, line(), "return ", js_name, ";"],
@@ -902,18 +948,25 @@ impl<'module, 'a> Generator<'module, 'a> {
             kind,
             value,
             compiled_case,
+            location,
             annotation: _,
-            location: _,
         } = assignment;
 
         // In case the pattern is just a variable, we special case it to
         // generate just a simple assignment instead of using the decision tree
         // for the code generation step.
         if let TypedPattern::Variable { name, .. } = pattern {
-            return self.simple_variable_assignment(name, value);
+            return self.simple_variable_assignment(name, value, location);
         }
 
-        decision::let_(compiled_case, value, kind, self, pattern)
+        docvec![
+            create_cursor_position_observer(
+                &self.source_map_builder.0,
+                self.line_numbers,
+                location.start
+            ),
+            decision::let_(compiled_case, value, kind, self, pattern)
+        ]
     }
 
     fn assert(&mut self, assert: &'a TypedAssert) -> Document<'a> {
@@ -1087,6 +1140,11 @@ impl<'module, 'a> Generator<'module, 'a> {
         fields.push(("expression_start", subject.location().start.to_doc()));
 
         docvec![
+            create_cursor_position_observer(
+                &self.source_map_builder.0,
+                self.line_numbers,
+                location.start
+            ),
             "if (",
             docvec!["!", subject_document].nest(INDENT),
             break_("", ""),
@@ -1191,6 +1249,11 @@ impl<'module, 'a> Generator<'module, 'a> {
         ];
 
         docvec![
+            create_cursor_position_observer(
+                &self.source_map_builder.0,
+                self.line_numbers,
+                location.start
+            ),
             "if (",
             left_value.nest(INDENT),
             ") {",
@@ -1254,6 +1317,11 @@ impl<'module, 'a> Generator<'module, 'a> {
 
         docvec![
             line(),
+            create_cursor_position_observer(
+                &self.source_map_builder.0,
+                self.line_numbers,
+                location.start
+            ),
             "if (",
             docvec!["!(", left_value, " || ", right_value, ")"].nest(INDENT),
             ") {",
@@ -1852,6 +1920,11 @@ impl<'module, 'a> Generator<'module, 'a> {
         let fields = wrap_object(fields.into_iter().map(|(k, v)| (k.to_doc(), Some(v))));
 
         docvec![
+            create_cursor_position_observer(
+                &self.source_map_builder.0,
+                self.line_numbers,
+                location.start
+            ),
             "throw makeError",
             wrap_arguments([
                 string(error_name),
@@ -2507,7 +2580,7 @@ pub fn float(value: &str) -> Document<'_> {
     out.to_doc()
 }
 
-pub fn float_from_value(value: f64) -> Document<'static> {
+pub fn float_from_value<'a>(value: f64) -> Document<'a> {
     if value.is_infinite() {
         if value.is_sign_positive() {
             "Infinity".to_doc()
@@ -2589,7 +2662,7 @@ impl BitArraySegmentType {
     }
 }
 
-pub fn string(value: &str) -> Document<'_> {
+pub fn string<'a>(value: &'a str) -> Document<'a> {
     if value.contains('\n') {
         EcoString::from(value.replace('\n', r"\n"))
             .to_doc()

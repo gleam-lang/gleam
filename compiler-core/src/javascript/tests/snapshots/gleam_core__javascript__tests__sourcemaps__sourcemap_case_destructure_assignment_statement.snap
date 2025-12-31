@@ -1,0 +1,57 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+expression: "\npub type Wibble {\n  Wibble(Int, Int)\n}\n\npub fn go(x) {\n  case Wibble(1, 2) {\n    Wibble(wibble, wobble) -> wibble + wobble\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(Int, Int)
+}
+
+pub fn go(x) {
+  case Wibble(1, 2) {
+    Wibble(wibble, wobble) -> wibble + wobble
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+//# sourceMappingURL=mod.mjs.map
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Wibble extends $CustomType {
+  constructor($0, $1) {
+    super();
+    this[0] = $0;
+    this[1] = $1;
+  }
+}
+export const Wibble$Wibble = ($0, $1) => new Wibble($0, $1);
+export const Wibble$isWibble = (value) => value instanceof Wibble;
+export const Wibble$Wibble$0 = (value) => value[0];
+export const Wibble$Wibble$1 = (value) => value[1];
+
+export function go(x) {
+  let $ = new Wibble(1, 2);
+  let wibble = $[0];
+  let wobble = $[1];
+  return wibble + wobble;
+}
+----- SOURCE MAP
+Mappings Raw:
+2:2 -> 3:0
+2:2 -> 10:0
+2:2 -> 11:0
+2:2 -> 12:0
+2:2 -> 13:0
+5:0 -> 15:0
+6:2 -> 16:2
+6:7 -> 16:2
+6:7 -> 16:2
+6:7 -> 16:10
+6:14 -> 16:21
+6:17 -> 16:24
+7:4 -> 17:2
+7:30 -> 19:2
+7:30 -> 19:9
+7:39 -> 19:18
