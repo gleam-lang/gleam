@@ -20,6 +20,7 @@ use super::{
     compiler::ModuleSourceInformation, rename::RenameTarget, src_span_to_lsp_range, url_from_path,
 };
 
+#[derive(Debug)]
 pub enum Referenced {
     LocalVariable {
         definition_location: SrcSpan,
