@@ -9,7 +9,7 @@
 - When adding a package that does not exist on Hex, the message is a bit friendlier.
   ([Ameen Radwan](https://github.com/Acepie))
 
-- When attempting to publish an existing package, the error is clearer.
+- When attempting to publish a package on Hex with an already taken name, the massage is clearer.
   ([vyacheslavhere](https://github.com/vyacheslavhere))
 
 ### Language server
