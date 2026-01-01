@@ -1179,7 +1179,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         let right_check = docvec![
             line(),
             "if (",
-            docvec!["!", right_value].nest(INDENT),
+            docvec!["!(", right_value, ")"].nest(INDENT),
             ") {",
             docvec![
                 line(),
