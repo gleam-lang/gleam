@@ -58,7 +58,7 @@
 
   ([Andrey Kozhev](https://github.com/ankddev))
 
-- When attempting to publish an existing package, the error is more clear.
+- When attempting to publish an existing package, the error is clearer.
   ([vyacheslavhere](https://github.com/vyacheslavhere))
 
 ### Language server
