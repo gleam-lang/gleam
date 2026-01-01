@@ -89,6 +89,7 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
     runtime.block_on(hex::publish_package(
         package_tarball,
         config.version.to_string(),
+        config.name.to_string(),
         &api_key,
         &hex_config,
         replace,
