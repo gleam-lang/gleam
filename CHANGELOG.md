@@ -6,7 +6,8 @@
 
 ### Build tool
 
-- When adding a package that does not exist on Hex, the message is a bit friendlier.
+- When adding a package that does not exist on Hex, the message is a bit
+  friendlier.
   ([Ameen Radwan](https://github.com/Acepie))
 
 ### Language server
@@ -25,4 +26,7 @@
 
 - The compiler now correctly tracks the minimum required version for expressions
   in `BitArray`s' `size` option to be `>= 1.12.0`.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug that would result in not being able to rename an aliased pattern.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
