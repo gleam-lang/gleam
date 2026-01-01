@@ -1734,3 +1734,19 @@ fn wibble() -> Nil {
         find_position_of("wibble").nth_occurrence(2)
     );
 }
+
+#[test]
+fn rename_nested_aliased_pattern() {
+    assert_rename!(
+        r#"
+pub fn go(x) {
+  case x {
+    [[nested, ..] as wibble, ..] -> todo
+    _ -> todo
+  }
+}
+        "#,
+        "new_name",
+        find_position_of("nested")
+    );
+}

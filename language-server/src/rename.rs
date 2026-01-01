@@ -105,6 +105,7 @@ pub fn rename_local_variable(
     }
 }
 
+#[derive(Debug)]
 pub enum RenameTarget {
     Qualified,
     Unqualified,
