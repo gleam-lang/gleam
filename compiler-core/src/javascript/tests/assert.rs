@@ -200,3 +200,39 @@ fn id(x) { x }
 "
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/5251
+#[test]
+fn assert_with_logical_and_binary_rhs_1() {
+    assert_js!(
+        "
+pub fn main() {
+  assert True && 3 < 4
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5251
+#[test]
+fn assert_with_logical_and_binary_rhs_2() {
+    assert_js!(
+        "
+pub fn main() {
+   assert True && \"foo\" == \"foo\"
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5251
+#[test]
+fn assert_with_logical_and_binary_rhs_3() {
+    assert_js!(
+        "
+pub fn main() {
+    assert True && \"foo\" != \"bar\"
+}
+"
+    );
+}
