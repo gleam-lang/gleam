@@ -30,6 +30,7 @@ fn key_name(hostname: &str) -> String {
 pub async fn publish_package<Http: HttpClient>(
     release_tarball: Vec<u8>,
     version: String,
+    name: String,
     api_key: &str,
     config: &hexpm::Config,
     replace: bool,
@@ -38,12 +39,10 @@ pub async fn publish_package<Http: HttpClient>(
     tracing::info!("Publishing package, replace: {}", replace);
     let request = hexpm::api_publish_package_request(release_tarball, api_key, config, replace);
     let response = http.send(request).await?;
-    hexpm::api_publish_package_response(response).map_err(|e| {
-        if let ApiError::NotReplacing = e {
-            Error::HexPublishReplaceRequired { version }
-        } else {
-            Error::hex(e)
-        }
+    hexpm::api_publish_package_response(response).map_err(|e| match e {
+        ApiError::NotReplacing => Error::HexPublishReplaceRequired { version },
+        ApiError::Forbidden => Error::HexPackageAlreadyExists { name, version },
+        _ => Error::hex(e),
     })
 }
 
