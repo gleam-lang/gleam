@@ -35,5 +35,9 @@
 - The language server no longer recommends the deprecated `@target` attribute.
   ([Hari Mohan](https://github.com/seafoamteal))
 
-- The compiler no longer crashes when trying to pattern match on a `UtfCodepoint`.
+- The compiler no longer crashes when trying to pattern match on a
+  `UtfCodepoint`.
   ([Hari Mohan](https://github.com/seafoamteal))
+
+- Fixed a bug that would result in not being able to rename an aliased pattern.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
