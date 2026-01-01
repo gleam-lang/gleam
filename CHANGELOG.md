@@ -58,7 +58,7 @@
 
   ([Andrey Kozhev](https://github.com/ankddev))
 
-- When attempting to publish an existing package, the error is clearer.
+- When attempting to publish a package on Hex with an already taken name, the massage is clearer.
   ([vyacheslavhere](https://github.com/vyacheslavhere))
 
 ### Language server
