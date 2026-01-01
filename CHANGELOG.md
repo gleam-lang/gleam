@@ -58,6 +58,9 @@
 
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- When attempting to publish an existing package, the error is more clear.
+  ([vyacheslavhere](https://github.com/vyacheslavhere))
+
 ### Language server
 
 - The language server now allows extracting the start of a pipeline into a

@@ -326,6 +326,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Version already published")]
     HexPublishReplaceRequired { version: String },
 
+    #[error("Package is already exists ")]
+    HexPackageAlreadyExists { name: String, version: String },
+
     #[error("The gleam version constraint is wrong and so cannot be published")]
     CannotPublishWrongVersion {
         minimum_required_version: SmallVersion,
@@ -4603,6 +4606,20 @@ or you can publish it using a different version number"
                 hint: Some(
                     "Please add the --replace flag if you want to replace the release.".into(),
                 ),
+            }],
+            Error::HexPackageAlreadyExists { name, version } => vec![Diagnostic {
+                title: format!("Package name {name} is already taken"),
+                text: wrap_format!(
+                    "I couldn't publish v{version} of {name}, it looks like that name is taken
+on hex and you don't have permission to publish it!
+"
+                ),
+                level: Level::Error,
+                location: None,
+                hint: Some(format!(
+                    "Choose a new name or make sure you are authorised as one of the
+hex users that can publish {name}"
+                )),
             }],
 
             Error::CannotAddSelfAsDependency { name } => vec![Diagnostic {
