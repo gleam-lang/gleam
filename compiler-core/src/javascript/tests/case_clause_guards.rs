@@ -622,3 +622,23 @@ pub fn main() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5254
+#[test]
+fn logical_or() {
+    assert_js!(
+        "
+        pub fn main() {
+          let a = False
+          let b = []
+          let c = True
+
+          let r = case c == True {
+            False if a || b == [] -> \"1\"
+            _else -> \"0\"
+          }
+          assert r == \"0\"
+        }
+        "
+    )
+}

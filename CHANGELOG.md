@@ -26,3 +26,6 @@
 - The compiler now correctly tracks the minimum required version for expressions
   in `BitArray`s' `size` option to be `>= 1.12.0`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Clause guard with logical expression now compiles correctly in JS.
+  ([vyacheslavhere](https://github.com/vyacheslavhere))

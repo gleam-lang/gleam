@@ -1,0 +1,58 @@
+---
+source: compiler-core/src/javascript/tests/case_clause_guards.rs
+expression: "\n        pub fn main() {\n          let a = False\n          let b = []\n          let c = True\n\n          let r = case c == True {\n            False if a || b == [] -> \"1\"\n            _else -> \"0\"\n          }\n          assert r == \"0\"\n        }\n        "
+---
+----- SOURCE CODE
+
+        pub fn main() {
+          let a = False
+          let b = []
+          let c = True
+
+          let r = case c == True {
+            False if a || b == [] -> "1"
+            _else -> "0"
+          }
+          assert r == "0"
+        }
+        
+
+----- COMPILED JAVASCRIPT
+import { toList, makeError, isEqual } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function main() {
+  let a = false;
+  let b = toList([]);
+  let c = true;
+  let _block;
+  let $ = c === true;
+  if (!$ && (a || (isEqual(b, toList([]))))) {
+    _block = "1";
+  } else {
+    _block = "0";
+  }
+  let r = _block;
+  let $1 = "0";
+  if (!(r === $1)) {
+    throw makeError(
+      "assert",
+      FILEPATH,
+      "my/mod",
+      11,
+      "main",
+      "Assertion failed.",
+      {
+        kind: "binary_operator",
+        operator: "==",
+        left: { kind: "expression", value: r, start: 224, end: 225 },
+        right: { kind: "literal", value: $1, start: 229, end: 232 },
+        start: 217,
+        end: 232,
+        expression_start: 224
+      }
+    )
+  }
+  return undefined;
+}

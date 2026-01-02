@@ -13,7 +13,7 @@ pub fn main(x, y) {
 
 ----- COMPILED JAVASCRIPT
 export function main(x, y) {
-  if (!y && !x) {
+  if ((!y && !x)) {
     return 0;
   } else {
     return 1;
