@@ -11859,3 +11859,320 @@ pub fn main() {
         find_position_of("fn(").select_until(find_position_of("}"))
     );
 }
+
+fn import_type_unqualified_without_existing_import() {
+    let name = "Import `Wibble` from `wibble`";
+    let src = r#"
+import wobble
+
+fn wibble(wobble: Wibble) -> Nil { Nil }
+"#;
+
+    assert_code_action!(
+        name,
+        TestProject::for_source(src)
+            .add_module(
+                "wibble",
+                r#"
+pub type Wibble {
+    Wobble
+}
+"#,
+            )
+            .add_module(
+                // Used to force wibble to compile first
+                "wobble",
+                r#"
+    import wibble
+    "#
+            ),
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+fn import_type_qualified_without_existing_import() {
+    let name = "Import `wibble` and qualify it";
+    let src = r#"
+import wobble
+
+fn wibble(wobble: Wibble) -> Nil { Nil }
+"#;
+
+    assert_code_action!(
+        name,
+        TestProject::for_source(src)
+            .add_module(
+                "wibble",
+                r#"
+pub type Wibble {
+    Wobble
+}
+"#,
+            )
+            .add_module(
+                // Used to force wibble to compile first
+                "wobble",
+                r#"
+import wibble
+"#
+            ),
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+#[test]
+fn import_type_unqualified_with_existing_import() {
+    let name = "Import `Wibble` from `wibble`";
+    let src = r#"
+import wibble
+
+fn wibble(wobble: Wibble) -> Nil { Nil }
+"#;
+    assert_code_action!(
+        name,
+        TestProject::for_source(src).add_module(
+            "wibble",
+            r#"
+pub type Wibble {
+    Wobble
+}
+"#,
+        ),
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+fn import_type_qualified_with_existing_import() {
+    let name = "Qualify as `wibble.Wibble`";
+    let src = r#"
+import wibble
+
+fn wibble(wobble: Wibble) -> Nil { Nil }
+"#;
+    assert_code_action!(
+        name,
+        TestProject::for_source(src).add_module(
+            "wibble",
+            r#"
+pub type Wibble {
+    Wobble
+}
+"#,
+        ),
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+fn import_type_constructor_unqualified_without_existing_import() {
+    let name = "Import `Wobble` from `wibble`";
+    let src = r#"
+import wobble
+
+fn wibble() -> Nil {
+    Wobble
+    Nil
+}
+"#;
+
+    assert_code_action!(
+        name,
+        TestProject::for_source(src)
+            .add_module(
+                "wibble",
+                r#"
+pub type Wibble {
+    Wobble
+}
+"#,
+            )
+            .add_module(
+                // Used to force wibble to compile first
+                "wobble",
+                r#"
+    import wibble
+    "#
+            ),
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+fn import_type_constructor_qualified_without_existing_import() {
+    let name = "Import `wibble` and qualify it";
+    let src = r#"
+import wobble
+
+fn wibble() -> Nil {
+    Wobble
+    Nil
+}
+"#;
+
+    assert_code_action!(
+        name,
+        TestProject::for_source(src)
+            .add_module(
+                "wibble",
+                r#"
+pub type Wibble {
+    Wobble
+}
+"#,
+            )
+            .add_module(
+                // Used to force wibble to compile first
+                "wobble",
+                r#"
+import wibble
+"#
+            ),
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn import_type_constructor_unqualified_with_existing_import() {
+    let name = "Import `Wobble` from `wibble`";
+    let src = r#"
+import wibble
+
+fn wibble() -> Nil {
+    Wobble
+    Nil
+}
+"#;
+    assert_code_action!(
+        name,
+        TestProject::for_source(src).add_module(
+            "wibble",
+            r#"
+pub type Wibble {
+    Wobble
+}
+"#,
+        ),
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn import_type_constructor_qualified_with_existing_import() {
+    let name = "Qualify as `wibble.Wobble`";
+    let src = r#"
+import wibble
+
+fn wibble() -> Nil {
+    Wobble
+    Nil
+}
+"#;
+    assert_code_action!(
+        name,
+        TestProject::for_source(src).add_module(
+            "wibble",
+            r#"
+pub type Wibble {
+    Wobble
+}
+"#,
+        ),
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn dont_import_value_unqualified_without_existing_import() {
+    let name = "Import `wib` from `wibble`";
+    let src = r#"
+import wobble
+
+fn wibble() -> Int { wib }
+"#;
+
+    assert_no_code_actions!(
+        name,
+        TestProject::for_source(src)
+            .add_module(
+                "wibble",
+                r#"
+pub const wib = 123
+"#,
+            )
+            .add_module(
+                // Used to force wibble to compile first
+                "wobble",
+                r#"
+import wibble
+"#
+            ),
+        find_position_of("wib").to_selection()
+    );
+}
+
+#[test]
+fn dont_import_value_qualified_without_existing_import() {
+    let name = "Import `wibble` and qualify it";
+    let src = r#"
+import wobble
+
+fn wibble() -> Int { wib }
+"#;
+
+    assert_no_code_actions!(
+        name,
+        TestProject::for_source(src)
+            .add_module(
+                "wibble",
+                r#"
+pub const wib = 123
+"#,
+            )
+            .add_module(
+                // Used to force wibble to compile first
+                "wobble",
+                r#"
+import wibble
+"#
+            ),
+        find_position_of("wib").to_selection()
+    );
+}
+
+#[test]
+fn dont_import_value_unqualified_with_existing_import() {
+    let name = "Import `wib` from `wibble`";
+    let src = r#"
+import wibble
+
+fn wibble() -> Int { wib }
+"#;
+    assert_no_code_actions!(
+        name,
+        TestProject::for_source(src).add_module(
+            "wibble",
+            r#"
+pub const wib = 123
+"#,
+        ),
+        find_position_of("wib").to_selection()
+    );
+}
+
+#[test]
+fn dont_import_value_qualified_with_existing_import() {
+    let name = "Qualify as `wibble.wib`";
+    let src = r#"
+import wibble
+
+fn wibble() -> Int { wib }
+"#;
+    assert_no_code_actions!(
+        name,
+        TestProject::for_source(src).add_module(
+            "wibble",
+            r#"
+pub const wib = 123
+"#,
+        ),
+        find_position_of("wib").to_selection()
+    );
+}
