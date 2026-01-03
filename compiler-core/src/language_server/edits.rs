@@ -2,7 +2,7 @@ use ecow::EcoString;
 use lsp_types::{Position, Range, TextEdit};
 
 use crate::{
-    ast::{Definition, Import, Layer, SrcSpan, TypedDefinitions},
+    ast::{Import, Layer, SrcSpan, TypedDefinitions},
     build::Module,
     line_numbers::LineNumbers,
 };
