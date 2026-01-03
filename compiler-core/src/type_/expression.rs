@@ -146,6 +146,38 @@ impl Purity {
     }
 }
 
+/// Represents different type-checking strategies for binary operations
+/// in clause guards.
+enum UntypedBinaryClauseGuard {
+    /// Both operands must have the same type, but that type is unknown until
+    /// inference.
+    SameType {
+        left: UntypedClauseGuard,
+        right: UntypedClauseGuard,
+        location: SrcSpan,
+    },
+    /// Both operands must have a specific, predetermined type.
+    CertainType {
+        left: UntypedClauseGuard,
+        right: UntypedClauseGuard,
+        type_: Arc<Type>,
+    },
+    /// Both operands must be numeric and of the same specific numeric type
+    /// (Int or Float).
+    Numeric {
+        operator: BinOp,
+        left: UntypedClauseGuard,
+        right: UntypedClauseGuard,
+        numeric_type: NumericType,
+        location: SrcSpan,
+    },
+}
+
+enum NumericType {
+    Int,
+    Float,
+}
+
 /// Tracking whether the function being currently type checked has externals
 /// implementations or not.
 /// This is used to determine whether an error should be raised in the case when
@@ -2466,6 +2498,69 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
+    /// Type-checks binary operations in clause guards and returns typed operands.
+    fn infer_binary_expression_clause_guard(
+        &mut self,
+        expression: UntypedBinaryClauseGuard,
+    ) -> Result<(TypedClauseGuard, TypedClauseGuard), Error> {
+        match expression {
+            UntypedBinaryClauseGuard::CertainType { left, right, type_ } => {
+                let left = self.infer_clause_guard(left)?;
+                let right = self.infer_clause_guard(right)?;
+
+                unify(type_.clone(), left.type_())
+                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                unify(type_, right.type_())
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+
+                Ok((left, right))
+            }
+            UntypedBinaryClauseGuard::Numeric {
+                operator,
+                left,
+                right,
+                numeric_type,
+                location,
+            } => {
+                let left = self.infer_clause_guard(left)?;
+                let right = self.infer_clause_guard(right)?;
+
+                if operator.is_int_operator() && left.type_().is_float() && right.type_().is_float()
+                {
+                    return Err(Error::IntOperatorOnFloats { operator, location });
+                } else if operator.is_float_operator()
+                    && left.type_().is_int()
+                    && right.type_().is_int()
+                {
+                    return Err(Error::FloatOperatorOnInts { operator, location });
+                }
+
+                let numeric_type = match numeric_type {
+                    NumericType::Int => int(),
+                    NumericType::Float => float(),
+                };
+
+                unify(numeric_type.clone(), left.type_())
+                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                unify(numeric_type, right.type_())
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+
+                Ok((left, right))
+            }
+            UntypedBinaryClauseGuard::SameType {
+                left,
+                right,
+                location,
+            } => {
+                let left = self.infer_clause_guard(left)?;
+                let right = self.infer_clause_guard(right)?;
+
+                unify(left.type_(), right.type_()).map_err(|e| convert_unify_error(e, location))?;
+
+                Ok((left, right))
+            }
+        }
+    }
     fn infer_clause_guard(&mut self, guard: UntypedClauseGuard) -> Result<TypedClauseGuard, Error> {
         match guard {
             ClauseGuard::Var { location, name, .. } => {
@@ -2573,11 +2668,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(bool(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(bool(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) = self.infer_binary_expression_clause_guard(
+                    UntypedBinaryClauseGuard::CertainType {
+                        left: *left,
+                        right: *right,
+                        type_: bool(),
+                    },
+                )?;
                 Ok(ClauseGuard::And {
                     location,
                     left: Box::new(left),
@@ -2591,11 +2688,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(bool(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(bool(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) = self.infer_binary_expression_clause_guard(
+                    UntypedBinaryClauseGuard::CertainType {
+                        left: *left,
+                        right: *right,
+                        type_: bool(),
+                    },
+                )?;
                 Ok(ClauseGuard::Or {
                     location,
                     left: Box::new(left),
@@ -2609,9 +2708,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(left.type_(), right.type_()).map_err(|e| convert_unify_error(e, location))?;
+                let (left, right) = self.infer_binary_expression_clause_guard(
+                    UntypedBinaryClauseGuard::SameType {
+                        left: *left,
+                        right: *right,
+                        location,
+                    },
+                )?;
                 Ok(ClauseGuard::Equals {
                     location,
                     left: Box::new(left),
@@ -2625,9 +2728,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(left.type_(), right.type_()).map_err(|e| convert_unify_error(e, location))?;
+                let (left, right) = self.infer_binary_expression_clause_guard(
+                    UntypedBinaryClauseGuard::SameType {
+                        left: *left,
+                        right: *right,
+                        location,
+                    },
+                )?;
                 Ok(ClauseGuard::NotEquals {
                     location,
                     left: Box::new(left),
@@ -2641,11 +2748,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(int(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) =
+                    self.infer_binary_expression_clause_guard(UntypedBinaryClauseGuard::Numeric {
+                        operator: BinOp::GtInt,
+                        left: *left,
+                        right: *right,
+                        numeric_type: NumericType::Int,
+                        location,
+                    })?;
                 Ok(ClauseGuard::GtInt {
                     location,
                     left: Box::new(left),
@@ -2659,11 +2769,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(int(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) =
+                    self.infer_binary_expression_clause_guard(UntypedBinaryClauseGuard::Numeric {
+                        operator: BinOp::GtEqInt,
+                        left: *left,
+                        right: *right,
+                        numeric_type: NumericType::Int,
+                        location,
+                    })?;
                 Ok(ClauseGuard::GtEqInt {
                     location,
                     left: Box::new(left),
@@ -2677,11 +2790,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(int(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) =
+                    self.infer_binary_expression_clause_guard(UntypedBinaryClauseGuard::Numeric {
+                        operator: BinOp::LtInt,
+                        left: *left,
+                        right: *right,
+                        numeric_type: NumericType::Int,
+                        location,
+                    })?;
                 Ok(ClauseGuard::LtInt {
                     location,
                     left: Box::new(left),
@@ -2695,11 +2811,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(int(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) =
+                    self.infer_binary_expression_clause_guard(UntypedBinaryClauseGuard::Numeric {
+                        operator: BinOp::LtEqInt,
+                        left: *left,
+                        right: *right,
+                        numeric_type: NumericType::Int,
+                        location,
+                    })?;
                 Ok(ClauseGuard::LtEqInt {
                     location,
                     left: Box::new(left),
@@ -2713,12 +2832,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(float(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(float(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) =
+                    self.infer_binary_expression_clause_guard(UntypedBinaryClauseGuard::Numeric {
+                        operator: BinOp::GtFloat,
+                        left: *left,
+                        right: *right,
+                        numeric_type: NumericType::Float,
+                        location,
+                    })?;
                 Ok(ClauseGuard::GtFloat {
                     location,
                     left: Box::new(left),
@@ -2732,12 +2853,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(float(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(float(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) =
+                    self.infer_binary_expression_clause_guard(UntypedBinaryClauseGuard::Numeric {
+                        operator: BinOp::GtEqFloat,
+                        left: *left,
+                        right: *right,
+                        numeric_type: NumericType::Float,
+                        location,
+                    })?;
                 Ok(ClauseGuard::GtEqFloat {
                     location,
                     left: Box::new(left),
@@ -2751,12 +2874,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(float(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(float(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) =
+                    self.infer_binary_expression_clause_guard(UntypedBinaryClauseGuard::Numeric {
+                        operator: BinOp::LtFloat,
+                        left: *left,
+                        right: *right,
+                        numeric_type: NumericType::Float,
+                        location,
+                    })?;
                 Ok(ClauseGuard::LtFloat {
                     location,
                     left: Box::new(left),
@@ -2770,12 +2895,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(float(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(float(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) =
+                    self.infer_binary_expression_clause_guard(UntypedBinaryClauseGuard::Numeric {
+                        operator: BinOp::LtEqFloat,
+                        left: *left,
+                        right: *right,
+                        numeric_type: NumericType::Float,
+                        location,
+                    })?;
                 Ok(ClauseGuard::LtEqFloat {
                     location,
                     left: Box::new(left),
@@ -2790,11 +2917,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
-                let left = self.infer_clause_guard(*left)?;
-                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(int(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) =
+                    self.infer_binary_expression_clause_guard(UntypedBinaryClauseGuard::Numeric {
+                        operator: BinOp::AddInt,
+                        left: *left,
+                        right: *right,
+                        numeric_type: NumericType::Int,
+                        location,
+                    })?;
                 Ok(ClauseGuard::AddInt {
                     location,
                     left: Box::new(left),
@@ -2809,12 +2939,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
-                let left = self.infer_clause_guard(*left)?;
-                unify(float(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(float(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) =
+                    self.infer_binary_expression_clause_guard(UntypedBinaryClauseGuard::Numeric {
+                        operator: BinOp::AddFloat,
+                        left: *left,
+                        right: *right,
+                        numeric_type: NumericType::Float,
+                        location,
+                    })?;
                 Ok(ClauseGuard::AddFloat {
                     location,
                     left: Box::new(left),
@@ -2829,11 +2961,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
-                let left = self.infer_clause_guard(*left)?;
-                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(int(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) =
+                    self.infer_binary_expression_clause_guard(UntypedBinaryClauseGuard::Numeric {
+                        operator: BinOp::SubInt,
+                        left: *left,
+                        right: *right,
+                        numeric_type: NumericType::Int,
+                        location,
+                    })?;
                 Ok(ClauseGuard::SubInt {
                     location,
                     left: Box::new(left),
@@ -2848,12 +2983,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
-                let left = self.infer_clause_guard(*left)?;
-                unify(float(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(float(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) =
+                    self.infer_binary_expression_clause_guard(UntypedBinaryClauseGuard::Numeric {
+                        operator: BinOp::SubFloat,
+                        left: *left,
+                        right: *right,
+                        numeric_type: NumericType::Float,
+                        location,
+                    })?;
                 Ok(ClauseGuard::SubFloat {
                     location,
                     left: Box::new(left),
@@ -2868,11 +3005,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
-                let left = self.infer_clause_guard(*left)?;
-                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(int(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) =
+                    self.infer_binary_expression_clause_guard(UntypedBinaryClauseGuard::Numeric {
+                        operator: BinOp::MultInt,
+                        left: *left,
+                        right: *right,
+                        numeric_type: NumericType::Int,
+                        location,
+                    })?;
                 Ok(ClauseGuard::MultInt {
                     location,
                     left: Box::new(left),
@@ -2887,12 +3027,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
-                let left = self.infer_clause_guard(*left)?;
-                unify(float(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(float(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) =
+                    self.infer_binary_expression_clause_guard(UntypedBinaryClauseGuard::Numeric {
+                        operator: BinOp::MultFloat,
+                        left: *left,
+                        right: *right,
+                        numeric_type: NumericType::Float,
+                        location,
+                    })?;
                 Ok(ClauseGuard::MultFloat {
                     location,
                     left: Box::new(left),
@@ -2907,11 +3049,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
-                let left = self.infer_clause_guard(*left)?;
-                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(int(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) =
+                    self.infer_binary_expression_clause_guard(UntypedBinaryClauseGuard::Numeric {
+                        operator: BinOp::DivInt,
+                        left: *left,
+                        right: *right,
+                        numeric_type: NumericType::Int,
+                        location,
+                    })?;
                 Ok(ClauseGuard::DivInt {
                     location,
                     left: Box::new(left),
@@ -2926,12 +3071,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
-                let left = self.infer_clause_guard(*left)?;
-                unify(float(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(float(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) =
+                    self.infer_binary_expression_clause_guard(UntypedBinaryClauseGuard::Numeric {
+                        operator: BinOp::DivFloat,
+                        left: *left,
+                        right: *right,
+                        numeric_type: NumericType::Float,
+                        location,
+                    })?;
                 Ok(ClauseGuard::DivFloat {
                     location,
                     left: Box::new(left),
@@ -2946,11 +3093,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
-                let left = self.infer_clause_guard(*left)?;
-                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(int(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let (left, right) =
+                    self.infer_binary_expression_clause_guard(UntypedBinaryClauseGuard::Numeric {
+                        operator: BinOp::RemainderInt,
+                        left: *left,
+                        right: *right,
+                        numeric_type: NumericType::Int,
+                        location,
+                    })?;
                 Ok(ClauseGuard::RemainderInt {
                     location,
                     left: Box::new(left),

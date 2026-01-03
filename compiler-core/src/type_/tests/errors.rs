@@ -531,6 +531,56 @@ fn case17() {
 }
 
 #[test]
+fn int_operator_on_floats_in_guard_gt() {
+    assert_error!("case 3.0 { x if x > 2.0 -> \"a\" _ -> \"b\" }");
+}
+
+#[test]
+fn int_operator_on_floats_in_guard_gte() {
+    assert_error!("case 3.0 { x if x >= 2.0 -> \"a\" _ -> \"b\" }");
+}
+
+#[test]
+fn int_operator_on_floats_in_guard_lt() {
+    assert_error!("case 3.0 { x if x < 2.0 -> \"a\" _ -> \"b\" }");
+}
+
+#[test]
+fn int_operator_on_floats_in_guard_lte() {
+    assert_error!("case 3.0 { x if x <= 2.0 -> \"a\" _ -> \"b\" }");
+}
+
+#[test]
+fn int_operator_on_floats_in_guard_add() {
+    assert_error!("case 3.0 { x if x + 2.0 == 5.0 -> \"a\" _ -> \"b\" }");
+}
+
+#[test]
+fn int_operator_on_floats_in_guard_sub() {
+    assert_error!("case 3.0 { x if x - 2.0 == 1.0 -> \"a\" _ -> \"b\" }");
+}
+
+#[test]
+fn int_operator_on_floats_in_guard_mult() {
+    assert_error!("case 3.0 { x if x * 2.0 == 6.0 -> \"a\" _ -> \"b\" }");
+}
+
+#[test]
+fn int_operator_on_floats_in_guard_div() {
+    assert_error!("case 3.0 { x if x / 2.0 == 1.5 -> \"a\" _ -> \"b\" }");
+}
+
+#[test]
+fn float_operator_on_ints_in_guard_gt() {
+    assert_error!("case 3 { x if x >. 2 -> \"a\" _ -> \"b\" }");
+}
+
+#[test]
+fn float_operator_on_ints_in_guard_add() {
+    assert_error!("case 3 { x if x +. 2 == 5.0 -> \"a\" _ -> \"b\" }");
+}
+
+#[test]
 fn case18() {
     assert_error!("case 1 { x if x == \"x\" -> 1 }");
 }

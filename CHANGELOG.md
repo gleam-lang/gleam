@@ -4,6 +4,8 @@
 
 ### Compiler
 
+- The compiler now reports an error when integer and float binary operators are used incorrectly in case expression guards. ([Adi Salimgereyev](https://github.com/abs0luty))
+
 ### Build tool
 
 - When adding a package that does not exist on Hex, the message is a bit friendlier.
