@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "case 3 { x if x +. 2 == 5.0 -> \"a\" _ -> \"b\" }"
+---
+----- SOURCE CODE
+case 3 { x if x +. 2 == 5.0 -> "a" _ -> "b" }
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:15
+  │
+1 │ case 3 { x if x +. 2 == 5.0 -> "a" _ -> "b" }
+  │               ^^^^^^ Use + instead
+
+The +. operator can only be used on Floats.

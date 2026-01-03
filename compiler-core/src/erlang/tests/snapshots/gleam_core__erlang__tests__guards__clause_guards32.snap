@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/erlang/tests/guards.rs
+expression: "\npub fn main() {\n  let wibble = \"wobble\"\n  case wibble {\n    x if x == \"wob\" <> \"ble\" -> 1\n    _ -> 0\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let wibble = "wobble"
+  case wibble {
+    x if x == "wob" <> "ble" -> 1
+    _ -> 0
+  }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> integer().
+main() ->
+    Wibble = <<"wobble"/utf8>>,
+    case Wibble of
+        X when X =:= <<"wob"/utf8, "ble"/utf8>> ->
+            1;
+
+        _ ->
+            0
+    end.

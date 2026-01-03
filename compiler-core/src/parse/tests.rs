@@ -1472,6 +1472,17 @@ case my_string {
 }
 
 #[test]
+fn string_concatenation_in_case_clause_guard() {
+    assert_parse!(
+        r#"
+let my_string = "hello "
+case my_string {
+    _ if my_string <> "world" == "hello world" -> io.debug("ok")
+}"#
+    );
+}
+
+#[test]
 fn invalid_label_shorthand() {
     assert_module_error!(
         "

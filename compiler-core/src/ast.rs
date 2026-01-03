@@ -2138,128 +2138,9 @@ pub enum ClauseGuard<Type, RecordTag> {
         value: Box<ClauseGuard<Type, RecordTag>>,
     },
 
-    Equals {
+    BinaryOperator {
         location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    NotEquals {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    GtInt {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    GtEqInt {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    LtInt {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    LtEqInt {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    GtFloat {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    GtEqFloat {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    LtFloat {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    LtEqFloat {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    AddInt {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    AddFloat {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    SubInt {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    SubFloat {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    MultInt {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    MultFloat {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    DivInt {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    DivFloat {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    RemainderInt {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    Or {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    And {
-        location: SrcSpan,
+        operator: BinOp,
         left: Box<Self>,
         right: Box<Self>,
     },
@@ -2307,30 +2188,10 @@ impl<A, B> ClauseGuard<A, B> {
     pub fn location(&self) -> SrcSpan {
         match self {
             ClauseGuard::Constant(constant) => constant.location(),
-            ClauseGuard::Or { location, .. }
-            | ClauseGuard::And { location, .. }
+            ClauseGuard::BinaryOperator { location, .. }
             | ClauseGuard::Not { location, .. }
             | ClauseGuard::Var { location, .. }
             | ClauseGuard::TupleIndex { location, .. }
-            | ClauseGuard::Equals { location, .. }
-            | ClauseGuard::NotEquals { location, .. }
-            | ClauseGuard::GtInt { location, .. }
-            | ClauseGuard::GtEqInt { location, .. }
-            | ClauseGuard::LtInt { location, .. }
-            | ClauseGuard::LtEqInt { location, .. }
-            | ClauseGuard::GtFloat { location, .. }
-            | ClauseGuard::GtEqFloat { location, .. }
-            | ClauseGuard::LtFloat { location, .. }
-            | ClauseGuard::AddInt { location, .. }
-            | ClauseGuard::AddFloat { location, .. }
-            | ClauseGuard::SubInt { location, .. }
-            | ClauseGuard::SubFloat { location, .. }
-            | ClauseGuard::MultInt { location, .. }
-            | ClauseGuard::MultFloat { location, .. }
-            | ClauseGuard::DivInt { location, .. }
-            | ClauseGuard::DivFloat { location, .. }
-            | ClauseGuard::RemainderInt { location, .. }
-            | ClauseGuard::LtEqFloat { location, .. }
             | ClauseGuard::ModuleSelect { location, .. }
             | ClauseGuard::Block { location, .. } => *location,
             ClauseGuard::FieldAccess {
@@ -2351,27 +2212,7 @@ impl<A, B> ClauseGuard<A, B> {
 
     pub fn bin_op_name(&self) -> Option<BinOp> {
         match self {
-            ClauseGuard::Or { .. } => Some(BinOp::Or),
-            ClauseGuard::And { .. } => Some(BinOp::And),
-            ClauseGuard::Equals { .. } => Some(BinOp::Eq),
-            ClauseGuard::NotEquals { .. } => Some(BinOp::NotEq),
-            ClauseGuard::GtInt { .. } => Some(BinOp::GtInt),
-            ClauseGuard::GtEqInt { .. } => Some(BinOp::GtEqInt),
-            ClauseGuard::LtInt { .. } => Some(BinOp::LtInt),
-            ClauseGuard::LtEqInt { .. } => Some(BinOp::LtEqInt),
-            ClauseGuard::GtFloat { .. } => Some(BinOp::GtFloat),
-            ClauseGuard::GtEqFloat { .. } => Some(BinOp::GtEqFloat),
-            ClauseGuard::LtFloat { .. } => Some(BinOp::LtFloat),
-            ClauseGuard::LtEqFloat { .. } => Some(BinOp::LtEqFloat),
-            ClauseGuard::AddInt { .. } => Some(BinOp::AddInt),
-            ClauseGuard::AddFloat { .. } => Some(BinOp::AddFloat),
-            ClauseGuard::SubInt { .. } => Some(BinOp::SubInt),
-            ClauseGuard::SubFloat { .. } => Some(BinOp::SubFloat),
-            ClauseGuard::MultInt { .. } => Some(BinOp::MultInt),
-            ClauseGuard::MultFloat { .. } => Some(BinOp::MultFloat),
-            ClauseGuard::DivInt { .. } => Some(BinOp::DivInt),
-            ClauseGuard::DivFloat { .. } => Some(BinOp::DivFloat),
-            ClauseGuard::RemainderInt { .. } => Some(BinOp::RemainderInt),
+            ClauseGuard::BinaryOperator { operator, .. } => Some(*operator),
 
             ClauseGuard::Constant(_)
             | ClauseGuard::Var { .. }
@@ -2394,30 +2235,31 @@ impl TypedClauseGuard {
             ClauseGuard::Constant(constant) => constant.type_(),
             ClauseGuard::Block { value, .. } => value.type_(),
 
-            ClauseGuard::AddInt { .. }
-            | ClauseGuard::SubInt { .. }
-            | ClauseGuard::MultInt { .. }
-            | ClauseGuard::DivInt { .. }
-            | ClauseGuard::RemainderInt { .. } => type_::int(),
+            ClauseGuard::Not { .. } => type_::bool(),
 
-            ClauseGuard::AddFloat { .. }
-            | ClauseGuard::SubFloat { .. }
-            | ClauseGuard::MultFloat { .. }
-            | ClauseGuard::DivFloat { .. } => type_::float(),
-
-            ClauseGuard::Or { .. }
-            | ClauseGuard::Not { .. }
-            | ClauseGuard::And { .. }
-            | ClauseGuard::Equals { .. }
-            | ClauseGuard::NotEquals { .. }
-            | ClauseGuard::GtInt { .. }
-            | ClauseGuard::GtEqInt { .. }
-            | ClauseGuard::LtInt { .. }
-            | ClauseGuard::LtEqInt { .. }
-            | ClauseGuard::GtFloat { .. }
-            | ClauseGuard::GtEqFloat { .. }
-            | ClauseGuard::LtFloat { .. }
-            | ClauseGuard::LtEqFloat { .. } => type_::bool(),
+            ClauseGuard::BinaryOperator { operator, .. } => match operator {
+                BinOp::AddInt
+                | BinOp::SubInt
+                | BinOp::MultInt
+                | BinOp::DivInt
+                | BinOp::RemainderInt => type_::int(),
+                BinOp::AddFloat | BinOp::SubFloat | BinOp::MultFloat | BinOp::DivFloat => {
+                    type_::float()
+                }
+                BinOp::Concatenate => type_::string(),
+                BinOp::Or
+                | BinOp::And
+                | BinOp::Eq
+                | BinOp::NotEq
+                | BinOp::GtInt
+                | BinOp::GtEqInt
+                | BinOp::LtInt
+                | BinOp::LtEqInt
+                | BinOp::GtFloat
+                | BinOp::GtEqFloat
+                | BinOp::LtFloat
+                | BinOp::LtEqFloat => type_::bool(),
+            },
         }
     }
 
@@ -2432,27 +2274,7 @@ impl TypedClauseGuard {
             ClauseGuard::Constant(constant) => constant.referenced_variables(),
             ClauseGuard::ModuleSelect { .. } => im::HashSet::new(),
 
-            ClauseGuard::Equals { left, right, .. }
-            | ClauseGuard::NotEquals { left, right, .. }
-            | ClauseGuard::GtInt { left, right, .. }
-            | ClauseGuard::GtEqInt { left, right, .. }
-            | ClauseGuard::LtInt { left, right, .. }
-            | ClauseGuard::LtEqInt { left, right, .. }
-            | ClauseGuard::GtFloat { left, right, .. }
-            | ClauseGuard::GtEqFloat { left, right, .. }
-            | ClauseGuard::LtFloat { left, right, .. }
-            | ClauseGuard::LtEqFloat { left, right, .. }
-            | ClauseGuard::AddInt { left, right, .. }
-            | ClauseGuard::AddFloat { left, right, .. }
-            | ClauseGuard::SubInt { left, right, .. }
-            | ClauseGuard::SubFloat { left, right, .. }
-            | ClauseGuard::MultInt { left, right, .. }
-            | ClauseGuard::MultFloat { left, right, .. }
-            | ClauseGuard::DivInt { left, right, .. }
-            | ClauseGuard::DivFloat { left, right, .. }
-            | ClauseGuard::RemainderInt { left, right, .. }
-            | ClauseGuard::And { left, right, .. }
-            | ClauseGuard::Or { left, right, .. } => left
+            ClauseGuard::BinaryOperator { left, right, .. } => left
                 .referenced_variables()
                 .union(right.referenced_variables()),
         }
@@ -2469,214 +2291,14 @@ impl TypedClauseGuard {
             (ClauseGuard::Block { .. }, _) => false,
 
             (
-                ClauseGuard::Equals { left, right, .. },
-                ClauseGuard::Equals {
+                ClauseGuard::BinaryOperator { left, right, .. },
+                ClauseGuard::BinaryOperator {
                     left: other_left,
                     right: other_right,
                     ..
                 },
             ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::Equals { .. }, _) => false,
-
-            (
-                ClauseGuard::NotEquals { left, right, .. },
-                ClauseGuard::NotEquals {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::NotEquals { .. }, _) => false,
-
-            (
-                ClauseGuard::GtInt { left, right, .. },
-                ClauseGuard::GtInt {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::GtInt { .. }, _) => false,
-
-            (
-                ClauseGuard::GtEqInt { left, right, .. },
-                ClauseGuard::GtEqInt {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::GtEqInt { .. }, _) => false,
-
-            (
-                ClauseGuard::LtInt { left, right, .. },
-                ClauseGuard::LtInt {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::LtInt { .. }, _) => false,
-
-            (
-                ClauseGuard::LtEqInt { left, right, .. },
-                ClauseGuard::LtEqInt {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::LtEqInt { .. }, _) => false,
-
-            (
-                ClauseGuard::GtFloat { left, right, .. },
-                ClauseGuard::GtFloat {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::GtFloat { .. }, _) => false,
-
-            (
-                ClauseGuard::GtEqFloat { left, right, .. },
-                ClauseGuard::GtEqFloat {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::GtEqFloat { .. }, _) => false,
-
-            (
-                ClauseGuard::LtFloat { left, right, .. },
-                ClauseGuard::LtFloat {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::LtFloat { .. }, _) => false,
-
-            (
-                ClauseGuard::LtEqFloat { left, right, .. },
-                ClauseGuard::LtEqFloat {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::LtEqFloat { .. }, _) => false,
-
-            (
-                ClauseGuard::AddInt { left, right, .. },
-                ClauseGuard::AddInt {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::AddInt { .. }, _) => false,
-
-            (
-                ClauseGuard::AddFloat { left, right, .. },
-                ClauseGuard::AddFloat {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::AddFloat { .. }, _) => false,
-
-            (
-                ClauseGuard::SubInt { left, right, .. },
-                ClauseGuard::SubInt {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::SubInt { .. }, _) => false,
-
-            (
-                ClauseGuard::SubFloat { left, right, .. },
-                ClauseGuard::SubFloat {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::SubFloat { .. }, _) => false,
-
-            (
-                ClauseGuard::MultInt { left, right, .. },
-                ClauseGuard::MultInt {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::MultInt { .. }, _) => false,
-
-            (
-                ClauseGuard::MultFloat { left, right, .. },
-                ClauseGuard::MultFloat {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::MultFloat { .. }, _) => false,
-
-            (
-                ClauseGuard::DivInt { left, right, .. },
-                ClauseGuard::DivInt {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::DivInt { .. }, _) => false,
-
-            (
-                ClauseGuard::DivFloat { left, right, .. },
-                ClauseGuard::DivFloat {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::DivFloat { .. }, _) => false,
-
-            (
-                ClauseGuard::RemainderInt { left, right, .. },
-                ClauseGuard::RemainderInt {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::RemainderInt { .. }, _) => false,
-
-            (
-                ClauseGuard::Or { left, right, .. },
-                ClauseGuard::Or {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::Or { .. }, _) => false,
-
-            (
-                ClauseGuard::And { left, right, .. },
-                ClauseGuard::And {
-                    left: other_left,
-                    right: other_right,
-                    ..
-                },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (ClauseGuard::And { .. }, _) => false,
+            (ClauseGuard::BinaryOperator { .. }, _) => false,
 
             (
                 ClauseGuard::Not { expression, .. },
