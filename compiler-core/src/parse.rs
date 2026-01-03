@@ -1269,7 +1269,7 @@ where
                 self.advance();
 
                 // A variable is not permitted on the left hand side of a `<>`
-                if let Some((_, Token::LtGt, _)) = self.tok0.as_ref() {
+                if let Some((_, Token::Concatenate, _)) = self.tok0.as_ref() {
                     return concat_pattern_variable_left_hand_side_error(start, end);
                 }
 
@@ -1311,7 +1311,7 @@ where
                 self.advance();
 
                 // A discard is not permitted on the left hand side of a `<>`
-                if let Some((_, Token::LtGt, _)) = self.tok0.as_ref() {
+                if let Some((_, Token::Concatenate, _)) = self.tok0.as_ref() {
                     return concat_pattern_variable_left_hand_side_error(start, end);
                 }
 
@@ -1340,7 +1340,7 @@ where
                         match self.tok0 {
                             // String prefix matching with assignment
                             // "Hello, " as greeting <> name -> ...
-                            Some((_, Token::LtGt, _)) => {
+                            Some((_, Token::Concatenate, _)) => {
                                 self.advance();
                                 let (r_start, right, r_end) = self.expect_assign_name()?;
                                 Pattern::StringPrefix {
@@ -1374,7 +1374,7 @@ where
 
                     // String prefix matching with no left side assignment
                     // "Hello, " <> name -> ...
-                    Some((_, Token::LtGt, _)) => {
+                    Some((_, Token::Concatenate, _)) => {
                         self.advance();
                         let (r_start, right, r_end) = self.expect_assign_name()?;
                         Pattern::StringPrefix {
@@ -3306,7 +3306,7 @@ where
         left: UntypedConstant,
     ) -> Result<Option<UntypedConstant>, ParseError> {
         match self.tok0.take() {
-            Some((op_start, Token::LtGt, op_end)) => {
+            Some((op_start, Token::Concatenate, op_end)) => {
                 self.advance();
 
                 match self.parse_const_value() {
@@ -3783,7 +3783,7 @@ where
             | Token::GreaterDot
             | Token::LessEqualDot
             | Token::GreaterEqualDot
-            | Token::LtGt
+            | Token::Concatenate
             | Token::Colon
             | Token::Comma
             | Token::Hash
@@ -4046,7 +4046,7 @@ functions are declared separately from types.";
                 | Token::GreaterDot
                 | Token::LessEqualDot
                 | Token::GreaterEqualDot
-                | Token::LtGt
+                | Token::Concatenate
                 | Token::Colon
                 | Token::Comma
                 | Token::Hash
@@ -4132,7 +4132,7 @@ functions are declared separately from types.";
                 | Token::GreaterDot
                 | Token::LessEqualDot
                 | Token::GreaterEqualDot
-                | Token::LtGt
+                | Token::Concatenate
                 | Token::Colon
                 | Token::Comma
                 | Token::Hash
@@ -4664,7 +4664,7 @@ fn tok_to_binop(t: &Token) -> Option<BinOp> {
         Token::StarDot => Some(BinOp::MultFloat),
         Token::Slash => Some(BinOp::DivInt),
         Token::SlashDot => Some(BinOp::DivFloat),
-        Token::LtGt => Some(BinOp::Concatenate),
+        Token::Concatenate => Some(BinOp::Concatenate),
         Token::Name { .. }
         | Token::UpName { .. }
         | Token::DiscardName { .. }
@@ -4788,187 +4788,13 @@ fn clause_guard_reduction(
     };
     let left = Box::new(l);
     let right = Box::new(r);
-    match token {
-        Token::VbarVbar => ClauseGuard::Or {
-            location,
-            left,
-            right,
-        },
+    let operator = tok_to_binop(&token).expect("Token could not be converted to binop.");
 
-        Token::AmperAmper => ClauseGuard::And {
-            location,
-            left,
-            right,
-        },
-
-        Token::EqualEqual => ClauseGuard::Equals {
-            location,
-            left,
-            right,
-        },
-
-        Token::NotEqual => ClauseGuard::NotEquals {
-            location,
-            left,
-            right,
-        },
-
-        Token::Greater => ClauseGuard::GtInt {
-            location,
-            left,
-            right,
-        },
-
-        Token::GreaterEqual => ClauseGuard::GtEqInt {
-            location,
-            left,
-            right,
-        },
-
-        Token::Less => ClauseGuard::LtInt {
-            location,
-            left,
-            right,
-        },
-
-        Token::LessEqual => ClauseGuard::LtEqInt {
-            location,
-            left,
-            right,
-        },
-
-        Token::GreaterDot => ClauseGuard::GtFloat {
-            location,
-            left,
-            right,
-        },
-
-        Token::GreaterEqualDot => ClauseGuard::GtEqFloat {
-            location,
-            left,
-            right,
-        },
-
-        Token::LessDot => ClauseGuard::LtFloat {
-            location,
-            left,
-            right,
-        },
-
-        Token::LessEqualDot => ClauseGuard::LtEqFloat {
-            location,
-            left,
-            right,
-        },
-
-        Token::Plus => ClauseGuard::AddInt {
-            location,
-            left,
-            right,
-        },
-
-        Token::PlusDot => ClauseGuard::AddFloat {
-            location,
-            left,
-            right,
-        },
-
-        Token::Minus => ClauseGuard::SubInt {
-            location,
-            left,
-            right,
-        },
-
-        Token::MinusDot => ClauseGuard::SubFloat {
-            location,
-            left,
-            right,
-        },
-
-        Token::Star => ClauseGuard::MultInt {
-            location,
-            left,
-            right,
-        },
-
-        Token::StarDot => ClauseGuard::MultFloat {
-            location,
-            left,
-            right,
-        },
-
-        Token::Slash => ClauseGuard::DivInt {
-            location,
-            left,
-            right,
-        },
-
-        Token::SlashDot => ClauseGuard::DivFloat {
-            location,
-            left,
-            right,
-        },
-
-        Token::Percent => ClauseGuard::RemainderInt {
-            location,
-            left,
-            right,
-        },
-
-        Token::Name { .. }
-        | Token::UpName { .. }
-        | Token::DiscardName { .. }
-        | Token::Int { .. }
-        | Token::Float { .. }
-        | Token::String { .. }
-        | Token::CommentDoc { .. }
-        | Token::LeftParen
-        | Token::RightParen
-        | Token::LeftSquare
-        | Token::RightSquare
-        | Token::LeftBrace
-        | Token::RightBrace
-        | Token::LtGt
-        | Token::Colon
-        | Token::Comma
-        | Token::Hash
-        | Token::Bang
-        | Token::Equal
-        | Token::Vbar
-        | Token::LtLt
-        | Token::GtGt
-        | Token::Pipe
-        | Token::Dot
-        | Token::RArrow
-        | Token::LArrow
-        | Token::DotDot
-        | Token::At
-        | Token::EndOfFile
-        | Token::CommentNormal
-        | Token::CommentModule
-        | Token::NewLine
-        | Token::As
-        | Token::Assert
-        | Token::Auto
-        | Token::Case
-        | Token::Const
-        | Token::Delegate
-        | Token::Derive
-        | Token::Echo
-        | Token::Else
-        | Token::Fn
-        | Token::If
-        | Token::Implement
-        | Token::Import
-        | Token::Let
-        | Token::Macro
-        | Token::Opaque
-        | Token::Panic
-        | Token::Pub
-        | Token::Test
-        | Token::Todo
-        | Token::Type
-        | Token::Use => panic!("Token could not be converted to Guard Op."),
+    UntypedClauseGuard::BinaryOperator {
+        location,
+        operator,
+        left,
+        right,
     }
 }
 

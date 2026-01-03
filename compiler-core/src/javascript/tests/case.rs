@@ -889,3 +889,17 @@ pub fn wibble(bits) {
 }"#
     );
 }
+
+#[test]
+fn string_concatenation_in_clause_guards() {
+    assert_js!(
+        r#"
+pub fn main() {
+  let wibble = "wob"
+  case wibble {
+    x if x <> "ble" == "wobble" -> 1
+    _ -> 0
+  }
+}"#
+    );
+}

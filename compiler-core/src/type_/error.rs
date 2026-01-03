@@ -1156,6 +1156,7 @@ pub enum FeatureKind {
     LabelShorthandSyntax,
     ConstantStringConcatenation,
     ArithmeticInGuards,
+    ConcatenateInGuards,
     UnannotatedUtf8StringSegment,
     UnannotatedFloatSegment,
     NestedTupleAccess,
@@ -1182,6 +1183,8 @@ impl FeatureKind {
             FeatureKind::AtInJavascriptModules => Version::new(1, 2, 0),
 
             FeatureKind::ArithmeticInGuards => Version::new(1, 3, 0),
+
+            FeatureKind::ConcatenateInGuards => Version::new(1, 15, 0),
 
             FeatureKind::LabelShorthandSyntax | FeatureKind::ConstantStringConcatenation => {
                 Version::new(1, 4, 0)

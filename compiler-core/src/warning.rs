@@ -1256,6 +1256,7 @@ See: https://tour.gleam.run/functions/pipelines/",
                             "Constant strings concatenation was"
                         }
                         FeatureKind::ArithmeticInGuards => "Arithmetic operations in guards were",
+                        FeatureKind::ConcatenateInGuards => "String concatenation in guards was",
                         FeatureKind::UnannotatedUtf8StringSegment => {
                             "The ability to omit the `utf8` annotation for string segments was"
                         }
