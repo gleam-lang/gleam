@@ -1,0 +1,68 @@
+---
+source: compiler-core/src/javascript/tests/assert.rs
+expression: "\npub fn main() {\n    assert True && case 1 > 2 {\n        True -> True\n        False -> False\n    }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+    assert True && case 1 > 2 {
+        True -> True
+        False -> False
+    }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function main() {
+  if (true) {
+    if (!(() => {
+        let $ = 1 > 2;
+        if ($) {
+          return $;
+        } else {
+          return $;
+        }
+      })()) {
+      throw makeError(
+        "assert",
+        FILEPATH,
+        "my/mod",
+        3,
+        "main",
+        "Assertion failed.",
+        {
+          kind: "binary_operator",
+          operator: "&&",
+          left: { kind: "literal", value: true, start: 28, end: 32 },
+          right: { kind: "expression", value: false, start: 36, end: 98 },
+          start: 21,
+          end: 98,
+          expression_start: 28
+        }
+      )
+    }
+  } else {
+    throw makeError(
+      "assert",
+      FILEPATH,
+      "my/mod",
+      3,
+      "main",
+      "Assertion failed.",
+      {
+        kind: "binary_operator",
+        operator: "&&",
+        left: { kind: "literal", value: false, start: 28, end: 32 },
+        right: { kind: "unevaluated", start: 36, end: 98 },
+        start: 21,
+        end: 98,
+        expression_start: 28
+      }
+    )
+  }
+  return undefined;
+}

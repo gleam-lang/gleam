@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assert.rs
-assertion_line: 107
 expression: "\nfn wibble(a, b) {\n  let result = a + b\n  result == 10\n}\n\npub fn go(x) {\n  assert True && wibble(1, 4)\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
