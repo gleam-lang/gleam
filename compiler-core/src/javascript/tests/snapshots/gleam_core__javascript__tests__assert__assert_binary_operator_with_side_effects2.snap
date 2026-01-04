@@ -26,7 +26,7 @@ function wibble(a, b) {
 
 export function go(x) {
   if (wibble(5, 5)) {
-    if (!(wibble(4, 6))) {
+    if (!wibble(4, 6)) {
       throw makeError(
         "assert",
         FILEPATH,

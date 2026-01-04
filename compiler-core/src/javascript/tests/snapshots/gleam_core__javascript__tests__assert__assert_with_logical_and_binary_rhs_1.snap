@@ -16,7 +16,7 @@ const FILEPATH = "src/module.gleam";
 
 export function main() {
   if (true) {
-    if (!(3 < 4)) {
+    if (3 >= 4) {
       throw makeError(
         "assert",
         FILEPATH,
