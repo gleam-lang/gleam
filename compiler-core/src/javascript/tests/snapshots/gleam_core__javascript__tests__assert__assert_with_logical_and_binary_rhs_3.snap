@@ -16,7 +16,7 @@ const FILEPATH = "src/module.gleam";
 
 export function main() {
   if (true) {
-    if (!("foo" !== "bar")) {
+    if ("foo" === "bar") {
       throw makeError(
         "assert",
         FILEPATH,
