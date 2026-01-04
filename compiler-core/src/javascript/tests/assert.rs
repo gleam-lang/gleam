@@ -236,3 +236,33 @@ pub fn main() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5251
+#[test]
+fn assert_with_case_rhs() {
+    assert_js!(
+        "
+pub fn main() {
+    assert True && case 1 > 2 {
+        True -> True
+        False -> False
+    }
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5251
+#[test]
+fn assert_with_negated_case_rhs() {
+    assert_js!(
+        "
+pub fn main() {
+    assert True && !case 3 - 2 {
+        1 -> True
+        _ -> False
+    }
+}
+"
+    );
+}
