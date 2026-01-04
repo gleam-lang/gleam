@@ -1115,8 +1115,8 @@ impl<'module, 'a> Generator<'module, 'a> {
                 BinOp::GtEqInt | BinOp::GtEqFloat => self.print_bin_op(left, right, "<"),
                 _ => unreachable!("type checking should make this impossible"),
             },
-            TypedExpr::NegateBool { value, .. } => self.expression(value),
-            _ => docvec!["!", self.expression(value)],
+            TypedExpr::NegateBool { value, .. } => self.wrap_expression(value),
+            _ => docvec!["!", self.wrap_expression(value)],
         }
     }
 
