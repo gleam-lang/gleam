@@ -1,0 +1,26 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\npub fn go(x) {\n  case x {\n    [[nested, ..] as wibble, ..] -> todo\n    _ -> todo\n  }\n}\n        "
+---
+----- BEFORE RENAME
+-- app.gleam
+
+pub fn go(x) {
+  case x {
+    [[nested, ..] as wibble, ..] -> todo
+      ↑▔▔▔▔▔                            
+    _ -> todo
+  }
+}
+        
+
+
+----- AFTER RENAME
+-- app.gleam
+
+pub fn go(x) {
+  case x {
+    [[new_name, ..] as wibble, ..] -> todo
+    _ -> todo
+  }
+}

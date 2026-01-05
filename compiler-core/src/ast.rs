@@ -3395,10 +3395,13 @@ impl TypedPattern {
             | Pattern::String { .. }
             | Pattern::Variable { .. }
             | Pattern::BitArraySize { .. }
-            | Pattern::Assign { .. }
             | Pattern::Discard { .. }
             | Pattern::StringPrefix { .. }
             | Pattern::Invalid { .. } => Some(Located::Pattern(self)),
+
+            Pattern::Assign { pattern, .. } => pattern
+                .find_node(byte_index)
+                .or_else(|| Some(Located::Pattern(self))),
 
             Pattern::Constructor {
                 arguments, spread, ..
