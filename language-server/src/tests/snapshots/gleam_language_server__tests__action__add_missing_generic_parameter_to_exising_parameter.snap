@@ -1,0 +1,19 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\ntype GenericType(t) {\n  GenericType(field: t)\n  GenericType2(field: u)\n}\n"
+---
+----- BEFORE ACTION
+
+type GenericType(t) {
+  GenericType(field: t)
+  GenericType2(field: u)
+                      ↑ 
+}
+
+
+----- AFTER ACTION
+
+type GenericType(t, u) {
+  GenericType(field: t)
+  GenericType2(field: u)
+}
