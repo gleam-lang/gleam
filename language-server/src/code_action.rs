@@ -10112,3 +10112,120 @@ impl<'ast> ast::visit::Visit<'ast> for MergeCaseBranches<'ast> {
         ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
     }
 }
+
+/// Code action to add a missing generic parameter to custom types.
+/// If a custom type is missing a generic type parameter, as it is the case
+/// in the following example, this action will offer to add the
+/// generic parameter to the type definition.
+///
+/// Before:
+/// ```gleam
+/// type GenericType {
+///   GenericType(field: t)
+/// }
+/// ```
+///
+/// After:
+/// ```gleam
+/// type GenericType(t) {
+///   GenericType(field: t)
+/// }
+/// ```
+///
+pub struct AddMissingGenericParameter<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    /// The source location where the parameters should be defined.
+    /// This might be a zero-length span if there are no parameters yet,
+    /// or it might cover the already existing generic parameter definitions.
+    parameters_location: Option<SrcSpan>,
+    /// The set of generic parameter names that are part of the type definition.
+    existing_parameters: HashSet<EcoString>,
+    /// The set of all generic parameter names in the different variants of the type
+    /// that are not already part of the generic parameter definition on the type
+    missing_parameters: HashSet<EcoString>,
+}
+
+impl<'a> AddMissingGenericParameter<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            parameters_location: None,
+            existing_parameters: HashSet::new(),
+            missing_parameters: HashSet::new(),
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(type_parameters_location) = self.parameters_location else {
+            return vec![];
+        };
+
+        if self.missing_parameters.is_empty() {
+            return vec![];
+        }
+
+        let all_parameters = self
+            .existing_parameters
+            .union(&self.missing_parameters)
+            .sorted()
+            .join(", ");
+
+        self.edits
+            .replace(type_parameters_location, format!("({})", all_parameters));
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Add missing generic parameter")
+            .kind(CodeActionKind::QUICKFIX)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for AddMissingGenericParameter<'ast> {
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
+        let full_type_definition_range = self.edits.src_span_to_lsp_range(SrcSpan::new(
+            custom_type.location.start,
+            custom_type.end_position,
+        ));
+
+        // only continue, if the action was selected anywhere within the custom type definition
+        if !overlaps(self.params.range, full_type_definition_range) {
+            return;
+        }
+
+        self.parameters_location = Some(SrcSpan::new(
+            custom_type.name_location.end,
+            custom_type.location.end,
+        ));
+
+        // collect the names of already existing type parameters
+        for (_, parameter) in &custom_type.parameters {
+            let _ = self.existing_parameters.insert(parameter.clone());
+        }
+
+        // collect the remaining type parameters from the variant constructors
+        for record in &custom_type.constructors {
+            for argument in &record.arguments {
+                if let Type::Var { .. } = argument.type_.as_ref()
+                    && !custom_type.typed_parameters.contains(&argument.type_)
+                {
+                    let mut name = EcoString::new();
+                    argument.ast.print(&mut name);
+                    let _ = self.missing_parameters.insert(name);
+                }
+            }
+        }
+    }
+}

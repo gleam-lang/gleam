@@ -138,6 +138,7 @@ const REMOVE_UNREACHABLE_CLAUSES: &str = "Remove unreachable clauses";
 const ADD_OMITTED_LABELS: &str = "Add omitted labels";
 const EXTRACT_FUNCTION: &str = "Extract function";
 const MERGE_CASE_BRANCHES: &str = "Merge case branches";
+const ADD_MISSING_GENERIC_PARAMETER: &str = "Add missing generic parameter";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -11623,5 +11624,60 @@ pub fn wibble() {
 }
 "#,
         find_position_of("x").to_selection()
+    );
+}
+
+#[test]
+fn add_missing_generic_parameter_for_single_constructor() {
+    assert_code_action!(
+        ADD_MISSING_GENERIC_PARAMETER,
+        r#"
+type GenericType {
+  GenericType(field: t)
+}
+"#,
+        find_position_of("t").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn add_missing_generic_parameter_to_exising_parameter() {
+    assert_code_action!(
+        ADD_MISSING_GENERIC_PARAMETER,
+        r#"
+type GenericType(t) {
+  GenericType(field: t)
+  GenericType2(field: u)
+}
+"#,
+        find_position_of("u").to_selection()
+    );
+}
+
+#[test]
+fn add_missing_generic_parameter_not_suggested_when_nothing_missing() {
+    assert_no_code_actions!(
+        ADD_MISSING_GENERIC_PARAMETER,
+        r#"
+type GenericType(t) {
+  GenericType(field: t)
+}
+"#,
+        find_position_of("t").nth_occurrence(3).to_selection()
+    );
+}
+
+#[test]
+fn add_missing_generic_parameter_not_suggested_when_no_parameters() {
+    assert_no_code_actions!(
+        ADD_MISSING_GENERIC_PARAMETER,
+        r#"
+type GenericType {
+  GenericType
+}
+"#,
+        find_position_of("GenericType")
+            .nth_occurrence(2)
+            .to_selection()
     );
 }
