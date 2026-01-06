@@ -40,6 +40,8 @@
 - The language server now allows extracting the start of a pipeline into a
   variable.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+- The language server now suggests adding missing generic parameters to custom types.
+  ([Andi Pabst](https://github.com/andipabst))
 
 ### Formatter
 
