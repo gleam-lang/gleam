@@ -10,6 +10,9 @@
   friendlier.
   ([Ameen Radwan](https://github.com/Acepie))
 
+- The compiler no longer crashes when trying to pattern match on a `UtfCodepoint`.
+  ([Hari Mohan](https://github.com/seafoamteal))
+
 ### Language server
 
 - The language server now allows extracting the start of a pipeline into a
