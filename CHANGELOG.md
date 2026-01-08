@@ -26,3 +26,7 @@
 - The compiler now correctly tracks the minimum required version for expressions
   in `BitArray`s' `size` option to be `>= 1.12.0`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the generated code for labelled functions would evaluate
+  arguments in the wrong order.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
