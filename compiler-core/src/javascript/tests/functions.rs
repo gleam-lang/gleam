@@ -596,3 +596,75 @@ pub fn main() { 1 }
 "
     );
 }
+
+#[test]
+fn call_with_out_of_place_labels() {
+    assert_js!(
+        r#"
+fn wibble(a a, b b) { 1 }
+fn fun(arg) { panic as "impure!" }
+
+pub fn main() {
+  wibble(fun("evaluated first"), a: fun("evaluated second"))
+}
+"#
+    )
+}
+
+#[test]
+fn call_with_out_of_place_labels_1() {
+    assert_js!(
+        r#"
+fn wibble(a a, b b) { 1 }
+fn fun(arg) { panic as "impure!" }
+
+pub fn main() {
+  wibble(b: fun("evaluated first"), a: fun("evaluated second"))
+}
+"#
+    )
+}
+
+#[test]
+fn call_with_out_of_place_labels_not_in_tail_position() {
+    assert_js!(
+        r#"
+fn wibble(a a, b b) { 1 }
+fn fun(arg) { panic as "impure!" }
+
+pub fn main() {
+  wibble(fun("evaluated first"), a: fun("evaluated second"))
+  Nil
+}
+"#
+    )
+}
+
+#[test]
+fn call_with_out_of_place_labels_not_in_tail_position_1() {
+    assert_js!(
+        r#"
+fn wibble(a a, b b) { 1 }
+fn fun(arg) { panic as "impure!" }
+
+pub fn main() {
+  let a = wibble(fun("evaluated first"), a: fun("evaluated second"))
+  a
+}
+"#
+    )
+}
+
+#[test]
+fn call_with_out_of_place_labels_does_not_produce_extra_bindings_if_args_are_pure() {
+    assert_js!(
+        r#"
+fn wibble(a a, b b) { 1 }
+fn fun(arg) { "pure" }
+
+pub fn main() {
+  wibble(b: fun("passed second"), a: fun("passed first"))
+}
+"#
+    )
+}
