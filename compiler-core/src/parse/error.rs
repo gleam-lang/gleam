@@ -557,7 +557,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
 
             ParseErrorType::UnknownAttribute => ParseErrorDetails {
                 text: "".into(),
-                hint: Some("Try `deprecated`, `external` or `target` instead.".into()),
+                hint: Some("Try `deprecated`, `external` or `internal` instead.".into()),
                 label_text: "I don't recognise this attribute".into(),
                 extra_labels: vec![],
             },
