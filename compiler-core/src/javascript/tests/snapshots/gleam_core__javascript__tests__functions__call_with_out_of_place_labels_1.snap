@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\nfn wibble(a a, b b) { 1 }\nfn fun(arg) { panic as \"impure!\" }\n\npub fn main() {\n  wibble(b: fun(\"evaluated first\"), a: fun(\"evaluated second\"))\n}\n"
+---
+----- SOURCE CODE
+
+fn wibble(a a, b b) { 1 }
+fn fun(arg) { panic as "impure!" }
+
+pub fn main() {
+  wibble(b: fun("evaluated first"), a: fun("evaluated second"))
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+function wibble(a, b) {
+  return 1;
+}
+
+function fun(arg) {
+  throw makeError("panic", FILEPATH, "my/mod", 3, "fun", "impure!", {})
+}
+
+export function main() {
+  let arg = fun("evaluated first");
+  let arg$1 = fun("evaluated second");
+  return wibble(arg$1, arg);
+}
