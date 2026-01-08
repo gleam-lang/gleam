@@ -821,6 +821,14 @@ fn infer_module_type_retention_test() {
                     }
                 ),
                 (
+                    "UtfCodepoint".into(),
+                    TypeVariantConstructors {
+                        type_parameters_ids: vec![],
+                        variants: vec![],
+                        opaque: Opaque::NotOpaque,
+                    }
+                ),
+                (
                     "Result".into(),
                     TypeVariantConstructors {
                         type_parameters_ids: vec![1, 2],
@@ -3054,10 +3062,13 @@ fn assert_suitable_main_function_javascript_not_supported() {
             purity: Purity::Impure,
         },
     };
-    assert!(
-        assert_suitable_main_function(&value, &"module".into(), Origin::Src, Target::JavaScript)
-            .is_err(),
-    );
+    assert!(assert_suitable_main_function(
+        &value,
+        &"module".into(),
+        Origin::Src,
+        Target::JavaScript
+    )
+    .is_err(),);
 }
 
 #[test]

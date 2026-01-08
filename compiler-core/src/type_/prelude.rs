@@ -529,6 +529,14 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         documentation: None,
                     },
                 );
+                let _ = prelude.types_value_constructors.insert(
+                    UTF_CODEPOINT.into(),
+                    TypeVariantConstructors {
+                        type_parameters_ids: vec![],
+                        variants: vec![],
+                        opaque: Opaque::NotOpaque,
+                    },
+                );
             }
         }
     }

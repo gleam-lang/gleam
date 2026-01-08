@@ -1,0 +1,44 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+expression: "\nimport gleam/string\n\npub fn main() {\n  let assert Ok(wibble) = string.utf_codepoint(71)\n  case wibble {\n  }\n}        "
+---
+----- SOURCE CODE
+-- gleam/string.gleam
+
+@external(erlang, "gleam_stdlib", "identity")
+fn unsafe_int_to_utf_codepoint(a: Int) -> UtfCodepoint
+
+pub fn utf_codepoint(value: Int) -> Result(UtfCodepoint, Nil) {
+  case value {
+    i if i > 1_114_111 -> Error(Nil)
+    i if i >= 55_296 && i <= 57_343 -> Error(Nil)
+    i if i < 0 -> Error(Nil)
+    i -> Ok(unsafe_int_to_utf_codepoint(i))
+  }
+}
+            
+
+-- main.gleam
+
+import gleam/string
+
+pub fn main() {
+  let assert Ok(wibble) = string.utf_codepoint(71)
+  case wibble {
+  }
+}        
+
+----- ERROR
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:6:3
+  │  
+6 │ ╭   case wibble {
+7 │ │   }
+  │ ╰───^
+
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    _
