@@ -922,3 +922,24 @@ pub fn wibble() {
 }"#
     )
 }
+
+#[test]
+fn directly_matching_case_subject() {
+    assert_js!(
+        r#"
+pub fn go() {
+  let x = "ABC"
+  case True {
+    True -> {
+      let x = 79
+      0
+    }
+    False -> {
+      let x = True
+      0
+    }
+  }
+  x
+}"#
+    )
+}

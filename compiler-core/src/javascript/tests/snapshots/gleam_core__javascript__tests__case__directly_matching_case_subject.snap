@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn go() {\n  let x = \"ABC\"\n  case True {\n    True -> {\n      let x = 79\n      0\n    }\n    False -> {\n      let x = True\n      0\n    }\n  }\n  x\n}"
+---
+----- SOURCE CODE
+
+pub fn go() {
+  let x = "ABC"
+  case True {
+    True -> {
+      let x = 79
+      0
+    }
+    False -> {
+      let x = True
+      0
+    }
+  }
+  x
+}
+
+----- COMPILED JAVASCRIPT
+export function go() {
+  let x = "ABC";
+  let $ = true;
+  let x$1 = 79;
+  0
+  return x;
+}
