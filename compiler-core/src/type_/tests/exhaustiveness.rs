@@ -1908,3 +1908,35 @@ fn wibble(b: Bool, i: Int) {
 pub fn main() { wibble(False, 1) }"#
     );
 }
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/5262
+fn compiler_does_not_crash_when_matching_on_utfcodepoint() {
+    assert_module_error!(
+        (
+            "gleam_stdlib",
+            "gleam/string",
+            r#"
+@external(erlang, "gleam_stdlib", "identity")
+fn unsafe_int_to_utf_codepoint(a: Int) -> UtfCodepoint
+
+pub fn utf_codepoint(value: Int) -> Result(UtfCodepoint, Nil) {
+  case value {
+    i if i > 1_114_111 -> Error(Nil)
+    i if i >= 55_296 && i <= 57_343 -> Error(Nil)
+    i if i < 0 -> Error(Nil)
+    i -> Ok(unsafe_int_to_utf_codepoint(i))
+  }
+}
+            "#
+        ),
+        r#"
+import gleam/string
+
+pub fn main() {
+  let assert Ok(wibble) = string.utf_codepoint(71)
+  case wibble {
+  }
+}        "#
+    );
+}
