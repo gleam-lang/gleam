@@ -3062,13 +3062,10 @@ fn assert_suitable_main_function_javascript_not_supported() {
             purity: Purity::Impure,
         },
     };
-    assert!(assert_suitable_main_function(
-        &value,
-        &"module".into(),
-        Origin::Src,
-        Target::JavaScript
-    )
-    .is_err(),);
+    assert!(
+        assert_suitable_main_function(&value, &"module".into(), Origin::Src, Target::JavaScript)
+            .is_err(),
+    );
 }
 
 #[test]
