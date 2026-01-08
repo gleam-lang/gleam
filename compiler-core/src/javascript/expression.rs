@@ -2,6 +2,7 @@ use num_bigint::BigInt;
 use vec1::Vec1;
 
 use super::{decision::ASSIGNMENT_VAR, *};
+use crate::type_::fields::supplied_in_definition_order;
 use crate::{
     ast::*,
     exhaustiveness::StringEncoding,
@@ -869,9 +870,9 @@ impl<'module, 'a> Generator<'module, 'a> {
         }
     }
 
-    fn simple_variable_assignment(
+    fn simple_variable_assignment<'b>(
         &mut self,
-        name: &'a EcoString,
+        name: &'b EcoString,
         value: &'a TypedExpr,
     ) -> Document<'a> {
         // Subject must be rendered before the variable for variable numbering
@@ -1316,16 +1317,62 @@ impl<'module, 'a> Generator<'module, 'a> {
     }
 
     fn call(&mut self, fun: &'a TypedExpr, arguments: &'a [TypedCallArg]) -> Document<'a> {
-        let arguments = arguments
-            .iter()
-            .map(|element| {
-                self.not_in_tail_position(Some(Ordering::Strict), |this| {
-                    this.wrap_expression(&element.value)
+        // If the arguments have already been supplied in the same order the function
+        // would expect them, or all the arguments are guaranteed to have no side effect.
+        if supplied_in_definition_order(arguments)
+            || arguments
+                .iter()
+                .all(|argument| argument.value.is_pure_value_constructor())
+        {
+            let arguments = arguments
+                .iter()
+                .map(|element| {
+                    self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                        this.wrap_expression(&element.value)
+                    })
                 })
-            })
-            .collect_vec();
+                .collect_vec();
+            return self.call_with_doc_arguments(fun, arguments);
+        }
 
-        self.call_with_doc_arguments(fun, arguments)
+        // However, if the arguments are not in order and could have side effects
+        // we're gonna have to be careful. Each argument has to be first evaluated
+        // in the order with which they are defined, and later passed to the function.
+        // How we do that depends on the position of the function!
+
+        let mut assignments = Vec::with_capacity(arguments.len());
+        // And the names we've given them, so they can be passed to the function call
+        // in the correct order (that is the order they currently are in in the
+        // array we've been passed - it has been ordered with the field map!)
+        let mut names = std::iter::repeat_n(None, arguments.len()).collect_vec();
+        for (i, argument) in arguments
+            .iter()
+            .enumerate()
+            .sorted_by_key(|(_, argument)| argument.location())
+        {
+            // `i` is the correct position with which the argument should be
+            // passed to the function!
+            let name = self.next_local_var(&EcoString::from("arg"));
+            *names.get_mut(i).expect("guaranteed to be in bound") = Some(name.clone().to_doc());
+            assignments.push(self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                let value = this.wrap_expression(&argument.value);
+                docvec!["let ", name.clone(), " = ", value, ";"]
+            }));
+        }
+
+        let names = names.into_iter().flatten().collect_vec();
+        let assignments = join(assignments, line());
+        match &self.scope_position {
+            Position::Tail => {
+                let call = self.call_with_doc_arguments(fun, names);
+                docvec![assignments, line(), call]
+            }
+            Position::Statement | Position::Expression(_) | Position::Assign(_) => self
+                .immediately_invoked_function_expression(fun, |this, fun| {
+                    let call = this.call_with_doc_arguments(fun, names);
+                    docvec![assignments, line(), call]
+                }),
+        }
     }
 
     fn call_with_doc_arguments(

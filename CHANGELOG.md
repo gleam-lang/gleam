@@ -114,6 +114,10 @@
   items.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the generated code for labelled functions would evaluate
+  arguments in the wrong order.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server no longer recommends the deprecated `@target` attribute.
   ([Hari Mohan](https://github.com/seafoamteal))
 
