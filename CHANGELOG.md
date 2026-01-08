@@ -26,3 +26,6 @@
 - The compiler now correctly tracks the minimum required version for expressions
   in `BitArray`s' `size` option to be `>= 1.12.0`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The language server no longer recommends the discouraged `@target` attribute.
+  ([Hari Mohan](https://github.com/seafoamteal))

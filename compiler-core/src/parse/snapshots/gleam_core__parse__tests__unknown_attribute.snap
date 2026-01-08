@@ -13,4 +13,4 @@ error: Syntax error
 1 │ @go_faster()
   │ ^^^^^^^^^^ I don't recognise this attribute
 
-Hint: Try `deprecated`, `external` or `target` instead.
+Hint: Try `deprecated`, `external` or `internal` instead.
