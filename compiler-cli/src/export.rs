@@ -149,7 +149,7 @@ pub fn package_interface(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
         Options {
             mode: Mode::Prod,
             target: None,
-            codegen: Codegen::All,
+            codegen: Codegen::None,
             compile: Compile::All,
             warnings_as_errors: false,
             root_target_support: TargetSupport::Enforced,
