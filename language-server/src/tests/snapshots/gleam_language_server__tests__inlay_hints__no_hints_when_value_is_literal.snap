@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/inlay_hints.rs
+expression: hints
+---
+pub fn ret_str(f1) {
+  "abc"
+  |> f1() "a"
+}
+
+pub fn ret_int(f2) {
+  42
+  |> f2() "a"
+}
+
+pub fn ret_float(f3) {
+  42.2
+  |> f3() "a"
+}
+
+pub fn ret_bit_array(f4) {
+  <<1, 2>>
+  |> f4() "a"
+}
