@@ -124,10 +124,29 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
+    /// Returns true if there's any comment that comes before the given
+    /// position.
+    ///
     fn any_comments(&self, limit: u32) -> bool {
         self.comments
             .first()
             .is_some_and(|comment| comment.start < limit)
+    }
+
+    /// Returns true if there's any comment that appears inside the given span.
+    ///
+    fn any_comment_between(&self, start: u32, end: u32) -> bool {
+        self.comments
+            .binary_search_by(|comment| {
+                if comment.start < start {
+                    Ordering::Less
+                } else if comment.start > end {
+                    Ordering::Greater
+                } else {
+                    Ordering::Equal
+                }
+            })
+            .is_ok()
     }
 
     fn any_empty_lines(&self, limit: u32) -> bool {
@@ -1375,13 +1394,15 @@ impl<'comments> Formatter<'comments> {
     ) -> Document<'a>
     where
         T: HasLocation,
+        T: std::fmt::Debug,
         ToExpr: Fn(&T) -> &UntypedExpr,
         ToDoc: Fn(&mut Self, &'b T) -> Document<'a>,
     {
         match init_and_last(values) {
             Some((initial_values, last_value))
                 if is_breakable_argument(to_expr(last_value), values.len())
-                    && !self.any_comments(last_value.location().start) =>
+                    && !self.any_comments(last_value.location().start)
+                    && !self.any_comment_between(last_value.location().end, location.end) =>
             {
                 let mut docs = initial_values
                     .iter()
