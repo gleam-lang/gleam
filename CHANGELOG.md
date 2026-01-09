@@ -28,5 +28,9 @@
   expressions in `BitArray`s' `size` option to be `>= 1.12.0`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the formatter would not properly format some function calls
+  if the last argument was followed by a trailing comment.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server no longer recommends the deprecated `@target` attribute.
   ([Hari Mohan](https://github.com/seafoamteal))
