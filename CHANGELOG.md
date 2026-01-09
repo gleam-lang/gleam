@@ -39,5 +39,5 @@
   ([Hari Mohan](https://github.com/seafoamteal))
 
 - The build tool now doesn't perform code generation when exporting package
-  interface
+  interface.
   ([Andrey Kozhev](https://github.com/ankddev))
