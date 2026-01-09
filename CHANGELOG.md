@@ -37,3 +37,7 @@
 
 - The compiler no longer crashes when trying to pattern match on a `UtfCodepoint`.
   ([Hari Mohan](https://github.com/seafoamteal))
+
+- The build tool now doesn't perform code generation when exporting package
+  interface
+  ([Andrey Kozhev](https://github.com/ankddev))
