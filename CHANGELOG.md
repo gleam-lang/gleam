@@ -20,6 +20,10 @@
 
   ([Adi Salimgereyev](https://github.com/abs0luty))
 
+- The JavaScript prelude JavaScript API now contains the `BitArray$isBitArray`
+  and `BitArray$BitArray$data` functions.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Build tool
 
 - When adding a package that does not exist on Hex, the message is a bit

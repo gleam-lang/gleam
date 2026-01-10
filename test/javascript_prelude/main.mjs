@@ -1,5 +1,8 @@
 import {
   BitArray,
+  BitArray$BitArray,
+  BitArray$BitArray$data,
+  BitArray$isBitArray,
   CustomType,
   Error,
   List,
@@ -63,6 +66,14 @@ function assertThrows(msg, callable) {
     fail(msg);
   } catch (error) {
     pass();
+  }
+}
+
+function assert(msg, value) {
+  if (value) {
+    pass();
+  } else {
+    fail(msg);
   }
 }
 
@@ -1171,6 +1182,47 @@ assertEqual(new BitArray(new Uint8Array([])).byteSize, 0);
 assertEqual(new BitArray(new Uint8Array([1, 2])).byteSize, 2);
 assertEqual(new BitArray(new Uint8Array([1, 2, 3, 4])).byteSize, 4);
 assertEqual(new BitArray(new Uint8Array([1, 2, 3, 4], 28)).byteSize, 4);
+
+// BitArray
+
+assert("numbers are not bit arrays", !BitArray$isBitArray(123));
+assert("strings are not bit arrays", !BitArray$isBitArray("!"));
+assert("results are not bit arrays", new Ok("!"));
+assert(
+  "Bit arrays are bit arrays",
+  BitArray$isBitArray(BitArray$BitArray(new Uint8Array([]))),
+);
+
+// Byte aligned bit array
+{
+  const bitArray = BitArray$BitArray(new Uint8Array([1, 2, 3]));
+  assertEqual(bitArray.bitSize, 3 * 8);
+  assertEqual(bitArray.byteSize, 3);
+  assertEqual(bitArray.bitOffset, 0);
+  assertEqual(bitArray.rawBuffer, new Uint8Array([1, 2, 3]));
+  assertEqual(
+    BitArray$BitArray$data(bitArray),
+    new DataView(new Uint8Array([1, 2, 3]).buffer),
+  );
+}
+
+// Non-byte aligned bit array
+{
+  const bitArray = BitArray$BitArray(new Uint8Array([1, 2, 3]), 23, 1);
+  assertEqual(bitArray.bitSize, 23);
+  assertEqual(bitArray.byteSize, 3);
+  assertEqual(bitArray.bitOffset, 1);
+  assertEqual(bitArray.rawBuffer, new Uint8Array([1, 2, 3]));
+  assertEqual(
+    BitArray$BitArray$data(bitArray),
+    new DataView(new Uint8Array([1, 2, 3]).buffer),
+  );
+}
+
+assertEqual(
+  BitArray$BitArray(new Uint8Array([])),
+  new BitArray(new Uint8Array([])),
+);
 
 //
 // Division

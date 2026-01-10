@@ -262,16 +262,11 @@ export class BitArray {
   /**
    * Returns this bit array's internal buffer.
    *
-   * @deprecated Use `BitArray.byteAt()` or `BitArray.rawBuffer` instead.
+   * @deprecated
    *
    * @returns {Uint8Array}
    */
   get buffer() {
-    bitArrayPrintDeprecationWarning(
-      "buffer",
-      "Use BitArray.byteAt() or BitArray.rawBuffer instead",
-    );
-
     if (this.bitOffset !== 0 || this.bitSize % 8 !== 0) {
       throw new globalThis.Error(
         "BitArray.buffer does not support unaligned bit arrays",
@@ -284,16 +279,11 @@ export class BitArray {
   /**
    * Returns the length in bytes of this bit array's internal buffer.
    *
-   * @deprecated Use `BitArray.bitSize` or `BitArray.byteSize` instead.
+   * @deprecated
    *
    * @returns {number}
    */
   get length() {
-    bitArrayPrintDeprecationWarning(
-      "length",
-      "Use BitArray.bitSize or BitArray.byteSize instead",
-    );
-
     if (this.bitOffset !== 0 || this.bitSize % 8 !== 0) {
       throw new globalThis.Error(
         "BitArray.length does not support unaligned bit arrays",
@@ -306,6 +296,11 @@ export class BitArray {
 
 export const BitArray$BitArray = (buffer, bitSize, bitOffset) =>
   new BitArray(buffer, bitSize, bitOffset);
+export const BitArray$isBitArray = (value) => value instanceof BitArray;
+export const BitArray$BitArray$data = (bitArray) => {
+  const array = bitArray.rawBuffer;
+  return new DataView(array.buffer, array.byteOffest, bitArray.byteLength);
+};
 
 /**
  * Returns the nth byte in the given buffer, after applying the specified bit
@@ -331,19 +326,6 @@ export class UtfCodepoint {
   constructor(value) {
     this.value = value;
   }
-}
-
-const isBitArrayDeprecationMessagePrinted = {};
-function bitArrayPrintDeprecationWarning(name, message) {
-  if (isBitArrayDeprecationMessagePrinted[name]) {
-    return;
-  }
-
-  console.warn(
-    `Deprecated BitArray.${name} property used in JavaScript FFI code. ${message}.`,
-  );
-
-  isBitArrayDeprecationMessagePrinted[name] = true;
 }
 
 /**
