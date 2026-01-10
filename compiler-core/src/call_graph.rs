@@ -431,27 +431,7 @@ impl<'a> CallGraphBuilder<'a> {
 
     fn guard(&mut self, guard: &'a UntypedClauseGuard) {
         match guard {
-            ClauseGuard::Equals { left, right, .. }
-            | ClauseGuard::NotEquals { left, right, .. }
-            | ClauseGuard::GtInt { left, right, .. }
-            | ClauseGuard::GtEqInt { left, right, .. }
-            | ClauseGuard::LtInt { left, right, .. }
-            | ClauseGuard::LtEqInt { left, right, .. }
-            | ClauseGuard::GtFloat { left, right, .. }
-            | ClauseGuard::GtEqFloat { left, right, .. }
-            | ClauseGuard::LtFloat { left, right, .. }
-            | ClauseGuard::LtEqFloat { left, right, .. }
-            | ClauseGuard::AddInt { left, right, .. }
-            | ClauseGuard::AddFloat { left, right, .. }
-            | ClauseGuard::SubInt { left, right, .. }
-            | ClauseGuard::SubFloat { left, right, .. }
-            | ClauseGuard::MultInt { left, right, .. }
-            | ClauseGuard::MultFloat { left, right, .. }
-            | ClauseGuard::DivInt { left, right, .. }
-            | ClauseGuard::DivFloat { left, right, .. }
-            | ClauseGuard::RemainderInt { left, right, .. }
-            | ClauseGuard::Or { left, right, .. }
-            | ClauseGuard::And { left, right, .. } => {
+            ClauseGuard::BinaryOperator { left, right, .. } => {
                 self.guard(left);
                 self.guard(right);
             }

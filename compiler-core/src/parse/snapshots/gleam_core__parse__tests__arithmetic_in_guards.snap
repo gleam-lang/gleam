@@ -66,16 +66,18 @@ expression: "\ncase 2, 3 {\n    x, y if x + y == 1 -> True\n}"
                         ],
                         alternative_patterns: [],
                         guard: Some(
-                            Equals {
+                            BinaryOperator {
                                 location: SrcSpan {
                                     start: 25,
                                     end: 35,
                                 },
-                                left: AddInt {
+                                operator: Eq,
+                                left: BinaryOperator {
                                     location: SrcSpan {
                                         start: 25,
                                         end: 30,
                                     },
+                                    operator: AddInt,
                                     left: Var {
                                         location: SrcSpan {
                                             start: 25,

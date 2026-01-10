@@ -1,0 +1,166 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\nlet my_string = \"hello \"\ncase my_string {\n    _ if my_string <> \"world\" == \"hello world\" -> io.debug(\"ok\")\n}"
+---
+[
+    Assignment(
+        Assignment {
+            location: SrcSpan {
+                start: 1,
+                end: 25,
+            },
+            value: String {
+                location: SrcSpan {
+                    start: 17,
+                    end: 25,
+                },
+                value: "hello ",
+            },
+            pattern: Variable {
+                location: SrcSpan {
+                    start: 5,
+                    end: 14,
+                },
+                name: "my_string",
+                type_: (),
+                origin: VariableOrigin {
+                    syntax: Variable(
+                        "my_string",
+                    ),
+                    declaration: LetPattern,
+                },
+            },
+            kind: Let,
+            compiled_case: CompiledCase {
+                tree: Fail,
+                subject_variables: [],
+            },
+            annotation: None,
+        },
+    ),
+    Expression(
+        Case {
+            location: SrcSpan {
+                start: 26,
+                end: 109,
+            },
+            subjects: [
+                Var {
+                    location: SrcSpan {
+                        start: 31,
+                        end: 40,
+                    },
+                    name: "my_string",
+                },
+            ],
+            clauses: Some(
+                [
+                    Clause {
+                        location: SrcSpan {
+                            start: 47,
+                            end: 107,
+                        },
+                        pattern: [
+                            Discard {
+                                name: "_",
+                                location: SrcSpan {
+                                    start: 47,
+                                    end: 48,
+                                },
+                                type_: (),
+                            },
+                        ],
+                        alternative_patterns: [],
+                        guard: Some(
+                            BinaryOperator {
+                                location: SrcSpan {
+                                    start: 52,
+                                    end: 89,
+                                },
+                                operator: Eq,
+                                left: BinaryOperator {
+                                    location: SrcSpan {
+                                        start: 52,
+                                        end: 72,
+                                    },
+                                    operator: Concatenate,
+                                    left: Var {
+                                        location: SrcSpan {
+                                            start: 52,
+                                            end: 61,
+                                        },
+                                        type_: (),
+                                        name: "my_string",
+                                        definition_location: SrcSpan {
+                                            start: 0,
+                                            end: 0,
+                                        },
+                                    },
+                                    right: Constant(
+                                        String {
+                                            location: SrcSpan {
+                                                start: 65,
+                                                end: 72,
+                                            },
+                                            value: "world",
+                                        },
+                                    ),
+                                },
+                                right: Constant(
+                                    String {
+                                        location: SrcSpan {
+                                            start: 76,
+                                            end: 89,
+                                        },
+                                        value: "hello world",
+                                    },
+                                ),
+                            },
+                        ),
+                        then: Call {
+                            location: SrcSpan {
+                                start: 93,
+                                end: 107,
+                            },
+                            fun: FieldAccess {
+                                location: SrcSpan {
+                                    start: 93,
+                                    end: 101,
+                                },
+                                label_location: SrcSpan {
+                                    start: 96,
+                                    end: 101,
+                                },
+                                label: "debug",
+                                container: Var {
+                                    location: SrcSpan {
+                                        start: 93,
+                                        end: 95,
+                                    },
+                                    name: "io",
+                                },
+                            },
+                            arguments: [
+                                CallArg {
+                                    label: None,
+                                    location: SrcSpan {
+                                        start: 102,
+                                        end: 106,
+                                    },
+                                    value: String {
+                                        location: SrcSpan {
+                                            start: 102,
+                                            end: 106,
+                                        },
+                                        value: "ok",
+                                    },
+                                    implicit: None,
+                                },
+                            ],
+                        },
+                    },
+                ],
+            ),
+        },
+    ),
+]

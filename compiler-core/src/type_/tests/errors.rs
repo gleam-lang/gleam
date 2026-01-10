@@ -531,6 +531,16 @@ fn case17() {
 }
 
 #[test]
+fn int_operator_on_floats_in_case_guard() {
+    assert_error!("case 3.0 { x if x > 2.0 -> \"a\" _ -> \"b\" }");
+}
+
+#[test]
+fn float_operator_on_ints_in_case_guard() {
+    assert_error!("case 3 { x if x +. 2 == 5.0 -> \"a\" _ -> \"b\" }");
+}
+
+#[test]
 fn case18() {
     assert_error!("case 1 { x if x == \"x\" -> 1 }");
 }

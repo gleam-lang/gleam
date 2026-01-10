@@ -1734,89 +1734,37 @@ fn bare_clause_guard<'a>(
             docvec!["not ", bare_clause_guard(expression, env, assignments)]
         }
 
-        ClauseGuard::Or { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" orelse ")
-            .append(clause_guard(right, env, assignments)),
+        ClauseGuard::BinaryOperator {
+            operator,
+            left,
+            right,
+            ..
+        } => {
+            let left_document = clause_guard(left, env, assignments);
+            let right_document = clause_guard(right, env, assignments);
 
-        ClauseGuard::And { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" andalso ")
-            .append(clause_guard(right, env, assignments)),
+            let operator = match operator {
+                BinOp::Or => "orelse",
+                BinOp::And => "andalso",
+                BinOp::Eq => "=:=",
+                BinOp::NotEq => "=/=",
+                BinOp::GtInt | BinOp::GtFloat => ">",
+                BinOp::GtEqInt | BinOp::GtEqFloat => ">=",
+                BinOp::LtInt | BinOp::LtFloat => "<",
+                BinOp::LtEqInt | BinOp::LtEqFloat => "=<",
+                BinOp::AddInt | BinOp::AddFloat => "+",
+                BinOp::SubInt | BinOp::SubFloat => "-",
+                BinOp::MultInt | BinOp::MultFloat => "*",
+                BinOp::DivFloat => "/",
+                BinOp::DivInt => "div",
+                BinOp::RemainderInt => "rem",
+                BinOp::Concatenate => {
+                    return clause_guard_string_concatenate(left, right, env, assignments);
+                }
+            };
 
-        ClauseGuard::Equals { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" =:= ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::NotEquals { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" =/= ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::GtInt { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" > ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::GtEqInt { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" >= ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::LtInt { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" < ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::LtEqInt { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" =< ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::GtFloat { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" > ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::GtEqFloat { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" >= ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::LtFloat { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" < ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::LtEqFloat { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" =< ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::AddInt { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" + ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::AddFloat { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" + ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::SubInt { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" - ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::SubFloat { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" - ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::MultInt { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" * ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::MultFloat { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" * ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::DivInt { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" div ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::DivFloat { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" / ")
-            .append(clause_guard(right, env, assignments)),
-
-        ClauseGuard::RemainderInt { left, right, .. } => clause_guard(left, env, assignments)
-            .append(" rem ")
-            .append(clause_guard(right, env, assignments)),
+            docvec![left_document, " ", operator, " ", right_document]
+        }
 
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
@@ -1843,6 +1791,74 @@ fn bare_clause_guard<'a>(
     }
 }
 
+fn clause_guard_string_concatenate<'a>(
+    left: &'a TypedClauseGuard,
+    right: &'a TypedClauseGuard,
+    env: &mut Env<'a>,
+    assignments: &HashMap<EcoString, &StringPatternAssignment<'a>>,
+) -> Document<'a> {
+    let left = clause_guard_string_concatenate_argument(left, env, assignments);
+    let right = clause_guard_string_concatenate_argument(right, env, assignments);
+    bit_array([left, right])
+}
+
+fn clause_guard_string_concatenate_argument<'a>(
+    guard: &'a TypedClauseGuard,
+    env: &mut Env<'a>,
+    assignments: &HashMap<EcoString, &StringPatternAssignment<'a>>,
+) -> Document<'a> {
+    match guard {
+        ClauseGuard::Constant(Constant::String { value, .. }) => {
+            docvec!['"', string_inner(value), "\"/utf8"]
+        }
+
+        ClauseGuard::Constant(Constant::StringConcatenation { left, right, .. }) => {
+            const_string_concatenate_inner(left, right, env)
+        }
+
+        ClauseGuard::ModuleSelect { literal, .. } => match literal {
+            Constant::String { value, .. } => docvec!['"', string_inner(value), "\"/utf8"],
+            Constant::StringConcatenation { left, right, .. } => {
+                const_string_concatenate_inner(left, right, env)
+            }
+            Constant::Int { .. }
+            | Constant::Float { .. }
+            | Constant::Tuple { .. }
+            | Constant::List { .. }
+            | Constant::Record { .. }
+            | Constant::RecordUpdate { .. }
+            | Constant::BitArray { .. }
+            | Constant::Var { .. }
+            | Constant::Invalid { .. } => docvec!["(", const_inline(literal, env), ")/binary"],
+        },
+
+        ClauseGuard::Var { name, .. } => assignments
+            .get(name)
+            .map(|assignment| docvec![assignment.literal_value.clone(), "/binary"])
+            .unwrap_or_else(|| docvec![env.local_var_name(name), "/binary"]),
+
+        ClauseGuard::BinaryOperator {
+            operator: BinOp::Concatenate,
+            left,
+            right,
+            ..
+        } => docvec![
+            clause_guard_string_concatenate(left, right, env, assignments),
+            "/binary"
+        ],
+
+        ClauseGuard::Block { .. }
+        | ClauseGuard::BinaryOperator { .. }
+        | ClauseGuard::Not { .. }
+        | ClauseGuard::TupleIndex { .. }
+        | ClauseGuard::FieldAccess { .. }
+        | ClauseGuard::Constant(_) => docvec![
+            clause_guard(guard, env, assignments).surround("(", ")"),
+            "/binary"
+        ],
+    }
+}
+
 fn tuple_index_inline<'a>(
     tuple: &'a TypedClauseGuard,
     index: u64,
@@ -1862,27 +1878,7 @@ fn clause_guard<'a>(
 ) -> Document<'a> {
     match guard {
         // Binary operators are wrapped in parens
-        ClauseGuard::Or { .. }
-        | ClauseGuard::And { .. }
-        | ClauseGuard::Equals { .. }
-        | ClauseGuard::NotEquals { .. }
-        | ClauseGuard::GtInt { .. }
-        | ClauseGuard::GtEqInt { .. }
-        | ClauseGuard::LtInt { .. }
-        | ClauseGuard::LtEqInt { .. }
-        | ClauseGuard::GtFloat { .. }
-        | ClauseGuard::GtEqFloat { .. }
-        | ClauseGuard::LtFloat { .. }
-        | ClauseGuard::LtEqFloat { .. }
-        | ClauseGuard::AddInt { .. }
-        | ClauseGuard::AddFloat { .. }
-        | ClauseGuard::SubInt { .. }
-        | ClauseGuard::SubFloat { .. }
-        | ClauseGuard::MultInt { .. }
-        | ClauseGuard::MultFloat { .. }
-        | ClauseGuard::DivInt { .. }
-        | ClauseGuard::DivFloat { .. }
-        | ClauseGuard::RemainderInt { .. } => "("
+        ClauseGuard::BinaryOperator { .. } => "("
             .to_doc()
             .append(bare_clause_guard(guard, env, assignments))
             .append(")"),

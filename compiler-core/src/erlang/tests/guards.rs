@@ -347,6 +347,21 @@ pub fn main(args) {
 }
 
 #[test]
+fn clause_guards32() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  let wibble = "wobble"
+  case wibble {
+    x if x == "wob" <> "ble" -> 1
+    _ -> 0
+  }
+}
+"#
+    );
+}
+
+#[test]
 fn constants_in_guards() {
     assert_erl!(
         r#"

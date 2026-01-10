@@ -350,7 +350,7 @@ where
                     Some('>') => {
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
-                        self.emit((tok_start, Token::LtGt, tok_end));
+                        self.emit((tok_start, Token::Concatenate, tok_end));
                     }
                     Some('<') => {
                         let _ = self.next_char();

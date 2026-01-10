@@ -2156,116 +2156,77 @@ impl<'module, 'a> Generator<'module, 'a> {
         match guard {
             ClauseGuard::Block { value, .. } => self.guard(value).surround("(", ")"),
 
-            ClauseGuard::Equals { left, right, .. } if is_js_scalar(left.type_()) => {
-                let left = self.wrapped_guard(left);
-                let right = self.wrapped_guard(right);
-                docvec![left, " === ", right]
-            }
+            ClauseGuard::BinaryOperator {
+                left,
+                right,
+                operator,
+                ..
+            } => {
+                let left_document = self.wrapped_guard(left);
+                let right_document = self.wrapped_guard(right);
 
-            ClauseGuard::NotEquals { left, right, .. } if is_js_scalar(left.type_()) => {
-                let left = self.wrapped_guard(left);
-                let right = self.wrapped_guard(right);
-                docvec![left, " !== ", right]
-            }
+                let operator = match operator {
+                    BinOp::Eq if is_js_scalar(left.type_()) => "===",
+                    BinOp::NotEq if is_js_scalar(left.type_()) => "!==",
+                    BinOp::Eq | BinOp::NotEq => {
+                        let should_be_equal = *operator == BinOp::Eq;
 
-            ClauseGuard::Equals { left, right, .. }
-            | ClauseGuard::NotEquals { left, right, .. } => {
-                let should_be_equal = matches!(guard, ClauseGuard::Equals { .. });
+                        // Handle singleton equality optimization for guards
+                        if let Some(doc) =
+                            self.singleton_variant_guard_equality(left, right, should_be_equal)
+                        {
+                            return doc;
+                        }
 
-                // Handle singleton equality optimization for guards
-                if let Some(doc) =
-                    self.singleton_variant_guard_equality(left, right, should_be_equal)
-                {
-                    return doc;
-                }
+                        if let Some(doc) =
+                            self.singleton_variant_guard_equality(right, left, should_be_equal)
+                        {
+                            return doc;
+                        }
 
-                if let Some(doc) =
-                    self.singleton_variant_guard_equality(right, left, should_be_equal)
-                {
-                    return doc;
-                }
+                        let left_doc = self.guard(left);
+                        let right_doc = self.guard(right);
+                        return self.prelude_equal_call(should_be_equal, left_doc, right_doc);
+                    }
 
-                let left_doc = self.guard(left);
-                let right_doc = self.guard(right);
-                self.prelude_equal_call(should_be_equal, left_doc, right_doc)
-            }
+                    BinOp::GtFloat | BinOp::GtInt => ">",
+                    BinOp::GtEqFloat | BinOp::GtEqInt => ">=",
+                    BinOp::LtFloat | BinOp::LtInt => "<",
+                    BinOp::LtEqFloat | BinOp::LtEqInt => "<=",
 
-            ClauseGuard::GtFloat { left, right, .. } | ClauseGuard::GtInt { left, right, .. } => {
-                let left = self.wrapped_guard(left);
-                let right = self.wrapped_guard(right);
-                docvec![left, " > ", right]
-            }
+                    BinOp::AddFloat | BinOp::AddInt | BinOp::Concatenate => "+",
+                    BinOp::SubFloat | BinOp::SubInt => "-",
+                    BinOp::MultFloat | BinOp::MultInt => "*",
 
-            ClauseGuard::GtEqFloat { left, right, .. }
-            | ClauseGuard::GtEqInt { left, right, .. } => {
-                let left = self.wrapped_guard(left);
-                let right = self.wrapped_guard(right);
-                docvec![left, " >= ", right]
-            }
+                    BinOp::DivFloat => {
+                        self.tracker.float_division_used = true;
+                        return docvec![
+                            "divideFloat",
+                            wrap_arguments([left_document, right_document])
+                        ];
+                    }
 
-            ClauseGuard::LtFloat { left, right, .. } | ClauseGuard::LtInt { left, right, .. } => {
-                let left = self.wrapped_guard(left);
-                let right = self.wrapped_guard(right);
-                docvec![left, " < ", right]
-            }
+                    BinOp::DivInt => {
+                        self.tracker.int_division_used = true;
+                        return docvec![
+                            "divideInt",
+                            wrap_arguments([left_document, right_document])
+                        ];
+                    }
 
-            ClauseGuard::LtEqFloat { left, right, .. }
-            | ClauseGuard::LtEqInt { left, right, .. } => {
-                let left = self.wrapped_guard(left);
-                let right = self.wrapped_guard(right);
-                docvec![left, " <= ", right]
-            }
+                    BinOp::RemainderInt => {
+                        self.tracker.int_remainder_used = true;
+                        return docvec![
+                            "remainderInt",
+                            wrap_arguments([left_document, right_document])
+                        ];
+                    }
 
-            ClauseGuard::AddFloat { left, right, .. } | ClauseGuard::AddInt { left, right, .. } => {
-                let left = self.wrapped_guard(left);
-                let right = self.wrapped_guard(right);
-                docvec![left, " + ", right]
-            }
+                    BinOp::And => "&&",
+                    BinOp::Or => "||",
+                };
 
-            ClauseGuard::SubFloat { left, right, .. } | ClauseGuard::SubInt { left, right, .. } => {
-                let left = self.wrapped_guard(left);
-                let right = self.wrapped_guard(right);
-                docvec![left, " - ", right]
-            }
-
-            ClauseGuard::MultFloat { left, right, .. }
-            | ClauseGuard::MultInt { left, right, .. } => {
-                let left = self.wrapped_guard(left);
-                let right = self.wrapped_guard(right);
-                docvec![left, " * ", right]
-            }
-
-            ClauseGuard::DivFloat { left, right, .. } => {
-                let left = self.wrapped_guard(left);
-                let right = self.wrapped_guard(right);
-                self.tracker.float_division_used = true;
-                docvec!["divideFloat", wrap_arguments([left, right])]
-            }
-
-            ClauseGuard::DivInt { left, right, .. } => {
-                let left = self.wrapped_guard(left);
-                let right = self.wrapped_guard(right);
-                self.tracker.int_division_used = true;
-                docvec!["divideInt", wrap_arguments([left, right])]
-            }
-
-            ClauseGuard::RemainderInt { left, right, .. } => {
-                let left = self.wrapped_guard(left);
-                let right = self.wrapped_guard(right);
-                self.tracker.int_remainder_used = true;
-                docvec!["remainderInt", wrap_arguments([left, right])]
-            }
-
-            ClauseGuard::Or { left, right, .. } => {
-                let left = self.wrapped_guard(left);
-                let right = self.wrapped_guard(right);
-                docvec![left, " || ", right]
-            }
-
-            ClauseGuard::And { left, right, .. } => {
-                let left = self.wrapped_guard(left);
-                let right = self.wrapped_guard(right);
-                docvec![left, " && ", right]
+                docvec![left_document, " ", operator, " ", right_document]
             }
 
             ClauseGuard::Var { name, .. } => self.local_var(name).to_doc(),
@@ -2324,28 +2285,9 @@ impl<'module, 'a> Generator<'module, 'a> {
             | ClauseGuard::FieldAccess { .. }
             | ClauseGuard::Block { .. } => self.guard(guard),
 
-            ClauseGuard::Equals { .. }
-            | ClauseGuard::NotEquals { .. }
-            | ClauseGuard::GtInt { .. }
-            | ClauseGuard::GtEqInt { .. }
-            | ClauseGuard::LtInt { .. }
-            | ClauseGuard::LtEqInt { .. }
-            | ClauseGuard::GtFloat { .. }
-            | ClauseGuard::GtEqFloat { .. }
-            | ClauseGuard::LtFloat { .. }
-            | ClauseGuard::LtEqFloat { .. }
-            | ClauseGuard::AddInt { .. }
-            | ClauseGuard::AddFloat { .. }
-            | ClauseGuard::SubInt { .. }
-            | ClauseGuard::SubFloat { .. }
-            | ClauseGuard::MultInt { .. }
-            | ClauseGuard::MultFloat { .. }
-            | ClauseGuard::DivInt { .. }
-            | ClauseGuard::DivFloat { .. }
-            | ClauseGuard::RemainderInt { .. }
-            | ClauseGuard::Or { .. }
-            | ClauseGuard::And { .. }
-            | ClauseGuard::ModuleSelect { .. } => docvec!["(", self.guard(guard), ")"],
+            ClauseGuard::BinaryOperator { .. } | ClauseGuard::ModuleSelect { .. } => {
+                docvec!["(", self.guard(guard), ")"]
+            }
         }
     }
 

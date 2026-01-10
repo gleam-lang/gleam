@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn main() {\n  let wibble = \"wob\"\n  case wibble {\n    x if x <> \"ble\" == \"wobble\" -> 1\n    _ -> 0\n  }\n}"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let wibble = "wob"
+  case wibble {
+    x if x <> "ble" == "wobble" -> 1
+    _ -> 0
+  }
+}
+
+----- COMPILED JAVASCRIPT
+export function main() {
+  let wibble = "wob";
+  let x = wibble;
+  if ((x + "ble") === "wobble") {
+    return 1;
+  } else {
+    return 0;
+  }
+}

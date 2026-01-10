@@ -57,7 +57,7 @@ pub enum Token {
     LessEqualDot,    // '<=.'
     GreaterEqualDot, // '>=.'
     // String Operators
-    LtGt, // '<>'
+    Concatenate, // '<>'
     // Other Punctuation
     Colon,
     Comma,
@@ -125,9 +125,11 @@ impl Token {
             | Self::GreaterEqualDot
             | Self::GreaterDot => Some(4),
 
-            Self::Plus | Self::PlusDot | Self::Minus | Self::MinusDot => Some(5),
+            Self::Concatenate => Some(5),
 
-            Self::Star | Self::StarDot | Self::Slash | Self::SlashDot | Self::Percent => Some(6),
+            Self::Plus | Self::PlusDot | Self::Minus | Self::MinusDot => Some(6),
+
+            Self::Star | Self::StarDot | Self::Slash | Self::SlashDot | Self::Percent => Some(7),
 
             Self::Name { .. }
             | Self::UpName { .. }
@@ -142,7 +144,6 @@ impl Token {
             | Self::RightSquare
             | Self::LeftBrace
             | Self::RightBrace
-            | Self::LtGt
             | Self::Colon
             | Self::Comma
             | Self::Hash
@@ -241,7 +242,7 @@ impl Token {
             | Token::GreaterDot
             | Token::LessEqualDot
             | Token::GreaterEqualDot
-            | Token::LtGt
+            | Token::Concatenate
             | Token::Colon
             | Token::Comma
             | Token::Hash
@@ -325,7 +326,7 @@ impl fmt::Display for Token {
             Token::LessEqual => "<=",
             Token::LessEqualDot => "<=.",
             Token::Let => "let",
-            Token::LtGt => "<>",
+            Token::Concatenate => "<>",
             Token::LtLt => "<<",
             Token::Macro => "macro",
             Token::Minus => "-",

@@ -2640,69 +2640,12 @@ impl<'comments> Formatter<'comments> {
 
     fn clause_guard<'a>(&mut self, clause_guard: &'a UntypedClauseGuard) -> Document<'a> {
         match clause_guard {
-            ClauseGuard::And { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::And, left, right)
-            }
-            ClauseGuard::Or { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::Or, left, right)
-            }
-            ClauseGuard::Equals { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::Eq, left, right)
-            }
-            ClauseGuard::NotEquals { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::NotEq, left, right)
-            }
-            ClauseGuard::GtInt { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::GtInt, left, right)
-            }
-            ClauseGuard::GtEqInt { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::GtEqInt, left, right)
-            }
-            ClauseGuard::LtInt { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::LtInt, left, right)
-            }
-            ClauseGuard::LtEqInt { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::LtEqInt, left, right)
-            }
-            ClauseGuard::GtFloat { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::GtFloat, left, right)
-            }
-            ClauseGuard::GtEqFloat { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::GtEqFloat, left, right)
-            }
-            ClauseGuard::LtFloat { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::LtFloat, left, right)
-            }
-            ClauseGuard::LtEqFloat { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::LtEqFloat, left, right)
-            }
-            ClauseGuard::AddInt { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::AddInt, left, right)
-            }
-            ClauseGuard::AddFloat { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::AddFloat, left, right)
-            }
-            ClauseGuard::SubInt { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::SubInt, left, right)
-            }
-            ClauseGuard::SubFloat { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::SubFloat, left, right)
-            }
-            ClauseGuard::MultInt { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::MultInt, left, right)
-            }
-            ClauseGuard::MultFloat { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::MultFloat, left, right)
-            }
-            ClauseGuard::DivInt { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::DivInt, left, right)
-            }
-            ClauseGuard::DivFloat { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::DivFloat, left, right)
-            }
-            ClauseGuard::RemainderInt { left, right, .. } => {
-                self.clause_guard_bin_op(&BinOp::RemainderInt, left, right)
-            }
+            ClauseGuard::BinaryOperator {
+                operator,
+                left,
+                right,
+                ..
+            } => self.clause_guard_bin_op(operator, left, right),
 
             ClauseGuard::Var { name, .. } => name.to_doc(),
 

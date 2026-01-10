@@ -38,21 +38,23 @@ expression: "case 1 {\n  _ if { 1 || { 1 || 1 } } || 1  -> 1\n}"
                         ],
                         alternative_patterns: [],
                         guard: Some(
-                            Or {
+                            BinaryOperator {
                                 location: SrcSpan {
                                     start: 16,
                                     end: 40,
                                 },
+                                operator: Or,
                                 left: Block {
                                     location: SrcSpan {
                                         start: 16,
                                         end: 35,
                                     },
-                                    value: Or {
+                                    value: BinaryOperator {
                                         location: SrcSpan {
                                             start: 18,
                                             end: 33,
                                         },
+                                        operator: Or,
                                         left: Constant(
                                             Int {
                                                 location: SrcSpan {
@@ -68,11 +70,12 @@ expression: "case 1 {\n  _ if { 1 || { 1 || 1 } } || 1  -> 1\n}"
                                                 start: 23,
                                                 end: 33,
                                             },
-                                            value: Or {
+                                            value: BinaryOperator {
                                                 location: SrcSpan {
                                                     start: 25,
                                                     end: 31,
                                                 },
+                                                operator: Or,
                                                 left: Constant(
                                                     Int {
                                                         location: SrcSpan {
