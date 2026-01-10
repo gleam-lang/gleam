@@ -1,0 +1,47 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+expression: "\npub fn main() {\n  let x = True\n  assert x\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let x = True
+  assert x
+}
+
+
+----- COMPILED JAVASCRIPT
+//# sourceMappingURL=mod.mjs.map
+import { makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function main() {
+  let x = true;
+  if (!x) {
+    throw makeError(
+      "assert",
+      FILEPATH,
+      "my/mod",
+      4,
+      "main",
+      "Assertion failed.",
+      {
+        kind: "expression",
+        expression: { kind: "expression", value: false, start: 41, end: 42 },
+        start: 34,
+        end: 42,
+        expression_start: 41
+      }
+    )
+  }
+  return undefined;
+}
+----- SOURCE MAP
+Mappings Raw:
+1:0 -> 5:0
+2:2 -> 6:2
+2:10 -> 6:10
+3:2 -> 7:2
+3:9 -> 7:7
+3:2 -> 8:4

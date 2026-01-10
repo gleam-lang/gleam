@@ -32,7 +32,7 @@ use super::{INDENT, concat, import::Imports, join, line, lines, wrap_arguments};
 /// When rendering a type variable to an TypeScript type spec we need all type
 /// variables with the same id to end up with the same name in the generated
 /// TypeScript. This function converts a usize into base 26 A-Z for this purpose.
-fn id_to_type_var(id: u64) -> Document<'static> {
+fn id_to_type_var<'a>(id: u64) -> Document<'a> {
     if id < 26 {
         return std::iter::once(
             std::char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"),
@@ -847,7 +847,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
     /// Converts a Gleam type into a TypeScript type string
     ///
-    pub fn print_type(&mut self, type_: &Type) -> Document<'static> {
+    pub fn print_type(&mut self, type_: &Type) -> Document<'a> {
         self.do_print(type_, None)
     }
 
@@ -858,7 +858,7 @@ impl<'a> TypeScriptGenerator<'a> {
         &mut self,
         type_: &Type,
         generic_usages: &HashMap<u64, u64>,
-    ) -> Document<'static> {
+    ) -> Document<'a> {
         self.do_print(type_, Some(generic_usages))
     }
 
@@ -883,7 +883,7 @@ impl<'a> TypeScriptGenerator<'a> {
         &mut self,
         type_: &Type,
         generic_usages: Option<&HashMap<u64, u64>>,
-    ) -> Document<'static> {
+    ) -> Document<'a> {
         match type_ {
             Type::Var { type_ } => self.print_var(&type_.borrow(), generic_usages, false),
 
@@ -913,7 +913,7 @@ impl<'a> TypeScriptGenerator<'a> {
         }
     }
 
-    fn do_print_force_generic_param(&mut self, type_: &Type) -> Document<'static> {
+    fn do_print_force_generic_param(&mut self, type_: &Type) -> Document<'a> {
         match type_ {
             Type::Var { type_ } => self.print_var(&type_.borrow(), None, true),
 
@@ -944,7 +944,7 @@ impl<'a> TypeScriptGenerator<'a> {
         type_: &TypeVar,
         generic_usages: Option<&HashMap<u64, u64>>,
         force_generic_id: bool,
-    ) -> Document<'static> {
+    ) -> Document<'a> {
         match type_ {
             TypeVar::Unbound { id } | TypeVar::Generic { id } => match &generic_usages {
                 Some(usages) => match usages.get(id) {
@@ -974,7 +974,7 @@ impl<'a> TypeScriptGenerator<'a> {
         name: &str,
         arguments: &[Arc<Type>],
         generic_usages: Option<&HashMap<u64, u64>>,
-    ) -> Document<'static> {
+    ) -> Document<'a> {
         match name {
             "Nil" => "undefined".to_doc(),
             "Int" | "Float" => "number".to_doc(),
@@ -1023,7 +1023,7 @@ impl<'a> TypeScriptGenerator<'a> {
         arguments: &[Arc<Type>],
         module: &str,
         generic_usages: Option<&HashMap<u64, u64>>,
-    ) -> Document<'static> {
+    ) -> Document<'a> {
         let name = eco_format!("{}$", ts_safe_type_name(name.to_string()));
         let name = match module == self.module.name {
             true => name.to_doc(),
@@ -1055,7 +1055,7 @@ impl<'a> TypeScriptGenerator<'a> {
         arguments: &[Arc<Type>],
         return_: &Type,
         generic_usages: Option<&HashMap<u64, u64>>,
-    ) -> Document<'static> {
+    ) -> Document<'a> {
         docvec![
             wrap_arguments(arguments.iter().enumerate().map(|(idx, argument)| docvec![
                 "x",

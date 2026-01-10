@@ -143,6 +143,7 @@ impl Default for Runtime {
 pub enum TargetCodegenConfiguration {
     JavaScript {
         emit_typescript_definitions: bool,
+        emit_source_maps: bool,
         prelude_location: Utf8PathBuf,
     },
     Erlang {

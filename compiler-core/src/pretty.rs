@@ -30,6 +30,8 @@
 #[cfg(test)]
 mod tests;
 
+use std::{cell::RefCell, rc::Rc};
+
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use num_bigint::BigInt;
@@ -179,6 +181,13 @@ pub fn join<'a>(
     concat(Itertools::intersperse(docs.into_iter(), separator))
 }
 
+/// A trait that allows for objects to observe the cursor position as it is being formatted.
+/// This is useful for any operations that need to track the exact position a document is
+/// being written to in a buffer such as for source mapping.
+pub trait CursorPositionObserver: std::fmt::Debug {
+    fn observe_cursor_position(&mut self, line: isize, width: isize);
+}
+
 /// A pretty printable document. A tree structure, made up of text and other
 /// elements which determine how it can be formatted.
 ///
@@ -186,7 +195,7 @@ pub fn join<'a>(
 /// rather use the helper functions of the same names to construct them.
 /// For example, use `line()` instead of `Document::Line(1)`.
 ///
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum Document<'a> {
     /// A mandatory linebreak. This is always printed as a string of newlines,
     /// equal in length to the number specified.
@@ -262,6 +271,14 @@ pub enum Document<'a> {
     /// This is useful for additional formatting text which won't be rendered
     /// in the final output, such as ANSI codes or HTML elements.
     ZeroWidthString { string: EcoString },
+
+    /// A node that gets notified of the cursor position as it is being formatted.
+    /// This allows for processes outside of the final output to be notified of
+    /// the cursor position and perform actions based on it, such as recording
+    /// the span of the node in the generated source code for a source mapping.
+    CursorPositionObserver {
+        observer: Rc<RefCell<dyn CursorPositionObserver>>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -408,7 +425,7 @@ fn fits(
             }
 
             // Zero width strings do nothing: they do not contribute to line length
-            Document::ZeroWidthString { .. } => {}
+            Document::ZeroWidthString { .. } | Document::CursorPositionObserver { .. } => {}
 
             // If we get to a break we need to first see if it has to be
             // rendered as its unbroken or broken string, depending on the mode.
@@ -477,9 +494,10 @@ pub enum BreakKind {
 fn format(
     writer: &mut impl Utf8Writer,
     limit: isize,
-    mut width: isize,
     mut docs: im::Vector<(isize, Mode, &Document<'_>)>,
 ) -> Result<()> {
+    let mut line: isize = 0;
+    let mut width: isize = 0;
     // As long as there are documents to print we'll take each one by one and
     // output the corresponding string to the given writer.
     //
@@ -500,6 +518,8 @@ fn format(
                 for _ in 0..*i {
                     writer.str_write("\n")?;
                 }
+                // i will always be positive, so we can safely cast it to isize
+                line += *i as isize;
                 for _ in 0..indent {
                     writer.str_write(" ")?;
                 }
@@ -526,6 +546,7 @@ fn format(
                 } else {
                     writer.str_write(broken)?;
                     writer.str_write("\n")?;
+                    line += 1;
                     for _ in 0..indent {
                         writer.str_write(" ")?;
                     }
@@ -551,6 +572,7 @@ fn format(
                 Mode::Broken | Mode::ForcedBroken => {
                     writer.str_write(broken)?;
                     writer.str_write("\n")?;
+                    line += 1;
                     for _ in 0..indent {
                         writer.str_write(" ")?;
                     }
@@ -639,6 +661,11 @@ fn format(
             // current mode.
             Document::ForceBroken(document) | Document::NextBreakFits(document, _) => {
                 docs.push_front((indent, mode, document));
+            }
+
+            Document::CursorPositionObserver { observer } => {
+                // Notify the observer of the current cursor position
+                observer.borrow_mut().observe_cursor_position(line, width);
             }
         }
     }
@@ -808,7 +835,8 @@ impl<'a> Document<'a> {
             | Self::Group(..)
             | Self::Str { .. }
             | Self::EcoString { .. }
-            | Self::ZeroWidthString { .. } => Self::Vec(vec![self, second.to_doc()]),
+            | Self::ZeroWidthString { .. }
+            | Self::CursorPositionObserver { .. } => Self::Vec(vec![self, second.to_doc()]),
         }
     }
 
@@ -831,7 +859,7 @@ impl<'a> Document<'a> {
     /// characters in length.
     pub fn pretty_print(&self, limit: isize, writer: &mut impl Utf8Writer) -> Result<()> {
         let docs = im::vector![(0, Mode::Unbroken, self)];
-        format(writer, limit, 0, docs)?;
+        format(writer, limit, docs)?;
         Ok(())
     }
 
@@ -851,6 +879,7 @@ impl<'a> Document<'a> {
             // still printed and so are not empty. (Unless their string contents
             // is also empty)
             ZeroWidthString { string } => string.is_empty(),
+            CursorPositionObserver { .. } => true,
         }
     }
 }

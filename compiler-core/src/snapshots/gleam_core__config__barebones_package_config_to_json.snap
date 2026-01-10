@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/config.rs
-assertion_line: 1187
 expression: output
-snapshot_kind: text
 ---
 --- GLEAM.TOML
 
@@ -32,6 +30,7 @@ version = "1.0.0"
   },
   "javascript": {
     "typescript_declarations": false,
+    "source_maps": false,
     "runtime": "nodejs",
     "deno": {
       "allow_env": [],
