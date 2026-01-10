@@ -29,6 +29,10 @@
   internal implementation details.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The JavaScript prelude JavaScript API now contains the `BitArray$isBitArray`
+  and `BitArray$BitArray$data` functions.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Build tool
 
 - Upgraded `actions/checkout` from v4 to v6 in the GitHub Actions workflow used
