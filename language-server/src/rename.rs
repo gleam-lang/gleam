@@ -6,12 +6,14 @@ use lsp_types::{Range, RenameParams, TextEdit, Url, WorkspaceEdit};
 
 use gleam_core::{
     analyse::name,
-    ast::{self, SrcSpan},
+    ast::{self, SrcSpan, visit::Visit},
     build::Module,
     line_numbers::LineNumbers,
     reference::ReferenceKind,
     type_::{ModuleInterface, error::Named},
 };
+
+use crate::reference::{self, ModuleNameReferenceKind};
 
 use super::{
     TextEdits,
@@ -321,4 +323,54 @@ fn add_import(
         },
         new_text: format!("import {module_name}.{{{unqualified_import}}}{newlines}",),
     });
+}
+
+pub fn rename_module_alias(
+    module: &Module,
+    line_numbers: &LineNumbers,
+    params: &RenameParams,
+    module_name: &EcoString,
+    module_alias: &EcoString,
+) -> RenameOutcome {
+    let new_name = EcoString::from(&params.new_name);
+    if name::check_name_case(SrcSpan::default(), &new_name, Named::Variable).is_err() {
+        return RenameOutcome::InvalidName { name: new_name };
+    }
+
+    let uri = params.text_document_position.text_document.uri.clone();
+    let mut edits = TextEdits::new(line_numbers);
+
+    let mut finder = reference::FindModuleNameReferences {
+        references: Vec::new(),
+        module_name,
+        module_alias,
+    };
+    finder.visit_typed_module(&module.ast);
+
+    let original_module_name = module_name.split('/').next_back().unwrap_or("");
+
+    for reference in finder.references {
+        match reference.kind {
+            ModuleNameReferenceKind::Import => {
+                edits.insert(reference.location.end, format!(" as {}", &params.new_name))
+            }
+            ModuleNameReferenceKind::AliasedImport => {
+                if params.new_name == original_module_name {
+                    edits.delete(SrcSpan::new(
+                        reference.location.start - 1,
+                        reference.location.end,
+                    ));
+                } else {
+                    edits.replace(reference.location, format!("as {}", &params.new_name))
+                }
+            }
+            ModuleNameReferenceKind::ModuleSelect => {
+                edits.replace(reference.location, params.new_name.to_string())
+            }
+        }
+    }
+
+    RenameOutcome::Renamed {
+        edit: workspace_edit(uri, edits.edits),
+    }
 }
