@@ -58,6 +58,10 @@ pub fn main() {
       suite("typescript file inclusion", typescript_file_included_tests()),
       suite("custom types mixed args match", mixed_arg_match_tests()),
       suite("tuple access", tuple_access_tests()),
+      suite(
+        "directly-matching case subject",
+        directly_matching_case_subject_tests(),
+      ),
     ])
 
   ffi.halt(case stats.failures {
@@ -2526,5 +2530,31 @@ fn tuple_access_tests() {
           5,
         )
       }),
+  ]
+}
+
+fn directly_matching_case_subject_tests() {
+  // github.com/gleam-lang/gleam/issues/5265
+  [
+    "ensure correct scoping"
+    |> example(fn() {
+      assert_equal(
+        {
+          let x = "ABC"
+          case True {
+            True -> {
+              let x = 79
+              0
+            }
+            False -> {
+              let x = True
+              0
+            }
+          }
+          x
+        },
+        "ABC",
+      )
+    }),
   ]
 }

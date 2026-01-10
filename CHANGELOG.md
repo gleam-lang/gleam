@@ -20,6 +20,10 @@
 
 ### Bug fixes
 
+- The compiler now emits correctly-scoped JavaScript code for `case` expressions
+  whose subjects directly match one of the branches.
+  ([Justin Lubin](https://github.com/justinlubin))
+
 - The compiler now correctly tracks the minimum required version for constant
   record updates to be `>= 1.14.0`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
