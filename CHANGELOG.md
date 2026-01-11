@@ -4,7 +4,7 @@
 
 ### Compiler
 
-- The compiler now reports an error when integer and float binary operators are used 
+- The compiler now reports an error when integer and float binary operators are used
   incorrectly in case expression guards. ([Adi Salimgereyev](https://github.com/abs0luty))
 
 - The compiler now supports string concatenation in clause guards:
@@ -63,4 +63,40 @@
 
 - The build tool now doesn't perform code generation when exporting package
   interface.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+- The "Extract constant" code action now correctly places new constant when
+  function has documentation. For example,
+
+  ```gleam
+  /// Wibble does some wobbling
+  pub fn wibble() {
+    let x = "wobble"
+    //  ^ Trigger "Extract constant" here
+    x
+  }
+  ```
+
+  Previously, it would incorrectly place it below doc comment:
+
+  ```gleam
+  /// Wibble does some wobbling
+  const x = "wobble"
+
+  pub fn wibble() {
+    x
+  }
+  ```
+
+  Now it will correctly place constant above doc comment:
+
+  ```gleam
+  const x = "wobble"
+
+  /// Wibble does some wobbling
+  pub fn wibble() {
+    x
+  }
+  ```
+
   ([Andrey Kozhev](https://github.com/ankddev))
