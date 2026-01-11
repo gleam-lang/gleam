@@ -10,11 +10,76 @@ use petgraph::{
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReferenceKind {
+    /// We're referencing a type/value in a qualified manner. For example:
+    ///
+    /// ```gleam
+    /// import wibble
+    ///
+    /// pub fn main() -> wibble.Wobble
+    /// //               ^^^^^^^^^^^^^ This is a qualified reference
+    /// ```
+    ///
     Qualified,
+
+    /// We're referencing a type/value that has been brought in scope through an
+    /// unqualified import or that is defined in the same module (and so is only
+    /// accessed unqualified).
+    /// For example:
+    ///
+    /// ```gleam
+    /// import wibble.{type Wobble}
+    ///
+    /// pub fn main() -> Wobble { todo }
+    /// //               ^^^^^^ This is an unqualified reference
+    /// ```
+    ///
     Unqualified,
+
+    /// We're referencing a type/value through an import.
+    /// For example:
+    ///
+    /// ```gleam
+    /// import wibble.{type Wobble}
+    /// //                  ^^^^^^ This is a reference to the `Wobble` type
+    /// ```
+    ///
     Import,
+
+    /// This is to keep track of definitions themselves (as far as the tracking
+    /// code is concerned a definition references itself). For example:
+    ///
+    /// ```gleam
+    /// fn wibble() {}
+    /// // ^^^^^^ This!
+    /// ```
+    ///
     Definition,
+
+    /// This happens when we're referencing a type through an alias.
+    /// For example:
+    ///
+    /// ```gleam
+    /// type Wibble = Wobble
+    /// //            ^^^^^^ This is an alias reference to wobble
+    /// ```
+    ///
     Alias,
+
+    /// This happens when we're referencing a label accessing the label
+    ///
+    /// ```gleam
+    /// type Wibble {
+    ///   Wibble(label: String)
+    /// }
+    ///
+    /// wibble.label
+    /// //    ^^^^^^ This is a reference to the label
+    ///
+    /// Wibble(label: todo)
+    /// //     ^^^^^ This is a reference to the label as well
+    /// ```
+    ///
+    Label,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -39,6 +104,7 @@ pub enum EntityKind {
     Constant,
     Constructor,
     Type,
+    Label,
     ImportedModule { module_name: EcoString },
     ModuleAlias { module: EcoString },
     ImportedConstructor { module: EcoString },
@@ -69,6 +135,9 @@ enum EntityLayer {
     Shadowed,
     /// The name of an imported module. Modules are separate to values!
     Module,
+    /// Labels are separate from all other values. So they live in their own layer
+    /// as well.
+    Label,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -338,6 +407,7 @@ impl ReferenceTracker {
             | EntityKind::Constant
             | EntityKind::Constructor
             | EntityKind::Type
+            | EntityKind::Label
             | EntityKind::ImportedModule { .. }
             | EntityKind::ModuleAlias { .. } => (),
 
@@ -349,16 +419,25 @@ impl ReferenceTracker {
         }
     }
 
+    /// Registers a reference of the given kind to a value that has the given
+    /// name.
+    ///
     pub fn register_value_reference(
         &mut self,
         module: EcoString,
+        // The name of the value that is being referenced.
         name: EcoString,
+        // The name with which we are referring to the value.
         referenced_name: &EcoString,
         location: SrcSpan,
+        // How we are referencing the value.
         kind: ReferenceKind,
     ) {
         match kind {
-            ReferenceKind::Qualified | ReferenceKind::Import | ReferenceKind::Definition => {}
+            ReferenceKind::Qualified
+            | ReferenceKind::Import
+            | ReferenceKind::Definition
+            | ReferenceKind::Label => {}
             ReferenceKind::Alias | ReferenceKind::Unqualified => {
                 let target = self.get_or_create_node(referenced_name.clone(), EntityLayer::Value);
                 _ = self.graph.add_edge(self.current_node, target, ());
@@ -380,7 +459,10 @@ impl ReferenceTracker {
         kind: ReferenceKind,
     ) {
         match kind {
-            ReferenceKind::Qualified | ReferenceKind::Import | ReferenceKind::Definition => {}
+            ReferenceKind::Qualified
+            | ReferenceKind::Import
+            | ReferenceKind::Definition
+            | ReferenceKind::Label => {}
             ReferenceKind::Alias | ReferenceKind::Unqualified => {
                 self.register_type_reference_in_call_graph(referenced_name.clone())
             }
