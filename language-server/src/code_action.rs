@@ -3537,7 +3537,8 @@ pub struct ExtractConstant<'a> {
     edits: TextEdits<'a>,
     /// The whole selected expression
     selected_expression: Option<SrcSpan>,
-    /// The location of the start of the function containing the expression
+    /// The location of the start of the function containing the expression.
+    /// It includes function's documentation as well
     container_function_start: Option<u32>,
     /// The variant of the extractable expression being extracted (if any)
     variant_of_extractable: Option<ExtractableToConstant>,
@@ -3680,6 +3681,12 @@ fn generate_new_name_for_constant(module: &Module, expr: &TypedExpr) -> EcoStrin
     name_generator.generate_name_from_type(&expr.type_())
 }
 
+/// Converts the source start position of a documentation comment's contents into
+/// the position of the leading slash in its marker ('///').
+fn get_doc_marker_pos(content_pos: u32) -> u32 {
+    content_pos.saturating_sub(3)
+}
+
 impl<'a> ExtractConstant<'a> {
     pub fn new(
         module: &'a Module,
@@ -3772,7 +3779,16 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
         if !within(self.params.range, fun_range) {
             return;
         }
-        self.container_function_start = Some(fun.location.start);
+
+        // Here we need to get position of the function starts from the leading slash in the
+        // documentation comment's marker ('///'), not from its content (of which
+        // we have the position), so we must convert the content start position
+        // to the leading slash's position using 'get_doc_marker_pos'.
+        self.container_function_start = Some(fun
+            .documentation
+            .as_ref()
+            .map(|(doc_start, _)| get_doc_marker_pos(*doc_start))
+            .unwrap_or(fun_location.start));
 
         ast::visit::visit_typed_function(self, fun);
     }
