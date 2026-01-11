@@ -3784,11 +3784,12 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
         // documentation comment's marker ('///'), not from its content (of which
         // we have the position), so we must convert the content start position
         // to the leading slash's position using 'get_doc_marker_pos'.
-        self.container_function_start = Some(fun
-            .documentation
-            .as_ref()
-            .map(|(doc_start, _)| get_doc_marker_pos(*doc_start))
-            .unwrap_or(fun_location.start));
+        self.container_function_start = Some(
+            fun.documentation
+                .as_ref()
+                .map(|(doc_start, _)| get_doc_marker_pos(*doc_start))
+                .unwrap_or(fun_location.start),
+        );
 
         ast::visit::visit_typed_function(self, fun);
     }
