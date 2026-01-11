@@ -1,0 +1,22 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\n/// Wibble does some wobbling\npub fn wibble() {\n    let x = \"wobble\"\n    x\n}\n"
+---
+----- BEFORE ACTION
+
+/// Wibble does some wobbling
+pub fn wibble() {
+    let x = "wobble"
+        ↑           
+    x
+}
+
+
+----- AFTER ACTION
+
+const x = "wobble"
+
+/// Wibble does some wobbling
+pub fn wibble() {
+    x
+}

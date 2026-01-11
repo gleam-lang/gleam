@@ -37,3 +37,39 @@
 
 - The compiler no longer crashes when trying to pattern match on a `UtfCodepoint`.
   ([Hari Mohan](https://github.com/seafoamteal))
+
+- The "Extract constant" code action now correctly places new constant when
+  function has documentation. For example,
+
+  ```gleam
+  /// Wibble does some wobbling
+  pub fn wibble() {
+    let x = "wobble"
+    //  ^ Trigger "Extract constant" here
+    x
+  }
+  ```
+
+  Previously, it would incorrectly place it below doc comment:
+
+  ```gleam
+  /// Wibble does some wobbling
+  const x = "wobble"
+
+  pub fn wibble() {
+    x
+  }
+  ```
+
+  Now it will correctly place constant above doc comment:
+
+  ```gleam
+  const x = "wobble"
+
+  /// Wibble does some wobbling
+  pub fn wibble() {
+    x
+  }
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))

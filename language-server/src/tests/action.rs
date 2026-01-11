@@ -11592,3 +11592,36 @@ fn wobble(one) { wibble(one) }
         find_position_of("wibble").to_selection()
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5273
+#[test]
+fn extract_constant_doesnt_place_constant_below_documentation() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"
+/// Wibble does some wobbling
+pub fn wibble() {
+    let x = "wobble"
+    x
+}
+"#,
+        find_position_of("x").to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5273
+#[test]
+fn extract_constant_doesnt_place_constant_below_large_documentation() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"
+/// Wibble does some wobbling
+/// Note that it doesn't perform wibbling
+pub fn wibble() {
+    let x = "wobble"
+    x
+}
+"#,
+        find_position_of("x").to_selection()
+    );
+}
