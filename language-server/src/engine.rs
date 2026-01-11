@@ -34,7 +34,7 @@ use std::{collections::HashSet, sync::Arc};
 use super::{
     DownloadDependencies, MakeLocker,
     code_action::{
-        AddAnnotations, AddMissingGenericParameter, AddOmittedLabels, AnnotateTopLevelDefinitions,
+        AddAnnotations, AddMissingTypeParameter, AddOmittedLabels, AnnotateTopLevelDefinitions,
         CodeActionBuilder, CollapseNestedCase, ConvertFromUse, ConvertToFunctionCall,
         ConvertToPipe, ConvertToUse, ExpandFunctionCapture, ExtractConstant, ExtractFunction,
         ExtractVariable, FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
@@ -464,7 +464,7 @@ where
             AddAnnotations::new(module, &lines, &params).code_action(&mut actions);
             actions
                 .extend(AnnotateTopLevelDefinitions::new(module, &lines, &params).code_actions());
-            actions.extend(AddMissingGenericParameter::new(module, &lines, &params).code_actions());
+            actions.extend(AddMissingTypeParameter::new(module, &lines, &params).code_actions());
             Ok(if actions.is_empty() {
                 None
             } else {

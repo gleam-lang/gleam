@@ -10113,41 +10113,41 @@ impl<'ast> ast::visit::Visit<'ast> for MergeCaseBranches<'ast> {
     }
 }
 
-/// Code action to add a missing generic parameter to custom types.
-/// If a custom type is missing a generic type parameter, as it is the case
+/// Code action to add a missing type parameter to custom types.
+/// If a custom type is missing a type parameter, as it is the case
 /// in the following example, this action will offer to add the
-/// generic parameter to the type definition.
+/// type parameter to the type definition.
 ///
 /// Before:
 /// ```gleam
-/// type GenericType {
-///   GenericType(field: t)
+/// type Wibble {
+///   Wibble(field: t)
 /// }
 /// ```
 ///
 /// After:
 /// ```gleam
-/// type GenericType(t) {
-///   GenericType(field: t)
+/// type Wibble(t) {
+///   Wibble(field: t)
 /// }
 /// ```
 ///
-pub struct AddMissingGenericParameter<'a> {
+pub struct AddMissingTypeParameter<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
     /// The source location where the parameters should be defined.
     /// This might be a zero-length span if there are no parameters yet,
-    /// or it might cover the already existing generic parameter definitions.
+    /// or it might cover the already existing type parameter definitions.
     parameters_location: Option<SrcSpan>,
-    /// The set of generic parameter names that are part of the type definition.
-    existing_parameters: HashSet<EcoString>,
-    /// The set of all generic parameter names in the different variants of the type
-    /// that are not already part of the generic parameter definition on the type
+    /// The set of type parameter names that are part of the type definition.
+    existing_parameters: Vec<EcoString>,
+    /// The set of all type parameter names in the different variants of the type
+    /// that are not already part of the type parameter definition on the type.
     missing_parameters: HashSet<EcoString>,
 }
 
-impl<'a> AddMissingGenericParameter<'a> {
+impl<'a> AddMissingTypeParameter<'a> {
     pub fn new(
         module: &'a Module,
         line_numbers: &'a LineNumbers,
@@ -10158,7 +10158,7 @@ impl<'a> AddMissingGenericParameter<'a> {
             params,
             edits: TextEdits::new(line_numbers),
             parameters_location: None,
-            existing_parameters: HashSet::new(),
+            existing_parameters: Vec::new(),
             missing_parameters: HashSet::new(),
         }
     }
@@ -10174,33 +10174,76 @@ impl<'a> AddMissingGenericParameter<'a> {
             return vec![];
         }
 
-        let all_parameters = self
-            .existing_parameters
-            .union(&self.missing_parameters)
-            .sorted()
-            .join(", ");
+        if self.existing_parameters.is_empty() {
+            let new_parameters = self.missing_parameters.iter().sorted().join(", ");
+            self.edits.insert(
+                type_parameters_location.end,
+                format!("({})", new_parameters),
+            );
+        } else {
+            self.existing_parameters.sort();
 
-        self.edits
-            .replace(type_parameters_location, format!("({})", all_parameters));
+            // Insert the parameters that come alphabetically before any existing parameter
+            // before the existing type parameters.
+            if let Some(first_existing_parameter) = self.existing_parameters.first() {
+                let mut first_parameters = self
+                    .missing_parameters
+                    .iter()
+                    .filter(|&param| param.lt(first_existing_parameter))
+                    .join(", ");
+
+                if !first_parameters.is_empty() {
+                    first_parameters.push_str(", ");
+                    self.edits
+                        .insert(type_parameters_location.start + 1, first_parameters);
+                }
+            }
+
+            // Insert the parameters that come alphabetically after any existing parameter
+            // after the existing type parameters.
+            if let Some(last_existing_parameter) = self.existing_parameters.last() {
+                let mut last_parameters = self
+                    .missing_parameters
+                    .iter()
+                    .filter(|&param| param.ge(last_existing_parameter))
+                    .join(", ");
+
+                if !last_parameters.is_empty() {
+                    let has_trailing_comma = self
+                        .module
+                        .extra
+                        .trailing_commas
+                        .iter()
+                        .any(|&trailing_comma| type_parameters_location.contains(trailing_comma));
+
+                    if !has_trailing_comma {
+                        last_parameters.insert_str(0, ", ");
+                    }
+
+                    self.edits
+                        .insert(type_parameters_location.end - 1, last_parameters);
+                }
+            }
+        }
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new("Add missing generic parameter")
+        CodeActionBuilder::new("Add missing type parameter")
             .kind(CodeActionKind::QUICKFIX)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
-            .preferred(false)
+            .preferred(true)
             .push_to(&mut action);
         action
     }
 }
 
-impl<'ast> ast::visit::Visit<'ast> for AddMissingGenericParameter<'ast> {
+impl<'ast> ast::visit::Visit<'ast> for AddMissingTypeParameter<'ast> {
     fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
         let full_type_definition_range = self.edits.src_span_to_lsp_range(SrcSpan::new(
             custom_type.location.start,
             custom_type.end_position,
         ));
 
-        // only continue, if the action was selected anywhere within the custom type definition
+        // Only continue, if the action was selected anywhere within the custom type definition.
         if !overlaps(self.params.range, full_type_definition_range) {
             return;
         }
@@ -10210,12 +10253,12 @@ impl<'ast> ast::visit::Visit<'ast> for AddMissingGenericParameter<'ast> {
             custom_type.location.end,
         ));
 
-        // collect the names of already existing type parameters
+        // Collect the names of already existing type parameters.
         for (_, parameter) in &custom_type.parameters {
-            let _ = self.existing_parameters.insert(parameter.clone());
+            self.existing_parameters.push(parameter.clone());
         }
 
-        // collect the remaining type parameters from the variant constructors
+        // Collect the remaining type parameters from the variant constructors.
         for record in &custom_type.constructors {
             for argument in &record.arguments {
                 if let Type::Var { .. } = argument.type_.as_ref()
