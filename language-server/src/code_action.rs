@@ -3780,8 +3780,8 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
             return;
         }
 
-        // Here we need to get position of the function starts from the leading slash in the
-        // documentation comment's marker ('///'), not from its content (of which
+        // Here we need to get position of the function, starting from the leading slash in the
+        // documentation comment's marker ('///'), not from comment's content (of which
         // we have the position), so we must convert the content start position
         // to the leading slash's position using 'get_doc_marker_pos'.
         self.container_function_start = Some(
