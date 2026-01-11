@@ -138,7 +138,7 @@ const REMOVE_UNREACHABLE_CLAUSES: &str = "Remove unreachable clauses";
 const ADD_OMITTED_LABELS: &str = "Add omitted labels";
 const EXTRACT_FUNCTION: &str = "Extract function";
 const MERGE_CASE_BRANCHES: &str = "Merge case branches";
-const ADD_MISSING_GENERIC_PARAMETER: &str = "Add missing generic parameter";
+const ADD_MISSING_TYPE_PARAMETER: &str = "Add missing type parameter";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -11628,12 +11628,12 @@ pub fn wibble() {
 }
 
 #[test]
-fn add_missing_generic_parameter_for_single_constructor() {
+fn add_missing_type_parameter_for_single_constructor() {
     assert_code_action!(
-        ADD_MISSING_GENERIC_PARAMETER,
+        ADD_MISSING_TYPE_PARAMETER,
         r#"
-type GenericType {
-  GenericType(field: t)
+type Wibble {
+  Wibble(field: t)
 }
 "#,
         find_position_of("t").nth_occurrence(2).to_selection()
@@ -11641,13 +11641,13 @@ type GenericType {
 }
 
 #[test]
-fn add_missing_generic_parameter_to_exising_parameter() {
+fn add_missing_type_parameter_to_exising_parameter() {
     assert_code_action!(
-        ADD_MISSING_GENERIC_PARAMETER,
+        ADD_MISSING_TYPE_PARAMETER,
         r#"
-type GenericType(t) {
-  GenericType(field: t)
-  GenericType2(field: u)
+type Wibble(t) {
+  Wibble(field: t)
+  Wobble(field: u)
 }
 "#,
         find_position_of("u").to_selection()
@@ -11655,29 +11655,57 @@ type GenericType(t) {
 }
 
 #[test]
-fn add_missing_generic_parameter_not_suggested_when_nothing_missing() {
-    assert_no_code_actions!(
-        ADD_MISSING_GENERIC_PARAMETER,
+fn add_missing_type_parameter_preserves_comments() {
+    assert_code_action!(
+        ADD_MISSING_TYPE_PARAMETER,
         r#"
-type GenericType(t) {
-  GenericType(field: t)
+type Wibble(
+  // Comment 1
+  b,
+  // Comment 2
+) {
+  Wibble(a, b, c)
 }
 "#,
-        find_position_of("t").nth_occurrence(3).to_selection()
+        find_position_of("c").to_selection()
     );
 }
 
 #[test]
-fn add_missing_generic_parameter_not_suggested_when_no_parameters() {
-    assert_no_code_actions!(
-        ADD_MISSING_GENERIC_PARAMETER,
+fn add_missing_type_parameter_sorted_alphabetically() {
+    assert_code_action!(
+        ADD_MISSING_TYPE_PARAMETER,
         r#"
-type GenericType {
-  GenericType
+type Wibble(b) {
+  Wibble(a, b)
 }
 "#,
-        find_position_of("GenericType")
-            .nth_occurrence(2)
-            .to_selection()
+        find_position_of("a").to_selection()
+    );
+}
+
+#[test]
+fn add_missing_type_parameter_not_suggested_when_nothing_missing() {
+    assert_no_code_actions!(
+        ADD_MISSING_TYPE_PARAMETER,
+        r#"
+type Wibble(t) {
+  Wibble(field: t)
+}
+"#,
+        find_position_of("t").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn add_missing_type_parameter_not_suggested_when_no_parameters() {
+    assert_no_code_actions!(
+        ADD_MISSING_TYPE_PARAMETER,
+        r#"
+type Wibble {
+  Wibble
+}
+"#,
+        find_position_of("Wibble").nth_occurrence(2).to_selection()
     );
 }
