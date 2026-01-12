@@ -42,7 +42,7 @@ pub enum Request {
 /// Responses from the language server client
 pub enum Response {
     /// Content for a response to a `workspace/configuration` request
-    Configuration(UserConfiguration),
+    Configuration(Result<UserConfiguration, ()>),
 }
 
 #[derive(Debug)]
@@ -283,11 +283,9 @@ impl MessageBuffer {
     }
 
     fn configuration_update_received(&mut self, result: serde_json::Value) -> Next {
-        let parsed_update_items: Result<(UserConfiguration,), _> = serde_json::from_value(result);
-        let Ok((parsed_config,)) = parsed_update_items else {
-            // TODO how can we present an error here without crashing with a panic?
-            return Next::MorePlease;
-        };
+        let parsed_config = serde_json::from_value::<(UserConfiguration,)>(result)
+            .map(|config| config.0)
+            .map_err(|_| {});
 
         let message = Message::Response(Response::Configuration(parsed_config));
         self.messages.push(message);

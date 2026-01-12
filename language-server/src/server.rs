@@ -112,12 +112,22 @@ where
     fn handle_response(&mut self, response: Response) {
         match response {
             Response::Configuration(updated_config) => {
-                {
-                    let mut config = self.config.write().expect("cannot write config");
-                    *config = updated_config;
-                }
+                if let Ok(updated_config) = updated_config {
+                    {
+                        let mut config = self.config.write().expect("cannot write config");
+                        *config = updated_config;
+                    }
 
-                self.send_inlay_hints_refresh();
+                    self.send_inlay_hints_refresh();
+                } else {
+                    self.publish_messages(vec![Diagnostic {
+                        title: "Invalid LSP User Configuration".to_string(),
+                        text: "The received user configuration could not be parsed by the Gleam LSP.".to_string(),
+                        level: Level::Error,
+                        location: None,
+                        hint: None,
+                    }])
+                }
             }
         }
     }
