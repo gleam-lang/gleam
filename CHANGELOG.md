@@ -10,6 +10,9 @@
   friendlier.
   ([Ameen Radwan](https://github.com/Acepie))
 
+- When attempting to publish a package on Hex with an already taken name, the massage is clearer.
+  ([vyacheslavhere](https://github.com/vyacheslavhere))
+
 ### Language server
 
 - The language server now allows extracting the start of a pipeline into a
