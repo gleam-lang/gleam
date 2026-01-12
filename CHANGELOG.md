@@ -41,3 +41,7 @@
 
 - Fixed a bug that would result in not being able to rename an aliased pattern.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Made link href validation in gleam.toml files less strict so developers can
+  use relative links for internal documentation.
+  ([Tristan-Mihai Radulescu](https://github.com/Courtcircuits))
