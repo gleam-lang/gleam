@@ -3683,7 +3683,7 @@ fn generate_new_name_for_constant(module: &Module, expr: &TypedExpr) -> EcoStrin
 
 /// Converts the source start position of a documentation comment's contents into
 /// the position of the leading slash in its marker ('///').
-fn get_doc_marker_pos(content_pos: u32) -> u32 {
+fn get_doc_marker_position(content_pos: u32) -> u32 {
     content_pos.saturating_sub(3)
 }
 
@@ -3783,11 +3783,11 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
         // Here we need to get position of the function, starting from the leading slash in the
         // documentation comment's marker ('///'), not from comment's content (of which
         // we have the position), so we must convert the content start position
-        // to the leading slash's position using 'get_doc_marker_pos'.
+        // to the leading slash's position.
         self.container_function_start = Some(
             fun.documentation
                 .as_ref()
-                .map(|(doc_start, _)| get_doc_marker_pos(*doc_start))
+                .map(|(doc_start, _)| get_doc_marker_position(*doc_start))
                 .unwrap_or(fun_location.start),
         );
 

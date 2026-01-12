@@ -491,12 +491,12 @@ where
                 // By convention, the symbol span starts from the leading slash in the
                 // documentation comment's marker ('///'), not from its content (of which
                 // we have the position), so we must convert the content start position
-                // to the leading slash's position using 'get_doc_marker_pos'.
+                // to the leading slash's position.
                 let full_function_span = SrcSpan {
                     start: function
                         .documentation
                         .as_ref()
-                        .map(|(doc_start, _)| get_doc_marker_pos(*doc_start))
+                        .map(|(doc_start, _)| get_doc_marker_position(*doc_start))
                         .unwrap_or(function.location.start),
 
                     end: function.end_position,
@@ -531,7 +531,7 @@ where
             for alias in &module.ast.definitions.type_aliases {
                 let full_alias_span = match alias.documentation {
                     Some((doc_position, _)) => {
-                        SrcSpan::new(get_doc_marker_pos(doc_position), alias.location.end)
+                        SrcSpan::new(get_doc_marker_position(doc_position), alias.location.end)
                     }
                     None => alias.location,
                 };
@@ -573,7 +573,7 @@ where
                     start: constant
                         .documentation
                         .as_ref()
-                        .map(|(doc_start, _)| get_doc_marker_pos(*doc_start))
+                        .map(|(doc_start, _)| get_doc_marker_position(*doc_start))
                         .unwrap_or(constant.location.start),
 
                     end: constant.value.location().end,
@@ -1099,7 +1099,7 @@ fn custom_type_symbol(
 
                 let full_arg_span = match argument.doc {
                     Some((doc_position, _)) => {
-                        SrcSpan::new(get_doc_marker_pos(doc_position), argument.location.end)
+                        SrcSpan::new(get_doc_marker_position(doc_position), argument.location.end)
                     }
                     None => argument.location,
                 };
@@ -1131,7 +1131,7 @@ fn custom_type_symbol(
                 start: constructor
                     .documentation
                     .as_ref()
-                    .map(|(doc_start, _)| get_doc_marker_pos(*doc_start))
+                    .map(|(doc_start, _)| get_doc_marker_position(*doc_start))
                     .unwrap_or(constructor.location.start),
 
                 end: constructor.location.end,
@@ -1170,7 +1170,7 @@ fn custom_type_symbol(
         start: type_
             .documentation
             .as_ref()
-            .map(|(doc_start, _)| get_doc_marker_pos(*doc_start))
+            .map(|(doc_start, _)| get_doc_marker_position(*doc_start))
             .unwrap_or(type_.location.start),
 
         end: type_.end_position,
@@ -1648,7 +1648,7 @@ fn get_hexdocs_link_section(
 
 /// Converts the source start position of a documentation comment's contents into
 /// the position of the leading slash in its marker ('///').
-fn get_doc_marker_pos(content_pos: u32) -> u32 {
+fn get_doc_marker_position(content_pos: u32) -> u32 {
     content_pos.saturating_sub(3)
 }
 
