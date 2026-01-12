@@ -925,3 +925,20 @@ pub fn main() {
         find_position_of("Wibble").nth_occurrence(1)
     );
 }
+
+#[test]
+fn goto_defintion_type_alias_of_an_alias() {
+    let code = "
+type One = Int
+type Two = One
+
+fn wibble() -> Two {
+  0
+}
+";
+
+    assert_goto!(
+        TestProject::for_source(code),
+        find_position_of("Two").nth_occurrence(2)
+    );
+}

@@ -1014,7 +1014,18 @@ impl ModuleInterface {
 
     /// Gets the origin location of a type by name. Checks both custom types
     /// and type aliases.
-    pub fn get_type_origin(&self, name: &str) -> Option<SrcSpan> {
+    ///
+    /// ```gleam
+    ///    type Wibble = Wobble
+    /// // ^^^^^^^^^^^^^^^^^^^^
+    /// // This is the origin of the `Wibble` type alias.
+    ///
+    ///    type Woo { Woo }
+    /// // ^^^^^^^^
+    /// // This is the origin of the `Woo` type.
+    /// ```
+    ///
+    pub fn get_type_definition_location(&self, name: &str) -> Option<SrcSpan> {
         self.type_aliases
             .get(name)
             .map(|alias| alias.origin)
