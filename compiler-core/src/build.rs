@@ -660,13 +660,12 @@ pub fn type_constructor_from_modules(
 ///
 /// ```gleam
 /// let a: wibble.Wobble = todo
-/// //     ^ when looking for the definition location of this type
-/// //       the name would be `Wobble`, and the module would be
-/// //       `Some("wibble")`
+/// //     ^ when looking for the definition location of this type the name
+/// //       would be `Wobble`, and the module would be `Some("wibble")`.
 ///
 /// let a: Wobble = todo
-/// //     ^ when looking for the definition location of this type
-/// //       the name would be `Wobble`, and the module would be `None`
+/// //     ^ when looking for the definition location of this type the name
+/// //       would be `Wobble`, and the module would be `None`.
 /// ```
 ///
 /// Checks both custom types and type aliases.
