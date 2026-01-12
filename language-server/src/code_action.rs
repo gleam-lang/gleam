@@ -13,22 +13,26 @@ use gleam_core::{
         TypedExpr, TypedFunction, TypedModuleConstant, TypedPattern, TypedPipelineAssignment,
         TypedRecordConstructor, TypedStatement, TypedTailPattern, TypedUse, visit::Visit as _,
     },
-    build::{Located, Module},
+    build::{Located, Module, Origin},
     config::PackageConfig,
     exhaustiveness::CompiledCase,
     line_numbers::LineNumbers,
     parse::{extra::ModuleExtra, lexer::string_to_keyword},
+    paths::ProjectPaths,
     strings::to_snake_case,
     type_::{
-        self, FieldMap, ModuleValueConstructor, Opaque, Type, TypeVar, TypedCallArg,
-        ValueConstructor,
+        self, Error as TypeError, FieldMap, ModuleValueConstructor, Opaque, Type, TypeVar,
+        TypedCallArg, ValueConstructor,
         error::{ModuleSuggestion, VariableDeclaration, VariableOrigin},
         printer::Printer,
     },
 };
 use im::HashMap;
 use itertools::Itertools;
-use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Url};
+use lsp_types::{
+    CodeAction, CodeActionKind, CodeActionParams, CreateFile, CreateFileOptions,
+    DocumentChangeOperation, DocumentChanges, Position, Range, ResourceOp, TextEdit, Url,
+};
 use vec1::{Vec1, vec1};
 
 use crate::engine::{completely_within, position_within};
@@ -40,6 +44,7 @@ use super::{
     edits::{add_newlines_after_import, get_import_edit, position_of_first_definition_if_import},
     engine::{overlaps, within},
     files::FileSystemProxy,
+    lsp_range_to_src_span,
     reference::{FindVariableReferences, VariableReferenceKind},
     src_span_to_lsp_range, url_from_path,
 };
@@ -50,7 +55,7 @@ pub struct CodeActionBuilder {
 }
 
 impl CodeActionBuilder {
-    pub fn new(title: &str) -> Self {
+    pub fn new(title: impl ToString) -> Self {
         Self {
             action: CodeAction {
                 title: title.to_string(),
@@ -76,6 +81,15 @@ impl CodeActionBuilder {
         _ = changes.insert(uri, edits);
 
         edit.changes = Some(changes);
+        self.action.edit = Some(edit);
+        self
+    }
+
+    pub fn document_changes(mut self, changes: DocumentChanges) -> Self {
+        let mut edit = self.action.edit.take().unwrap_or_default();
+
+        edit.document_changes = Some(changes);
+
         self.action.edit = Some(edit);
         self
     }
@@ -1987,7 +2001,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
         }
         self.edit_import();
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new(&format!(
+        CodeActionBuilder::new(format!(
             "Unqualify {}.{}",
             self.qualified_constructor.used_name, self.qualified_constructor.constructor
         ))
@@ -2488,7 +2502,7 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
             constructor,
             ..
         } = self.unqualified_constructor;
-        CodeActionBuilder::new(&format!(
+        CodeActionBuilder::new(format!(
             "Qualify {} as {}.{}",
             constructor.used_name(),
             module_name,
@@ -8619,7 +8633,7 @@ impl<'a> FixBinaryOperation<'a> {
         self.edits.replace(location, replacement.name().into());
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new(&format!("Use `{}`", replacement.name()))
+        CodeActionBuilder::new(format!("Use `{}`", replacement.name()))
             .kind(CodeActionKind::REFACTOR_REWRITE)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
@@ -8702,7 +8716,7 @@ impl<'a> FixTruncatedBitArraySegment<'a> {
             .replace(truncation.value_location, replacement.clone());
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new(&format!("Replace with `{replacement}`"))
+        CodeActionBuilder::new(format!("Replace with `{replacement}`"))
             .kind(CodeActionKind::REFACTOR_REWRITE)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
@@ -11906,5 +11920,110 @@ impl<'ast> ast::visit::Visit<'ast> for UnwrapAnonymousFunction<'ast> {
             body,
             return_annotation,
         )
+    }
+}
+
+/// Code action to create unknown modules when an import is added for a
+/// module that doesn't exist.
+///
+/// For example, if `import wobble/woo` is added to `src/wiggle.gleam`,
+/// then a code action to create `src/wobble/woo.gleam` will be presented
+/// when triggered over `import wobble/woo`.
+pub struct CreateUnknownModule<'a> {
+    module: &'a Module,
+    lines: &'a LineNumbers,
+    params: &'a CodeActionParams,
+    paths: &'a ProjectPaths,
+    error: &'a Option<Error>,
+}
+
+impl<'a> CreateUnknownModule<'a> {
+    pub fn new(
+        module: &'a Module,
+        lines: &'a LineNumbers,
+        params: &'a CodeActionParams,
+        paths: &'a ProjectPaths,
+        error: &'a Option<Error>,
+    ) -> Self {
+        Self {
+            module,
+            lines,
+            params,
+            paths,
+            error,
+        }
+    }
+
+    pub fn code_actions(self) -> Vec<CodeAction> {
+        struct UnknownModule<'a> {
+            name: &'a EcoString,
+            location: &'a SrcSpan,
+        }
+
+        let mut actions = vec![];
+
+        // This code action can be derived from UnknownModule type errors. If those
+        // errors don't exist, there are no actions to add.
+        let Some(Error::Type { failed_modules, .. }) = self.error else {
+            return actions;
+        };
+
+        // Span of the code action so we can check if it exists within the span of
+        // the UnkownModule type error
+        let code_action_span = lsp_range_to_src_span(self.params.range, self.lines);
+
+        // Origin directory we can build the new module path from
+        let origin_directory = match self.module.origin {
+            Origin::Src => self.paths.src_directory(),
+            Origin::Test => self.paths.test_directory(),
+            Origin::Dev => self.paths.dev_directory(),
+        };
+
+        // Filter for any UnknownModule type errors
+        let unknown_modules = failed_modules
+            .values()
+            .flat_map(|module| &module.errors)
+            .filter_map(|error| {
+                if let TypeError::UnknownModule { name, location, .. } = error {
+                    return Some(UnknownModule { name, location });
+                }
+
+                None
+            });
+
+        // For each UnknownModule type error, check to see if it contains the
+        // incoming code action & if so, add a document change to create the module
+        for unknown_module in unknown_modules {
+            // Was this code action triggered within the UnknownModule error?
+            let error_contains_action = unknown_module.location.contains(code_action_span.start)
+                && unknown_module.location.contains(code_action_span.end);
+
+            if !error_contains_action {
+                continue;
+            }
+
+            let uri = url_from_path(&format!("{origin_directory}/{}.gleam", unknown_module.name))
+                .expect("origin directory is absolute");
+
+            CodeActionBuilder::new(format!(
+                "Create {}/{}.gleam",
+                self.module.origin.folder_name(),
+                unknown_module.name
+            ))
+            .kind(CodeActionKind::QUICKFIX)
+            .document_changes(DocumentChanges::Operations(vec![
+                DocumentChangeOperation::Op(ResourceOp::Create(CreateFile {
+                    uri,
+                    options: Some(CreateFileOptions {
+                        overwrite: Some(false),
+                        ignore_if_exists: Some(true),
+                    }),
+                    annotation_id: None,
+                })),
+            ]))
+            .push_to(&mut actions);
+        }
+
+        actions
     }
 }
