@@ -1750,3 +1750,21 @@ pub fn go(x) {
         find_position_of("nested")
     );
 }
+
+#[test]
+fn rename_works_when_error_is_present() {
+    assert_rename!(
+        r#"
+fn wibble() {
+  "test string"
+}
+
+pub fn main() {
+  1 + "1"
+  echo wibble()
+}
+  "#,
+        "wobble",
+        find_position_of("wibble")
+    );
+}
