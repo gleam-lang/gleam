@@ -16,10 +16,10 @@ type Wibble(
 
 ----- AFTER ACTION
 
-type Wibble(a, 
+type Wibble(
   // Comment 1
   b,
   // Comment 2
-c) {
+a, c) {
   Wibble(a, b, c)
 }

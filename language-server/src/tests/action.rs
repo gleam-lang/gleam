@@ -11677,7 +11677,7 @@ fn add_missing_type_parameter_sorted_alphabetically() {
         ADD_MISSING_TYPE_PARAMETER,
         r#"
 type Wibble(b) {
-  Wibble(a, b)
+  Wibble(c, b, a)
 }
 "#,
         find_position_of("a").to_selection()
