@@ -10140,8 +10140,8 @@ pub struct AddMissingTypeParameter<'a> {
     /// This might be a zero-length span if there are no parameters yet,
     /// or it might cover the already existing type parameter definitions.
     parameters_location: Option<SrcSpan>,
-    /// The set of type parameter names that are part of the type definition.
-    existing_parameters: Vec<EcoString>,
+    /// If the type definition already had existing parameters before.
+    has_existing_parameters: bool,
     /// The set of all type parameter names in the different variants of the type
     /// that are not already part of the type parameter definition on the type.
     missing_parameters: HashSet<EcoString>,
@@ -10158,7 +10158,7 @@ impl<'a> AddMissingTypeParameter<'a> {
             params,
             edits: TextEdits::new(line_numbers),
             parameters_location: None,
-            existing_parameters: Vec::new(),
+            has_existing_parameters: false,
             missing_parameters: HashSet::new(),
         }
     }
@@ -10174,56 +10174,26 @@ impl<'a> AddMissingTypeParameter<'a> {
             return vec![];
         }
 
-        if self.existing_parameters.is_empty() {
-            let new_parameters = self.missing_parameters.iter().sorted().join(", ");
+        let mut new_parameters = self.missing_parameters.iter().sorted().join(", ");
+        if self.has_existing_parameters {
+            let has_trailing_comma = self
+                .module
+                .extra
+                .trailing_commas
+                .iter()
+                .any(|&trailing_comma| type_parameters_location.contains(trailing_comma));
+
+            if !has_trailing_comma {
+                new_parameters.insert_str(0, ", ");
+            }
+
+            self.edits
+                .insert(type_parameters_location.end - 1, new_parameters);
+        } else {
             self.edits.insert(
                 type_parameters_location.end,
                 format!("({})", new_parameters),
             );
-        } else {
-            self.existing_parameters.sort();
-
-            // Insert the parameters that come alphabetically before any existing parameter
-            // before the existing type parameters.
-            if let Some(first_existing_parameter) = self.existing_parameters.first() {
-                let mut first_parameters = self
-                    .missing_parameters
-                    .iter()
-                    .filter(|&param| param.lt(first_existing_parameter))
-                    .join(", ");
-
-                if !first_parameters.is_empty() {
-                    first_parameters.push_str(", ");
-                    self.edits
-                        .insert(type_parameters_location.start + 1, first_parameters);
-                }
-            }
-
-            // Insert the parameters that come alphabetically after any existing parameter
-            // after the existing type parameters.
-            if let Some(last_existing_parameter) = self.existing_parameters.last() {
-                let mut last_parameters = self
-                    .missing_parameters
-                    .iter()
-                    .filter(|&param| param.ge(last_existing_parameter))
-                    .join(", ");
-
-                if !last_parameters.is_empty() {
-                    let has_trailing_comma = self
-                        .module
-                        .extra
-                        .trailing_commas
-                        .iter()
-                        .any(|&trailing_comma| type_parameters_location.contains(trailing_comma));
-
-                    if !has_trailing_comma {
-                        last_parameters.insert_str(0, ", ");
-                    }
-
-                    self.edits
-                        .insert(type_parameters_location.end - 1, last_parameters);
-                }
-            }
         }
 
         let mut action = Vec::with_capacity(1);
@@ -10253,10 +10223,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddMissingTypeParameter<'ast> {
             custom_type.location.end,
         ));
 
-        // Collect the names of already existing type parameters.
-        for (_, parameter) in &custom_type.parameters {
-            self.existing_parameters.push(parameter.clone());
-        }
+        self.has_existing_parameters = !custom_type.typed_parameters.is_empty();
 
         // Collect the remaining type parameters from the variant constructors.
         for record in &custom_type.constructors {
