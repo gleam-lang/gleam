@@ -141,6 +141,10 @@ pub fn rename_module_entity(
     }
 
     match renamed.target_kind {
+        // When renaming an unqualified import, instead of renaming the original
+        // value, we simply want to alias it in the current module.
+        // It's an unqualified import if we are referencing it using unqualified
+        // syntax, and it is from a different module.
         RenameTarget::Unqualified if renamed.module_name != &current_module.name => {
             return alias_references_in_module(
                 params,

@@ -607,7 +607,7 @@ fn analyse(
                 let _ = incomplete_modules.insert(name.clone());
                 // Register the partially type checked module data so that it can be
                 // used in the language server.
-                modules.push(Module {
+                let mut module = Module {
                     dependencies,
                     origin,
                     extra,
@@ -616,7 +616,12 @@ fn analyse(
                     code,
                     ast,
                     input_path: path,
-                });
+                };
+                module.attach_doc_and_module_comments();
+
+                let _ = module_types.insert(module.ast.name.clone(), module.ast.type_info.clone());
+
+                modules.push(module);
                 // WARNING: This cannot be used for code generation as the code has errors.
                 return Outcome::PartialFailure(modules, error);
             }
