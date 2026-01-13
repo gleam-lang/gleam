@@ -4,14 +4,16 @@
 
 ### Compiler
 
-- The compiler now reports an error when integer and float binary operators are used
-  incorrectly in case expression guards. ([Adi Salimgereyev](https://github.com/abs0luty))
+- The compiler now reports an error when integer and float binary operators are
+  used incorrectly in case expression guards.
+  ([Adi Salimgereyev](https://github.com/abs0luty))
 
 - The compiler now supports string concatenation in clause guards:
 
   ```gleam
   case message {
-    #(version, action) if version <> ":" <> action == "v1:delete" -> handle_delete()
+    #(version, action) if version <> ":" <> action == "v1:delete" ->
+      handle_delete()
     _ -> ignore()
   }
   ```
@@ -33,6 +35,10 @@
 ### Formatter
 
 ### Bug fixes
+
+- Fixed a bug where some bit array patterns would erroneously be marked as
+  unreachable.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - The compiler now correctly tracks the minimum required version for constant
   record updates to be `>= 1.14.0`.
@@ -56,8 +62,8 @@
 - Fixed a bug that would result in not being able to rename an aliased pattern.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Added an error message when attempting to update packages that are not dependencies
-  of the project, instead of failing silently.
+- Added an error message when attempting to update packages that are not
+  dependencies of the project, instead of failing silently.
   ([Etienne Boutet](https://github.com/EtienneBoutet),
   [Vladislav Shakitskiy](https://github.com/vshakitskiy))
 

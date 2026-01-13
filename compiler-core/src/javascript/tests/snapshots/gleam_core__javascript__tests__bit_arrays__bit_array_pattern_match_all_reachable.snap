@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn main(x) {\n    case x {\n    <<_, \"==\">> -> 1\n    <<_, _, \"=\">> -> 2\n    // ^^^ This should be reachable\n    _ -> 3\n    }\n}\n        "
+---
+----- SOURCE CODE
+
+pub fn main(x) {
+    case x {
+    <<_, "==">> -> 1
+    <<_, _, "=">> -> 2
+    // ^^^ This should be reachable
+    _ -> 3
+    }
+}
+        
+
+----- COMPILED JAVASCRIPT
+export function main(x) {
+  if (x.bitSize >= 8 && x.bitSize === 24) {
+    if (x.byteAt(1) === 61 && x.byteAt(2) === 61) {
+      return 1;
+    } else if (x.byteAt(2) === 61) {
+      return 2;
+    } else {
+      return 3;
+    }
+  } else {
+    return 3;
+  }
+}
