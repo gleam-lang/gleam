@@ -2659,3 +2659,19 @@ pub fn wibble(bits, wobble) {
 "#
     );
 }
+
+#[test]
+fn bit_array_pattern_match_all_reachable() {
+    assert_js!(
+        r#"
+pub fn main(x) {
+    case x {
+    <<_, "==">> -> 1
+    <<_, _, "=">> -> 2
+    // ^^^ This should be reachable
+    _ -> 3
+    }
+}
+        "#
+    )
+}

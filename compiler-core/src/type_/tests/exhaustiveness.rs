@@ -1940,3 +1940,20 @@ pub fn main() {
 }        "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5286
+#[test]
+fn reachable_bit_array_pattern() {
+    assert_no_warnings!(
+        r#"
+pub fn main(x) {
+  case x {
+    <<_, "==">> -> 1
+    <<_, _, "=">> -> 2
+    // ^^^ This should be reachable
+    _ -> 3
+  }
+}
+"#
+    );
+}

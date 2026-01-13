@@ -1074,6 +1074,7 @@ pub struct MatchTest {
     pub read_action: ReadAction,
 }
 
+#[derive(Debug)]
 struct Interference {
     interfering_bits_are_equal: bool,
     first_encloses_second: bool,
@@ -1223,13 +1224,25 @@ impl MatchTest {
         let bits_one = self.value.constant_bits()?;
         let bits_other = other.value.constant_bits()?;
         let end = (offset_other + size_other).min(offset_one + size_one);
+
+        let range_one = offset_one..=(offset_one + size_one);
+        let range_other = offset_other..=(offset_other + size_other);
+
         Some(Interference {
             interfering_bits_are_equal: bits_one[offset_other - offset_one..end - offset_one]
                 == bits_other[0..end - offset_other],
-            first_encloses_second: size_one + offset_one >= size_other + offset_other,
-            second_encloses_first: size_other + offset_other >= size_one + offset_one,
+            first_encloses_second: range_contains(&range_one, &range_other),
+            second_encloses_first: range_contains(&range_other, &range_one),
         })
     }
+}
+
+/// Returns true if the first range fully contains the other one.
+fn range_contains(
+    one: &std::ops::RangeInclusive<usize>,
+    other: &std::ops::RangeInclusive<usize>,
+) -> bool {
+    one.contains(other.start()) && one.contains(other.end())
 }
 
 /// A value that can be matched in a bit array pattern's segment. We do not use
