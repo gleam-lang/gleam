@@ -452,9 +452,38 @@ impl<'a> Located<'a> {
         })
     }
 
+    // Finds where the type referenced in a type annotation is defined.
+    fn annotation_definition_location(
+        &self,
+        importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
+        current_module: &EcoString,
+        imports: &[TypedImport],
+        type_: &std::sync::Arc<Type>,
+        ast: &&'a TypeAst,
+    ) -> Option<DefinitionLocation> {
+        if let TypeAst::Constructor(ast::TypeAstConstructor { module, name, .. }) = ast {
+            let module_name = module.as_ref().map(|(name, _)| name);
+
+            let definition = type_definition_location(
+                importable_modules,
+                current_module,
+                imports,
+                module_name,
+                name,
+            );
+            if definition.is_some() {
+                return definition;
+            }
+        }
+
+        self.type_location(importable_modules, type_.clone())
+    }
+
     pub fn definition_location(
         &self,
         importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
+        current_module: &EcoString,
+        imports: &[TypedImport],
     ) -> Option<DefinitionLocation> {
         match self {
             Self::PatternSpread { .. } => None,
@@ -508,19 +537,14 @@ impl<'a> Located<'a> {
                 }
             }),
             Self::Arg(_) => None,
-            Self::Annotation { ast, type_ } => {
-                if let TypeAst::Constructor(ast::TypeAstConstructor { module, name, .. }) = ast {
-                    let module_name = module.as_ref().map(|(name, _)| name);
+            Self::Annotation { ast, type_ } => self.annotation_definition_location(
+                importable_modules,
+                current_module,
+                imports,
+                type_,
+                ast,
+            ),
 
-                    let definition =
-                        type_definition_location(importable_modules, module_name, name);
-                    if definition.is_some() {
-                        return definition;
-                    }
-                }
-
-                self.type_location(importable_modules, type_.clone())
-            }
             Self::Label(_, _) => None,
             Self::ModuleName { name, .. } => Some(DefinitionLocation {
                 module: Some((*name).clone()),
@@ -668,32 +692,45 @@ pub fn type_constructor_from_modules(
 /// //       would be `Wobble`, and the module would be `None`.
 /// ```
 ///
-/// Checks both custom types and type aliases.
+/// Checks both named types and type aliases.
 fn type_definition_location(
     importable_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
+    current_module: &EcoString,
+    imports: &[TypedImport],
     module: Option<&EcoString>,
     name: &EcoString,
 ) -> Option<DefinitionLocation> {
     match module {
-        Some(module_name) => {
-            let module = importable_modules.get(module_name)?;
+        Some(module_alias) => {
+            let module = importable_modules.get(module_alias)?;
             let span = module.get_type_definition_location(name)?;
 
             Some(DefinitionLocation {
-                module: Some(module_name.clone()),
+                module: Some(module_alias.clone()),
                 span,
             })
         }
-        None => importable_modules
-            .iter()
-            .find_map(|(module_name, module_interface)| {
-                module_interface
-                    .get_type_definition_location(name)
-                    .map(|span| DefinitionLocation {
-                        module: Some(module_name.clone()),
-                        span,
-                    })
-            }),
+        None => {
+            // For unqualified types, we check if it was imported
+            for import in imports {
+                for unqualified in &import.unqualified_types {
+                    let local_name = unqualified.used_name();
+                    if local_name == name {
+                        let source_module = importable_modules.get(&import.module)?;
+                        let span = source_module.get_type_definition_location(&unqualified.name)?;
+                        return Some(DefinitionLocation {
+                            module: Some(import.module.clone()),
+                            span,
+                        });
+                    }
+                }
+            }
+
+            // If not imported, we check if it's defined in the current module
+            let module = importable_modules.get(current_module)?;
+            let span = module.get_type_definition_location(name)?;
+            Some(DefinitionLocation { module: None, span })
+        }
     }
 }
 

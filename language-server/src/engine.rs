@@ -192,14 +192,23 @@ where
     ) -> Response<Option<lsp::Location>> {
         self.respond(|this| {
             let params = params.text_document_position_params;
+
             let (line_numbers, node) = match this.node_at_position(&params) {
                 Some(location) => location,
                 None => return Ok(None),
             };
 
-            let Some(location) =
-                node.definition_location(this.compiler.project_compiler.get_importable_modules())
-            else {
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(None);
+            };
+            let current_module = &module.ast.name;
+            let imports = &module.ast.definitions.imports;
+
+            let Some(location) = node.definition_location(
+                this.compiler.project_compiler.get_importable_modules(),
+                current_module,
+                imports,
+            ) else {
                 return Ok(None);
             };
 

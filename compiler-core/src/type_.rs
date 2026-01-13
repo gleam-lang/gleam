@@ -1012,7 +1012,7 @@ impl ModuleInterface {
         self.warnings.iter().any(|warning| warning.is_todo())
     }
 
-    /// Gets the origin location of a type by name. Checks both custom types
+    /// Gets the origin location of a type by name. Checks both named types
     /// and type aliases.
     ///
     /// ```gleam
