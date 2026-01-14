@@ -39,6 +39,7 @@ pub fn case<'a>(
         kind: DecisionKind::Case { clauses },
     }
     .decision(&compiled_case.tree);
+
     docvec![assignments_to_doc(assignments), decision.into_doc()].force_break()
 }
 

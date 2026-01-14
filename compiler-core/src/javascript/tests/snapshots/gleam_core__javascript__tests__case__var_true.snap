@@ -1,0 +1,57 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\nfn true() { True }\npub fn main() {\n    let true_ = true()\n    assert 0 == case Nil {\n        _ if true_ -> 0\n        _ -> 1\n    }\n}\n"
+---
+----- SOURCE CODE
+
+fn true() { True }
+pub fn main() {
+    let true_ = true()
+    assert 0 == case Nil {
+        _ if true_ -> 0
+        _ -> 1
+    }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+function true$() {
+  return true;
+}
+
+export function main() {
+  let true_ = true$();
+  let $ = 0;
+  let _block;
+  let $1 = undefined;
+  if (true_) {
+    _block = 0;
+  } else {
+    _block = 1;
+  }
+  let $2 = _block;
+  if (!($ === $2)) {
+    throw makeError(
+      "assert",
+      FILEPATH,
+      "my/mod",
+      5,
+      "main",
+      "Assertion failed.",
+      {
+        kind: "binary_operator",
+        operator: "==",
+        left: { kind: "literal", value: $, start: 70, end: 71 },
+        right: { kind: "expression", value: $2, start: 75, end: 130 },
+        start: 63,
+        end: 130,
+        expression_start: 70
+      }
+    )
+  }
+  return undefined;
+}

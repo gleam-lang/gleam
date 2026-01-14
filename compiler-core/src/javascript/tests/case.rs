@@ -871,3 +871,19 @@ pub fn main() {
 }"#
     );
 }
+
+#[test]
+fn var_true() {
+    assert_js!(
+        r#"
+fn true() { True }
+pub fn main() {
+    let true_ = true()
+    assert 0 == case Nil {
+        _ if true_ -> 0
+        _ -> 1
+    }
+}
+"#
+    )
+}
