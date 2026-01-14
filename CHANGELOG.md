@@ -52,6 +52,11 @@
   if the last argument was followed by a trailing comment.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler would generate invalid code on the JavaScript
+  target when using a `case` expression as the right hand side of an equality
+  check in an `assert`.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server no longer recommends the deprecated `@target` attribute.
   ([Hari Mohan](https://github.com/seafoamteal))
 

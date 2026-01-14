@@ -776,8 +776,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         if let TypedExpr::Block { statements, .. } = expression {
             self.statements(statements)
         } else {
-            let expression_document = self.expression(expression);
-            self.add_statement_level(expression_document)
+            self.expression(expression)
         }
     }
 
@@ -924,10 +923,9 @@ impl<'module, 'a> Generator<'module, 'a> {
         } = assert;
 
         let message = match message {
-            Some(m) => self.not_in_tail_position(
-                Some(Ordering::Strict),
-                |this: &mut Generator<'module, 'a>| this.expression(m),
-            ),
+            Some(message) => {
+                self.not_in_tail_position(Some(Ordering::Strict), |this| this.expression(message))
+            }
             None => string("Assertion failed."),
         };
 
