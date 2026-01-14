@@ -154,11 +154,13 @@ pub fn assignment_string_pattern_test() {
   assert h == "Hello"
 }
 
+@target(erlang)
 pub fn pattern_match_utf16_codepoint_little_test() {
   let assert <<codepoint:utf16_codepoint-little>> = <<"🌍":utf16-little>>
   assert codepoint == ffi.utf_codepoint(127_757)
 }
 
+@target(erlang)
 pub fn pattern_match_utf32_codepoint_little_test() {
   let assert <<codepoint:utf32_codepoint-little>> = <<"🌍":utf32-little>>
   assert codepoint == ffi.utf_codepoint(127_757)
