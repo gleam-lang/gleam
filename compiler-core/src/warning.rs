@@ -180,6 +180,13 @@ pub enum Warning {
         src: EcoString,
         location: SrcSpan,
     },
+    InternalModuleMainFunction {
+        module: EcoString,
+    },
+    DeprecatedMainFunction {
+        module: EcoString,
+        message: EcoString,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -275,6 +282,32 @@ pub enum DeprecatedSyntaxWarning {
 impl Warning {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
+            Warning::DeprecatedMainFunction { module, message } => {
+                let text = wrap(&format!(
+                    "The main function in module `{module}` \
+was deprecated with this message: {message}"
+                ));
+                Diagnostic {
+                    title: "Deprecated main function".into(),
+                    text,
+                    level: diagnostic::Level::Warning,
+                    location: None,
+                    hint: None,
+                }
+            }
+            Warning::InternalModuleMainFunction { module } => {
+                let text = wrap(&format!(
+                    "The main function is in internal module `{module}`. \
+It is not recommended for public use."
+                ));
+                Diagnostic {
+                    title: "Main function in internal module".into(),
+                    text,
+                    level: diagnostic::Level::Warning,
+                    location: None,
+                    hint: None,
+                }
+            }
             Warning::InvalidSource { path } => Diagnostic {
                 title: "Invalid module name".into(),
                 text: "\
@@ -1581,4 +1614,23 @@ fn pluralise(string: String, quantity: i64) -> String {
     } else {
         format!("{string}s")
     }
+}
+
+#[test]
+fn deprecated_main_function_pretty() {
+    let warning = Warning::DeprecatedMainFunction {
+        module: "apple".into(),
+        message: "Use some other method please!".into(),
+    };
+
+    insta::assert_snapshot!(insta::internals::AutoName, warning.to_pretty_string());
+}
+
+#[test]
+fn internal_module_main_function_pretty() {
+    let warning: Warning = Warning::InternalModuleMainFunction {
+        module: "internal/picking".into(),
+    };
+
+    insta::assert_snapshot!(insta::internals::AutoName, warning.to_pretty_string());
 }
