@@ -26,6 +26,9 @@
   friendlier.
   ([Ameen Radwan](https://github.com/Acepie))
 
+- Added `gleam hex deauthenticate` command.
+  ([Samuel Cristobal](https://github.com/scristobal))
+
 ### Language server
 
 - The language server now allows extracting the start of a pipeline into a
