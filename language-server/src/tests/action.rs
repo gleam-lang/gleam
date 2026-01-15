@@ -138,6 +138,7 @@ const REMOVE_UNREACHABLE_CLAUSES: &str = "Remove unreachable clauses";
 const ADD_OMITTED_LABELS: &str = "Add omitted labels";
 const EXTRACT_FUNCTION: &str = "Extract function";
 const MERGE_CASE_BRANCHES: &str = "Merge case branches";
+const SPLIT_CASE_BRANCHES: &str = "Split alternative patterns";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -11428,6 +11429,207 @@ fn merge_case_branch_does_not_merge_branches_with_variables_with_same_name_and_d
   }
 }"#,
         find_position_of("Ok").select_until(find_position_of("Error"))
+    );
+}
+
+#[test]
+fn split_case_branch_all_patterns() {
+    assert_code_action!(
+        SPLIT_CASE_BRANCHES,
+        r#"
+pub fn go(n: Int) {
+  case n {
+    1 | 2 | 3 -> todo
+    _ -> todo
+  }
+}"#,
+        find_position_of("1").select_until(find_position_of("3"))
+    );
+}
+
+#[test]
+fn split_case_branch_two_patterns() {
+    assert_code_action!(
+        SPLIT_CASE_BRANCHES,
+        r#"
+pub fn go(n: Int) {
+  case n {
+    1 | 2 -> todo
+    _ -> todo
+  }
+}"#,
+        find_position_of("1").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
+fn split_case_branch_partial_first_two() {
+    assert_code_action!(
+        SPLIT_CASE_BRANCHES,
+        r#"
+pub fn go(n: Int) {
+  case n {
+    1 | 2 | 3 | 4 -> todo
+    _ -> todo
+  }
+}"#,
+        find_position_of("1").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
+fn split_case_branch_partial_middle() {
+    assert_code_action!(
+        SPLIT_CASE_BRANCHES,
+        r#"
+pub fn go(n: Int) {
+  case n {
+    1 | 2 | 3 | 4 -> todo
+    _ -> todo
+  }
+}"#,
+        find_position_of("2").select_until(find_position_of("3"))
+    );
+}
+
+#[test]
+fn split_case_branch_partial_last_two() {
+    assert_code_action!(
+        SPLIT_CASE_BRANCHES,
+        r#"
+pub fn go(n: Int) {
+  case n {
+    1 | 2 | 3 | 4 -> todo
+    _ -> todo
+  }
+}"#,
+        find_position_of("3").select_until(find_position_of("4"))
+    );
+}
+
+#[test]
+fn split_case_branch_single_pattern_selected_from_many() {
+    assert_code_action!(
+        SPLIT_CASE_BRANCHES,
+        r#"
+pub fn go(n: Int) {
+  case n {
+    1 | 2 | 3 -> todo
+    _ -> todo
+  }
+}"#,
+        find_position_of("2").to_selection()
+    );
+}
+
+#[test]
+fn split_case_branch_no_action_for_single_pattern() {
+    assert_no_code_actions!(
+        SPLIT_CASE_BRANCHES,
+        r#"
+pub fn go(n: Int) {
+  case n {
+    1 -> todo
+    _ -> todo
+  }
+}"#,
+        find_position_of("1").to_selection()
+    );
+}
+
+#[test]
+fn split_case_branch_no_action_with_guard() {
+    assert_no_code_actions!(
+        SPLIT_CASE_BRANCHES,
+        r#"
+pub fn go(n: Int) {
+  case n {
+    1 | 2 if True -> todo
+    _ -> todo
+  }
+}"#,
+        find_position_of("1").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
+fn split_case_branch_with_variables() {
+    assert_code_action!(
+        SPLIT_CASE_BRANCHES,
+        r#"
+pub fn go(result: Result(Int, Int)) {
+  case result {
+    Ok(n) | Error(n) -> n
+    _ -> 0
+  }
+}"#,
+        find_position_of("Ok(n)").select_until(find_position_of("Error(n)"))
+    );
+}
+
+#[test]
+fn split_case_branch_with_block_body() {
+    assert_code_action!(
+        SPLIT_CASE_BRANCHES,
+        r#"
+pub fn go(n: Int) {
+  case n {
+    1 | 2 -> {
+      let x = n * 2
+      x + 1
+    }
+    _ -> 0
+  }
+}"#,
+        find_position_of("1").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
+fn split_case_branch_with_function_call_body() {
+    assert_code_action!(
+        SPLIT_CASE_BRANCHES,
+        r#"
+pub fn go(n: Int) {
+  case n {
+    1 | 2 | 3 -> go(n - 1)
+    _ -> 0
+  }
+}"#,
+        find_position_of("1").select_until(find_position_of("3"))
+    );
+}
+
+#[test]
+fn split_case_branch_nested_case() {
+    assert_code_action!(
+        SPLIT_CASE_BRANCHES,
+        r#"
+pub fn go(a: Int, b: Int) {
+  case a {
+    1 -> case b {
+      10 | 20 | 30 -> "tens"
+      _ -> "other"
+    }
+    _ -> "not one"
+  }
+}"#,
+        find_position_of("10").select_until(find_position_of("30"))
+    );
+}
+
+#[test]
+fn split_case_branch_multiple_subjects() {
+    assert_code_action!(
+        SPLIT_CASE_BRANCHES,
+        r#"
+pub fn go(a: Int, b: Int) {
+  case a, b {
+    1, 1 | 2, 2 | 3, 3 -> "equal"
+    _, _ -> "not equal"
+  }
+}"#,
+        find_position_of("1, 1").select_until(find_position_of("3, 3"))
     );
 }
 

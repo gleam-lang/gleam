@@ -1,0 +1,24 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn go(n: Int) {\n  case n {\n    1 | 2 | 3 -> todo\n    _ -> todo\n  }\n}"
+---
+----- BEFORE ACTION
+
+pub fn go(n: Int) {
+  case n {
+    1 | 2 | 3 -> todo
+        ↑            
+    _ -> todo
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn go(n: Int) {
+  case n {
+    1 | 3 -> todo
+    2 -> todo
+    _ -> todo
+  }
+}
