@@ -9,6 +9,7 @@ mod tests;
 use crate::build::{Target, module_erlang_name};
 use crate::erlang::pattern::{PatternPrinter, StringPatternAssignment};
 use crate::strings::{convert_string_escape_chars, to_snake_case};
+use crate::type_::fields::supplied_in_definition_order;
 use crate::type_::is_prelude_module;
 use crate::{
     Result,
@@ -1930,14 +1931,66 @@ fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'a>)
 }
 
 fn call<'a>(fun: &'a TypedExpr, arguments: &'a [TypedCallArg], env: &mut Env<'a>) -> Document<'a> {
-    docs_arguments_call(
-        fun,
-        arguments
+    // If the arguments have already been supplied in the same order the function
+    // would expect them, or all the arguments are guaranteed to have no side effect.
+    if supplied_in_definition_order(arguments)
+        || arguments
             .iter()
-            .map(|argument| maybe_block_expr(&argument.value, env))
-            .collect(),
-        env,
-    )
+            .all(|argument| argument.value.is_pure_value_constructor())
+    {
+        // Then we can pass them to the function  directly, with no extra steps.
+        // The resulting code would look something like this:
+        // ```erl
+        // wibble(wobble(), Arg, OtherArg).
+        // ```
+        return docs_arguments_call(
+            fun,
+            arguments
+                .iter()
+                .map(|argument| maybe_block_expr(&argument.value, env))
+                .collect(),
+            env,
+        );
+    }
+
+    // However, if the arguments are not in order and could have some side
+    // effects, we first need to evaluate each one in the order they are
+    // defined in the source code. And only then pass those to the function.
+    // The resulting code would look like this:
+    //
+    // ```erl
+    // Arg0 = wobble(),
+    // Arg1 = Arg,
+    // Arg2 = maybe_a_side_effect(),
+    // wibble(Arg1, Arg0, Arg2).
+    // ```
+    //
+    // So we'll need to first keep track of the assignments for each value:
+    let mut assignments = Vec::with_capacity(arguments.len());
+    // And the names we've given them, so they can be passed to the function call
+    // in the correct order (that is the order they currently are in in the
+    // array we've been passed - it has been ordered with the field map!)
+    let mut names = std::iter::repeat_n(None, arguments.len()).collect_vec();
+    for (i, argument) in arguments
+        .iter()
+        .enumerate()
+        .sorted_by_key(|(_, argument)| argument.location())
+    {
+        // `i` is the correct position with which the argument should be
+        // passed to the function!
+        let name = env.next_local_var_name("Arg");
+        *names.get_mut(i).expect("guaranteed to be in bound") = Some(name.clone());
+
+        let assignment = docvec![name, " = ", maybe_block_expr(&argument.value, env)];
+        assignments.push(assignment);
+    }
+
+    let call = docs_arguments_call(fun, names.into_iter().flatten().collect(), env);
+
+    begin_end(join(
+        assignments.into_iter().chain(std::iter::once(call)),
+        docvec![",", line()],
+    ))
 }
 
 fn module_fn_with_arguments<'a>(

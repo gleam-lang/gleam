@@ -1,7 +1,7 @@
 use super::Error;
 use crate::{
     ast::{CallArg, SrcSpan},
-    type_::error::IncorrectArityContext,
+    type_::{TypedCallArg, error::IncorrectArityContext},
 };
 use ecow::EcoString;
 use itertools::Itertools;
@@ -17,6 +17,43 @@ pub struct FieldMap {
 
 #[derive(Debug, Clone, Copy)]
 pub struct DuplicateField;
+
+/// Given a list of `TypedCallArg`s passed to a function call, this returns
+/// `true` if the arguments have been supplied in the same order that would be
+/// expected by the function's definition.
+///
+/// For example:
+///
+/// ```gleam
+/// pub fn wibble(label1 a, label2 b) {}
+///
+/// // the arguments are supplied in the same order they are defined in:
+/// wibble(1, 2)
+/// wibble(a: 1, b: 2)
+/// wibble(1, b: 2)
+///
+/// // arguments won't be in order if we use labels to pass them around
+/// // differently
+/// wibble(b: 2, a: 1)
+/// wibble(2, a: 1)
+/// ```
+///
+pub(crate) fn supplied_in_definition_order(args: &[TypedCallArg]) -> bool {
+    // If any of the arguments have been reordered usnig a field map, that means
+    // they will have a different order than the one they have as they were
+    // written in the source code. We have to look out for those.
+    for (arg, next) in args.iter().tuple_windows() {
+        // If an argument comes before another one but appears later in the
+        // source code, that means it has been reordered using a field map!
+        if arg.location >= next.location {
+            return false;
+        }
+    }
+
+    // We couldn't find any of those out-of-place arguments, no reordering has
+    // taken place.
+    true
+}
 
 impl FieldMap {
     pub fn new(arity: u32) -> Self {
