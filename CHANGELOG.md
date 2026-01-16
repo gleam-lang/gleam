@@ -46,51 +46,11 @@
   ([Andi Pabst](https://github.com/andipabst))
 
 - The `Extract function` code action now moves
-  - nullary anonymous functions that don't close over any variables from an
-    outer scope, and
-  - all unary anonymous functions
+  - all unary anonymous functions, and
+  - any n-ary anonymous functions that don't close over variables from an
+    outer scope
   directly to the top level of the module without unnecessarily wrapping them
   inside another anonymous function. For example,
-
-  ```gleam
-  pub fn main() {
-    let needle = 42
-    let haystack = [25, 81, 74, 42, 33]
-    list.filter(haystack, fn(x) { x == needle })
-    //                    ^^^^^^^^^^^^^^^^^^^^^
-    //                    Extract function
-  }
-  ```
-
-  would previously produce
-
-  ```gleam
-  pub fn main() {
-    let needle = 42
-    let haystack = [25, 81, 74, 42, 33]
-    list.filter(haystack, function(needle))
-  }
-
-  fn function(needle: Int) -> fn(Int) -> Bool {
-    fn(x) { x == needle }
-  }
-  ```
-
-  whereas now it produces the more reasonable
-
-
-  ```gleam
-  pub fn main() {
-    let needle = 42
-    let haystack = [25, 81, 74, 42, 33]
-    list.filter(haystack, function(_, needle))
-  }
-
-  fn function(x: Int, needle: Int) -> Bool {
-    x == needle
-  }
-  ```
-
   ([Hari Mohan](https://github.com/seafoamteal))
 
 ### Formatter

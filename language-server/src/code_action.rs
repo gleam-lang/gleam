@@ -9394,25 +9394,26 @@ impl<'a> ExtractFunction<'a> {
                 body,
                 ..
             }) => {
-                if arguments.len() == 1 {
+                if extracted.parameters.is_empty() {
                     let location = body.first().location().merge(&body.last().location());
                     let return_type = type_.return_type().expect("Fn should have a return type");
 
-                    self.extract_unary_anonymous_function(
+                    self.extract_anonymous_function(
+                        *full_location,
+                        location,
+                        arguments,
+                        return_type,
+                        end,
+                    )
+                } else if arguments.len() == 1 {
+                    let location = body.first().location().merge(&body.last().location());
+                    let return_type = type_.return_type().expect("Fn should have a return type");
+
+                    self.extract_anonymous_function_with_capture(
                         *full_location,
                         location,
                         arguments.first().expect("There is exactly one argument"),
                         extracted.parameters,
-                        return_type,
-                        end,
-                    )
-                } else if arguments.is_empty() && extracted.parameters.is_empty() {
-                    let location = body.first().location().merge(&body.last().location());
-                    let return_type = type_.return_type().expect("Fn should have a return type");
-
-                    self.extract_nullary_anonymous_function(
-                        *full_location,
-                        location,
                         return_type,
                         end,
                     )
@@ -9492,11 +9493,53 @@ impl<'a> ExtractFunction<'a> {
         }
     }
 
-    /// When extracting an anonymous function that only takes one argument,
-    /// the more reasonable thing to do is to register the function itself at
-    /// the module level, instead of generating a new function that then returns
-    /// the original anonymous function.
-    fn extract_unary_anonymous_function(
+    /// An anonymous function that does not close over any variables from an
+    /// outer scope can be trivially extracted to the module top-level and
+    /// replaced with a reference to the newly created function.
+    fn extract_anonymous_function(
+        &mut self,
+        location: SrcSpan,
+        code_location: SrcSpan,
+        arguments: &[TypedArg],
+        return_type: Arc<Type>,
+        function_end: u32,
+    ) {
+        let name = self.function_name();
+        self.edits.replace(location, name.to_string());
+
+        let mut printer = Printer::new(&self.module.ast.names);
+
+        let return_type = printer.print_type(&return_type);
+        let function_body = code_at(self.module, code_location);
+        let mut name_generator = NameGenerator::new();
+        let arguments = arguments
+            .iter()
+            .map(|arg| {
+                if let Some(name) = arg.get_variable_name() {
+                    eco_format!("{name}: {}", printer.print_type(&arg.type_))
+                } else {
+                    eco_format!(
+                        "{}: {}",
+                        name_generator.generate_name_from_type(&arg.type_),
+                        printer.print_type(&arg.type_)
+                    )
+                }
+            })
+            .join(", ");
+
+        let function = format!(
+            "\n\nfn {name}({arguments}) -> {return_type} {{
+  {function_body}
+}}"
+        );
+        self.edits.insert(function_end, function);
+    }
+
+    /// Even if an anonymous function closes over variables from an external
+    /// scope, it can still be refactored more ergonomically than the default
+    /// _if it only expects a single argument_. In this case, the original
+    /// argument can be replaced with a capture.
+    fn extract_anonymous_function_with_capture(
         &mut self,
         location: SrcSpan,
         code_location: SrcSpan,
@@ -9546,31 +9589,6 @@ impl<'a> ExtractFunction<'a> {
 }}"
             )
         };
-        self.edits.insert(function_end, function);
-    }
-
-    /// Similar to `extract_unary_anonymous_function`, nullary functions that
-    /// _don't need any parameters passed to them_ can also be trivially
-    /// moved to the module top level and replaced with a reference.
-    fn extract_nullary_anonymous_function(
-        &mut self,
-        location: SrcSpan,
-        code_location: SrcSpan,
-        return_type: Arc<Type>,
-        function_end: u32,
-    ) {
-        let name = self.function_name();
-        self.edits.replace(location, name.to_string());
-
-        let mut printer = Printer::new(&self.module.ast.names);
-
-        let return_type = printer.print_type(&return_type);
-        let function_body = code_at(self.module, code_location);
-        let function = format!(
-            "\n\nfn {name}() -> {return_type} {{
-  {function_body}
-}}"
-        );
         self.edits.insert(function_end, function);
     }
 
