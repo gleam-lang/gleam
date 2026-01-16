@@ -32,6 +32,10 @@
   variable.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now suggests adding missing type parameters
+  to custom generic types.
+  ([Andi Pabst](https://github.com/andipabst))
+
 ### Formatter
 
 ### Bug fixes

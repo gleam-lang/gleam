@@ -1,0 +1,25 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\ntype Wibble(\n  // Comment 1\n  b,\n  // Comment 2\n) {\n  Wibble(a, b, c)\n}\n"
+---
+----- BEFORE ACTION
+
+type Wibble(
+  // Comment 1
+  b,
+  // Comment 2
+) {
+  Wibble(a, b, c)
+               ↑ 
+}
+
+
+----- AFTER ACTION
+
+type Wibble(
+  // Comment 1
+  b,
+  // Comment 2
+a, c) {
+  Wibble(a, b, c)
+}

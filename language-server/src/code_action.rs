@@ -10112,3 +10112,130 @@ impl<'ast> ast::visit::Visit<'ast> for MergeCaseBranches<'ast> {
         ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
     }
 }
+
+/// Code action to add a missing type parameter to custom types.
+/// If a custom type is missing a type parameter, as it is the case
+/// in the following example, this action will offer to add the
+/// type parameter to the type definition.
+///
+/// Before:
+/// ```gleam
+/// type Wibble {
+///   Wibble(field: t)
+/// }
+/// ```
+///
+/// After:
+/// ```gleam
+/// type Wibble(t) {
+///   Wibble(field: t)
+/// }
+/// ```
+///
+pub struct AddMissingTypeParameter<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    /// The source location where the parameters should be defined.
+    /// This might be a zero-length span if there are no parameters yet,
+    /// or it might cover the already existing type parameter definitions.
+    parameters_location: Option<SrcSpan>,
+    /// If the type definition already had existing parameters before.
+    has_existing_parameters: bool,
+    /// The set of all type parameter names in the different variants of the type
+    /// that are not already part of the type parameter definition on the type.
+    missing_parameters: HashSet<EcoString>,
+}
+
+impl<'a> AddMissingTypeParameter<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            parameters_location: None,
+            has_existing_parameters: false,
+            missing_parameters: HashSet::new(),
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(type_parameters_location) = self.parameters_location else {
+            return vec![];
+        };
+
+        if self.missing_parameters.is_empty() {
+            return vec![];
+        }
+
+        let mut new_parameters = self.missing_parameters.iter().sorted().join(", ");
+        if self.has_existing_parameters {
+            let has_trailing_comma = self
+                .module
+                .extra
+                .trailing_commas
+                .iter()
+                .any(|&trailing_comma| type_parameters_location.contains(trailing_comma));
+
+            if !has_trailing_comma {
+                new_parameters.insert_str(0, ", ");
+            }
+
+            self.edits
+                .insert(type_parameters_location.end - 1, new_parameters);
+        } else {
+            self.edits.insert(
+                type_parameters_location.end,
+                format!("({})", new_parameters),
+            );
+        }
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Add missing type parameter")
+            .kind(CodeActionKind::QUICKFIX)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(true)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for AddMissingTypeParameter<'ast> {
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
+        let full_type_definition_range = self.edits.src_span_to_lsp_range(SrcSpan::new(
+            custom_type.location.start,
+            custom_type.end_position,
+        ));
+
+        // Only continue, if the action was selected anywhere within the custom type definition.
+        if !overlaps(self.params.range, full_type_definition_range) {
+            return;
+        }
+
+        self.parameters_location = Some(SrcSpan::new(
+            custom_type.name_location.end,
+            custom_type.location.end,
+        ));
+
+        self.has_existing_parameters = !custom_type.typed_parameters.is_empty();
+
+        // Collect the remaining type parameters from the variant constructors.
+        for record in &custom_type.constructors {
+            for argument in &record.arguments {
+                if let Type::Var { .. } = argument.type_.as_ref()
+                    && !custom_type.typed_parameters.contains(&argument.type_)
+                {
+                    let mut name = EcoString::new();
+                    argument.ast.print(&mut name);
+                    let _ = self.missing_parameters.insert(name);
+                }
+            }
+        }
+    }
+}

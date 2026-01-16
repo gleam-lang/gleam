@@ -1,0 +1,19 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\ntype Wibble(t) {\n  Wibble(field: t)\n  Wobble(field: u)\n}\n"
+---
+----- BEFORE ACTION
+
+type Wibble(t) {
+  Wibble(field: t)
+  Wobble(field: u)
+                ↑ 
+}
+
+
+----- AFTER ACTION
+
+type Wibble(t, u) {
+  Wibble(field: t)
+  Wobble(field: u)
+}

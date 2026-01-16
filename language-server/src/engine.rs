@@ -34,10 +34,10 @@ use std::{collections::HashSet, sync::Arc};
 use super::{
     DownloadDependencies, MakeLocker,
     code_action::{
-        AddAnnotations, AddOmittedLabels, AnnotateTopLevelDefinitions, CodeActionBuilder,
-        CollapseNestedCase, ConvertFromUse, ConvertToFunctionCall, ConvertToPipe, ConvertToUse,
-        ExpandFunctionCapture, ExtractConstant, ExtractFunction, ExtractVariable,
-        FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
+        AddAnnotations, AddMissingTypeParameter, AddOmittedLabels, AnnotateTopLevelDefinitions,
+        CodeActionBuilder, CollapseNestedCase, ConvertFromUse, ConvertToFunctionCall,
+        ConvertToPipe, ConvertToUse, ExpandFunctionCapture, ExtractConstant, ExtractFunction,
+        ExtractVariable, FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
         FixTruncatedBitArraySegment, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
         GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase, MergeCaseBranches,
         PatternMatchOnValue, RedundantTupleInCaseSubject, RemoveBlock, RemoveEchos,
@@ -464,6 +464,7 @@ where
             AddAnnotations::new(module, &lines, &params).code_action(&mut actions);
             actions
                 .extend(AnnotateTopLevelDefinitions::new(module, &lines, &params).code_actions());
+            actions.extend(AddMissingTypeParameter::new(module, &lines, &params).code_actions());
             Ok(if actions.is_empty() {
                 None
             } else {
