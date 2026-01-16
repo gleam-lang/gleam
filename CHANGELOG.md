@@ -32,6 +32,14 @@
   variable.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The `Extract function` code action now moves
+  - all unary anonymous functions, and
+  - any anonymous functions that don't close over variables from an
+    outer scope
+  directly to the top level of the module without unnecessarily wrapping them
+  inside another anonymous function.
+  ([Hari Mohan](https://github.com/seafoamteal))
+
 ### Formatter
 
 ### Bug fixes

@@ -9386,6 +9386,47 @@ impl<'a> ExtractFunction<'a> {
                     end,
                 )
             }
+            ExtractedValue::Expression(TypedExpr::Fn {
+                type_,
+                location: full_location,
+                kind: FunctionLiteralKind::Anonymous { .. },
+                arguments,
+                body,
+                ..
+            }) => {
+                if extracted.parameters.is_empty() {
+                    let location = body.first().location().merge(&body.last().location());
+                    let return_type = type_.return_type().expect("Fn should have a return type");
+
+                    self.extract_anonymous_function(
+                        *full_location,
+                        location,
+                        arguments,
+                        return_type,
+                        end,
+                    )
+                } else if arguments.len() == 1 {
+                    let location = body.first().location().merge(&body.last().location());
+                    let return_type = type_.return_type().expect("Fn should have a return type");
+
+                    self.extract_anonymous_function_with_capture(
+                        *full_location,
+                        location,
+                        arguments.first().expect("There is exactly one argument"),
+                        extracted.parameters,
+                        return_type,
+                        end,
+                    )
+                } else {
+                    self.extract_code_in_tail_position(
+                        *full_location,
+                        *full_location,
+                        type_.clone(),
+                        extracted.parameters,
+                        end,
+                    )
+                }
+            }
             ExtractedValue::Expression(expression) => {
                 let expression_type = if let TypedExpr::Fn {
                     type_,
@@ -9450,6 +9491,105 @@ impl<'a> ExtractFunction<'a> {
             }
             number += 1;
         }
+    }
+
+    /// An anonymous function that does not close over any variables from an
+    /// outer scope can be trivially extracted to the module top-level and
+    /// replaced with a reference to the newly created function.
+    fn extract_anonymous_function(
+        &mut self,
+        location: SrcSpan,
+        code_location: SrcSpan,
+        arguments: &[TypedArg],
+        return_type: Arc<Type>,
+        function_end: u32,
+    ) {
+        let name = self.function_name();
+        self.edits.replace(location, name.to_string());
+
+        let mut printer = Printer::new(&self.module.ast.names);
+
+        let return_type = printer.print_type(&return_type);
+        let function_body = code_at(self.module, code_location);
+        let mut name_generator = NameGenerator::new();
+        let arguments = arguments
+            .iter()
+            .map(|arg| {
+                if let Some(name) = arg.get_variable_name() {
+                    eco_format!("{name}: {}", printer.print_type(&arg.type_))
+                } else {
+                    eco_format!(
+                        "{}: {}",
+                        name_generator.generate_name_from_type(&arg.type_),
+                        printer.print_type(&arg.type_)
+                    )
+                }
+            })
+            .join(", ");
+
+        let function = format!(
+            "\n\nfn {name}({arguments}) -> {return_type} {{
+  {function_body}
+}}"
+        );
+        self.edits.insert(function_end, function);
+    }
+
+    /// Even if an anonymous function closes over variables from an external
+    /// scope, it can still be refactored more ergonomically than the default
+    /// _if it only expects a single argument_. In this case, the original
+    /// argument can be replaced with a capture.
+    fn extract_anonymous_function_with_capture(
+        &mut self,
+        location: SrcSpan,
+        code_location: SrcSpan,
+        original_argument: &TypedArg,
+        extra_parameters: Vec<(EcoString, Arc<Type>)>,
+        return_type: Arc<Type>,
+        function_end: u32,
+    ) {
+        let name = self.function_name();
+
+        // replace the old code with a reference to the newly generated function
+        let call = if !extra_parameters.is_empty() {
+            let extra_arguments = extra_parameters.iter().map(|(name, _)| name).join(", ");
+            format!("{name}(_, {extra_arguments})")
+        } else {
+            format!("{name}")
+        };
+        self.edits.replace(location, call);
+
+        let mut printer = Printer::new(&self.module.ast.names);
+
+        // build up the code for the newly generated function
+        let original_argument = if let Some(name) = original_argument.get_variable_name() {
+            eco_format!("{name}: {}", printer.print_type(&original_argument.type_))
+        } else {
+            let name = NameGenerator::new().generate_name_from_type(&original_argument.type_);
+            eco_format!("{name}: {}", printer.print_type(&original_argument.type_))
+        };
+
+        let return_type = printer.print_type(&return_type);
+        let function_body = code_at(self.module, code_location);
+        let function = if !extra_parameters.is_empty() {
+            let extra_parameters = extra_parameters
+                .iter()
+                .map(|(name, type_)| eco_format!("{name}: {}", printer.print_type(type_)))
+                .join(", ");
+
+            format!(
+                "\n\nfn {name}({original_argument}, {extra_parameters}) -> {return_type} {{
+  {function_body}
+}}"
+            )
+        } else {
+            format!(
+                "\n\nfn {name}({original_argument}) -> {return_type} {{
+  {function_body}
+}}"
+            )
+        };
+        self.edits.insert(function_end, function);
     }
 
     /// Extracts code from the end of a function or block. This could either be

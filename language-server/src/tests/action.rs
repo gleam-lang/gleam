@@ -11625,3 +11625,54 @@ pub fn wibble() {
         find_position_of("x").to_selection()
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5288
+#[test]
+fn extract_function_directly_registers_unary_anonymous_functions_at_top_level() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+ pub fn main() {
+  let needle = 42
+  let haystack = [25, 81, 74, 42, 33]
+  list.filter(haystack, fn(x) { x == needle })
+}
+        ",
+        find_position_of("fn(").select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn extract_function_directly_registers_n_ary_anonymous_functions_at_top_level_1() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+ pub fn main() {
+  let int_pow = fn(base, exp) {
+    case exp {
+      exp if exp < 0 -> 0
+      0 -> base
+      exp -> int_pow(base * exp, exp - 1)
+    }
+  }
+}
+        ",
+        find_position_of("fn(").select_until(find_position_of("}").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn extract_function_directly_registers_n_ary_anonymous_functions_at_top_level_2() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+ pub fn main() {
+  let outer_scope = 3
+  let wibble = fn(a, b) {
+    a + b + outer_scope
+  }
+}
+        ",
+        find_position_of("fn(").select_until(find_position_of("}"))
+    );
+}
