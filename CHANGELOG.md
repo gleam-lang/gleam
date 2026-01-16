@@ -111,3 +111,7 @@
   ```
 
   ([Andrey Kozhev](https://github.com/ankddev))
+
+- Fixed a bug where renaming would not work properly if there was an error in
+  target file.
+  ([Surya Rose](https://github.com/GearsDatapacks))

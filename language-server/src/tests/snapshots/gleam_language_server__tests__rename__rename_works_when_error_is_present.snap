@@ -1,0 +1,30 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\nfn wibble() {\n  \"test string\"\n}\n\npub fn main() {\n  1 + \"1\"\n  echo wibble()\n}\n  "
+---
+----- BEFORE RENAME
+-- app.gleam
+
+fn wibble() {
+   ↑▔▔▔▔▔    
+  "test string"
+}
+
+pub fn main() {
+  1 + "1"
+  echo wibble()
+}
+  
+
+
+----- AFTER RENAME
+-- app.gleam
+
+fn wobble() {
+  "test string"
+}
+
+pub fn main() {
+  1 + "1"
+  echo wobble()
+}
