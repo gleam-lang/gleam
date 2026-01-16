@@ -47,10 +47,10 @@
 
 - The `Extract function` code action now moves
   - all unary anonymous functions, and
-  - any n-ary anonymous functions that don't close over variables from an
+  - any anonymous functions that don't close over variables from an
     outer scope
   directly to the top level of the module without unnecessarily wrapping them
-  inside another anonymous function. For example,
+  inside another anonymous function.
   ([Hari Mohan](https://github.com/seafoamteal))
 
 ### Formatter
