@@ -11709,3 +11709,35 @@ type Wibble {
         find_position_of("Wibble").nth_occurrence(2).to_selection()
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5288
+#[test]
+fn extract_function_directly_registers_unary_anonymous_functions_at_top_level() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+ pub fn main() {
+  let needle = 42
+  let haystack = [25, 81, 74, 42, 33]
+  list.filter(haystack, fn(x) { x == needle })
+}
+        ",
+        find_position_of("fn(").select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn extract_function_directly_registers_nullary_anonymous_functions_at_top_level() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+ pub fn main() {
+  let wibble = fn() {
+      let x = 5
+      x > 3
+  }
+}
+        ",
+        find_position_of("fn(").select_until(find_position_of("}"))
+    );
+}
