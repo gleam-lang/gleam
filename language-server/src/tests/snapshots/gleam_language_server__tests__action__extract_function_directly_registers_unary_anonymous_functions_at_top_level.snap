@@ -1,0 +1,26 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\n pub fn main() {\n  let needle = 42\n  let haystack = [25, 81, 74, 42, 33]\n  list.filter(haystack, fn(x) { x == needle })\n}\n        "
+---
+----- BEFORE ACTION
+
+ pub fn main() {
+  let needle = 42
+  let haystack = [25, 81, 74, 42, 33]
+  list.filter(haystack, fn(x) { x == needle })
+                        ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑ 
+}
+        
+
+
+----- AFTER ACTION
+
+ pub fn main() {
+  let needle = 42
+  let haystack = [25, 81, 74, 42, 33]
+  list.filter(haystack, function(_, needle))
+}
+
+fn function(x: Int, needle: Int) -> Bool {
+  x == needle
+}
