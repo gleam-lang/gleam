@@ -11727,14 +11727,33 @@ fn extract_function_directly_registers_unary_anonymous_functions_at_top_level() 
 }
 
 #[test]
-fn extract_function_directly_registers_nullary_anonymous_functions_at_top_level() {
+fn extract_function_directly_registers_n_ary_anonymous_functions_at_top_level_1() {
     assert_code_action!(
         EXTRACT_FUNCTION,
         "
  pub fn main() {
-  let wibble = fn() {
-      let x = 5
-      x > 3
+  let int_pow = fn(base, exp) {
+    case exp {
+      exp if exp < 0 -> 0
+      0 -> base
+      exp -> int_pow(base * exp, exp - 1)
+    }
+  }
+}
+        ",
+        find_position_of("fn(").select_until(find_position_of("}").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn extract_function_directly_registers_n_ary_anonymous_functions_at_top_level_2() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+ pub fn main() {
+  let outer_scope = 3
+  let wibble = fn(a, b) {
+    a + b + outer_scope
   }
 }
         ",
