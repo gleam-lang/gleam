@@ -1,3 +1,4 @@
+use crate::configuration::UserConfiguration;
 use camino::Utf8PathBuf;
 use lsp::{
     notification::{DidChangeWatchedFiles, DidOpenTextDocument},
@@ -8,14 +9,16 @@ use lsp_types::{
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
     request::{
         CodeActionRequest, Completion, DocumentSymbolRequest, Formatting, GotoTypeDefinition,
-        HoverRequest, PrepareRenameRequest, References, Rename, SignatureHelpRequest,
+        HoverRequest, InlayHintRequest, PrepareRenameRequest, References, Rename,
+        SignatureHelpRequest,
     },
 };
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 
 #[derive(Debug)]
 pub enum Message {
     Request(lsp_server::RequestId, Request),
+    Response(Response),
     Notification(Notification),
 }
 
@@ -29,9 +32,24 @@ pub enum Request {
     CodeAction(lsp::CodeActionParams),
     SignatureHelp(lsp::SignatureHelpParams),
     DocumentSymbol(lsp::DocumentSymbolParams),
+    ShowInlayHints(lsp::InlayHintParams),
     PrepareRename(lsp::TextDocumentPositionParams),
     Rename(lsp::RenameParams),
     FindReferences(lsp::ReferenceParams),
+}
+
+#[derive(Debug)]
+/// Responses from the language server client
+pub enum Response {
+    /// Content for a response to a `workspace/configuration` request
+    Configuration(Result<UserConfiguration, ()>),
+}
+
+#[derive(Debug)]
+/// Handlers for responses from the language server client
+pub enum ResponseHandler {
+    /// Handle a response to a `workspace/configuration` request
+    UpdateConfiguration,
 }
 
 impl Request {
@@ -66,6 +84,10 @@ impl Request {
                 let params = cast_request::<DocumentSymbolRequest>(request);
                 Some(Message::Request(id, Request::DocumentSymbol(params)))
             }
+            "textDocument/inlayHint" => {
+                let params = cast_request::<InlayHintRequest>(request);
+                Some(Message::Request(id, Request::ShowInlayHints(params)))
+            }
             "textDocument/rename" => {
                 let params = cast_request::<Rename>(request);
                 Some(Message::Request(id, Request::Rename(params)))
@@ -95,6 +117,8 @@ pub enum Notification {
     SourceFileMatchesDisc { path: Utf8PathBuf },
     /// gleam.toml has changed.
     ConfigFileChanged { path: Utf8PathBuf },
+    /// The user edited a client config option
+    UserConfigurationChanged,
     /// It's time to compile all open projects.
     CompilePlease,
 }
@@ -141,6 +165,11 @@ impl Notification {
                 };
                 Some(Message::Notification(notification))
             }
+
+            "workspace/didChangeConfiguration" => Some(Message::Notification(
+                Notification::UserConfigurationChanged,
+            )),
+
             _ => None,
         }
     }
@@ -159,14 +188,20 @@ pub enum Next {
 ///   stopped typing for a moment and would benefit from feedback.
 /// - A request type message is received, which requires an immediate response.
 ///
+/// If a response is received, it will be handled by a previously registered response handler.
+#[derive(Debug)]
 pub struct MessageBuffer {
     messages: Vec<Message>,
+    next_request_id: i32,
+    response_handlers: HashMap<lsp_server::RequestId, ResponseHandler>,
 }
 
 impl MessageBuffer {
     pub fn new() -> Self {
         Self {
             messages: Vec::new(),
+            next_request_id: 1,
+            response_handlers: Default::default(),
         }
     }
 
@@ -226,8 +261,51 @@ impl MessageBuffer {
         Next::MorePlease
     }
 
-    fn response(&mut self, _: lsp_server::Response) -> Next {
-        // We do not use or expect responses from the client currently.
+    pub fn make_request(
+        &mut self,
+        method: impl Into<String>,
+        params: impl serde::Serialize,
+        handler: Option<ResponseHandler>,
+    ) -> lsp_server::Request {
+        let id = self.next_request_id;
+        self.next_request_id += 1;
+        let request = lsp_server::Request {
+            id: id.into(),
+            method: method.into(),
+            params: serde_json::value::to_value(params).expect("serialisation should never fail"),
+        };
+
+        if let Some(handler) = handler {
+            _ = self.response_handlers.insert(id.into(), handler);
+        }
+
+        request
+    }
+
+    fn configuration_update_received(&mut self, result: serde_json::Value) -> Next {
+        let parsed_config = serde_json::from_value::<(UserConfiguration,)>(result)
+            .map(|config| config.0)
+            .map_err(|_| {});
+
+        let message = Message::Response(Response::Configuration(parsed_config));
+        self.messages.push(message);
+
+        Next::Handle(self.take_messages())
+    }
+
+    fn handle_response(&mut self, handler: ResponseHandler, result: serde_json::Value) -> Next {
+        match handler {
+            ResponseHandler::UpdateConfiguration => self.configuration_update_received(result),
+        }
+    }
+
+    fn response(&mut self, response: lsp_server::Response) -> Next {
+        if let Some(handler) = self.response_handlers.remove(&response.id) {
+            if let Some(result) = response.result {
+                return self.handle_response(handler, result);
+            }
+        }
+
         Next::MorePlease
     }
 
