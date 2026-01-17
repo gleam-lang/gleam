@@ -893,3 +893,52 @@ fn warble(wibble: Wibble) {
         find_position_of("Wobble ->")
     );
 }
+
+#[test]
+fn goto_definition_local_type_alias_in_annotation() {
+    let src = "
+type Wibble = #(Int, String)
+
+pub fn main() {
+  let _: Wibble = #(1, \"Wobble\")
+}
+";
+
+    assert_goto!(
+        TestProject::for_source(src),
+        find_position_of("Wibble").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn goto_definition_imported_type_alias_unqualified_in_annotation() {
+    let code = "
+import wibble
+
+pub fn main() {
+  let _: wibble.Wibble = #(1, \"Test\")
+}
+";
+
+    assert_goto!(
+        TestProject::for_source(code).add_module("wibble", "pub type Wibble = #(Int, String)"),
+        find_position_of("Wibble").nth_occurrence(1)
+    );
+}
+
+#[test]
+fn goto_defintion_type_alias_of_an_alias() {
+    let code = "
+type One = Int
+type Two = One
+
+fn wibble() -> Two {
+  0
+}
+";
+
+    assert_goto!(
+        TestProject::for_source(code),
+        find_position_of("Two").nth_occurrence(2)
+    );
+}
