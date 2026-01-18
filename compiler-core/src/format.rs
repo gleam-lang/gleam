@@ -805,9 +805,20 @@ impl<'comments> Formatter<'comments> {
             })
             .collect_vec();
 
-        // When comments are present ensure the force_break isn't propagated to parent
         if has_comments {
-            self.wrap_arguments_with_line_breaks(arguments, location.end)
+            // Use line() separators and avoid force_break() to prevent propagation
+            // to parent groups (which would break return type formatting in fn types)
+            break_("(", "(")
+                .append(line())
+                .append(join(arguments, ",".to_doc().append(line())))
+                .append(",")
+                .append(
+                    printed_comments(self.pop_comments(location.end), false)
+                        .map_or(nil(), |c| line().append(c)),
+                )
+                .nest(INDENT)
+                .append(line())
+                .append(")")
         } else {
             self.wrap_arguments(arguments, location.end)
         }
@@ -3027,30 +3038,6 @@ impl<'comments> Formatter<'comments> {
                 .append(break_(",", ""))
                 .append(")"),
         }
-    }
-
-    fn wrap_arguments_with_line_breaks<'a, I>(
-        &mut self,
-        arguments: I,
-        comments_limit: u32,
-    ) -> Document<'a>
-    where
-        I: IntoIterator<Item = Document<'a>>,
-    {
-        let doc = break_("(", "(")
-            .append(line())
-            .append(join(arguments, ",".to_doc().append(line())))
-            .append(",");
-
-        // Include trailing comments if there are any
-        let comments = self.pop_comments(comments_limit);
-        match printed_comments(comments, false) {
-            Some(trailing_comments) => doc.append(line()).append(trailing_comments),
-            None => doc,
-        }
-        .nest(INDENT)
-        .append(line())
-        .append(")")
     }
 
     /// Given some regular comments it pretty prints those with any respective
