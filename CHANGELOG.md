@@ -57,6 +57,10 @@
   check in an `assert`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The formatter no longer stack overflows trying to format lists with many
+  items.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server no longer recommends the deprecated `@target` attribute.
   ([Hari Mohan](https://github.com/seafoamteal))
 
