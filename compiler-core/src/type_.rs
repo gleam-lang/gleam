@@ -529,6 +529,13 @@ impl Type {
         }
     }
 
+    pub fn constructor_arity(&self) -> Option<usize> {
+        match self {
+            Self::Named { arguments, .. } => Some(arguments.len()),
+            _ => None,
+        }
+    }
+
     #[must_use]
     /// Returns `true` is the two types are the same. This differs from the
     /// standard `Eq` implementation as it also follows all links to check if

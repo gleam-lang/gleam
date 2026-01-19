@@ -4259,9 +4259,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     &module,
                     &name,
                     &location,
-                    constructor
-                        .and_then(|constructor| constructor.type_.custom_type_inferred_variant())
-                        .map(u16::into),
+                    constructor.and_then(|constructor| constructor.type_.constructor_arity()),
                 ) {
                     Ok(constructor) => constructor,
                     Err(error) => {

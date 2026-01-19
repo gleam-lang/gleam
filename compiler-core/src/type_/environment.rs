@@ -960,7 +960,7 @@ impl Environment<'_> {
                     }
                 }
                 // Make sure the arities match.
-                if arity == value.type_.fn_arity() {
+                if arity == value.type_.constructor_arity() {
                     if is_imported {
                         // Should be impossible to exist already
                         let _ = imported_modules.insert(module_name.clone());
