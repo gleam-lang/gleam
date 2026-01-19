@@ -3780,7 +3780,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 self.track_feature_usage(FeatureKind::ConstantRecordUpdate, location);
-                let constructor = match self.infer_value_constructor(&module, &name, &location) {
+                let constructor = match self.infer_value_constructor(
+                    &module,
+                    &name,
+                    &location,
+                    Some(arguments.len()),
+                ) {
                     Ok(constructor) => constructor,
                     Err(error) => {
                         self.problems.error(error);
