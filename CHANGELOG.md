@@ -111,3 +111,7 @@
   ```
 
   ([Andrey Kozhev](https://github.com/ankddev))
+
+- Fixed a bug where the formatter would reorder comments inside function type
+  parameters, moving them to the end of the parameter list.
+  ([Rob Durst](https://github.com/robertDurst))

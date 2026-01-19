@@ -790,11 +790,38 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn type_arguments<'a>(&mut self, arguments: &'a [TypeAst], location: &SrcSpan) -> Document<'a> {
+        let mut has_comments = false;
+
         let arguments = arguments
             .iter()
-            .map(|type_| self.type_ast(type_))
+            .map(|type_| {
+                // Grab any comments we have and ensure we insert a line between the comment and type
+                let comments: Vec<_> = self.pop_comments(type_.location().start).collect();
+                has_comments = has_comments || !comments.is_empty();
+                match printed_comments(comments, false) {
+                    Some(c) => c.append(line()).append(self.type_ast(type_)),
+                    None => self.type_ast(type_),
+                }
+            })
             .collect_vec();
-        self.wrap_arguments(arguments, location.end)
+
+        if has_comments {
+            // Use line() separators and avoid force_break() to prevent propagation
+            // to parent groups (which would break return type formatting in fn types)
+            break_("(", "(")
+                .append(line())
+                .append(join(arguments, ",".to_doc().append(line())))
+                .append(",")
+                .append(
+                    printed_comments(self.pop_comments(location.end), false)
+                        .map_or(nil(), |c| line().append(c)),
+                )
+                .nest(INDENT)
+                .append(line())
+                .append(")")
+        } else {
+            self.wrap_arguments(arguments, location.end)
+        }
     }
 
     pub fn type_alias<'a, A>(&mut self, alias: &'a TypeAlias<A>) -> Document<'a> {
