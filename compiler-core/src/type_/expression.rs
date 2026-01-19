@@ -4251,27 +4251,34 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location,
                 module,
                 name,
+                constructor,
                 ..
             } => {
                 // Infer the type of this constant
-                let constructor =
-                    match self.infer_value_constructor(&module, &name, &location, None) {
-                        Ok(constructor) => constructor,
-                        Err(error) => {
-                            self.problems.error(error);
-                            return Constant::Invalid {
-                                location,
-                                type_: self.new_unbound_var(),
-                                extra_information: Some(match module {
-                                    Some((module_name, _)) => InvalidExpression::ModuleSelect {
-                                        module_name,
-                                        label: name,
-                                    },
-                                    None => InvalidExpression::UnknownVariable { name },
-                                }),
-                            };
-                        }
-                    };
+                let constructor = match self.infer_value_constructor(
+                    &module,
+                    &name,
+                    &location,
+                    constructor
+                        .and_then(|constructor| constructor.type_.custom_type_inferred_variant())
+                        .map(u16::into),
+                ) {
+                    Ok(constructor) => constructor,
+                    Err(error) => {
+                        self.problems.error(error);
+                        return Constant::Invalid {
+                            location,
+                            type_: self.new_unbound_var(),
+                            extra_information: Some(match module {
+                                Some((module_name, _)) => InvalidExpression::ModuleSelect {
+                                    module_name,
+                                    label: name,
+                                },
+                                None => InvalidExpression::UnknownVariable { name },
+                            }),
+                        };
+                    }
+                };
 
                 match constructor.variant {
                     ValueConstructorVariant::ModuleConstant { .. }
