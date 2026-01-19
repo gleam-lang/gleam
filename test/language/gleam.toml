@@ -1,7 +1,7 @@
 name = "language"
 version = "1.0.0"
 
-[dev-dependencies]
+[dev_dependencies]
 gleeunit = ">= 1.9.0 and < 2.0.0"
 
 [javascript.deno]

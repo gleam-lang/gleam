@@ -249,7 +249,7 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Dependency resolution failed: {0}")]
     DependencyResolutionError(String),
 
-    #[error("The package {0} is listed in dependencies and dev-dependencies")]
+    #[error("The package {0} is listed in dependencies and dev_dependencies")]
     DuplicateDependency(EcoString),
 
     #[error("Expected package {expected} at path {path} but found {found} instead")]
@@ -4422,7 +4422,7 @@ manifest.toml and a version range specified in gleam.toml:
             Error::DuplicateDependency(name) => {
                 let text = format!(
                     "The package `{name}` is specified in both the dependencies and
-dev-dependencies sections of the gleam.toml file."
+dev_dependencies sections of the gleam.toml file."
                 );
                 vec![Diagnostic {
                     title: "Dependency duplicated".into(),

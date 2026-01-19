@@ -32,5 +32,5 @@ ezstd = "~> 1.1"
 hpack_erl = "~> 0.1"
 gleam_javascript = "~> 0.7"
 
-[dev-dependencies]
+[dev_dependencies]
 gleeunit = "~> 1.0"

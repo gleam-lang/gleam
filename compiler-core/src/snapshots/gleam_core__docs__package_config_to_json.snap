@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/docs.rs
-assertion_line: 769
+assertion_line: 770
 expression: output
 snapshot_kind: text
 ---
@@ -71,7 +71,7 @@ allow_read = ["./database.sqlite"]
         "path": "../my_other_project"
       }
     },
-    "dev-dependencies": {
+    "dev_dependencies": {
       "gleeunit": {
         "version": ">= 1.0.0 and < 2.0.0"
       }
@@ -81,7 +81,7 @@ allow_read = ["./database.sqlite"]
       "user": "example",
       "repo": "my_dep",
       "path": null,
-      "tag-prefix": null
+      "tag_prefix": null
     },
     "links": [
       {

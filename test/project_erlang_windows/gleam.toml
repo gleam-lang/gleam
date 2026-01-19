@@ -13,5 +13,5 @@ cowboy = "~> 2.10"
 # This is a mix dep that uses files in ./priv
 countries = "~> 1.6"
 
-[dev-dependencies]
+[dev_dependencies]
 gleeunit = "~> 1.0"

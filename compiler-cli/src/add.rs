@@ -70,10 +70,19 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
         #[allow(clippy::indexing_slicing)]
         {
             if dev {
-                if !gleam_toml.as_table().contains_key("dev-dependencies") {
-                    gleam_toml["dev-dependencies"] = toml_edit::table();
+                let canonical_name = "dev_dependencies";
+                let deprecated_name = "dev-dependencies";
+                let has_canonical = gleam_toml.as_table().contains_key(canonical_name);
+                let has_deprecated = gleam_toml.as_table().contains_key(deprecated_name);
+                if !has_canonical && !has_deprecated {
+                    gleam_toml["dev_dependencies"] = toml_edit::table();
                 }
-                gleam_toml["dev-dependencies"][&added_package] = toml_edit::value(range.clone());
+                let name = if has_deprecated {
+                    deprecated_name
+                } else {
+                    canonical_name
+                };
+                gleam_toml[name][&added_package] = toml_edit::value(range.clone());
             } else {
                 if !gleam_toml.as_table().contains_key("dependencies") {
                     gleam_toml["dependencies"] = toml_edit::table();

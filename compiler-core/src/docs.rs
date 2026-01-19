@@ -739,7 +739,7 @@ gleam = ">= 0.30.0"
 gleam_stdlib = ">= 0.18.0 and < 2.0.0"
 my_other_project = { path = "../my_other_project" }
 
-[dev-dependencies]
+[dev_dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
 
 [documentation]

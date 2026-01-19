@@ -166,7 +166,7 @@ version = "1.0.0"
 [dependencies]
 gleam_stdlib = "{GLEAM_STDLIB_REQUIREMENT}"
 
-[dev-dependencies]
+[dev_dependencies]
 gleeunit = "{GLEEUNIT_REQUIREMENT}"
 "#,
             )),

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/config.rs
-assertion_line: 1171
+assertion_line: 1177
 expression: output
 snapshot_kind: text
 ---
@@ -20,7 +20,7 @@ gleam = ">= 0.30.0"
 gleam_stdlib = ">= 0.18.0 and < 2.0.0"
 my_other_project = { path = "../my_other_project" }
 
-[dev-dependencies]
+[dev_dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
 
 [documentation]
@@ -70,7 +70,7 @@ allow_read = ["./database.sqlite"]
       "path": "../my_other_project"
     }
   },
-  "dev-dependencies": {
+  "dev_dependencies": {
     "gleeunit": {
       "version": ">= 1.0.0 and < 2.0.0"
     }
@@ -80,7 +80,7 @@ allow_read = ["./database.sqlite"]
     "user": "example",
     "repo": "my_dep",
     "path": null,
-    "tag-prefix": null
+    "tag_prefix": null
   },
   "links": [
     {

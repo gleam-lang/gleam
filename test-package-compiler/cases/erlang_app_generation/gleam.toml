@@ -15,7 +15,7 @@ application_start_module = "my_erlang_application_sup" # <-
 gleam_stdlib = "~> 1337.0"
 gleam_otp = "~> 1337.0"
 
-[dev-dependencies] # <-
+[dev_dependencies] # <-
 midas = "~> 1337.0"
 simple_json = "~> 1337.0"
 
