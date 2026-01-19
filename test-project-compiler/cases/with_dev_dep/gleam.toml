@@ -1,5 +1,5 @@
 name = "example"
 version = "1.0.0"
 
-[dev-dependencies]
+[dev_dependencies]
 package_a = { path = "../support/package_a" }

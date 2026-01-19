@@ -5,4 +5,4 @@ target = "javascript"
 [dependencies]
 hello_joe = "~> 1.0"
 
-[dev-dependencies]
+[dev_dependencies]

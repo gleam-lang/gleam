@@ -165,7 +165,7 @@ pub struct PackageConfig {
     pub documentation: Docs,
     #[serde(default, serialize_with = "ordered_map")]
     pub dependencies: Dependencies,
-    #[serde(default, rename = "dev-dependencies", serialize_with = "ordered_map")]
+    #[serde(default, alias = "dev-dependencies", serialize_with = "ordered_map")]
     pub dev_dependencies: Dependencies,
     #[serde(default)]
     pub repository: Option<Repository>,
@@ -216,7 +216,7 @@ impl PackageConfig {
     }
 
     // Return all the dependencies listed in the configuration, that is, all the
-    // direct dependencies, both in the `dependencies` and `dev-dependencies`.
+    // direct dependencies, both in the `dependencies` and `dev_dependencies`.
     pub fn all_direct_dependencies(&self) -> Result<Dependencies> {
         let mut deps =
             HashMap::with_capacity(self.dependencies.len() + self.dev_dependencies.len());
@@ -839,7 +839,7 @@ pub enum Repository {
         user: String,
         repo: String,
         path: Option<String>,
-        #[serde(rename = "tag-prefix")]
+        #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
     },
     #[serde(rename = "gitlab")]
@@ -847,7 +847,7 @@ pub enum Repository {
         user: String,
         repo: String,
         path: Option<String>,
-        #[serde(rename = "tag-prefix")]
+        #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
     },
     #[serde(rename = "bitbucket")]
@@ -855,7 +855,7 @@ pub enum Repository {
         user: String,
         repo: String,
         path: Option<String>,
-        #[serde(rename = "tag-prefix")]
+        #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
     },
     #[serde(rename = "codeberg")]
@@ -863,7 +863,7 @@ pub enum Repository {
         user: String,
         repo: String,
         path: Option<String>,
-        #[serde(rename = "tag-prefix")]
+        #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
     },
     #[serde(rename = "gitea")]
@@ -871,7 +871,7 @@ pub enum Repository {
         user: String,
         repo: String,
         path: Option<String>,
-        #[serde(rename = "tag-prefix")]
+        #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
         #[serde(
             serialize_with = "uri_serde::serialize",
@@ -884,7 +884,7 @@ pub enum Repository {
         user: String,
         repo: String,
         path: Option<String>,
-        #[serde(rename = "tag-prefix")]
+        #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
         #[serde(
             serialize_with = "uri_serde::serialize",
@@ -897,7 +897,7 @@ pub enum Repository {
         user: String,
         repo: String,
         path: Option<String>,
-        #[serde(rename = "tag-prefix")]
+        #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
     },
     #[serde(rename = "tangled")]
@@ -905,13 +905,13 @@ pub enum Repository {
         user: String,
         repo: String,
         path: Option<String>,
-        #[serde(rename = "tag-prefix")]
+        #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
     },
     #[serde(rename = "custom")]
     Custom {
         url: String,
-        #[serde(rename = "tag-prefix")]
+        #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
     },
 }
@@ -1149,7 +1149,7 @@ gleam = ">= 0.30.0"
 gleam_stdlib = ">= 0.18.0 and < 2.0.0"
 my_other_project = { path = "../my_other_project" }
 
-[dev-dependencies]
+[dev_dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
 
 [documentation]
@@ -1191,4 +1191,25 @@ version = "1.0.0"
     let json = serde_json::to_string_pretty(&config).unwrap();
     let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
     insta::assert_snapshot!(output);
+}
+
+#[test]
+fn dev_deps_field_name() {
+    let toml = r#"
+name = "wibble"
+version = "1.0.0"
+
+[dev_dependencies]
+wibble = ">= 1.0.0 and < 2.0.0"
+"#;
+    let hyphen_alternative = deserialise_config("gleam.toml", toml.into()).expect("valid config");
+    let toml = r#"
+name = "wibble"
+version = "1.0.0"
+
+[dev_dependencies]
+wibble = ">= 1.0.0 and < 2.0.0"
+"#;
+    let canonical = deserialise_config("gleam.toml", toml.into()).expect("valid config");
+    assert_eq!(canonical, hyphen_alternative)
 }

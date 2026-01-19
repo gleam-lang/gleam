@@ -16,9 +16,9 @@ It covers these features:
 These features are not tested yet
 
 - Downloading packages
-  - Specified in config.dev-dependencies
+  - Specified in config.dev_dependencies
 - Importing packages
-  - Specified in config.dev-dependencies
+  - Specified in config.dev_dependencies
 - Compilation of locally defined JavaScript modules
   - in src
   - in test

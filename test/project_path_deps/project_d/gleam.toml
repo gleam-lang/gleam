@@ -1,7 +1,7 @@
 name = "project_d"
 version = "1.0.0"
 
-[dev-dependencies] 
+[dev_dependencies]
 # This dependency is not used by any of the other packages in this project, and
 # it is is only used by this package in dev mode, so it will not be in the other
 # packages at all.

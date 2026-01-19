@@ -6,10 +6,10 @@ It covers these features:
 
 - Downloading packages
   - Specified in config.dependencies
-  - Specified in config.dev-dependencies
+  - Specified in config.dev_dependencies
 - Importing packages
   - Specified in config.dependencies
-  - Specified in config.dev-dependencies
+  - Specified in config.dev_dependencies
 - Compilation of Gleam code
   - in src
   - in test

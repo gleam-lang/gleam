@@ -5,5 +5,5 @@ version = "0.1.0"
 project_b = { path = "../project_b" }
 project_c = { path = "../project_c" }
 
-[dev-dependencies]
+[dev_dependencies]
 gleeunit = "~> 1.0"

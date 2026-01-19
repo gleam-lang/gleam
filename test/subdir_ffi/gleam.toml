@@ -15,5 +15,5 @@ version = "1.0.0"
 [dependencies]
 gleam_stdlib = ">= 0.34.0 and < 2.0.0"
 
-[dev-dependencies]
+[dev_dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"

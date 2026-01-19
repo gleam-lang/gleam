@@ -26,6 +26,11 @@
   friendlier.
   ([Ameen Radwan](https://github.com/Acepie))
 
+- The `gleam.toml` format is now consistent. The two sausage-case fields
+  (`dev-dependencies` and `tag-prefix`) have been replaced by snake_case
+  versions. Files using the old names will continue to work.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Language server
 
 - The language server now allows extracting the start of a pipeline into a

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/docs.rs
-assertion_line: 785
+assertion_line: 786
 expression: output
 snapshot_kind: text
 ---
@@ -23,7 +23,7 @@ version = "1.0.0"
       "pages": []
     },
     "dependencies": {},
-    "dev-dependencies": {},
+    "dev_dependencies": {},
     "repository": null,
     "links": [],
     "erlang": {

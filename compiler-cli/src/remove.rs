@@ -21,17 +21,19 @@ pub fn command(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
     // Remove the specified dependencies
     let mut packages_not_exist = vec![];
     for package_to_remove in packages.iter() {
-        #[allow(clippy::indexing_slicing)]
-        let maybe_removed_item = toml["dependencies"]
-            .as_table_like_mut()
-            .and_then(|deps| deps.remove(package_to_remove));
+        let remove = |toml: &mut toml_edit::DocumentMut, name| {
+            #[allow(clippy::indexing_slicing)]
+            toml[name]
+                .as_table_like_mut()
+                .and_then(|deps| deps.remove(package_to_remove))
+        };
 
-        #[allow(clippy::indexing_slicing)]
-        let maybe_removed_dev_item = toml["dev-dependencies"]
-            .as_table_like_mut()
-            .and_then(|deps| deps.remove(package_to_remove));
+        // dev-dependencies is the old deprecated name for dev_dependencies
+        let removed = remove(&mut toml, "dependencies")
+            .or_else(|| remove(&mut toml, "dev_dependencies"))
+            .or_else(|| remove(&mut toml, "dev-dependencies"));
 
-        if maybe_removed_item.or(maybe_removed_dev_item).is_none() {
+        if removed.is_none() {
             packages_not_exist.push(package_to_remove.into());
         }
     }
