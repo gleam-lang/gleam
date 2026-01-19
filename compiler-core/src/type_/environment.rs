@@ -992,7 +992,7 @@ impl Environment<'_> {
                 // If the module doesn't have this value, ignore it.
                 let value = module_info.get_public_value(name)?;
                 // If we couldn't find the arity of the value, consider all modules.
-                if arity.is_some() {
+                if arity.is_none() {
                     if is_imported {
                         // Should be impossible to exist already
                         let _ = imported_modules.insert(module_name.clone());
@@ -1002,7 +1002,7 @@ impl Environment<'_> {
                     }
                 }
                 // Make sure the arities match.
-                if arity == value.type_.fn_arity() {
+                if arity == value.type_.constructor_arity() {
                     if is_imported {
                         // Should be impossible to exist already
                         let _ = imported_modules.insert(module_name.clone());

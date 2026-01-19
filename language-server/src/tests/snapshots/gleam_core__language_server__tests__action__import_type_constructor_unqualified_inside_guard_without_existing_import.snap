@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport wobble\n\nfn wibble() -> Nil {\n    case Nil {\n        _ if Wobble == Wobble -> Nil\n        _ -> Nil\n    }\n}\n"
+---
+----- BEFORE ACTION
+
+import wobble
+
+fn wibble() -> Nil {
+    case Nil {
+        _ if Wobble == Wobble -> Nil
+             ↑                      
+        _ -> Nil
+    }
+}
+
+
+----- AFTER ACTION
+
+import wibble.{Wobble}
+import wobble
+
+fn wibble() -> Nil {
+    case Nil {
+        _ if Wobble == Wobble -> Nil
+        _ -> Nil
+    }
+}
