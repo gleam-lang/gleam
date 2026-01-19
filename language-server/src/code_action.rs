@@ -9394,10 +9394,10 @@ impl<'a> ExtractFunction<'a> {
                 body,
                 ..
             }) => {
-                if extracted.parameters.is_empty() {
-                    let location = body.first().location().merge(&body.last().location());
-                    let return_type = type_.return_type().expect("Fn should have a return type");
+                let location = body.first().location().merge(&body.last().location());
+                let return_type = type_.return_type().expect("Fn should have a return type");
 
+                if extracted.parameters.is_empty() {
                     self.extract_anonymous_function(
                         *full_location,
                         location,
@@ -9406,10 +9406,7 @@ impl<'a> ExtractFunction<'a> {
                         end,
                     )
                 } else if arguments.len() == 1 {
-                    let location = body.first().location().merge(&body.last().location());
-                    let return_type = type_.return_type().expect("Fn should have a return type");
-
-                    self.extract_anonymous_function_with_capture(
+                    self.extract_anonymous_function_with_capture_hole(
                         *full_location,
                         location,
                         arguments.first().expect("There is exactly one argument"),
@@ -9418,11 +9415,11 @@ impl<'a> ExtractFunction<'a> {
                         end,
                     )
                 } else {
-                    self.extract_code_in_tail_position(
-                        *full_location,
-                        *full_location,
-                        type_.clone(),
+                    self.extract_anonymous_function_body(
+                        location,
+                        arguments,
                         extracted.parameters,
+                        return_type,
                         end,
                     )
                 }
@@ -9493,7 +9490,7 @@ impl<'a> ExtractFunction<'a> {
         }
     }
 
-    /// An anonymous function that does not close over any variables from an
+    /// An anonymous function that does not capture any variables from an
     /// outer scope can be trivially extracted to the module top-level and
     /// replaced with a reference to the newly created function.
     fn extract_anonymous_function(
@@ -9535,60 +9532,93 @@ impl<'a> ExtractFunction<'a> {
         self.edits.insert(function_end, function);
     }
 
-    /// Even if an anonymous function closes over variables from an external
+    /// Even if an anonymous function captures variables from an external
     /// scope, it can still be refactored more ergonomically than the default
     /// _if it only expects a single argument_. In this case, the original
-    /// argument can be replaced with a capture.
-    fn extract_anonymous_function_with_capture(
+    /// argument can be replaced with a capture hole.
+    fn extract_anonymous_function_with_capture_hole(
         &mut self,
         location: SrcSpan,
         code_location: SrcSpan,
-        original_argument: &TypedArg,
+        argument: &TypedArg,
         extra_parameters: Vec<(EcoString, Arc<Type>)>,
         return_type: Arc<Type>,
         function_end: u32,
     ) {
         let name = self.function_name();
 
-        // replace the old code with a reference to the newly generated function
-        let call = if !extra_parameters.is_empty() {
-            let extra_arguments = extra_parameters.iter().map(|(name, _)| name).join(", ");
-            format!("{name}(_, {extra_arguments})")
-        } else {
-            format!("{name}")
-        };
+        let call = format!(
+            "{name}(_, {})",
+            extra_parameters.iter().map(|(name, _)| name).join(", ")
+        );
         self.edits.replace(location, call);
 
         let mut printer = Printer::new(&self.module.ast.names);
 
         // build up the code for the newly generated function
-        let original_argument = if let Some(name) = original_argument.get_variable_name() {
-            eco_format!("{name}: {}", printer.print_type(&original_argument.type_))
-        } else {
-            let name = NameGenerator::new().generate_name_from_type(&original_argument.type_);
-            eco_format!("{name}: {}", printer.print_type(&original_argument.type_))
-        };
-
         let return_type = printer.print_type(&return_type);
         let function_body = code_at(self.module, code_location);
-        let function = if !extra_parameters.is_empty() {
-            let extra_parameters = extra_parameters
-                .iter()
-                .map(|(name, type_)| eco_format!("{name}: {}", printer.print_type(type_)))
-                .join(", ");
-
-            format!(
-                "\n\nfn {name}({original_argument}, {extra_parameters}) -> {return_type} {{
-  {function_body}
-}}"
-            )
+        let argument = if let Some(name) = argument.get_variable_name() {
+            eco_format!("{name}: {}", printer.print_type(&argument.type_))
         } else {
-            format!(
-                "\n\nfn {name}({original_argument}) -> {return_type} {{
+            let name = NameGenerator::new().generate_name_from_type(&argument.type_);
+            eco_format!("{name}: {}", printer.print_type(&argument.type_))
+        };
+        let extra_parameters = extra_parameters
+            .iter()
+            .map(|(name, type_)| eco_format!("{name}: {}", printer.print_type(type_)))
+            .join(", ");
+
+        let function = format!(
+            "\n\nfn {name}({argument}, {extra_parameters}) -> {return_type} {{
   {function_body}
 }}"
-            )
-        };
+        );
+        self.edits.insert(function_end, function);
+    }
+
+    /// In the case where a non-unary anonymous function captures variables
+    /// from an external scope, the idiomatic refactoring is to replace the
+    /// _body_ of this function with a newly generated function that accepts
+    /// all the original arguments and captured variables as parameters.
+    fn extract_anonymous_function_body(
+        &mut self,
+        location: SrcSpan,
+        arguments: &[TypedArg],
+        extra_parameters: Vec<(EcoString, Arc<Type>)>,
+        return_type: Arc<Type>,
+        function_end: u32,
+    ) {
+        let name = self.function_name();
+
+        // if the programmer has ignored an argument, the generated function
+        // cannot take it as an parameter
+        let arguments = arguments
+            .iter()
+            .filter_map(|arg| arg.get_variable_name().map(|name| (name, &arg.type_)))
+            .chain(extra_parameters.iter().map(|(name, type_)| (name, type_)))
+            .collect::<Vec<(&EcoString, &Arc<Type>)>>();
+
+        let call = format!(
+            "{name}({})",
+            arguments.iter().map(|(name, _)| name).join(", ")
+        );
+        self.edits.replace(location, call);
+
+        let mut printer = Printer::new(&self.module.ast.names);
+
+        let return_type = printer.print_type(&return_type);
+        let function_body = code_at(self.module, location);
+        let arguments = arguments
+            .iter()
+            .map(|(name, type_)| eco_format!("{name}: {}", printer.print_type(type_)))
+            .join(", ");
+
+        let function = format!(
+            "\n\nfn {name}({arguments}) -> {return_type} {{
+  {function_body}
+}}"
+        );
         self.edits.insert(function_end, function);
     }
 

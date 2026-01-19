@@ -20,11 +20,11 @@ expression: "\n pub fn main() {\n  let outer_scope = 3\n  let wibble = fn(a, b) 
 
  pub fn main() {
   let outer_scope = 3
-  let wibble = function(outer_scope)
+  let wibble = fn(a, b) {
+    function(a, b, outer_scope)
+  }
 }
 
-fn function(outer_scope: Int) -> fn(Int, Int) -> Int {
-  fn(a, b) {
-    a + b + outer_scope
-  }
+fn function(a: Int, b: Int, outer_scope: Int) -> Int {
+  a + b + outer_scope
 }
