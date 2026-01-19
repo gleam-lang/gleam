@@ -215,20 +215,27 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     .inferred_variant_variables
                     .insert(name.clone(), variant_index);
 
-                let origin = match &variable.variant {
-                    ValueConstructorVariant::LocalVariable { origin, .. } => origin.clone(),
-                    ValueConstructorVariant::ModuleConstant { .. }
-                    | ValueConstructorVariant::ModuleFn { .. }
-                    | ValueConstructorVariant::Record { .. } => VariableOrigin::generated(),
-                };
-
-                // This variable is only inferred in this branch of the case expression
-                self.environment.insert_local_variable(
-                    name.clone(),
-                    variable.definition_location().span,
-                    origin,
-                    type_,
-                );
+                match &variable.variant {
+                    ValueConstructorVariant::LocalVariable { origin, .. } => {
+                        // This variable is only inferred in this branch of the case expression
+                        self.environment.insert_local_variable(
+                            name.clone(),
+                            variable.definition_location().span,
+                            origin.clone(),
+                            type_,
+                        );
+                    }
+                    ValueConstructorVariant::ModuleConstant { .. } => {
+                        // If the variable is a constant we shadow it with the refined type.
+                        // We cannot convert it to a local variable as that would cause the
+                        // code generator to look for a runtime variable that doesn't exist.
+                        let mut refined_constant = variable.clone();
+                        refined_constant.type_ = type_;
+                        let _ = self.environment.scope.insert(name, refined_constant);
+                    }
+                    ValueConstructorVariant::ModuleFn { .. }
+                    | ValueConstructorVariant::Record { .. } => {}
+                }
             }
 
             PatternMode::Alternative(_) => {

@@ -209,3 +209,7 @@
 - Fixed a bug where the package cache would not properly be reset when a version
   of a package was replaced on Hex.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where referencing a constant record inside a case branch matching
+  on that constant would generate invalid code on the Erlang target.
+  ([Igor Castejón](https://github.com/IgorCastejon))

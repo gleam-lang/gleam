@@ -889,6 +889,96 @@ pub fn main() {
 }
 
 #[test]
+fn local_variable_as_case_subject_with_type_refinement_allows_field_access_inside_branch() {
+    assert_js!(
+        r#"
+pub type User {
+  User(name: String, age: Int)
+  Guest
+}
+
+pub fn main() {
+  let user = User("Gleam", 42)
+  
+  case user {
+    User(..) -> user.name
+    Guest -> "Guest"
+  }
+}
+"#
+    )
+}
+
+#[test]
+fn local_variable_as_case_subject_shadows_const() {
+    assert_js!(
+        r#"
+pub type Wibble {
+  Wibble
+  Wobble(int: Int)
+}
+
+const wibble = Wibble
+
+pub fn main() {
+  echo wibble
+  // This 'wibble' shadows the const
+  let wibble = Wobble(42)
+  case wibble {
+    // This matches the local variable, not the const
+    Wobble(_) -> wibble
+  }
+}
+"#
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/5261
+#[test]
+fn case_with_record_const_as_subject_with_record_constructor_clause_and_referencing_same_const_inside_clause_consequence()
+ {
+    assert_js!(
+        r#"
+pub type Wibble {
+  Wibble
+  Wobble(int: Int)
+}
+
+const wibble = Wibble
+
+pub fn main() {
+  case wibble {
+    Wobble(_) -> wibble
+    wobble -> wibble
+  }
+}
+"#
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/5261
+#[test]
+fn const_as_case_subject_with_type_refinement_allows_field_access_inside_branch() {
+    assert_js!(
+        r#"
+pub type Wibble {
+  Wibble
+  Wobble(int: Int)
+}
+
+const wibble = Wobble(42)
+
+pub fn main() {
+  case wibble {
+    Wibble -> 24
+    Wobble(_) -> wibble.int
+  }
+}
+"#
+    )
+}
+
+#[test]
 // https://github.com/gleam-lang/gleam/issues/5283
 fn duplicate_name_for_variables_used_in_guards() {
     assert_js!(
