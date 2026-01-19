@@ -1,0 +1,41 @@
+---
+source: compiler-core/src/erlang/tests/case.rs
+expression: "\npub type User {\n  User(name: String, age: Int)\n  Guest\n}\n\npub fn main() {\n  let user = User(\"Gleam\", 42)\n  \n  case user {\n    User(..) -> user.name\n    Guest -> \"Guest\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type User {
+  User(name: String, age: Int)
+  Guest
+}
+
+pub fn main() {
+  let user = User("Gleam", 42)
+  
+  case user {
+    User(..) -> user.name
+    Guest -> "Guest"
+  }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+-export_type([user/0]).
+
+-type user() :: {user, binary(), integer()} | guest.
+
+-file("project/test/my/mod.gleam", 7).
+-spec main() -> binary().
+main() ->
+    User = {user, <<"Gleam"/utf8>>, 42},
+    case User of
+        {user, _, _} ->
+            erlang:element(2, User);
+
+        guest ->
+            <<"Guest"/utf8>>
+    end.
