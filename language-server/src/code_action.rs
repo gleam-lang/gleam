@@ -9515,11 +9515,8 @@ impl<'a> ExtractFunction<'a> {
                 if let Some(name) = arg.get_variable_name() {
                     eco_format!("{name}: {}", printer.print_type(&arg.type_))
                 } else {
-                    eco_format!(
-                        "{}: {}",
-                        name_generator.generate_name_from_type(&arg.type_),
-                        printer.print_type(&arg.type_)
-                    )
+                    let name = name_generator.generate_name_from_type(&arg.type_);
+                    eco_format!("_{name}: {}", printer.print_type(&arg.type_))
                 }
             })
             .join(", ");
@@ -9562,7 +9559,7 @@ impl<'a> ExtractFunction<'a> {
             eco_format!("{name}: {}", printer.print_type(&argument.type_))
         } else {
             let name = NameGenerator::new().generate_name_from_type(&argument.type_);
-            eco_format!("{name}: {}", printer.print_type(&argument.type_))
+            eco_format!("_{name}: {}", printer.print_type(&argument.type_))
         };
         let extra_parameters = extra_parameters
             .iter()
