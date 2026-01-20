@@ -3411,7 +3411,7 @@ pub fn main() {
 }
 
 #[test]
-fn unknown_variable_possible_modules_1() {
+fn unknown_variable_suggest_modules_with_public_value_1() {
     assert_module_error!(
         (
             "module",
@@ -3427,79 +3427,7 @@ pub fn main() {
 }
 
 #[test]
-fn unknown_variable_possible_modules_2() {
-    assert_module_error!(
-        (
-            "module",
-            "
-pub fn add(x: Int, y: Int) {
-    x + y
-}"
-        ),
-        "
-import module
-pub fn main() {
-    add(1, 1)
-}"
-    );
-}
-
-#[test]
-fn unknown_variable_possible_modules_3() {
-    assert_module_error!(
-        (
-            "module",
-            "
-pub fn add(x: Int) {
-    x + 1
-}"
-        ),
-        "
-import module
-pub fn main() {
-    add(1, 1)
-}"
-    );
-}
-
-#[test]
-fn unknown_variable_possible_modules_4() {
-    assert_module_error!(
-        (
-            "module",
-            "
-pub fn add(x: Float, y: Float) {
-    x +. y
-}"
-        ),
-        "
-import module
-pub fn main() {
-    add(1, 1)
-}"
-    );
-}
-
-#[test]
-fn unknown_variable_possible_modules_5() {
-    assert_module_error!(
-        (
-            "module",
-            "
-fn add(x: Int, y: Int) {
-    x + y
-}"
-        ),
-        "
-import module
-pub fn main() {
-    add(1, 1)
-}"
-    );
-}
-
-#[test]
-fn unknown_variable_possible_modules_6() {
+fn unknown_variable_suggest_modules_with_public_value_2() {
     assert_module_error!(
         (
             "module",
@@ -3518,7 +3446,171 @@ pub fn main() {
 }
 
 #[test]
-fn unknown_variable_possible_modules_7() {
+fn unknown_variable_suggest_modules_with_public_function_with_correct_arity_1() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_with_public_function_with_correct_arity_2() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int) {
+    x + 1
+}"
+        ),
+        "
+import module
+pub fn main() {
+    1 |> add
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_with_public_function_with_correct_arity_3() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    1 |> add(2)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_with_public_function_with_correct_arity_4() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn wibble(_) {
+    1
+}"
+        ),
+        "
+import module
+pub fn main() {
+    use <- wibble
+    1
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_with_public_function_with_incorrect_arity_1() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int) {
+    x + 1
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_with_public_function_with_incorrect_arity_2() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int) {
+    fn(y: Int) { x + y }
+}"
+        ),
+        "
+import module
+pub fn main() {
+    1 |> add(2)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_with_public_function_with_incorrect_arity_3() {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int) {
+    fn(y: Int, z: Int) { x + y + z }
+}"
+        ),
+        "
+import module
+pub fn main() {
+    1 |> add(2)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_with_public_function_with_correct_arity_even_if_arguments_type_mismatch()
+ {
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Float, y: Float) {
+    x +. y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_with_private_function() {
+    assert_module_error!(
+        (
+            "module",
+            "
+fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_with_public_type() {
     assert_module_error!(
         (
             "module",
@@ -3537,7 +3629,7 @@ pub fn main() {
 }
 
 #[test]
-fn unknown_variable_possible_modules_8() {
+fn unknown_variable_suggest_modules_with_public_record_constructor_with_correct_arity() {
     assert_module_error!(
         (
             "moduleone",
@@ -3563,98 +3655,7 @@ pub fn main() {
 }
 
 #[test]
-fn unknown_variable_possible_modules_9() {
-    assert_module_error!(
-        (
-            "module",
-            "
-pub fn add(x: Int) {
-    x + 1
-}"
-        ),
-        "
-import module
-pub fn main() {
-    1 |> add
-}"
-    );
-}
-
-#[test]
-fn unknown_variable_possible_modules_10() {
-    assert_module_error!(
-        (
-            "module",
-            "
-pub fn add(x: Int, y: Int) {
-    x + y
-}"
-        ),
-        "
-import module
-pub fn main() {
-    1 |> add(2)
-}"
-    );
-}
-
-#[test]
-fn unknown_variable_possible_modules_11() {
-    assert_module_error!(
-        (
-            "module",
-            "
-pub fn add(x: Int) {
-    fn(y: Int) { x + y }
-}"
-        ),
-        "
-import module
-pub fn main() {
-    1 |> add(2)
-}"
-    );
-}
-
-#[test]
-fn unknown_variable_possible_modules_12() {
-    assert_module_error!(
-        (
-            "module",
-            "
-pub fn add(x: Int) {
-    fn(y: Int, z: Int) { x + y + z }
-}"
-        ),
-        "
-import module
-pub fn main() {
-    1 |> add(2)
-}"
-    );
-}
-
-#[test]
-fn unknown_variable_possible_modules_13() {
-    assert_module_error!(
-        (
-            "module",
-            "
-pub fn wibble(_) {
-    1
-}"
-        ),
-        "
-import module
-pub fn main() {
-    use <- wibble
-    1
-}"
-    );
-}
-
-#[test]
-fn unknown_variable_possible_modules_14() {
+fn unknown_variable_suggest_modules_imported_using_an_alias() {
     assert_module_error!(
         (
             "module",
@@ -3672,7 +3673,7 @@ pub fn main() {
 }
 
 #[test]
-fn unknown_variable_possible_modules_15() {
+fn unknown_variable_suggest_modules_with_multiple_segments() {
     assert_module_error!(
         (
             "gleam/module",
@@ -3690,7 +3691,24 @@ pub fn main() {
 }
 
 #[test]
-fn unknown_variable_possible_modules_16() {
+fn unknown_variable_suggest_modules_from_the_same_package_with_internal_value() {
+    assert_module_error!(
+        (
+            "module",
+            "
+@internal
+pub const one = 1"
+        ),
+        "
+import module
+pub fn main() {
+    one
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_from_the_same_package_with_internal_function() {
     assert_module_error!(
         (
             "module",
@@ -3709,7 +3727,64 @@ pub fn main() {
 }
 
 #[test]
-fn unknown_variable_possible_modules_17() {
+fn unknown_variable_suggest_modules_from_the_same_package_with_internal_type() {
+    assert_module_error!(
+        (
+            "module",
+            "
+@internal
+pub type OneOrTwo {
+    One
+    Two
+}"
+        ),
+        "
+import module
+pub fn main() {
+    One
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_from_the_same_package_with_internal_record_constructor() {
+    assert_module_error!(
+        (
+            "module",
+            "
+@internal
+pub type MyType {
+    MyRecord(x: Int, y: Int)
+}"
+        ),
+        "
+import module
+pub fn main() {
+    MyRecord(1, 2)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_from_the_another_package_with_internal_value() {
+    assert_module_error!(
+        (
+            "anotherpackage",
+            "module",
+            "
+@internal
+pub const one = 1"
+        ),
+        "
+import module
+pub fn main() {
+    one
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_from_the_another_package_with_internal_function() {
     assert_module_error!(
         (
             "anotherpackage",
@@ -3724,6 +3799,48 @@ pub fn add(x: Int, y: Int) {
 import module
 pub fn main() {
     add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_from_the_another_package_with_internal_type() {
+    assert_module_error!(
+        (
+            "anotherpackage",
+            "module",
+            "
+@internal
+pub type OneOrTwo {
+    One
+    Two
+}"
+        ),
+        "
+import module
+pub fn main() {
+    One
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_from_the_another_package_with_internal_record_constructor()
+ {
+    assert_module_error!(
+        (
+            "anotherpackage",
+            "module",
+            "
+@internal
+pub type MyType {
+    MyRecord(x: Int, y: Int)
+}"
+        ),
+        "
+import module
+pub fn main() {
+    MyRecord(1, 2)
 }"
     );
 }
