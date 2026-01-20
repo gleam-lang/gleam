@@ -68,7 +68,12 @@ macro_rules! docvec {
         // So in case a `docvec!` starts with a `Vec` we flatten it out to avoid
         // having deeply nested documents.
         match $first.to_doc() {
-            first@Document::Vec(_) => first.append(docvec![$($rest.to_doc()),+]),
+            Document::Vec(mut vec) => {
+                $(
+                    vec.push($rest.to_doc());
+                )*
+                Document::Vec(vec)
+            },
             first => Document::Vec(vec![first, $($rest.to_doc()),+])
         }
     };
