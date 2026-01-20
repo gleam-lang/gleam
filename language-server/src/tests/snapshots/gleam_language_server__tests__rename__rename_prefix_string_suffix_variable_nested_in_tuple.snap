@@ -1,0 +1,25 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\nfn main() {\n  case #(\"1-wibble\", 0) {\n    #(\"1\" <> rest, _) -> rest\n    _ -> \"\"\n  }\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+fn main() {
+  case #("1-wibble", 0) {
+    #("1" <> rest, _) -> rest
+             ↑▔▔▔            
+    _ -> ""
+  }
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+fn main() {
+  case #("1-wibble", 0) {
+    #("1" <> new_name, _) -> new_name
+    _ -> ""
+  }
+}

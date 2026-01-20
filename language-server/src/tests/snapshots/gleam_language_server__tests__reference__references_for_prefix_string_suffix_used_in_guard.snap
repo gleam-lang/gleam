@@ -1,0 +1,13 @@
+---
+source: language-server/src/tests/reference.rs
+expression: "\nfn main() {\n  case \"1-wibble\" {\n    \"1\" <> rest if rest == \"-wibble\" -> rest\n    _ -> \"\"\n  }\n}\n"
+---
+-- app.gleam
+
+fn main() {
+  case "1-wibble" {
+    "1" <> rest if rest == "-wibble" -> rest
+           ↑▔▔▔    ▔▔▔▔                 ▔▔▔▔
+    _ -> ""
+  }
+}

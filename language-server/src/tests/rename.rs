@@ -1768,3 +1768,277 @@ pub fn main() {
         find_position_of("wibble")
     );
 }
+
+#[test]
+fn rename_prefix_string_suffix_variable_in_case() {
+    assert_rename!(
+        "
+fn main() -> String {
+  let wibble = \"1-wibble\"
+  case wibble {
+    \"1\" <> rest -> rest
+    other -> other
+  }
+}
+",
+        "new_name",
+        find_position_of("rest").nth_occurrence(1)
+    );
+}
+
+#[test]
+fn rename_prefix_string_suffix_variable_in_case_triggered_from_usage() {
+    assert_rename!(
+        "
+fn main() -> String {
+  let wibble = \"1-wibble\"
+  case wibble {
+    \"1\" <> rest -> rest
+    other -> other
+  }
+}
+",
+        "new_name",
+        find_position_of("rest").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_prefix_string_suffix_variable_with_alternative_definition_in_case() {
+    assert_rename!(
+        "
+fn main() -> String {
+  let wibble = \"1-wibble\"
+  case wibble {
+    \"1\" <> rest | \"2\" <> rest -> rest
+    other -> other
+  }
+}
+",
+        "new_name",
+        find_position_of("rest").nth_occurrence(1),
+    );
+}
+
+#[test]
+fn rename_prefix_string_suffix_variable_with_alternative_definition_triggered_from_second_pattern()
+{
+    assert_rename!(
+        "
+fn main() -> String {
+  let wibble = \"1-wibble\"
+  case wibble {
+    \"1\" <> rest | \"2\" <> rest -> rest
+    other -> other
+  }
+}
+",
+        "new_name",
+        find_position_of("rest").nth_occurrence(2),
+    );
+}
+
+#[test]
+fn rename_prefix_string_suffix_variable_in_let_assert() {
+    assert_rename!(
+        "
+fn main() -> String {
+  let assert \"1\" <> rest = \"1-wibble\"
+  rest
+}
+",
+        "new_name",
+        find_position_of("rest").nth_occurrence(1)
+    );
+}
+
+#[test]
+fn rename_prefix_string_suffix_variable_in_let_assert_triggered_from_usage() {
+    assert_rename!(
+        "
+fn main() -> String {
+  let assert \"1\" <> rest = \"1-wibble\"
+  rest
+}
+",
+        "new_name",
+        find_position_of("rest").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_prefix_string_alias_in_case() {
+    assert_rename!(
+        "
+fn main() -> String {
+  let wibble = \"1-wibble\"
+  case wibble {
+    \"1\" as digit <> rest -> digit <> rest
+    other -> other
+  }
+}
+",
+        "new_name",
+        find_position_of("digit").nth_occurrence(1)
+    );
+}
+
+#[test]
+fn rename_prefix_string_alias_in_case_triggered_from_usage() {
+    assert_rename!(
+        "
+fn main() -> String {
+  let wibble = \"1-wibble\"
+  case wibble {
+    \"1\" as digit <> rest -> digit <> rest
+    other -> other
+  }
+}
+",
+        "new_name",
+        find_position_of("digit").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_prefix_string_alias_with_alternative_definitions_in_case() {
+    assert_rename!(
+        "
+fn main() -> String {
+  let wibble = \"1-wibble\"
+  case wibble {
+    \"1\" as digit <> rest | \"2\" as digit <> rest -> digit <> rest
+    other -> other
+  }
+}
+",
+        "new_name",
+        find_position_of("digit").nth_occurrence(1)
+    );
+}
+
+#[test]
+fn rename_prefix_string_alias_with_alternative_definitions_triggered_from_second_pattern() {
+    assert_rename!(
+        "
+fn main() -> String {
+  let wibble = \"1-wibble\"
+  case wibble {
+    \"1\" as digit <> rest | \"2\" as digit <> rest -> digit <> rest
+    other -> other
+  }
+}
+",
+        "new_name",
+        find_position_of("digit").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_prefix_string_alias_in_let_assert() {
+    assert_rename!(
+        "
+fn main() -> String {
+  let assert \"1\" as digit <> rest = \"1-wibble\"
+  digit
+}
+",
+        "new_name",
+        find_position_of("digit").nth_occurrence(1)
+    );
+}
+
+#[test]
+fn rename_prefix_string_alias_in_let_assert_triggered_from_usage() {
+    assert_rename!(
+        "
+fn main() -> String {
+  let assert \"1\" as digit <> rest = \"1-wibble\"
+  digit
+}
+",
+        "new_name",
+        find_position_of("digit").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_prefix_string_suffix_variable_nested_in_tuple() {
+    assert_rename!(
+        "
+fn main() {
+  case #(\"1-wibble\", 0) {
+    #(\"1\" <> rest, _) -> rest
+    _ -> \"\"
+  }
+}
+",
+        "new_name",
+        find_position_of("rest").nth_occurrence(1)
+    );
+}
+
+#[test]
+fn rename_prefix_string_alias_used_in_guard() {
+    assert_rename!(
+        "
+fn main() {
+  case \"1-wibble\" {
+    \"1\" as digit <> _rest if digit == \"1\" -> digit
+    _ -> \"\"
+  }
+}
+",
+        "new_name",
+        find_position_of("digit").nth_occurrence(1)
+    );
+}
+
+#[test]
+fn rename_prefix_string_suffix_used_in_guard() {
+    assert_rename!(
+        "
+fn main() {
+  case \"1-wibble\" {
+    \"1\" <> rest if rest == \"-wibble\" -> rest
+    _ -> \"\"
+  }
+}
+",
+        "new_name",
+        find_position_of("rest").nth_occurrence(1)
+    );
+}
+
+#[test]
+fn rename_prefix_string_suffix_shadowing_outer_variable() {
+    assert_rename!(
+        "
+fn main() {
+  let rest = \"outer\"
+  case \"1-wibble\" {
+    \"1\" <> rest -> rest
+    _ -> rest
+  }
+}
+",
+        "new_name",
+        find_position_of("rest").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_prefix_string_alias_and_suffix_complex_guard() {
+    assert_rename!(
+        "
+fn main() {
+  case \"1-wibble\" {
+    \"1\" as digit <> rest if digit == \"1\" && rest == \"-wibble\" -> #(digit, rest)
+    _ -> #(\"\", \"\")
+  }
+}
+",
+        "new_name",
+        find_position_of("digit").nth_occurrence(1)
+    );
+}

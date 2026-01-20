@@ -641,50 +641,57 @@ where
 
             let byte_index = lines.byte_index(params.position);
 
-            Ok(match reference_for_ast_node(found, &current_module.name) {
-                Some(Referenced::LocalVariable {
-                    location, origin, ..
-                }) if location.contains(byte_index) => match origin.map(|origin| origin.syntax) {
-                    Some(VariableSyntax::Generated) => None,
-                    Some(
-                        VariableSyntax::Variable(label) | VariableSyntax::LabelShorthand(label),
-                    ) => success_response(SrcSpan {
-                        start: location.start,
-                        end: label
-                            .len()
-                            .try_into()
-                            .map(|len: u32| location.start + len)
-                            .unwrap_or(location.end),
-                    }),
-                    Some(VariableSyntax::AssignmentPattern) | None => success_response(location),
-                },
-                Some(
-                    Referenced::ModuleValue {
-                        module,
-                        location,
-                        target_kind,
-                        ..
-                    }
-                    | Referenced::ModuleType {
-                        module,
-                        location,
-                        target_kind,
-                        ..
+            Ok(
+                match reference_for_ast_node(found, &current_module.name, byte_index) {
+                    Some(Referenced::LocalVariable {
+                        location, origin, ..
+                    }) if location.contains(byte_index) => match origin.map(|origin| origin.syntax)
+                    {
+                        Some(VariableSyntax::Generated) => None,
+                        Some(
+                            VariableSyntax::Variable(label) | VariableSyntax::LabelShorthand(label),
+                        ) => success_response(SrcSpan {
+                            start: location.start,
+                            end: label
+                                .len()
+                                .try_into()
+                                .map(|len: u32| location.start + len)
+                                .unwrap_or(location.end),
+                        }),
+                        Some(VariableSyntax::AssignmentPattern) | None => {
+                            success_response(location)
+                        }
                     },
-                ) if location.contains(byte_index) => {
-                    // We can't rename types or values from other packages if we are not aliasing an unqualified import.
-                    let rename_allowed = match target_kind {
-                        RenameTarget::Qualified => this.is_same_package(current_module, &module),
-                        RenameTarget::Unqualified | RenameTarget::Definition => true,
-                    };
-                    if rename_allowed {
-                        success_response(location)
-                    } else {
-                        None
+                    Some(
+                        Referenced::ModuleValue {
+                            module,
+                            location,
+                            target_kind,
+                            ..
+                        }
+                        | Referenced::ModuleType {
+                            module,
+                            location,
+                            target_kind,
+                            ..
+                        },
+                    ) if location.contains(byte_index) => {
+                        // We can't rename types or values from other packages if we are not aliasing an unqualified import.
+                        let rename_allowed = match target_kind {
+                            RenameTarget::Qualified => {
+                                this.is_same_package(current_module, &module)
+                            }
+                            RenameTarget::Unqualified | RenameTarget::Definition => true,
+                        };
+                        if rename_allowed {
+                            success_response(location)
+                        } else {
+                            None
+                        }
                     }
-                }
-                _ => None,
-            })
+                    _ => None,
+                },
+            )
         })
     }
 
@@ -704,78 +711,82 @@ where
                 return Ok(RenameOutcome::NoRenames.into_result());
             };
 
-            Ok(match reference_for_ast_node(found, &module.name) {
-                Some(Referenced::LocalVariable {
-                    origin,
-                    definition_location,
-                    name,
-                    ..
-                }) => {
-                    let rename_kind = match origin.map(|origin| origin.syntax) {
-                        Some(VariableSyntax::Generated) => {
-                            return Ok(RenameOutcome::NoRenames.into_result());
-                        }
-                        Some(VariableSyntax::LabelShorthand(_)) => {
-                            VariableReferenceKind::LabelShorthand
-                        }
-                        Some(
-                            VariableSyntax::AssignmentPattern | VariableSyntax::Variable { .. },
-                        )
-                        | None => VariableReferenceKind::Variable,
-                    };
-                    rename_local_variable(
-                        module,
-                        &lines,
-                        &params,
+            let byte_index = lines.byte_index(position.position);
+
+            Ok(
+                match reference_for_ast_node(found, &module.name, byte_index) {
+                    Some(Referenced::LocalVariable {
+                        origin,
                         definition_location,
                         name,
-                        rename_kind,
-                    )
-                    .into_result()
-                }
-                Some(Referenced::ModuleValue {
-                    module: module_name,
-                    target_kind,
-                    name,
-                    name_kind,
-                    ..
-                }) => rename_module_entity(
-                    &params,
-                    module,
-                    this.compiler.project_compiler.get_importable_modules(),
-                    &this.compiler.sources,
-                    Renamed {
-                        module_name: &module_name,
-                        name: &name,
+                        ..
+                    }) => {
+                        let rename_kind = match origin.map(|origin| origin.syntax) {
+                            Some(VariableSyntax::Generated) => {
+                                return Ok(RenameOutcome::NoRenames.into_result());
+                            }
+                            Some(VariableSyntax::LabelShorthand(_)) => {
+                                VariableReferenceKind::LabelShorthand
+                            }
+                            Some(
+                                VariableSyntax::AssignmentPattern | VariableSyntax::Variable { .. },
+                            )
+                            | None => VariableReferenceKind::Variable,
+                        };
+                        rename_local_variable(
+                            module,
+                            &lines,
+                            &params,
+                            definition_location,
+                            name,
+                            rename_kind,
+                        )
+                        .into_result()
+                    }
+                    Some(Referenced::ModuleValue {
+                        module: module_name,
+                        target_kind,
+                        name,
                         name_kind,
-                        target_kind,
-                        layer: ast::Layer::Value,
-                    },
-                )
-                .into_result(),
+                        ..
+                    }) => rename_module_entity(
+                        &params,
+                        module,
+                        this.compiler.project_compiler.get_importable_modules(),
+                        &this.compiler.sources,
+                        Renamed {
+                            module_name: &module_name,
+                            name: &name,
+                            name_kind,
+                            target_kind,
+                            layer: ast::Layer::Value,
+                        },
+                    )
+                    .into_result(),
 
-                Some(Referenced::ModuleType {
-                    module: module_name,
-                    target_kind,
-                    name,
-                    ..
-                }) => rename_module_entity(
-                    &params,
-                    module,
-                    this.compiler.project_compiler.get_importable_modules(),
-                    &this.compiler.sources,
-                    Renamed {
-                        module_name: &module_name,
-                        name: &name,
-                        name_kind: Named::Type,
+                    Some(Referenced::ModuleType {
+                        module: module_name,
                         target_kind,
-                        layer: ast::Layer::Type,
-                    },
-                )
-                .into_result(),
+                        name,
+                        ..
+                    }) => rename_module_entity(
+                        &params,
+                        module,
+                        this.compiler.project_compiler.get_importable_modules(),
+                        &this.compiler.sources,
+                        Renamed {
+                            module_name: &module_name,
+                            name: &name,
+                            name_kind: Named::Type,
+                            target_kind,
+                            layer: ast::Layer::Type,
+                        },
+                    )
+                    .into_result(),
 
-                None => RenameOutcome::NoRenames.into_result(),
-            })
+                    None => RenameOutcome::NoRenames.into_result(),
+                },
+            )
         })
     }
 
@@ -799,67 +810,70 @@ where
 
             let byte_index = lines.byte_index(position.position);
 
-            Ok(match reference_for_ast_node(found, &module.name) {
-                Some(Referenced::LocalVariable {
-                    origin,
-                    definition_location,
-                    location,
-                    name,
-                }) if location.contains(byte_index) => match origin.map(|origin| origin.syntax) {
-                    Some(VariableSyntax::Generated) => None,
-                    Some(
-                        VariableSyntax::LabelShorthand(_)
-                        | VariableSyntax::AssignmentPattern
-                        | VariableSyntax::Variable { .. },
-                    )
-                    | None => {
-                        let variable_references =
-                            FindVariableReferences::new(definition_location, name)
-                                .find_in_module(&module.ast);
+            Ok(
+                match reference_for_ast_node(found, &module.name, byte_index) {
+                    Some(Referenced::LocalVariable {
+                        origin,
+                        definition_location,
+                        location,
+                        name,
+                    }) if location.contains(byte_index) => match origin.map(|origin| origin.syntax)
+                    {
+                        Some(VariableSyntax::Generated) => None,
+                        Some(
+                            VariableSyntax::LabelShorthand(_)
+                            | VariableSyntax::AssignmentPattern
+                            | VariableSyntax::Variable { .. },
+                        )
+                        | None => {
+                            let variable_references =
+                                FindVariableReferences::new(definition_location, name)
+                                    .find_in_module(&module.ast);
 
-                        let mut reference_locations =
-                            Vec::with_capacity(variable_references.len() + 1);
-                        reference_locations.push(lsp::Location {
-                            uri: uri.clone(),
-                            range: src_span_to_lsp_range(definition_location, &lines),
-                        });
-
-                        for reference in variable_references {
+                            let mut reference_locations =
+                                Vec::with_capacity(variable_references.len() + 1);
                             reference_locations.push(lsp::Location {
                                 uri: uri.clone(),
-                                range: src_span_to_lsp_range(reference.location, &lines),
-                            })
-                        }
+                                range: src_span_to_lsp_range(definition_location, &lines),
+                            });
 
-                        Some(reference_locations)
-                    }
+                            for reference in variable_references {
+                                reference_locations.push(lsp::Location {
+                                    uri: uri.clone(),
+                                    range: src_span_to_lsp_range(reference.location, &lines),
+                                })
+                            }
+
+                            Some(reference_locations)
+                        }
+                    },
+                    Some(Referenced::ModuleValue {
+                        module,
+                        name,
+                        location,
+                        ..
+                    }) if location.contains(byte_index) => Some(find_module_references(
+                        module,
+                        name,
+                        this.compiler.project_compiler.get_importable_modules(),
+                        &this.compiler.sources,
+                        ast::Layer::Value,
+                    )),
+                    Some(Referenced::ModuleType {
+                        module,
+                        name,
+                        location,
+                        ..
+                    }) if location.contains(byte_index) => Some(find_module_references(
+                        module,
+                        name,
+                        this.compiler.project_compiler.get_importable_modules(),
+                        &this.compiler.sources,
+                        ast::Layer::Type,
+                    )),
+                    _ => None,
                 },
-                Some(Referenced::ModuleValue {
-                    module,
-                    name,
-                    location,
-                    ..
-                }) if location.contains(byte_index) => Some(find_module_references(
-                    module,
-                    name,
-                    this.compiler.project_compiler.get_importable_modules(),
-                    &this.compiler.sources,
-                    ast::Layer::Value,
-                )),
-                Some(Referenced::ModuleType {
-                    module,
-                    name,
-                    location,
-                    ..
-                }) if location.contains(byte_index) => Some(find_module_references(
-                    module,
-                    name,
-                    this.compiler.project_compiler.get_importable_modules(),
-                    &this.compiler.sources,
-                    ast::Layer::Type,
-                )),
-                _ => None,
-            })
+            )
         })
     }
 

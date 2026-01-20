@@ -6,7 +6,7 @@ use lsp_types::Location;
 use gleam_core::{
     analyse,
     ast::{
-        self, ArgNames, BitArraySize, CustomType, Function, ModuleConstant, Pattern,
+        self, ArgNames, AssignName, BitArraySize, CustomType, Function, ModuleConstant, Pattern,
         RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
     },
     build::Located,
@@ -46,6 +46,7 @@ pub enum Referenced {
 pub fn reference_for_ast_node(
     found: Located<'_>,
     current_module: &EcoString,
+    byte_index: u32,
 ) -> Option<Referenced> {
     match found {
         Located::Expression {
@@ -231,6 +232,40 @@ pub fn reference_for_ast_node(
             name_kind: Named::CustomTypeVariant,
             target_kind: RenameTarget::Definition,
         }),
+        Located::Pattern(Pattern::StringPrefix {
+            left_side_assignment,
+            right_side_assignment,
+            right_location,
+            ..
+        }) => {
+            match left_side_assignment {
+                // Handle the prefix alias: "prefix" as name
+                Some((name, left_side_assignment_location))
+                    if left_side_assignment_location.contains(byte_index) =>
+                {
+                    Some(Referenced::LocalVariable {
+                        definition_location: *left_side_assignment_location,
+                        location: *left_side_assignment_location,
+                        origin: None,
+                        name: name.clone(),
+                    })
+                }
+                Some(_) | None => {
+                    match right_side_assignment {
+                        // Handle the suffix: <> name
+                        AssignName::Variable(name) if right_location.contains(byte_index) => {
+                            Some(Referenced::LocalVariable {
+                                definition_location: *right_location,
+                                location: *right_location,
+                                origin: None,
+                                name: name.clone(),
+                            })
+                        }
+                        AssignName::Variable(_) | AssignName::Discard(_) => None,
+                    }
+                }
+            }
+        }
         Located::Pattern(Pattern::Constructor {
             constructor: analyse::Inferred::Known(constructor),
             module: module_select,
@@ -510,6 +545,27 @@ impl FindVariableReferences {
         self.visit_typed_expr(expression);
         self.references
     }
+
+    fn register_alternative_definition(&mut self, name: &EcoString, location: &SrcSpan) {
+        match self.alternative_variable {
+            // If we are inside the same alternative pattern as the target
+            // variable and the name is the same, this is an alternative definition
+            // of the same variable. We don't register the reference if this is
+            // the exact variable though, as that would result in a duplicated
+            // reference.
+            AlternativeVariable::Track
+                if *name == self.name && *location != self.definition_location() =>
+            {
+                self.update_alternative_origin(*location);
+
+                _ = self.references.insert(VariableReference {
+                    location: *location,
+                    kind: VariableReferenceKind::Variable,
+                });
+            }
+            AlternativeVariable::Track | AlternativeVariable::Ignore => {}
+        }
+    }
 }
 
 impl<'ast> Visit<'ast> for FindVariableReferences {
@@ -595,24 +651,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
         _type_: &'ast std::sync::Arc<Type>,
         _origin: &'ast VariableOrigin,
     ) {
-        match self.alternative_variable {
-            // If we are inside the same alternative pattern as the target
-            // variable and the name is the same, this is an alternative definition
-            // of the same variable. We don't register the reference if this is
-            // the exact variable though, as that would result in a duplicated
-            // reference.
-            AlternativeVariable::Track
-                if *name == self.name && *location != self.definition_location() =>
-            {
-                self.update_alternative_origin(*location);
-
-                _ = self.references.insert(VariableReference {
-                    location: *location,
-                    kind: VariableReferenceKind::Variable,
-                });
-            }
-            AlternativeVariable::Track | AlternativeVariable::Ignore => {}
-        }
+        self.register_alternative_definition(name, location);
     }
 
     fn visit_typed_pattern_assign(
@@ -621,24 +660,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
         name: &'ast EcoString,
         pattern: &'ast ast::TypedPattern,
     ) {
-        match self.alternative_variable {
-            // If we are inside the same alternative pattern as the target
-            // variable and the name is the same, this is an alternative definition
-            // of the same variable. We don't register the reference if this is
-            // the exact variable though, as that would result in a duplicated
-            // reference.
-            AlternativeVariable::Track
-                if *name == self.name && *location != self.definition_location() =>
-            {
-                self.update_alternative_origin(*location);
-
-                _ = self.references.insert(VariableReference {
-                    location: *location,
-                    kind: VariableReferenceKind::Variable,
-                });
-            }
-            AlternativeVariable::Track | AlternativeVariable::Ignore => {}
-        }
+        self.register_alternative_definition(name, location);
 
         ast::visit::visit_typed_pattern_assign(self, location, name, pattern);
     }
@@ -699,5 +721,38 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
         }
 
         ast::visit::visit_typed_call_arg(self, arg);
+    }
+
+    fn visit_typed_pattern_string_prefix(
+        &mut self,
+        location: &'ast SrcSpan,
+        left_location: &'ast SrcSpan,
+        left_side_assignment: &'ast Option<(EcoString, SrcSpan)>,
+        right_location: &'ast SrcSpan,
+        left_side_string: &'ast EcoString,
+        right_side_assignment: &'ast AssignName,
+    ) {
+        // Handle the prefix alias in alternative pattern: "prefix" as name | "other_prefix" as name
+        if let Some((name, left_side_assignment_location)) = left_side_assignment {
+            self.register_alternative_definition(name, left_side_assignment_location);
+        }
+
+        // Handle the suffix in alternative pattern: "prefix" <> name | "other_prefix" <> name
+        match right_side_assignment {
+            AssignName::Variable(name) => {
+                self.register_alternative_definition(name, right_location)
+            }
+            AssignName::Discard(_) => {}
+        }
+
+        ast::visit::visit_typed_pattern_string_prefix(
+            self,
+            location,
+            left_location,
+            left_side_assignment,
+            right_location,
+            left_side_string,
+            right_side_assignment,
+        );
     }
 }

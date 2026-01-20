@@ -1,0 +1,27 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\nfn main() -> String {\n  let wibble = \"1-wibble\"\n  case wibble {\n    \"1\" as digit <> rest | \"2\" as digit <> rest -> digit <> rest\n    other -> other\n  }\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+fn main() -> String {
+  let wibble = "1-wibble"
+  case wibble {
+    "1" as digit <> rest | "2" as digit <> rest -> digit <> rest
+                                  ↑▔▔▔▔                         
+    other -> other
+  }
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+fn main() -> String {
+  let wibble = "1-wibble"
+  case wibble {
+    "1" as new_name <> rest | "2" as new_name <> rest -> new_name <> rest
+    other -> other
+  }
+}

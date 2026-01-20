@@ -1,0 +1,27 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\nfn main() {\n  let rest = \"outer\"\n  case \"1-wibble\" {\n    \"1\" <> rest -> rest\n    _ -> rest\n  }\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+fn main() {
+  let rest = "outer"
+  case "1-wibble" {
+    "1" <> rest -> rest
+           ↑▔▔▔        
+    _ -> rest
+  }
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+fn main() {
+  let rest = "outer"
+  case "1-wibble" {
+    "1" <> new_name -> new_name
+    _ -> rest
+  }
+}

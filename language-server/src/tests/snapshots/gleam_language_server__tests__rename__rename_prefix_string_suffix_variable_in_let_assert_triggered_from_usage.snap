@@ -1,0 +1,21 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\nfn main() -> String {\n  let assert \"1\" <> rest = \"1-wibble\"\n  rest\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+fn main() -> String {
+  let assert "1" <> rest = "1-wibble"
+  rest
+  ↑▔▔▔
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+fn main() -> String {
+  let assert "1" <> new_name = "1-wibble"
+  new_name
+}
