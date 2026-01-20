@@ -129,34 +129,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     location,
                     ..
                 } => {
-                    // If the function is used as a variable, then we can suggest values
-                    // from imported modules with the same name and same arity.
-                    let fun = match *fun {
-                        UntypedExpr::Var { location, name } => {
-                            self.expr_typer
-                                .infer_called_var(name, location, arguments.len() + 1)
-                        }
-                        UntypedExpr::Int { .. }
-                        | UntypedExpr::Float { .. }
-                        | UntypedExpr::String { .. }
-                        | UntypedExpr::Block { .. }
-                        | UntypedExpr::Fn { .. }
-                        | UntypedExpr::List { .. }
-                        | UntypedExpr::Call { .. }
-                        | UntypedExpr::BinOp { .. }
-                        | UntypedExpr::PipeLine { .. }
-                        | UntypedExpr::Case { .. }
-                        | UntypedExpr::FieldAccess { .. }
-                        | UntypedExpr::Tuple { .. }
-                        | UntypedExpr::TupleIndex { .. }
-                        | UntypedExpr::Todo { .. }
-                        | UntypedExpr::Panic { .. }
-                        | UntypedExpr::Echo { .. }
-                        | UntypedExpr::BitArray { .. }
-                        | UntypedExpr::RecordUpdate { .. }
-                        | UntypedExpr::NegateBool { .. }
-                        | UntypedExpr::NegateInt { .. } => self.expr_typer.infer(*fun),
-                    };
+                    let fun = self.infer_called(*fun, arguments.len() + 1);
 
                     match fun.type_().fn_types() {
                         // Rewrite as right(..args)(left)
@@ -373,33 +346,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     /// b is the `function` argument.
     fn infer_apply_pipe(&mut self, function: UntypedExpr) -> TypedExpr {
         let function_location = function.location();
-        // If the function is used as a variable, then we can suggest values
-        // from imported modules with the same name and same arity.
-        let function = Box::new(match function {
-            UntypedExpr::Var { location, name } => {
-                self.expr_typer.infer_called_var(name, location, 1)
-            }
-            UntypedExpr::Int { .. }
-            | UntypedExpr::Float { .. }
-            | UntypedExpr::String { .. }
-            | UntypedExpr::Block { .. }
-            | UntypedExpr::Fn { .. }
-            | UntypedExpr::List { .. }
-            | UntypedExpr::Call { .. }
-            | UntypedExpr::BinOp { .. }
-            | UntypedExpr::PipeLine { .. }
-            | UntypedExpr::Case { .. }
-            | UntypedExpr::FieldAccess { .. }
-            | UntypedExpr::Tuple { .. }
-            | UntypedExpr::TupleIndex { .. }
-            | UntypedExpr::Todo { .. }
-            | UntypedExpr::Panic { .. }
-            | UntypedExpr::Echo { .. }
-            | UntypedExpr::BitArray { .. }
-            | UntypedExpr::RecordUpdate { .. }
-            | UntypedExpr::NegateBool { .. }
-            | UntypedExpr::NegateInt { .. } => self.expr_typer.infer(function),
-        });
+        let function = Box::new(self.infer_called(function, 1));
 
         self.expr_typer.purity = self
             .expr_typer
@@ -430,6 +377,36 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             type_: return_type,
             fun: function,
             arguments: vec![self.typed_left_hand_value_variable_call_argument()],
+        }
+    }
+
+    fn infer_called(&mut self, function: UntypedExpr, arity: usize) -> TypedExpr {
+        match function {
+            // If the function is used as a variable, then we can suggest values
+            // from imported modules with the same name and same arity.
+            UntypedExpr::Var { location, name } => {
+                self.expr_typer.infer_called_var(name, location, arity)
+            }
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::String { .. }
+            | UntypedExpr::Block { .. }
+            | UntypedExpr::Fn { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::BinOp { .. }
+            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Case { .. }
+            | UntypedExpr::FieldAccess { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
+            | UntypedExpr::BitArray { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::NegateBool { .. }
+            | UntypedExpr::NegateInt { .. } => self.expr_typer.infer(function),
         }
     }
 

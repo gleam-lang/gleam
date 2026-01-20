@@ -14,10 +14,9 @@ expression: "\n        pub fn wibble(_) { 1 }\n        pub fn main() {\n        
 
 ----- WARNING
 warning: Unreachable code
-  ┌─ /src/warning/wrn.gleam:5:13
-  │  
-5 │ ╭             use <- wibble
-6 │ │             1
-  │ ╰─────────────^
+  ┌─ /src/warning/wrn.gleam:5:20
+  │
+5 │             use <- wibble
+  │                    ^^^^^^
 
 This code is unreachable because it comes after a `panic`.
