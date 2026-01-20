@@ -61,15 +61,10 @@ impl<'runtime> HexAuthentication<'runtime> {
         let future = hex::create_api_key(&name, &username, &password, &self.hex_config, &self.http);
         let api_key = self.runtime.block_on(future)?;
 
-        if self.local_password.is_none() {
-            println!(
-                "
-Please enter a new unique password. This will be used to locally
-encrypt your Hex API key.
-"
-            );
-        }
-        let password = self.ask_local_password()?;
+        // We are creating a new API key, so we need a new local password
+        // to encrypt it with.
+        let password = self.ask_for_new_local_password()?;
+
         let encrypted = encryption::encrypt_with_passphrase(api_key.as_bytes(), &password)
             .map_err(|e| Error::FailedToEncryptLocalHexApiKey {
                 detail: e.to_string(),
@@ -81,6 +76,36 @@ encrypt your Hex API key.
         Ok(UnencryptedApiKey {
             unencrypted: api_key,
         })
+    }
+
+    /// Create a new local password.
+    ///
+    /// The password must be long enough.
+    ///
+    /// The old password will be discarded, and the new one will be both
+    /// returned and stored in `self.local_password`
+    ///
+    fn ask_for_new_local_password(&mut self) -> Result<String> {
+        let required_length = 8;
+        self.local_password = None;
+        println!(
+            "
+Please enter a new unique password. This will be used to locally
+encrypt your Hex API key.
+
+It should be at least {required_length} characters long.
+"
+        );
+
+        loop {
+            let password = cli::ask_password(LOCAL_PASS_PROMPT)?;
+            if password.chars().count() < required_length {
+                println!("\nPlease use a password at least {required_length} characters long.")
+            } else {
+                self.local_password = Some(password.clone());
+                return Ok(password);
+            }
+        }
     }
 
     fn ask_local_password(&mut self) -> Result<String> {
