@@ -45,12 +45,8 @@
   to custom generic types.
   ([Andi Pabst](https://github.com/andipabst))
 
-- The `Extract function` code action now moves
-  - all unary anonymous functions, and
-  - any anonymous functions that don't close over variables from an
-    outer scope
-  directly to the top level of the module without unnecessarily wrapping them
-  inside another anonymous function.
+- The `Extract function` code action now provides more ergonomic/idiomatic
+  refactorings when used on anonymous functions.
   ([Hari Mohan](https://github.com/seafoamteal))
 
 ### Formatter
