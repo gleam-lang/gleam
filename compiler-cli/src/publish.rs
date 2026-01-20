@@ -326,8 +326,12 @@ fn check_for_gleam_prefix(config: &PackageConfig) -> Result<bool, Error> {
 
     println!(
         "You are about to publish a package with a name that starts with
-the prefix `gleam_`, which is for packages maintained by the Gleam
-core team.\n",
+the prefix `gleam_`, which is preferred for packages maintained by the
+Gleam core team.
+
+Security: do not assume the owner of a package from the name, always check
+the maintainers listed on https://hex.pm/.
+\n",
     );
     let password = cli::ask_password("Please enter the core team password to continue")?;
     println!();
