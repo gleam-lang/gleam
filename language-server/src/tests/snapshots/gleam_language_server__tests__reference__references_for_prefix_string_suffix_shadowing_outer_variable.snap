@@ -1,0 +1,14 @@
+---
+source: language-server/src/tests/reference.rs
+expression: "\nfn main() {\n  let rest = \"outer\"\n  case \"1-wibble\" {\n    \"1\" <> rest -> rest\n    _ -> rest\n  }\n}\n"
+---
+-- app.gleam
+
+fn main() {
+  let rest = "outer"
+  case "1-wibble" {
+    "1" <> rest -> rest
+           ↑▔▔▔    ▔▔▔▔
+    _ -> rest
+  }
+}

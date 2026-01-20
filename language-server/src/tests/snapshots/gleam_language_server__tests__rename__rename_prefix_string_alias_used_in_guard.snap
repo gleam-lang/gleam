@@ -1,0 +1,25 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\nfn main() {\n  case \"1-wibble\" {\n    \"1\" as digit <> _rest if digit == \"1\" -> digit\n    _ -> \"\"\n  }\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+fn main() {
+  case "1-wibble" {
+    "1" as digit <> _rest if digit == "1" -> digit
+           ↑▔▔▔▔                                  
+    _ -> ""
+  }
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+fn main() {
+  case "1-wibble" {
+    "1" as new_name <> _rest if new_name == "1" -> new_name
+    _ -> ""
+  }
+}

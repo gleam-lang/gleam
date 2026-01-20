@@ -1,0 +1,12 @@
+---
+source: language-server/src/tests/reference.rs
+expression: "\npub fn main() -> String {\n  let assert \"1\" as digit <> _rest = \"1-wibble\"\n  digit\n}\n"
+---
+-- app.gleam
+
+pub fn main() -> String {
+  let assert "1" as digit <> _rest = "1-wibble"
+                    ▔▔▔▔▔                      
+  digit
+  ↑▔▔▔▔
+}

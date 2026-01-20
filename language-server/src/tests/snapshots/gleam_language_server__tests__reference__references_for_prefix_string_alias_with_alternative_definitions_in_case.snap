@@ -1,0 +1,15 @@
+---
+source: language-server/src/tests/reference.rs
+expression: "\npub fn main() -> String {\n  let wibble = \"1-wibble\"\n  let digit = case wibble {\n    \"1\" as digit <> _rest | \"2\" as digit <> _rest -> digit\n    other -> other\n  }\n  digit\n}\n"
+---
+-- app.gleam
+
+pub fn main() -> String {
+  let wibble = "1-wibble"
+  let digit = case wibble {
+    "1" as digit <> _rest | "2" as digit <> _rest -> digit
+           ↑▔▔▔▔                   ▔▔▔▔▔             ▔▔▔▔▔
+    other -> other
+  }
+  digit
+}

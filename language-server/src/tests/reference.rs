@@ -48,21 +48,22 @@ fn show_references(code: &str, position: Option<Position>, ranges: &[Range]) -> 
         let mut underline_empty = true;
         let line_number = line_number as u32;
 
-        if let Some(Range { start, end }) = ranges
-            .iter()
-            .find(|range| range.start.line == line_number && range.end.line == line_number)
-        {
-            for (column_number, _) in line.chars().enumerate() {
-                let current_position = Position::new(line_number, column_number as u32);
-                if Some(current_position) == position {
-                    underline_empty = false;
-                    underline.push('↑');
-                } else if start <= &current_position && current_position < *end {
-                    underline_empty = false;
-                    underline.push('▔');
-                } else {
-                    underline.push(' ');
-                }
+        for (column_number, _) in line.chars().enumerate() {
+            let current_position = Position::new(line_number, column_number as u32);
+
+            // Check if any range covers this specific character
+            let is_in_range = ranges
+                .iter()
+                .any(|range| range.start <= current_position && current_position < range.end);
+
+            if Some(current_position) == position {
+                underline_empty = false;
+                underline.push('↑');
+            } else if is_in_range {
+                underline_empty = false;
+                underline.push('▔');
+            } else {
+                underline.push(' ');
             }
         }
 
@@ -755,5 +756,304 @@ pub fn main() -> Wibble {
 }
 ",
         find_position_of("mod.Wibble").under_char('W'),
+    );
+}
+
+#[test]
+fn references_for_prefix_string_suffix_variable_in_case() {
+    assert_references!(
+        "
+pub fn main() -> String {
+  let wibble = \"1-wibble\"
+  let rest = case wibble {
+    \"1\" <> rest -> rest
+    other -> other
+  }
+  rest
+}
+",
+        find_position_of("rest").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn references_for_prefix_string_suffix_variable_in_case_triggered_from_usage() {
+    assert_references!(
+        "
+pub fn main() -> String {
+  let wibble = \"1-wibble\"
+  let rest = case wibble {
+    \"1\" <> rest -> rest
+    other -> other
+  }
+  rest
+}
+",
+        find_position_of("rest").nth_occurrence(3)
+    );
+}
+
+#[test]
+fn references_for_prefix_string_suffix_variable_with_alternative_definition_in_case() {
+    assert_references!(
+        "
+pub fn main() -> String {
+  let wibble = \"1-wibble\"
+  let rest = case wibble {
+    \"1\" <> rest | \"2\" <> rest -> rest
+    other -> other
+  }
+  rest
+}
+",
+        find_position_of("rest").nth_occurrence(2),
+    );
+}
+
+#[test]
+fn references_for_prefix_string_suffix_variable_with_alternative_definition_triggered_from_second_pattern()
+ {
+    assert_references!(
+        "
+pub fn main() -> String {
+  let wibble = \"1-wibble\"
+  let rest = case wibble {
+    \"1\" <> rest | \"2\" <> rest -> rest
+    other -> other
+  }
+  rest
+}
+",
+        find_position_of("rest").nth_occurrence(3),
+    );
+}
+
+#[test]
+fn references_for_prefix_string_suffix_variable_with_alternative_definition_triggered_from_usage() {
+    assert_references!(
+        "
+pub fn main() -> String {
+  let wibble = \"1-wibble\"
+  let rest = case wibble {
+    \"1\" <> rest | \"2\" <> rest -> rest
+    other -> other
+  }
+  rest
+}
+",
+        find_position_of("rest").nth_occurrence(4),
+    );
+}
+
+#[test]
+fn references_for_prefix_string_suffix_variable_in_let_assert() {
+    assert_references!(
+        "
+pub fn main() -> String {
+  let assert \"1\" <> rest = \"1-wibble\"
+  rest
+}
+",
+        find_position_of("rest").nth_occurrence(1),
+    );
+}
+
+#[test]
+fn references_for_prefix_string_suffix_variable_in_let_assert_triggered_from_usage() {
+    assert_references!(
+        "
+pub fn main() -> String {
+  let assert \"1\" <> rest = \"1-wibble\"
+  rest
+}
+",
+        find_position_of("rest").nth_occurrence(2),
+    );
+}
+
+#[test]
+fn references_for_prefix_string_alias_in_case() {
+    assert_references!(
+        "
+pub fn main() -> String {
+  let wibble = \"1-wibble\"
+  let digit = case wibble {
+    \"1\" as digit <> _rest -> digit
+    other -> other
+  }
+  digit
+}
+",
+        find_position_of("digit").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn references_for_prefix_string_alias_in_case_triggered_from_usage() {
+    assert_references!(
+        "
+pub fn main() -> String {
+  let wibble = \"1-wibble\"
+  let digit = case wibble {
+    \"1\" as digit <> _rest -> digit
+    other -> other
+  }
+  digit
+}
+",
+        find_position_of("digit").nth_occurrence(3)
+    );
+}
+
+#[test]
+fn references_for_prefix_string_alias_with_alternative_definitions_in_case() {
+    assert_references!(
+        "
+pub fn main() -> String {
+  let wibble = \"1-wibble\"
+  let digit = case wibble {
+    \"1\" as digit <> _rest | \"2\" as digit <> _rest -> digit
+    other -> other
+  }
+  digit
+}
+",
+        find_position_of("digit").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn references_for_prefix_string_alias_with_alternative_definitions_triggered_from_second_pattern() {
+    assert_references!(
+        "
+pub fn main() -> String {
+  let wibble = \"1-wibble\"
+  let digit = case wibble {
+    \"1\" as digit <> _rest | \"2\" as digit <> _rest -> digit
+    other -> other
+  }
+  digit
+}
+",
+        find_position_of("digit").nth_occurrence(3)
+    );
+}
+
+#[test]
+fn references_for_prefix_string_alias_with_alternative_definitions_triggered_from_usage() {
+    assert_references!(
+        "
+pub fn main() -> String {
+  let wibble = \"1-wibble\"
+  let digit = case wibble {
+    \"1\" as digit <> _rest | \"2\" as digit <> _rest -> digit
+    other -> other
+  }
+  digit
+}
+",
+        find_position_of("digit").nth_occurrence(4)
+    );
+}
+
+#[test]
+fn references_for_prefix_string_alias_in_let_assert() {
+    assert_references!(
+        "
+pub fn main() -> String {
+  let assert \"1\" as digit <> _rest = \"1-wibble\"
+  digit
+}
+",
+        find_position_of("digit").nth_occurrence(1)
+    );
+}
+
+#[test]
+fn references_for_prefix_string_alias_in_let_assert_triggered_from_usage() {
+    assert_references!(
+        "
+pub fn main() -> String {
+  let assert \"1\" as digit <> _rest = \"1-wibble\"
+  digit
+}
+",
+        find_position_of("digit").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn references_for_prefix_string_suffix_variable_nested_in_tuple() {
+    assert_references!(
+        "
+fn main() {
+  case #(\"1-wibble\", 0) {
+    #(\"1\" <> rest, _) -> rest
+    _ -> \"\"
+  }
+}
+",
+        find_position_of("rest").nth_occurrence(1)
+    );
+}
+
+#[test]
+fn references_for_prefix_string_alias_used_in_guard() {
+    assert_references!(
+        "
+fn main() {
+  case \"1-wibble\" {
+    \"1\" as digit <> _rest if digit == \"1\" -> digit
+    _ -> \"\"
+  }
+}
+",
+        find_position_of("digit").nth_occurrence(1)
+    );
+}
+
+#[test]
+fn references_for_prefix_string_suffix_used_in_guard() {
+    assert_references!(
+        "
+fn main() {
+  case \"1-wibble\" {
+    \"1\" <> rest if rest == \"-wibble\" -> rest
+    _ -> \"\"
+  }
+}
+",
+        find_position_of("rest").nth_occurrence(1)
+    );
+}
+
+#[test]
+fn references_for_prefix_string_suffix_shadowing_outer_variable() {
+    assert_references!(
+        "
+fn main() {
+  let rest = \"outer\"
+  case \"1-wibble\" {
+    \"1\" <> rest -> rest
+    _ -> rest
+  }
+}
+",
+        find_position_of("rest").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn references_for_prefix_string_alias_and_suffix_complex_guard() {
+    assert_references!(
+        "
+fn main() {
+  case \"1-wibble\" {
+    \"1\" as digit <> rest if digit == \"1\" && rest == \"-wibble\" -> #(digit, rest)
+    _ -> #(\"\", \"\")
+  }
+}
+",
+        find_position_of("digit").nth_occurrence(1)
     );
 }
