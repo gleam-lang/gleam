@@ -49,6 +49,18 @@
   refactorings when used on anonymous functions.
   ([Hari Mohan](https://github.com/seafoamteal))
 
+- It's now possible to find references and rename variables in string prefix
+  patterns.
+
+  ```gleam
+  case wibble {
+    "1" as digit <> rest -> digit <> rest
+    //     ^^^^^    ^^^^ You can now trigger "Find references" and "Rename" from here
+  }
+  ```
+
+  ([Igor Castejón](https://github.com/IgorCastejon))
+
 ### Formatter
 
 ### Bug fixes
