@@ -71,7 +71,7 @@ impl<'runtime> HexAuthentication<'runtime> {
             })?;
 
         crate::fs::write(&path, &format!("{name}\n{encrypted}"))?;
-        println!("Encrypted Hex API key written to {path}");
+        println!("\nEncrypted Hex API key written to {path}");
 
         Ok(UnencryptedApiKey {
             unencrypted: api_key,
@@ -92,7 +92,6 @@ impl<'runtime> HexAuthentication<'runtime> {
             "
 Please enter a new unique password. This will be used to locally
 encrypt your Hex API key.
-
 It should be at least {required_length} characters long.
 "
         );
@@ -100,7 +99,7 @@ It should be at least {required_length} characters long.
         loop {
             let password = cli::ask_password(LOCAL_PASS_PROMPT)?;
             if password.chars().count() < required_length {
-                println!("\nPlease use a password at least {required_length} characters long.")
+                println!("\nPlease use a password at least {required_length} characters long.\n")
             } else {
                 self.local_password = Some(password.clone());
                 return Ok(password);
