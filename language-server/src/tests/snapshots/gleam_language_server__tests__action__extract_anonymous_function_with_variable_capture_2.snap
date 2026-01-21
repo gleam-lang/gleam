@@ -1,8 +1,10 @@
 ---
 source: language-server/src/tests/action.rs
-expression: "\npub fn main() {\n  let shorter = [1, 2, 3]\n  let longer = [4, 5, 6, 7, 8]\n  let offset = 5\n  list.map2(shorter, longer, fn(_left, right) { right + offset })\n}\n        "
+expression: "\nimport gleam/list\n\npub fn main() {\n  let shorter = [1, 2, 3]\n  let longer = [4, 5, 6, 7, 8]\n  let offset = 5\n  list.map2(shorter, longer, fn(_left, right) { right + offset })\n}\n        "
 ---
 ----- BEFORE ACTION
+
+import gleam/list
 
 pub fn main() {
   let shorter = [1, 2, 3]
@@ -15,6 +17,8 @@ pub fn main() {
 
 
 ----- AFTER ACTION
+
+import gleam/list
 
 pub fn main() {
   let shorter = [1, 2, 3]

@@ -1,26 +1,30 @@
 ---
 source: language-server/src/tests/action.rs
-expression: "\npub fn main() {\n  let wrong = [25, 81, 74, 41, 33]\n  let right = 42\n  list.map(haystack, fn(_) { right })\n}\n        "
+expression: "\nimport gleam/list\n\npub fn main() {\n  let needle = 42\n  let haystack = [25, 81, 74, 42, 33]\n  list.filter(haystack, fn(_) { needle == 42 })\n}\n        "
 ---
 ----- BEFORE ACTION
 
+import gleam/list
+
 pub fn main() {
-  let wrong = [25, 81, 74, 41, 33]
-  let right = 42
-  list.map(haystack, fn(_) { right })
-                     ▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑ 
+  let needle = 42
+  let haystack = [25, 81, 74, 42, 33]
+  list.filter(haystack, fn(_) { needle == 42 })
+                        ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑ 
 }
         
 
 
 ----- AFTER ACTION
 
+import gleam/list
+
 pub fn main() {
-  let wrong = [25, 81, 74, 41, 33]
-  let right = 42
-  list.map(haystack, function(_, right))
+  let needle = 42
+  let haystack = [25, 81, 74, 42, 33]
+  list.filter(haystack, function(_, needle))
 }
 
-fn function(_value: a, right: Int) -> Int {
-  right
+fn function(_int: Int, needle: Int) -> Bool {
+  needle == 42
 }

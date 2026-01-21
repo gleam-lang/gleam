@@ -11732,43 +11732,85 @@ pub fn main() {
 
 #[test]
 fn extract_anonymous_function_without_variable_capture_2() {
-    assert_code_action!(
-        EXTRACT_FUNCTION,
-        r#"
+    let src = r#"
+import gleam/io
+import gleam/list
+
 pub fn main() {
   list.each(list.range(0, 10), fn(_) { io.println("wibble wobble") })
 }
-        "#,
+        "#;
+
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        TestProject::for_source(src)
+            .add_hex_module(
+                "gleam/io",
+                "
+                    pub fn println(string: String) -> Nil { todo }
+                "
+            )
+            .add_hex_module(
+                "gleam/list",
+                "
+                    pub fn each(list: List(a), f: fn(a) -> b) -> Nil { todo }
+                    pub fn range(from start: Int, to stop: Int) -> List(Int) { todo }
+                "
+            ),
         find_position_of("fn(").select_until(find_position_of("}"))
     );
 }
 
 #[test]
 fn extract_unary_anonymous_function_with_variable_capture_1() {
-    assert_code_action!(
-        EXTRACT_FUNCTION,
-        "
+    let src = "
+import gleam/list
+
 pub fn main() {
   let needle = 42
   let haystack = [25, 81, 74, 42, 33]
   list.filter(haystack, fn(x) { x == needle })
 }
-        ",
+        ";
+
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        TestProject::for_source(src).add_hex_module(
+            "gleam/list",
+            "
+                pub fn filter(
+                  list: List(a),
+                  keeping predicate: fn(a) -> Bool,
+                ) -> List(a) { todo }
+            "
+        ),
         find_position_of("fn(").select_until(find_position_of("}"))
     );
 }
 
 #[test]
 fn extract_unary_anonymous_function_with_variable_capture_2() {
+    let src = "
+import gleam/list
+
+pub fn main() {
+  let needle = 42
+  let haystack = [25, 81, 74, 42, 33]
+  list.filter(haystack, fn(_) { needle == 42 })
+}
+        ";
+
     assert_code_action!(
         EXTRACT_FUNCTION,
-        "
-pub fn main() {
-  let wrong = [25, 81, 74, 41, 33]
-  let right = 42
-  list.map(haystack, fn(_) { right })
-}
-        ",
+        TestProject::for_source(src).add_hex_module(
+            "gleam/list",
+            "
+                pub fn filter(
+                  list: List(a),
+                  keeping predicate: fn(a) -> Bool,
+                ) -> List(a) { todo }
+            "
+        ),
         find_position_of("fn(").select_until(find_position_of("}"))
     );
 }
@@ -11791,16 +11833,29 @@ pub fn main() {
 
 #[test]
 fn extract_anonymous_function_with_variable_capture_2() {
-    assert_code_action!(
-        EXTRACT_FUNCTION,
-        "
+    let src = "
+import gleam/list
+
 pub fn main() {
   let shorter = [1, 2, 3]
   let longer = [4, 5, 6, 7, 8]
   let offset = 5
   list.map2(shorter, longer, fn(_left, right) { right + offset })
 }
-        ",
+        ";
+
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        TestProject::for_source(src).add_hex_module(
+            "gleam/list",
+            "
+                pub fn map2(
+                  list1: List(a),
+                  list2: List(b),
+                  with fun: fn(a, b) -> c,
+                ) -> List(c) { todo }
+            "
+        ),
         find_position_of("fn(").select_until(find_position_of("}"))
     );
 }

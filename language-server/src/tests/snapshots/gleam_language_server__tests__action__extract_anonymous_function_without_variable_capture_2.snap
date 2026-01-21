@@ -1,8 +1,11 @@
 ---
 source: language-server/src/tests/action.rs
-expression: "\npub fn main() {\n  list.each(list.range(0, 10), fn(_) { io.println(\"wibble wobble\") })\n}\n        "
+expression: "\nimport gleam/io\nimport gleam/list\n\npub fn main() {\n  list.each(list.range(0, 10), fn(_) { io.println(\"wibble wobble\") })\n}\n        "
 ---
 ----- BEFORE ACTION
+
+import gleam/io
+import gleam/list
 
 pub fn main() {
   list.each(list.range(0, 10), fn(_) { io.println("wibble wobble") })
@@ -13,10 +16,13 @@ pub fn main() {
 
 ----- AFTER ACTION
 
+import gleam/io
+import gleam/list
+
 pub fn main() {
   list.each(list.range(0, 10), function)
 }
 
-fn function(_value: b) -> a {
+fn function(_int: Int) -> Nil {
   io.println("wibble wobble")
 }
