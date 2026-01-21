@@ -1,0 +1,30 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  let outer_scope = 3\n  let wibble = fn(a, b) {\n    a + b + outer_scope\n  }\n}\n        "
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let outer_scope = 3
+  let wibble = fn(a, b) {
+               ▔▔▔▔▔▔▔▔▔▔
+    a + b + outer_scope
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  }
+▔▔↑
+}
+        
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let outer_scope = 3
+  let wibble = fn(a, b) {
+    function(a, b, outer_scope)
+  }
+}
+
+fn function(a: Int, b: Int, outer_scope: Int) -> Int {
+  a + b + outer_scope
+}

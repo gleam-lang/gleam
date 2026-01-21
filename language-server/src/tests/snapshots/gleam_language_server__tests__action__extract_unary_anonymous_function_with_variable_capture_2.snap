@@ -1,0 +1,26 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  let wrong = [25, 81, 74, 41, 33]\n  let right = 42\n  list.map(haystack, fn(_) { right })\n}\n        "
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let wrong = [25, 81, 74, 41, 33]
+  let right = 42
+  list.map(haystack, fn(_) { right })
+                     ▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑ 
+}
+        
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let wrong = [25, 81, 74, 41, 33]
+  let right = 42
+  list.map(haystack, function(_, right))
+}
+
+fn function(_value: a, right: Int) -> Int {
+  right
+}

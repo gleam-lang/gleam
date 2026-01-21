@@ -1,0 +1,22 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  list.each(list.range(0, 10), fn(_) { io.println(\"wibble wobble\") })\n}\n        "
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  list.each(list.range(0, 10), fn(_) { io.println("wibble wobble") })
+                               ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑ 
+}
+        
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  list.each(list.range(0, 10), function)
+}
+
+fn function(_value: b) -> a {
+  io.println("wibble wobble")
+}

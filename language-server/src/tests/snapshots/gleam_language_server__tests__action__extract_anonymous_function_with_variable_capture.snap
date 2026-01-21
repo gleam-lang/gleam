@@ -1,10 +1,10 @@
 ---
 source: language-server/src/tests/action.rs
-expression: "\n pub fn main() {\n  let outer_scope = 3\n  let wibble = fn(a, b) {\n    a + b + outer_scope\n  }\n}\n        "
+expression: "\npub fn main() {\n  let outer_scope = 3\n  let wibble = fn(a, b) {\n    a + b + outer_scope\n  }\n}\n        "
 ---
 ----- BEFORE ACTION
 
- pub fn main() {
+pub fn main() {
   let outer_scope = 3
   let wibble = fn(a, b) {
                ▔▔▔▔▔▔▔▔▔▔
@@ -18,7 +18,7 @@ expression: "\n pub fn main() {\n  let outer_scope = 3\n  let wibble = fn(a, b) 
 
 ----- AFTER ACTION
 
- pub fn main() {
+pub fn main() {
   let outer_scope = 3
   let wibble = fn(a, b) {
     function(a, b, outer_scope)

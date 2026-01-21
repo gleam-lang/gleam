@@ -1,10 +1,10 @@
 ---
 source: language-server/src/tests/action.rs
-expression: "\n pub fn main() {\n  let int_pow = fn(base, exp) {\n    case exp {\n      exp if exp < 0 -> 0\n      0 -> base\n      exp -> int_pow(base * exp, exp - 1)\n    }\n  }\n}\n        "
+expression: "\npub fn main() {\n  let int_pow = fn(base, exp) {\n    case exp {\n      exp if exp < 0 -> 0\n      0 -> base\n      exp -> int_pow(base * exp, exp - 1)\n    }\n  }\n}\n        "
 ---
 ----- BEFORE ACTION
 
- pub fn main() {
+pub fn main() {
   let int_pow = fn(base, exp) {
                 ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
     case exp {
@@ -25,7 +25,7 @@ expression: "\n pub fn main() {\n  let int_pow = fn(base, exp) {\n    case exp {
 
 ----- AFTER ACTION
 
- pub fn main() {
+pub fn main() {
   let int_pow = function
 }
 
