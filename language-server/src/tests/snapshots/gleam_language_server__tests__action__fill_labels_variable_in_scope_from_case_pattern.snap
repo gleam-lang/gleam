@@ -1,0 +1,31 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub type Player {\n    Player(name: String, team: String)\n}\n\npub fn main(result: Result(String, Nil)) {\n    case result {\n        Ok(name) -> Player(team: \"BLU\")\n        Error(_) -> Player(team: \"RED\", name: \"Unknown\")\n    }\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Player {
+    Player(name: String, team: String)
+}
+
+pub fn main(result: Result(String, Nil)) {
+    case result {
+        Ok(name) -> Player(team: "BLU")
+                    ↑                  
+        Error(_) -> Player(team: "RED", name: "Unknown")
+    }
+}
+
+
+----- AFTER ACTION
+
+pub type Player {
+    Player(name: String, team: String)
+}
+
+pub fn main(result: Result(String, Nil)) {
+    case result {
+        Ok(name) -> Player(team: "BLU", name:)
+        Error(_) -> Player(team: "RED", name: "Unknown")
+    }
+}
