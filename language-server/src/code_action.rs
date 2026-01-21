@@ -10112,3 +10112,164 @@ impl<'ast> ast::visit::Visit<'ast> for MergeCaseBranches<'ast> {
         ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
     }
 }
+
+pub struct SplitCaseBranches<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    patterns_to_split: Option<SplittablePatterns>,
+}
+
+struct SplittablePatterns {
+    clause_location: SrcSpan,
+    body_location: SrcSpan,
+    selected_patterns: Vec<SrcSpan>,
+    unselected_patterns: Vec<SrcSpan>,
+    first_pattern_selected: bool,
+}
+
+impl<'a> SplitCaseBranches<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            patterns_to_split: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(splittable) = self.patterns_to_split else {
+            return vec![];
+        };
+
+        let clause_range = self.edits.src_span_to_lsp_range(splittable.clause_location);
+        let indent_size = count_indentation(
+            &self.module.code,
+            self.edits.line_numbers,
+            clause_range.start.line,
+        );
+        let indent = " ".repeat(indent_size);
+        let body_text = code_at(self.module, splittable.body_location);
+
+        // Each selected pattern becomes its own clause
+        let split_clauses: Vec<String> = splittable
+            .selected_patterns
+            .iter()
+            .map(|loc| format!("{} -> {}", code_at(self.module, *loc), body_text))
+            .collect();
+
+        // Unselected patterns stay grouped
+        let grouped_clause: Option<String> = if splittable.unselected_patterns.is_empty() {
+            None
+        } else {
+            let patterns: Vec<&str> = splittable
+                .unselected_patterns
+                .iter()
+                .map(|loc| code_at(self.module, *loc))
+                .collect();
+            Some(format!("{} -> {}", patterns.join(" | "), body_text))
+        };
+
+        let new_clauses: Vec<String> = if splittable.first_pattern_selected {
+            split_clauses.into_iter().chain(grouped_clause).collect()
+        } else {
+            grouped_clause.into_iter().chain(split_clauses).collect()
+        };
+
+        self.edits.replace(
+            splittable.clause_location,
+            new_clauses.join(&format!("\n{indent}")),
+        );
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Split alternative patterns")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(false)
+            .push_to(&mut action);
+
+        action
+    }
+
+    fn select_splittable_patterns(
+        &self,
+        clause: &'a ast::TypedClause,
+    ) -> Option<SplittablePatterns> {
+        if clause.guard.is_some() {
+            return None;
+        }
+
+        let all_patterns: Vec<SrcSpan> = iter::once(pattern_location(&clause.pattern))
+            .chain(clause.alternative_patterns.iter().map(pattern_location))
+            .collect();
+
+        let first_pattern_location = *all_patterns.first()?;
+        let first_range = self.edits.src_span_to_lsp_range(first_pattern_location);
+        let first_pattern_selected = overlaps(self.params.range, first_range);
+
+        let (selected, unselected): (Vec<SrcSpan>, Vec<SrcSpan>) =
+            all_patterns.into_iter().partition(|loc| {
+                let range = self.edits.src_span_to_lsp_range(*loc);
+                overlaps(self.params.range, range)
+            });
+
+        if selected.is_empty() || selected.len() + unselected.len() < 2 {
+            return None;
+        }
+
+        Some(SplittablePatterns {
+            clause_location: clause.location,
+            body_location: clause.then.location(),
+            selected_patterns: selected,
+            unselected_patterns: unselected,
+            first_pattern_selected,
+        })
+    }
+}
+
+fn pattern_location(patterns: &ast::MultiPattern<Arc<Type>>) -> SrcSpan {
+    let start = patterns
+        .first()
+        .map(|p| p.location().start)
+        .unwrap_or_default();
+    let end = patterns
+        .last()
+        .map(|p| p.location().end)
+        .unwrap_or_default();
+    SrcSpan::new(start, end)
+}
+
+impl<'ast> ast::visit::Visit<'ast> for SplitCaseBranches<'_> {
+    fn visit_typed_expr_case(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        subjects: &'ast [TypedExpr],
+        clauses: &'ast [ast::TypedClause],
+        compiled_case: &'ast CompiledCase,
+    ) {
+        let case_range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, case_range) {
+            return;
+        }
+
+        for clause in clauses {
+            if clause.alternative_patterns.is_empty() {
+                continue;
+            }
+
+            if let result @ Some(_) = self.select_splittable_patterns(clause) {
+                self.patterns_to_split = result;
+            }
+        }
+
+        ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
+    }
+}

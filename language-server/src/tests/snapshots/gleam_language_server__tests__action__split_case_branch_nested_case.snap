@@ -1,0 +1,31 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn go(a: Int, b: Int) {\n  case a {\n    1 -> case b {\n      10 | 20 | 30 -> \"tens\"\n      _ -> \"other\"\n    }\n    _ -> \"not one\"\n  }\n}"
+---
+----- BEFORE ACTION
+
+pub fn go(a: Int, b: Int) {
+  case a {
+    1 -> case b {
+      10 | 20 | 30 -> "tens"
+      ▔▔▔▔▔▔▔▔▔▔↑           
+      _ -> "other"
+    }
+    _ -> "not one"
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn go(a: Int, b: Int) {
+  case a {
+    1 -> case b {
+      10 -> "tens"
+      20 -> "tens"
+      30 -> "tens"
+      _ -> "other"
+    }
+    _ -> "not one"
+  }
+}

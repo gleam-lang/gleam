@@ -1,0 +1,25 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn go(a: Int, b: Int) {\n  case a, b {\n    1, 1 | 2, 2 | 3, 3 -> \"equal\"\n    _, _ -> \"not equal\"\n  }\n}"
+---
+----- BEFORE ACTION
+
+pub fn go(a: Int, b: Int) {
+  case a, b {
+    1, 1 | 2, 2 | 3, 3 -> "equal"
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑              
+    _, _ -> "not equal"
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn go(a: Int, b: Int) {
+  case a, b {
+    1, 1 -> "equal"
+    2, 2 -> "equal"
+    3, 3 -> "equal"
+    _, _ -> "not equal"
+  }
+}
