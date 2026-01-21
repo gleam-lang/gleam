@@ -35,6 +35,9 @@
   8 characters in length.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Added `gleam hex deauthenticate` command.
+  ([Samuel Cristobal](https://github.com/scristobal))
+
 ### Language server
 
 - The language server now allows extracting the start of a pipeline into a
