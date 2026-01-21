@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+type One = Int
+type Two = One
+
+fn wibble() -> Two {
+               ↑    
+  0
+}
+
+----- Jumped to `src/app.gleam`
+
+type One = Int
+type Two = One
+↑▔▔▔▔▔▔▔▔▔▔▔▔▔
+
+fn wibble() -> Two {
+  0
+}

@@ -41,6 +41,9 @@
   variable.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now supports go-to-definition for type aliases.
+  ([Vladislav Shakitskiy](https://github.com/vshakitskiy))
+
 ### Formatter
 
 ### Bug fixes
