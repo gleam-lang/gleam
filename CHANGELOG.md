@@ -55,7 +55,8 @@
   ```gleam
   case wibble {
     "1" as digit <> rest -> digit <> rest
-    //     ^^^^^    ^^^^ You can now trigger "Find references" and "Rename" from here
+    //     ^^^^^    ^^^^
+    // You can now trigger "Find references" and "Rename" from here
   }
   ```
 
