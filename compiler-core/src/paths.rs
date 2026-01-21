@@ -1,4 +1,7 @@
-use crate::build::{Mode, Target};
+use crate::{
+    build::{Mode, Target},
+    manifest::Base16Checksum,
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -126,8 +129,8 @@ impl ProjectPaths {
     }
 }
 
-pub fn global_package_cache_package_tarball(package_name: &str, version: &str) -> Utf8PathBuf {
-    global_packages_cache().join(format!("{package_name}-{version}.tar"))
+pub fn global_package_cache_package_tarball(checksum: &Base16Checksum) -> Utf8PathBuf {
+    global_packages_cache().join(format!("{}.tar", checksum.to_string()))
 }
 
 pub fn global_hexpm_credentials_path() -> Utf8PathBuf {
@@ -166,12 +169,12 @@ fn paths() {
     assert!(global_packages_cache().ends_with("hex/hexpm/packages"));
 
     assert!(
-        global_package_cache_package_tarball("gleam_stdlib", "0.17.1")
-            .ends_with("hex/hexpm/packages/gleam_stdlib-0.17.1.tar")
+        global_package_cache_package_tarball(&Base16Checksum(vec![0, 0, 0, 0]))
+            .ends_with("hex/hexpm/packages/00000000.tar")
     );
 
     assert!(
-        global_package_cache_package_tarball("elli", "1.0.0")
-            .ends_with("hex/hexpm/packages/elli-1.0.0.tar")
+        global_package_cache_package_tarball(&Base16Checksum(vec![0x3A, 0x21, 0xF4]))
+            .ends_with("hex/hexpm/packages/3A21F4.tar")
     );
 }

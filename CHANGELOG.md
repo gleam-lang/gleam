@@ -184,3 +184,7 @@
 - Fixed a bug where generics in custom types would not be properly generated
   when emitting TypeScript declarations.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the package cache would not properly be reset when a version
+  of a package was replaced on Hex.
+  ([Surya Rose](https://github.com/GearsDatapacks))
