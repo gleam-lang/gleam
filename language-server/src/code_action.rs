@@ -9490,9 +9490,9 @@ impl<'a> ExtractFunction<'a> {
         }
     }
 
-    /// An anonymous function that does not capture any variables from an
-    /// outer scope can be trivially extracted to the module top-level and
-    /// replaced with a reference to the newly created function.
+    /// For anonymous functions that do not capture any variables from an outer scope.
+    /// Moves the function so it is defined at the module top-level instead,
+    /// replacing the original literal with a reference to the new function.
     fn extract_anonymous_function(
         &mut self,
         location: SrcSpan,
@@ -9501,6 +9501,25 @@ impl<'a> ExtractFunction<'a> {
         return_type: Arc<Type>,
         function_end: u32,
     ) {
+        // --- BEFORE
+        // ```gleam
+        // pub fn main() {
+        //   list.each([1, 2, 3], fn(x) { io.println(int.to_string(x)) })
+        //                        ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑
+        // }
+        // ```
+        //
+        // --- AFTER
+        // ```gleam
+        // pub fn main() {
+        //   list.each([1, 2, 3], function)
+        // }
+        //
+        // fn function(x: Int) -> Nil {
+        //   io.println(int.to_string(x))
+        // }
+        // ```
+
         let name = self.function_name();
         self.edits.replace(location, name.to_string());
 
@@ -9529,10 +9548,10 @@ impl<'a> ExtractFunction<'a> {
         self.edits.insert(function_end, function);
     }
 
-    /// Even if an anonymous function captures variables from an external
-    /// scope, it can still be refactored more ergonomically than the default
-    /// _if it only expects a single argument_. In this case, the original
-    /// argument can be replaced with a capture hole.
+    /// For anonymous functions that capture variables from an external scope
+    /// but only expect a single argument.
+    /// Uses function caputre syntax to provide a more concise refactoring than
+    /// `extract_anonymous_function_body`.
     fn extract_anonymous_function_with_capture_hole(
         &mut self,
         location: SrcSpan,
@@ -9543,6 +9562,29 @@ impl<'a> ExtractFunction<'a> {
         function_end: u32,
     ) {
         let name = self.function_name();
+
+        // --- BEFORE
+        // ```gleam
+        // pub fn main() {
+        //   let needle = 42
+        //   let haystack = [25, 81, 74, 42, 33]
+        //   list.filter(haystack, fn(x) { x == needle })
+        //                         ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑
+        // }
+        // ```
+        //
+        // --- AFTER
+        // ```gleam
+        // pub fn main() {
+        //   let needle = 42
+        //   let haystack = [25, 81, 74, 42, 33]
+        //   list.filter(haystack, function(_, needle))
+        // }
+        //
+        // fn function(x: Int, needle: Int) -> Bool {
+        //   x == needle
+        // }
+        // ```
 
         let call = format!(
             "{name}(_, {})",
@@ -9574,10 +9616,8 @@ impl<'a> ExtractFunction<'a> {
         self.edits.insert(function_end, function);
     }
 
-    /// In the case where a non-unary anonymous function captures variables
-    /// from an external scope, the idiomatic refactoring is to replace the
-    /// _body_ of this function with a newly generated function that accepts
-    /// all the original arguments and captured variables as parameters.
+    /// For non-unary anonymous functions that capture variables from an external scope.
+    /// Replaces just the _function body_ with a call to the newly generated function.
     fn extract_anonymous_function_body(
         &mut self,
         location: SrcSpan,
@@ -9587,6 +9627,26 @@ impl<'a> ExtractFunction<'a> {
         function_end: u32,
     ) {
         let name = self.function_name();
+        // --- BEFORE
+        // ```gleam
+        // pub fn main() {
+        //   let factor = 2
+        //   list.fold([], 0, fn(acc, value) { acc + value * factor })
+        //                    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑
+        // }
+        // ```
+        //
+        // --- AFTER
+        // ```gleam
+        // pub fn main() {
+        //   let factor = 2
+        //   list.fold([], 0, fn(acc, value) { function(acc, value, factor) })
+        // }
+        //
+        // fn function(acc: Int, value: Int, factor: Int) -> Int {
+        //   acc + value * factor
+        // }
+        // ```
 
         // if the programmer has ignored an argument, the generated function
         // cannot take it as an parameter
