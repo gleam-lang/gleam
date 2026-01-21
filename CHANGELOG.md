@@ -124,3 +124,8 @@
 - Fixed a bug where renaming would not work properly if there was an error in
   target file.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where enabling `typescript_declarations = true` wouldn't generate
+  TypeScript declarations unless the build directory was manually deleted. The
+  compiler now automatically rebuilds the project when this configuration changes.
+  ([daniellionel01](https://github.com/daniellionel01))
