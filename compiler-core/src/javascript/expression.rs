@@ -1113,10 +1113,40 @@ impl<'module, 'a> Generator<'module, 'a> {
                 BinOp::LtEqInt | BinOp::LtEqFloat => self.print_bin_op(left, right, ">"),
                 BinOp::GtInt | BinOp::GtFloat => self.print_bin_op(left, right, "<="),
                 BinOp::GtEqInt | BinOp::GtEqFloat => self.print_bin_op(left, right, "<"),
-                _ => unreachable!("type checking should make this impossible"),
+                BinOp::AddInt
+                | BinOp::AddFloat
+                | BinOp::SubInt
+                | BinOp::SubFloat
+                | BinOp::MultInt
+                | BinOp::MultFloat
+                | BinOp::DivInt
+                | BinOp::DivFloat
+                | BinOp::RemainderInt
+                | BinOp::Concatenate => unreachable!("type checking should make this impossible"),
             },
             TypedExpr::NegateBool { value, .. } => self.wrap_expression(value),
-            _ => docvec!["!", self.wrap_expression(value)],
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => docvec!["!", self.wrap_expression(value)],
         }
     }
 
