@@ -1,5 +1,6 @@
 use camino::Utf8Path;
 use debug_ignore::DebugIgnore;
+use ecow::EcoString;
 use flate2::read::GzDecoder;
 use futures::future;
 use hexpm::{ApiError, version::Version};
@@ -30,7 +31,7 @@ fn key_name(hostname: &str) -> String {
 pub async fn publish_package<Http: HttpClient>(
     release_tarball: Vec<u8>,
     version: String,
-    name: String,
+    name: &str,
     api_key: &str,
     config: &hexpm::Config,
     replace: bool,
@@ -41,7 +42,10 @@ pub async fn publish_package<Http: HttpClient>(
     let response = http.send(request).await?;
     hexpm::api_publish_package_response(response).map_err(|e| match e {
         ApiError::NotReplacing => Error::HexPublishReplaceRequired { version },
-        ApiError::Forbidden => Error::HexPackageAlreadyExists { name, version },
+        ApiError::Forbidden => Error::HexPackageAlreadyExists {
+            name: name.into(),
+            version,
+        },
         _ => Error::hex(e),
     })
 }
