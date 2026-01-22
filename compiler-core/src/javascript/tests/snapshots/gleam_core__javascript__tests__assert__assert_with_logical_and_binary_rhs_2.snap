@@ -1,11 +1,11 @@
 ---
 source: compiler-core/src/javascript/tests/assert.rs
-expression: "\npub fn main() {\n   assert True && \"foo\" == \"foo\"\n}\n"
+expression: "\npub fn main() {\n  assert True && \"wibble\" == \"wibble\"\n}\n"
 ---
 ----- SOURCE CODE
 
 pub fn main() {
-   assert True && "foo" == "foo"
+  assert True && "wibble" == "wibble"
 }
 
 
@@ -16,7 +16,7 @@ const FILEPATH = "src/module.gleam";
 
 export function main() {
   if (true) {
-    if ("foo" !== "foo") {
+    if ("wibble" !== "wibble") {
       throw makeError(
         "assert",
         FILEPATH,
@@ -27,11 +27,11 @@ export function main() {
         {
           kind: "binary_operator",
           operator: "&&",
-          left: { kind: "literal", value: true, start: 27, end: 31 },
-          right: { kind: "expression", value: false, start: 35, end: 49 },
-          start: 20,
-          end: 49,
-          expression_start: 27
+          left: { kind: "literal", value: true, start: 26, end: 30 },
+          right: { kind: "expression", value: false, start: 34, end: 54 },
+          start: 19,
+          end: 54,
+          expression_start: 26
         }
       )
     }
@@ -46,11 +46,11 @@ export function main() {
       {
         kind: "binary_operator",
         operator: "&&",
-        left: { kind: "literal", value: false, start: 27, end: 31 },
-        right: { kind: "unevaluated", start: 35, end: 49 },
-        start: 20,
-        end: 49,
-        expression_start: 27
+        left: { kind: "literal", value: false, start: 26, end: 30 },
+        right: { kind: "unevaluated", start: 34, end: 54 },
+        start: 19,
+        end: 54,
+        expression_start: 26
       }
     )
   }
