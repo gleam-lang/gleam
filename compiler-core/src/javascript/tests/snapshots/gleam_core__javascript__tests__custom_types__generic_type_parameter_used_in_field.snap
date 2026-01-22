@@ -1,0 +1,44 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub type Wibble(value, error) {\n  Wibble(\n    wibble: value,\n    wobble: Result(value, error),\n    wubble: error,\n  )\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble(value, error) {
+  Wibble(
+    wibble: value,
+    wobble: Result(value, error),
+    wubble: error,
+  )
+}
+
+
+----- TYPESCRIPT DEFINITIONS
+import type * as _ from "../gleam.d.mts";
+
+export class Wibble<I, J> extends _.CustomType {
+  /** @deprecated */
+  constructor(wibble: I, wobble: _.Result<I, J>, wubble: J);
+  /** @deprecated */
+  wibble: I;
+  /** @deprecated */
+  wobble: _.Result<I, J>;
+  /** @deprecated */
+  wubble: J;
+}
+export function Wibble$Wibble<I, J>(
+  wibble: I,
+  wobble: _.Result<I, J>,
+  wubble: J,
+): Wibble$<I, J>;
+export function Wibble$isWibble<I, J>(value: Wibble$<I, J>): boolean;
+export function Wibble$Wibble$0<I, J>(value: Wibble$<I, J>): I;
+export function Wibble$Wibble$wibble<I, J>(value: Wibble$<I, J>): I;
+export function Wibble$Wibble$1<I, J>(value: Wibble$<I, J>): _.Result<I, J>;
+export function Wibble$Wibble$wobble<I, J>(value: Wibble$<I, J>): _.Result<I, J>;
+export function Wibble$Wibble$2<I, J>(
+  value: Wibble$<I, J>,
+): J;
+export function Wibble$Wibble$wubble<I, J>(value: Wibble$<I, J>): J;
+
+export type Wibble$<I, J> = Wibble<I, J>;

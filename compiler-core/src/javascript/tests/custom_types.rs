@@ -976,3 +976,19 @@ pub opaque type Wobble {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5312
+#[test]
+fn generic_type_parameter_used_in_field() {
+    assert_ts_def!(
+        "
+pub type Wibble(value, error) {
+  Wibble(
+    wibble: value,
+    wobble: Result(value, error),
+    wubble: error,
+  )
+}
+"
+    );
+}
