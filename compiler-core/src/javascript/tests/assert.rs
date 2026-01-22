@@ -219,7 +219,7 @@ fn assert_with_logical_and_binary_rhs_2() {
     assert_js!(
         "
 pub fn main() {
-   assert True && \"foo\" == \"foo\"
+  assert True && \"wibble\" == \"wibble\"
 }
 "
     );
@@ -231,7 +231,7 @@ fn assert_with_logical_and_binary_rhs_3() {
     assert_js!(
         "
 pub fn main() {
-    assert True && \"foo\" != \"bar\"
+  assert True && \"wobble\" != \"wobble\"
 }
 "
     );
@@ -243,10 +243,10 @@ fn assert_with_case_rhs() {
     assert_js!(
         "
 pub fn main() {
-    assert True && case 1 > 2 {
-        True -> True
-        False -> False
-    }
+  assert True && case 1 > 2 {
+    True -> True
+    False -> False
+  }
 }
 "
     );
@@ -258,10 +258,10 @@ fn assert_with_negated_case_rhs() {
     assert_js!(
         "
 pub fn main() {
-    assert True && !case 3 - 2 {
-        1 -> True
-        _ -> False
-    }
+  assert True && !case 3 - 2 {
+    1 -> True
+    _ -> False
+  }
 }
 "
     );

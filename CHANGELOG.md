@@ -136,6 +136,10 @@
 - Fixed a bug that would result in not being able to rename an aliased pattern.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed JavaScript codegen bug for `assert` when using `&&` with comparison
+  operators on the right side.
+  ([vyacheslavhere](https://github.com/vyacheslavhere))
+
 - Added an error message when attempting to update packages that are not
   dependencies of the project, instead of failing silently.
   ([Etienne Boutet](https://github.com/EtienneBoutet),
