@@ -128,3 +128,7 @@
 - Fixed a bug where renaming would not work properly if there was an error in
   target file.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where generics in custom types would not be properly generated
+  when emitting TypeScript declarations.
+  ([Surya Rose](https://github.com/GearsDatapacks))
