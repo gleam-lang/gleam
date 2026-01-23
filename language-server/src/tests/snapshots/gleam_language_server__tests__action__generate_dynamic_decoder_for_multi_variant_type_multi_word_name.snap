@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub type Wibble {\n  OneTwo(wibble: Int, next: Wibble)\n  ThreeFour(wobble: Float, text: String, values: List(Bool))\n  FiveSixSeven(one_two: Int)\n}\n"
 ---
 ----- BEFORE ACTION
@@ -39,6 +39,6 @@ fn wibble_decoder() -> decode.Decoder(Wibble) {
       use one_two <- decode.field("one_two", decode.int)
       decode.success(FiveSixSeven(one_two:))
     }
-    _ -> decode.failure(todo as "Zero value for Wibble", "Wibble")
+    _ -> decode.failure(FiveSixSeven(one_two: 0), "Wibble")
   }
 }

@@ -154,6 +154,10 @@
 
   ([Vladislav Shakitskiy](https://github.com/vshakitskiy))
 
+- The language server now performs best-effort zero value generation for
+  `decode.failure` when using the `Generate Dynamic Decoder` code action.
+  ([Hari Mohan](https://github.com/seafoamteal))
+
 ### Formatter
 
 ### Bug fixes
