@@ -1,0 +1,19 @@
+---
+source: language-server/src/tests/hover.rs
+expression: "\npub fn main() {\n  case \"wibble\" {\n    \"wib\" as prefix <> rest | \"wob\" as prefix <> rest -> prefix <> rest\n    other -> other\n  }\n}\n"
+---
+pub fn main() {
+  case "wibble" {
+    "wib" as prefix <> rest | "wob" as prefix <> rest -> prefix <> rest
+                                       ↑▔▔▔▔▔                          
+    other -> other
+  }
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nString\n```",
+    ),
+)
