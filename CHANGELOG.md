@@ -167,6 +167,10 @@
   interpolated expression.
   ([Hari Mohan](https://github.com/seafoamteal))
 
+- The language server now performs best-effort zero value generation for
+  `decode.failure` when using the `Generate Dynamic Decoder` code action.
+  ([Hari Mohan](https://github.com/seafoamteal))
+
 ### Formatter
 
 ### Bug fixes

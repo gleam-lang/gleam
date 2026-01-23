@@ -4232,21 +4232,31 @@ impl<'a> GenerateDynamicDecoder<'a> {
             eco_format!("use variant <- {module}.field(\"type\", {module}.string)")
         };
 
+        let mut zero_constructor = first;
         let mut clauses = Vec::with_capacity(constructors_size);
         for constructor in iter::once(first).chain(rest) {
             let body = self.constructor_decoder(mode, custom_type, constructor, 4)?;
             let name = to_snake_case(&constructor.name);
             clauses.push(eco_format!(r#"    "{name}" -> {body}"#));
+
+            // We look for the variant constructor with the fewest fields
+            // because it's a simple heuristic to try and generate a zero
+            // value that is textually short and therefore doesn't add visual
+            // noise to the codebase.
+            if constructor.arguments.len() < zero_constructor.arguments.len() {
+                zero_constructor = constructor;
+            }
         }
 
+        let failure_clause = self.failure_clause(custom_type, zero_constructor);
+
         let cases = clauses.join("\n");
-        let type_name = &custom_type.name;
         Some(eco_format!(
             r#"{{
   {discriminant}
   case variant {{
 {cases}
-    _ -> {module}.failure(todo as "Zero value for {type_name}", "{type_name}")
+{failure_clause}
   }}
 }}"#,
         ))
@@ -4308,6 +4318,66 @@ impl<'a> GenerateDynamicDecoder<'a> {
 {indent}}}",
             )
         })
+    }
+
+    /// Generates the failure/catch-all clause in a decoder function for a
+    /// type with `EncodingMode::ObjectWithTypeTag` i.e. the `_ -> decode.failure()`
+    /// clause executed when the `type` field does not match any of the known variants.
+    ///
+    /// # Arguments
+    /// * `custom_type` -  The root type we are printing a decoder for
+    /// * `zero_constructor` - The constructor to use when producing a zero value for `custom_type`
+    fn failure_clause(
+        &mut self,
+        custom_type: &CustomType<Arc<Type>>,
+        zero_constructor: &RecordConstructor<Arc<Type>>,
+    ) -> EcoString {
+        let decode_module = self.printer.print_module(DECODE_MODULE);
+        let type_name = &custom_type.name;
+        let constructor_name = &zero_constructor.name;
+
+        if zero_constructor.arguments.is_empty() {
+            return eco_format!(
+                r#"    _ -> {decode_module}.failure({constructor_name}, "{type_name}")"#,
+            );
+        };
+
+        let mut decoder_printer = DecoderPrinter::new(
+            &mut self.printer,
+            custom_type.name.clone(),
+            self.module.name.clone(),
+        );
+
+        // Generate zero values for each of the fields. We can only generate
+        // zero values for Prelude and stdlib types. We exit early whenever any field
+        // cannot have a zero value generated.
+        let zero_args = zero_constructor
+            .arguments
+            .iter()
+            .map_while(|arg| {
+                let (_, name) = arg.label.as_ref()?;
+                let type_ = &arg.type_;
+
+                decoder_printer
+                    .zero_value_for_type(type_)
+                    .map(|zero| eco_format!("{name}: {zero}"))
+            })
+            .collect::<Vec<EcoString>>();
+
+        // If we were able to successfully generate zero values for all the fields,
+        // then we can go ahead and produce a failure clause with a zero value
+        // for the type. If not, we leave it up to the user.
+        if zero_args.len() < zero_constructor.arguments.len() {
+            eco_format!(
+                r#"    _ -> {decode_module}.failure(todo as "Zero value for {type_name}", "{type_name}")"#
+            )
+        } else {
+            let zero_args = zero_args.iter().join(", ");
+
+            eco_format!(
+                r#"    _ -> {decode_module}.failure({constructor_name}({zero_args}), "{type_name}")"#,
+            )
+        }
     }
 }
 
@@ -4396,6 +4466,10 @@ struct DecoderPrinter<'a, 'b> {
     /// The module name of the root type we are printing a decoder for
     type_module: EcoString,
 }
+
+const DYNAMIC_MODULE: &str = "gleam/dynamic";
+const DICT_MODULE: &str = "gleam/dict";
+const OPTION_MODULE: &str = "gleam/option";
 
 struct RecordField<'a> {
     label: RecordLabel<'a>,
@@ -4540,6 +4614,70 @@ impl<'a, 'b> DecoderPrinter<'a, 'b> {
             field = field.label.field_key(),
             module = self.printer.print_module(DECODE_MODULE)
         )
+    }
+
+    /// Returns the zero values for all Prelude and stdlib types except Result.
+    /// Returns None for all other types.
+    fn zero_value_for_type(&mut self, type_: &Type) -> Option<EcoString> {
+        if type_.is_bit_array() {
+            Some("<<>>".into())
+        } else if type_.is_bool() {
+            Some("False".into())
+        } else if type_.is_float() {
+            Some("0.".into())
+        } else if type_.is_int() {
+            Some("0".into())
+        } else if type_.is_string() {
+            Some("\"\"".into())
+        } else if type_.is_list() {
+            Some("[]".into())
+        } else if type_.is_nil() {
+            Some("Nil".into())
+        } else {
+            match type_.tuple_types() {
+                Some(types) => {
+                    // Just like in the `failure_clause` function, we try generating zero
+                    // values for the tuple members and exit early if any of them fail.
+                    let field_zeroes = types
+                        .iter()
+                        .map_while(|type_| self.zero_value_for_type(type_))
+                        .collect_vec();
+
+                    if field_zeroes.len() < types.len() {
+                        None
+                    } else {
+                        Some(eco_format!("#({})", field_zeroes.iter().join(", ")))
+                    }
+                }
+
+                _ => {
+                    let type_information = type_.named_type_information();
+                    let type_information =
+                        type_information.as_ref().map(|(module, name, arguments)| {
+                            (module.as_str(), name.as_str(), arguments.as_slice())
+                        });
+
+                    match type_information {
+                        Some(("gleam/option", "Option", _)) => Some(eco_format!(
+                            "{}.None",
+                            self.printer.print_module(OPTION_MODULE)
+                        )),
+
+                        Some(("gleam/dynamic", "Dynamic", _)) => Some(eco_format!(
+                            "{}.nil()",
+                            self.printer.print_module(DYNAMIC_MODULE)
+                        )),
+
+                        Some(("gleam/dict", "Dict", _)) => Some(eco_format!(
+                            "{}.new()",
+                            self.printer.print_module(DICT_MODULE)
+                        )),
+
+                        _ => None,
+                    }
+                }
+            }
+        }
     }
 }
 
