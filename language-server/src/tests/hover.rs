@@ -1816,3 +1816,93 @@ pub fn wibble(w: Wibble) {
         find_position_of("w.wibble").under_char('l')
     );
 }
+
+#[test]
+fn hover_for_string_prefix_pattern() {
+    assert_hover!(
+        "
+pub fn main() {
+  case \"wibble\" {
+    \"wib\" as alias <> suffix -> alias <> suffix
+    other -> other
+  }
+}
+",
+        find_position_of("<>")
+    );
+}
+
+#[test]
+fn hover_for_string_prefix_pattern_prefix_alias() {
+    assert_hover!(
+        "
+pub fn main() {
+  case \"wibble\" {
+    \"wib\" as alias <> suffix -> alias <> suffix
+    other -> other
+  }
+}
+",
+        find_position_of("alias").nth_occurrence(1)
+    );
+}
+
+#[test]
+fn hover_for_string_prefix_pattern_suffix_variable() {
+    assert_hover!(
+        "
+pub fn main() {
+  case \"wibble\" {
+    \"wib\" as alias <> suffix -> alias <> suffix
+    other -> other
+  }
+}
+",
+        find_position_of("suffix").nth_occurrence(1)
+    );
+}
+
+#[test]
+fn hover_for_string_prefix_pattern_prefix_alias_alternative_definition() {
+    assert_hover!(
+        "
+pub fn main() {
+  case \"wibble\" {
+    \"wib\" as prefix <> rest | \"wob\" as prefix <> rest -> prefix <> rest
+    other -> other
+  }
+}
+",
+        find_position_of("prefix").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn hover_for_string_prefix_pattern_suffix_variable_alternative_definition() {
+    assert_hover!(
+        "
+pub fn main() {
+  case \"wibble\" {
+    \"wib\" <> rest | \"wob\" <> rest -> rest
+    other -> other
+  }
+}
+",
+        find_position_of("rest").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn hover_for_string_prefix_pattern_suffix_variable_discard() {
+    assert_hover!(
+        "
+pub fn main() {
+  case \"wibble\" {
+    \"wib\" <> _discard -> Nil
+    other -> Nil
+  }
+}
+",
+        find_position_of("_discard")
+    );
+}

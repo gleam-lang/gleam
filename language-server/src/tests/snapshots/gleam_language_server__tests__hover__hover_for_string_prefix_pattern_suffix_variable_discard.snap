@@ -1,0 +1,19 @@
+---
+source: language-server/src/tests/hover.rs
+expression: "\npub fn main() {\n  case \"wibble\" {\n    \"wib\" <> _discard -> Nil\n    other -> Nil\n  }\n}\n"
+---
+pub fn main() {
+  case "wibble" {
+    "wib" <> _discard -> Nil
+    ▔▔▔▔▔▔▔▔▔↑▔▔▔▔▔▔▔       
+    other -> Nil
+  }
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nString\n```\n",
+    ),
+)
