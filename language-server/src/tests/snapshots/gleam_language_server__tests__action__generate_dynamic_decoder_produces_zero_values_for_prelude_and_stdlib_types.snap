@@ -1,0 +1,125 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\nimport gleam/option\nimport gleam/dict\n\npub type Wobble {\n  Wobble(\n    bit_array: BitArray,\n    int: Int,\n    float: Float,\n    bool: Bool,\n    list: List(Int),\n    string: String,\n    nil: Nil,\n    option: option.Option(String),\n    dict: dict.Dict(Int, Bool),\n  )\n  Wimble(\n    a: Int,\n    b: Int,\n    c: Int,\n    d: Int,\n    e: Int,\n    f: Int,\n    g: Int,\n    h: Int,\n    i: Int,\n    j: Int,\n  )\n}\n    "
+---
+----- BEFORE ACTION
+
+import gleam/option
+import gleam/dict
+
+pub type Wobble {
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  Wobble(
+▔▔▔▔▔▔▔▔▔
+    bit_array: BitArray,
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    int: Int,
+▔▔▔▔▔▔▔▔▔▔▔▔▔
+    float: Float,
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    bool: Bool,
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    list: List(Int),
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    string: String,
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    nil: Nil,
+▔▔▔▔▔▔▔▔▔▔▔▔▔
+    option: option.Option(String),
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    dict: dict.Dict(Int, Bool),
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  )
+▔▔▔
+  Wimble(
+▔▔▔▔▔▔▔▔▔
+    a: Int,
+▔▔▔▔▔▔▔▔▔▔▔
+    b: Int,
+▔▔▔▔▔▔▔▔▔▔▔
+    c: Int,
+▔▔▔▔▔▔▔▔▔▔▔
+    d: Int,
+▔▔▔▔▔▔▔▔▔▔▔
+    e: Int,
+▔▔▔▔▔▔▔▔▔▔▔
+    f: Int,
+▔▔▔▔▔▔▔▔▔▔▔
+    g: Int,
+▔▔▔▔▔▔▔▔▔▔▔
+    h: Int,
+▔▔▔▔▔▔▔▔▔▔▔
+    i: Int,
+▔▔▔▔▔▔▔▔▔▔▔
+    j: Int,
+▔▔▔▔▔▔▔▔▔▔▔
+  )
+▔▔▔
+}
+↑
+    
+
+
+----- AFTER ACTION
+
+import gleam/dynamic/decode
+import gleam/option
+import gleam/dict
+
+pub type Wobble {
+  Wobble(
+    bit_array: BitArray,
+    int: Int,
+    float: Float,
+    bool: Bool,
+    list: List(Int),
+    string: String,
+    nil: Nil,
+    option: option.Option(String),
+    dict: dict.Dict(Int, Bool),
+  )
+  Wimble(
+    a: Int,
+    b: Int,
+    c: Int,
+    d: Int,
+    e: Int,
+    f: Int,
+    g: Int,
+    h: Int,
+    i: Int,
+    j: Int,
+  )
+}
+
+fn wobble_decoder() -> decode.Decoder(Wobble) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "wobble" -> {
+      use bit_array <- decode.field("bit_array", decode.bit_array)
+      use int <- decode.field("int", decode.int)
+      use float <- decode.field("float", decode.float)
+      use bool <- decode.field("bool", decode.bool)
+      use list <- decode.field("list", decode.list(decode.int))
+      use string <- decode.field("string", decode.string)
+      use nil <- decode.field("nil", todo as "Decoder for Nil")
+      use option <- decode.field("option", decode.optional(decode.string))
+      use dict <- decode.field("dict", decode.dict(decode.int, decode.bool))
+      decode.success(Wobble(bit_array:, int:, float:, bool:, list:, string:, nil:, option:, dict:))
+    }
+    "wimble" -> {
+      use a <- decode.field("a", decode.int)
+      use b <- decode.field("b", decode.int)
+      use c <- decode.field("c", decode.int)
+      use d <- decode.field("d", decode.int)
+      use e <- decode.field("e", decode.int)
+      use f <- decode.field("f", decode.int)
+      use g <- decode.field("g", decode.int)
+      use h <- decode.field("h", decode.int)
+      use i <- decode.field("i", decode.int)
+      use j <- decode.field("j", decode.int)
+      decode.success(Wimble(a:, b:, c:, d:, e:, f:, g:, h:, i:, j:))
+    }
+    _ -> decode.failure(Wobble(bit_array: <<>>, int: 0, float: 0., bool: False, list: [], string: "", nil: Nil, option: option.None, dict: dict.new()), "Wobble")
+  }
+}

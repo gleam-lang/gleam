@@ -1,0 +1,41 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\nimport wibble.{type Wibble}\n\npub type Wobble {\n  Wobble(value: Wibble)\n  Wimble(a: Int, b: Int)\n}\n    "
+---
+----- BEFORE ACTION
+
+import wibble.{type Wibble}
+                          ↑
+
+pub type Wobble {
+  Wobble(value: Wibble)
+  Wimble(a: Int, b: Int)
+}
+    
+
+
+----- AFTER ACTION
+
+import gleam/dynamic/decode
+import wibble.{type Wibble}
+
+pub type Wobble {
+  Wobble(value: Wibble)
+  Wimble(a: Int, b: Int)
+}
+
+fn wobble_decoder() -> decode.Decoder(Wobble) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "wobble" -> {
+      use value <- decode.field("value", todo as "Decoder for Wibble")
+      decode.success(Wobble(value:))
+    }
+    "wimble" -> {
+      use a <- decode.field("a", decode.int)
+      use b <- decode.field("b", decode.int)
+      decode.success(Wimble(a:, b:))
+    }
+    _ -> decode.failure(todo as "Zero value for Wobble", "Wobble")
+  }
+}

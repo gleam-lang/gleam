@@ -12123,6 +12123,48 @@ fn interpolate_string_allows_extracting_record_access_syntax() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/5299
+#[test]
+fn generate_dynamic_decoder_produces_zero_values_for_prelude_and_stdlib_types() {
+    let src = r#"
+import gleam/option
+import gleam/dict
+
+pub type Wobble {
+  Wobble(
+    bit_array: BitArray,
+    int: Int,
+    float: Float,
+    bool: Bool,
+    list: List(Int),
+    string: String,
+    nil: Nil,
+    option: option.Option(String),
+    dict: dict.Dict(Int, Bool),
+  )
+  Wimble(
+    a: Int,
+    b: Int,
+    c: Int,
+    d: Int,
+    e: Int,
+    f: Int,
+    g: Int,
+    h: Int,
+    i: Int,
+    j: Int,
+  )
+}
+    "#;
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src)
+            .add_hex_module("gleam/option", "pub type Option(a) { Some(a) None }")
+            .add_hex_module("gleam/dict", "pub type Dict(key, value)"),
+        find_position_of("pub type Wobble {").select_until(find_position_of("}"))
+    );
+}
+
 #[test]
 fn interpolate_string_does_not_add_empty_string_right_at_the_start() {
     assert_code_action!(
@@ -12135,6 +12177,23 @@ fn interpolate_string_does_not_add_empty_string_right_at_the_start() {
 }
 
 #[test]
+fn generate_dynamic_decoder_does_not_produce_zero_values_for_non_prelude_and_stdlib_types_1() {
+    let src = r#"
+import wibble.{type Wibble}
+
+pub type Wobble {
+  Wobble(value: Wibble)
+  Wimble(a: Int, b: Int)
+}
+    "#;
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_module("wibble", "pub type Wibble { Wibble }"),
+        find_position_of("pub type Wobble {").select_until(find_position_of("}"))
+    );
+}
+
+#[test]
 fn interpolate_string_does_not_add_empty_string_right_at_the_end() {
     assert_code_action!(
         INTERPOLATE_STRING,
@@ -12142,5 +12201,52 @@ fn interpolate_string_does_not_add_empty_string_right_at_the_end() {
   "wibble wobble woo"
 }"#,
         find_position_of("woo\"").select_until(find_position_of("woo\"").under_last_char()),
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_does_not_produce_zero_values_for_non_prelude_and_stdlib_types_2() {
+    let src = r#"
+import wibble.{type Wibble}
+
+pub type Wobble {
+  Wobble(value: option.Option(Wibble))
+  Wimble(a: Int, b: Int)
+}
+    "#;
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src)
+            .add_hex_module("gleam/option", "pub type Option(a) { Some(a) None }")
+            .add_module("wibble", "pub type Wibble { Wibble }"),
+        find_position_of("pub type Wobble {").select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_does_not_produce_zero_values_for_non_prelude_and_stdlib_types_3() {
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        r#"
+pub type Wobble {
+  Wobble(inside: Wobble)
+  Wimble(a: Int, b: Int)
+}
+    "#,
+        find_position_of("pub type Wobble {").select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_uses_constructor_with_fewest_fields_for_zero_value() {
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        r#"
+pub type Wobble {
+  Wobble
+  Wibble(some: Int, thing: Int)
+}
+    "#,
+        find_position_of("pub type Wobble {").select_until(find_position_of("}"))
     );
 }
