@@ -46,7 +46,6 @@ pub enum Referenced {
 pub fn reference_for_ast_node(
     found: Located<'_>,
     current_module: &EcoString,
-    byte_index: u32,
 ) -> Option<Referenced> {
     match found {
         Located::Expression {
@@ -232,40 +231,6 @@ pub fn reference_for_ast_node(
             name_kind: Named::CustomTypeVariant,
             target_kind: RenameTarget::Definition,
         }),
-        Located::Pattern(Pattern::StringPrefix {
-            left_side_assignment,
-            right_side_assignment,
-            right_location,
-            ..
-        }) => {
-            match left_side_assignment {
-                // Handle the prefix alias: "prefix" as name
-                Some((name, left_side_assignment_location))
-                    if left_side_assignment_location.contains(byte_index) =>
-                {
-                    Some(Referenced::LocalVariable {
-                        definition_location: *left_side_assignment_location,
-                        location: *left_side_assignment_location,
-                        origin: None,
-                        name: name.clone(),
-                    })
-                }
-                Some(_) | None => {
-                    match right_side_assignment {
-                        // Handle the suffix: <> name
-                        AssignName::Variable(name) if right_location.contains(byte_index) => {
-                            Some(Referenced::LocalVariable {
-                                definition_location: *right_location,
-                                location: *right_location,
-                                origin: None,
-                                name: name.clone(),
-                            })
-                        }
-                        AssignName::Variable(_) | AssignName::Discard(_) => None,
-                    }
-                }
-            }
-        }
         Located::Pattern(Pattern::Constructor {
             constructor: analyse::Inferred::Known(constructor),
             module: module_select,
@@ -282,6 +247,14 @@ pub fn reference_for_ast_node(
                 RenameTarget::Unqualified
             },
         }),
+        Located::StringPrefixPatternVariable { location, name, .. } => {
+            Some(Referenced::LocalVariable {
+                definition_location: location,
+                location,
+                origin: None,
+                name: name.clone(),
+            })
+        }
         Located::Annotation { ast, type_ } => match type_.named_type_name() {
             Some((module, name)) => {
                 let (target_kind, location) = match ast {

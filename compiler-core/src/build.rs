@@ -410,6 +410,12 @@ pub enum Located<'a> {
         spread_location: SrcSpan,
         pattern: &'a TypedPattern,
     },
+    // A prefix alias or a suffix variable defined in a string prefix pattern:
+    // "prefix" as alias <> suffix
+    StringPrefixPatternVariable {
+        location: SrcSpan,
+        name: &'a EcoString,
+    },
     Statement(&'a TypedStatement),
     Expression {
         expression: &'a TypedExpr,
@@ -459,6 +465,10 @@ impl<'a> Located<'a> {
         match self {
             Self::PatternSpread { .. } => None,
             Self::Pattern(pattern) => pattern.definition_location(),
+            Self::StringPrefixPatternVariable { location, .. } => Some(DefinitionLocation {
+                module: None,
+                span: *location,
+            }),
             Self::Statement(statement) => statement.definition_location(),
             Self::FunctionBody(statement) => None,
             Self::Expression { expression, .. } => expression.definition_location(),
@@ -520,6 +530,7 @@ impl<'a> Located<'a> {
     pub(crate) fn type_(&self) -> Option<Arc<Type>> {
         match self {
             Located::Pattern(pattern) => Some(pattern.type_()),
+            Located::StringPrefixPatternVariable { .. } => Some(type_::string()),
             Located::Statement(statement) => Some(statement.type_()),
             Located::Expression { expression, .. } => Some(expression.type_()),
             Located::Arg(arg) => Some(arg.type_.clone()),

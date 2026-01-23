@@ -3018,9 +3018,35 @@ impl TypedPattern {
             | Pattern::Variable { .. }
             | Pattern::BitArraySize { .. }
             | Pattern::Discard { .. }
-            | Pattern::StringPrefix { .. }
             | Pattern::Invalid { .. } => Some(Located::Pattern(self)),
+            Pattern::StringPrefix {
+                left_side_assignment,
+                right_side_assignment,
+                right_location,
+                ..
+            } => {
+                // Handle the prefix alias: "prefix" as name
+                if let Some((name, left_side_assignment_location)) = left_side_assignment
+                    && left_side_assignment_location.contains(byte_index)
+                {
+                    return Some(Located::StringPrefixPatternVariable {
+                        location: *left_side_assignment_location,
+                        name,
+                    });
+                }
 
+                // Handle the suffix: <> name
+                if let AssignName::Variable(name) = right_side_assignment
+                    && right_location.contains(byte_index)
+                {
+                    return Some(Located::StringPrefixPatternVariable {
+                        location: *right_location,
+                        name,
+                    });
+                }
+
+                Some(Located::Pattern(self))
+            }
             Pattern::Assign { pattern, .. } => pattern
                 .find_node(byte_index)
                 .or_else(|| Some(Located::Pattern(self))),
