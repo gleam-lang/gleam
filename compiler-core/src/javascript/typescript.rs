@@ -849,7 +849,7 @@ impl<'a> TypeScriptGenerator<'a> {
     /// Converts a Gleam type into a TypeScript type string
     ///
     pub fn print_type(&mut self, type_: &Type) -> Document<'static> {
-        self.do_print(type_, None, false)
+        self.do_print(type_, GenericPrinting::AsAny)
     }
 
     /// Helper function for generating a TypeScript type string after collecting
@@ -860,7 +860,7 @@ impl<'a> TypeScriptGenerator<'a> {
         type_: &Type,
         generic_usages: &HashMap<u64, u64>,
     ) -> Document<'static> {
-        self.do_print(type_, Some(generic_usages), true)
+        self.do_print(type_, GenericPrinting::FromUsage(generic_usages))
     }
 
     /// Get the locally used name for a module. Either the last segment, or the
@@ -883,13 +883,10 @@ impl<'a> TypeScriptGenerator<'a> {
     fn do_print(
         &mut self,
         type_: &Type,
-        generic_usages: Option<&HashMap<u64, u64>>,
-        force_generic_id: bool,
+        generic_printing: GenericPrinting<'_>,
     ) -> Document<'static> {
         match type_ {
-            Type::Var { type_ } => {
-                self.print_var(&type_.borrow(), generic_usages, force_generic_id)
-            }
+            Type::Var { type_ } => self.print_var(&type_.borrow(), generic_printing),
 
             Type::Named {
                 name,
@@ -897,7 +894,7 @@ impl<'a> TypeScriptGenerator<'a> {
                 arguments,
                 ..
             } if is_prelude_module(module) => {
-                self.print_prelude_type(name, arguments, generic_usages, force_generic_id)
+                self.print_prelude_type(name, arguments, generic_printing)
             }
 
             Type::Named {
@@ -905,42 +902,46 @@ impl<'a> TypeScriptGenerator<'a> {
                 arguments,
                 module,
                 ..
-            } => self.print_type_app(name, arguments, module, generic_usages, force_generic_id),
+            } => self.print_type_app(name, arguments, module, generic_printing),
 
-            Type::Fn { arguments, return_ } => self.print_fn(arguments, return_, generic_usages),
+            Type::Fn { arguments, return_ } => self.print_fn(arguments, return_, generic_printing),
 
             Type::Tuple { elements } => tuple(
                 elements
                     .iter()
-                    .map(|element| self.do_print(element, generic_usages, force_generic_id)),
+                    .map(|element| self.do_print(element, generic_printing)),
             ),
         }
     }
 
     fn do_print_force_generic_param(&mut self, type_: &Type) -> Document<'static> {
         match type_ {
-            Type::Var { type_ } => self.print_var(&type_.borrow(), None, true),
+            Type::Var { type_ } => self.print_var(&type_.borrow(), GenericPrinting::AlwaysGeneric),
 
             Type::Named {
                 name,
                 module,
                 arguments,
                 ..
-            } if is_prelude_module(module) => self.print_prelude_type(name, arguments, None, true),
+            } if is_prelude_module(module) => {
+                self.print_prelude_type(name, arguments, GenericPrinting::AlwaysGeneric)
+            }
 
             Type::Named {
                 name,
                 arguments,
                 module,
                 ..
-            } => self.print_type_app(name, arguments, module, None, true),
+            } => self.print_type_app(name, arguments, module, GenericPrinting::AlwaysGeneric),
 
-            Type::Fn { arguments, return_ } => self.print_fn(arguments, return_, None),
+            Type::Fn { arguments, return_ } => {
+                self.print_fn(arguments, return_, GenericPrinting::AlwaysGeneric)
+            }
 
             Type::Tuple { elements } => tuple(
                 elements
                     .iter()
-                    .map(|element| self.do_print(element, None, true)),
+                    .map(|element| self.do_print(element, GenericPrinting::AlwaysGeneric)),
             ),
         }
     }
@@ -948,25 +949,19 @@ impl<'a> TypeScriptGenerator<'a> {
     fn print_var(
         &mut self,
         type_: &TypeVar,
-        generic_usages: Option<&HashMap<u64, u64>>,
-        force_generic_id: bool,
+        generic_printing: GenericPrinting<'_>,
     ) -> Document<'static> {
         match type_ {
-            TypeVar::Unbound { id } | TypeVar::Generic { id } => match &generic_usages {
-                Some(usages) => match usages.get(id) {
+            TypeVar::Unbound { id } | TypeVar::Generic { id } => match generic_printing {
+                GenericPrinting::FromUsage(usages) => match usages.get(id) {
                     Some(&0) => super::nil(),
                     Some(&1) => "any".to_doc(),
                     _ => id_to_type_var(*id),
                 },
-                None => {
-                    if force_generic_id {
-                        id_to_type_var(*id)
-                    } else {
-                        "any".to_doc()
-                    }
-                }
+                GenericPrinting::AlwaysGeneric => id_to_type_var(*id),
+                GenericPrinting::AsAny => "any".to_doc(),
             },
-            TypeVar::Link { type_ } => self.do_print(type_, generic_usages, force_generic_id),
+            TypeVar::Link { type_ } => self.do_print(type_, generic_printing),
         }
     }
 
@@ -979,8 +974,7 @@ impl<'a> TypeScriptGenerator<'a> {
         &mut self,
         name: &str,
         arguments: &[Arc<Type>],
-        generic_usages: Option<&HashMap<u64, u64>>,
-        force_generic_id: bool,
+        generic_printing: GenericPrinting<'_>,
     ) -> Document<'static> {
         match name {
             "Nil" => "undefined".to_doc(),
@@ -999,22 +993,20 @@ impl<'a> TypeScriptGenerator<'a> {
                 self.tracker.prelude_used = true;
                 docvec![
                     "_.List",
-                    wrap_generic_arguments(arguments.iter().map(|argument| self.do_print(
-                        argument,
-                        generic_usages,
-                        force_generic_id
-                    )))
+                    wrap_generic_arguments(
+                        arguments
+                            .iter()
+                            .map(|argument| self.do_print(argument, generic_printing))
+                    )
                 ]
             }
             "Result" => {
                 self.tracker.prelude_used = true;
                 docvec![
                     "_.Result",
-                    wrap_generic_arguments(arguments.iter().map(|x| self.do_print(
-                        x,
-                        generic_usages,
-                        force_generic_id
-                    )))
+                    wrap_generic_arguments(
+                        arguments.iter().map(|x| self.do_print(x, generic_printing))
+                    )
                 ]
             }
             // Getting here should mean we either forgot a built-in type or there is a
@@ -1031,8 +1023,7 @@ impl<'a> TypeScriptGenerator<'a> {
         name: &str,
         arguments: &[Arc<Type>],
         module: &str,
-        generic_usages: Option<&HashMap<u64, u64>>,
-        force_generic_id: bool,
+        generic_printing: GenericPrinting<'_>,
     ) -> Document<'static> {
         let name = eco_format!("{}$", ts_safe_type_name(name.to_string()));
         let name = match module == self.module.name {
@@ -1050,11 +1041,11 @@ impl<'a> TypeScriptGenerator<'a> {
         // If the App type takes arguments, pass them in as TypeScript generics
         docvec![
             name,
-            wrap_generic_arguments(arguments.iter().map(|argument| self.do_print(
-                argument,
-                generic_usages,
-                force_generic_id
-            )))
+            wrap_generic_arguments(
+                arguments
+                    .iter()
+                    .map(|argument| self.do_print(argument, generic_printing))
+            )
         ]
     }
 
@@ -1064,17 +1055,17 @@ impl<'a> TypeScriptGenerator<'a> {
         &mut self,
         arguments: &[Arc<Type>],
         return_: &Type,
-        generic_usages: Option<&HashMap<u64, u64>>,
+        generic_printing: GenericPrinting<'_>,
     ) -> Document<'static> {
         docvec![
             wrap_arguments(arguments.iter().enumerate().map(|(idx, argument)| docvec![
                 "x",
                 idx,
                 ": ",
-                self.do_print(argument, generic_usages, false)
+                self.do_print(argument, generic_printing)
             ])),
             " => ",
-            self.do_print(return_, generic_usages, false)
+            self.do_print(return_, generic_printing)
         ]
     }
 
@@ -1095,4 +1086,53 @@ impl<'a> TypeScriptGenerator<'a> {
 #[derive(Debug, Default)]
 pub(crate) struct UsageTracker {
     pub prelude_used: bool,
+}
+
+/// How to print generic type parameters when generating declarations.
+#[derive(Debug, Clone, Copy)]
+enum GenericPrinting<'a> {
+    /// Print the generic parameters based on how many times they are used:
+    /// - If a parameter isn't used, it is not printed.
+    /// - If a parameter is used exactly once, it is printed as `any`.
+    /// - If a parameter is used more than once, it is printed as a generic.
+    ///
+    /// For example, the following function:
+    ///
+    /// ```gleam
+    /// pub fn wibble(thing: one, other_thing: other) -> one { ... }
+    /// ```
+    ///
+    /// Would result in the following declaration:
+    ///
+    /// ```typescript
+    /// export function wibble<A>(thing: A, other_thing: any): A;
+    /// ```
+    ///
+    FromUsage(&'a HashMap<u64, u64>),
+    /// Print every generic parameter as a generic in TypeScript. This is used in
+    /// custom types where every generic needs to be emitted, even if it is only
+    /// referenced once, or not at all.
+    ///
+    /// For example:
+    ///
+    /// ```gleam
+    /// pub type Wibble(multiple, single, phantom) {
+    ///   Wibble(a: single, b: multiple, b: multiple)
+    /// }
+    /// ```
+    ///
+    /// Generates more or less the following TypeScript:
+    ///
+    /// ```typescript
+    /// export class Wibble<A, B, C> extends CustomType {
+    ///   a: A;
+    ///   b: B;
+    ///   c: B;
+    /// }
+    /// ```
+    ///
+    AlwaysGeneric,
+    /// Print generic parameters as TypeScript `any`. This is used in constants,
+    /// where generics are not allowed.
+    AsAny,
 }
