@@ -1204,7 +1204,7 @@ fn package_config(
         },
         target: Target::Erlang,
         internal_modules: None,
-        tools: Default::default()
+        tools: Default::default(),
     }
 }
 
