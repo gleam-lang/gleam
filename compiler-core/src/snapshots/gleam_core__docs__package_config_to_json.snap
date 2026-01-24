@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/docs.rs
-assertion_line: 770
 expression: output
-snapshot_kind: text
 ---
 --- GLEAM.TOML
 
@@ -57,6 +55,7 @@ allow_read = ["./database.sqlite"]
     "documentation": {
       "pages": [
         {
+          "type": "DocsPage",
           "title": "My Page",
           "path": "my-page.html",
           "source": "./path/to/my-page.md"
@@ -85,6 +84,7 @@ allow_read = ["./database.sqlite"]
     },
     "links": [
       {
+        "type": "Link",
         "title": "Home page",
         "href": "https://example.com/"
       }
@@ -123,6 +123,7 @@ allow_read = ["./database.sqlite"]
     "target": "erlang",
     "internal_modules": [
       "my_app/internal"
-    ]
+    ],
+    "tools": {}
   }
 }
