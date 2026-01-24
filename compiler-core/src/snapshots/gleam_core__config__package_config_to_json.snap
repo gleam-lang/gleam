@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/config.rs
-assertion_line: 1177
 expression: output
-snapshot_kind: text
 ---
 --- GLEAM.TOML
 
@@ -41,6 +39,9 @@ allow_env = ["DATABASE_URL"]
 allow_net = ["example.com:443"]
 allow_read = ["./database.sqlite"]
 
+[tools.my-tool]
+enable = true
+
 
 --- EXPORTED JSON
 
@@ -56,6 +57,7 @@ allow_read = ["./database.sqlite"]
   "documentation": {
     "pages": [
       {
+        "type": "DocsPage",
         "title": "My Page",
         "path": "my-page.html",
         "source": "./path/to/my-page.md"
@@ -84,6 +86,7 @@ allow_read = ["./database.sqlite"]
   },
   "links": [
     {
+      "type": "Link",
       "title": "Home page",
       "href": "https://example.com/"
     }
@@ -122,5 +125,10 @@ allow_read = ["./database.sqlite"]
   "target": "erlang",
   "internal_modules": [
     "my_app/internal"
-  ]
+  ],
+  "tools": {
+    "my-tool": {
+      "enable": true
+    }
+  }
 }
