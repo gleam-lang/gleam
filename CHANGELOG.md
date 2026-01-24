@@ -35,6 +35,45 @@
   8 characters in length.
   ([Louis Pilfold](https://github.com/lpil))
 
+- The build tool now emits errors for unknown fields in package config,
+  except ones under `[tools]`. For example,
+
+  ```toml
+  name = "hello"
+  version = "1.0.0"
+
+  [tools]
+  my-awesome-setting = true
+  ```
+
+  Building the project won't give any errors. But with this:
+
+  ```toml
+  name = "hello"
+  version = "1.0.0"
+  my-awesome-setting = true
+  ```
+
+  Building the project will emit following error:
+
+  ```txt
+  error: File IO failure
+
+  An error occurred while trying to parse this file:
+
+      C:\Users\user\projects\test_gleam\gleam.toml
+
+  The error message from the file IO library was:
+
+      TOML parse error at line 3, column 1
+    |
+  3 | my-awesome-setting = true
+    | ^^^^^^^^^^^^^^^^^^
+  unknown field `my-awesome-setting`, expected one of `name`, `version`, `gleam`, `licences`, `licenses`, `description`, `docs`, `documentation`, `dependencies`, `dev-dependencies`, `dev_dependencies`, `repository`, `links`, `erlang`, `javascript`, `target`, `internal_modules`, `tools`
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server now allows extracting the start of a pipeline into a
