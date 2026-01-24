@@ -6,10 +6,10 @@
 // - [x] Take details from device response https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.ex#L157
 // - [x] Display the URL and the verification code to the user
 // - [x] Open the URL in the browser (ask for confirmation first?)
-// - [ ] Poll Hex for a token https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.ex#L190
-//   - [ ] 200 - OK got token
+// - [x] Poll Hex for a token https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.ex#L190
+//   - [x] 200 - OK got token
 //   - [ ] Too much time: timed out, tell user to try again, exit. How long should timeout be?
-//   - [ ] 400 {error: slow_down} - increase delay to `min(attempt_number * 2, 30)` seconds
+//   - [x] 400 {error: slow_down} - increase delay to `min(attempt_number * 2, 30)` seconds
 //   - [ ] 400 {error: expired_token} - tell user, tell to try again, exit.
 //   - [ ] 403 {error: access_denied} - tell user, tell to try again, exit.
 //   - [ ] other error - tell user, tell to try again, exit.
@@ -26,6 +26,8 @@
 //                            <<"refresh_token">> =>
 //                                <<"REDACTED">>}}.
 // - [ ] Get an initial oauth token to actually use it https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.ex#L460
+//   - [ ] refresh token
+//   - [ ] ask user to reauth if that fails
 // - [ ] Something to do with one-time-passwords (enforced for write access)
 //
 // @doc false
@@ -55,9 +57,25 @@ use std::time::{Duration, Instant};
 use serde::Deserialize;
 use serde_json::json;
 
-static USER_AGENT: &str = concat!("Gleam build tool ", env!("CARGO_PKG_VERSION"));
+const HEX_OAUTH_CLIENT_ID: &str = "877731e8-cb88-45e1-9b84-9214de7da421";
+const USER_AGENT: &str = concat!("Gleam build tool ", env!("CARGO_PKG_VERSION"));
 
 pub fn main() {
+    run().unwrap();
+}
+
+#[derive(Debug)]
+pub struct HexTokens {
+    access_token: String,
+    refresh_token: String,
+}
+
+#[derive(Debug)]
+pub enum HexOauthError {
+    HttpRequestFailed { method: http::Method, url: String },
+}
+
+pub fn run() -> Result<HexTokens, HexOauthError> {
     let http_client = reqwest::blocking::Client::new();
     let DeviceAuthorisation {
         poll_interval_seconds,
@@ -69,7 +87,7 @@ pub fn main() {
         .post("https://hex.pm/api/oauth/device_authorization")
         .header("user-agent", USER_AGENT)
         .json(&json!({
-            "client_id": "877731e8-cb88-45e1-9b84-9214de7da421",
+            "client_id": HEX_OAUTH_CLIENT_ID,
             "scope": "api:write",
             "name": "The Gleam build tool"
         }))
@@ -103,7 +121,7 @@ Press Enter to open {uri}",
     let mut interval = Duration::from_secs(poll_interval_seconds);
     let start = Instant::now();
 
-    let (access_token, refresh_token) = loop {
+    let tokens = loop {
         if start.elapsed() > Duration::from_mins(10) {
             // TODO: return error
             todo!("timeout")
@@ -112,25 +130,11 @@ Press Enter to open {uri}",
         std::thread::sleep(interval);
         attempt = attempt + 1;
 
-        let text = http_client
-            .post("https://hex.pm/api/oauth/token")
-            .header("user-agent", USER_AGENT)
-            .json(&json!({
-                "client_id": "877731e8-cb88-45e1-9b84-9214de7da421",
-                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-                "device_code": device_code,
-            }))
-            .send()
-            .unwrap()
-            .text()
-            .unwrap();
-        println!("{text}");
-
         let response: PollOutcome = http_client
             .post("https://hex.pm/api/oauth/token")
             .header("user-agent", USER_AGENT)
             .json(&json!({
-                "client_id": "877731e8-cb88-45e1-9b84-9214de7da421",
+                "client_id": HEX_OAUTH_CLIENT_ID,
                 "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
                 "device_code": device_code,
             }))
@@ -139,13 +143,16 @@ Press Enter to open {uri}",
             .json()
             .unwrap();
 
-        dbg!(&response);
-
         let error = match response {
             PollOutcome::Success {
                 access_token,
                 refresh_token,
-            } => break (access_token, refresh_token),
+            } => {
+                break HexTokens {
+                    access_token,
+                    refresh_token,
+                };
+            }
             PollOutcome::Fail { error } => error,
         };
 
@@ -160,6 +167,22 @@ Press Enter to open {uri}",
             PollError::ExpiredToken => todo!("access denied error"),
         }
     };
+
+    let response = http_client
+        .post("https://hex.pm/api/oauth/token")
+        .header("user-agent", USER_AGENT)
+        .json(&json!({
+            "client_id": HEX_OAUTH_CLIENT_ID,
+            "grant_type": "refresh_token",
+            "refresh_token": tokens.refresh_token,
+        }))
+        .send()
+        .unwrap()
+        .text()
+        .unwrap();
+    dbg!(response);
+
+    todo!();
 }
 
 #[derive(Debug, Deserialize)]

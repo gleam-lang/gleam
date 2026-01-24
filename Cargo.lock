@@ -1270,6 +1270,7 @@ checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 name = "hex-auth"
 version = "1.14.0"
 dependencies = [
+ "http",
  "opener",
  "reqwest",
  "serde",
