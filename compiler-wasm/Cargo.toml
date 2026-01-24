@@ -16,7 +16,7 @@ serde-wasm-bindgen = "0"
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 tracing-wasm = "*"
 camino.workspace = true
-hexpm.workspace = true
+hexpm = { path = "../hexpm" }
 im.workspace = true
 itertools.workspace = true
 serde.workspace = true
