@@ -12177,7 +12177,7 @@ pub type Wobble {
     assert_code_action!(
         GENERATE_DYNAMIC_DECODER,
         TestProject::for_source(src).add_module("wibble", "pub type Wibble { Wibble }"),
-        find_position_of("pub type Wobble {").select_until(find_position_of("}"))
+        find_position_of("pub type Wobble {").select_until(find_position_of("}").nth_occurrence(2))
     );
 }
 
@@ -12196,7 +12196,7 @@ pub type Wobble {
         TestProject::for_source(src)
             .add_hex_module("gleam/option", "pub type Option(a) { Some(a) None }")
             .add_module("wibble", "pub type Wibble { Wibble }"),
-        find_position_of("pub type Wobble {").select_until(find_position_of("}"))
+        find_position_of("pub type Wobble {").select_until(find_position_of("}").nth_occurrence(2))
     );
 }
 
