@@ -983,7 +983,7 @@ pub struct Docs {
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
-#[serde(tag = "type", deny_unknown_fields)]
+#[serde(deny_unknown_fields)]
 pub struct DocsPage {
     pub title: String,
     pub path: String,
@@ -991,7 +991,7 @@ pub struct DocsPage {
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
-#[serde(tag = "type", deny_unknown_fields)]
+#[serde(deny_unknown_fields)]
 pub struct Link {
     pub title: String,
     #[serde(with = "uri_serde")]
