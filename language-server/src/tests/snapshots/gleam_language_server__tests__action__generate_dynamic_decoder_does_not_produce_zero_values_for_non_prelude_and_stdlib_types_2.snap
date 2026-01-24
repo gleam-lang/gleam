@@ -5,12 +5,15 @@ expression: "\nimport wibble.{type Wibble}\n\npub type Wobble {\n  Wobble(value:
 ----- BEFORE ACTION
 
 import wibble.{type Wibble}
-                          ↑
 
 pub type Wobble {
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
   Wobble(value: option.Option(Wibble))
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
   Wimble(a: Int, b: Int)
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
 }
+↑
     
 
 
