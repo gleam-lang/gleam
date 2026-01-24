@@ -274,7 +274,7 @@ impl Type {
             Self::Named { module, name, .. } if "BitArray" == name && is_prelude_module(module) => {
                 true
             }
-            Self::Var { type_ } => type_.borrow().is_nil(),
+            Self::Var { type_ } => type_.borrow().is_bit_array(),
             Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
@@ -286,7 +286,7 @@ impl Type {
             {
                 true
             }
-            Self::Var { type_ } => type_.borrow().is_nil(),
+            Self::Var { type_ } => type_.borrow().is_utf_codepoint(),
             Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
     }
@@ -1325,6 +1325,20 @@ impl TypeVar {
     pub fn is_string(&self) -> bool {
         match self {
             Self::Link { type_ } => type_.is_string(),
+            Self::Unbound { .. } | Self::Generic { .. } => false,
+        }
+    }
+
+    pub fn is_bit_array(&self) -> bool {
+        match self {
+            Self::Link { type_ } => type_.is_bit_array(),
+            Self::Unbound { .. } | Self::Generic { .. } => false,
+        }
+    }
+
+    pub fn is_utf_codepoint(&self) -> bool {
+        match self {
+            Self::Link { type_ } => type_.is_utf_codepoint(),
             Self::Unbound { .. } | Self::Generic { .. } => false,
         }
     }
