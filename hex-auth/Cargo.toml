@@ -1,0 +1,12 @@
+[package]
+name = "hex-auth"
+version = "1.14.0"
+authors = ["Louis Pilfold <louis@lpil.uk>"]
+edition = "2024"
+license = "Apache-2.0"
+
+[dependencies]
+reqwest = { version = "0", default-features = false, features = ["rustls-tls", "blocking", "json"] }
+opener.workspace = true
+serde.workspace = true
+serde_json.workspace = true
