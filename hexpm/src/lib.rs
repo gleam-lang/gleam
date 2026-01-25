@@ -9,12 +9,12 @@ use crate::proto::{signed::Signed, versions::Versions};
 use bytes::buf::Buf;
 use flate2::read::GzDecoder;
 use http::{Method, StatusCode};
-use lazy_static::lazy_static;
 use prost::Message;
 use regex::Regex;
 use ring::digest::{Context, SHA256};
 use serde::Deserialize;
 use serde_json::json;
+use std::sync::OnceLock;
 use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
@@ -958,15 +958,17 @@ pub struct Dependency {
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
 
 fn validate_package_and_version(package: &str, version: &str) -> Result<(), ApiError> {
-    // TODO: replace lazy_static with OnceCell
-    lazy_static! {
-        static ref PACKAGE_PATTERN: Regex = Regex::new(r"^[a-z]\w*$").unwrap();
-        static ref VERSION_PATTERN: Regex = Regex::new(r"^[a-zA-Z-0-9\._-]+$").unwrap();
-    }
-    if !PACKAGE_PATTERN.is_match(package) {
+    static PACKAGE_PATTERN: OnceLock<Regex> = OnceLock::new();
+    static VERSION_PATTERN: OnceLock<Regex> = OnceLock::new();
+
+    let package_pattern = PACKAGE_PATTERN.get_or_init(|| Regex::new(r"^[a-z]\w*$").unwrap());
+    let version_pattern =
+        VERSION_PATTERN.get_or_init(|| Regex::new(r"^[a-zA-Z-0-9\._-]+$").unwrap());
+
+    if !package_pattern.is_match(package) {
         return Err(ApiError::InvalidPackageNameFormat(package.to_string()));
     }
-    if !VERSION_PATTERN.is_match(version) {
+    if !version_pattern.is_match(version) {
         return Err(ApiError::InvalidVersionFormat(version.to_string()));
     }
     Ok(())

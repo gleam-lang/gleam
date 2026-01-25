@@ -14,8 +14,6 @@ categories = ["api-bindings"]
 [dependencies]
 # HTTP types
 url = "2.2"
-# Complex static values
-lazy_static = "1.4"
 # Byte collections
 bytes = "1"
 # gzip (de)compression
