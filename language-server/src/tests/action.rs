@@ -12142,7 +12142,7 @@ pub type Wobble {
     option: option.Option(String),
     dict: dict.Dict(Int, Bool),
   )
-  Wimble(
+  Dummy(
     a: Int,
     b: Int,
     c: Int,
@@ -12182,7 +12182,7 @@ import wibble.{type Wibble}
 
 pub type Wobble {
   Wobble(value: Wibble)
-  Wimble(a: Int, b: Int)
+  Dummy(a: Int, b: Int)
 }
     "#;
     assert_code_action!(
@@ -12206,23 +12206,29 @@ fn interpolate_string_does_not_add_empty_string_right_at_the_end() {
 #[test]
 fn generate_dynamic_decoder_produces_zero_values_for_user_defined_type_in_the_same_package_2() {
     let src = r#"
-import wibble.{type Wibble}
+import internal/wibble.{type Wibble}
 
 pub type Wobble {
   Wobble(value: Wibble)
-  Wimble(a: Int, b: Int)
+  Dummy(a: Int, b: Int)
 }
     "#;
     assert_code_action!(
         GENERATE_DYNAMIC_DECODER,
-        TestProject::for_source(src).add_module(
-            "wibble",
-            r#"
+        TestProject::for_source(src)
+            .add_module(
+                "internal/wibble",
+                r#"
+import internal/nested_wibble.{type NestedWibble}
 pub type Wibble { Wibble(value: NestedWibble) }
-
+"#
+            )
+            .add_module(
+                "internal/nested_wibble",
+                r#"
 pub type NestedWibble { NestedWibble }
 "#
-        ),
+            ),
         find_position_of("pub type Wobble {").select_until(find_position_of("}").nth_occurrence(2))
     );
 }
@@ -12234,7 +12240,7 @@ import wibble.{type Wibble}
 
 pub type Wobble {
   Wobble(value: Wibble)
-  Wimble(a: Int, b: Int)
+  Dummy(a: Int, b: Int)
 }
     "#;
     assert_code_action!(
@@ -12265,7 +12271,7 @@ import wibble.{type Wibble}
 
 pub type Wobble {
   Wobble(value: Wibble)
-  Wimble(a: Int, b: Int)
+  Dummy(a: Int, b: Int)
 }
     "#;
     assert_code_action!(
@@ -12282,7 +12288,7 @@ fn generate_dynamic_decoder_does_not_produce_zero_values_for_recursively_defined
         r#"
 pub type Wobble {
   Wobble(inside: Wobble)
-  Wimble(a: Int, b: Int)
+  Dummy(a: Int, b: Int)
 }
     "#,
         find_position_of("pub type Wobble {").select_until(find_position_of("}"))
@@ -12296,12 +12302,12 @@ fn generate_dynamic_decoder_does_not_produce_zero_values_for_recursively_defined
         r#"
 pub type Wobble {
   Wobble(inside: Wibble)
-  Womble(a: Int, b: Int)
+  Dummy(a: Int, b: Int)
 }
 
 pub type Wibble {
   Wibble(inside: Wobble)
-  Wimble(a: Int, b: Int)
+  Dummy(a: Int, b: Int)
 }
     "#,
         find_position_of("pub type Wobble {").select_until(find_position_of("}"))
