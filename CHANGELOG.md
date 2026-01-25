@@ -36,13 +36,13 @@
   ([Louis Pilfold](https://github.com/lpil))
 
 - The build tool now emits errors for unknown fields in package config,
-  except ones under `[tools]`. For example,
+  except ones under `[tools]`. For example, with this:
 
   ```toml
   name = "hello"
   version = "1.0.0"
 
-  [tools]
+  [tools.my-tool]
   my-awesome-setting = true
   ```
 
@@ -54,23 +54,7 @@
   my-awesome-setting = true
   ```
 
-  Building the project will emit following error:
-
-  ```txt
-  error: File IO failure
-
-  An error occurred while trying to parse this file:
-
-      C:\Users\user\projects\test_gleam\gleam.toml
-
-  The error message from the file IO library was:
-
-      TOML parse error at line 3, column 1
-    |
-  3 | my-awesome-setting = true
-    | ^^^^^^^^^^^^^^^^^^
-  unknown field `my-awesome-setting`, expected one of `name`, `version`, `gleam`, `licences`, `licenses`, `description`, `docs`, `documentation`, `dependencies`, `dev-dependencies`, `dev_dependencies`, `repository`, `links`, `erlang`, `javascript`, `target`, `internal_modules`, `tools`
-  ```
+  Building the project will emit error.
 
   ([Andrey Kozhev](https://github.com/ankddev))
 
