@@ -37,8 +37,6 @@ fslock = "0"
 same-file = "1"
 # Open generated docs in browser
 opener = "0"
-# Pubgrub dependency resolution algorithm
-pubgrub = "0.3"
 
 camino = { workspace = true, features = ["serde1"] }
 async-trait.workspace = true
@@ -47,7 +45,7 @@ debug-ignore.workspace = true
 ecow.workspace = true
 flate2.workspace = true
 futures.workspace = true
-hexpm.workspace = true
+hexpm = { path = "../hexpm" }
 http.workspace = true
 im.workspace = true
 itertools.workspace = true
@@ -61,6 +59,7 @@ tar.workspace = true
 termcolor.workspace = true
 toml.workspace = true
 tracing.workspace = true
+pubgrub.workspace = true
 
 [dev-dependencies]
 # Creation of temporary directories

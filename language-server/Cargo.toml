@@ -11,7 +11,7 @@ gleam-core = { path = "../compiler-core" }
 camino.workspace = true
 debug-ignore.workspace = true
 ecow.workspace = true
-hexpm.workspace = true
+hexpm = { path = "../hexpm" }
 im.workspace = true
 itertools.workspace = true
 lsp-server.workspace = true

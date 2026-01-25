@@ -10,6 +10,7 @@ members = [
   "test-package-compiler",
   "test-project-compiler",
   "language-server",
+  "hexpm",
 ]
 
 # common dependencies
@@ -29,8 +30,6 @@ serde_json = "1"
 toml = "0.9"
 # Enum trait impl macros
 strum = { version = "0", features = ["derive"] }
-# Hex package manager client
-hexpm = "5"
 # Creation of tar file archives
 tar = "0"
 # gzip compression
@@ -65,3 +64,5 @@ insta = { version = "1", features = ["glob"] }
 getrandom = { version = "0.2", features = ["js"] }
 # Non-empty vectors
 vec1 = "1"
+# Pubgrub dependency resolution algorithm
+pubgrub = "0.3"

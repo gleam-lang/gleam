@@ -56,7 +56,7 @@ debug-ignore.workspace = true
 ecow = { workspace = true, features = ["serde"] }
 flate2.workspace = true
 futures.workspace = true
-hexpm.workspace = true
+hexpm = { path = "../hexpm" }
 http.workspace = true
 im.workspace = true
 itertools.workspace = true
