@@ -120,6 +120,6 @@ fn wobble_decoder() -> decode.Decoder(Wobble) {
       use j <- decode.field("j", decode.int)
       decode.success(Wimble(a:, b:, c:, d:, e:, f:, g:, h:, i:, j:))
     }
-    _ -> decode.failure(Wobble(bit_array: <<>>, int: 0, float: 0., bool: False, list: [], string: "", nil: Nil, option: option.None, dict: dict.new()), "Wobble")
+    _ -> decode.failure(Wobble(bit_array: <<>>, int: 0, float: 0.0, bool: False, list: [], string: "", nil: Nil, option: option.None, dict: dict.new()), "Wobble")
   }
 }

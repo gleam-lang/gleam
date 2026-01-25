@@ -20,7 +20,8 @@ use gleam_core::{
     parse::{extra::ModuleExtra, lexer::str_to_keyword},
     strings::to_snake_case,
     type_::{
-        self, FieldMap, ModuleValueConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
+        self, FieldMap, ModuleValueConstructor, Opaque, Type, TypeVar, TypedCallArg,
+        ValueConstructor,
         error::{ModuleSuggestion, VariableDeclaration, VariableOrigin},
         printer::Printer,
     },
@@ -4174,7 +4175,8 @@ impl<'ast> ast::visit::Visit<'ast> for VariablesNames {
 
 /// Builder for code action to apply the "generate dynamic decoder action.
 ///
-pub struct GenerateDynamicDecoder<'a> {
+pub struct GenerateDynamicDecoder<'a, IO> {
+    compiler: &'a LspProjectCompiler<FileSystemProxy<IO>>,
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
@@ -4184,12 +4186,13 @@ pub struct GenerateDynamicDecoder<'a> {
 
 const DECODE_MODULE: &str = "gleam/dynamic/decode";
 
-impl<'a> GenerateDynamicDecoder<'a> {
+impl<'a, IO> GenerateDynamicDecoder<'a, IO> {
     pub fn new(
         module: &'a Module,
         line_numbers: &'a LineNumbers,
         params: &'a CodeActionParams,
         actions: &'a mut Vec<CodeAction>,
+        compiler: &'a LspProjectCompiler<FileSystemProxy<IO>>,
     ) -> Self {
         // Since we are generating a new function, type variables from other
         // functions and constants are irrelevant to the types we print.
@@ -4200,6 +4203,7 @@ impl<'a> GenerateDynamicDecoder<'a> {
             edits: TextEdits::new(line_numbers),
             printer,
             actions,
+            compiler,
         }
     }
 
@@ -4294,6 +4298,7 @@ impl<'a> GenerateDynamicDecoder<'a> {
             &mut self.printer,
             custom_type.name.clone(),
             self.module.name.clone(),
+            self.compiler,
         );
 
         let decoders = fields
@@ -4346,42 +4351,25 @@ impl<'a> GenerateDynamicDecoder<'a> {
             &mut self.printer,
             custom_type.name.clone(),
             self.module.name.clone(),
+            self.compiler,
         );
 
-        // Generate zero values for each of the fields. We can only generate
-        // zero values for Prelude and stdlib types. We exit early whenever any field
-        // cannot have a zero value generated.
-        let zero_args = zero_constructor
-            .arguments
-            .iter()
-            .map_while(|arg| {
-                let (_, name) = arg.label.as_ref()?;
-                let type_ = &arg.type_;
-
-                decoder_printer
-                    .zero_value_for_type(type_)
-                    .map(|zero| eco_format!("{name}: {zero}"))
-            })
-            .collect::<Vec<EcoString>>();
-
-        // If we were able to successfully generate zero values for all the fields,
-        // then we can go ahead and produce a failure clause with a zero value
-        // for the type. If not, we leave it up to the user.
-        if zero_args.len() < zero_constructor.arguments.len() {
+        if let Some((zero_value, modules_to_import)) =
+            decoder_printer.zero_value_from_record_constructor(custom_type, zero_constructor)
+        {
+            for module_name in modules_to_import {
+                maybe_import(&mut self.edits, self.module, &module_name);
+            }
+            eco_format!(r#"    _ -> {decode_module}.failure({zero_value}, "{type_name}")"#,)
+        } else {
             eco_format!(
                 r#"    _ -> {decode_module}.failure(todo as "Zero value for {type_name}", "{type_name}")"#
-            )
-        } else {
-            let zero_args = zero_args.iter().join(", ");
-
-            eco_format!(
-                r#"    _ -> {decode_module}.failure({constructor_name}({zero_args}), "{type_name}")"#,
             )
         }
     }
 }
 
-impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
+impl<'ast, IO> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast, IO> {
     fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
         let range = self.edits.src_span_to_lsp_range(custom_type.location);
         if !overlaps(self.params.range, range) {
@@ -4459,12 +4447,13 @@ fn maybe_import(edits: &mut TextEdits<'_>, module: &Module, module_name: &str) {
     ));
 }
 
-struct DecoderPrinter<'a, 'b> {
+struct DecoderPrinter<'a, 'b, IO> {
     printer: &'a mut Printer<'b>,
     /// The name of the root type we are printing a decoder for
     type_name: EcoString,
     /// The module name of the root type we are printing a decoder for
     type_module: EcoString,
+    compiler: &'a LspProjectCompiler<FileSystemProxy<IO>>,
 }
 
 const DYNAMIC_MODULE: &str = "gleam/dynamic";
@@ -4514,12 +4503,18 @@ impl RecordLabel<'_> {
     }
 }
 
-impl<'a, 'b> DecoderPrinter<'a, 'b> {
-    fn new(printer: &'a mut Printer<'b>, type_name: EcoString, type_module: EcoString) -> Self {
+impl<'a, 'b, IO> DecoderPrinter<'a, 'b, IO> {
+    fn new(
+        printer: &'a mut Printer<'b>,
+        type_name: EcoString,
+        type_module: EcoString,
+        compiler: &'a LspProjectCompiler<FileSystemProxy<IO>>,
+    ) -> Self {
         Self {
             type_name,
             type_module,
             printer,
+            compiler,
         }
     }
 
@@ -4616,67 +4611,237 @@ impl<'a, 'b> DecoderPrinter<'a, 'b> {
         )
     }
 
-    /// Returns the zero values for all Prelude and stdlib types except Result.
-    /// Returns None for all other types.
-    fn zero_value_for_type(&mut self, type_: &Type) -> Option<EcoString> {
+    fn zero_value_from_record_constructor(
+        &mut self,
+        custom_type: &CustomType<Arc<Type>>,
+        zero_constructor: &RecordConstructor<Arc<Type>>,
+    ) -> Option<(EcoString, HashSet<EcoString>)> {
+        // The construction of the zero value might necessitate importing
+        // modules that aren't currently in scope. We keep track of them here.
+        let mut modules_to_import = HashSet::new();
+
+        // We might not be able to generate a zero value for this constructor
+        // for various reasons e.g. it contains values of types from outside
+        // the current package or it's a (mutually) recursive type constructor.
+        let zero_args = zero_constructor
+            .arguments
+            .iter()
+            .map_while(|arg| {
+                let zero_value = self.zero_value_for_type(
+                    &arg.type_,
+                    // We have already "visited" this root type, so it is always included
+                    // as the first element in our path for cycle-detection.
+                    &mut vec![(self.type_module.clone(), custom_type.name.clone())],
+                    &mut modules_to_import,
+                )?;
+
+                let label = arg.label.as_ref().map(|(_, label)| label);
+                Some((label, zero_value))
+            })
+            .collect_vec();
+
+        // We check that we were able to produce zero values for all the fields
+        // before proceeding further
+        if zero_args.len() < zero_constructor.arguments.len() {
+            return None;
+        };
+
+        let zero_args = zero_args
+            .iter()
+            .map(|(label, zero_value)| {
+                if let Some(label) = label {
+                    eco_format!("{label}: {zero_value}")
+                } else {
+                    eco_format!("{zero_value}")
+                }
+            })
+            .join(", ");
+
+        let zero_value = eco_format!("{}({})", zero_constructor.name, zero_args);
+
+        Some((zero_value, modules_to_import))
+    }
+
+    /// Performs best-effort generation of zero values for a given type.
+    /// Will succeed for all prelude types and most stdlib types.
+    /// For specifics on how custom user-defined types are handled, see
+    /// `zero_value_for_custom_type`.
+    fn zero_value_for_type(
+        &mut self,
+        type_: &Type,
+        // Keeps track of types visited already to ensure we don't end up in an infinite
+        // loop due to recursive types
+        path: &mut Vec<(EcoString, EcoString)>,
+        modules_to_import: &mut HashSet<EcoString>,
+    ) -> Option<EcoString> {
         if type_.is_bit_array() {
-            Some("<<>>".into())
-        } else if type_.is_bool() {
-            Some("False".into())
-        } else if type_.is_float() {
-            Some("0.".into())
-        } else if type_.is_int() {
-            Some("0".into())
-        } else if type_.is_string() {
-            Some("\"\"".into())
-        } else if type_.is_list() {
-            Some("[]".into())
-        } else if type_.is_nil() {
-            Some("Nil".into())
-        } else {
-            match type_.tuple_types() {
-                Some(types) => {
-                    // Just like in the `failure_clause` function, we try generating zero
-                    // values for the tuple members and exit early if any of them fail.
-                    let field_zeroes = types
-                        .iter()
-                        .map_while(|type_| self.zero_value_for_type(type_))
-                        .collect_vec();
+            return Some("<<>>".into());
+        }
+        if type_.is_bool() {
+            return Some("False".into());
+        }
+        if type_.is_float() {
+            return Some("0.0".into());
+        }
+        if type_.is_int() {
+            return Some("0".into());
+        }
+        if type_.is_string() {
+            return Some("\"\"".into());
+        }
+        if type_.is_list() {
+            return Some("[]".into());
+        }
+        if type_.is_nil() {
+            return Some("Nil".into());
+        }
 
-                    if field_zeroes.len() < types.len() {
-                        None
-                    } else {
-                        Some(eco_format!("#({})", field_zeroes.iter().join(", ")))
-                    }
-                }
+        if let Some(types) = type_.tuple_types() {
+            // We try generating zero values for the tuple members and exit early if any of them fail.
+            let field_zeroes = types
+                .iter()
+                .map_while(|type_| self.zero_value_for_type(type_, path, modules_to_import))
+                .collect_vec();
 
-                _ => {
-                    let type_information = type_.named_type_information();
-                    let type_information =
-                        type_information.as_ref().map(|(module, name, arguments)| {
-                            (module.as_str(), name.as_str(), arguments.as_slice())
-                        });
-
-                    match type_information {
-                        Some(("gleam/option", "Option", _)) => Some(eco_format!(
-                            "{}.None",
-                            self.printer.print_module(OPTION_MODULE)
-                        )),
-
-                        Some(("gleam/dynamic", "Dynamic", _)) => Some(eco_format!(
-                            "{}.nil()",
-                            self.printer.print_module(DYNAMIC_MODULE)
-                        )),
-
-                        Some(("gleam/dict", "Dict", _)) => Some(eco_format!(
-                            "{}.new()",
-                            self.printer.print_module(DICT_MODULE)
-                        )),
-
-                        _ => None,
-                    }
-                }
+            if field_zeroes.len() < types.len() {
+                return None;
+            } else {
+                return Some(eco_format!("#({})", field_zeroes.iter().join(", ")));
             }
+        };
+
+        let (module, name, _) = type_.named_type_information()?;
+        match (module.as_str(), name.as_str()) {
+            (OPTION_MODULE, "Option") => {
+                let _ = modules_to_import.insert(OPTION_MODULE.into());
+                Some(eco_format!(
+                    "{}.None",
+                    self.printer.print_module(OPTION_MODULE)
+                ))
+            }
+
+            (DYNAMIC_MODULE, "Dynamic") => {
+                let _ = modules_to_import.insert(DYNAMIC_MODULE.into());
+                Some(eco_format!(
+                    "{}.nil()",
+                    self.printer.print_module(DYNAMIC_MODULE)
+                ))
+            }
+
+            (DICT_MODULE, "Dict") => {
+                let _ = modules_to_import.insert(DICT_MODULE.into());
+                Some(eco_format!(
+                    "{}.new()",
+                    self.printer.print_module(DICT_MODULE)
+                ))
+            }
+
+            _ => {
+                let already_seen_type = path.iter().any(|(path_module, path_type_name)| {
+                    path_module == &module && path_type_name == &name
+                });
+
+                if already_seen_type {
+                    return None;
+                };
+
+                path.push((module.clone(), name.clone()));
+                let zero = self.zero_value_for_custom_type(module, name, path, modules_to_import);
+                // We need to clean up the path whether the zero value generation succeeded or not
+                // to make sure cycle detection works correctly for any other fields that might
+                // need to be handled next.
+                let _ = path.pop();
+
+                zero
+            }
+        }
+    }
+
+    /// Best-effort zero value generation for user-defined types.
+    /// Extracted from `zero_value_for_type` for readability.
+    /// Does NOT handle setup and cleanup of `path` for cycle detection.
+    /// Use `zero_value_for_type` instead.
+    fn zero_value_for_custom_type(
+        &mut self,
+        custom_type_module: EcoString,
+        custom_type_name: EcoString,
+        path: &mut Vec<(EcoString, EcoString)>,
+        modules_to_import: &mut HashSet<EcoString>,
+    ) -> Option<EcoString> {
+        let type_is_inside_current_module = self.type_module == custom_type_module;
+
+        let current_module_interface = self
+            .compiler
+            .modules
+            .get(&self.type_module)
+            .map(|module| &module.ast.type_info)?;
+
+        let type_module_interface = if !type_is_inside_current_module {
+            self.compiler.get_module_interface(&custom_type_module)?
+        } else {
+            current_module_interface
+        };
+
+        // We only try and generate zero values for user-defined types in the current
+        // package. If you are expanding the scope of this functionality to
+        // remove this limitation, make sure to check for internal modules.
+        if current_module_interface.package != type_module_interface.package {
+            return None;
+        }
+
+        let constructors = type_module_interface
+            .types_value_constructors
+            .get(&custom_type_name)?;
+
+        // Opaque types cannot be constructed outside the module they were defined in,
+        // so we will be unable to produce a zero value.
+        if !type_is_inside_current_module && constructors.opaque == Opaque::Opaque {
+            return None;
+        }
+
+        // Find the constructor with the fewest fields.
+        let zero_constructor = constructors
+            .variants
+            .iter()
+            .min_by_key(|v| v.parameters.len())?;
+
+        // Try to generate zero values for all fields in the constructor
+        let zero_params = zero_constructor
+            .parameters
+            .iter()
+            .map_while(|parameter| {
+                let zero = self.zero_value_for_type(&parameter.type_, path, modules_to_import)?;
+
+                if let Some(label) = &parameter.label {
+                    Some(eco_format!("{label}: {zero}"))
+                } else {
+                    Some(zero)
+                }
+            })
+            .collect_vec();
+
+        if zero_params.len() < zero_constructor.parameters.len() {
+            return None;
+        };
+
+        let zero_constructor = if !type_is_inside_current_module {
+            // Type constructors from other modules need to be qualified appropriately,
+            // and they might need to be brought into scope.
+            let _ = modules_to_import.insert(custom_type_module.clone());
+            eco_format!(
+                "{}.{}",
+                self.printer.print_module(&custom_type_module),
+                zero_constructor.name
+            )
+        } else {
+            eco_format!("{}", zero_constructor.name)
+        };
+
+        if zero_params.is_empty() {
+            Some(eco_format!("{zero_constructor}"))
+        } else {
+            let zero_args = zero_params.iter().join(", ");
+            Some(eco_format!("{zero_constructor}({zero_args})"))
         }
     }
 }
