@@ -181,6 +181,9 @@ pub struct PackageConfig {
     pub target: Target,
     #[serde(default)]
     pub internal_modules: Option<Vec<Glob>>,
+    /// This entry contains values from [tools] table, which is the only way
+    /// for tools to store configuration inside package config, other unknown
+    /// values are denied. It isn't used anywhere in the compiler and build tool.
     #[serde(default)]
     pub tools: Table,
 }
