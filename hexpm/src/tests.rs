@@ -1,36 +1,46 @@
-// TODO: remove all the async stuff and mockito server. The library is pure now
-// so it isn't needed.
-
 use std::{convert::TryFrom, io::Cursor};
 
 use super::*;
-use mockito::Matcher;
 use serde_json::json;
 
-async fn http_send<Body: Into<reqwest::Body>>(
-    request: http::Request<Body>,
-) -> Result<http::Response<Vec<u8>>, reqwest::Error> {
-    // Make the request
-    let mut response = reqwest::Client::new()
-        .execute(request.try_into().unwrap())
-        .await?;
-    // Convert to http::Response
-    let mut builder = http::Response::builder()
-        .status(response.status())
-        .version(response.version());
-    std::mem::swap(builder.headers_mut().unwrap(), response.headers_mut());
-    Ok(builder
-        .body(response.bytes().await.unwrap().to_vec())
-        .unwrap())
+fn make_response(status: u16, body: Vec<u8>) -> http::Response<Vec<u8>> {
+    http::Response::builder().status(status).body(body).unwrap()
 }
 
-#[tokio::test]
-async fn authenticate_test_success() {
+fn make_json_response(status: u16, body: serde_json::Value) -> http::Response<Vec<u8>> {
+    make_response(status, body.to_string().into_bytes())
+}
+
+#[test]
+fn authenticate_request() {
     let username = "me@example.com";
     let password = "password";
     let name = "louis-test";
-    let expected_secret = "some-secret-here";
 
+    let config = Config::new();
+    let request = crate::api_create_api_key_request(username, password, name, &config);
+
+    assert_eq!(request.method(), http::Method::POST);
+    assert_eq!(request.uri().path(), "/api/keys");
+    assert_eq!(
+        request.headers().get("authorization").unwrap(),
+        "Basic bWVAZXhhbXBsZS5jb206cGFzc3dvcmQ="
+    );
+    assert_eq!(
+        request.headers().get("content-type").unwrap(),
+        "application/json"
+    );
+    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+
+    let body: serde_json::Value = serde_json::from_slice(request.body()).unwrap();
+    assert_eq!(body["name"], "louis-test");
+    assert_eq!(body["permissions"][0]["domain"], "api");
+    assert_eq!(body["permissions"][0]["resource"], "write");
+}
+
+#[test]
+fn authenticate_response_success() {
+    let expected_secret = "some-secret-here";
     let resp_body = json!({
         "authing_key": false,
         "inserted_at": "2020-05-02T17:18:23.336328Z",
@@ -42,528 +52,255 @@ async fn authenticate_test_success() {
         "url": "https: //hex.pm/api/keys/authenticate_test_1"
     });
 
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock("POST", "/keys")
-        .expect(1)
-        .match_header("authorization", "Basic bWVAZXhhbXBsZS5jb206cGFzc3dvcmQ=")
-        .match_header("content-type", "application/json")
-        .match_header("accept", "application/json")
-        .match_body(Matcher::Json(json!({
-            "name": name,
-            "permissions":[{ "domain": "api", "resource": "write" }]
-        })))
-        .with_status(201)
-        .with_body(resp_body.to_string())
-        .create_async()
-        .await;
-
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let secret = crate::api_create_api_key_response(
-        http_send(crate::api_create_api_key_request(
-            username, password, name, &config,
-        ))
-        .await
-        .unwrap(),
-    )
-    .unwrap();
+    let response = make_json_response(201, resp_body);
+    let secret = crate::api_create_api_key_response(response).unwrap();
 
     assert_eq!(expected_secret, secret);
-    mock.assert();
 }
 
-#[tokio::test]
-async fn authenticate_test_rate_limted() {
-    let username = "me@example.com";
-    let password = "password";
-    let name = "authenticate_test_2";
-
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock("POST", "/keys")
-        .expect(1)
-        .match_header("authorization", "Basic bWVAZXhhbXBsZS5jb206cGFzc3dvcmQ=")
-        .match_header("content-type", "application/json")
-        .match_header("accept", "application/json")
-        .match_body(Matcher::Json(json!({
-            "name": name,
-            "permissions":[{ "domain": "api", "resource": "write" }]
-        })))
-        .with_status(429)
-        .create_async()
-        .await;
-
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_create_api_key_response(
-        http_send(crate::api_create_api_key_request(
-            username, password, name, &config,
-        ))
-        .await
-        .unwrap(),
-    )
-    .unwrap_err();
+#[test]
+fn authenticate_response_rate_limited() {
+    let response = make_response(429, vec![]);
+    let result = crate::api_create_api_key_response(response).unwrap_err();
 
     match result {
         ApiError::RateLimited => (),
         result => panic!("expected RateLimited, got {:?}", result),
     }
-
-    mock.assert();
 }
 
-#[tokio::test]
-async fn authenticate_test_bad_creds() {
-    let username = "me@example.com";
-    let password = "password";
-    let name = "authenticate_test_3";
-
+#[test]
+fn authenticate_response_bad_creds() {
     let resp_body = json!({
         "message": "invalid username and password combination",
         "status": 401,
     });
 
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock("POST", "/keys")
-        .expect(1)
-        .match_header("authorization", "Basic bWVAZXhhbXBsZS5jb206cGFzc3dvcmQ=")
-        .match_header("content-type", "application/json")
-        .match_header("accept", "application/json")
-        .match_body(Matcher::Json(json!({
-            "name": name,
-            "permissions":[{ "domain": "api", "resource": "write" }]
-        })))
-        .with_status(401)
-        .with_body(resp_body.to_string())
-        .create_async()
-        .await;
-
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_create_api_key_response(
-        http_send(crate::api_create_api_key_request(
-            username, password, name, &config,
-        ))
-        .await
-        .unwrap(),
-    )
-    .unwrap_err();
+    let response = make_json_response(401, resp_body);
+    let result = crate::api_create_api_key_response(response).unwrap_err();
 
     match result {
         ApiError::InvalidCredentials => (),
         result => panic!("expected InvalidCredentials, got {:?}", result),
     }
-
-    mock.assert();
 }
 
-#[tokio::test]
-async fn remove_docs_success() {
+#[test]
+fn remove_docs_request() {
     let key = "my-api-key-here";
     let package = "gleam_experimental_stdlib";
     let version = "0.8.0";
 
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock(
-            "DELETE",
-            format!("/packages/{}/releases/{}/docs", package, version).as_str(),
-        )
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .with_status(204)
-        .create_async()
-        .await;
+    let config = Config::new();
+    let request = crate::api_remove_docs_request(package, version, key, &config).unwrap();
 
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_remove_docs_response(
-        http_send(crate::api_remove_docs_request(package, version, key, &config).unwrap())
-            .await
-            .unwrap(),
-    )
-    .unwrap();
-
-    assert_eq!(result, ());
-    mock.assert();
+    assert_eq!(request.method(), http::Method::DELETE);
+    assert_eq!(
+        request.uri().path(),
+        "/api/packages/gleam_experimental_stdlib/releases/0.8.0/docs"
+    );
+    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
 }
 
-#[tokio::test]
-async fn revert_release_success() {
+#[test]
+fn remove_docs_response_success() {
+    let response = make_response(204, vec![]);
+    let result = crate::api_remove_docs_response(response).unwrap();
+    assert_eq!(result, ());
+}
+
+#[test]
+fn revert_release_request() {
     let key = "my-api-key-here";
     let package = "gleam_experimental_stdlib";
     let version = "0.8.0";
 
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock(
-            "DELETE",
-            format!("/packages/{}/releases/{}", package, version).as_str(),
-        )
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .with_status(204)
-        .create_async()
-        .await;
+    let config = Config::new();
+    let request = crate::api_revert_release_request(package, version, key, &config).unwrap();
 
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_revert_release_response(
-        http_send(crate::api_revert_release_request(package, version, key, &config).unwrap())
-            .await
-            .unwrap(),
-    )
-    .unwrap();
-
-    assert_eq!(result, ());
-    mock.assert();
+    assert_eq!(request.method(), http::Method::DELETE);
+    assert_eq!(
+        request.uri().path(),
+        "/api/packages/gleam_experimental_stdlib/releases/0.8.0"
+    );
+    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
 }
 
-#[tokio::test]
-async fn add_owner_success() {
+#[test]
+fn revert_release_response_success() {
+    let response = make_response(204, vec![]);
+    let result = crate::api_revert_release_response(response).unwrap();
+    assert_eq!(result, ());
+}
+
+#[test]
+fn add_owner_request() {
     let key = "my-api-key-here";
     let package = "gleam_experimental_stdlib";
     let owner = "lpil";
     let level = OwnerLevel::Maintainer;
 
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock(
-            "PUT",
-            format!("/packages/{}/owners/{}", package, owner).as_str(),
-        )
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .match_body(Matcher::Json(json!({
-            "level": "maintainer",
-            "transfer": false,
-        })))
-        .with_status(204)
-        .create_async()
-        .await;
+    let config = Config::new();
+    let request = crate::api_add_owner_request(package, owner, level, key, &config);
 
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
+    assert_eq!(request.method(), http::Method::PUT);
+    assert_eq!(
+        request.uri().path(),
+        "/api/packages/gleam_experimental_stdlib/owners/lpil"
+    );
+    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
 
-    let result = crate::api_add_owner_response(
-        http_send(crate::api_add_owner_request(
-            package, owner, level, key, &config,
-        ))
-        .await
-        .unwrap(),
-    )
-    .unwrap();
-
-    assert_eq!(result, ());
-    mock.assert();
+    let body: serde_json::Value = serde_json::from_slice(request.body()).unwrap();
+    assert_eq!(body["level"], "maintainer");
+    assert_eq!(body["transfer"], false);
 }
 
-#[tokio::test]
-async fn transfer_owner_success() {
+#[test]
+fn add_owner_response_success() {
+    let response = make_response(204, vec![]);
+    let result = crate::api_add_owner_response(response).unwrap();
+    assert_eq!(result, ());
+}
+
+#[test]
+fn transfer_owner_request() {
     let key = "my-api-key-here";
     let package = "gleam_experimental_stdlib";
     let owner = "lpil";
 
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock(
-            "PUT",
-            format!("/packages/{}/owners/{}", package, owner).as_str(),
-        )
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .match_body(Matcher::Json(json!({
-            "level": "full",
-            "transfer": true,
-        })))
-        .with_status(204)
-        .create_async()
-        .await;
+    let config = Config::new();
+    let request = crate::api_transfer_owner_request(package, owner, key, &config);
 
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
+    assert_eq!(request.method(), http::Method::PUT);
+    assert_eq!(
+        request.uri().path(),
+        "/api/packages/gleam_experimental_stdlib/owners/lpil"
+    );
+    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
 
-    let result = crate::api_transfer_owner_response(
-        http_send(crate::api_transfer_owner_request(
-            package, owner, key, &config,
-        ))
-        .await
-        .unwrap(),
-    )
-    .unwrap();
-
-    assert_eq!(result, ());
-    mock.assert();
+    let body: serde_json::Value = serde_json::from_slice(request.body()).unwrap();
+    assert_eq!(body["level"], "full");
+    assert_eq!(body["transfer"], true);
 }
 
-#[tokio::test]
-async fn remove_owner_success() {
+#[test]
+fn transfer_owner_response_success() {
+    let response = make_response(204, vec![]);
+    let result = crate::api_transfer_owner_response(response).unwrap();
+    assert_eq!(result, ());
+}
+
+#[test]
+fn remove_owner_request() {
     let key = "my-api-key-here";
     let package = "gleam_experimental_stdlib";
     let owner = "lpil";
 
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock(
-            "DELETE",
-            format!("/packages/{}/owners/{}", package, owner).as_str(),
-        )
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .with_status(204)
-        .create_async()
-        .await;
+    let config = Config::new();
+    let request = crate::api_remove_owner_request(package, owner, key, &config);
 
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_remove_owner_response(
-        http_send(crate::api_remove_owner_request(
-            package, owner, key, &config,
-        ))
-        .await
-        .unwrap(),
-    )
-    .unwrap();
-
-    assert_eq!(result, ());
-    mock.assert();
+    assert_eq!(request.method(), http::Method::DELETE);
+    assert_eq!(
+        request.uri().path(),
+        "/api/packages/gleam_experimental_stdlib/owners/lpil"
+    );
+    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
 }
 
-#[tokio::test]
-async fn remove_key_success() {
+#[test]
+fn remove_owner_response_success() {
+    let response = make_response(204, vec![]);
+    let result = crate::api_remove_owner_response(response).unwrap();
+    assert_eq!(result, ());
+}
+
+#[test]
+fn remove_key_request() {
     let name = "some-key-name";
     let key = "my-api-key-here";
 
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock("DELETE", format!("/keys/{}", name).as_str())
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .with_status(204)
-        .create_async()
-        .await;
+    let config = Config::new();
+    let request = crate::api_remove_api_key_request(name, key, &config);
 
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_remove_api_key_response(
-        http_send(crate::api_remove_api_key_request(name, key, &config))
-            .await
-            .unwrap(),
-    )
-    .unwrap();
-
-    assert_eq!(result, ());
-    mock.assert();
+    assert_eq!(request.method(), http::Method::DELETE);
+    assert_eq!(request.uri().path(), "/api/keys/some-key-name");
+    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
 }
 
-#[tokio::test]
-async fn remove_key_success_2() {
-    let name = "some-key-name";
-    let key = "my-api-key-here";
-
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock("DELETE", format!("/keys/{}", name).as_str())
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .with_status(200)
-        .create_async()
-        .await;
-
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_remove_api_key_response(
-        http_send(crate::api_remove_api_key_request(name, key, &config))
-            .await
-            .unwrap(),
-    )
-    .unwrap();
-
+#[test]
+fn remove_key_response_success_204() {
+    let response = make_response(204, vec![]);
+    let result = crate::api_remove_api_key_response(response).unwrap();
     assert_eq!(result, ());
-    mock.assert();
 }
 
-#[tokio::test]
-async fn remove_docs_unknown_package_version() {
-    let key = "my-api-key-here";
-    let package = "gleam_experimental_stdlib_this_does_not_exist";
-    let version = "0.8.0";
+#[test]
+fn remove_key_response_success_200() {
+    let response = make_response(200, vec![]);
+    let result = crate::api_remove_api_key_response(response).unwrap();
+    assert_eq!(result, ());
+}
 
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock(
-            "DELETE",
-            format!("/packages/{}/releases/{}/docs", package, version).as_str(),
-        )
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .with_status(404)
-        .create_async()
-        .await;
-
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_remove_docs_response(
-        http_send(crate::api_remove_docs_request(package, version, key, &config).unwrap())
-            .await
-            .unwrap(),
-    )
-    .unwrap_err();
+#[test]
+fn remove_docs_response_not_found() {
+    let response = make_response(404, vec![]);
+    let result = crate::api_remove_docs_response(response).unwrap_err();
 
     match result {
         ApiError::NotFound => (),
         result => panic!("expected ApiError::NotFound got {:?}", result),
     }
-
-    mock.assert();
 }
 
-#[tokio::test]
-async fn remove_docs_rate_limted() {
-    let key = "my-api-key-here";
-    let package = "gleam_experimental_stdlib";
-    let version = "0.8.0";
-
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock(
-            "DELETE",
-            format!("/packages/{}/releases/{}/docs", package, version).as_str(),
-        )
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .with_status(429)
-        .create_async()
-        .await;
-
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_remove_docs_response(
-        http_send(crate::api_remove_docs_request(package, version, key, &config).unwrap())
-            .await
-            .unwrap(),
-    )
-    .unwrap_err();
+#[test]
+fn remove_docs_response_rate_limited() {
+    let response = make_response(429, vec![]);
+    let result = crate::api_remove_docs_response(response).unwrap_err();
 
     match result {
         ApiError::RateLimited => (),
         result => panic!("expected ApiError::RateLimited got {:?}", result),
     }
-
-    mock.assert();
 }
 
-#[tokio::test]
-async fn remove_docs_invalid_key() {
-    let key = "my-api-key-here";
-    let package = "gleam_experimental_stdlib";
-    let version = "0.8.0";
-
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock(
-            "DELETE",
-            format!("/packages/{}/releases/{}/docs", package, version).as_str(),
-        )
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .with_status(401)
-        .with_body(
-            json!({
-                "message": "invalid API key",
-                "status": 401,
-            })
-            .to_string(),
-        )
-        .create_async()
-        .await;
-
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_remove_docs_response(
-        http_send(crate::api_remove_docs_request(package, version, key, &config).unwrap())
-            .await
-            .unwrap(),
-    )
-    .unwrap_err();
+#[test]
+fn remove_docs_response_invalid_key() {
+    let resp_body = json!({
+        "message": "invalid API key",
+        "status": 401,
+    });
+    let response = make_json_response(401, resp_body);
+    let result = crate::api_remove_docs_response(response).unwrap_err();
 
     match result {
         ApiError::InvalidApiKey => (),
         result => panic!("expected ApiError::InvalidApiKey got {:?}", result),
     }
-
-    mock.assert();
 }
 
-#[tokio::test]
-async fn remove_docs_forbidden() {
-    let key = "my-api-key-here";
-    let package = "jason";
-    let version = "1.2.0";
-
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock(
-            "DELETE",
-            format!("/packages/{}/releases/{}/docs", package, version).as_str(),
-        )
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .with_status(403)
-        .with_body(
-            json!({
-                "message": "account is not authorized for this action",
-                "status": 403,
-            })
-            .to_string(),
-        )
-        .create_async()
-        .await;
-
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_remove_docs_response(
-        http_send(crate::api_remove_docs_request(package, version, key, &config).unwrap())
-            .await
-            .unwrap(),
-    )
-    .unwrap_err();
+#[test]
+fn remove_docs_response_forbidden() {
+    let resp_body = json!({
+        "message": "account is not authorized for this action",
+        "status": 403,
+    });
+    let response = make_json_response(403, resp_body);
+    let result = crate::api_remove_docs_response(response).unwrap_err();
 
     match result {
         ApiError::Forbidden => (),
         result => panic!("expected ApiError::Forbidden got {:?}", result),
     }
-
-    mock.assert();
 }
 
-#[tokio::test]
-async fn remove_docs_bad_package_name() {
+#[test]
+fn remove_docs_bad_package_name() {
     let key = "my-api-key-here";
     let package = "not valid";
     let version = "1.2.0";
@@ -576,47 +313,45 @@ async fn remove_docs_bad_package_name() {
     }
 }
 
-#[tokio::test]
-async fn publish_docs_success() {
+#[test]
+fn publish_docs_request() {
     let key = "my-api-key-here";
     let package = "gleam_experimental_stdlib_123";
     let version = "0.8.0";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock(
-            "POST",
-            format!("/packages/{}/releases/{}/docs", package, version).as_str(),
-        )
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .with_status(201)
-        .create_async()
-        .await;
+    let config = Config::new();
+    let request =
+        crate::api_publish_docs_request(package, version, tarball.clone(), key, &config).unwrap();
 
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_publish_docs_response(
-        http_send(
-            crate::api_publish_docs_request(package, version, tarball, key, &config).unwrap(),
-        )
-        .await
-        .unwrap(),
+    assert_eq!(request.method(), http::Method::POST);
+    assert_eq!(
+        request.uri().path(),
+        "/api/packages/gleam_experimental_stdlib_123/releases/0.8.0/docs"
     );
+    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+    assert_eq!(
+        request.headers().get("content-type").unwrap(),
+        "application/x-tar"
+    );
+    assert_eq!(request.headers().get("content-encoding").unwrap(), "x-gzip");
+    assert_eq!(request.body(), &tarball);
+}
+
+#[test]
+fn publish_docs_response_success() {
+    let response = make_response(201, vec![]);
+    let result = crate::api_publish_docs_response(response);
 
     match result {
         Ok(()) => (),
         result => panic!("expected Ok(()), got {:?}", result),
     }
-
-    mock.assert()
 }
 
-#[tokio::test]
-async fn publish_docs_bad_package_name() {
+#[test]
+fn publish_docs_bad_package_name() {
     let key = "my-api-key-here";
     let package = "not valid";
     let version = "1.2.0";
@@ -630,8 +365,8 @@ async fn publish_docs_bad_package_name() {
     }
 }
 
-#[tokio::test]
-async fn publish_docs_bad_package_version() {
+#[test]
+fn publish_docs_bad_package_version() {
     let key = "my-api-key-here";
     let package = "name";
     let version = "invalid version";
@@ -645,174 +380,56 @@ async fn publish_docs_bad_package_version() {
     }
 }
 
-#[tokio::test]
-async fn publish_docs_not_found() {
-    let key = "my-api-key-here";
-    let package = "name";
-    let version = "1.1.0";
-    let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
-
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock(
-            "POST",
-            format!("/packages/{}/releases/{}/docs", package, version).as_str(),
-        )
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .with_status(404)
-        .create_async()
-        .await;
-
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_publish_docs_response(
-        http_send(
-            crate::api_publish_docs_request(package, version, tarball, key, &config).unwrap(),
-        )
-        .await
-        .unwrap(),
-    );
+#[test]
+fn publish_docs_response_not_found() {
+    let response = make_response(404, vec![]);
+    let result = crate::api_publish_docs_response(response);
 
     match result {
         Err(ApiError::NotFound) => (),
         result => panic!("expected ApiError::NotFound, got {:?}", result),
     }
-
-    mock.assert()
 }
 
-#[tokio::test]
-async fn publish_docs_rate_limit() {
-    let key = "my-api-key-here";
-    let package = "name";
-    let version = "1.1.0";
-    let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
-
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock(
-            "POST",
-            format!("/packages/{}/releases/{}/docs", package, version).as_str(),
-        )
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .with_status(429)
-        .create_async()
-        .await;
-
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_publish_docs_response(
-        http_send(
-            crate::api_publish_docs_request(package, version, tarball, key, &config).unwrap(),
-        )
-        .await
-        .unwrap(),
-    );
+#[test]
+fn publish_docs_response_rate_limit() {
+    let response = make_response(429, vec![]);
+    let result = crate::api_publish_docs_response(response);
 
     match result {
         Err(ApiError::RateLimited) => (),
         result => panic!("expected ApiError::RateLimited, got {:?}", result),
     }
-
-    mock.assert()
 }
 
-#[tokio::test]
-async fn publish_docs_invalid_api_key() {
-    let key = "my-api-key-here";
-    let package = "gleam_experimental_stdlib";
-    let version = "0.8.0";
-    let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
-
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock(
-            "POST",
-            format!("/packages/{}/releases/{}/docs", package, version).as_str(),
-        )
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .with_status(401)
-        .with_body(
-            json!({
-                "message": "invalid API key",
-                "status": 401,
-            })
-            .to_string(),
-        )
-        .create_async()
-        .await;
-
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_publish_docs_response(
-        http_send(
-            crate::api_publish_docs_request(package, version, tarball, key, &config).unwrap(),
-        )
-        .await
-        .unwrap(),
-    );
+#[test]
+fn publish_docs_response_invalid_api_key() {
+    let resp_body = json!({
+        "message": "invalid API key",
+        "status": 401,
+    });
+    let response = make_json_response(401, resp_body);
+    let result = crate::api_publish_docs_response(response);
 
     match result {
         Err(ApiError::InvalidApiKey) => (),
         result => panic!("expected Err(ApiError::InvalidApiKey), got {:?}", result),
     }
-
-    mock.assert();
 }
 
-#[tokio::test]
-async fn publish_docs_forbidden() {
-    let key = "my-api-key-here";
-    let package = "gleam_experimental_stdlib";
-    let version = "0.8.0";
-    let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
-
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock(
-            "POST",
-            format!("/packages/{}/releases/{}/docs", package, version).as_str(),
-        )
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .with_status(403)
-        .with_body(
-            json!({
-                "message": "account is not authorized for this action",
-                "status": 403,
-            })
-            .to_string(),
-        )
-        .create_async()
-        .await;
-
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_publish_docs_response(
-        http_send(
-            crate::api_publish_docs_request(package, version, tarball, key, &config).unwrap(),
-        )
-        .await
-        .unwrap(),
-    );
+#[test]
+fn publish_docs_response_forbidden() {
+    let resp_body = json!({
+        "message": "account is not authorized for this action",
+        "status": 403,
+    });
+    let response = make_json_response(403, resp_body);
+    let result = crate::api_publish_docs_response(response);
 
     match result {
         Err(ApiError::Forbidden) => (),
         result => panic!("expected Err(ApiError::Forbidden), got {:?}", result),
     }
-
-    mock.assert();
 }
 
 fn expected_package_exfmt() -> Package {
@@ -924,50 +541,35 @@ fn expected_package_exfmt() -> Package {
     }
 }
 
-#[tokio::test]
-async fn get_package_ok_test() {
+#[test]
+fn get_package_request() {
+    let config = Config::new();
+    let request = crate::repository_v2_get_package_request("exfmt", None, &config);
+
+    assert_eq!(request.method(), http::Method::GET);
+    assert_eq!(request.uri().path(), "/packages/exfmt");
+    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+}
+
+#[test]
+fn get_package_response_ok() {
     let response_body = std::include_bytes!("../test/package_exfmt");
-
-    // Set up test server
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock("GET", "/packages/exfmt")
-        .expect(1)
-        .with_status(200)
-        .with_body(&response_body[..])
-        .create_async()
-        .await;
-
-    // Test!
-    let mut config = Config::new();
-    config.repository_base = http::Uri::try_from(server.url()).unwrap();
+    let response = make_response(200, response_body.to_vec());
 
     let package = crate::repository_v2_get_package_response(
-        http_send(crate::repository_v2_get_package_request(
-            "exfmt", None, &config,
-        ))
-        .await
-        .unwrap(),
+        response,
         std::include_bytes!("../test/public_key"),
     )
     .unwrap();
 
-    assert_eq!(expected_package_exfmt(), package,);
-
-    mock.assert();
+    assert_eq!(expected_package_exfmt(), package);
 }
 
-#[tokio::test]
-async fn get_package_not_found() {
-    let config = Config::new();
+#[test]
+fn get_package_response_not_found() {
+    let response = make_response(404, vec![]);
     let error = crate::repository_v2_get_package_response(
-        http_send(crate::repository_v2_get_package_request(
-            "louissaysthispackagedoesnotexist",
-            None,
-            &config,
-        ))
-        .await
-        .unwrap(),
+        response,
         std::include_bytes!("../test/public_key"),
     )
     .unwrap_err();
@@ -975,8 +577,8 @@ async fn get_package_not_found() {
     assert!(error.is_not_found());
 }
 
-#[tokio::test]
-async fn get_package_from_bytes_ok() {
+#[test]
+fn get_package_from_bytes_ok() {
     let response_body = std::include_bytes!("../test/package_exfmt");
     let mut uncompressed = Vec::new();
     let mut decoder = GzDecoder::new(Cursor::new(response_body));
@@ -990,11 +592,11 @@ async fn get_package_from_bytes_ok() {
     )
     .expect("package failed to parse");
 
-    assert_eq!(expected_package_exfmt(), package,);
+    assert_eq!(expected_package_exfmt(), package);
 }
 
-#[tokio::test]
-async fn get_package_from_bytes_malformed() {
+#[test]
+fn get_package_from_bytes_malformed() {
     // public key should not be a valid protobuf and should therefore fail
     let bytes = std::include_bytes!("../test/public_key").to_vec();
     let package_error = crate::repository_v2_package_parse_body(&bytes, &bytes)
@@ -1003,28 +605,23 @@ async fn get_package_from_bytes_malformed() {
     assert!(package_error.is_invalid_protobuf());
 }
 
-#[tokio::test]
-async fn get_repository_versions_ok_test() {
+#[test]
+fn get_repository_versions_request() {
+    let config = Config::new();
+    let request = crate::repository_v2_get_versions_request(None, &config);
+
+    assert_eq!(request.method(), http::Method::GET);
+    assert_eq!(request.uri().path(), "/versions");
+    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+}
+
+#[test]
+fn get_repository_versions_response_ok() {
     let response_body = std::include_bytes!("../test/versions");
-
-    // Set up test server
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock("GET", "/versions")
-        .expect(1)
-        .with_status(200)
-        .with_body(&response_body[..])
-        .create_async()
-        .await;
-
-    // Test!
-    let mut config = Config::new();
-    config.repository_base = http::Uri::try_from(server.url()).unwrap();
+    let response = make_response(200, response_body.to_vec());
 
     let versions = crate::repository_v2_get_versions_response(
-        http_send(crate::repository_v2_get_versions_request(None, &config))
-            .await
-            .unwrap(),
+        response,
         std::include_bytes!("../test/public_key"),
     );
 
@@ -1043,12 +640,10 @@ async fn get_repository_versions_ok_test() {
         ],
         versions.unwrap().get("exfmt").unwrap(),
     );
-
-    mock.assert();
 }
 
-#[tokio::test]
-async fn get_repository_versions_from_bytes_ok() {
+#[test]
+fn get_repository_versions_from_bytes_ok() {
     let response_body = std::include_bytes!("../test/versions");
     let mut uncompressed = Vec::new();
     let mut decoder = GzDecoder::new(Cursor::new(response_body));
@@ -1079,8 +674,8 @@ async fn get_repository_versions_from_bytes_ok() {
     );
 }
 
-#[tokio::test]
-async fn get_repository_versions_from_bytes_malformed() {
+#[test]
+fn get_repository_versions_from_bytes_malformed() {
     // public key should not be a valid protobuf and should therefore fail
     let bytes = std::include_bytes!("../test/public_key").to_vec();
     let versions_error =
@@ -1089,48 +684,39 @@ async fn get_repository_versions_from_bytes_malformed() {
     assert!(versions_error.is_invalid_protobuf());
 }
 
-#[tokio::test]
-async fn get_repository_tarball_ok_test() {
+#[test]
+fn get_repository_tarball_request() {
     let config = Config::new();
-    let checksum =
-        base16::decode("9107f6a859cb96945ad9a099085db028ca2bebb3c8ea42eec227b51c614cc2e0").unwrap();
+    let request =
+        crate::repository_get_package_tarball_request("gleam_stdlib", "0.14.0", None, &config);
 
-    let downloaded = crate::repository_get_package_tarball_response(
-        http_send(crate::repository_get_package_tarball_request(
-            "gleam_stdlib",
-            "0.14.0",
-            None,
-            &config,
-        ))
-        .await
-        .unwrap(),
-        &checksum,
-    )
-    .unwrap();
-
+    assert_eq!(request.method(), http::Method::GET);
+    assert_eq!(request.uri().path(), "/tarballs/gleam_stdlib-0.14.0.tar");
     assert_eq!(
-        &downloaded,
-        std::include_bytes!("../test/gleam_stdlib-0.14.0.tar")
+        request.headers().get("accept").unwrap(),
+        "application/x-tar"
     );
 }
 
-#[tokio::test]
-async fn get_repository_tarball_bad_checksum_test() {
-    let config = Config::new();
+#[test]
+fn get_repository_tarball_response_ok() {
+    let tarball_bytes = std::include_bytes!("../test/gleam_stdlib-0.14.0.tar");
+    let checksum =
+        base16::decode("9107f6a859cb96945ad9a099085db028ca2bebb3c8ea42eec227b51c614cc2e0").unwrap();
+
+    let response = make_response(200, tarball_bytes.to_vec());
+    let downloaded = crate::repository_get_package_tarball_response(response, &checksum).unwrap();
+
+    assert_eq!(&downloaded, tarball_bytes);
+}
+
+#[test]
+fn get_repository_tarball_response_bad_checksum() {
+    let tarball_bytes = std::include_bytes!("../test/gleam_stdlib-0.14.0.tar");
     let checksum = vec![1, 2, 3, 4, 5];
 
-    let err = crate::repository_get_package_tarball_response(
-        http_send(crate::repository_get_package_tarball_request(
-            "gleam_stdlib",
-            "0.14.0",
-            None,
-            &config,
-        ))
-        .await
-        .unwrap(),
-        &checksum,
-    )
-    .unwrap_err();
+    let response = make_response(200, tarball_bytes.to_vec());
+    let err = crate::repository_get_package_tarball_response(response, &checksum).unwrap_err();
 
     assert_eq!(
         err.to_string(),
@@ -1138,172 +724,137 @@ async fn get_repository_tarball_bad_checksum_test() {
     );
 }
 
-#[tokio::test]
-async fn get_repository_tarball_not_found_test() {
-    let config = Config::new();
+#[test]
+fn get_repository_tarball_response_not_found() {
     let checksum = vec![1, 2, 3, 4, 5];
 
-    let err = crate::repository_get_package_tarball_response(
-        http_send(crate::repository_get_package_tarball_request(
-            "gleam_stdlib",
-            "unknown-version",
-            None,
-            &config,
-        ))
-        .await
-        .unwrap(),
-        &checksum,
-    )
-    .unwrap_err();
+    let response = make_response(404, vec![]);
+    let err = crate::repository_get_package_tarball_response(response, &checksum).unwrap_err();
 
     assert_eq!(err.to_string(), "resource was not found");
 }
 
-#[tokio::test]
-async fn publish_package_success() {
+#[test]
+fn publish_package_request() {
     let key = "my-api-key-here";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock("POST", "/publish?replace=false")
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .with_status(201)
-        .create_async()
-        .await;
+    let config = Config::new();
+    let request = crate::api_publish_package_request(tarball.clone(), key, &config, false);
 
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_publish_package_response(
-        http_send(crate::api_publish_package_request(
-            tarball, key, &config, false,
-        ))
-        .await
-        .unwrap(),
+    assert_eq!(request.method(), http::Method::POST);
+    assert_eq!(
+        request.uri().path_and_query().unwrap(),
+        "/api/publish?replace=false"
     );
+    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+    assert_eq!(
+        request.headers().get("content-type").unwrap(),
+        "application/x-tar"
+    );
+    assert_eq!(request.body(), &tarball);
+}
+
+#[test]
+fn publish_package_request_replace() {
+    let key = "my-api-key-here";
+    let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
+
+    let config = Config::new();
+    let request = crate::api_publish_package_request(tarball.clone(), key, &config, true);
+
+    assert_eq!(
+        request.uri().path_and_query().unwrap(),
+        "/api/publish?replace=true"
+    );
+}
+
+#[test]
+fn publish_package_response_success() {
+    let response = make_response(201, vec![]);
+    let result = crate::api_publish_package_response(response);
 
     match result {
         Ok(()) => (),
         result => panic!("expected Ok(()), got {:?}", result),
     }
-
-    mock.assert()
 }
 
-#[tokio::test]
-async fn modify_package_late() {
-    let key = "my-api-key-here";
-    let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
-
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock("POST", "/publish?replace=true")
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .with_status(422)
-        .with_body(
-            json!({
-                "errors": {"inserted_at": "can only modify a release up to one hour after publication"},
-                "message": "Validation error(s)",
-                "status": 422,
-            })
-            .to_string(),
-        )
-        .create_async().await;
-
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_publish_package_response(
-        http_send(crate::api_publish_package_request(
-            tarball, key, &config, true,
-        ))
-        .await
-        .unwrap(),
-    );
+#[test]
+fn modify_package_late() {
+    let resp_body = json!({
+        "errors": {"inserted_at": "can only modify a release up to one hour after publication"},
+        "message": "Validation error(s)",
+        "status": 422,
+    });
+    let response = make_json_response(422, resp_body);
+    let result = crate::api_publish_package_response(response);
 
     match result {
         Err(ApiError::LateModification) => (),
         result => panic!("expected Err(ApiError::LateModification), got {:?}", result),
     }
-
-    mock.assert()
 }
 
-#[tokio::test]
-async fn not_replacing() {
-    let key = "my-api-key-here";
-    let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
-
-    let mut server = mockito::Server::new_async().await;
-    let mock = server
-        .mock("POST", "/publish?replace=false")
-        .expect(1)
-        .match_header("authorization", key)
-        .match_header("accept", "application/json")
-        .with_status(422)
-        .with_body(
-            json!({
-                "errors": {"inserted_at": "must include the --replace flag to update an existing release"},
-                "message": "Validation error(s)",
-                "status": 422,
-            })
-            .to_string(),
-        )
-        .create_async().await;
-
-    let mut config = Config::new();
-    config.api_base = http::Uri::try_from(server.url()).unwrap();
-
-    let result = crate::api_publish_package_response(
-        http_send(crate::api_publish_package_request(
-            tarball, key, &config, false,
-        ))
-        .await
-        .unwrap(),
-    );
+#[test]
+fn not_replacing() {
+    let resp_body = json!({
+        "errors": {"inserted_at": "must include the --replace flag to update an existing release"},
+        "message": "Validation error(s)",
+        "status": 422,
+    });
+    let response = make_json_response(422, resp_body);
+    let result = crate::api_publish_package_response(response);
 
     match result {
         Err(ApiError::NotReplacing) => (),
         result => panic!("expected Err(ApiError::NotReplacing), got {:?}", result),
     }
-
-    mock.assert()
 }
 
-#[tokio::test]
-async fn get_package_release_not_found() {
+#[test]
+fn get_package_release_request() {
     let config = Config::new();
-    let error = crate::api_get_package_release_response(
-        http_send(crate::api_get_package_release_request(
-            "louissaysthispackagedoesnotexist",
-            "1.0.1",
-            None,
-            &config,
-        ))
-        .await
-        .unwrap(),
-    )
-    .unwrap_err();
+    let request = crate::api_get_package_release_request("clint", "0.0.1", None, &config);
+
+    assert_eq!(request.method(), http::Method::GET);
+    assert_eq!(request.uri().path(), "/api/packages/clint/releases/0.0.1");
+    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+}
+
+#[test]
+fn get_package_release_response_not_found() {
+    let response = make_response(404, vec![]);
+    let error = crate::api_get_package_release_response(response).unwrap_err();
 
     assert!(error.is_not_found());
 }
 
-#[tokio::test]
-async fn get_package_release_ok() {
-    let config = Config::new();
-    let resp = crate::api_get_package_release_response(
-        http_send(crate::api_get_package_release_request(
-            "clint", "0.0.1", None, &config,
-        ))
-        .await
-        .unwrap(),
-    )
-    .unwrap();
+#[test]
+fn get_package_release_response_ok() {
+    let resp_body = json!({
+        "version": "0.0.1",
+        "checksum": "41C6781B5F4B986BCE14C3578D39C497BCB8427F1D36D8CDE5FCAA6E03CAE2B1",
+        "requirements": {
+            "plug": {
+                "requirement": "~>0.11.0",
+                "optional": false,
+                "app": "plug"
+            },
+            "cowboy": {
+                "requirement": "~>1.0.0",
+                "optional": false,
+                "app": "cowboy"
+            }
+        },
+        "meta": {
+            "app": "clint",
+            "build_tools": ["mix"]
+        }
+    });
+    let response = make_json_response(200, resp_body);
+    let resp = crate::api_get_package_release_response(response).unwrap();
 
     assert_eq!(
         resp,

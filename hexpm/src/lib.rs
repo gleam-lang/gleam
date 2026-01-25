@@ -471,14 +471,15 @@ pub fn api_publish_docs_request(
 ) -> Result<http::Request<Vec<u8>>, ApiError> {
     validate_package_and_version(package_name, version)?;
 
-    Ok(config
-        .api_request(
-            Method::POST,
-            &format!("packages/{}/releases/{}/docs", package_name, version),
-            Some(api_key),
-        )
-        .header("content-encoding", "x-gzip")
-        .header("content-type", "application/x-tar")
+    let mut builder = config.api_request(
+        Method::POST,
+        &format!("packages/{}/releases/{}/docs", package_name, version),
+        Some(api_key),
+    );
+    let headers = builder.headers_mut().expect("headers");
+    headers.insert("content-encoding", "x-gzip".parse().unwrap());
+    headers.insert("content-type", "application/x-tar".parse().unwrap());
+    Ok(builder
         .body(gzipped_tarball)
         .expect("publish_docs_request request"))
 }
@@ -507,13 +508,16 @@ pub fn api_publish_package_request(
     replace: bool,
 ) -> http::Request<Vec<u8>> {
     // TODO: do all the package tarball construction
-    config
-        .api_request(
-            Method::POST,
-            format!("publish?replace={}", replace).as_str(),
-            Some(api_key),
-        )
-        .header("content-type", "application/x-tar")
+    let mut builder = config.api_request(
+        Method::POST,
+        format!("publish?replace={}", replace).as_str(),
+        Some(api_key),
+    );
+    builder
+        .headers_mut()
+        .expect("headers")
+        .insert("content-type", "application/x-tar".parse().unwrap());
+    builder
         .body(release_tarball)
         .expect("publish_package_request request")
 }
