@@ -128,3 +128,7 @@
 - Fixed a bug where renaming would not work properly if there was an error in
   target file.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where variable sized string segment patterns that are discarded
+  are not disallowed by the compiler.
+  ([Lily Rose](https://github.com/LilyRose2798))
