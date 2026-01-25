@@ -12176,8 +12176,7 @@ fn interpolate_string_does_not_add_empty_string_right_at_the_start() {
     );
 }
 
-#[test]
-fn generate_dynamic_decoder_does_not_produce_zero_values_for_non_prelude_and_stdlib_types_1() {
+fn generate_dynamic_decoder_produces_zero_values_for_user_defined_type_in_the_same_package_1() {
     let src = r#"
 import wibble.{type Wibble}
 
@@ -12205,31 +12204,103 @@ fn interpolate_string_does_not_add_empty_string_right_at_the_end() {
 }
 
 #[test]
-fn generate_dynamic_decoder_does_not_produce_zero_values_for_non_prelude_and_stdlib_types_2() {
+fn generate_dynamic_decoder_produces_zero_values_for_user_defined_type_in_the_same_package_2() {
     let src = r#"
 import wibble.{type Wibble}
 
 pub type Wobble {
-  Wobble(value: option.Option(Wibble))
+  Wobble(value: Wibble)
+  Wimble(a: Int, b: Int)
+}
+    "#;
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_module(
+            "wibble",
+            r#"
+pub type Wibble { Wibble(value: NestedWibble) }
+
+pub type NestedWibble { NestedWibble }
+"#
+        ),
+        find_position_of("pub type Wobble {").select_until(find_position_of("}").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_produces_zero_values_for_user_defined_type_in_the_same_package_3() {
+    let src = r#"
+import wibble.{type Wibble}
+
+pub type Wobble {
+  Wobble(value: Wibble)
   Wimble(a: Int, b: Int)
 }
     "#;
     assert_code_action!(
         GENERATE_DYNAMIC_DECODER,
         TestProject::for_source(src)
-            .add_hex_module("gleam/option", "pub type Option(a) { Some(a) None }")
-            .add_module("wibble", "pub type Wibble { Wibble }"),
+            .add_module(
+                "wibble",
+                r#"
+import gleam/dict.{type Dict}
+pub type Wibble { Wibble(map: Dict(Int, Bool)) }
+"#
+            )
+            .add_hex_module(
+                "gleam/dict",
+                r#"
+pub type Dict(key, value)
+pub fn new() -> Dict(k, v) { todo }
+"#
+            ),
         find_position_of("pub type Wobble {").select_until(find_position_of("}").nth_occurrence(2))
     );
 }
 
 #[test]
-fn generate_dynamic_decoder_does_not_produce_zero_values_for_non_prelude_and_stdlib_types_3() {
+fn generate_dynamic_decoder_does_not_produce_zero_values_for_types_from_other_packages() {
+    let src = r#"
+import wibble.{type Wibble}
+
+pub type Wobble {
+  Wobble(value: Wibble)
+  Wimble(a: Int, b: Int)
+}
+    "#;
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_hex_module("wibble", "pub type Wibble { Wibble }"),
+        find_position_of("pub type Wobble {").select_until(find_position_of("}").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_does_not_produce_zero_values_for_recursively_defined_constructors_1() {
     assert_code_action!(
         GENERATE_DYNAMIC_DECODER,
         r#"
 pub type Wobble {
   Wobble(inside: Wobble)
+  Wimble(a: Int, b: Int)
+}
+    "#,
+        find_position_of("pub type Wobble {").select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_does_not_produce_zero_values_for_recursively_defined_constructors_2() {
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        r#"
+pub type Wobble {
+  Wobble(inside: Wibble)
+  Womble(a: Int, b: Int)
+}
+
+pub type Wibble {
+  Wibble(inside: Wobble)
   Wimble(a: Int, b: Int)
 }
     "#,
