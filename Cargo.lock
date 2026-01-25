@@ -1279,7 +1279,7 @@ dependencies = [
 
 [[package]]
 name = "hexpm"
-version = "5.1.1"
+version = "1.14.0"
 dependencies = [
  "base16",
  "bytes",
