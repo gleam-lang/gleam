@@ -12,9 +12,10 @@ use http::{Method, StatusCode};
 use prost::Message;
 use regex::Regex;
 use ring::digest::{Context, SHA256};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::OnceLock;
+use std::time::{Duration, Instant};
 use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
@@ -61,6 +62,7 @@ impl Config {
         make_request(self.repository_base.clone(), method, path_suffix, api_key)
     }
 }
+
 impl Default for Config {
     fn default() -> Self {
         Self::new()
@@ -955,7 +957,7 @@ pub struct Dependency {
     pub repository: Option<String>,
 }
 
-static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
+static USER_AGENT: &str = concat!("Gleam v", env!("CARGO_PKG_VERSION"));
 
 fn validate_package_and_version(package: &str, version: &str) -> Result<(), ApiError> {
     static PACKAGE_PATTERN: OnceLock<Regex> = OnceLock::new();
@@ -1038,4 +1040,181 @@ pub fn api_get_package_release_response(
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
         status => Err(ApiError::unexpected_response(status, body)),
     }
+}
+
+// TODO: document
+pub fn oauth_device_authorisation_request(
+    hex_oauth_client_id: &str,
+    config: &Config,
+) -> http::Request<Vec<u8>> {
+    let body = json!({
+        "client_id": hex_oauth_client_id,
+        "scope": "api:write",
+        "name": "The Gleam build tool"
+    })
+    .to_string()
+    .into_bytes();
+    config
+        .api_request(Method::POST, "oauth/device_authorization", None)
+        .body(body)
+        .expect("oauth_device_authorisation_request")
+}
+
+// TODO: document
+pub fn oauth_device_authorisation_response(
+    hex_oauth_client_id: String,
+    response: http::Response<Vec<u8>>,
+) -> Result<OAuthDeviceAuthorisation, ApiError> {
+    let (parts, body) = response.into_parts();
+
+    match parts.status {
+        StatusCode::OK => (),
+        StatusCode::TOO_MANY_REQUESTS => return Err(ApiError::RateLimited),
+        status => return Err(ApiError::unexpected_response(status, body)),
+    };
+
+    let data: DeviceAuthorisationResponseBody = serde_json::from_slice(&body)?;
+    let poll_interval = Duration::from_secs(data.poll_interval_seconds);
+    let verification_uri = data
+        .verification_uri_complete
+        .unwrap_or(data.verification_uri);
+
+    Ok(OAuthDeviceAuthorisation {
+        user_code: data.user_code,
+        device_code: data.device_code,
+        start_time: Instant::now(),
+        client_id: hex_oauth_client_id,
+        poll_interval,
+        verification_uri,
+    })
+}
+
+// TODO: document
+#[derive(Debug)]
+pub struct OAuthDeviceAuthorisation {
+    /// Show this code to the user for them to match against the one in the Hex UI.
+    pub user_code: String,
+    /// Send the user to this URI after showing them the code.
+    pub verification_uri: String,
+    client_id: String,
+    device_code: String,
+    poll_interval: Duration,
+    start_time: Instant,
+}
+
+impl OAuthDeviceAuthorisation {
+    pub fn poll_token_request(&self, config: &Config) -> http::Request<Vec<u8>> {
+        let body = json!({
+            "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+            "client_id": &self.client_id,
+            "device_code": &self.device_code,
+        })
+        .to_string()
+        .into_bytes();
+        config
+            .api_request(Method::POST, "oauth/token", None)
+            .body(body)
+            .expect("poll_token_request")
+    }
+
+    pub fn poll_token_response(
+        &mut self,
+        response: http::Response<Vec<u8>>,
+    ) -> Result<PollStep, ApiError> {
+        if self.start_time.elapsed() > Duration::from_mins(10) {
+            // TODO: return error
+            return todo!("timeout");
+        }
+
+        let (parts, body) = response.into_parts();
+
+        match parts.status {
+            StatusCode::OK | StatusCode::BAD_REQUEST | StatusCode::FORBIDDEN => (),
+            status => return Err(ApiError::unexpected_response(status, body)),
+        };
+
+        let data: PollResponseBody = serde_json::from_slice(&body)?;
+        match data.into_result() {
+            Ok(tokens) => Ok(PollStep::Done(tokens)),
+
+            Err(PollResponseBodyError::AuthorizationPending) => {
+                Ok(PollStep::SleepThenPollAgain(self.poll_interval.clone()))
+            }
+
+            Err(PollResponseBodyError::SlowDown) => {
+                let max_interval = Duration::from_secs(30);
+                self.poll_interval = self.poll_interval.saturating_mul(2).min(max_interval);
+                Ok(PollStep::SleepThenPollAgain(self.poll_interval.clone()))
+            }
+
+            Err(PollResponseBodyError::AccessDenied) => todo!(),
+
+            Err(PollResponseBodyError::ExpiredToken) => todo!(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum PollStep {
+    Done(OAuthTokens),
+    SleepThenPollAgain(Duration),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OAuthTokens {
+    pub access_token: String,
+    pub refresh_token: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct DeviceAuthorisationResponseBody {
+    #[serde(default = "default_poll_interval_seconds", rename = "interval")]
+    poll_interval_seconds: u64,
+    device_code: String,
+    user_code: String,
+    verification_uri: String,
+    verification_uri_complete: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum PollResponseBody {
+    Success {
+        access_token: String,
+        refresh_token: String,
+    },
+    Fail {
+        error: PollResponseBodyError,
+    },
+}
+
+impl PollResponseBody {
+    pub fn into_result(self) -> Result<OAuthTokens, PollResponseBodyError> {
+        match self {
+            PollResponseBody::Success {
+                access_token,
+                refresh_token,
+            } => Ok(OAuthTokens {
+                access_token,
+                refresh_token,
+            }),
+            PollResponseBody::Fail { error } => Err(error),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+enum PollResponseBodyError {
+    #[serde(rename = "authorization_pending")]
+    AuthorizationPending,
+    #[serde(rename = "slow_down")]
+    SlowDown,
+    #[serde(rename = "access_denied")]
+    AccessDenied,
+    #[serde(rename = "expired_token")]
+    ExpiredToken,
+}
+
+fn default_poll_interval_seconds() -> u64 {
+    5
 }

@@ -907,3 +907,221 @@ fn make_request_base_trailing_slash_is_optional() {
     let no_slash = make_request(no_slash, http::Method::GET, suffix, None);
     assert_eq!(no_slash.uri_ref().unwrap().path(), expect);
 }
+
+#[test]
+fn oauth_device_authorisation_request() {
+    let client_id = "test-client-id";
+
+    let config = Config::new();
+    let request = crate::oauth_device_authorisation_request(client_id, &config);
+
+    assert_eq!(request.method(), http::Method::POST);
+    assert_eq!(request.uri().path(), "/api/oauth/device_authorization");
+    assert_eq!(
+        request.headers().get("content-type").unwrap(),
+        "application/json"
+    );
+    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+
+    let body: serde_json::Value = serde_json::from_slice(request.body()).unwrap();
+    assert_eq!(body["client_id"], "test-client-id");
+    assert_eq!(body["scope"], "api:write");
+    assert_eq!(body["name"], "The Gleam build tool");
+}
+
+#[test]
+fn oauth_device_authorisation_response_success() {
+    let client_id = "test-client-id".to_string();
+    let resp_body = json!({
+        "device_code": "device-code-123",
+        "user_code": "USER-CODE",
+        "verification_uri": "https://hex.pm/oauth/device",
+        "interval": 5
+    });
+
+    let response = make_json_response(200, resp_body);
+    let auth = crate::oauth_device_authorisation_response(client_id, response).unwrap();
+
+    assert_eq!(auth.user_code, "USER-CODE");
+    assert_eq!(auth.verification_uri, "https://hex.pm/oauth/device");
+}
+
+#[test]
+fn oauth_device_authorisation_response_success_with_complete_uri() {
+    let client_id = "test-client-id".to_string();
+    let resp_body = json!({
+        "device_code": "device-code-123",
+        "user_code": "USER-CODE",
+        "verification_uri": "https://hex.pm/oauth/device",
+        "verification_uri_complete": "https://hex.pm/oauth/device?user_code=USER-CODE",
+        "interval": 5
+    });
+
+    let response = make_json_response(200, resp_body);
+    let auth = crate::oauth_device_authorisation_response(client_id, response).unwrap();
+
+    assert_eq!(auth.user_code, "USER-CODE");
+    // When verification_uri_complete is present, it should be used instead
+    assert_eq!(
+        auth.verification_uri,
+        "https://hex.pm/oauth/device?user_code=USER-CODE"
+    );
+}
+
+#[test]
+fn oauth_device_authorisation_response_default_interval() {
+    let client_id = "test-client-id".to_string();
+    // Response without "interval" field - should use default of 5 seconds
+    let resp_body = json!({
+        "device_code": "device-code-123",
+        "user_code": "USER-CODE",
+        "verification_uri": "https://hex.pm/oauth/device"
+    });
+
+    let response = make_json_response(200, resp_body);
+    let auth = crate::oauth_device_authorisation_response(client_id, response).unwrap();
+
+    assert_eq!(auth.user_code, "USER-CODE");
+    assert_eq!(auth.verification_uri, "https://hex.pm/oauth/device");
+}
+
+#[test]
+fn oauth_device_authorisation_response_rate_limited() {
+    let client_id = "test-client-id".to_string();
+    let response = make_response(429, vec![]);
+    let result = crate::oauth_device_authorisation_response(client_id, response).unwrap_err();
+
+    match result {
+        ApiError::RateLimited => (),
+        result => panic!("expected RateLimited, got {:?}", result),
+    }
+}
+
+#[test]
+fn oauth_device_authorisation_response_unexpected_status() {
+    let client_id = "test-client-id".to_string();
+    let resp_body = json!({
+        "message": "Internal server error",
+        "status": 500,
+    });
+    let response = make_json_response(500, resp_body);
+    let result = crate::oauth_device_authorisation_response(client_id, response).unwrap_err();
+
+    match result {
+        ApiError::UnexpectedResponse(status, _) => {
+            assert_eq!(status, http::StatusCode::INTERNAL_SERVER_ERROR);
+        }
+        result => panic!("expected UnexpectedResponse, got {:?}", result),
+    }
+}
+
+fn make_device_authorisation() -> crate::OAuthDeviceAuthorisation {
+    let client_id = "test-client-id".to_string();
+    let resp_body = json!({
+        "device_code": "device-code-123",
+        "user_code": "USER-CODE",
+        "verification_uri": "https://hex.pm/oauth/device",
+        "interval": 5
+    });
+    let response = make_json_response(200, resp_body);
+    crate::oauth_device_authorisation_response(client_id, response).unwrap()
+}
+
+#[test]
+fn poll_token_request() {
+    let auth = make_device_authorisation();
+    let config = Config::new();
+    let request = auth.poll_token_request(&config);
+
+    assert_eq!(request.method(), http::Method::POST);
+    assert_eq!(request.uri().path(), "/api/oauth/token");
+    assert_eq!(
+        request.headers().get("content-type").unwrap(),
+        "application/json"
+    );
+    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+
+    let body: serde_json::Value = serde_json::from_slice(request.body()).unwrap();
+    assert_eq!(
+        body["grant_type"],
+        "urn:ietf:params:oauth:grant-type:device_code"
+    );
+    assert_eq!(body["client_id"], "test-client-id");
+    assert_eq!(body["device_code"], "device-code-123");
+}
+
+#[test]
+fn poll_token_response_success() {
+    let mut auth = make_device_authorisation();
+    let resp_body = json!({
+        "access_token": "access-token-abc",
+        "refresh_token": "refresh-token-xyz"
+    });
+    let response = make_json_response(200, resp_body);
+
+    let result = auth.poll_token_response(response).unwrap();
+
+    match result {
+        crate::PollStep::Done(tokens) => {
+            assert_eq!(tokens.access_token, "access-token-abc");
+            assert_eq!(tokens.refresh_token, "refresh-token-xyz");
+        }
+        result => panic!("expected PollStep::Done, got {:?}", result),
+    }
+}
+
+#[test]
+fn poll_token_response_authorization_pending() {
+    let mut auth = make_device_authorisation();
+    let resp_body = json!({
+        "error": "authorization_pending"
+    });
+    let response = make_json_response(200, resp_body);
+
+    let result = auth.poll_token_response(response).unwrap();
+
+    match result {
+        crate::PollStep::SleepThenPollAgain(duration) => {
+            assert_eq!(duration, std::time::Duration::from_secs(5));
+        }
+        result => panic!("expected PollStep::SleepThenPollAgain, got {:?}", result),
+    }
+}
+
+#[test]
+fn poll_token_response_slow_down() {
+    let mut auth = make_device_authorisation();
+    let resp_body = json!({
+        "error": "slow_down"
+    });
+    let response = make_json_response(200, resp_body);
+
+    let result = auth.poll_token_response(response).unwrap();
+
+    match result {
+        crate::PollStep::SleepThenPollAgain(duration) => {
+            // Interval should be doubled from 5 to 10 seconds
+            assert_eq!(duration, std::time::Duration::from_secs(10));
+        }
+        result => panic!("expected PollStep::SleepThenPollAgain, got {:?}", result),
+    }
+}
+
+#[test]
+fn poll_token_response_unexpected_status() {
+    let mut auth = make_device_authorisation();
+    let resp_body = json!({
+        "message": "Internal server error",
+        "status": 500,
+    });
+    let response = make_json_response(500, resp_body);
+
+    let result = auth.poll_token_response(response).unwrap_err();
+
+    match result {
+        ApiError::UnexpectedResponse(status, _) => {
+            assert_eq!(status, http::StatusCode::INTERNAL_SERVER_ERROR);
+        }
+        result => panic!("expected UnexpectedResponse, got {:?}", result),
+    }
+}
