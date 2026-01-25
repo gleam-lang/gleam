@@ -12,10 +12,8 @@ error: Type mismatch
 1 │ pub const pair: #(Int, Float) = #(4.1, 1)
   │                                 ^^^^^^^^^
 
-Expected type:
-
-    #(Int, Float)
-
 Found type:
 
     #(Float, Int)
+      ^^^^^ expected: Int
+             ^^^ expected: Float

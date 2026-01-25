@@ -20,6 +20,11 @@
 
   ([Adi Salimgereyev](https://github.com/abs0luty))
 
+- Type mismatch errors now emphasize the exact location of mismatches in complex
+  types by highlighting the mismatched type parameters. This makes it easier to
+  spot errors in types with multiple parameters or deep nesting.
+  ([Adi Salimgereyev](https://github.com/abs0luty))
+
 ### Build tool
 
 - When adding a package that does not exist on Hex, the message is a bit
