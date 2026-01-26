@@ -114,6 +114,10 @@
   items.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the formatter would not be able to consistently format a
+  constant list with an `@internal` attribute.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server no longer recommends the deprecated `@target` attribute.
   ([Hari Mohan](https://github.com/seafoamteal))
 
