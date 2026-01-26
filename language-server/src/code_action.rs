@@ -4354,9 +4354,20 @@ impl<'a, IO> GenerateDynamicDecoder<'a, IO> {
             self.compiler,
         );
 
-        if let Some((zero_value, modules_to_import)) =
-            decoder_printer.zero_value_from_record_constructor(custom_type, zero_constructor)
-        {
+        // The construction of the zero value might necessitate importing
+        // modules that aren't currently in scope. We keep track of them here.
+        let mut modules_to_import = HashSet::new();
+        // We also need to keep track of the path we are tracing through the types
+        // to make sure we don't get stuck in an infinite loop building a recursive
+        // type.
+        let mut path = vec![];
+
+        if let Some(zero_value) = decoder_printer.zero_value_for_custom_type(
+            &self.module.name,
+            &custom_type.name,
+            &mut path,
+            &mut modules_to_import,
+        ) {
             for module_name in modules_to_import {
                 maybe_import(&mut self.edits, self.module, &module_name);
             }
@@ -4611,57 +4622,6 @@ impl<'a, 'b, IO> DecoderPrinter<'a, 'b, IO> {
         )
     }
 
-    fn zero_value_from_record_constructor(
-        &mut self,
-        custom_type: &CustomType<Arc<Type>>,
-        zero_constructor: &RecordConstructor<Arc<Type>>,
-    ) -> Option<(EcoString, HashSet<EcoString>)> {
-        // The construction of the zero value might necessitate importing
-        // modules that aren't currently in scope. We keep track of them here.
-        let mut modules_to_import = HashSet::new();
-        // We also need to keep track of the path we are tracing through the types
-        // to make sure we don't get stuck in an infinite loop building a recursive
-        // type. We have already "visited" this root type, so it is included
-        // as the first element in our path for cycle-detection.
-        let mut path = vec![(self.type_module.clone(), custom_type.name.clone())];
-
-        // We might not be able to generate a zero value for this constructor
-        // for various reasons e.g. it contains values of types from outside
-        // the current package, and we short-circuit at the first failure.
-        let zero_args = zero_constructor
-            .arguments
-            .iter()
-            .map_while(|arg| {
-                let zero_value =
-                    self.zero_value_for_type(&arg.type_, &mut path, &mut modules_to_import)?;
-
-                let label = arg.label.as_ref().map(|(_, label)| label);
-                Some((label, zero_value))
-            })
-            .collect_vec();
-
-        // We check that we were able to produce zero values for all the fields
-        // before proceeding further
-        if zero_args.len() < zero_constructor.arguments.len() {
-            return None;
-        };
-
-        let zero_args = zero_args
-            .iter()
-            .map(|(label, zero_value)| {
-                if let Some(label) = label {
-                    eco_format!("{label}: {zero_value}")
-                } else {
-                    eco_format!("{zero_value}")
-                }
-            })
-            .join(", ");
-
-        let zero_value = eco_format!("{}({})", zero_constructor.name, zero_args);
-
-        Some((zero_value, modules_to_import))
-    }
-
     /// Performs best-effort generation of zero values for a given type.
     /// Will succeed for all prelude types and most stdlib types.
     /// For specifics on how custom user-defined types are handled, see
@@ -4736,31 +4696,30 @@ impl<'a, 'b, IO> DecoderPrinter<'a, 'b, IO> {
                 ))
             }
 
-            _ => self.zero_value_for_custom_type(module, name, path, modules_to_import),
+            _ => self.zero_value_for_custom_type(&module, &name, path, modules_to_import),
         }
     }
 
-    /// Best-effort zero value generation for user-defined types.
-    /// Extracted from `zero_value_for_type` for readability.
-    /// Use `zero_value_for_type` instead.
+    /// Best-effort zero value generation for user-defined types in the
+    /// current package.
     fn zero_value_for_custom_type(
         &mut self,
-        custom_type_module: EcoString,
-        custom_type_name: EcoString,
+        custom_type_module: &EcoString,
+        custom_type_name: &EcoString,
         path: &mut Vec<(EcoString, EcoString)>,
         modules_to_import: &mut HashSet<EcoString>,
     ) -> Option<EcoString> {
         // First we check that we have not already visited this type before to
         // avoid cycles.
         let already_seen_type = path.iter().any(|(path_module, path_type_name)| {
-            path_module == &custom_type_module && path_type_name == &custom_type_name
+            path_module == custom_type_module && path_type_name == custom_type_name
         });
 
         if already_seen_type {
             return None;
         };
 
-        let type_is_inside_current_module = self.type_module == custom_type_module;
+        let type_is_inside_current_module = &self.type_module == custom_type_module;
 
         let current_module_interface = self
             .compiler
@@ -4769,7 +4728,7 @@ impl<'a, 'b, IO> DecoderPrinter<'a, 'b, IO> {
             .map(|module| &module.ast.type_info)?;
 
         let type_module_interface = if !type_is_inside_current_module {
-            self.compiler.get_module_interface(&custom_type_module)?
+            self.compiler.get_module_interface(custom_type_module)?
         } else {
             current_module_interface
         };
@@ -4783,7 +4742,7 @@ impl<'a, 'b, IO> DecoderPrinter<'a, 'b, IO> {
 
         let constructors = type_module_interface
             .types_value_constructors
-            .get(&custom_type_name)?;
+            .get(custom_type_name)?;
 
         // Opaque types cannot be constructed outside the module they were defined in,
         // so we will be unable to produce a zero value.
@@ -4828,7 +4787,7 @@ impl<'a, 'b, IO> DecoderPrinter<'a, 'b, IO> {
             let _ = modules_to_import.insert(custom_type_module.clone());
             eco_format!(
                 "{}.{}",
-                self.printer.print_module(&custom_type_module),
+                self.printer.print_module(custom_type_module),
                 zero_constructor.name
             )
         } else {
