@@ -12271,7 +12271,7 @@ import wibble.{type Wibble}
 
 pub type Wobble {
   Wobble(value: Wibble)
-  Dummy(a: Int, b: Int)
+  Dummy(a: Int, b: Wibble)
 }
     "#;
     assert_code_action!(
@@ -12282,7 +12282,7 @@ pub type Wobble {
 }
 
 #[test]
-fn generate_dynamic_decoder_does_not_produce_zero_values_for_recursively_defined_constructors_1() {
+fn generate_dynamic_decoder_skips_over_recursive_constructors_when_generating_zero_values() {
     assert_code_action!(
         GENERATE_DYNAMIC_DECODER,
         r#"
@@ -12296,18 +12296,19 @@ pub type Wobble {
 }
 
 #[test]
-fn generate_dynamic_decoder_does_not_produce_zero_values_for_recursively_defined_constructors_2() {
+fn generate_dynamic_decoder_skips_over_mutually_recursive_constructors_when_generating_zero_values()
+{
     assert_code_action!(
         GENERATE_DYNAMIC_DECODER,
         r#"
 pub type Wobble {
   Wobble(inside: Wibble)
-  Dummy(a: Int, b: Int)
+  DummyWobble(a: Int, b: Int)
 }
 
 pub type Wibble {
   Wibble(inside: Wobble)
-  Dummy(a: Int, b: Int)
+  DummyWibble(a: Int, b: Int)
 }
     "#,
         find_position_of("pub type Wobble {").select_until(find_position_of("}"))
@@ -12315,13 +12316,31 @@ pub type Wibble {
 }
 
 #[test]
-fn generate_dynamic_decoder_uses_constructor_with_fewest_fields_for_zero_value() {
+fn generate_dynamic_decoder_uses_smallest_possible_constructor_for_zero_value() {
+    let src = r#"
+import wibble.{type Wibble}
+
+pub type Wobble {
+  Wobble(impossible: Wobble)
+  WibbleWobble(nope: Wibble)
+  Dummy(a: Int, b: #(Float, Float))
+}
+    "#;
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_hex_module("wibble", "pub type Wibble { Wibble }"),
+        find_position_of("pub type Wobble {").select_until(find_position_of("}").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_generates_todo_for_zero_value_when_all_constructors_fail() {
     assert_code_action!(
         GENERATE_DYNAMIC_DECODER,
         r#"
 pub type Wobble {
-  Wobble
-  Wibble(some: Int, thing: Int)
+  Wobble(nope: Wobble)
+  Wibble(not: Int, again: Wobble)
 }
     "#,
         find_position_of("pub type Wobble {").select_until(find_position_of("}"))

@@ -4750,15 +4750,42 @@ impl<'a, 'b, IO> DecoderPrinter<'a, 'b, IO> {
             return None;
         }
 
-        // Find the constructor with the fewest fields.
-        let zero_constructor = constructors
+        // Ideally, we want to use the "smallest" (i.e. fewest fields) constructor
+        // to construct our zero value to reduce visual noise, but this might not always
+        // be possible. So we check all constructors in increasing order of size to
+        // find the first one that succeeds, and then short circuit.
+        constructors
             .variants
             .iter()
-            .min_by_key(|v| v.parameters.len())?;
+            .sorted_by_key(|v| v.parameters.len())
+            .find_map(|zero_constructor| {
+                self.zero_value_for_custom_type_constructor(
+                    custom_type_module,
+                    custom_type_name,
+                    zero_constructor,
+                    type_is_inside_current_module,
+                    path,
+                    modules_to_import,
+                )
+            })
+    }
 
-        // Try to generate zero values for all fields in the constructor
+    /// Attempts to construct a zero value for one specific constructor
+    /// of a custom type. Use `zero_value_for_custom_type` instead as it performs
+    /// _important checks on type visibility that this method does NOT_.
+    /// This is a helper method extracted for readability.
+    fn zero_value_for_custom_type_constructor(
+        &mut self,
+        custom_type_module: &EcoString,
+        custom_type_name: &EcoString,
+        zero_constructor: &type_::TypeValueConstructor,
+        type_is_inside_current_module: bool,
+        path: &mut Vec<(EcoString, EcoString)>,
+        modules_to_import: &mut HashSet<EcoString>,
+    ) -> Option<EcoString> {
         path.push((custom_type_module.clone(), custom_type_name.clone()));
 
+        // Try to generate zero values for all fields in the constructor
         let zero_params = zero_constructor
             .parameters
             .iter()
@@ -4777,6 +4804,7 @@ impl<'a, 'b, IO> DecoderPrinter<'a, 'b, IO> {
         // "visiting" this type.
         let _ = path.pop();
 
+        // Only proceed if we were able to construct every field successfully
         if zero_params.len() < zero_constructor.parameters.len() {
             return None;
         };

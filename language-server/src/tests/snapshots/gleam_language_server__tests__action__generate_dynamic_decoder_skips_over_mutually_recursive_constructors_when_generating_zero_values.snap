@@ -1,6 +1,6 @@
 ---
 source: language-server/src/tests/action.rs
-expression: "\npub type Wobble {\n  Wobble(inside: Wibble)\n  Dummy(a: Int, b: Int)\n}\n\npub type Wibble {\n  Wibble(inside: Wobble)\n  Dummy(a: Int, b: Int)\n}\n    "
+expression: "\npub type Wobble {\n  Wobble(inside: Wibble)\n  DummyWobble(a: Int, b: Int)\n}\n\npub type Wibble {\n  Wibble(inside: Wobble)\n  DummyWibble(a: Int, b: Int)\n}\n    "
 ---
 ----- BEFORE ACTION
 
@@ -8,14 +8,14 @@ pub type Wobble {
 ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
   Wobble(inside: Wibble)
 ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
-  Dummy(a: Int, b: Int)
-▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  DummyWobble(a: Int, b: Int)
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
 }
 ↑
 
 pub type Wibble {
   Wibble(inside: Wobble)
-  Dummy(a: Int, b: Int)
+  DummyWibble(a: Int, b: Int)
 }
     
 
@@ -25,7 +25,7 @@ import gleam/dynamic/decode
 
 pub type Wobble {
   Wobble(inside: Wibble)
-  Dummy(a: Int, b: Int)
+  DummyWobble(a: Int, b: Int)
 }
 
 fn wobble_decoder() -> decode.Decoder(Wobble) {
@@ -35,16 +35,16 @@ fn wobble_decoder() -> decode.Decoder(Wobble) {
       use inside <- decode.field("inside", todo as "Decoder for Wibble")
       decode.success(Wobble(inside:))
     }
-    "dummy" -> {
+    "dummy_wobble" -> {
       use a <- decode.field("a", decode.int)
       use b <- decode.field("b", decode.int)
-      decode.success(Dummy(a:, b:))
+      decode.success(DummyWobble(a:, b:))
     }
-    _ -> decode.failure(todo as "Zero value for Wobble", "Wobble")
+    _ -> decode.failure(Wobble(inside: DummyWibble(a: 0, b: 0)), "Wobble")
   }
 }
 
 pub type Wibble {
   Wibble(inside: Wobble)
-  Dummy(a: Int, b: Int)
+  DummyWibble(a: Int, b: Int)
 }
