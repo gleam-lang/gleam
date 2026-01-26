@@ -4619,21 +4619,21 @@ impl<'a, 'b, IO> DecoderPrinter<'a, 'b, IO> {
         // The construction of the zero value might necessitate importing
         // modules that aren't currently in scope. We keep track of them here.
         let mut modules_to_import = HashSet::new();
+        // We also need to keep track of the path we are tracing through the types
+        // to make sure we don't get stuck in an infinite loop building a recursive
+        // type. We have already "visited" this root type, so it is included
+        // as the first element in our path for cycle-detection.
+        let mut path = vec![(self.type_module.clone(), custom_type.name.clone())];
 
         // We might not be able to generate a zero value for this constructor
         // for various reasons e.g. it contains values of types from outside
-        // the current package or it's a (mutually) recursive type constructor.
+        // the current package, and we short-circuit at the first failure.
         let zero_args = zero_constructor
             .arguments
             .iter()
             .map_while(|arg| {
-                let zero_value = self.zero_value_for_type(
-                    &arg.type_,
-                    // We have already "visited" this root type, so it is always included
-                    // as the first element in our path for cycle-detection.
-                    &mut vec![(self.type_module.clone(), custom_type.name.clone())],
-                    &mut modules_to_import,
-                )?;
+                let zero_value =
+                    self.zero_value_for_type(&arg.type_, &mut path, &mut modules_to_import)?;
 
                 let label = arg.label.as_ref().map(|(_, label)| label);
                 Some((label, zero_value))
@@ -4736,30 +4736,12 @@ impl<'a, 'b, IO> DecoderPrinter<'a, 'b, IO> {
                 ))
             }
 
-            _ => {
-                let already_seen_type = path.iter().any(|(path_module, path_type_name)| {
-                    path_module == &module && path_type_name == &name
-                });
-
-                if already_seen_type {
-                    return None;
-                };
-
-                path.push((module.clone(), name.clone()));
-                let zero = self.zero_value_for_custom_type(module, name, path, modules_to_import);
-                // We need to clean up the path whether the zero value generation succeeded or not
-                // to make sure cycle detection works correctly for any other fields that might
-                // need to be handled next.
-                let _ = path.pop();
-
-                zero
-            }
+            _ => self.zero_value_for_custom_type(module, name, path, modules_to_import),
         }
     }
 
     /// Best-effort zero value generation for user-defined types.
     /// Extracted from `zero_value_for_type` for readability.
-    /// Does NOT handle setup and cleanup of `path` for cycle detection.
     /// Use `zero_value_for_type` instead.
     fn zero_value_for_custom_type(
         &mut self,
@@ -4768,6 +4750,16 @@ impl<'a, 'b, IO> DecoderPrinter<'a, 'b, IO> {
         path: &mut Vec<(EcoString, EcoString)>,
         modules_to_import: &mut HashSet<EcoString>,
     ) -> Option<EcoString> {
+        // First we check that we have not already visited this type before to
+        // avoid cycles.
+        let already_seen_type = path.iter().any(|(path_module, path_type_name)| {
+            path_module == &custom_type_module && path_type_name == &custom_type_name
+        });
+
+        if already_seen_type {
+            return None;
+        };
+
         let type_is_inside_current_module = self.type_module == custom_type_module;
 
         let current_module_interface = self
@@ -4806,6 +4798,8 @@ impl<'a, 'b, IO> DecoderPrinter<'a, 'b, IO> {
             .min_by_key(|v| v.parameters.len())?;
 
         // Try to generate zero values for all fields in the constructor
+        path.push((custom_type_module.clone(), custom_type_name.clone()));
+
         let zero_params = zero_constructor
             .parameters
             .iter()
@@ -4819,6 +4813,10 @@ impl<'a, 'b, IO> DecoderPrinter<'a, 'b, IO> {
                 }
             })
             .collect_vec();
+
+        // We need to make sure to clean up the path once we've finished
+        // "visiting" this type.
+        let _ = path.pop();
 
         if zero_params.len() < zero_constructor.parameters.len() {
             return None;
