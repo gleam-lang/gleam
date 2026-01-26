@@ -466,7 +466,7 @@ impl<'comments> Formatter<'comments> {
                     None => head,
                     Some(t) => head.append(": ").append(self.type_ast(t)),
                 };
-                head.append(" = ").append(self.const_expr(value))
+                head.append(" = ").append(self.const_expr(value).group())
             }
         }
     }
@@ -3272,6 +3272,7 @@ impl<'a> Documentable<'a> for &'a BinOp {
 }
 
 #[allow(clippy::enum_variant_names)]
+#[derive(Debug)]
 /// This is used to determine how to fit the items of a list, or the segments of
 /// a bit array in a line.
 ///

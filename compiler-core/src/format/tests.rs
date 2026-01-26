@@ -6823,3 +6823,16 @@ fn can_format_big_list_without_stack_overflowing() {
 "
     ));
 }
+
+// https://github.com/gleam-lang/gleam/issues/5323
+#[test]
+fn internal_const_list_is_kept_on_multiple_lines() {
+    assert_format!(
+        "@internal
+pub const list = [
+  LeftToRight,
+  RightToLeft,
+]
+"
+    );
+}
