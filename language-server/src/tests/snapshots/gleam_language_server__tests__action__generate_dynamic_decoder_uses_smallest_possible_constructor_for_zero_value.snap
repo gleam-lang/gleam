@@ -1,0 +1,56 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\nimport wibble.{type Wibble}\n\npub type Wobble {\n  Wobble(impossible: Wobble)\n  WibbleWobble(nope: Wibble)\n  Dummy(a: Int, b: #(Float, Float))\n}\n    "
+---
+----- BEFORE ACTION
+
+import wibble.{type Wibble}
+
+pub type Wobble {
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  Wobble(impossible: Wobble)
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  WibbleWobble(nope: Wibble)
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  Dummy(a: Int, b: #(Float, Float))
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+}
+↑
+    
+
+
+----- AFTER ACTION
+
+import gleam/dynamic/decode
+import wibble.{type Wibble}
+
+pub type Wobble {
+  Wobble(impossible: Wobble)
+  WibbleWobble(nope: Wibble)
+  Dummy(a: Int, b: #(Float, Float))
+}
+
+fn wobble_decoder() -> decode.Decoder(Wobble) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "wobble" -> {
+      use impossible <- decode.field("impossible", wobble_decoder())
+      decode.success(Wobble(impossible:))
+    }
+    "wibble_wobble" -> {
+      use nope <- decode.field("nope", todo as "Decoder for Wibble")
+      decode.success(WibbleWobble(nope:))
+    }
+    "dummy" -> {
+      use a <- decode.field("a", decode.int)
+      use b <- decode.field("b", {
+        use a <- decode.field(0, decode.float)
+        use b <- decode.field(1, decode.float)
+
+        decode.success(#(a, b))
+      })
+      decode.success(Dummy(a:, b:))
+    }
+    _ -> decode.failure(Dummy(a: 0, b: #(0.0, 0.0)), "Wobble")
+  }
+}
