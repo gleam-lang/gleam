@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport wibble\n\nfn wibble() { Wobble }\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+pub type Wibble { Wobble }
+
+-- main.gleam
+
+import wibble
+
+fn wibble() { Wobble }
+
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:4:15
+  │
+4 │ fn wibble() { Wobble }
+  │               ^^^^^^ Did you mean `wibble`?
+
+The custom type variant constructor `Wobble` is not in scope here.
+Hint: Did you mean to update the import of `wibble`?
