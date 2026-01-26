@@ -4236,23 +4236,14 @@ impl<'a, IO> GenerateDynamicDecoder<'a, IO> {
             eco_format!("use variant <- {module}.field(\"type\", {module}.string)")
         };
 
-        let mut zero_constructor = first;
         let mut clauses = Vec::with_capacity(constructors_size);
         for constructor in iter::once(first).chain(rest) {
             let body = self.constructor_decoder(mode, custom_type, constructor, 4)?;
             let name = to_snake_case(&constructor.name);
             clauses.push(eco_format!(r#"    "{name}" -> {body}"#));
-
-            // We look for the variant constructor with the fewest fields
-            // because it's a simple heuristic to try and generate a zero
-            // value that is textually short and therefore doesn't add visual
-            // noise to the codebase.
-            if constructor.arguments.len() < zero_constructor.arguments.len() {
-                zero_constructor = constructor;
-            }
         }
 
-        let failure_clause = self.failure_clause(custom_type, zero_constructor);
+        let failure_clause = self.failure_clause(custom_type);
 
         let cases = clauses.join("\n");
         Some(eco_format!(
@@ -4331,25 +4322,13 @@ impl<'a, IO> GenerateDynamicDecoder<'a, IO> {
     ///
     /// # Arguments
     /// * `custom_type` -  The root type we are printing a decoder for
-    /// * `zero_constructor` - The constructor to use when producing a zero value for `custom_type`
-    fn failure_clause(
-        &mut self,
-        custom_type: &CustomType<Arc<Type>>,
-        zero_constructor: &RecordConstructor<Arc<Type>>,
-    ) -> EcoString {
+    fn failure_clause(&mut self, custom_type: &CustomType<Arc<Type>>) -> EcoString {
         let decode_module = self.printer.print_module(DECODE_MODULE);
         let type_name = &custom_type.name;
-        let constructor_name = &zero_constructor.name;
-
-        if zero_constructor.arguments.is_empty() {
-            return eco_format!(
-                r#"    _ -> {decode_module}.failure({constructor_name}, "{type_name}")"#,
-            );
-        };
 
         let mut decoder_printer = DecoderPrinter::new(
             &mut self.printer,
-            custom_type.name.clone(),
+            type_name.clone(),
             self.module.name.clone(),
             self.compiler,
         );
@@ -4364,7 +4343,7 @@ impl<'a, IO> GenerateDynamicDecoder<'a, IO> {
 
         if let Some(zero_value) = decoder_printer.zero_value_for_custom_type(
             &self.module.name,
-            &custom_type.name,
+            type_name,
             &mut path,
             &mut modules_to_import,
         ) {
