@@ -35,6 +35,6 @@ fn wobble_decoder() -> decode.Decoder(Wobble) {
       use b <- decode.field("b", decode.int)
       decode.success(Dummy(a:, b:))
     }
-    _ -> decode.failure(todo as "Zero value for Wobble", "Wobble")
+    _ -> decode.failure(Dummy(a: 0, b: 0), "Wobble")
   }
 }

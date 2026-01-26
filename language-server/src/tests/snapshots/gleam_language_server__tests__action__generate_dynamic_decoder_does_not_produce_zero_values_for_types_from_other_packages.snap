@@ -1,6 +1,6 @@
 ---
 source: language-server/src/tests/action.rs
-expression: "\nimport wibble.{type Wibble}\n\npub type Wobble {\n  Wobble(value: Wibble)\n  Dummy(a: Int, b: Int)\n}\n    "
+expression: "\nimport wibble.{type Wibble}\n\npub type Wobble {\n  Wobble(value: Wibble)\n  Dummy(a: Int, b: Wibble)\n}\n    "
 ---
 ----- BEFORE ACTION
 
@@ -10,8 +10,8 @@ pub type Wobble {
 ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
   Wobble(value: Wibble)
 ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
-  Dummy(a: Int, b: Int)
-▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  Dummy(a: Int, b: Wibble)
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
 }
 ↑
     
@@ -24,7 +24,7 @@ import wibble.{type Wibble}
 
 pub type Wobble {
   Wobble(value: Wibble)
-  Dummy(a: Int, b: Int)
+  Dummy(a: Int, b: Wibble)
 }
 
 fn wobble_decoder() -> decode.Decoder(Wobble) {
@@ -36,7 +36,7 @@ fn wobble_decoder() -> decode.Decoder(Wobble) {
     }
     "dummy" -> {
       use a <- decode.field("a", decode.int)
-      use b <- decode.field("b", decode.int)
+      use b <- decode.field("b", todo as "Decoder for Wibble")
       decode.success(Dummy(a:, b:))
     }
     _ -> decode.failure(todo as "Zero value for Wobble", "Wobble")
