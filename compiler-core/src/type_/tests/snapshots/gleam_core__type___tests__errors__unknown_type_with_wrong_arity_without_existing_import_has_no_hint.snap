@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nfn wibble(wobble: Wibble(Int)) -> Nil { Nil }\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+pub type Wibble { Wobble }
+
+-- main.gleam
+
+fn wibble(wobble: Wibble(Int)) -> Nil { Nil }
+
+
+----- ERROR
+error: Unknown type
+  ┌─ /src/one/two.gleam:2:19
+  │
+2 │ fn wibble(wobble: Wibble(Int)) -> Nil { Nil }
+  │                   ^^^^^^^^^^^
+
+The type `Wibble` is not defined or imported in this module.
