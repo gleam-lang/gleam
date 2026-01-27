@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\nfn wibble(a a, b b) { 1 }\nfn fun(arg) { \"pure\" }\n\npub fn main() {\n  wibble(b: fun(\"passed second\"), a: fun(\"passed first\"))\n}\n"
+---
+----- SOURCE CODE
+
+fn wibble(a a, b b) { 1 }
+fn fun(arg) { "pure" }
+
+pub fn main() {
+  wibble(b: fun("passed second"), a: fun("passed first"))
+}
+
+
+----- COMPILED JAVASCRIPT
+function wibble(a, b) {
+  return 1;
+}
+
+function fun(arg) {
+  return "pure";
+}
+
+export function main() {
+  return wibble(fun("passed first"), fun("passed second"));
+}
