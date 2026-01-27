@@ -1,6 +1,5 @@
 use camino::Utf8Path;
 use debug_ignore::DebugIgnore;
-use ecow::EcoString;
 use flate2::read::GzDecoder;
 use futures::future;
 use hexpm::{ApiError, version::Version};
