@@ -1101,7 +1101,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     None => {
                         // The fun or constructor has no field map and so we
                         // error if arguments have been labelled
-                        match assert_no_labelled_arguments(&pattern_arguments, UnexpectedLabelledArgKind::RecordConstructorArgument) {
+                        match assert_no_labelled_arguments(
+                            &pattern_arguments,
+                            UnexpectedLabelledArgKind::RecordConstructorArgument,
+                        ) {
                             Ok(()) => {}
                             Err(error) => {
                                 self.problems.error(error);

@@ -4144,8 +4144,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
                     // The fun or constructor has no field map and so we error
                     // if arguments have been labelled.
-                    Ok(None) if fun.is_record_constructor_function() => assert_no_labelled_arguments(&arguments, UnexpectedLabelledArgKind::RecordConstructorArgument),
-                    Ok(None) => assert_no_labelled_arguments(&arguments, UnexpectedLabelledArgKind::FunctionParameter),
+                    Ok(None) if fun.is_record_constructor_function() => {
+                        assert_no_labelled_arguments(
+                            &arguments,
+                            UnexpectedLabelledArgKind::RecordConstructorArgument,
+                        )
+                    }
+                    Ok(None) => assert_no_labelled_arguments(
+                        &arguments,
+                        UnexpectedLabelledArgKind::FunctionParameter,
+                    ),
                 };
 
                 // If there's an error reordering the fields, or there's labelled
@@ -4542,8 +4550,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     // known to be a valid function we can make sure that there's
                     // no labelled arguments if it doesn't actually have a field map.
                     None if fun.is_invalid() => Ok(()),
-                    None if fun.is_record_constructor_function() => assert_no_labelled_arguments(&arguments, UnexpectedLabelledArgKind::RecordConstructorArgument),
-                    None => assert_no_labelled_arguments(&arguments, UnexpectedLabelledArgKind::FunctionParameter),
+                    None if fun.is_record_constructor_function() => assert_no_labelled_arguments(
+                        &arguments,
+                        UnexpectedLabelledArgKind::RecordConstructorArgument,
+                    ),
+                    None => assert_no_labelled_arguments(
+                        &arguments,
+                        UnexpectedLabelledArgKind::FunctionParameter,
+                    ),
                 }
             });
 
