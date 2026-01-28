@@ -669,7 +669,6 @@ pub fn let_<'a>(
     expression_generator: &mut Generator<'_, 'a>,
     pattern: &'a TypedPattern,
 ) -> Document<'a> {
-    let _ = pattern;
     let scope_position = expression_generator.scope_position.clone();
     let mut variables = Variables::new(expression_generator, VariableAssignment::Reassign);
 
