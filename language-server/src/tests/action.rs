@@ -66,7 +66,7 @@ fn apply_code_edit(
             Some(code) => code,
             None => tester
                 .src_from_module_url(&uri)
-                .expect(&format!("no src for url {:?}", uri)),
+                .unwrap_or_else(|| panic!("no src for url {uri:?}")),
         };
         let code = super::apply_code_edit(code, change);
         let _ = changed_files.insert(uri, code);

@@ -761,7 +761,7 @@ allow_net = ["example.com:443"]
 allow_read = ["./database.sqlite"]
 "#;
 
-    let config = toml::from_str::<PackageConfig>(&input).unwrap();
+    let config = toml::from_str::<PackageConfig>(input).unwrap();
     let info = PackageInformation {
         package_config: config.clone(),
     };
@@ -780,7 +780,7 @@ name = "my_project"
 version = "1.0.0"
 "#;
 
-    let config = toml::from_str::<PackageConfig>(&input).unwrap();
+    let config = toml::from_str::<PackageConfig>(input).unwrap();
     let json = package_information_as_json(config);
     let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
     insta::assert_snapshot!(output);

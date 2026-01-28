@@ -97,9 +97,9 @@ impl std::fmt::Display for Token<'_> {
             Or => write!(f, "or"),
             And => write!(f, "and"),
             Whitespace(_, _) => write!(f, " "),
-            Numeric(i) => write!(f, "{}", i),
-            AlphaNumeric(a) => write!(f, "{}", a),
-            LeadingZero(z) => write!(f, "{}", z),
+            Numeric(i) => write!(f, "{i}"),
+            AlphaNumeric(a) => write!(f, "{a}"),
+            LeadingZero(z) => write!(f, "{z}"),
         }
     }
 }

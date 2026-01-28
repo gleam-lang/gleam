@@ -1302,8 +1302,6 @@ fn generate_search_data(module_name: &str, module_src: &str) -> EcoString {
 
     let module = &build_module.ast;
 
-    dbg!(&module.documentation);
-
     let dependencies = HashMap::new();
     let mut printer = Printer::new(
         module.type_info.package.clone(),

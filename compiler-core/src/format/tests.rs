@@ -6812,7 +6812,7 @@ fn call_with_single_call_argument_and_trailing_comment_2() {
 
 #[test]
 fn can_format_big_list_without_stack_overflowing() {
-    let items = std::iter::repeat("    1,").take(10_000).join("\n");
+    let items = std::iter::repeat_n("    1,", 10_000).join("\n");
 
     assert_format!(format!(
         "pub fn main() {{

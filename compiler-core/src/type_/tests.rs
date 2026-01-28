@@ -523,7 +523,7 @@ pub fn compile_module_with_opts(
     ast.name = module_name.into();
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
-    config.gleam_version = gleam_version.map(|v| GleamVersion::from_pubgrub(v));
+    config.gleam_version = gleam_version.map(GleamVersion::from_pubgrub);
 
     let warnings = TypeWarningEmitter::new("/src/warning/wrn.gleam".into(), src.into(), emitter);
     crate::analyse::ModuleAnalyzerConstructor::<()> {
