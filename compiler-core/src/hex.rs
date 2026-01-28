@@ -45,7 +45,20 @@ pub async fn publish_package<Http: HttpClient>(
             name: name.into(),
             version,
         },
-        _ => Error::hex(e),
+        ApiError::Json(_)
+        | ApiError::Io(_)
+        | ApiError::RateLimited
+        | ApiError::InvalidCredentials
+        | ApiError::UnexpectedResponse(..)
+        | ApiError::InvalidPackageNameFormat(_)
+        | ApiError::IncorrectPayloadSignature
+        | ApiError::InvalidProtobuf(_)
+        | ApiError::InvalidVersionFormat(_)
+        | ApiError::NotFound
+        | ApiError::InvalidVersionRequirementFormat(_)
+        | ApiError::IncorrectChecksum
+        | ApiError::InvalidApiKey
+        | ApiError::LateModification => Error::hex(e),
     })
 }
 

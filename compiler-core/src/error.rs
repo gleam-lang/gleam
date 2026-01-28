@@ -4608,7 +4608,7 @@ or you can publish it using a different version number"
                 ),
             }],
             Error::HexPublishAccessDenied { name, version } => vec![Diagnostic {
-                title: format!("Access denied"),
+                title: "Access denied".to_string(),
                 text: wrap_format!(
                     "You are not one of the maintainers of the {name} package, so \
 you cannot publish a new {version} version. Are you logged into the correct account?
