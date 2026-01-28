@@ -1188,7 +1188,7 @@ allow_read = ["./database.sqlite"]
 enable = true
 "#;
 
-    let config = toml::from_str::<PackageConfig>(&input).unwrap();
+    let config = toml::from_str::<PackageConfig>(input).unwrap();
     let json = serde_json::to_string_pretty(&config).unwrap();
     let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
     insta::assert_snapshot!(output);
@@ -1204,7 +1204,7 @@ name = "my_project"
 version = "1.0.0"
 "#;
 
-    let config = toml::from_str::<PackageConfig>(&input).unwrap();
+    let config = toml::from_str::<PackageConfig>(input).unwrap();
     let json = serde_json::to_string_pretty(&config).unwrap();
     let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
     insta::assert_snapshot!(output);

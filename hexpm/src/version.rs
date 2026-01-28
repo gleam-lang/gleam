@@ -216,7 +216,7 @@ impl fmt::Display for Version {
             }
         }
         if let Some(build) = self.build.as_ref() {
-            write!(f, "+{}", build)?;
+            write!(f, "+{build}")?;
         }
         Ok(())
     }
@@ -240,7 +240,7 @@ impl fmt::Display for Identifier {
 impl Identifier {
     pub fn concat(self, add_str: &str) -> Identifier {
         match self {
-            Identifier::Numeric(n) => Identifier::AlphaNumeric(format!("{}{}", n, add_str)),
+            Identifier::Numeric(n) => Identifier::AlphaNumeric(format!("{n}{add_str}")),
             Identifier::AlphaNumeric(mut s) => {
                 s.push_str(add_str);
                 Identifier::AlphaNumeric(s)

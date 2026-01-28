@@ -65,7 +65,7 @@ fn authenticate_response_rate_limited() {
 
     match result {
         ApiError::RateLimited => (),
-        result => panic!("expected RateLimited, got {:?}", result),
+        result => panic!("expected RateLimited, got {result:?}"),
     }
 }
 
@@ -81,7 +81,7 @@ fn authenticate_response_bad_creds() {
 
     match result {
         ApiError::InvalidCredentials => (),
-        result => panic!("expected InvalidCredentials, got {:?}", result),
+        result => panic!("expected InvalidCredentials, got {result:?}"),
     }
 }
 
@@ -254,7 +254,7 @@ fn remove_docs_response_not_found() {
 
     match result {
         ApiError::NotFound => (),
-        result => panic!("expected ApiError::NotFound got {:?}", result),
+        result => panic!("expected ApiError::NotFound got {result:?}"),
     }
 }
 
@@ -265,7 +265,7 @@ fn remove_docs_response_rate_limited() {
 
     match result {
         ApiError::RateLimited => (),
-        result => panic!("expected ApiError::RateLimited got {:?}", result),
+        result => panic!("expected ApiError::RateLimited got {result:?}"),
     }
 }
 
@@ -280,7 +280,7 @@ fn remove_docs_response_invalid_key() {
 
     match result {
         ApiError::InvalidApiKey => (),
-        result => panic!("expected ApiError::InvalidApiKey got {:?}", result),
+        result => panic!("expected ApiError::InvalidApiKey got {result:?}"),
     }
 }
 
@@ -295,7 +295,7 @@ fn remove_docs_response_forbidden() {
 
     match result {
         ApiError::Forbidden => (),
-        result => panic!("expected ApiError::Forbidden got {:?}", result),
+        result => panic!("expected ApiError::Forbidden got {result:?}"),
     }
 }
 
@@ -309,7 +309,7 @@ fn remove_docs_bad_package_name() {
 
     match crate::api_remove_docs_request(package, version, key, &config).unwrap_err() {
         ApiError::InvalidPackageNameFormat(p) if p == package => (),
-        result => panic!("expected Err(ApiError::BadPackage), got {:?}", result),
+        result => panic!("expected Err(ApiError::BadPackage), got {result:?}"),
     }
 }
 
@@ -346,7 +346,7 @@ fn publish_docs_response_success() {
 
     match result {
         Ok(()) => (),
-        result => panic!("expected Ok(()), got {:?}", result),
+        result => panic!("expected Ok(()), got {result:?}"),
     }
 }
 
@@ -361,7 +361,7 @@ fn publish_docs_bad_package_name() {
 
     match crate::api_publish_docs_request(package, version, tarball, key, &config).unwrap_err() {
         ApiError::InvalidPackageNameFormat(p) if p == package => (),
-        result => panic!("expected Err(ApiError::BadPackage), got {:?}", result),
+        result => panic!("expected Err(ApiError::BadPackage), got {result:?}"),
     }
 }
 
@@ -376,7 +376,7 @@ fn publish_docs_bad_package_version() {
 
     match crate::api_publish_docs_request(package, version, tarball, key, &config).unwrap_err() {
         ApiError::InvalidVersionFormat(v) if v == version => (),
-        result => panic!("expected ApiError::BadPackage, got {:?}", result),
+        result => panic!("expected ApiError::BadPackage, got {result:?}"),
     }
 }
 
@@ -387,7 +387,7 @@ fn publish_docs_response_not_found() {
 
     match result {
         Err(ApiError::NotFound) => (),
-        result => panic!("expected ApiError::NotFound, got {:?}", result),
+        result => panic!("expected ApiError::NotFound, got {result:?}"),
     }
 }
 
@@ -398,7 +398,7 @@ fn publish_docs_response_rate_limit() {
 
     match result {
         Err(ApiError::RateLimited) => (),
-        result => panic!("expected ApiError::RateLimited, got {:?}", result),
+        result => panic!("expected ApiError::RateLimited, got {result:?}"),
     }
 }
 
@@ -413,7 +413,7 @@ fn publish_docs_response_invalid_api_key() {
 
     match result {
         Err(ApiError::InvalidApiKey) => (),
-        result => panic!("expected Err(ApiError::InvalidApiKey), got {:?}", result),
+        result => panic!("expected Err(ApiError::InvalidApiKey), got {result:?}"),
     }
 }
 
@@ -428,7 +428,7 @@ fn publish_docs_response_forbidden() {
 
     match result {
         Err(ApiError::Forbidden) => (),
-        result => panic!("expected Err(ApiError::Forbidden), got {:?}", result),
+        result => panic!("expected Err(ApiError::Forbidden), got {result:?}"),
     }
 }
 
@@ -777,7 +777,7 @@ fn publish_package_response_success() {
 
     match result {
         Ok(()) => (),
-        result => panic!("expected Ok(()), got {:?}", result),
+        result => panic!("expected Ok(()), got {result:?}"),
     }
 }
 
@@ -793,7 +793,7 @@ fn modify_package_late() {
 
     match result {
         Err(ApiError::LateModification) => (),
-        result => panic!("expected Err(ApiError::LateModification), got {:?}", result),
+        result => panic!("expected Err(ApiError::LateModification), got {result:?}"),
     }
 }
 
@@ -809,7 +809,7 @@ fn not_replacing() {
 
     match result {
         Err(ApiError::NotReplacing) => (),
-        result => panic!("expected Err(ApiError::NotReplacing), got {:?}", result),
+        result => panic!("expected Err(ApiError::NotReplacing), got {result:?}"),
     }
 }
 

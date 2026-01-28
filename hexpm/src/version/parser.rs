@@ -42,16 +42,16 @@ impl fmt::Display for Error {
 
         match *self {
             UnexpectedEnd => write!(fmt, "expected more input"),
-            UnexpectedToken(ref token) => write!(fmt, "encountered unexpected token: {:?}", token),
-            Lexer(ref error) => write!(fmt, "lexer error: {:?}", error),
-            MoreInput(ref tokens) => write!(fmt, "expected end of input, but got: {:?}", tokens),
+            UnexpectedToken(ref token) => write!(fmt, "encountered unexpected token: {token:?}"),
+            Lexer(ref error) => write!(fmt, "lexer error: {error:?}"),
+            MoreInput(ref tokens) => write!(fmt, "expected end of input, but got: {tokens:?}"),
             EmptyPredicate => write!(fmt, "encountered empty predicate"),
             EmptyRange => write!(fmt, "encountered empty range"),
             MinorVersionMissing(major) => {
-                write!(fmt, "missing minor and patch versions: {:?}", major)
+                write!(fmt, "missing minor and patch versions: {major:?}")
             }
             PatchVersionMissing(major, minor) => {
-                write!(fmt, "missing patch version: {:?}.{:?}", major, minor)
+                write!(fmt, "missing patch version: {major:?}.{minor:?}")
             }
         }
     }

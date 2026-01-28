@@ -10417,10 +10417,8 @@ impl<'a> AddMissingTypeParameter<'a> {
             self.edits
                 .insert(type_parameters_location.end - 1, new_parameters);
         } else {
-            self.edits.insert(
-                type_parameters_location.end,
-                format!("({})", new_parameters),
-            );
+            self.edits
+                .insert(type_parameters_location.end, format!("({new_parameters})"));
         }
 
         let mut action = Vec::with_capacity(1);

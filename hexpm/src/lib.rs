@@ -159,7 +159,7 @@ pub fn api_remove_api_key_request(
     config
         .api_request(
             Method::DELETE,
-            &format!("keys/{}", name_of_key_to_delete),
+            &format!("keys/{name_of_key_to_delete}"),
             Some(api_key),
         )
         .body(vec![])
@@ -199,7 +199,7 @@ pub fn api_retire_release_request(
     config
         .api_request(
             Method::POST,
-            &format!("packages/{}/releases/{}/retire", package, version),
+            &format!("packages/{package}/releases/{version}/retire"),
             Some(api_key),
         )
         .body(body.to_string().into_bytes())
@@ -233,7 +233,7 @@ pub fn api_unretire_release_request(
     config
         .api_request(
             Method::DELETE,
-            &format!("packages/{}/releases/{}/retire", package, version),
+            &format!("packages/{package}/releases/{version}/retire"),
             Some(api_key),
         )
         .body(vec![])
@@ -328,7 +328,7 @@ pub fn repository_v2_get_package_request(
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     config
-        .repository_request(Method::GET, &format!("packages/{}", name), api_key)
+        .repository_request(Method::GET, &format!("packages/{name}"), api_key)
         .header("accept", "application/json")
         .body(vec![])
         .expect("get_package_request request")
@@ -395,7 +395,7 @@ pub fn repository_get_package_tarball_request(
     config
         .repository_request(
             Method::GET,
-            &format!("tarballs/{}-{}.tar", name, version),
+            &format!("tarballs/{name}-{version}.tar"),
             api_key,
         )
         .header("accept", "application/x-tar")
@@ -438,7 +438,7 @@ pub fn api_remove_docs_request(
     Ok(config
         .api_request(
             Method::DELETE,
-            &format!("packages/{}/releases/{}/docs", package_name, version),
+            &format!("packages/{package_name}/releases/{version}/docs"),
             Some(api_key),
         )
         .body(vec![])
@@ -473,7 +473,7 @@ pub fn api_publish_docs_request(
 
     let mut builder = config.api_request(
         Method::POST,
-        &format!("packages/{}/releases/{}/docs", package_name, version),
+        &format!("packages/{package_name}/releases/{version}/docs"),
         Some(api_key),
     );
     let headers = builder.headers_mut().expect("headers");
@@ -510,7 +510,7 @@ pub fn api_publish_package_request(
     // TODO: do all the package tarball construction
     let mut builder = config.api_request(
         Method::POST,
-        format!("publish?replace={}", replace).as_str(),
+        format!("publish?replace={replace}").as_str(),
         Some(api_key),
     );
     builder
@@ -558,7 +558,7 @@ pub fn api_revert_release_request(
     Ok(config
         .api_request(
             Method::DELETE,
-            &format!("packages/{}/releases/{}", package_name, version),
+            &format!("packages/{package_name}/releases/{version}"),
             Some(api_key),
         )
         .body(vec![])
@@ -615,7 +615,7 @@ pub fn api_add_owner_request(
     config
         .api_request(
             Method::PUT,
-            &format!("packages/{}/owners/{}", package_name, owner),
+            &format!("packages/{package_name}/owners/{owner}"),
             Some(api_key),
         )
         .body(body.to_string().into_bytes())
@@ -653,7 +653,7 @@ pub fn api_transfer_owner_request(
     config
         .api_request(
             Method::PUT,
-            &format!("packages/{}/owners/{}", package_name, owner),
+            &format!("packages/{package_name}/owners/{owner}"),
             Some(api_key),
         )
         .body(body.to_string().into_bytes())
@@ -686,7 +686,7 @@ pub fn api_remove_owner_request(
     config
         .api_request(
             Method::DELETE,
-            &format!("packages/{}/owners/{}", package_name, owner),
+            &format!("packages/{package_name}/owners/{owner}"),
             Some(api_key),
         )
         .body(vec![])
@@ -1015,7 +1015,7 @@ pub fn api_get_package_release_request(
     config
         .api_request(
             Method::GET,
-            &format!("packages/{}/releases/{}", name, version),
+            &format!("packages/{name}/releases/{version}"),
             api_key,
         )
         .header("accept", "application/json")
