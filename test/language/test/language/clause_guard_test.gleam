@@ -548,3 +548,15 @@ pub fn module_access_custom_type_const_nomatch_test() {
       _ -> False
     }
 }
+
+// https://github.com/gleam-lang/gleam/issues/5283
+pub fn case_with_guard_does_not_pollute_outer_scope_test() {
+  let a = case 1337 {
+    n if n == 1347 -> 1
+    _ -> 2
+  }
+  let b = case 1337 {
+    n -> 2
+  }
+  assert a == b
+}

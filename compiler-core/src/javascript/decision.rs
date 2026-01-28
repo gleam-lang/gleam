@@ -31,16 +31,56 @@ pub fn case<'a>(
     subjects: &'a [TypedExpr],
     expression_generator: &mut Generator<'_, 'a>,
 ) -> Document<'a> {
+    let scope_position = expression_generator.scope_position.clone();
     let mut variables = Variables::new(expression_generator, VariableAssignment::Declare);
     let assignments = variables.assign_case_subjects(compiled_case, subjects);
-    let decision = CasePrinter {
+    let mut printer = CasePrinter {
         variables,
         assignments: &assignments,
         kind: DecisionKind::Case { clauses },
-    }
-    .decision(&compiled_case.tree);
+    };
 
-    docvec![assignments_to_doc(assignments), decision.into_doc()].force_break()
+    let decision = match &compiled_case.tree {
+        // Printing needs extra care if we're dealing with a sort of "degenerate"
+        // tree that immediately starts with a guard node.
+        // Code generation for guard nodes require defining variables outside of
+        // the safe scope of the generated `if` statement. So if we were to just
+        // generate code like usual we run the risk of leaking variables in the
+        // outer scope:
+        //
+        // ```case
+        // case 11 {
+        //   n if n == 10 -> todo
+        //   _ -> todo
+        // }
+        //
+        // let n = 12
+        // ```
+        //
+        // That case would have us generate something like this:
+        //
+        // ```js
+        // let n = 11
+        // if (n === 10) { todo } else { todo }
+        //
+        // // If we don't wrap it in a block that `n = 11` definition that was
+        // // introduced would end up clashing with the `let n = 12` that comes
+        // // later!
+        // ```
+        //
+        // So in this special case we have to wrap everything in a block.
+        tree @ Decision::Guard { .. } if !scope_position.is_tail() => break_block(
+            printer
+                .inside_new_scope(|this| this.decision(tree))
+                .into_doc(),
+        ),
+
+        tree @ Decision::Run { .. }
+        | tree @ Decision::Guard { .. }
+        | tree @ Decision::Switch { .. }
+        | tree @ Decision::Fail => printer.decision(tree).into_doc(),
+    };
+    docvec![assignments_to_doc(assignments), decision].force_break()
 }
 
 /// The generated code for a decision tree.

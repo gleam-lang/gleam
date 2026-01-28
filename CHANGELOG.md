@@ -110,6 +110,10 @@
   check in an `assert`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler would generate invalid code on the JavaScript
+  target for some `case` expressions using clause guards.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The formatter no longer stack overflows trying to format lists with many
   items.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

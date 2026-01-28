@@ -28,10 +28,12 @@ export function main() {
   let $ = 0;
   let _block;
   let $1 = undefined;
-  if (true_) {
-    _block = 0;
-  } else {
-    _block = 1;
+  {
+    if (true_) {
+      _block = 0;
+    } else {
+      _block = 1;
+    }
   }
   let $2 = _block;
   if (!($ === $2)) {

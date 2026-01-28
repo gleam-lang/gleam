@@ -887,3 +887,38 @@ pub fn main() {
 "#
     )
 }
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/5283
+fn duplicate_name_for_variables_used_in_guards() {
+    assert_js!(
+        r#"
+pub fn wibble() {
+  let a = case 1337 {
+    n if n == 1347 -> Nil
+    _ -> Nil
+  }
+  let b = case 1337 {
+    n -> Nil
+  }
+}"#
+    )
+}
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/5283
+fn duplicate_name_for_variables_used_in_guards_shadowing_outer_name() {
+    assert_js!(
+        r#"
+pub fn wibble() {
+  let n = 1
+  let a = case 1337 {
+    n if n == 1347 -> n
+    _ -> n
+  }
+  let b = case 1337 {
+    n -> Nil
+  }
+}"#
+    )
+}
