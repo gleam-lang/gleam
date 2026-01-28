@@ -12,5 +12,5 @@ error: Unexpected labelled argument
 1 │ fn id(x) { x } fn y() { id(x: 4) }
   │                            ^^^^
 
-This argument has been given a label but the constructor does
+This argument has been given a label but the function does
 not expect any. Please remove the label `x`.
