@@ -894,6 +894,11 @@ fn unexpected_labelled_arg() {
 }
 
 #[test]
+fn unexpected_labelled_arg_record_constructor() {
+    assert_module_error!(r#"type X { X(Int) } fn y() { X(a: 0) }"#);
+}
+
+#[test]
 fn unexpected_arg_with_label_shorthand() {
     assert_module_error!(
         r#"
