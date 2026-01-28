@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn wibble() {\n  let a = case 1337 {\n    n if n == 1347 -> Nil\n    _ -> Nil\n  }\n  let b = case 1337 {\n    n -> Nil\n  }\n}"
+---
+----- SOURCE CODE
+
+pub fn wibble() {
+  let a = case 1337 {
+    n if n == 1347 -> Nil
+    _ -> Nil
+  }
+  let b = case 1337 {
+    n -> Nil
+  }
+}
+
+----- COMPILED JAVASCRIPT
+export function wibble() {
+  let _block;
+  let $ = 1337;
+  {
+    let n = $;
+    if (n === 1347) {
+      _block = undefined;
+    } else {
+      _block = undefined;
+    }
+  }
+  let a = _block;
+  let _block$1;
+  let $1 = 1337;
+  let n = $1;
+  _block$1 = undefined;
+  let b = _block$1;
+  return b;
+}
