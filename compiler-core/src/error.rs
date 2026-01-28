@@ -10,7 +10,8 @@ use crate::strings::{to_snake_case, to_upper_camel_case};
 use crate::type_::collapse_links;
 use crate::type_::error::{
     IncorrectArityContext, InvalidImportKind, MissingAnnotation, ModuleValueUsageContext, Named,
-    RecordField, UnexpectedLabelledArgKind, UnknownField, UnknownTypeHint, UnsafeRecordUpdateReason,
+    RecordField, UnexpectedLabelledArgKind, UnknownField, UnknownTypeHint,
+    UnsafeRecordUpdateReason,
 };
 use crate::type_::printer::{Names, Printer};
 use crate::type_::{FieldAccessUsage, error::PatternMatchKind};
@@ -1770,10 +1771,16 @@ constructor accepts."
                         }
                     }
 
-                    TypeError::UnexpectedLabelledArg { location, label, kind } => {
+                    TypeError::UnexpectedLabelledArg {
+                        location,
+                        label,
+                        kind,
+                    } => {
                         let kind = match kind {
                             UnexpectedLabelledArgKind::FunctionParameter => "function",
-                            UnexpectedLabelledArgKind::RecordConstructorArgument => "record constructor",
+                            UnexpectedLabelledArgKind::RecordConstructorArgument => {
+                                "record constructor"
+                            }
                         };
                         let text = format!(
                             "This argument has been given a label but the {kind} does

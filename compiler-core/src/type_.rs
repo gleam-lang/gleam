@@ -1524,7 +1524,10 @@ impl ValueConstructor {
 
 pub type TypedCallArg = CallArg<TypedExpr>;
 
-fn assert_no_labelled_arguments<A>(arguments: &[CallArg<A>], kind: UnexpectedLabelledArgKind) -> Result<(), Error> {
+fn assert_no_labelled_arguments<A>(
+    arguments: &[CallArg<A>],
+    kind: UnexpectedLabelledArgKind,
+) -> Result<(), Error> {
     for argument in arguments {
         if let Some(label) = &argument.label {
             return Err(Error::UnexpectedLabelledArg {
