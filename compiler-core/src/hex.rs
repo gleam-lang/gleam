@@ -41,7 +41,7 @@ pub async fn publish_package<Http: HttpClient>(
     let response = http.send(request).await?;
     hexpm::api_publish_package_response(response).map_err(|e| match e {
         ApiError::NotReplacing => Error::HexPublishReplaceRequired { version },
-        ApiError::Forbidden => Error::HexPackageAlreadyExists {
+        ApiError::Forbidden => Error::HexPublishAccessDenied {
             name: name.into(),
             version,
         },
