@@ -131,3 +131,23 @@ pub fn main(x) {
 "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5261
+#[test]
+fn const_record_in_case_expression() {
+    assert_erl!(
+        r#"
+pub type Wibble {
+  Wibble
+}
+
+const wibble = Wibble
+
+pub fn main() {
+  case wibble {
+    Wibble -> wibble
+  }
+}
+"#,
+    );
+}

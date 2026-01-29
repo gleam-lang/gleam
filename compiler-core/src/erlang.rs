@@ -1481,7 +1481,38 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
             }
         },
 
-        ValueConstructorVariant::LocalVariable { .. } => env.local_var_name(name),
+        ValueConstructorVariant::LocalVariable { origin, .. } => {
+            // If this is a generated local variable (e.g., from type narrowing of a
+            // module constant in a case expression) and the type is a zero-argument
+            // custom record type (not a prelude type like Int, Bool, etc.) that has
+            // been narrowed to a specific variant, AND the variable name matches the
+            // snake_case of the type name (indicating it's shadowing a const with the
+            // same name as the record constructor), we need to output the atom for
+            // the record constructor instead of a local variable reference.
+            // See: https://github.com/gleam-lang/gleam/issues/5261
+            if matches!(origin.syntax, crate::type_::error::VariableSyntax::Generated) {
+                if let Type::Named {
+                    name: type_name,
+                    arguments,
+                    module,
+                    inferred_variant: Some(_),
+                    ..
+                } = constructor.type_.deref()
+                {
+                    // Only apply this fix for custom types (not prelude types like Int)
+                    // that have been narrowed to a specific variant AND where the
+                    // variable name matches the type name (indicating a const reference)
+                    let type_name_snake = to_snake_case(type_name);
+                    if arguments.is_empty()
+                        && !is_prelude_module(module)
+                        && name == type_name_snake.as_str()
+                    {
+                        return atom_string(type_name_snake);
+                    }
+                }
+            }
+            env.local_var_name(name)
+        }
 
         ValueConstructorVariant::ModuleConstant { literal, .. } => const_inline(literal, env),
 
