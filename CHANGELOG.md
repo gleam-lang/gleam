@@ -196,6 +196,3 @@
 - Fixed a bug where the package cache would not properly be reset when a version
   of a package was replaced on Hex.
   ([Surya Rose](https://github.com/GearsDatapacks))
-
-- Assert with logical expression now compiles correctly in JS.
-  ([vyacheslavhere](https://github.com/vyacheslavhere))
