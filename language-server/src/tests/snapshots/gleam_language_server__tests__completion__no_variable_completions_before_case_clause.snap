@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\npub fn main() {\n  case todo {\n    something -> s\n    something_else -> Nil\n  }\n  s\n}\n"
 ---
 pub fn main() {
@@ -38,7 +38,7 @@ main
   sort:   2_main
   desc:   app
   edits:
-    [3:17-3:17]: "main"
+    [3:17-3:18]: "main"
 something
   kind:   Variable
   detail: a
@@ -46,4 +46,4 @@ something
   desc:   app
   docs:   "A locally defined variable."
   edits:
-    [3:17-3:17]: "something"
+    [3:17-3:18]: "something"

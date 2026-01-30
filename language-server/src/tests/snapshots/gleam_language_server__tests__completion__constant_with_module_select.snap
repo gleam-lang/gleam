@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\nimport wibble\n\ntype Wibble {\n  Wibble\n}\n\nconst pi = 3.14159\n\nfn some_function() {\n  todo\n}\n\nconst my_constant = wibble.W\n"
 ---
 import wibble
@@ -24,25 +24,25 @@ wibble.Wobble
   sort:   3_wibble.Wobble
   desc:   app
   edits:
-    [13:20-13:20]: "wibble.Wobble"
+    [13:20-13:28]: "wibble.Wobble"
 wibble.Wubble
   kind:   EnumMember
   detail: Wibble
   sort:   3_wibble.Wubble
   desc:   app
   edits:
-    [13:20-13:20]: "wibble.Wubble"
+    [13:20-13:28]: "wibble.Wubble"
 wibble.some_constant
   kind:   Constant
   detail: Int
   sort:   3_wibble.some_constant
   desc:   app
   edits:
-    [13:20-13:20]: "wibble.some_constant"
+    [13:20-13:28]: "wibble.some_constant"
 wibble.some_function
   kind:   Function
   detail: fn() -> a
   sort:   3_wibble.some_function
   desc:   app
   edits:
-    [13:20-13:20]: "wibble.some_function"
+    [13:20-13:28]: "wibble.some_function"

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\nfn add_one(wibble: Int) -> Int {\n  wibble + 1\n}\n\npub fn main() {\n  let wobble = 1\n  add_one(wobble)\n}\n"
 ---
 fn add_one(wibble: Int) -> Int {
@@ -39,14 +39,14 @@ add_one
   sort:   2_add_one
   desc:   app
   edits:
-    [7:10-7:10]: "add_one"
+    [7:10-7:16]: "add_one"
 main
   kind:   Function
   detail: fn() -> Int
   sort:   2_main
   desc:   app
   edits:
-    [7:10-7:10]: "main"
+    [7:10-7:16]: "main"
 wobble
   kind:   Variable
   detail: Int
@@ -54,4 +54,4 @@ wobble
   desc:   app
   docs:   "A locally defined variable."
   edits:
-    [7:10-7:10]: "wobble"
+    [7:10-7:16]: "wobble"

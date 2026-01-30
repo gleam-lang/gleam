@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\nconst hello = 10\nconst world = he\n"
 ---
 const hello = 10
@@ -33,11 +33,11 @@ hello
   sort:   2_hello
   desc:   app
   edits:
-    [2:14-2:14]: "hello"
+    [2:14-2:16]: "hello"
 world
   kind:   Constant
   detail: a
   sort:   2_world
   desc:   app
   edits:
-    [2:14-2:14]: "world"
+    [2:14-2:16]: "world"

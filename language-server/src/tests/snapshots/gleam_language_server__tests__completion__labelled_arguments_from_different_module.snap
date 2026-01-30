@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\nimport wibble\n\npub fn main() {\n  wibble.divide(10, b)\n}\n"
 ---
 import wibble
@@ -40,11 +40,11 @@ main
   sort:   2_main
   desc:   app
   edits:
-    [4:20-4:20]: "main"
+    [4:20-4:21]: "main"
 wibble.divide
   kind:   Function
   detail: fn(Int, Int) -> Int
   sort:   3_wibble.divide
   desc:   app
   edits:
-    [4:20-4:20]: "wibble.divide"
+    [4:20-4:21]: "wibble.divide"

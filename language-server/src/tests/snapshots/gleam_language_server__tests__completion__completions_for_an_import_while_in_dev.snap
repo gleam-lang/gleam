@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "import gleam\n\npub fn main() {\n  0\n}"
 ---
 import gleam|
@@ -13,8 +13,8 @@ pub fn main() {
 app
   kind:   Module
   edits:
-    [0:7-0:7]: "app"
+    [0:7-0:12]: "app"
 dev_helper
   kind:   Module
   edits:
-    [0:7-0:7]: "dev_helper"
+    [0:7-0:12]: "dev_helper"

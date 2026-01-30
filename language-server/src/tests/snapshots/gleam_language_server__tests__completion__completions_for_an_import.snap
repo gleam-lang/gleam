@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "import dep\n\npub fn main() {\n  0\n}"
 ---
 import dep|
@@ -13,4 +13,4 @@ pub fn main() {
 gleam
   kind:   Module
   edits:
-    [0:7-0:7]: "gleam"
+    [0:7-0:10]: "gleam"

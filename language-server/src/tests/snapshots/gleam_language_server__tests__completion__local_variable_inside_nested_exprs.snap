@@ -39,7 +39,7 @@ Wobble
   sort:   2_Wobble
   desc:   app
   edits:
-    [5:4-5:4]: "Wobble"
+    [5:4-5:7]: "Wobble"
 wibble
   kind:   Variable
   detail: Bool
@@ -47,7 +47,7 @@ wibble
   desc:   app
   docs:   "A locally defined variable."
   edits:
-    [5:4-5:4]: "wibble"
+    [5:4-5:10]: "wibble"
 wibble
   kind:   Function
   detail: fn() -> a
