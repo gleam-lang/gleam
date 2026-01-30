@@ -5,7 +5,6 @@ members = [
   "compiler-cli",
   "compiler-core",
   "compiler-wasm",
-  "hex-auth",
   "language-server",
   "test-helpers-rs",
   "test-output",
