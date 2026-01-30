@@ -2259,13 +2259,13 @@ impl<'module, 'a> Generator<'module, 'a> {
             ClauseGuard::Or { left, right, .. } => {
                 let left = self.wrapped_guard(left);
                 let right = self.wrapped_guard(right);
-                docvec!["(", left, " || ", right, ")"]
+                docvec![left, " || ", right]
             }
 
             ClauseGuard::And { left, right, .. } => {
                 let left = self.wrapped_guard(left);
                 let right = self.wrapped_guard(right);
-                docvec!["(", left, " && ", right, ")"]
+                docvec![left, " && ", right]
             }
 
             ClauseGuard::Var { name, .. } => self.local_var(name).to_doc(),

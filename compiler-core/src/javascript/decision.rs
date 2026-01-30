@@ -3,7 +3,9 @@ use super::{
     expression::{self, Generator, Ordering, float, float_from_value},
 };
 use crate::{
-    ast::{AssignmentKind, Endianness, SrcSpan, TypedClause, TypedExpr, TypedPattern},
+    ast::{
+        AssignmentKind, Endianness, SrcSpan, TypedClause, TypedClauseGuard, TypedExpr, TypedPattern,
+    },
     docvec,
     exhaustiveness::{
         BitArrayMatchedValue, BitArrayTest, Body, BoundValue, CompiledCase, Decision,
@@ -298,7 +300,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
                 guard,
                 if_true,
                 if_false,
-            } => self.decision_guard(*guard, if_true, if_false),
+            } => self.decision_guard(*guard, if_true, if_false, false),
         }
     }
 
@@ -331,6 +333,17 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
                     .expression_generator
                     .expression_flattening_blocks(body),
             )
+        }
+    }
+
+    fn wrap_guard(&mut self, decision: &'a Decision) -> CaseBody<'a> {
+        match decision {
+            Decision::Guard {
+                guard,
+                if_true,
+                if_false,
+            } => self.decision_guard(*guard, if_true, if_false, true),
+            decision => self.decision(decision),
         }
     }
 
@@ -379,7 +392,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             let (check_doc, body, mut segment_assignments) = self.inside_new_scope(|this| {
                 let segment_assignments = this.variables.bit_array_segment_assignments(check);
                 let check_doc = this.variables.runtime_check(var, check);
-                let body = this.decision(decision);
+                let body = this.wrap_guard(decision);
                 (check_doc, body, segment_assignments)
             });
             assignments.append(&mut segment_assignments);
@@ -563,6 +576,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
         guard: usize,
         if_true: &'a Body,
         if_false: &'a Decision,
+        wrap: bool,
     ) -> CaseBody<'a> {
         let DecisionKind::Case { clauses } = &self.kind else {
             unreachable!("Guards cannot appear in let assert decision trees")
@@ -588,7 +602,16 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             // check_bindings and if_true generation have to be in this scope so that pattern-bound
             // variables used in guards don't leak into other case branches (if_false).
             let check_bindings = this.variables.bindings_ref_doc(&check_bindings);
-            let check = this.variables.expression_generator.guard(guard);
+            let check = if wrap {
+                match guard {
+                    guard @ (TypedClauseGuard::Or { .. } | TypedClauseGuard::And { .. }) => {
+                        docvec!["(", this.variables.expression_generator.guard(guard), ")"]
+                    }
+                    guard => this.variables.expression_generator.guard(guard),
+                }
+            } else {
+                this.variables.expression_generator.guard(guard)
+            };
             // All the other bindings that are not needed by the guard check will
             // end up directly in the body of the if clause.
             let if_true_bindings = this.variables.bindings_ref_doc(&if_true_bindings);
