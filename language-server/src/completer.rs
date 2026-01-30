@@ -78,14 +78,87 @@ fn sort_text(kind: CompletionKind, label: &str, type_match: TypeMatch) -> String
     }
 }
 
-// The form in which a type completion is needed in context.
-// Mainly used to determine if the "type" keyword should be appended to the completion
-enum TypeCompletionForm {
-    // The type completion is for an unqualified import.
+/// The form in which a type completion is needed in context.
+enum TypeCompletionContext {
+    /// The type completion is for an unqualified import that doesn't have an
+    /// import list yet. So adding the type will also require adding braces:
+    ///
+    /// ```gleam
+    /// import wibble.Wib|
+    /// //           ^^^^^ We're typing this...
+    /// import wibble.{type Wibble}
+    /// //           ^^^^^^^^^^^^^^ ...so this will be the completion
+    /// ```
+    ///
     UnqualifiedImport,
-    // The type completion is for an unqualified import within braces.
+
+    /// The type completion is for an unqualified import within already existing
+    /// braces.
+    ///
+    /// ```gleam
+    /// import wibble.{type AlreadyImported, Wibb|}
+    /// //                                   ^^^^^ We're typing this...
+    /// import wibble.{type AlreadyImported, type Wibble}
+    /// //                                   ^^^^^^^^^^^ ...so this will be the completion
+    /// ```
+    ///
     UnqualifiedImportWithinBraces,
-    Default,
+
+    /// The type completion is for an unqualified type (for example something
+    /// coming from the prelude, or a type that was already imported in a
+    /// unqualified way).
+    ///
+    /// ```gleam
+    /// import wobble.{type Wobble}
+    ///
+    /// pub fn new_wobble() -> Wob|
+    /// //                     ^^^^ We're typing this...
+    /// pub fn new_wobble() -> Wobble
+    /// //                     ^^^^^^ ... so this will be the completion
+    /// ```
+    ///
+    UnqualifiedType,
+
+    /// The type completion is for a qualified type.
+    ///
+    /// ```gleam
+    /// import wobble
+    ///
+    /// pub fn new_wobble() -> wobble.W|
+    /// //                     ^^^^^^^^ We're typing this...
+    /// pub fn new_wobble() -> wobble.Wobble
+    /// //                     ^^^^^^^^^^^^^ ...so this will be the completion
+    /// ```
+    ///
+    QualifiedType,
+}
+
+/// Represents the surroundings of the cursor when trying to figure out a
+/// completion.
+///
+/// ```gleam
+/// wibble.w|ob
+/// //      ^ cursor here
+/// ```
+struct CursorSurroundings {
+    /// The text surrounding the cursor. For example:
+    ///
+    /// ```gleam
+    /// wibble.w|ob
+    /// //      ^ cursor here
+    /// // The surrounding text is: "wibble.wob"
+    /// ```
+    ///
+    surrounding_text: EcoString,
+    surrounding_text_range: Range,
+}
+
+impl CursorSurroundings {
+    fn selected_module(&self) -> Option<EcoString> {
+        self.surrounding_text
+            .split_once('.')
+            .map(|(selected_module, _)| EcoString::from(selected_module))
+    }
 }
 
 pub struct Completer<'a, IO> {
@@ -171,26 +244,32 @@ impl<'a, IO> Completer<'a, IO> {
     // and any part of the phrase preceeding a dot if a module is being selected from.
     // A continuous phrase in this case is a name or typename that may have a dot in it.
     // This is used to match the exact location to fill in the completion.
-    fn get_phrase_surrounding_completion(&'a self) -> (Range, Option<String>) {
+    fn get_phrase_surrounding_completion(&'a self) -> CursorSurroundings {
         let valid_phrase_char = |c: char| {
             // Checks if a character is not a valid name/upname character or a dot.
             !c.is_ascii_alphanumeric() && c != '.' && c != '_'
         };
         let (range, word) = self.get_phrase_surrounding_for_completion(&valid_phrase_char);
-        (range, word.split_once('.').map(|c| String::from(c.0)))
+        CursorSurroundings {
+            surrounding_text: EcoString::from(word),
+            surrounding_text_range: range,
+        }
     }
 
     // Gets the current range around the cursor to place a completion.
     // For unqualified imports we special case the word being completed to allow for whitespace but not dots.
     // This is to allow `type MyType` to be treated as 1 "phrase" for the sake of completion.
-    fn get_phrase_surrounding_completion_for_import(&'a self) -> Range {
+    fn get_phrase_surrounding_completion_for_import(&'a self) -> CursorSurroundings {
         let valid_phrase_char = |c: char| {
             // Checks if a character is not a valid name/upname character or whitespace.
             // The newline character is not included as well.
             !c.is_ascii_alphanumeric() && c != '_' && c != ' ' && c != '\t'
         };
-        let (range, _) = self.get_phrase_surrounding_for_completion(&valid_phrase_char);
-        range
+        let (range, word) = self.get_phrase_surrounding_for_completion(&valid_phrase_char);
+        CursorSurroundings {
+            surrounding_text: EcoString::from(word),
+            surrounding_text_range: range,
+        }
     }
 
     /// Checks if the line being editted is an import line and provides completions if it is.
@@ -249,7 +328,7 @@ impl<'a, IO> Completer<'a, IO> {
         module_being_imported_from: &'a ModuleInterface,
         within_braces: bool,
     ) -> Vec<CompletionItem> {
-        let insert_range = self.get_phrase_surrounding_completion_for_import();
+        let cursor_surroundings = self.get_phrase_surrounding_completion_for_import();
         let mut completions = vec![];
 
         // Find values and type that have already previously been imported
@@ -290,11 +369,11 @@ impl<'a, IO> Completer<'a, IO> {
                 None,
                 name,
                 type_,
-                insert_range,
+                &cursor_surroundings,
                 if within_braces {
-                    TypeCompletionForm::UnqualifiedImportWithinBraces
+                    TypeCompletionContext::UnqualifiedImportWithinBraces
                 } else {
-                    TypeCompletionForm::UnqualifiedImport
+                    TypeCompletionContext::UnqualifiedImport
                 },
                 CompletionKind::ImportedModule,
             ));
@@ -319,7 +398,7 @@ impl<'a, IO> Completer<'a, IO> {
                 &module_being_imported_from.name,
                 name,
                 value,
-                insert_range,
+                cursor_surroundings.surrounding_text_range,
                 CompletionKind::ImportedModule,
             ));
         }
@@ -410,23 +489,23 @@ impl<'a, IO> Completer<'a, IO> {
 
     /// Provides completions for when the context being editted is a type.
     pub fn completion_types(&'a self) -> Vec<CompletionItem> {
-        let surrounding_completion = self.get_phrase_surrounding_completion();
+        let cursor_surroundings = self.get_phrase_surrounding_completion();
+        let selected_module = cursor_surroundings.selected_module();
         let mut completions = vec![];
 
-        let (insert_range, module_select) = surrounding_completion;
-
         // Module and prelude types
-        // Do not complete direct module types if the user has already started typing a module select.
-        // e.x. when the user has typed mymodule.| we know local module types and prelude types are no
-        // longer relevant.
-        if module_select.is_none() {
+        // Do not complete direct module types if the user has already started
+        // typing a module select. That is, when the user has already typed
+        // `mymodule.|` we know local module types and prelude types are no
+        // longer relevant and needed for completions.
+        if selected_module.is_none() {
             for (name, type_) in &self.module.ast.type_info.types {
                 completions.push(type_completion(
                     None,
                     name,
                     type_,
-                    insert_range,
-                    TypeCompletionForm::Default,
+                    &cursor_surroundings,
+                    TypeCompletionContext::UnqualifiedType,
                     CompletionKind::LocallyDefined,
                 ));
             }
@@ -448,51 +527,56 @@ impl<'a, IO> Completer<'a, IO> {
             }
         }
 
-        // Imported modules
+        // Qualified types
         for import in &self.module.ast.definitions.imports {
             // The module may not be known of yet if it has not previously
             // compiled yet in this editor session.
             let Some(module) = self.compiler.get_module_interface(&import.module) else {
                 continue;
             };
+            let Some(module_name) = &import.used_name() else {
+                continue;
+            };
 
-            // Qualified types
             for (name, type_) in &module.types {
                 if !self.is_suggestable_import(&type_.publicity, module.package.as_str()) {
                     continue;
                 }
 
-                if let Some(module) = import.used_name() {
-                    // If the user has already started a module select then don't show irrelevant modules.
-                    // e.x. when the user has typed mymodule.| we should only show items from mymodule.
-                    if let Some(input_mod_name) = &module_select
-                        && &module != input_mod_name
-                    {
-                        continue;
-                    }
-                    completions.push(type_completion(
-                        Some(&module),
-                        name,
-                        type_,
-                        insert_range,
-                        TypeCompletionForm::Default,
-                        CompletionKind::ImportedModule,
-                    ));
+                // If the user has already started typing a module select
+                // then don't show irrelevant modules.
+                // For example: when the user has typed `mymodule.|` we
+                // should only show items from `mymodule`.
+                if let Some(typed_module) = &selected_module
+                    && module_name != typed_module
+                {
+                    continue;
                 }
+
+                completions.push(type_completion(
+                    Some(module_name),
+                    name,
+                    type_,
+                    &cursor_surroundings,
+                    TypeCompletionContext::QualifiedType,
+                    CompletionKind::ImportedModule,
+                ));
             }
 
             // Unqualified types
-            // Do not complete unqualified types if the user has already started typing a module select.
-            // e.x. when the user has typed mymodule.| we know unqualified module types are no longer relevant.
-            if module_select.is_none() {
+            // Do not complete unqualified types if the user has already started
+            // typing a module select.
+            // For example, when the user has already typed `mymodule.|` we know
+            // unqualified module types are no longer relevant.
+            if selected_module.is_none() {
                 for unqualified in &import.unqualified_types {
                     if let Some(type_) = module.get_public_type(&unqualified.name) {
                         completions.push(type_completion(
                             None,
                             unqualified.used_name(),
                             type_,
-                            insert_range,
-                            TypeCompletionForm::Default,
+                            &cursor_surroundings,
+                            TypeCompletionContext::UnqualifiedType,
                             CompletionKind::ImportedModule,
                         ))
                     }
@@ -525,8 +609,8 @@ impl<'a, IO> Completer<'a, IO> {
 
             // If the user has already started a module select then don't show irrelevant modules.
             // e.x. when the user has typed mymodule.| we should only show items from mymodule.
-            if let Some(input_mod_name) = &module_select
-                && qualifier != input_mod_name
+            if let Some(selected_module) = &selected_module
+                && qualifier != selected_module
             {
                 continue;
             }
@@ -541,8 +625,8 @@ impl<'a, IO> Completer<'a, IO> {
                     Some(qualifier),
                     name,
                     type_,
-                    insert_range,
-                    TypeCompletionForm::Default,
+                    &cursor_surroundings,
+                    TypeCompletionContext::QualifiedType,
                     CompletionKind::ImportableModule,
                 );
                 add_import_to_completion(
@@ -560,17 +644,16 @@ impl<'a, IO> Completer<'a, IO> {
 
     /// Provides completions for when the context being editted is a value.
     pub fn completion_values(&'a self) -> Vec<CompletionItem> {
-        let surrounding_completion = self.get_phrase_surrounding_completion();
+        let cursor_surroundings = self.get_phrase_surrounding_completion();
+        let selected_module = cursor_surroundings.selected_module();
         let mut completions = vec![];
         let mod_name = self.module.name.as_str();
-
-        let (insert_range, module_select) = surrounding_completion;
 
         // Module and prelude values
         // Do not complete direct module values if the user has already started typing a module select.
         // e.x. when the user has typed mymodule.| we know local module and prelude values are no longer
         // relevant.
-        if module_select.is_none() {
+        if selected_module.is_none() {
             let cursor = self.src_line_numbers.byte_index(*self.cursor_position);
 
             // Find the function that the cursor is in and push completions for
@@ -588,7 +671,7 @@ impl<'a, IO> Completer<'a, IO> {
                 completions.extend(
                     LocalCompletion::new(
                         mod_name,
-                        insert_range,
+                        cursor_surroundings.surrounding_text_range,
                         cursor,
                         self.expected_type.clone(),
                     )
@@ -605,7 +688,7 @@ impl<'a, IO> Completer<'a, IO> {
                     mod_name,
                     name,
                     value,
-                    insert_range,
+                    cursor_surroundings.surrounding_text_range,
                     CompletionKind::LocallyDefined,
                 ));
             }
@@ -686,7 +769,7 @@ impl<'a, IO> Completer<'a, IO> {
                 if let Some(module) = import.used_name() {
                     // If the user has already started a module select then don't show irrelevant modules.
                     // e.x. when the user has typed mymodule.| we should only show items from mymodule.
-                    if let Some(input_mod_name) = &module_select
+                    if let Some(input_mod_name) = &selected_module
                         && &module != input_mod_name
                     {
                         continue;
@@ -696,7 +779,7 @@ impl<'a, IO> Completer<'a, IO> {
                         mod_name,
                         name,
                         value,
-                        insert_range,
+                        cursor_surroundings.surrounding_text_range,
                         CompletionKind::ImportedModule,
                     ));
                 }
@@ -705,7 +788,7 @@ impl<'a, IO> Completer<'a, IO> {
             // Unqualified values
             // Do not complete unqualified values if the user has already started typing a module select.
             // e.x. when the user has typed mymodule.| we know unqualified module values are no longer relevant.
-            if module_select.is_none() {
+            if selected_module.is_none() {
                 for unqualified in &import.unqualified_values {
                     if let Some(value) = module.get_public_value(&unqualified.name) {
                         let name = unqualified.used_name();
@@ -714,7 +797,7 @@ impl<'a, IO> Completer<'a, IO> {
                             mod_name,
                             name,
                             value,
-                            insert_range,
+                            cursor_surroundings.surrounding_text_range,
                             CompletionKind::ImportedModule,
                         ))
                     }
@@ -745,8 +828,8 @@ impl<'a, IO> Completer<'a, IO> {
 
             // If the user has already started a module select then don't show irrelevant modules.
             // e.x. when the user has typed mymodule.| we should only show items from mymodule.
-            if let Some(input_mod_name) = &module_select
-                && qualifier != input_mod_name
+            if let Some(selected_module) = &selected_module
+                && qualifier != selected_module
             {
                 continue;
             }
@@ -762,7 +845,7 @@ impl<'a, IO> Completer<'a, IO> {
                     module_full_name,
                     name,
                     value,
-                    insert_range,
+                    cursor_surroundings.surrounding_text_range,
                     CompletionKind::ImportableModule,
                 );
 
@@ -997,8 +1080,8 @@ fn type_completion(
     module: Option<&str>,
     name: &str,
     type_: &TypeConstructor,
-    insert_range: Range,
-    include_type_in_completion: TypeCompletionForm,
+    cursor_surrounding: &CursorSurroundings,
+    include_type_in_completion: TypeCompletionContext,
     priority: CompletionKind,
 ) -> CompletionItem {
     let label = match module {
@@ -1018,11 +1101,12 @@ fn type_completion(
         detail: Some("Type".into()),
         sort_text: Some(sort_text(priority, &label, TypeMatch::Unknown)),
         text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-            range: insert_range,
+            range: cursor_surrounding.surrounding_text_range,
             new_text: match include_type_in_completion {
-                TypeCompletionForm::UnqualifiedImport => format!("{{type {label}}}"),
-                TypeCompletionForm::UnqualifiedImportWithinBraces => format!("type {label}"),
-                TypeCompletionForm::Default => label.clone(),
+                TypeCompletionContext::UnqualifiedImport => format!("{{type {label}}}"),
+                TypeCompletionContext::UnqualifiedImportWithinBraces => format!("type {label}"),
+                TypeCompletionContext::QualifiedType => label.clone(),
+                TypeCompletionContext::UnqualifiedType => label.clone(),
             },
         })),
         ..Default::default()
