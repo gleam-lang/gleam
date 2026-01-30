@@ -210,6 +210,10 @@
   of a package was replaced on Hex.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a crash (`bad_generator`) that could occur when a linked OTP process
+  exits with a non-standard exit reason.
+  ([John Downey](https://github.com/jtdowney))
+
 - Fixed a bug where diagnostic about incorrect `size` and `unit` options would
   use incorrect error location.
   ([Andrey Kozhev](https://github.com/ankddev))
