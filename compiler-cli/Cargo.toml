@@ -45,6 +45,7 @@ flate2.workspace = true
 futures.workspace = true
 hexpm = { path = "../hexpm" }
 http.workspace = true
+http-serde.workspace = true
 im.workspace = true
 itertools.workspace = true
 lsp-server.workspace = true

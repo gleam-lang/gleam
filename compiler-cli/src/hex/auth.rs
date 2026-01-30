@@ -1,16 +1,16 @@
-use crate::{cli, fs::ConsoleWarningEmitter, http::HttpClient};
+use crate::{cli, http::HttpClient};
+use ecow::EcoString;
 use gleam_core::{
-    Error, Result, Warning, encryption, hex,
-    paths::global_hexpm_credentials_path,
-    warning::{DeprecatedEnvironmentVariable, WarningEmitter},
+    Error, Result, encryption,
+    error::{FileIoAction, FileKind},
+    io::HttpClient as _,
+    paths,
 };
-use std::{rc::Rc, time::SystemTime};
+use hexpm::OAuthTokens;
 
-pub const USER_PROMPT: &str = "https://hex.pm username";
-pub const USER_ENV_NAME: &str = "HEXPM_USER";
-pub const PASS_PROMPT: &str = "https://hex.pm password";
+pub const HEX_OAUTH_CLIENT_ID: &str = "877731e8-cb88-45e1-9b84-9214de7da421";
+
 pub const LOCAL_PASS_PROMPT: &str = "Local password";
-pub const PASS_ENV_NAME: &str = "HEXPM_PASS";
 pub const API_ENV_NAME: &str = "HEXPM_API_KEY";
 
 #[derive(Debug)]
@@ -19,18 +19,11 @@ pub struct EncryptedApiKey {
     pub encrypted: String,
 }
 
-#[derive(Debug)]
-pub struct UnencryptedApiKey {
-    pub unencrypted: String,
-}
-
 pub struct HexAuthentication<'runtime> {
     runtime: &'runtime tokio::runtime::Runtime,
     http: HttpClient,
-    local_password: Option<String>,
+    local_password: Option<EcoString>,
     hex_config: hexpm::Config,
-    warnings: Vec<Warning>,
-    warning_emitter: WarningEmitter,
 }
 
 impl<'runtime> HexAuthentication<'runtime> {
@@ -42,40 +35,96 @@ impl<'runtime> HexAuthentication<'runtime> {
             http: HttpClient::new(),
             local_password: None,
             hex_config,
-            warnings: vec![],
-            warning_emitter: WarningEmitter::new(Rc::new(ConsoleWarningEmitter)),
         }
     }
 
-    /// Create a new API key, removing the previous one if it already exists.
+    /// Create new OAuth tokens by sending the user through the OAuth flow.
     ///
-    pub fn create_and_store_api_key(&mut self) -> Result<UnencryptedApiKey> {
-        let name = generate_api_key_name();
-        let path = global_hexpm_credentials_path();
+    /// Any already-existing tokens stored on the file system are revoked.
+    ///
+    pub fn create_and_store_new_oauth_tokens(&mut self) -> Result<OAuthTokens> {
+        // TODO: revoke any prior oauth tokens
+        // TODO: revoke any prior old api keys
 
-        // Get login creds from user
-        let username = ask_username(&mut self.warnings)?;
-        let password = ask_password(&mut self.warnings)?;
+        // Create a recognisable name for the client, so folks can more easily understand which
+        // session is which in the Hex console.
+        let client_name = format!(
+            "Gleam ({})",
+            hostname::get().expect("hostname").to_string_lossy()
+        );
 
-        // Get API key
-        let future = hex::create_api_key(&name, &username, &password, &self.hex_config, &self.http);
-        let api_key = self.runtime.block_on(future)?;
+        // Create a device authorisation with HEx, starting the oauth flow.
+        let request = hexpm::oauth_device_authorisation_request(
+            HEX_OAUTH_CLIENT_ID,
+            &client_name,
+            &self.hex_config,
+        );
+        let response = self.runtime.block_on(self.http.send(request))?;
+        let mut device_authorisation =
+            hexpm::oauth_device_authorisation_response(HEX_OAUTH_CLIENT_ID.to_string(), response)
+                .map_err(Error::hex)?;
+
+        // Show the user their code, and send them to Hex to log in.
+        // We make them press Enter to open the browser instead of going there immediately,
+        // to make sure they see the code before the browser window potentially hides the
+        // terminal window.
+        let uri = &device_authorisation.verification_uri;
+        println!(
+            "Your Hex verification code:
+
+    {code}
+
+Verify this code matches what is shown in your browser.
+
+Press Enter to open {uri}",
+            code = device_authorisation.user_code,
+        );
+
+        let _ = std::io::stdin().read_line(&mut String::new()).unwrap();
+        if let Err(_) = opener::open_browser(uri) {
+            println!("\nFailed to open the browser, please navigate to {uri}");
+        }
+
+        // The user has been sent to the Hex website to authenticate.
+        // Poll the Hex API until they accept or reject the request, or it times out.
+        let tokens = loop {
+            let request = device_authorisation.poll_token_request(&self.hex_config);
+            let response = self.runtime.block_on(self.http.send(request))?;
+            let next = device_authorisation
+                .poll_token_response(response)
+                .map_err(Error::hex)?;
+            match next {
+                hexpm::PollStep::Done(tokens) => break tokens,
+                hexpm::PollStep::SleepThenPollAgain(duration) => std::thread::sleep(duration),
+            }
+        };
 
         // We are creating a new API key, so we need a new local password
         // to encrypt it with.
-        let password = self.ask_for_new_local_password()?;
+        self.ask_for_new_local_password()?;
+        self.encrypt_and_store_oauth_refresh_token(&tokens)?;
 
-        let encrypted = encryption::encrypt_with_passphrase(api_key.as_bytes(), &password)
-            .map_err(|e| Error::FailedToEncryptLocalHexApiKey {
+        Ok(tokens)
+    }
+
+    fn encrypt_and_store_oauth_refresh_token(&mut self, tokens: &OAuthTokens) -> Result<(), Error> {
+        let path = paths::global_hexpm_oauth_credentials_path();
+        let local_password = self.get_local_password()?;
+        let encrypted_refresh_token =
+            encryption::encrypt_with_passphrase(tokens.refresh_token.as_bytes(), &local_password)
+                .map_err(|e| Error::FailedToEncryptLocalHexApiKey {
                 detail: e.to_string(),
             })?;
-
-        crate::fs::write(&path, &format!("{name}\n{encrypted}"))?;
-        println!("\nEncrypted Hex API key written to {path}");
-
-        Ok(UnencryptedApiKey {
-            unencrypted: api_key,
-        })
+        let credentials = StoredOAuthCredentials {
+            hexpm: StoredOAuthRepoCredentials {
+                api: self.hex_config.api_base.clone(),
+                repository: self.hex_config.repository_base.clone(),
+                refresh_token: encrypted_refresh_token,
+            },
+        };
+        let toml = toml::to_string(&credentials).expect("OAuth credentials TOML encoding");
+        crate::fs::write(&path, &toml)?;
+        Ok(())
     }
 
     /// Create a new local password.
@@ -85,14 +134,12 @@ impl<'runtime> HexAuthentication<'runtime> {
     /// The old password will be discarded, and the new one will be both
     /// returned and stored in `self.local_password`
     ///
-    fn ask_for_new_local_password(&mut self) -> Result<String> {
+    fn ask_for_new_local_password(&mut self) -> Result<()> {
         let required_length = 8;
         self.local_password = None;
         println!(
-            "
-Please enter a new unique password. This will be used to locally
-encrypt your Hex API key.
-It should be at least {required_length} characters long.
+            "Please enter a new unique password, at least {required_length} characters long.
+It will be used to locally encrypt your Hex API tokens.
 "
         );
 
@@ -102,34 +149,37 @@ It should be at least {required_length} characters long.
                 println!("\nPlease use a password at least {required_length} characters long.\n")
             } else {
                 self.local_password = Some(password.clone());
-                return Ok(password);
+                return Ok(());
             }
         }
     }
 
-    fn ask_local_password(&mut self) -> Result<String> {
-        if let Some(pw) = self.local_password.as_ref() {
-            return Ok(pw.clone());
+    fn get_local_password(&mut self) -> Result<EcoString> {
+        if let Some(password) = self.local_password.as_ref() {
+            return Ok(password.clone());
         }
-        let pw = ask_local_password(&mut self.warnings)?;
-        self.local_password = Some(pw.clone());
-        Ok(pw)
+
+        let password = cli::ask_password(LOCAL_PASS_PROMPT)?;
+        self.local_password = Some(password.clone());
+        return Ok(password);
     }
 
-    /// Get an API key from
-    /// 1. the HEXPM_API_KEY env var
-    /// 2. the file system (encrypted)
-    /// 3. the Hex API
-    pub fn get_or_create_api_key(&mut self) -> Result<String> {
+    /// Get a token that can be used to authenticate with the Hex API.
+    /// In order, it will try these sources:
+    ///
+    /// 1. An API key from the HEXPM_API_KEY environment variable.
+    /// 2. An OAuth refresh token from the file system, which is the exchanged for an access token.
+    /// 3. The OAuth flow.
+    pub fn get_or_create_api_access_token(&mut self) -> Result<String> {
         if let Some(key) = Self::read_env_api_key()? {
             return Ok(key);
         }
 
-        if let Some(key) = self.read_and_decrypt_stored_api_key()? {
-            return Ok(key.unencrypted);
+        if let Some(tokens) = self.read_and_decrypt_and_refresh_stored_tokens()? {
+            return Ok(tokens.access_token);
         }
 
-        Ok(self.create_and_store_api_key()?.unencrypted)
+        Ok(self.create_and_store_new_oauth_tokens()?.access_token)
     }
 
     fn read_env_api_key() -> Result<Option<String>> {
@@ -141,22 +191,60 @@ It should be at least {required_length} characters long.
         }
     }
 
-    fn read_and_decrypt_stored_api_key(&mut self) -> Result<Option<UnencryptedApiKey>> {
-        let Some(EncryptedApiKey { encrypted, .. }) = self.read_stored_api_key()? else {
+    /// Read, decrypt, and refresh OAuth keys stored on the filesystem.
+    ///
+    /// The new refresh is encrypted and stored on the file system for next use.
+    ///
+    /// If there is no stored key then this return `Ok(None)`, and you'll
+    /// need to create a new one.
+    ///
+    fn read_and_decrypt_and_refresh_stored_tokens(&mut self) -> Result<Option<OAuthTokens>> {
+        let Some(EncryptedApiKey { encrypted, .. }) = self.read_stored_legacy_api_key()? else {
+            // There was no prior token to use, return None.
             return Ok(None);
         };
 
-        let password = self.ask_local_password()?;
-        let unencrypted = encryption::decrypt_with_passphrase(encrypted.as_bytes(), &password)
-            .map_err(|e| Error::FailedToDecryptLocalHexApiKey {
-                detail: e.to_string(),
-            })?;
+        let local_password = self.get_local_password()?;
+        let refresh_token =
+            encryption::decrypt_with_passphrase(encrypted.as_bytes(), &local_password).map_err(
+                |e| Error::FailedToDecryptLocalHexApiKey {
+                    detail: e.to_string(),
+                },
+            )?;
 
-        Ok(Some(UnencryptedApiKey { unencrypted }))
+        // Use a refresh token, consuming it to get a new set of tokens.
+        let request = hexpm::oauth_refresh_token_request(
+            HEX_OAUTH_CLIENT_ID,
+            &refresh_token,
+            &self.hex_config,
+        );
+        let response = self.runtime.block_on(self.http.send(request))?;
+        let tokens = hexpm::oauth_refresh_token_response(response).map_err(Error::hex)?;
+
+        // Store the refresh token for future use.
+        self.encrypt_and_store_oauth_refresh_token(&tokens)?;
+
+        Ok(Some(tokens))
     }
 
-    pub fn read_stored_api_key(&self) -> Result<Option<EncryptedApiKey>> {
-        let path = global_hexpm_credentials_path();
+    pub fn read_stored_encrypted_oauth_refresh_token(&self) -> Result<Option<String>> {
+        let path = paths::global_hexpm_legacy_credentials_path();
+        if !path.exists() {
+            return Ok(None);
+        }
+        let toml = crate::fs::read(&path)?;
+        let credentials: StoredOAuthCredentials =
+            toml::from_str(&toml).map_err(|e| Error::FileIo {
+                action: FileIoAction::Parse,
+                kind: FileKind::File,
+                path,
+                err: Some(e.to_string()),
+            })?;
+        Ok(Some(credentials.hexpm.refresh_token))
+    }
+
+    pub fn read_stored_legacy_api_key(&self) -> Result<Option<EncryptedApiKey>> {
+        let path = paths::global_hexpm_legacy_credentials_path();
         if !path.exists() {
             return Ok(None);
         }
@@ -175,52 +263,16 @@ It should be at least {required_length} characters long.
     }
 }
 
-impl Drop for HexAuthentication<'_> {
-    fn drop(&mut self) {
-        while let Some(warning) = self.warnings.pop() {
-            self.warning_emitter.emit(warning);
-        }
-    }
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct StoredOAuthRepoCredentials {
+    #[serde(with = "http_serde::uri")]
+    api: http::Uri,
+    #[serde(with = "http_serde::uri")]
+    repository: http::Uri,
+    refresh_token: String,
 }
 
-fn ask_local_password(warnings: &mut Vec<Warning>) -> std::result::Result<String, Error> {
-    std::env::var(PASS_ENV_NAME)
-        .inspect(|_| {
-            warnings.push(Warning::DeprecatedEnvironmentVariable {
-                variable: DeprecatedEnvironmentVariable::HexpmPass,
-            })
-        })
-        .or_else(|_| cli::ask_password(LOCAL_PASS_PROMPT))
-}
-
-fn ask_password(warnings: &mut Vec<Warning>) -> std::result::Result<String, Error> {
-    std::env::var(PASS_ENV_NAME)
-        .inspect(|_| {
-            warnings.push(Warning::DeprecatedEnvironmentVariable {
-                variable: DeprecatedEnvironmentVariable::HexpmPass,
-            })
-        })
-        .or_else(|_| cli::ask_password(PASS_PROMPT))
-}
-
-fn ask_username(warnings: &mut Vec<Warning>) -> std::result::Result<String, Error> {
-    std::env::var(USER_ENV_NAME)
-        .inspect(|_| {
-            warnings.push(Warning::DeprecatedEnvironmentVariable {
-                variable: DeprecatedEnvironmentVariable::HexpmUser,
-            })
-        })
-        .or_else(|_| cli::ask(USER_PROMPT))
-}
-
-pub fn generate_api_key_name() -> String {
-    let timestamp = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .expect("This function must only be called after January 1, 1970. Sorry time traveller!")
-        .as_secs();
-    let name = hostname::get()
-        .expect("Looking up hostname")
-        .to_string_lossy()
-        .to_string();
-    format!("{name}-{timestamp}")
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct StoredOAuthCredentials {
+    hexpm: StoredOAuthRepoCredentials,
 }
