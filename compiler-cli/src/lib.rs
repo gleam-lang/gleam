@@ -564,7 +564,10 @@ enum Hex {
     /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
     ///
     #[command(verbatim_doc_comment)]
-    Unretire { package: String, version: String },
+    Unretire {
+        package: String,
+        version: String,
+    },
 
     /// Revert a release from Hex
     ///
@@ -585,12 +588,7 @@ enum Hex {
     #[command(subcommand)]
     Owner(Owner),
 
-    // TODO: remove
-    /// Authenticate with Hex
     Authenticate,
-
-    /// Authenticate with Hex
-    Oauth,
 }
 
 #[derive(Subcommand, Debug)]
@@ -734,7 +732,6 @@ fn parse_and_run_command() -> Result<(), Error> {
         }
 
         Command::Hex(Hex::Authenticate) => hex::authenticate(),
-        Command::Hex(Hex::Oauth) => hex::oauth_authenticate(),
 
         Command::New(options) => new::create(options, COMPILER_VERSION),
 

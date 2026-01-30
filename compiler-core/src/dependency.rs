@@ -241,9 +241,13 @@ impl PackageFetchError {
     pub fn from_api_error(api_error: hexpm::ApiError, package: &str) -> Self {
         match &api_error {
             hexpm::ApiError::NotFound => Self::NotFoundError(package.to_string()),
-            hexpm::ApiError::Json(_)
-            | hexpm::ApiError::OAuthTimeout
+
+            // TODO: custom error messages for these
+            hexpm::ApiError::OAuthTimeout
             | hexpm::ApiError::OAuthAccessDenied
+            | hexpm::ApiError::OAuthRefreshTokenRejected => Self::ApiError(api_error),
+
+            hexpm::ApiError::Json(_)
             | hexpm::ApiError::ExpiredToken
             | hexpm::ApiError::Io(_)
             | hexpm::ApiError::InvalidProtobuf(_)
