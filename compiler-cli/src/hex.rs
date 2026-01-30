@@ -91,6 +91,60 @@ pub fn revert(
     Ok(())
 }
 
+pub(crate) fn oauth_authenticate() -> Result<()> {
+    const HEX_OAUTH_CLIENT_ID: &str = "877731e8-cb88-45e1-9b84-9214de7da421";
+
+    let config = hexpm::Config::new();
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let http = HttpClient::new();
+
+    // Create a device authorisation with HEx, starting the oauth flow.
+    let request = hexpm::oauth_device_authorisation_request(HEX_OAUTH_CLIENT_ID, &config);
+    let response = runtime.block_on(http.send(request))?;
+    let mut device_authorisation =
+        hexpm::oauth_device_authorisation_response(HEX_OAUTH_CLIENT_ID.to_string(), response)
+            .map_err(Error::hex)?;
+
+    // Show the user their code, and send them to Hex to log in.
+    // We make them press Enter to open the browser instead of going there immediately,
+    // to make sure they see the code before the browser window potentially hides the
+    // terminal window.
+    let uri = &device_authorisation.verification_uri;
+    println!(
+        "Your Hex verification code:
+
+    {code}
+
+Verify this code matches what is shown in your browser.
+
+Press Enter to open {uri}",
+        code = device_authorisation.user_code,
+    );
+
+    let _ = std::io::stdin().read_line(&mut String::new()).unwrap();
+    if let Err(_) = opener::open_browser(uri) {
+        println!("\nFailed to open the browser, please navigate to {uri}");
+    }
+
+    // The user has been sent to the Hex website to authenticate.
+    // Poll the Hex API until they accept or reject the request, or it times out.
+    let tokens = loop {
+        let request = device_authorisation.poll_token_request(&config);
+        let response = runtime.block_on(http.send(request))?;
+        let next = device_authorisation
+            .poll_token_response(response)
+            .map_err(Error::hex)?;
+        match next {
+            hexpm::PollStep::Done(tokens) => break tokens,
+            hexpm::PollStep::SleepThenPollAgain(duration) => std::thread::sleep(duration),
+        }
+    };
+
+    dbg!(tokens);
+
+    Ok(())
+}
+
 pub(crate) fn authenticate() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let http = HttpClient::new();
