@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\npub fn main() -> Int {\n  a\n}\n\nfn add(a, b) { a + b }\nfn sub(a, b) { a - b }\nfn addf(a, b) { a +. b }\n"
 ---
 pub fn main() -> Int {
@@ -38,25 +38,25 @@ add
   sort:   02_add
   desc:   app
   edits:
-    [2:2-2:2]: "add"
+    [2:2-2:3]: "add"
 addf
   kind:   Function
   detail: fn(Float, Float) -> Float
   sort:   2_addf
   desc:   app
   edits:
-    [2:2-2:2]: "addf"
+    [2:2-2:3]: "addf"
 main
   kind:   Function
   detail: fn() -> Int
   sort:   02_main
   desc:   app
   edits:
-    [2:2-2:2]: "main"
+    [2:2-2:3]: "main"
 sub
   kind:   Function
   detail: fn(Int, Int) -> Int
   sort:   02_sub
   desc:   app
   edits:
-    [2:2-2:2]: "sub"
+    [2:2-2:3]: "sub"

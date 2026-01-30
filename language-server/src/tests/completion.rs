@@ -161,8 +161,8 @@ fn format_completion_results(completions: Vec<CompletionItem>) -> EcoString {
         let edit = |buffer: &mut EcoString, e: lsp_types::TextEdit| {
             let a = e.range.start.line;
             let b = e.range.start.character;
-            let c = e.range.start.line;
-            let d = e.range.start.character;
+            let c = e.range.end.line;
+            let d = e.range.end.character;
             write!(buffer, "\n    [{a}:{b}-{c}:{d}]: {:?}", e.new_text).unwrap();
         };
 

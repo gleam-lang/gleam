@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\npub fn divide(x: Int, by y: Int) { x / y }\n\npub fn main() {\n  divide(10, b)\n}\n"
 ---
 pub fn divide(x: Int, by y: Int) { x / y }
@@ -40,11 +40,11 @@ divide
   sort:   2_divide
   desc:   app
   edits:
-    [4:13-4:13]: "divide"
+    [4:13-4:14]: "divide"
 main
   kind:   Function
   detail: fn() -> Int
   sort:   2_main
   desc:   app
   edits:
-    [4:13-4:13]: "main"
+    [4:13-4:14]: "main"

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\npub fn main() {\n  fn() {\n    let something = 10\n  }\n  s\n}\n"
 ---
 pub fn main() {
@@ -37,4 +37,4 @@ main
   sort:   2_main
   desc:   app
   edits:
-    [5:2-5:2]: "main"
+    [5:2-5:3]: "main"

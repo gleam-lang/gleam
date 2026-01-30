@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\npub fn main() {\n  let my_bool = T\n}\n"
 ---
 pub fn main() {
@@ -34,4 +34,4 @@ main
   sort:   2_main
   desc:   app
   edits:
-    [2:16-2:16]: "main"
+    [2:16-2:17]: "main"

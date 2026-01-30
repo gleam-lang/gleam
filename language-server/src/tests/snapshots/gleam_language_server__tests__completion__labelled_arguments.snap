@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\npub type Wibble {\n  Wibble(wibble: Int, wobble: Float)\n}\n\npub fn main() {\n  Wibble(w)\n}\n"
 ---
 pub type Wibble {
@@ -38,14 +38,14 @@ Wibble
   sort:   2_Wibble
   desc:   app
   edits:
-    [6:9-6:9]: "Wibble"
+    [6:9-6:10]: "Wibble"
 main
   kind:   Function
   detail: fn() -> Wibble
   sort:   2_main
   desc:   app
   edits:
-    [6:9-6:9]: "main"
+    [6:9-6:10]: "main"
 wibble:
   kind:   Field
   detail: Int

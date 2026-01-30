@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\npub fn main() -> Result(Int, Nil) {\n  let result = Ok(12)\n  let result2 = Error(True)\n  r\n}\n"
 ---
 pub fn main() -> Result(Int, Nil) {
@@ -36,7 +36,7 @@ main
   sort:   02_main
   desc:   app
   edits:
-    [4:2-4:2]: "main"
+    [4:2-4:3]: "main"
 result
   kind:   Variable
   detail: Result(Int, a)
@@ -44,7 +44,7 @@ result
   desc:   app
   docs:   "A locally defined variable."
   edits:
-    [4:2-4:2]: "result"
+    [4:2-4:3]: "result"
 result2
   kind:   Variable
   detail: Result(a, Bool)
@@ -52,4 +52,4 @@ result2
   desc:   app
   docs:   "A locally defined variable."
   edits:
-    [4:2-4:2]: "result2"
+    [4:2-4:3]: "result2"

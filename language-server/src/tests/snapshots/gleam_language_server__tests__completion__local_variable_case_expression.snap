@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\npub fn main() {\n  case True {\n    True as wibble -> { todo }\n    False -> { todo }\n  }\n}\n"
 ---
 pub fn main() {
@@ -37,7 +37,7 @@ main
   sort:   2_main
   desc:   app
   edits:
-    [3:24-3:24]: "main"
+    [3:24-3:25]: "main"
 wibble
   kind:   Variable
   detail: Bool
@@ -45,4 +45,4 @@ wibble
   desc:   app
   docs:   "A locally defined variable."
   edits:
-    [3:24-3:24]: "wibble"
+    [3:24-3:28]: "wibble"

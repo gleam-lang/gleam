@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\npub fn main() -> Bool {\n  let wibble = 123\n  let wubble = True\n  let Wobble = 1.5\n  w\n}\n"
 ---
 pub fn main() -> Bool {
@@ -37,7 +37,7 @@ main
   sort:   02_main
   desc:   app
   edits:
-    [5:2-5:2]: "main"
+    [5:2-5:3]: "main"
 wibble
   kind:   Variable
   detail: Int
@@ -45,7 +45,7 @@ wibble
   desc:   app
   docs:   "A locally defined variable."
   edits:
-    [5:2-5:2]: "wibble"
+    [5:2-5:3]: "wibble"
 wubble
   kind:   Variable
   detail: Bool
@@ -53,4 +53,4 @@ wubble
   desc:   app
   docs:   "A locally defined variable."
   edits:
-    [5:2-5:2]: "wubble"
+    [5:2-5:3]: "wubble"
