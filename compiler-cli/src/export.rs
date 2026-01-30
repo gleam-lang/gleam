@@ -1,8 +1,12 @@
+use std::collections::{HashMap, HashSet};
+
 use camino::Utf8PathBuf;
+use ecow::EcoString;
 use gleam_core::{
     Result,
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Target},
+    manifest::ManifestPackage,
     paths::ProjectPaths,
 };
 
@@ -16,6 +20,34 @@ static ENTRYPOINT_TEMPLATE_POSIX_SHELL: &str =
 
 // TODO: start in embedded mode
 // TODO: test
+
+/// Computes the set of application names for production dependencies.
+/// Returns application names (otp_app) since that's what build directories use.
+fn production_app_names(
+    packages: &[ManifestPackage],
+    direct_prod_deps: impl Iterator<Item = EcoString>,
+) -> HashSet<EcoString> {
+    let packages_by_name: HashMap<&EcoString, _> =
+        packages.iter().map(|p| (&p.name, p)).collect();
+
+    // BFS to find all transitive production dependencies
+    let mut visited = HashSet::new();
+    let mut queue: Vec<EcoString> = direct_prod_deps.collect();
+    while let Some(name) = queue.pop() {
+        if visited.insert(name.clone()) {
+            if let Some(pkg) = packages_by_name.get(&name) {
+                queue.extend(pkg.requirements.iter().cloned());
+            }
+        }
+    }
+
+    // Convert to application names (directory names in build output)
+    visited
+        .iter()
+        .filter_map(|name| packages_by_name.get(name))
+        .map(|pkg| pkg.application_name().clone())
+        .collect()
+}
 
 /// Generate a directory of precompiled Erlang along with a start script.
 /// Suitable for deployment to a server.
@@ -37,6 +69,16 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
     crate::fs::delete_directory(&build)?;
     crate::fs::delete_directory(&out)?;
 
+    // Download dependencies and store manifest for filtering
+    let manifest = crate::build::download_dependencies(paths, crate::cli::Reporter::new())?;
+
+    // Get the config to determine production dependencies
+    let config = crate::config::root_config(paths)?;
+
+    // Compute the set of production app names (excludes dev dependencies)
+    let production_apps =
+        production_app_names(&manifest.packages, config.dependencies.keys().cloned());
+
     // Build project in production mode
     let built = crate::build::main(
         paths,
@@ -49,7 +91,7 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
             target: Some(target),
             no_print_progress: false,
         },
-        crate::build::download_dependencies(paths, crate::cli::Reporter::new())?,
+        manifest,
     )?;
 
     for entry in crate::fs::read_dir(&build)?.filter_map(Result::ok) {
@@ -61,6 +103,13 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
         }
 
         let name = path.file_name().expect("Directory name");
+
+        // Skip dev-only dependencies (but always include the root package)
+        let name_str: EcoString = name.to_string().into();
+        if name_str != config.name && !production_apps.contains(&name_str) {
+            continue;
+        }
+
         let build = build.join(name);
         let out = out.join(name);
         crate::fs::mkdir(&out)?;
