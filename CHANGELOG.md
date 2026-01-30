@@ -68,6 +68,19 @@
   variable.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server is now smarter when producing autocompletions. Imagine
+  you're updating your code to fully qualify the uses of the `Json` type:
+
+  ```gleam
+  pub fn payload() -> js|Json
+  //                    ^ typing the module name
+  ```
+
+  Accepting the `json.Json` completion will not produce the correct `json.Json`
+  annotation rather than generating invalid code: `json.JsonJson`.
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server now suggests adding missing type parameters
   to custom generic types.
   ([Andi Pabst](https://github.com/andipabst))
