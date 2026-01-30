@@ -2294,3 +2294,30 @@ pub fn main() -> Result(Int, Nil) {
 
     assert_completion!(TestProject::for_source(code), Position::new(4, 3));
 }
+
+#[test]
+fn completion_for_type() {
+    let dep = "pub type Wibble";
+    let code = "pub fn new() -> wibble.Wibble {}";
+    assert_completion!(
+        TestProject::for_source(code).add_dep_module("wibble", dep),
+        Position::new(0, 23)
+    );
+}
+
+#[test]
+fn completion_for_partially_correct_existing_module_select() {
+    let dep = "pub fn filter() {}";
+    let code = "
+import gleam/list
+
+pub fn new() {
+  list.fer
+//      ^ cursor right after the 'f'
+}
+";
+    assert_completion!(
+        TestProject::for_source(code).add_dep_module("gleam/list", dep),
+        Position::new(4, 8)
+    );
+}

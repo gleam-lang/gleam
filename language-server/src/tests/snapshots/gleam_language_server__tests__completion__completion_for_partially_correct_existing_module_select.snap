@@ -1,0 +1,20 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "\nimport gleam/list\n\npub fn new() {\n  list.fer\n//      ^ cursor right after the 'f'\n}\n"
+---
+import gleam/list
+
+pub fn new() {
+  list.f|er
+//      ^ cursor right after the 'f'
+}
+
+
+----- Completion content -----
+list.filter
+  kind:   Function
+  detail: fn() -> a
+  sort:   3_list.filter
+  desc:   app
+  edits:
+    [4:2-4:2]: "list.filter"
