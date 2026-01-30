@@ -242,6 +242,9 @@ impl PackageFetchError {
         match &api_error {
             hexpm::ApiError::NotFound => Self::NotFoundError(package.to_string()),
             hexpm::ApiError::Json(_)
+            | hexpm::ApiError::OAuthTimeout
+            | hexpm::ApiError::OAuthAccessDenied
+            | hexpm::ApiError::ExpiredToken
             | hexpm::ApiError::Io(_)
             | hexpm::ApiError::InvalidProtobuf(_)
             | hexpm::ApiError::UnexpectedResponse(_, _)

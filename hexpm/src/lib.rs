@@ -756,6 +756,15 @@ pub enum ApiError {
 
     #[error("can only modify a release up to one hour after publication")]
     LateModification,
+
+    #[error("the oauth request wasn't approved in time")]
+    OAuthTimeout,
+
+    #[error("the oauth request was rejected")]
+    OAuthAccessDenied,
+
+    #[error("the oauth token expired before the request was approved")]
+    ExpiredToken,
 }
 
 impl ApiError {
@@ -1042,7 +1051,7 @@ pub fn api_get_package_release_response(
     }
 }
 
-// TODO: document
+/// Create a device authorisation, kicking off the Hex oauth flow.
 pub fn oauth_device_authorisation_request(
     hex_oauth_client_id: &str,
     config: &Config,
@@ -1060,7 +1069,7 @@ pub fn oauth_device_authorisation_request(
         .expect("oauth_device_authorisation_request")
 }
 
-// TODO: document
+/// Parse the response of creating a device authorisation, kicking off the Hex oauth flow.
 pub fn oauth_device_authorisation_response(
     hex_oauth_client_id: String,
     response: http::Response<Vec<u8>>,
@@ -1089,7 +1098,6 @@ pub fn oauth_device_authorisation_response(
     })
 }
 
-// TODO: document
 #[derive(Debug)]
 pub struct OAuthDeviceAuthorisation {
     /// Show this code to the user for them to match against the one in the Hex UI.
@@ -1122,8 +1130,7 @@ impl OAuthDeviceAuthorisation {
         response: http::Response<Vec<u8>>,
     ) -> Result<PollStep, ApiError> {
         if self.start_time.elapsed() > Duration::from_mins(10) {
-            // TODO: return error
-            return todo!("timeout");
+            return Err(ApiError::OAuthTimeout);
         }
 
         let (parts, body) = response.into_parts();
@@ -1147,9 +1154,9 @@ impl OAuthDeviceAuthorisation {
                 Ok(PollStep::SleepThenPollAgain(self.poll_interval.clone()))
             }
 
-            Err(PollResponseBodyError::AccessDenied) => todo!(),
+            Err(PollResponseBodyError::AccessDenied) => Err(ApiError::OAuthAccessDenied),
 
-            Err(PollResponseBodyError::ExpiredToken) => todo!(),
+            Err(PollResponseBodyError::ExpiredToken) => Err(ApiError::ExpiredToken),
         }
     }
 }
