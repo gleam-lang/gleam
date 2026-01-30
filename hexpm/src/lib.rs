@@ -765,6 +765,9 @@ pub enum ApiError {
 
     #[error("the oauth token expired before the request was approved")]
     ExpiredToken,
+
+    #[error("the oauth refresh token was expired, revoked, or already used")]
+    OAuthRefreshTokenRejected,
 }
 
 impl ApiError {
@@ -1054,12 +1057,13 @@ pub fn api_get_package_release_response(
 /// Create a device authorisation, kicking off the Hex oauth flow.
 pub fn oauth_device_authorisation_request(
     hex_oauth_client_id: &str,
+    client_name: &str,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     let body = json!({
         "client_id": hex_oauth_client_id,
         "scope": "api:write",
-        "name": "The Gleam build tool"
+        "name": client_name,
     })
     .to_string()
     .into_bytes();
@@ -1224,4 +1228,38 @@ enum PollResponseBodyError {
 
 fn default_poll_interval_seconds() -> u64 {
     5
+}
+/// Use a refresh tokent to get an access token that can be used to
+/// authenticate with the API.
+pub fn oauth_refresh_token_request(
+    hex_oauth_client_id: &str,
+    refresh_token: &str,
+    config: &Config,
+) -> http::Request<Vec<u8>> {
+    let body = json!({
+        "grant_type": "refresh_token",
+        "client_id": hex_oauth_client_id,
+        "refresh_token": refresh_token,
+    })
+    .to_string()
+    .into_bytes();
+    config
+        .api_request(Method::POST, "oauth/token", None)
+        .body(body)
+        .expect("oauth_refresh_token_request")
+}
+
+pub fn oauth_refresh_token_response(
+    response: http::Response<Vec<u8>>,
+) -> Result<OAuthTokens, ApiError> {
+    let (parts, body) = response.into_parts();
+
+    match parts.status {
+        StatusCode::OK => (),
+        StatusCode::TOO_MANY_REQUESTS => return Err(ApiError::RateLimited),
+        StatusCode::BAD_REQUEST => return Err(ApiError::OAuthRefreshTokenRejected),
+        status => return Err(ApiError::unexpected_response(status, body)),
+    };
+
+    Ok(serde_json::from_slice(&body)?)
 }

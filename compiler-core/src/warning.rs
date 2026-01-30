@@ -166,10 +166,6 @@ pub enum Warning {
         warning: DeprecatedSyntaxWarning,
     },
 
-    DeprecatedEnvironmentVariable {
-        variable: DeprecatedEnvironmentVariable,
-    },
-
     EmptyModule {
         path: Utf8PathBuf,
         name: EcoString,
@@ -180,32 +176,6 @@ pub enum Warning {
         src: EcoString,
         location: SrcSpan,
     },
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Copy)]
-pub enum DeprecatedEnvironmentVariable {
-    HexpmUser,
-    HexpmPass,
-}
-
-impl DeprecatedEnvironmentVariable {
-    fn name(&self) -> &'static str {
-        match self {
-            DeprecatedEnvironmentVariable::HexpmUser => "HEXPM_USER",
-            DeprecatedEnvironmentVariable::HexpmPass => "HEXPM_PASS",
-        }
-    }
-
-    fn message(&self) -> &'static str {
-        match self {
-            DeprecatedEnvironmentVariable::HexpmUser => {
-                "Use the `{API_ENV_NAME}` environment variable instead."
-            }
-            DeprecatedEnvironmentVariable::HexpmPass => {
-                "Use the `{API_ENV_NAME}` environment variable instead."
-            }
-        }
-    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -1513,23 +1483,6 @@ The imported value could not be used in this module anyway."
                     }),
                 },
             },
-
-            Warning::DeprecatedEnvironmentVariable { variable } => {
-                let name = variable.name();
-                let message = variable.message();
-
-                let text = wrap(&format!(
-                    "The environment variable `{name}` is deprecated.\n\n{message}"
-                ));
-
-                Diagnostic {
-                    title: "Use of deprecated environment variable".into(),
-                    text,
-                    hint: None,
-                    level: diagnostic::Level::Warning,
-                    location: None,
-                }
-            }
 
             Warning::EmptyModule { path: _, name } => Diagnostic {
                 title: "Empty module".into(),

@@ -42,6 +42,7 @@ tracing = "0"
 async-trait = "0"
 # HTTP types
 http = "1"
+http-serde = "2.1.1"
 # Async combinators for futures
 futures = "0"
 # Little helper to omit fields that cannot be debug printed

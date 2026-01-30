@@ -81,8 +81,8 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
 
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let hex_config = hexpm::Config::new();
-    let api_key =
-        crate::hex::HexAuthentication::new(&runtime, hex_config.clone()).get_or_create_api_key()?;
+    let api_key = crate::hex::HexAuthentication::new(&runtime, hex_config.clone())
+        .get_or_create_api_access_token()?;
     let start = Instant::now();
     cli::print_publishing(&config.name, &config.version);
 
