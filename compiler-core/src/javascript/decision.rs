@@ -75,10 +75,10 @@ pub fn case<'a>(
                 .into_doc(),
         ),
 
-        tree @ Decision::Run { .. }
-        | tree @ Decision::Guard { .. }
-        | tree @ Decision::Switch { .. }
-        | tree @ Decision::Fail => printer.decision(tree).into_doc(),
+        tree @ (Decision::Run { .. }
+        | Decision::Guard { .. }
+        | Decision::Switch { .. }
+        | Decision::Fail) => printer.decision(tree).into_doc(),
     };
     docvec![assignments_to_doc(assignments), decision].force_break()
 }
