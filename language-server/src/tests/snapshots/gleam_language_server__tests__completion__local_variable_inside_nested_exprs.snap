@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\ntype Wibble { Wobble(List(#(Bool))) }\nfn wibble() {\n  Wobble([#(!{\n    let wibble = True\n    wibble\n  })])\n  todo\n}\n"
 ---
 type Wibble { Wobble(List(#(Bool))) }
@@ -53,5 +53,3 @@ wibble
   detail: fn() -> a
   sort:   2_wibble
   desc:   app
-  edits:
-    [5:4-5:4]: "wibble"

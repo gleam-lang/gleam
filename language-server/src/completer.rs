@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use ecow::EcoString;
+use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionItemLabelDetails, CompletionTextEdit,
@@ -79,6 +79,7 @@ fn sort_text(kind: CompletionKind, label: &str, type_match: TypeMatch) -> String
 }
 
 /// The form in which a type completion is needed in context.
+#[derive(Debug)]
 enum TypeCompletionContext {
     /// The type completion is for an unqualified import that doesn't have an
     /// import list yet. So adding the type will also require adding braces:
@@ -151,6 +152,41 @@ struct CursorSurroundings {
     ///
     surrounding_text: EcoString,
     surrounding_text_range: Range,
+
+    /// The text that comes immediately before the cursor.
+    /// For example:
+    ///
+    /// ```gleam
+    ///    wibble.w|ob
+    /// //         ^ cursor here
+    /// // The text before is: "wibble.w"
+    /// ```
+    ///
+    text_before_cursor: EcoString,
+
+    /// The range of the text that comes immediately before the cursor.
+    /// For example:
+    ///
+    /// ```gleam
+    ///    wibble.w|ob
+    /// //         ^ cursor here
+    /// // ^^^^^^^^ This is the range
+    /// ```
+    ///
+    /// This is what is usually replaced with a completion.
+    ///
+    text_before_cursor_range: Range,
+
+    /// The text that comes immediately after the cursor.
+    /// For example:
+    ///
+    /// ```gleam
+    ///    wibble.w|ob
+    /// //         ^ cursor here
+    /// // The text before is: "ob"
+    /// ```
+    ///
+    text_after_cursor: EcoString,
 }
 
 impl CursorSurroundings {
@@ -158,6 +194,65 @@ impl CursorSurroundings {
         self.surrounding_text
             .split_once('.')
             .map(|(selected_module, _)| EcoString::from(selected_module))
+    }
+
+    /// Given a proposed completion, this returns the text edit to obtain that
+    /// completion.
+    ///
+    /// > This could also return `None` as sometimes no further edit is actually
+    /// > needed!
+    ///
+    fn to_text_edit(&self, new_text: String) -> Option<CompletionTextEdit> {
+        // We need to check if the new text we're adding could actually be
+        // a simple addition in the middle of something that is already being
+        // typed.
+        // Say we're editing our code to actually make the `Json` type
+        // qualified:
+        //
+        // ```gleam
+        // jso|Json
+        //    ^ cursor here
+        // ```
+        //
+        // Halfway through writing the module name we might just want to accept
+        // the completion for: `json.Json`.
+        // What one would normally expect is for the final code to be:
+        //
+        // ```gleam
+        // json.Json|
+        // // after accepting completion
+        //
+        // // and not something like this!
+        // // json.JsonJson
+        // ```
+        //
+        // This only makes sense if the completion we're adding has a prefix and
+        // suffix in common with the surrounding text:
+        let remaining_label = new_text
+            .strip_prefix(self.text_before_cursor.as_str())
+            .and_then(|rest| rest.strip_suffix(self.text_after_cursor.as_str()));
+
+        match remaining_label {
+            // The entire existing text is already the same as the new text we
+            // might want to add.
+            // In that case there's no need to perform any edit at all!
+            Some("") => None,
+
+            // This is one of the cases (like the one in the example above) were
+            // the label is a more complete version of the text surrounding the
+            // cursor. So we replace the entire range.
+            Some(_) => Some(CompletionTextEdit::Edit(TextEdit {
+                range: self.surrounding_text_range,
+                new_text,
+            })),
+            // In all other cases the completion is never meant to replace text
+            // that comes after the cursor.
+            // We only replace what comes before it with the new text.
+            None => Some(CompletionTextEdit::Edit(TextEdit {
+                range: self.text_before_cursor_range,
+                new_text,
+            })),
+        }
     }
 }
 
@@ -208,7 +303,7 @@ impl<'a, IO> Completer<'a, IO> {
     fn get_phrase_surrounding_for_completion(
         &'a self,
         valid_phrase_char: &impl Fn(char) -> bool,
-    ) -> (Range, String) {
+    ) -> CursorSurroundings {
         let cursor = self.src_line_numbers.byte_index(*self.cursor_position);
 
         // Get part of phrase prior to cursor
@@ -225,19 +320,32 @@ impl<'a, IO> Completer<'a, IO> {
             .and_then(|line| line.split_once(valid_phrase_char).map(|r| r.0))
             .unwrap_or("");
 
-        (
-            Range {
-                start: Position {
-                    line: self.cursor_position.line,
-                    character: self.cursor_position.character - before.len() as u32,
-                },
-                end: Position {
-                    line: self.cursor_position.line,
-                    character: self.cursor_position.character,
-                },
+        let text_before_cursor_range = Range {
+            start: Position {
+                line: self.cursor_position.line,
+                character: self.cursor_position.character - before.len() as u32,
             },
-            format!("{before}{after}"),
-        )
+            end: Position {
+                line: self.cursor_position.line,
+                character: self.cursor_position.character,
+            },
+        };
+
+        let surrounding_text_range = Range {
+            start: text_before_cursor_range.start,
+            end: Position {
+                line: self.cursor_position.line,
+                character: self.cursor_position.character + after.len() as u32,
+            },
+        };
+
+        CursorSurroundings {
+            surrounding_text: eco_format!("{before}{after}"),
+            surrounding_text_range,
+            text_before_cursor: EcoString::from(before),
+            text_before_cursor_range,
+            text_after_cursor: EcoString::from(after),
+        }
     }
 
     // Gets the current range around the cursor to place a completion
@@ -245,31 +353,21 @@ impl<'a, IO> Completer<'a, IO> {
     // A continuous phrase in this case is a name or typename that may have a dot in it.
     // This is used to match the exact location to fill in the completion.
     fn get_phrase_surrounding_completion(&'a self) -> CursorSurroundings {
-        let valid_phrase_char = |c: char| {
+        self.get_phrase_surrounding_for_completion(&|c: char| {
             // Checks if a character is not a valid name/upname character or a dot.
             !c.is_ascii_alphanumeric() && c != '.' && c != '_'
-        };
-        let (range, word) = self.get_phrase_surrounding_for_completion(&valid_phrase_char);
-        CursorSurroundings {
-            surrounding_text: EcoString::from(word),
-            surrounding_text_range: range,
-        }
+        })
     }
 
     // Gets the current range around the cursor to place a completion.
     // For unqualified imports we special case the word being completed to allow for whitespace but not dots.
     // This is to allow `type MyType` to be treated as 1 "phrase" for the sake of completion.
     fn get_phrase_surrounding_completion_for_import(&'a self) -> CursorSurroundings {
-        let valid_phrase_char = |c: char| {
+        self.get_phrase_surrounding_for_completion(&|c: char| {
             // Checks if a character is not a valid name/upname character or whitespace.
             // The newline character is not included as well.
             !c.is_ascii_alphanumeric() && c != '_' && c != ' ' && c != '\t'
-        };
-        let (range, word) = self.get_phrase_surrounding_for_completion(&valid_phrase_char);
-        CursorSurroundings {
-            surrounding_text: EcoString::from(word),
-            surrounding_text_range: range,
-        }
+        })
     }
 
     /// Checks if the line being editted is an import line and provides completions if it is.
@@ -398,7 +496,7 @@ impl<'a, IO> Completer<'a, IO> {
                 &module_being_imported_from.name,
                 name,
                 value,
-                cursor_surroundings.surrounding_text_range,
+                &cursor_surroundings,
                 CompletionKind::ImportedModule,
             ));
         }
@@ -688,7 +786,7 @@ impl<'a, IO> Completer<'a, IO> {
                     mod_name,
                     name,
                     value,
-                    cursor_surroundings.surrounding_text_range,
+                    &cursor_surroundings,
                     CompletionKind::LocallyDefined,
                 ));
             }
@@ -779,7 +877,7 @@ impl<'a, IO> Completer<'a, IO> {
                         mod_name,
                         name,
                         value,
-                        cursor_surroundings.surrounding_text_range,
+                        &cursor_surroundings,
                         CompletionKind::ImportedModule,
                     ));
                 }
@@ -797,7 +895,7 @@ impl<'a, IO> Completer<'a, IO> {
                             mod_name,
                             name,
                             value,
-                            cursor_surroundings.surrounding_text_range,
+                            &cursor_surroundings,
                             CompletionKind::ImportedModule,
                         ))
                     }
@@ -845,7 +943,7 @@ impl<'a, IO> Completer<'a, IO> {
                     module_full_name,
                     name,
                     value,
-                    cursor_surroundings.surrounding_text_range,
+                    &cursor_surroundings,
                     CompletionKind::ImportableModule,
                 );
 
@@ -1005,7 +1103,7 @@ impl<'a, IO> Completer<'a, IO> {
         module_name: &str,
         name: &str,
         value: &type_::ValueConstructor,
-        insert_range: Range,
+        cursor_surrounding: &CursorSurroundings,
         priority: CompletionKind,
     ) -> CompletionItem {
         let type_match = match_type(&self.expected_type, &value.type_);
@@ -1024,10 +1122,10 @@ impl<'a, IO> Completer<'a, IO> {
             ValueConstructorVariant::Record { .. } => CompletionItemKind::CONSTRUCTOR,
         });
 
-        let documentation = value.get_documentation().map(|d| {
+        let documentation = value.get_documentation().map(|documentation| {
             Documentation::MarkupContent(MarkupContent {
                 kind: MarkupKind::Markdown,
-                value: d.into(),
+                value: documentation.into(),
             })
         });
 
@@ -1041,10 +1139,7 @@ impl<'a, IO> Completer<'a, IO> {
             }),
             documentation,
             sort_text: Some(sort_text(priority, &label, type_match)),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                range: insert_range,
-                new_text: label.clone(),
-            })),
+            text_edit: cursor_surrounding.to_text_edit(label),
             ..Default::default()
         }
     }
@@ -1081,7 +1176,7 @@ fn type_completion(
     name: &str,
     type_: &TypeConstructor,
     cursor_surrounding: &CursorSurroundings,
-    include_type_in_completion: TypeCompletionContext,
+    type_completion_context: TypeCompletionContext,
     priority: CompletionKind,
 ) -> CompletionItem {
     let label = match module {
@@ -1095,20 +1190,20 @@ fn type_completion(
         CompletionItemKind::CLASS
     });
 
+    let completion_text = match type_completion_context {
+        TypeCompletionContext::UnqualifiedImport => format!("{{type {label}}}"),
+        TypeCompletionContext::UnqualifiedImportWithinBraces => format!("type {label}"),
+        TypeCompletionContext::QualifiedType | TypeCompletionContext::UnqualifiedType => {
+            label.clone()
+        }
+    };
+
     CompletionItem {
         label: label.clone(),
         kind,
         detail: Some("Type".into()),
         sort_text: Some(sort_text(priority, &label, TypeMatch::Unknown)),
-        text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-            range: cursor_surrounding.surrounding_text_range,
-            new_text: match include_type_in_completion {
-                TypeCompletionContext::UnqualifiedImport => format!("{{type {label}}}"),
-                TypeCompletionContext::UnqualifiedImportWithinBraces => format!("type {label}"),
-                TypeCompletionContext::QualifiedType => label.clone(),
-                TypeCompletionContext::UnqualifiedType => label.clone(),
-            },
-        })),
+        text_edit: cursor_surrounding.to_text_edit(completion_text),
         ..Default::default()
     }
 }

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "import dep\n\npub fn wibble(\n  _: dep.Zoo,\n) -> Nil {\n  Nil\n}\n"
 ---
 import dep
@@ -16,5 +16,3 @@ dep.Zoo
   kind:   Class
   detail: Type
   sort:   3_dep.Zoo
-  edits:
-    [3:5-3:5]: "dep.Zoo"
