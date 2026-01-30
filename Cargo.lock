@@ -1268,17 +1268,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 
 [[package]]
-name = "hex-auth"
-version = "1.14.0"
-dependencies = [
- "http",
- "opener",
- "reqwest",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "hexpm"
 version = "1.14.0"
 dependencies = [
@@ -2584,9 +2573,7 @@ checksum = "9d0946410b9f7b082a427e4ef5c8ff541a88b357bc6c637c40db3a68ac70a36f"
 dependencies = [
  "base64 0.22.0",
  "bytes",
- "futures-channel",
  "futures-core",
- "futures-util",
  "http",
  "http-body",
  "http-body-util",
