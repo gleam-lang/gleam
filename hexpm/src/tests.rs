@@ -913,7 +913,7 @@ fn oauth_device_authorisation_request() {
     let client_id = "test-client-id";
 
     let config = Config::new();
-    let request = crate::oauth_device_authorisation_request(client_id, &config);
+    let request = crate::oauth_device_authorisation_request(client_id, "My client", &config);
 
     assert_eq!(request.method(), http::Method::POST);
     assert_eq!(request.uri().path(), "/api/oauth/device_authorization");
@@ -926,7 +926,7 @@ fn oauth_device_authorisation_request() {
     let body: serde_json::Value = serde_json::from_slice(request.body()).unwrap();
     assert_eq!(body["client_id"], "test-client-id");
     assert_eq!(body["scope"], "api:write");
-    assert_eq!(body["name"], "The Gleam build tool");
+    assert_eq!(body["name"], "My client");
 }
 
 #[test]
