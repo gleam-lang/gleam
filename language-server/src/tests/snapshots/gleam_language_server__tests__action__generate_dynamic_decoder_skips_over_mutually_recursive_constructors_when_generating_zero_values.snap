@@ -1,0 +1,50 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub type Wobble {\n  Wobble(inside: Wibble)\n  DummyWobble(a: Int, b: Int)\n}\n\npub type Wibble {\n  Wibble(inside: Wobble)\n  DummyWibble(a: Int, b: Int)\n}\n    "
+---
+----- BEFORE ACTION
+
+pub type Wobble {
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  Wobble(inside: Wibble)
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  DummyWobble(a: Int, b: Int)
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+}
+↑
+
+pub type Wibble {
+  Wibble(inside: Wobble)
+  DummyWibble(a: Int, b: Int)
+}
+    
+
+
+----- AFTER ACTION
+import gleam/dynamic/decode
+
+pub type Wobble {
+  Wobble(inside: Wibble)
+  DummyWobble(a: Int, b: Int)
+}
+
+fn wobble_decoder() -> decode.Decoder(Wobble) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "wobble" -> {
+      use inside <- decode.field("inside", todo as "Decoder for Wibble")
+      decode.success(Wobble(inside:))
+    }
+    "dummy_wobble" -> {
+      use a <- decode.field("a", decode.int)
+      use b <- decode.field("b", decode.int)
+      decode.success(DummyWobble(a:, b:))
+    }
+    _ -> decode.failure(Wobble(inside: DummyWibble(a: 0, b: 0)), "Wobble")
+  }
+}
+
+pub type Wibble {
+  Wibble(inside: Wobble)
+  DummyWibble(a: Int, b: Int)
+}

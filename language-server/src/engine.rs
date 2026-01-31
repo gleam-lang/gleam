@@ -454,7 +454,8 @@ where
             actions.extend(RemoveBlock::new(module, &lines, &params).code_actions());
             actions.extend(RemovePrivateOpaque::new(module, &lines, &params).code_actions());
             actions.extend(ExtractFunction::new(module, &lines, &params).code_actions());
-            GenerateDynamicDecoder::new(module, &lines, &params, &mut actions).code_actions();
+            GenerateDynamicDecoder::new(module, &lines, &params, &mut actions, &this.compiler)
+                .code_actions();
             GenerateJsonEncoder::new(
                 module,
                 &lines,

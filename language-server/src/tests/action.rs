@@ -11859,3 +11859,206 @@ pub fn main() {
         find_position_of("fn(").select_until(find_position_of("}"))
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5299
+#[test]
+fn generate_dynamic_decoder_produces_zero_values_for_prelude_and_stdlib_types() {
+    let src = r#"
+import gleam/option
+import gleam/dict
+
+pub type Wobble {
+  Wobble(
+    bit_array: BitArray,
+    int: Int,
+    float: Float,
+    bool: Bool,
+    list: List(Int),
+    string: String,
+    nil: Nil,
+    option: option.Option(String),
+    dict: dict.Dict(Int, Bool),
+  )
+  Dummy(
+    a: Int,
+    b: Int,
+    c: Int,
+    d: Int,
+    e: Int,
+    f: Int,
+    g: Int,
+    h: Int,
+    i: Int,
+    j: Int,
+  )
+}
+    "#;
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src)
+            .add_hex_module("gleam/option", "pub type Option(a) { Some(a) None }")
+            .add_hex_module("gleam/dict", "pub type Dict(key, value)"),
+        find_position_of("pub type Wobble {").select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_produces_zero_values_for_user_defined_type_in_the_same_package_1() {
+    let src = r#"
+import wibble.{type Wibble}
+
+pub type Wobble {
+  Wobble(value: Wibble)
+  Dummy(a: Int, b: Int)
+}
+    "#;
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_module("wibble", "pub type Wibble { Wibble }"),
+        find_position_of("pub type Wobble {").select_until(find_position_of("}").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_produces_zero_values_for_user_defined_type_in_the_same_package_2() {
+    let src = r#"
+import internal/wibble.{type Wibble}
+
+pub type Wobble {
+  Wobble(value: Wibble)
+  Dummy(a: Int, b: Int)
+}
+    "#;
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src)
+            .add_module(
+                "internal/wibble",
+                r#"
+import internal/nested_wibble.{type NestedWibble}
+pub type Wibble { Wibble(value: NestedWibble) }
+"#
+            )
+            .add_module(
+                "internal/nested_wibble",
+                r#"
+pub type NestedWibble { NestedWibble }
+"#
+            ),
+        find_position_of("pub type Wobble {").select_until(find_position_of("}").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_produces_zero_values_for_user_defined_type_in_the_same_package_3() {
+    let src = r#"
+import wibble.{type Wibble}
+
+pub type Wobble {
+  Wobble(value: Wibble)
+  Dummy(a: Int, b: Int)
+}
+    "#;
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src)
+            .add_module(
+                "wibble",
+                r#"
+import gleam/dict.{type Dict}
+pub type Wibble { Wibble(map: Dict(Int, Bool)) }
+"#
+            )
+            .add_hex_module(
+                "gleam/dict",
+                r#"
+pub type Dict(key, value)
+pub fn new() -> Dict(k, v) { todo }
+"#
+            ),
+        find_position_of("pub type Wobble {").select_until(find_position_of("}").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_does_not_produce_zero_values_for_types_from_other_packages() {
+    let src = r#"
+import wibble.{type Wibble}
+
+pub type Wobble {
+  Wobble(value: Wibble)
+  Dummy(a: Int, b: Wibble)
+}
+    "#;
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_hex_module("wibble", "pub type Wibble { Wibble }"),
+        find_position_of("pub type Wobble {").select_until(find_position_of("}").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_skips_over_recursive_constructors_when_generating_zero_values() {
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        r#"
+pub type Wobble {
+  Wobble(inside: Wobble)
+  Dummy(a: Int, b: Int)
+}
+    "#,
+        find_position_of("pub type Wobble {").select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_skips_over_mutually_recursive_constructors_when_generating_zero_values()
+{
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        r#"
+pub type Wobble {
+  Wobble(inside: Wibble)
+  DummyWobble(a: Int, b: Int)
+}
+
+pub type Wibble {
+  Wibble(inside: Wobble)
+  DummyWibble(a: Int, b: Int)
+}
+    "#,
+        find_position_of("pub type Wobble {").select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_uses_smallest_possible_constructor_for_zero_value() {
+    let src = r#"
+import wibble.{type Wibble}
+
+pub type Wobble {
+  Wobble(impossible: Wobble)
+  WibbleWobble(nope: Wibble)
+  Dummy(a: Int, b: #(Float, Float))
+}
+    "#;
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_hex_module("wibble", "pub type Wibble { Wibble }"),
+        find_position_of("pub type Wobble {").select_until(find_position_of("}").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_generates_todo_for_zero_value_when_all_constructors_fail() {
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        r#"
+pub type Wobble {
+  Wobble(nope: Wobble)
+  Wibble(not: Int, again: Wobble)
+}
+    "#,
+        find_position_of("pub type Wobble {").select_until(find_position_of("}"))
+    );
+}
