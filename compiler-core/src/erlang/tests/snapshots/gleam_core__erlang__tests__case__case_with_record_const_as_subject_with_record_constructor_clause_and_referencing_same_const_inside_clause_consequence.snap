@@ -1,0 +1,40 @@
+---
+source: compiler-core/src/erlang/tests/case.rs
+expression: "\npub type Wibble {\n  Wibble\n  Wobble(int: Int)\n}\n\nconst wibble = Wibble\n\npub fn main() {\n  case wibble {\n    Wobble(_) -> wibble\n    wobble -> wibble\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble
+  Wobble(int: Int)
+}
+
+const wibble = Wibble
+
+pub fn main() {
+  case wibble {
+    Wobble(_) -> wibble
+    wobble -> wibble
+  }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+-export_type([wibble/0]).
+
+-type wibble() :: wibble | {wobble, integer()}.
+
+-file("project/test/my/mod.gleam", 9).
+-spec main() -> wibble().
+main() ->
+    case wibble of
+        {wobble, _} ->
+            wibble;
+
+        Wobble ->
+            wibble
+    end.

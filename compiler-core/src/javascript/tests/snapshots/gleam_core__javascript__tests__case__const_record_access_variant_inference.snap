@@ -1,0 +1,49 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub type Wibble {\n  Wibble\n  Wobble(int: Int)\n}\n\nconst wibble = Wobble(42)\n\npub fn main() {\n  case wibble {\n    Wibble -> 24\n    Wobble(_) -> wibble.int\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble
+  Wobble(int: Int)
+}
+
+const wibble = Wobble(42)
+
+pub fn main() {
+  case wibble {
+    Wibble -> 24
+    Wobble(_) -> wibble.int
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Wibble extends $CustomType {}
+export const Wibble$Wibble = () => new Wibble();
+export const Wibble$isWibble = (value) => value instanceof Wibble;
+
+export class Wobble extends $CustomType {
+  constructor(int) {
+    super();
+    this.int = int;
+  }
+}
+export const Wibble$Wobble = (int) => new Wobble(int);
+export const Wibble$isWobble = (value) => value instanceof Wobble;
+export const Wibble$Wobble$int = (value) => value.int;
+export const Wibble$Wobble$0 = (value) => value.int;
+
+const wibble = /* @__PURE__ */ new Wobble(42);
+
+export function main() {
+  let $ = wibble;
+  if ($ instanceof Wibble) {
+    return 24;
+  } else {
+    return wibble.int;
+  }
+}
