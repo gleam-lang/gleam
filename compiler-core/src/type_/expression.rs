@@ -857,7 +857,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 },
             )
         };
-        let call = stacker::maybe_grow(64 * 1024, 2 * 1024 * 1024, infer_call);
+        let call = stacker::maybe_grow(128 * 1024, 2 * 1024 * 1024, infer_call);
 
         // After typing the call we know that the last argument must be an
         // anonymous function and the first assignments in its body are the
