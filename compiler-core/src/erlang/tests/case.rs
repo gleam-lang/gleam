@@ -133,7 +133,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn local_variable_as_case_subject_with_type_refinement_allows_field_access_inside_branch() {
+fn local_variable_record_access_variant_inference() {
     assert_erl!(
         r#"
 pub type User {
@@ -202,7 +202,7 @@ pub fn main() {
 
 // https://github.com/gleam-lang/gleam/issues/5261
 #[test]
-fn const_as_case_subject_with_type_refinement_allows_field_access_inside_branch() {
+fn const_record_access_variant_inference() {
     assert_erl!(
         r#"
 pub type Wibble {

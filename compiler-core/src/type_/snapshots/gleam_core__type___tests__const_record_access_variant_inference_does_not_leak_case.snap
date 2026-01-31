@@ -1,0 +1,72 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "\npub type Wibble {\n  Wibble\n  Wobble(int: Int)\n  Wubble\n}\n\nconst wibble = Wobble(42)\n\npub fn main() {\n  case wibble {\n    Wibble -> wibble.int\n    Wobble(_) -> wibble.int\n    Wubble -> wibble.int\n  }\n  wibble.int\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble
+  Wobble(int: Int)
+  Wubble
+}
+
+const wibble = Wobble(42)
+
+pub fn main() {
+  case wibble {
+    Wibble -> wibble.int
+    Wobble(_) -> wibble.int
+    Wubble -> wibble.int
+  }
+  wibble.int
+}
+
+
+----- ERROR
+error: Unknown record field
+   ┌─ /src/one/two.gleam:12:22
+   │
+12 │     Wibble -> wibble.int
+   │                      ^^^ This field does not exist
+
+The value being accessed has this type:
+
+    Wibble
+
+It does not have fields that are common across all variants.
+
+Note: The field exists in this custom type but is not defined for the
+current variant. Ensure that you are accessing the field on a variant where
+it is valid.
+
+error: Unknown record field
+   ┌─ /src/one/two.gleam:14:22
+   │
+14 │     Wubble -> wibble.int
+   │                      ^^^ This field does not exist
+
+The value being accessed has this type:
+
+    Wibble
+
+It does not have fields that are common across all variants.
+
+Note: The field exists in this custom type but is not defined for the
+current variant. Ensure that you are accessing the field on a variant where
+it is valid.
+
+error: Unknown record field
+   ┌─ /src/one/two.gleam:16:10
+   │
+16 │   wibble.int
+   │          ^^^ This field does not exist
+
+The value being accessed has this type:
+
+    Wibble
+
+It does not have fields that are common across all variants.
+
+Note: The field you are trying to access is not defined consistently across
+all variants of this custom type. To fix this, ensure that all variants
+include the field with the same name, position, and type.

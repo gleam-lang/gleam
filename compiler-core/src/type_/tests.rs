@@ -3503,3 +3503,27 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn const_record_access_variant_inference_does_not_leak_case() {
+    assert_module_error!(
+        r#"
+pub type Wibble {
+  Wibble
+  Wobble(int: Int)
+  Wubble
+}
+
+const wibble = Wobble(42)
+
+pub fn main() {
+  case wibble {
+    Wibble -> wibble.int
+    Wobble(_) -> wibble.int
+    Wubble -> wibble.int
+  }
+  wibble.int
+}
+"#
+    );
+}
