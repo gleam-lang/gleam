@@ -18,6 +18,10 @@ impl BuildLock {
     pub fn new_target(paths: &ProjectPaths, mode: Mode, target: Target) -> Result<Self> {
         let directory = paths.build_directory();
         crate::fs::mkdir(&directory)?;
+        let target = match target {
+            Target::Erlang => "erlang",
+            Target::JavaScript => "javascript",
+        };
         Ok(Self {
             directory,
             filename: format!("gleam-{mode}-{target}.lock"),

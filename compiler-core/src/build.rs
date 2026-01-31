@@ -64,16 +64,14 @@ pub enum Target {
     JavaScript,
 }
 
-impl Display for Target {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Target {
+    pub fn as_presentable_str(&self) -> &str {
         match self {
-            Target::Erlang => write!(f, "Erlang"),
-            Target::JavaScript => write!(f, "JavaScript"),
+            Target::Erlang => "Erlang",
+            Target::JavaScript => "JavaScript",
         }
     }
-}
 
-impl Target {
     pub fn variant_strings() -> Vec<EcoString> {
         Self::VARIANTS.iter().map(|s| (*s).into()).collect()
     }
@@ -127,7 +125,7 @@ impl Codegen {
 }
 
 #[derive(
-    Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy, PartialEq, Eq,
+    Debug, Serialize, Deserialize, EnumString, EnumVariantNames, Clone, Copy, PartialEq, Eq,
 )]
 pub enum Runtime {
     #[strum(serialize = "nodejs", serialize = "node")]
@@ -139,6 +137,16 @@ pub enum Runtime {
     #[strum(serialize = "bun")]
     #[serde(rename = "bun")]
     Bun,
+}
+
+impl Runtime {
+    pub fn as_presentable_str(&self) -> &str {
+        match self {
+            Runtime::NodeJs => "NodeJS",
+            Runtime::Deno => "Deno",
+            Runtime::Bun => "Bun",
+        }
+    }
 }
 
 impl Default for Runtime {

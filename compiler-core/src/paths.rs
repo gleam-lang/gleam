@@ -96,7 +96,11 @@ impl ProjectPaths {
     }
 
     pub fn build_directory_for_target(&self, mode: Mode, target: Target) -> Utf8PathBuf {
-        self.build_directory_for_mode(mode).join(target.to_string())
+        let target = match target {
+            Target::Erlang => "erlang",
+            Target::JavaScript => "javascript",
+        };
+        self.build_directory_for_mode(mode).join(target)
     }
 
     /// Note this uses the "application name", not the name of this package.

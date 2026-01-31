@@ -114,11 +114,22 @@ macro_rules! assert_echo {
 }
 
 fn snapshot_name(target: Option<Target>, runtime: Option<Runtime>, suffix: &str) -> String {
+    let show_target = |target: Target| match target {
+        Target::Erlang => "erlang",
+        Target::JavaScript => "javascript",
+    };
+    let show_runtime = |runtime: Runtime| match runtime {
+        Runtime::NodeJs => "nodejs",
+        Runtime::Deno => "deno",
+        Runtime::Bun => "bun",
+    };
     let prefix = match (target, runtime) {
         (None, None) => "".into(),
-        (None, Some(runtime)) => format!("{runtime}-"),
-        (Some(target), None) => format!("{target}-"),
-        (Some(target), Some(runtime)) => format!("{target}-{runtime}-"),
+        (None, Some(runtime)) => format!("{}-", show_runtime(runtime)),
+        (Some(target), None) => format!("{}-", show_target(target)),
+        (Some(target), Some(runtime)) => {
+            format!("{}-{}-", show_target(target), show_runtime(runtime))
+        }
     };
     format!("{prefix}{suffix}")
 }

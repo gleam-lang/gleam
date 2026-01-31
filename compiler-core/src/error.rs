@@ -220,7 +220,7 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("warnings are not permitted")]
     ForbiddenWarnings { count: usize },
 
-    #[error("Invalid runtime for {target} target: {invalid_runtime}")]
+    #[error("Invalid runtime for target {target:?}: {invalid_runtime:?}")]
     InvalidRuntime {
         target: Target,
         invalid_runtime: Runtime,
@@ -963,7 +963,8 @@ forward slash and must not end with a slash."
                 title: "Target not supported".into(),
                 text: wrap_format!(
                     "`{module}` has a main function, but it does not support the {target} \
-target, so it cannot be run."
+target, so it cannot be run.",
+                    target = target.as_presentable_str(),
                 ),
                 level: Level::Error,
                 location: None,
@@ -3110,7 +3111,8 @@ a size are only allowed at the end of a bin pattern.",
                                 "Unsupported endianness",
                                 vec![wrap_format!(
                                     "The {target} target does not support the `native` \
-endianness option."
+endianness option.",
+                                    target = target.as_presentable_str(),
                                 )],
                             ),
                             bit_array::ErrorType::OptionNotSupportedForTarget {
@@ -3120,7 +3122,8 @@ endianness option."
                                 "UTF-codepoint pattern matching is not supported",
                                 vec![wrap_format!(
                                     "The {target} target does not support \
-UTF-codepoint pattern matching."
+UTF-codepoint pattern matching.",
+                                    target = target.as_presentable_str(),
                                 )],
                             ),
                         };
@@ -4539,7 +4542,11 @@ satisfying {required_version} but you are using v{gleam_version}.",
                 target,
                 invalid_runtime,
             } => {
-                let text = format!("Invalid runtime for {target} target: {invalid_runtime}");
+                let text = format!(
+                    "Invalid runtime for {target} target: {invalid_runtime}",
+                    target = target.as_presentable_str(),
+                    invalid_runtime = invalid_runtime.as_presentable_str(),
+                );
 
                 let hint = match target {
                     Target::JavaScript => {
@@ -4552,7 +4559,10 @@ satisfying {required_version} but you are using v{gleam_version}.",
                 };
 
                 vec![Diagnostic {
-                    title: format!("Invalid runtime for {target}"),
+                    title: format!(
+                        "Invalid runtime for {target}",
+                        target = target.as_presentable_str(),
+                    ),
                     text,
                     hint,
                     location: None,
