@@ -5,6 +5,7 @@ members = [
   "compiler-cli",
   "compiler-core",
   "compiler-wasm",
+  "language-server",
   "test-helpers-rs",
   "test-output",
   "test-package-compiler",
@@ -40,6 +41,7 @@ tracing = "0"
 async-trait = "0"
 # HTTP types
 http = "1"
+http-serde = "2.1.1"
 # Async combinators for futures
 futures = "0"
 # Little helper to omit fields that cannot be debug printed
@@ -66,3 +68,5 @@ getrandom = { version = "0.2", features = ["js"] }
 vec1 = "1"
 # Pubgrub dependency resolution algorithm
 pubgrub = "0.3"
+# Open the user's web browser
+opener = "0"
