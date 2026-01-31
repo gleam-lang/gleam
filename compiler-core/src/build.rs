@@ -46,7 +46,6 @@ use vec1::Vec1;
     Debug,
     Serialize,
     Deserialize,
-    Display,
     EnumString,
     EnumVariantNames,
     EnumIter,
@@ -63,6 +62,15 @@ pub enum Target {
     #[strum(serialize = "javascript", serialize = "js")]
     #[serde(rename = "javascript", alias = "js")]
     JavaScript,
+}
+
+impl Display for Target {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Target::Erlang => write!(f, "Erlang"),
+            Target::JavaScript => write!(f, "JavaScript"),
+        }
+    }
 }
 
 impl Target {
