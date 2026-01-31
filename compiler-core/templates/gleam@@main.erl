@@ -12,8 +12,11 @@ run(Module) ->
     process_flag(trap_exit, true),
     Pid = spawn_link(fun() -> run_module(Module) end),
     receive
-        {'EXIT', Pid, {Reason, StackTrace}} ->
-            print_error(exit, Reason, StackTrace),
+        {'EXIT', Pid, {Reason, [First|_] = StackTrace}} when is_tuple(First) ->
+            print_error_with_stacktrace(exit, Reason, StackTrace),
+            init:stop(1);
+        {'EXIT', Pid, Reason} when Reason =/= normal ->
+            print_error(exit, Reason),
             init:stop(1)
     end.
 
@@ -25,11 +28,11 @@ run_module(Module) ->
         init:stop(0)
     catch
         Class:Reason:StackTrace ->
-            print_error(Class, Reason, StackTrace),
+            print_error_with_stacktrace(Class, Reason, StackTrace),
             init:stop(1)
     end.
 
-print_error(Class, Error, Stacktrace) ->
+print_error_with_stacktrace(Class, Error, Stacktrace) ->
     Printed = [
         ?red, "runtime error", ?reset_color, ": ", error_class(Class, Error), ?reset_all,
         "\n\n",
@@ -38,6 +41,16 @@ print_error(Class, Error, Stacktrace) ->
         error_details(Class, Error),
         "stacktrace:\n",
         [error_frame(Line) || Line <- refine_first(Error, Stacktrace)]
+    ],
+    io:format(standard_error, "~ts~n", [Printed]).
+
+print_error(Class, Error) ->
+    Printed = [
+        ?red, "runtime error", ?reset_color, ": ", error_class(Class, Error), ?reset_all,
+        "\n\n",
+        error_message(Error),
+        "\n\n",
+        "exit reason:\n  ", print_term(Error), $\n
     ],
     io:format(standard_error, "~ts~n", [Printed]).
 

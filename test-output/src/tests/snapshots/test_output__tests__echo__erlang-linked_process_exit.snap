@@ -1,0 +1,20 @@
+---
+source: test-output/src/tests/echo.rs
+expression: output
+---
+--- main.gleam ----------------------
+@external(erlang, "main_ffi", "spawn_and_exit")
+fn spawn_and_exit() -> Nil
+
+pub fn main() {
+  spawn_and_exit()
+}
+
+
+--- gleam run output ----------------
+[31;1mruntime error[39m: Erlang exit[0m
+
+An error occurred outside of Gleam.
+
+exit reason:
+  {shutdown,<<"test reason">>}

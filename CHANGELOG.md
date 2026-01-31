@@ -209,3 +209,7 @@
 - Fixed a bug where the package cache would not properly be reset when a version
   of a package was replaced on Hex.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a crash (`bad_generator`) that could occur when a linked OTP process
+  exits with a non-standard exit reason.
+  ([John Downey](https://github.com/jtdowney))

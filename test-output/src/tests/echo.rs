@@ -221,3 +221,8 @@ fn echo_singleton() {
 fn echo_with_message() {
     assert_echo!("echo_with_message");
 }
+
+#[test]
+fn linked_process_exit() {
+    assert_echo!(Target::Erlang, "linked_process_exit");
+}
