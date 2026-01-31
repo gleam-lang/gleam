@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn hello(a, b, c, d, e, f) { todo }\n\npub fn main() {\n  let x: Nil = []\n}\n"
+---
+----- SOURCE CODE
+
+pub fn hello(a, b, c, d, e, f) { todo }
+
+pub fn main() {
+  let x: Nil = []
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:5:16
+  │
+5 │   let x: Nil = []
+  │                ^^
+
+Expected type:
+
+    Nil
+
+Found type:
+
+    List(a)

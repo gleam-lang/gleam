@@ -62,6 +62,57 @@
   the message is clearer.
   ([vyacheslavhere](https://github.com/vyacheslavhere))
 
+- Now build tool ignores type variables defined in other functions and types,
+  improving hints in errors. For example:
+
+  ```gleam
+  pub type Wibble(a, b, c, d, e, f, g) {
+    Wibble(value: a)
+  }
+
+  pub fn main() {
+    let x: Nil = []
+  }
+  ```
+
+  Previously this code would have emit following error:
+
+  ```text
+  error: Type mismatch
+    ┌─ C:\Users\user\projects\test_gleam\src\test_gleam.gleam:6:16
+    │
+  6 │   let x: Nil = []
+    │                ^^
+
+  Expected type:
+
+      Nil
+
+  Found type:
+
+      List(h)
+  ```
+
+  Now it will emit following error:
+
+  ```text
+  error: Type mismatch
+    ┌─ C:\Users\user\projects\test_gleam\src\test_gleam.gleam:6:16
+    │
+  6 │   let x: Nil = []
+    │                ^^
+
+  Expected type:
+
+      Nil
+
+  Found type:
+
+      List(a)
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server now allows extracting the start of a pipeline into a
