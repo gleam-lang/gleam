@@ -428,7 +428,7 @@ impl Environment<'_> {
                 })?;
                 self.references
                     .register_module_reference(module_name.clone());
-                module.get_public_type(name).ok_or_else(|| {
+                module.get_importable_type(name).ok_or_else(|| {
                     UnknownTypeConstructorError::ModuleType {
                         name: name.clone(),
                         module_name: module.name.clone(),
@@ -494,14 +494,15 @@ impl Environment<'_> {
         name: &EcoString,
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
-            None => self.scope.get(name).ok_or_else(|| {
-                let type_with_name_in_scope = self.module_types.keys().any(|type_| type_ == name);
-                UnknownValueConstructorError::Variable {
+            None => self
+                .scope
+                .get(name)
+                .ok_or_else(|| UnknownValueConstructorError::Variable {
                     name: name.clone(),
                     variables: self.local_value_names(),
-                    type_with_name_in_scope,
-                }
-            }),
+                    type_with_name_in_scope: self.module_types.keys().any(|typ| typ == name),
+                    possible_modules: self.get_possible_modules_with_value(name),
+                }),
 
             Some(module_name) => {
                 let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
@@ -513,7 +514,7 @@ impl Environment<'_> {
                 })?;
                 self.references
                     .register_module_reference(module_name.clone());
-                module.get_public_value(name).ok_or_else(|| {
+                module.get_importable_value(name).ok_or_else(|| {
                     UnknownValueConstructorError::ModuleValue {
                         name: name.clone(),
                         module_name: module.name.clone(),
@@ -523,6 +524,46 @@ impl Environment<'_> {
                 })
             }
         }
+    }
+
+    /// Get the name of modules with a value that can be suggested and matches
+    /// the given `name`
+    ///
+    pub fn get_possible_modules_with_value(&self, name: &EcoString) -> Vec<EcoString> {
+        self.imported_modules
+            .iter()
+            .filter_map(|(module_name, (_, module))| {
+                if module.package == self.current_package {
+                    module.get_importable_value(name).map(|_| module_name)
+                } else {
+                    module.get_public_value(name).map(|_| module_name)
+                }
+            })
+            .cloned()
+            .collect_vec()
+    }
+
+    /// Get the name of modules with a function that can be suggested and
+    /// matches the given `name` and `arity`
+    ///
+    pub fn get_possible_modules_with_function(
+        &self,
+        name: &EcoString,
+        arity: usize,
+    ) -> Vec<EcoString> {
+        self.imported_modules
+            .iter()
+            .filter_map(|(module_name, (_, module))| {
+                if module.package == self.current_package {
+                    module
+                        .get_importable_function(name, arity)
+                        .map(|_| module_name)
+                } else {
+                    module.get_public_function(name, arity).map(|_| module_name)
+                }
+            })
+            .cloned()
+            .collect_vec()
     }
 
     pub fn get_type_variants_fields(
@@ -551,7 +592,7 @@ impl Environment<'_> {
             self.scope.get(&variant.name)
         } else {
             let (_, module) = self.imported_modules.get(module)?;
-            module.get_public_value(&variant.name)
+            module.get_importable_value(&variant.name)
         }
     }
 
@@ -864,10 +905,10 @@ impl Environment<'_> {
                     {
                         None
                     }
-                    Imported::Type(name) if module_info.get_public_type(name).is_some() => {
+                    Imported::Type(name) if module_info.get_importable_type(name).is_some() => {
                         Some(ModuleSuggestion::Importable(importable.clone()))
                     }
-                    Imported::Value(name) if module_info.get_public_value(name).is_some() => {
+                    Imported::Value(name) if module_info.get_importable_value(name).is_some() => {
                         Some(ModuleSuggestion::Importable(importable.clone()))
                     }
                     Imported::Module | Imported::Type(_) | Imported::Value(_) => None,
