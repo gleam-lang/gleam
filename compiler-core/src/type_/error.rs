@@ -289,6 +289,7 @@ pub enum Error {
     UnexpectedLabelledArg {
         location: SrcSpan,
         label: EcoString,
+        kind: UnexpectedLabelledArgKind,
     },
 
     PositionalArgumentAfterLabelled {
@@ -679,6 +680,12 @@ pub enum Error {
     LowercaseBoolPattern {
         location: SrcSpan,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnexpectedLabelledArgKind {
+    FunctionParameter,
+    RecordConstructorArgument,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
