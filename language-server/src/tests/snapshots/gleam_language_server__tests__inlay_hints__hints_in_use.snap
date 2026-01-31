@@ -1,0 +1,15 @@
+---
+source: language-server/src/tests/inlay_hints.rs
+expression: hints
+---
+const int_val = 0
+
+fn identity(x) {
+  x
+}
+
+fn main(f) {
+  use a <- f()
+  int_val "Int"
+  |> identity() "Int"
+}
