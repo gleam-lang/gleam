@@ -10,10 +10,63 @@ use petgraph::{
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReferenceKind {
+    /// We're referencing a type/value in a qualified manner. For example:
+    ///
+    /// ```gleam
+    /// import wibble
+    ///
+    /// pub fn main() -> wibble.Wobble
+    /// //               ^^^^^^^^^^^^^ This is a qualified reference
+    /// ```
+    ///
     Qualified,
+
+    /// We're referencing a type/value that has been brought in scope through an
+    /// unqualified import or that is defined in the same module (and so is only
+    /// accessed unqualified).
+    /// For example:
+    ///
+    /// ```gleam
+    /// import wibble.{type Wobble}
+    ///
+    /// pub fn main() -> Wobble { todo }
+    /// //               ^^^^^^ This is an unqualified reference
+    /// ```
+    ///
     Unqualified,
+
+    /// We're referencing a type/value through an import.
+    /// For example:
+    ///
+    /// ```gleam
+    /// import wibble.{type Wobble}
+    /// //                  ^^^^^^ This is a reference to the `Wobble` type
+    /// ```
+    ///
     Import,
+
+    /// This is to keep track of definitions themselves (as far as the tracking
+    /// code is concerned a definition references itself). For example:
+    ///
+    /// ```gleam
+    /// fn wibble() {}
+    /// // ^^^^^^ This!
+    /// ```
+    ///
     Definition,
+
+    /// This happens when we're referencing a value that has been imported and
+    /// aliased.
+    ///
+    /// For example:
+    ///
+    /// ```gleam
+    /// import wibble.{Wibble as Wobble}
+    ///
+    /// pub fn make_wobble() -> Wobble
+    /// //                      ^^^^^^ This is an alias reference
+    /// ```
+    ///
     Alias,
 }
 
@@ -349,12 +402,18 @@ impl ReferenceTracker {
         }
     }
 
+    /// Registers a reference of the given kind to a value that has the given
+    /// name.
+    ///
     pub fn register_value_reference(
         &mut self,
         module: EcoString,
+        // The name of the value that is being referenced.
         name: EcoString,
+        // The name with which we are referring to the value.
         referenced_name: &EcoString,
         location: SrcSpan,
+        // How we are referencing the value.
         kind: ReferenceKind,
     ) {
         match kind {
