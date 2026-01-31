@@ -20,6 +20,9 @@
 
   ([Adi Salimgereyev](https://github.com/abs0luty))
 
+- Gleam will now warn when running a deprecated or internal module main function
+  ([Kevin Chen](https://github.com/kfc35) & [Lioncat2002](https://github.com/Lioncat2002))
+
 ### Build tool
 
 - When adding a package that does not exist on Hex, the message is a bit
