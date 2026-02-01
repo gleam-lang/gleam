@@ -11,4 +11,4 @@ gleam-cli = { path = "../compiler-cli" }
 [target.'cfg(windows)'.build-dependencies]
 # For statically linking the VCRuntime on Windows when
 # using the MSVC toolchain
-static_vcruntime = "2"
+static_vcruntime = "3"

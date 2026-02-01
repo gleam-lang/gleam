@@ -43,7 +43,7 @@ num-bigint = { version = "0.4.6", features = ["serde"] }
 num-traits = "0.2.19"
 # Encryption
 age = { version = "0.11", features = ["armor"] }
-radix_trie = "0.2.1"
+radix_trie = "0.3"
 # Ensuring recursive type-checking doesn't stack overflow
 stacker = "0.1.21"
 # Manipulating bit arrays
