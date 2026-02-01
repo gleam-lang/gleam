@@ -58,13 +58,7 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
 
         // Produce a version requirement locked to the major version.
         // i.e. if 1.2.3 is selected we want >= 1.2.3 and < 2.0.0
-        let range = format!(
-            ">= {}.{}.{} and < {}.0.0",
-            version.major,
-            version.minor,
-            version.patch,
-            version.major + 1
-        );
+        let range = format!(">= {} and < {}.0.0", version, version.major + 1);
 
         // False positive. This package doesn't use the indexing API correctly.
         #[allow(clippy::indexing_slicing)]
