@@ -7,10 +7,10 @@ case <<1>> { <<1:utf32-size(5)>> -> 1 }
 
 ----- ERROR
 error: Invalid bit array segment
-  ┌─ /src/one/two.gleam:1:18
+  ┌─ /src/one/two.gleam:1:24
   │
 1 │ case <<1>> { <<1:utf32-size(5)>> -> 1 }
-  │                  ^^^^^ Size cannot be specified here
+  │                        ^^^^^^^ Size cannot be specified here
 
 Hint: utf32 segments have an automatic size.
 See: https://tour.gleam.run/data-types/bit-arrays/
