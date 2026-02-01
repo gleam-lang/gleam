@@ -7,10 +7,10 @@ let x = <<1:utf16_codepoint-size(5)>> x
 
 ----- ERROR
 error: Invalid bit array segment
-  ┌─ /src/one/two.gleam:1:13
+  ┌─ /src/one/two.gleam:1:29
   │
 1 │ let x = <<1:utf16_codepoint-size(5)>> x
-  │             ^^^^^^^^^^^^^^^ Size cannot be specified here
+  │                             ^^^^^^^ Size cannot be specified here
 
 Hint: utf16_codepoint segments have an automatic size.
 See: https://tour.gleam.run/data-types/bit-arrays/

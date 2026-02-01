@@ -281,14 +281,14 @@ where
 
         SegmentOptionCategories {
             type_: Some(type_),
-            size: Some(_),
+            size: Some(size),
             ..
         } if is_unicode(type_) => {
             return err(
                 ErrorType::TypeDoesNotAllowSize {
                     type_: type_.label(),
                 },
-                type_.location(),
+                size.location(),
             );
         }
 
