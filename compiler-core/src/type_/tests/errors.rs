@@ -202,6 +202,16 @@ fn bit_array_bits_option_in_value() {
 }
 
 #[test]
+fn bit_array_utf8_and_size() {
+    assert_error!(r#"let x = <<"test":size(1)>> x"#);
+}
+
+#[test]
+fn bit_array_utf8_and_unit() {
+    assert_error!(r#"let x = <<"test":unit(5)>> x"#);
+}
+
+#[test]
 fn add_int_float() {
     assert_error!("1 + 1.0");
 }
