@@ -268,14 +268,14 @@ where
     match categories {
         SegmentOptionCategories {
             type_: Some(type_),
-            unit: Some(_),
+            unit: Some(unit),
             ..
         } if is_unicode(type_) => {
             return err(
                 ErrorType::TypeDoesNotAllowUnit {
                     type_: type_.label(),
                 },
-                type_.location(),
+                unit.location(),
             );
         }
 
