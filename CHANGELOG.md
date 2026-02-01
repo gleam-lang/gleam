@@ -76,7 +76,7 @@
   //                    ^ typing the module name
   ```
 
-  Accepting the `json.Json` completion will not produce the correct `json.Json`
+  Accepting the `json.Json` completion will now produce the correct `json.Json`
   annotation rather than generating invalid code: `json.JsonJson`.
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
