@@ -209,3 +209,7 @@
 - Fixed a bug where the package cache would not properly be reset when a version
   of a package was replaced on Hex.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where diagnostic about incorrect `size` and `unit` options would
+  use incorrect error location.
+  ([Andrey Kozhev](https://github.com/ankddev))
