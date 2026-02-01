@@ -7,10 +7,10 @@ let x = <<1:utf16-unit(5)>> x
 
 ----- ERROR
 error: Invalid bit array segment
-  ┌─ /src/one/two.gleam:1:13
+  ┌─ /src/one/two.gleam:1:19
   │
 1 │ let x = <<1:utf16-unit(5)>> x
-  │             ^^^^^ Unit cannot be specified here
+  │                   ^^^^^^^ Unit cannot be specified here
 
 Hint: utf16 segments are sized based on their value and cannot have a unit.
 See: https://tour.gleam.run/data-types/bit-arrays/
