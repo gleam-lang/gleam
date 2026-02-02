@@ -28,13 +28,13 @@ http-auth-basic = "0.3"
 prost = "0.13.5"
 
 base16 = { workspace = true, features = ["alloc"] }
+ecow = { workspace = true, features = ["serde"] }
 http.workspace = true
 pubgrub.workspace = true
 regex.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
-ecow.workspace = true
 
 [dev-dependencies]
 # toml encoding
