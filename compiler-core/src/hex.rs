@@ -58,6 +58,10 @@ pub async fn publish_package<Http: HttpClient>(
         | ApiError::InvalidVersionRequirementFormat(_)
         | ApiError::IncorrectChecksum
         | ApiError::InvalidApiKey
+        | ApiError::OAuthTimeout
+        | ApiError::OAuthAccessDenied
+        | ApiError::ExpiredToken
+        | ApiError::OAuthRefreshTokenRejected
         | ApiError::LateModification => Error::hex(e),
     })
 }

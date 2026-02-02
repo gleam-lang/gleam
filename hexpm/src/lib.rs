@@ -98,7 +98,7 @@ fn make_request(
         .uri(uri)
         .header("user-agent", USER_AGENT);
     if let Some(key) = api_key {
-        builder = builder.header("authorization", key);
+        builder = builder.header("authorization", format!("Bearer {key}"));
     }
     builder
 }
@@ -1262,4 +1262,29 @@ pub fn oauth_refresh_token_response(
     };
 
     Ok(serde_json::from_slice(&body)?)
+}
+
+/// Get information about the currently authenticated user.
+pub fn me_request(api_key: &str, config: &Config) -> http::Request<Vec<u8>> {
+    config
+        .api_request(Method::GET, "users/me", Some(api_key))
+        .body(vec![])
+        .expect("me_request")
+}
+
+/// Get information about the currently authenticated user.
+pub fn me_response(response: http::Response<Vec<u8>>) -> Result<Me, ApiError> {
+    let (parts, body) = response.into_parts();
+
+    match parts.status {
+        StatusCode::OK => (),
+        status => return Err(ApiError::unexpected_response(status, body)),
+    };
+
+    Ok(serde_json::from_slice(&body)?)
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
+pub struct Me {
+    pub username: String,
 }
