@@ -23,8 +23,9 @@ use gleam_core::{
 
 pub fn remove(package: String, version: String) -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let http = HttpClient::new();
     let hex_config = hexpm::Config::new();
-    let api_key = crate::hex::HexAuthentication::new(&runtime, hex_config.clone())
+    let api_key = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
         .get_or_create_api_access_token()?;
     let http = HttpClient::new();
 
@@ -167,10 +168,10 @@ pub(crate) fn build_documentation(
 
 pub fn publish(paths: &ProjectPaths) -> Result<()> {
     let config = crate::config::root_config(paths)?;
-
+    let http = HttpClient::new();
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let hex_config = hexpm::Config::new();
-    let api_key = crate::hex::HexAuthentication::new(&runtime, hex_config.clone())
+    let api_key = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
         .get_or_create_api_access_token()?;
 
     // Reset the build directory so we know the state of the project
@@ -226,7 +227,7 @@ pub fn publish(paths: &ProjectPaths) -> Result<()> {
         archive,
         &api_key,
         &hex_config,
-        &HttpClient::new(),
+        &http,
     ))?;
     cli::print_published(start.elapsed());
     Ok(())
