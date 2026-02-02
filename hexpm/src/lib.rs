@@ -43,15 +43,12 @@ impl Config {
         }
     }
 
-    fn api_request(
-        &self,
-        method: http::Method,
-        path_suffix: &str,
-        credentials: Option<&Credentials>,
-    ) -> http::request::Builder {
-        make_request(self.api_base.clone(), method, path_suffix, credentials)
-            .header("content-type", "application/json")
-            .header("accept", "application/json")
+    fn api_request(&self, method: http::Method, path_suffix: &str) -> RequestBuilder {
+        RequestBuilder {
+            builder: make_request(self.api_base.clone(), method, path_suffix, None)
+                .header("content-type", "application/json")
+                .header("accept", "application/json"),
+        }
     }
 
     fn repository_request(
@@ -75,10 +72,59 @@ impl Default for Config {
     }
 }
 
+struct RequestBuilder {
+    builder: http::request::Builder,
+}
+
+impl RequestBuilder {
+    pub fn read_credentials(self, credentials: Option<&Credentials>) -> http::request::Builder {
+        let mut builder = self.builder;
+        match credentials {
+            Some(Credentials::OAuthAccessToken(token)) => {
+                builder = builder.header("authorization", format!("Bearer {token}"));
+            }
+            Some(Credentials::ApiKey(key)) => {
+                builder = builder.header("authorization", key.to_string());
+            }
+            None => (),
+        }
+        builder
+    }
+
+    pub fn write_credentials(self, credentials: &WriteActionCredentials) -> http::request::Builder {
+        let mut builder = self.builder;
+        match credentials {
+            WriteActionCredentials::OAuthAccessToken {
+                access_token,
+                one_time_password,
+            } => {
+                builder = builder.header("authorization", format!("Bearer {access_token}"));
+                builder = builder.header("x-hex-otp", one_time_password.to_string());
+            }
+            WriteActionCredentials::ApiKey(key) => {
+                builder = builder.header("authorization", key.to_string());
+            }
+        }
+        builder
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Credentials {
     // Short lived credential from OAuth
     OAuthAccessToken(EcoString),
+    // Long lived API key
+    ApiKey(EcoString),
+}
+
+#[derive(Debug, Clone)]
+pub enum WriteActionCredentials {
+    // Short lived credential from OAuth.
+    // A one-time-password is required for write actions when using OAuth
+    OAuthAccessToken {
+        access_token: EcoString,
+        one_time_password: EcoString,
+    },
     // Long lived API key
     ApiKey(EcoString),
 }
@@ -107,63 +153,10 @@ fn make_request(
         .expect("api_uri path"),
     );
     let uri = http::Uri::from_parts(parts).expect("api_uri building");
-    let mut builder = http::Request::builder()
+    http::Request::builder()
         .method(method)
         .uri(uri)
-        .header("user-agent", USER_AGENT);
-    match credentials {
-        Some(Credentials::OAuthAccessToken(token)) => {
-            builder = builder.header("authorization", format!("Bearer {token}"));
-        }
-        Some(Credentials::ApiKey(key)) => {
-            builder = builder.header("authorization", key.to_string());
-        }
-        None => todo!(),
-    }
-    builder
-}
-
-/// Create a request that creates a Hex API key.
-///
-/// API Docs:
-///
-/// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.ex#L137
-///
-/// https://github.com/hexpm/hex/blob/main/lib/hex/api/key.ex#L6
-pub fn api_create_api_key_request(
-    username: &str,
-    password: &str,
-    key_name: &str,
-    config: &Config,
-) -> http::Request<Vec<u8>> {
-    let body = json!({
-        "name": key_name,
-        "permissions": [{
-            "domain": "api",
-            "resource": "write",
-        }],
-    });
-    let creds = http_auth_basic::Credentials::new(username, password).as_http_header();
-    config
-        .api_request(Method::POST, "keys", None)
-        .header("authorization", creds)
-        .body(body.to_string().into_bytes())
-        .expect("create_api_key_request request")
-}
-
-/// Parses a request that creates a Hex API key.
-pub fn api_create_api_key_response(response: http::Response<Vec<u8>>) -> Result<String, ApiError> {
-    #[derive(Deserialize)]
-    struct Resp {
-        secret: String,
-    }
-    let (parts, body) = response.into_parts();
-    match parts.status {
-        StatusCode::CREATED => Ok(serde_json::from_slice::<Resp>(&body)?.secret),
-        StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
-        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidCredentials),
-        status => Err(ApiError::unexpected_response(status, body)),
-    }
+        .header("user-agent", USER_AGENT)
 }
 
 /// Create a request that deletes an Hex API key.
@@ -175,15 +168,13 @@ pub fn api_create_api_key_response(response: http::Response<Vec<u8>>) -> Result<
 /// https://github.com/hexpm/hex/blob/main/lib/hex/api/key.ex#L15
 pub fn api_remove_api_key_request(
     name_of_key_to_delete: &str,
-    credentials: &Credentials,
+    credentials: &WriteActionCredentials,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
+    let path = format!("keys/{name_of_key_to_delete}");
     config
-        .api_request(
-            Method::DELETE,
-            &format!("keys/{name_of_key_to_delete}"),
-            Some(credentials),
-        )
+        .api_request(Method::DELETE, &path)
+        .write_credentials(credentials)
         .body(vec![])
         .expect("remove_api_key_request request")
 }
@@ -191,12 +182,26 @@ pub fn api_remove_api_key_request(
 /// Parses a request that deleted a Hex API key.
 pub fn api_remove_api_key_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
     let (parts, body) = response.into_parts();
+
     match parts.status {
         StatusCode::NO_CONTENT | StatusCode::OK => Ok(()),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
-        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidCredentials),
+        StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
         status => Err(ApiError::unexpected_response(status, body)),
     }
+}
+
+fn unauthorised_response(headers: &http::HeaderMap) -> ApiError {
+    let authenticate_header = headers
+        .get("www-authenticate")
+        .and_then(|header| header.to_str().ok())
+        .unwrap_or_default();
+
+    if authenticate_header.starts_with("Bearer realm=\"hex\", error=\"invalid_totp\"") {
+        return ApiError::IncorrectOneTimePassword;
+    }
+
+    ApiError::InvalidCredentials
 }
 
 /// Retire an existing package release from Hex.
@@ -211,19 +216,17 @@ pub fn api_retire_release_request(
     version: &str,
     reason: RetirementReason,
     message: Option<&str>,
-    credentials: &Credentials,
+    credentials: &WriteActionCredentials,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     let body = json!({
         "reason": reason.to_str(),
         "message": message,
     });
+    let path = format!("packages/{package}/releases/{version}/retire");
     config
-        .api_request(
-            Method::POST,
-            &format!("packages/{package}/releases/{version}/retire"),
-            Some(credentials),
-        )
+        .api_request(Method::POST, &path)
+        .write_credentials(credentials)
         .body(body.to_string().into_bytes())
         .expect("retire_release_request request")
 }
@@ -234,7 +237,7 @@ pub fn api_retire_release_response(response: http::Response<Vec<u8>>) -> Result<
     match parts.status {
         StatusCode::NO_CONTENT | StatusCode::OK => Ok(()),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
-        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidCredentials),
+        StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
         status => Err(ApiError::unexpected_response(status, body)),
     }
 }
@@ -249,15 +252,13 @@ pub fn api_retire_release_response(response: http::Response<Vec<u8>>) -> Result<
 pub fn api_unretire_release_request(
     package: &str,
     version: &str,
-    credentials: &Credentials,
+    credentials: &WriteActionCredentials,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
+    let path = format!("packages/{package}/releases/{version}/retire");
     config
-        .api_request(
-            Method::DELETE,
-            &format!("packages/{package}/releases/{version}/retire"),
-            Some(credentials),
-        )
+        .api_request(Method::DELETE, &path)
+        .write_credentials(credentials)
         .body(vec![])
         .expect("unretire_release_request request")
 }
@@ -268,7 +269,7 @@ pub fn api_unretire_release_response(response: http::Response<Vec<u8>>) -> Resul
     match parts.status {
         StatusCode::NO_CONTENT | StatusCode::OK => Ok(()),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
-        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidCredentials),
+        StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
         status => Err(ApiError::unexpected_response(status, body)),
     }
 }
@@ -452,17 +453,14 @@ pub fn repository_get_package_tarball_response(
 pub fn api_remove_docs_request(
     package_name: &str,
     version: &str,
-    credentials: &Credentials,
+    credentials: &WriteActionCredentials,
     config: &Config,
 ) -> Result<http::Request<Vec<u8>>, ApiError> {
     validate_package_and_version(package_name, version)?;
-
+    let path = format!("packages/{package_name}/releases/{version}/docs");
     Ok(config
-        .api_request(
-            Method::DELETE,
-            &format!("packages/{package_name}/releases/{version}/docs"),
-            Some(credentials),
-        )
+        .api_request(Method::DELETE, &path)
+        .write_credentials(credentials)
         .body(vec![])
         .expect("remove_docs_request request"))
 }
@@ -473,7 +471,7 @@ pub fn api_remove_docs_response(response: http::Response<Vec<u8>>) -> Result<(),
         StatusCode::NO_CONTENT => Ok(()),
         StatusCode::NOT_FOUND => Err(ApiError::NotFound),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
-        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
+        StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
         status => Err(ApiError::unexpected_response(status, body)),
     }
@@ -488,16 +486,14 @@ pub fn api_publish_docs_request(
     package_name: &str,
     version: &str,
     gzipped_tarball: Vec<u8>,
-    credentials: &Credentials,
+    credentials: &WriteActionCredentials,
     config: &Config,
 ) -> Result<http::Request<Vec<u8>>, ApiError> {
     validate_package_and_version(package_name, version)?;
-
-    let mut builder = config.api_request(
-        Method::POST,
-        &format!("packages/{package_name}/releases/{version}/docs"),
-        Some(credentials),
-    );
+    let path = format!("packages/{package_name}/releases/{version}/docs");
+    let mut builder = config
+        .api_request(Method::POST, &path)
+        .write_credentials(credentials);
     let headers = builder.headers_mut().expect("headers");
     headers.insert("content-encoding", "x-gzip".parse().unwrap());
     headers.insert("content-type", "application/x-tar".parse().unwrap());
@@ -512,7 +508,7 @@ pub fn api_publish_docs_response(response: http::Response<Vec<u8>>) -> Result<()
         StatusCode::CREATED => Ok(()),
         StatusCode::NOT_FOUND => Err(ApiError::NotFound),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
-        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
+        StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
         status => Err(ApiError::unexpected_response(status, body)),
     }
@@ -525,16 +521,15 @@ pub fn api_publish_docs_response(response: http::Response<Vec<u8>>) -> Result<()
 /// https://github.com/hexpm/hex/blob/main/lib/hex/api/release.ex#L13
 pub fn api_publish_package_request(
     release_tarball: Vec<u8>,
-    credentials: &Credentials,
+    credentials: &WriteActionCredentials,
     config: &Config,
     replace: bool,
 ) -> http::Request<Vec<u8>> {
     // TODO: do all the package tarball construction
-    let mut builder = config.api_request(
-        Method::POST,
-        format!("publish?replace={replace}").as_str(),
-        Some(credentials),
-    );
+    let path = format!("publish?replace={replace}");
+    let mut builder = config
+        .api_request(Method::POST, &path)
+        .write_credentials(credentials);
     builder
         .headers_mut()
         .expect("headers")
@@ -545,13 +540,12 @@ pub fn api_publish_package_request(
 }
 
 pub fn api_publish_package_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
-    // TODO: return data from body
     let (parts, body) = response.into_parts();
     match parts.status {
         StatusCode::OK | StatusCode::CREATED => Ok(()),
         StatusCode::NOT_FOUND => Err(ApiError::NotFound),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
-        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
+        StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
         StatusCode::UNPROCESSABLE_ENTITY => {
             let body = &String::from_utf8_lossy(&body).to_string();
@@ -572,17 +566,14 @@ pub fn api_publish_package_response(response: http::Response<Vec<u8>>) -> Result
 pub fn api_revert_release_request(
     package_name: &str,
     version: &str,
-    credentials: &Credentials,
+    credentials: &WriteActionCredentials,
     config: &Config,
 ) -> Result<http::Request<Vec<u8>>, ApiError> {
     validate_package_and_version(package_name, version)?;
-
+    let path = format!("packages/{package_name}/releases/{version}");
     Ok(config
-        .api_request(
-            Method::DELETE,
-            &format!("packages/{package_name}/releases/{version}"),
-            Some(credentials),
-        )
+        .api_request(Method::DELETE, &path)
+        .write_credentials(credentials)
         .body(vec![])
         .expect("publish_package_request request"))
 }
@@ -593,7 +584,7 @@ pub fn api_revert_release_response(response: http::Response<Vec<u8>>) -> Result<
         StatusCode::NO_CONTENT => Ok(()),
         StatusCode::NOT_FOUND => Err(ApiError::NotFound),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
-        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
+        StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
         status => Err(ApiError::unexpected_response(status, body)),
     }
@@ -626,20 +617,17 @@ pub fn api_add_owner_request(
     package_name: &str,
     owner: &str,
     level: OwnerLevel,
-    credentials: &Credentials,
+    credentials: &WriteActionCredentials,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     let body = json!({
         "level": level.to_string(),
         "transfer": false,
     });
-
+    let path = format!("packages/{package_name}/owners/{owner}");
     config
-        .api_request(
-            Method::PUT,
-            &format!("packages/{package_name}/owners/{owner}"),
-            Some(credentials),
-        )
+        .api_request(Method::PUT, &path)
+        .write_credentials(credentials)
         .body(body.to_string().into_bytes())
         .expect("add_owner_request request")
 }
@@ -650,7 +638,7 @@ pub fn api_add_owner_response(response: http::Response<Vec<u8>>) -> Result<(), A
         StatusCode::NO_CONTENT => Ok(()),
         StatusCode::NOT_FOUND => Err(ApiError::NotFound),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
-        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
+        StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
         status => Err(ApiError::unexpected_response(status, body)),
     }
@@ -664,20 +652,17 @@ pub fn api_add_owner_response(response: http::Response<Vec<u8>>) -> Result<(), A
 pub fn api_transfer_owner_request(
     package_name: &str,
     owner: &str,
-    credentials: &Credentials,
+    credentials: &WriteActionCredentials,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     let body = json!({
         "level": OwnerLevel::Full.to_string(),
         "transfer": true,
     });
-
+    let path = format!("packages/{package_name}/owners/{owner}");
     config
-        .api_request(
-            Method::PUT,
-            &format!("packages/{package_name}/owners/{owner}"),
-            Some(credentials),
-        )
+        .api_request(Method::PUT, &path)
+        .write_credentials(credentials)
         .body(body.to_string().into_bytes())
         .expect("transfer_owner_request request")
 }
@@ -688,7 +673,7 @@ pub fn api_transfer_owner_response(response: http::Response<Vec<u8>>) -> Result<
         StatusCode::NO_CONTENT => Ok(()),
         StatusCode::NOT_FOUND => Err(ApiError::NotFound),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
-        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
+        StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
         status => Err(ApiError::unexpected_response(status, body)),
     }
@@ -702,15 +687,13 @@ pub fn api_transfer_owner_response(response: http::Response<Vec<u8>>) -> Result<
 pub fn api_remove_owner_request(
     package_name: &str,
     owner: &str,
-    credentials: &Credentials,
+    credentials: &WriteActionCredentials,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
+    let path = format!("packages/{package_name}/owners/{owner}");
     config
-        .api_request(
-            Method::DELETE,
-            &format!("packages/{package_name}/owners/{owner}"),
-            Some(credentials),
-        )
+        .api_request(Method::DELETE, &path)
+        .write_credentials(credentials)
         .body(vec![])
         .expect("remove_owner_request request")
 }
@@ -721,7 +704,7 @@ pub fn api_remove_owner_response(response: http::Response<Vec<u8>>) -> Result<()
         StatusCode::NO_CONTENT => Ok(()),
         StatusCode::NOT_FOUND => Err(ApiError::NotFound),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
-        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
+        StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
         status => Err(ApiError::unexpected_response(status, body)),
     }
@@ -738,7 +721,7 @@ pub enum ApiError {
     #[error("the rate limit for the Hex API has been exceeded for this IP")]
     RateLimited,
 
-    #[error("invalid username and password combination")]
+    #[error("invalid authentication credentials")]
     InvalidCredentials,
 
     #[error("an unexpected response was sent by Hex: {0}: {1}")]
@@ -765,9 +748,6 @@ pub enum ApiError {
     #[error("the downloaded data did not have the expected checksum")]
     IncorrectChecksum,
 
-    #[error("the given API key was not valid")]
-    InvalidApiKey,
-
     #[error("this account is not authorized for this action")]
     Forbidden,
 
@@ -788,6 +768,9 @@ pub enum ApiError {
 
     #[error("the oauth refresh token was expired, revoked, or already used")]
     OAuthRefreshTokenRejected,
+
+    #[error("the supplied one-time-password was not correct")]
+    IncorrectOneTimePassword,
 }
 
 impl ApiError {
@@ -1046,12 +1029,10 @@ pub fn api_get_package_release_request(
     credentials: Option<&Credentials>,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
+    let path = format!("packages/{name}/releases/{version}");
     config
-        .api_request(
-            Method::GET,
-            &format!("packages/{name}/releases/{version}"),
-            credentials,
-        )
+        .api_request(Method::GET, &path)
+        .read_credentials(credentials)
         .header("accept", "application/json")
         .body(vec![])
         .expect("get_package_release request")
@@ -1068,7 +1049,7 @@ pub fn api_get_package_release_response(
         StatusCode::OK => Ok(serde_json::from_slice(&body)?),
         StatusCode::NOT_FOUND => Err(ApiError::NotFound),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
-        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
+        StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
         status => Err(ApiError::unexpected_response(status, body)),
     }
@@ -1088,7 +1069,8 @@ pub fn oauth_device_authorisation_request(
     .to_string()
     .into_bytes();
     config
-        .api_request(Method::POST, "oauth/device_authorization", None)
+        .api_request(Method::POST, "oauth/device_authorization")
+        .builder
         .body(body)
         .expect("oauth_device_authorisation_request")
 }
@@ -1144,7 +1126,8 @@ impl OAuthDeviceAuthorisation {
         .to_string()
         .into_bytes();
         config
-            .api_request(Method::POST, "oauth/token", None)
+            .api_request(Method::POST, "oauth/token")
+            .builder
             .body(body)
             .expect("poll_token_request")
     }
@@ -1270,7 +1253,8 @@ pub fn oauth_refresh_token_request(
     .to_string()
     .into_bytes();
     config
-        .api_request(Method::POST, "oauth/token", None)
+        .api_request(Method::POST, "oauth/token")
+        .builder
         .body(body)
         .expect("oauth_refresh_token_request")
 }
@@ -1291,15 +1275,16 @@ pub fn oauth_refresh_token_response(
 }
 
 /// Get information about the currently authenticated user.
-pub fn me_request(credentials: &Credentials, config: &Config) -> http::Request<Vec<u8>> {
+pub fn get_me_request(credentials: &Credentials, config: &Config) -> http::Request<Vec<u8>> {
     config
-        .api_request(Method::GET, "users/me", Some(credentials))
+        .api_request(Method::GET, "users/me")
+        .read_credentials(Some(credentials))
         .body(vec![])
         .expect("me_request")
 }
 
 /// Get information about the currently authenticated user.
-pub fn me_response(response: http::Response<Vec<u8>>) -> Result<Me, ApiError> {
+pub fn get_me_response(response: http::Response<Vec<u8>>) -> Result<Me, ApiError> {
     let (parts, body) = response.into_parts();
 
     match parts.status {

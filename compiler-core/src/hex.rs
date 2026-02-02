@@ -57,11 +57,11 @@ pub async fn publish_package<Http: HttpClient>(
         | ApiError::NotFound
         | ApiError::InvalidVersionRequirementFormat(_)
         | ApiError::IncorrectChecksum
-        | ApiError::InvalidApiKey
         | ApiError::OAuthTimeout
         | ApiError::OAuthAccessDenied
         | ApiError::ExpiredToken
         | ApiError::OAuthRefreshTokenRejected
+        | ApiError::IncorrectOneTimePassword
         | ApiError::LateModification => Error::hex(e),
     })
 }
@@ -143,20 +143,6 @@ pub async fn unretire_release<Http: HttpClient>(
     let request = hexpm::api_unretire_release_request(package, version, api_key, config);
     let response = http.send(request).await?;
     hexpm::api_unretire_release_response(response).map_err(Error::hex)
-}
-
-pub async fn create_api_key<Http: HttpClient>(
-    hostname: &str,
-    username: &str,
-    password: &str,
-    config: &hexpm::Config,
-    http: &Http,
-) -> Result<String> {
-    tracing::info!("Creating API key with Hex");
-    let request =
-        hexpm::api_create_api_key_request(username, password, &key_name(hostname), config);
-    let response = http.send(request).await?;
-    hexpm::api_create_api_key_response(response).map_err(Error::hex)
 }
 
 pub async fn remove_api_key<Http: HttpClient>(

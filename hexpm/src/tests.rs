@@ -12,80 +12,6 @@ fn make_json_response(status: u16, body: serde_json::Value) -> http::Response<Ve
 }
 
 #[test]
-fn authenticate_request() {
-    let username = "me@example.com";
-    let password = "password";
-    let name = "louis-test";
-
-    let config = Config::new();
-    let request = crate::api_create_api_key_request(username, password, name, &config);
-
-    assert_eq!(request.method(), http::Method::POST);
-    assert_eq!(request.uri().path(), "/api/keys");
-    assert_eq!(
-        request.headers().get("authorization").unwrap(),
-        "Basic bWVAZXhhbXBsZS5jb206cGFzc3dvcmQ="
-    );
-    assert_eq!(
-        request.headers().get("content-type").unwrap(),
-        "application/json"
-    );
-    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
-
-    let body: serde_json::Value = serde_json::from_slice(request.body()).unwrap();
-    assert_eq!(body["name"], "louis-test");
-    assert_eq!(body["permissions"][0]["domain"], "api");
-    assert_eq!(body["permissions"][0]["resource"], "write");
-}
-
-#[test]
-fn authenticate_response_success() {
-    let expected_secret = "some-secret-here";
-    let resp_body = json!({
-        "authing_key": false,
-        "inserted_at": "2020-05-02T17:18:23.336328Z",
-        "name": "authenticate_test_1",
-        "permissions": [{"domain": "api", "resource": "write"}],
-        "revoked_at": null,
-        "secret": expected_secret,
-        "updated_at": "2020-05-02T17: 18: 23.336328Z",
-        "url": "https: //hex.pm/api/keys/authenticate_test_1"
-    });
-
-    let response = make_json_response(201, resp_body);
-    let secret = crate::api_create_api_key_response(response).unwrap();
-
-    assert_eq!(expected_secret, secret);
-}
-
-#[test]
-fn authenticate_response_rate_limited() {
-    let response = make_response(429, vec![]);
-    let result = crate::api_create_api_key_response(response).unwrap_err();
-
-    match result {
-        ApiError::RateLimited => (),
-        result => panic!("expected RateLimited, got {result:?}"),
-    }
-}
-
-#[test]
-fn authenticate_response_bad_creds() {
-    let resp_body = json!({
-        "message": "invalid username and password combination",
-        "status": 401,
-    });
-
-    let response = make_json_response(401, resp_body);
-    let result = crate::api_create_api_key_response(response).unwrap_err();
-
-    match result {
-        ApiError::InvalidCredentials => (),
-        result => panic!("expected InvalidCredentials, got {result:?}"),
-    }
-}
-
-#[test]
 fn remove_docs_request() {
     let key = Credentials::OAuthAccessToken(EcoString::from("my-api-key-here"));
     let package = "gleam_experimental_stdlib";
@@ -297,7 +223,7 @@ fn remove_docs_response_invalid_key() {
     let result = crate::api_remove_docs_response(response).unwrap_err();
 
     match result {
-        ApiError::InvalidApiKey => (),
+        ApiError::InvalidCredentials => (),
         result => panic!("expected ApiError::InvalidApiKey got {result:?}"),
     }
 }
@@ -433,8 +359,28 @@ fn publish_docs_response_invalid_api_key() {
     let result = crate::api_publish_docs_response(response);
 
     match result {
-        Err(ApiError::InvalidApiKey) => (),
+        Err(ApiError::InvalidCredentials) => (),
         result => panic!("expected Err(ApiError::InvalidApiKey), got {result:?}"),
+    }
+}
+
+#[test]
+fn publish_docs_response_incorrect_totp_key() {
+    let resp_body = json!({
+        "status": 401,
+    });
+    let mut response = make_json_response(401, resp_body);
+    response.headers_mut().insert(
+        "www-authenticate",
+        "Bearer realm=\"hex\", error=\"invalid_totp\""
+            .try_into()
+            .expect("Header value"),
+    );
+    let result = crate::api_publish_docs_response(response);
+
+    match result {
+        Err(ApiError::IncorrectOneTimePassword) => (),
+        result => panic!("expected Err(ApiError::IncorrectOneTimePassword), got {result:?}"),
     }
 }
 
