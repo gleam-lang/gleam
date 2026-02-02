@@ -87,19 +87,22 @@ fn authenticate_response_bad_creds() {
 
 #[test]
 fn remove_docs_request() {
-    let key = "my-api-key-here";
+    let key = Credentials::OAuthAccessToken(EcoString::from("my-api-key-here"));
     let package = "gleam_experimental_stdlib";
     let version = "0.8.0";
 
     let config = Config::new();
-    let request = crate::api_remove_docs_request(package, version, key, &config).unwrap();
+    let request = crate::api_remove_docs_request(package, version, &key, &config).unwrap();
 
     assert_eq!(request.method(), http::Method::DELETE);
     assert_eq!(
         request.uri().path(),
         "/api/packages/gleam_experimental_stdlib/releases/0.8.0/docs"
     );
-    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(
+        request.headers().get("authorization").unwrap(),
+        "Bearer my-api-key-here"
+    );
     assert_eq!(request.headers().get("accept").unwrap(), "application/json");
 }
 
@@ -112,19 +115,22 @@ fn remove_docs_response_success() {
 
 #[test]
 fn revert_release_request() {
-    let key = "my-api-key-here";
+    let key = Credentials::OAuthAccessToken(EcoString::from("my-api-key-here"));
     let package = "gleam_experimental_stdlib";
     let version = "0.8.0";
 
     let config = Config::new();
-    let request = crate::api_revert_release_request(package, version, key, &config).unwrap();
+    let request = crate::api_revert_release_request(package, version, &key, &config).unwrap();
 
     assert_eq!(request.method(), http::Method::DELETE);
     assert_eq!(
         request.uri().path(),
         "/api/packages/gleam_experimental_stdlib/releases/0.8.0"
     );
-    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(
+        request.headers().get("authorization").unwrap(),
+        "Bearer my-api-key-here"
+    );
     assert_eq!(request.headers().get("accept").unwrap(), "application/json");
 }
 
@@ -137,20 +143,23 @@ fn revert_release_response_success() {
 
 #[test]
 fn add_owner_request() {
-    let key = "my-api-key-here";
+    let key = Credentials::OAuthAccessToken(EcoString::from("my-api-key-here"));
     let package = "gleam_experimental_stdlib";
     let owner = "lpil";
     let level = OwnerLevel::Maintainer;
 
     let config = Config::new();
-    let request = crate::api_add_owner_request(package, owner, level, key, &config);
+    let request = crate::api_add_owner_request(package, owner, level, &key, &config);
 
     assert_eq!(request.method(), http::Method::PUT);
     assert_eq!(
         request.uri().path(),
         "/api/packages/gleam_experimental_stdlib/owners/lpil"
     );
-    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(
+        request.headers().get("authorization").unwrap(),
+        "Bearer my-api-key-here"
+    );
     assert_eq!(request.headers().get("accept").unwrap(), "application/json");
 
     let body: serde_json::Value = serde_json::from_slice(request.body()).unwrap();
@@ -167,19 +176,22 @@ fn add_owner_response_success() {
 
 #[test]
 fn transfer_owner_request() {
-    let key = "my-api-key-here";
+    let key = Credentials::OAuthAccessToken(EcoString::from("my-api-key-here"));
     let package = "gleam_experimental_stdlib";
     let owner = "lpil";
 
     let config = Config::new();
-    let request = crate::api_transfer_owner_request(package, owner, key, &config);
+    let request = crate::api_transfer_owner_request(package, owner, &key, &config);
 
     assert_eq!(request.method(), http::Method::PUT);
     assert_eq!(
         request.uri().path(),
         "/api/packages/gleam_experimental_stdlib/owners/lpil"
     );
-    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(
+        request.headers().get("authorization").unwrap(),
+        "Bearer my-api-key-here"
+    );
     assert_eq!(request.headers().get("accept").unwrap(), "application/json");
 
     let body: serde_json::Value = serde_json::from_slice(request.body()).unwrap();
@@ -196,19 +208,22 @@ fn transfer_owner_response_success() {
 
 #[test]
 fn remove_owner_request() {
-    let key = "my-api-key-here";
+    let key = Credentials::OAuthAccessToken(EcoString::from("my-api-key-here"));
     let package = "gleam_experimental_stdlib";
     let owner = "lpil";
 
     let config = Config::new();
-    let request = crate::api_remove_owner_request(package, owner, key, &config);
+    let request = crate::api_remove_owner_request(package, owner, &key, &config);
 
     assert_eq!(request.method(), http::Method::DELETE);
     assert_eq!(
         request.uri().path(),
         "/api/packages/gleam_experimental_stdlib/owners/lpil"
     );
-    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(
+        request.headers().get("authorization").unwrap(),
+        "Bearer my-api-key-here"
+    );
     assert_eq!(request.headers().get("accept").unwrap(), "application/json");
 }
 
@@ -222,14 +237,17 @@ fn remove_owner_response_success() {
 #[test]
 fn remove_key_request() {
     let name = "some-key-name";
-    let key = "my-api-key-here";
+    let key = Credentials::OAuthAccessToken(EcoString::from("my-api-key-here"));
 
     let config = Config::new();
-    let request = crate::api_remove_api_key_request(name, key, &config);
+    let request = crate::api_remove_api_key_request(name, &key, &config);
 
     assert_eq!(request.method(), http::Method::DELETE);
     assert_eq!(request.uri().path(), "/api/keys/some-key-name");
-    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(
+        request.headers().get("authorization").unwrap(),
+        "Bearer my-api-key-here"
+    );
     assert_eq!(request.headers().get("accept").unwrap(), "application/json");
 }
 
@@ -301,13 +319,13 @@ fn remove_docs_response_forbidden() {
 
 #[test]
 fn remove_docs_bad_package_name() {
-    let key = "my-api-key-here";
+    let key = Credentials::OAuthAccessToken(EcoString::from("my-api-key-here"));
     let package = "not valid";
     let version = "1.2.0";
 
     let config = Config::new();
 
-    match crate::api_remove_docs_request(package, version, key, &config).unwrap_err() {
+    match crate::api_remove_docs_request(package, version, &key, &config).unwrap_err() {
         ApiError::InvalidPackageNameFormat(p) if p == package => (),
         result => panic!("expected Err(ApiError::BadPackage), got {result:?}"),
     }
@@ -315,21 +333,24 @@ fn remove_docs_bad_package_name() {
 
 #[test]
 fn publish_docs_request() {
-    let key = "my-api-key-here";
+    let key = Credentials::OAuthAccessToken(EcoString::from("my-api-key-here"));
     let package = "gleam_experimental_stdlib_123";
     let version = "0.8.0";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let config = Config::new();
     let request =
-        crate::api_publish_docs_request(package, version, tarball.clone(), key, &config).unwrap();
+        crate::api_publish_docs_request(package, version, tarball.clone(), &key, &config).unwrap();
 
     assert_eq!(request.method(), http::Method::POST);
     assert_eq!(
         request.uri().path(),
         "/api/packages/gleam_experimental_stdlib_123/releases/0.8.0/docs"
     );
-    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(
+        request.headers().get("authorization").unwrap(),
+        &"Bearer my-api-key-here"
+    );
     assert_eq!(request.headers().get("accept").unwrap(), "application/json");
     assert_eq!(
         request.headers().get("content-type").unwrap(),
@@ -352,14 +373,14 @@ fn publish_docs_response_success() {
 
 #[test]
 fn publish_docs_bad_package_name() {
-    let key = "my-api-key-here";
+    let key = Credentials::OAuthAccessToken(EcoString::from("my-api-key-here"));
     let package = "not valid";
     let version = "1.2.0";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let config = Config::new();
 
-    match crate::api_publish_docs_request(package, version, tarball, key, &config).unwrap_err() {
+    match crate::api_publish_docs_request(package, version, tarball, &key, &config).unwrap_err() {
         ApiError::InvalidPackageNameFormat(p) if p == package => (),
         result => panic!("expected Err(ApiError::BadPackage), got {result:?}"),
     }
@@ -367,14 +388,14 @@ fn publish_docs_bad_package_name() {
 
 #[test]
 fn publish_docs_bad_package_version() {
-    let key = "my-api-key-here";
+    let key = Credentials::OAuthAccessToken(EcoString::from("my-api-key-here"));
     let package = "name";
     let version = "invalid version";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let config = Config::new();
 
-    match crate::api_publish_docs_request(package, version, tarball, key, &config).unwrap_err() {
+    match crate::api_publish_docs_request(package, version, tarball, &key, &config).unwrap_err() {
         ApiError::InvalidVersionFormat(v) if v == version => (),
         result => panic!("expected ApiError::BadPackage, got {result:?}"),
     }
@@ -736,18 +757,21 @@ fn get_repository_tarball_response_not_found() {
 
 #[test]
 fn publish_package_request() {
-    let key = "my-api-key-here";
+    let key = Credentials::ApiKey(EcoString::from("my-api-key-here"));
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let config = Config::new();
-    let request = crate::api_publish_package_request(tarball.clone(), key, &config, false);
+    let request = crate::api_publish_package_request(tarball.clone(), &key, &config, false);
 
     assert_eq!(request.method(), http::Method::POST);
     assert_eq!(
         request.uri().path_and_query().unwrap(),
         "/api/publish?replace=false"
     );
-    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(
+        request.headers().get("authorization").unwrap(),
+        "my-api-key-here"
+    );
     assert_eq!(request.headers().get("accept").unwrap(), "application/json");
     assert_eq!(
         request.headers().get("content-type").unwrap(),
@@ -758,11 +782,11 @@ fn publish_package_request() {
 
 #[test]
 fn publish_package_request_replace() {
-    let key = "my-api-key-here";
+    let key = Credentials::OAuthAccessToken(EcoString::from("my-api-key-here"));
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let config = Config::new();
-    let request = crate::api_publish_package_request(tarball.clone(), key, &config, true);
+    let request = crate::api_publish_package_request(tarball.clone(), &key, &config, true);
 
     assert_eq!(
         request.uri().path_and_query().unwrap(),

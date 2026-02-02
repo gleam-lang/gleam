@@ -7,6 +7,7 @@ pub mod version;
 
 use crate::proto::{signed::Signed, versions::Versions};
 use bytes::buf::Buf;
+use ecow::EcoString;
 use flate2::read::GzDecoder;
 use http::{Method, StatusCode};
 use prost::Message;
@@ -46,9 +47,9 @@ impl Config {
         &self,
         method: http::Method,
         path_suffix: &str,
-        api_key: Option<&str>,
+        credentials: Option<&Credentials>,
     ) -> http::request::Builder {
-        make_request(self.api_base.clone(), method, path_suffix, api_key)
+        make_request(self.api_base.clone(), method, path_suffix, credentials)
             .header("content-type", "application/json")
             .header("accept", "application/json")
     }
@@ -57,9 +58,14 @@ impl Config {
         &self,
         method: http::Method,
         path_suffix: &str,
-        api_key: Option<&str>,
+        credentials: Option<&Credentials>,
     ) -> http::request::Builder {
-        make_request(self.repository_base.clone(), method, path_suffix, api_key)
+        make_request(
+            self.repository_base.clone(),
+            method,
+            path_suffix,
+            credentials,
+        )
     }
 }
 
@@ -69,11 +75,19 @@ impl Default for Config {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum Credentials {
+    // Short lived credential from OAuth
+    OAuthAccessToken(EcoString),
+    // Long lived API key
+    ApiKey(EcoString),
+}
+
 fn make_request(
     base: http::Uri,
     method: http::Method,
     path_suffix: &str,
-    api_key: Option<&str>,
+    credentials: Option<&Credentials>,
 ) -> http::request::Builder {
     let mut parts = base.into_parts();
     parts.path_and_query = Some(
@@ -97,8 +111,14 @@ fn make_request(
         .method(method)
         .uri(uri)
         .header("user-agent", USER_AGENT);
-    if let Some(key) = api_key {
-        builder = builder.header("authorization", format!("Bearer {key}"));
+    match credentials {
+        Some(Credentials::OAuthAccessToken(token)) => {
+            builder = builder.header("authorization", format!("Bearer {token}"));
+        }
+        Some(Credentials::ApiKey(key)) => {
+            builder = builder.header("authorization", key.to_string());
+        }
+        None => todo!(),
     }
     builder
 }
@@ -155,14 +175,14 @@ pub fn api_create_api_key_response(response: http::Response<Vec<u8>>) -> Result<
 /// https://github.com/hexpm/hex/blob/main/lib/hex/api/key.ex#L15
 pub fn api_remove_api_key_request(
     name_of_key_to_delete: &str,
-    api_key: &str,
+    credentials: &Credentials,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     config
         .api_request(
             Method::DELETE,
             &format!("keys/{name_of_key_to_delete}"),
-            Some(api_key),
+            Some(credentials),
         )
         .body(vec![])
         .expect("remove_api_key_request request")
@@ -191,7 +211,7 @@ pub fn api_retire_release_request(
     version: &str,
     reason: RetirementReason,
     message: Option<&str>,
-    api_key: &str,
+    credentials: &Credentials,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     let body = json!({
@@ -202,7 +222,7 @@ pub fn api_retire_release_request(
         .api_request(
             Method::POST,
             &format!("packages/{package}/releases/{version}/retire"),
-            Some(api_key),
+            Some(credentials),
         )
         .body(body.to_string().into_bytes())
         .expect("retire_release_request request")
@@ -229,14 +249,14 @@ pub fn api_retire_release_response(response: http::Response<Vec<u8>>) -> Result<
 pub fn api_unretire_release_request(
     package: &str,
     version: &str,
-    api_key: &str,
+    credentials: &Credentials,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     config
         .api_request(
             Method::DELETE,
             &format!("packages/{package}/releases/{version}/retire"),
-            Some(api_key),
+            Some(credentials),
         )
         .body(vec![])
         .expect("unretire_release_request request")
@@ -260,11 +280,11 @@ pub fn api_unretire_release_response(response: http::Response<Vec<u8>>) -> Resul
 ///
 /// TODO: Where are the API docs for this?
 pub fn repository_v2_get_versions_request(
-    api_key: Option<&str>,
+    credentials: Option<&Credentials>,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     config
-        .repository_request(Method::GET, "versions", api_key)
+        .repository_request(Method::GET, "versions", credentials)
         .header("accept", "application/json")
         .body(vec![])
         .expect("get_repository_versions_request request")
@@ -326,11 +346,11 @@ pub fn repository_v2_get_versions_body(
 ///
 pub fn repository_v2_get_package_request(
     name: &str,
-    api_key: Option<&str>,
+    credentials: Option<&Credentials>,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     config
-        .repository_request(Method::GET, &format!("packages/{name}"), api_key)
+        .repository_request(Method::GET, &format!("packages/{name}"), credentials)
         .header("accept", "application/json")
         .body(vec![])
         .expect("get_package_request request")
@@ -391,14 +411,14 @@ pub fn repository_v2_package_parse_body(
 pub fn repository_get_package_tarball_request(
     name: &str,
     version: &str,
-    api_key: Option<&str>,
+    credentials: Option<&Credentials>,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     config
         .repository_request(
             Method::GET,
             &format!("tarballs/{name}-{version}.tar"),
-            api_key,
+            credentials,
         )
         .header("accept", "application/x-tar")
         .body(vec![])
@@ -432,7 +452,7 @@ pub fn repository_get_package_tarball_response(
 pub fn api_remove_docs_request(
     package_name: &str,
     version: &str,
-    api_key: &str,
+    credentials: &Credentials,
     config: &Config,
 ) -> Result<http::Request<Vec<u8>>, ApiError> {
     validate_package_and_version(package_name, version)?;
@@ -441,7 +461,7 @@ pub fn api_remove_docs_request(
         .api_request(
             Method::DELETE,
             &format!("packages/{package_name}/releases/{version}/docs"),
-            Some(api_key),
+            Some(credentials),
         )
         .body(vec![])
         .expect("remove_docs_request request"))
@@ -468,7 +488,7 @@ pub fn api_publish_docs_request(
     package_name: &str,
     version: &str,
     gzipped_tarball: Vec<u8>,
-    api_key: &str,
+    credentials: &Credentials,
     config: &Config,
 ) -> Result<http::Request<Vec<u8>>, ApiError> {
     validate_package_and_version(package_name, version)?;
@@ -476,7 +496,7 @@ pub fn api_publish_docs_request(
     let mut builder = config.api_request(
         Method::POST,
         &format!("packages/{package_name}/releases/{version}/docs"),
-        Some(api_key),
+        Some(credentials),
     );
     let headers = builder.headers_mut().expect("headers");
     headers.insert("content-encoding", "x-gzip".parse().unwrap());
@@ -505,7 +525,7 @@ pub fn api_publish_docs_response(response: http::Response<Vec<u8>>) -> Result<()
 /// https://github.com/hexpm/hex/blob/main/lib/hex/api/release.ex#L13
 pub fn api_publish_package_request(
     release_tarball: Vec<u8>,
-    api_key: &str,
+    credentials: &Credentials,
     config: &Config,
     replace: bool,
 ) -> http::Request<Vec<u8>> {
@@ -513,7 +533,7 @@ pub fn api_publish_package_request(
     let mut builder = config.api_request(
         Method::POST,
         format!("publish?replace={replace}").as_str(),
-        Some(api_key),
+        Some(credentials),
     );
     builder
         .headers_mut()
@@ -552,7 +572,7 @@ pub fn api_publish_package_response(response: http::Response<Vec<u8>>) -> Result
 pub fn api_revert_release_request(
     package_name: &str,
     version: &str,
-    api_key: &str,
+    credentials: &Credentials,
     config: &Config,
 ) -> Result<http::Request<Vec<u8>>, ApiError> {
     validate_package_and_version(package_name, version)?;
@@ -561,7 +581,7 @@ pub fn api_revert_release_request(
         .api_request(
             Method::DELETE,
             &format!("packages/{package_name}/releases/{version}"),
-            Some(api_key),
+            Some(credentials),
         )
         .body(vec![])
         .expect("publish_package_request request"))
@@ -606,7 +626,7 @@ pub fn api_add_owner_request(
     package_name: &str,
     owner: &str,
     level: OwnerLevel,
-    api_key: &str,
+    credentials: &Credentials,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     let body = json!({
@@ -618,7 +638,7 @@ pub fn api_add_owner_request(
         .api_request(
             Method::PUT,
             &format!("packages/{package_name}/owners/{owner}"),
-            Some(api_key),
+            Some(credentials),
         )
         .body(body.to_string().into_bytes())
         .expect("add_owner_request request")
@@ -644,7 +664,7 @@ pub fn api_add_owner_response(response: http::Response<Vec<u8>>) -> Result<(), A
 pub fn api_transfer_owner_request(
     package_name: &str,
     owner: &str,
-    api_key: &str,
+    credentials: &Credentials,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     let body = json!({
@@ -656,7 +676,7 @@ pub fn api_transfer_owner_request(
         .api_request(
             Method::PUT,
             &format!("packages/{package_name}/owners/{owner}"),
-            Some(api_key),
+            Some(credentials),
         )
         .body(body.to_string().into_bytes())
         .expect("transfer_owner_request request")
@@ -682,14 +702,14 @@ pub fn api_transfer_owner_response(response: http::Response<Vec<u8>>) -> Result<
 pub fn api_remove_owner_request(
     package_name: &str,
     owner: &str,
-    api_key: &str,
+    credentials: &Credentials,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     config
         .api_request(
             Method::DELETE,
             &format!("packages/{package_name}/owners/{owner}"),
-            Some(api_key),
+            Some(credentials),
         )
         .body(vec![])
         .expect("remove_owner_request request")
@@ -1023,14 +1043,14 @@ fn verify_payload(mut signed: Signed, pem_public_key: &[u8]) -> Result<Vec<u8>, 
 pub fn api_get_package_release_request(
     name: &str,
     version: &str,
-    api_key: Option<&str>,
+    credentials: Option<&Credentials>,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     config
         .api_request(
             Method::GET,
             &format!("packages/{name}/releases/{version}"),
-            api_key,
+            credentials,
         )
         .header("accept", "application/json")
         .body(vec![])
@@ -1173,8 +1193,14 @@ pub enum PollStep {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OAuthTokens {
-    pub access_token: String,
-    pub refresh_token: String,
+    pub access_token: EcoString,
+    pub refresh_token: EcoString,
+}
+
+impl OAuthTokens {
+    pub fn as_credentials(&self) -> Credentials {
+        Credentials::OAuthAccessToken(self.access_token.clone())
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -1191,8 +1217,8 @@ struct DeviceAuthorisationResponseBody {
 #[serde(untagged)]
 enum PollResponseBody {
     Success {
-        access_token: String,
-        refresh_token: String,
+        access_token: EcoString,
+        refresh_token: EcoString,
     },
     Fail {
         error: PollResponseBodyError,
@@ -1265,9 +1291,9 @@ pub fn oauth_refresh_token_response(
 }
 
 /// Get information about the currently authenticated user.
-pub fn me_request(api_key: &str, config: &Config) -> http::Request<Vec<u8>> {
+pub fn me_request(credentials: &Credentials, config: &Config) -> http::Request<Vec<u8>> {
     config
-        .api_request(Method::GET, "users/me", Some(api_key))
+        .api_request(Method::GET, "users/me", Some(credentials))
         .body(vec![])
         .expect("me_request")
 }
