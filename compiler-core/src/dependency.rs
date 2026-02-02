@@ -259,9 +259,9 @@ impl PackageFetchError {
             | hexpm::ApiError::InvalidVersionFormat(_)
             | hexpm::ApiError::InvalidVersionRequirementFormat(_)
             | hexpm::ApiError::IncorrectChecksum
-            | hexpm::ApiError::InvalidApiKey
             | hexpm::ApiError::Forbidden
             | hexpm::ApiError::NotReplacing
+            | hexpm::ApiError::IncorrectOneTimePassword
             | hexpm::ApiError::LateModification => Self::ApiError(api_error),
         }
     }

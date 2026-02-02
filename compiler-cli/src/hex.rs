@@ -99,9 +99,9 @@ pub(crate) fn authenticate() -> Result<()> {
     let credentials = HexAuthentication::new(&runtime, &http, config.clone())
         .create_and_store_new_credentials_via_oauth()?;
 
-    let request = hexpm::me_request(&credentials, &config);
+    let request = hexpm::get_me_request(&credentials, &config);
     let response = runtime.block_on(http.send(request))?;
-    let me = hexpm::me_response(response).map_err(Error::hex)?;
+    let me = hexpm::get_me_response(response).map_err(Error::hex)?;
     println!("\nSuccessfully logged in as {}", me.username);
 
     Ok(())
