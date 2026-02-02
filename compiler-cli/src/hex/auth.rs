@@ -46,7 +46,7 @@ impl<'runtime> HexAuthentication<'runtime> {
     ///
     /// Any already-existing tokens stored on the file system are revoked.
     ///
-    pub fn create_and_store_new_oauth_tokens(&mut self) -> Result<OAuthTokens> {
+    pub fn create_and_store_new_credentials_via_oauth(&mut self) -> Result<hexpm::Credentials> {
         // TODO: revoke any prior oauth tokens
         // TODO: revoke any prior old api keys
 
@@ -108,7 +108,7 @@ Press Enter to open {uri}",
         self.ask_for_new_local_password()?;
         self.encrypt_and_store_oauth_refresh_token(&tokens)?;
 
-        Ok(tokens)
+        Ok(tokens.as_credentials())
     }
 
     fn encrypt_and_store_oauth_refresh_token(&mut self, tokens: &OAuthTokens) -> Result<(), Error> {
@@ -174,24 +174,24 @@ It will be used to locally encrypt your Hex API tokens.
     /// 1. An API key from the HEXPM_API_KEY environment variable.
     /// 2. An OAuth refresh token from the file system, which is the exchanged for an access token.
     /// 3. The OAuth flow.
-    pub fn get_or_create_api_access_token(&mut self) -> Result<String> {
+    pub fn get_or_create_api_credentials(&mut self) -> Result<hexpm::Credentials> {
         if let Some(key) = Self::read_env_api_key()? {
             return Ok(key);
         }
 
         if let Some(tokens) = self.read_and_decrypt_and_refresh_stored_tokens()? {
-            return Ok(tokens.access_token);
+            return Ok(tokens.as_credentials());
         }
 
-        Ok(self.create_and_store_new_oauth_tokens()?.access_token)
+        Ok(self.create_and_store_new_credentials_via_oauth()?)
     }
 
-    fn read_env_api_key() -> Result<Option<String>> {
+    fn read_env_api_key() -> Result<Option<hexpm::Credentials>> {
         let api_key = std::env::var(API_ENV_NAME).unwrap_or_default();
         if api_key.trim().is_empty() {
             Ok(None)
         } else {
-            Ok(Some(api_key))
+            Ok(Some(hexpm::Credentials::ApiKey(EcoString::from(api_key))))
         }
     }
 
@@ -203,18 +203,19 @@ It will be used to locally encrypt your Hex API tokens.
     /// need to create a new one.
     ///
     fn read_and_decrypt_and_refresh_stored_tokens(&mut self) -> Result<Option<OAuthTokens>> {
-        let Some(EncryptedApiKey { encrypted, .. }) = self.read_stored_legacy_api_key()? else {
-            // There was no prior token to use, return None.
+        let Some(encrypted_refresh_token) = self.read_stored_encrypted_oauth_refresh_token()?
+        else {
             return Ok(None);
         };
 
         let local_password = self.get_local_password()?;
-        let refresh_token =
-            encryption::decrypt_with_passphrase(encrypted.as_bytes(), &local_password).map_err(
-                |e| Error::FailedToDecryptLocalHexApiKey {
-                    detail: e.to_string(),
-                },
-            )?;
+        let refresh_token = encryption::decrypt_with_passphrase(
+            encrypted_refresh_token.as_bytes(),
+            &local_password,
+        )
+        .map_err(|e| Error::FailedToDecryptLocalHexApiKey {
+            detail: e.to_string(),
+        })?;
 
         // Use a refresh token, consuming it to get a new set of tokens.
         let request = hexpm::oauth_refresh_token_request(
@@ -231,8 +232,9 @@ It will be used to locally encrypt your Hex API tokens.
         Ok(Some(tokens))
     }
 
-    pub fn read_stored_encrypted_oauth_refresh_token(&self) -> Result<Option<String>> {
-        let path = paths::global_hexpm_legacy_credentials_path();
+    // TODO: use
+    fn read_stored_encrypted_oauth_refresh_token(&self) -> Result<Option<String>> {
+        let path = paths::global_hexpm_oauth_credentials_path();
         if !path.exists() {
             return Ok(None);
         }
@@ -247,7 +249,7 @@ It will be used to locally encrypt your Hex API tokens.
         Ok(Some(credentials.hexpm.refresh_token))
     }
 
-    pub fn read_stored_legacy_api_key(&self) -> Result<Option<EncryptedApiKey>> {
+    fn read_stored_legacy_api_key(&self) -> Result<Option<EncryptedApiKey>> {
         let path = paths::global_hexpm_legacy_credentials_path();
         if !path.exists() {
             return Ok(None);

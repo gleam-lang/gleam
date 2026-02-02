@@ -1273,6 +1273,7 @@ version = "1.14.0"
 dependencies = [
  "base16",
  "bytes",
+ "ecow",
  "flate2",
  "http",
  "http-auth-basic",

@@ -26,7 +26,7 @@ pub fn remove(package: String, version: String) -> Result<()> {
     let http = HttpClient::new();
     let hex_config = hexpm::Config::new();
     let api_key = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
-        .get_or_create_api_access_token()?;
+        .get_or_create_api_credentials()?;
     let http = HttpClient::new();
 
     // Remove docs from API
@@ -172,7 +172,7 @@ pub fn publish(paths: &ProjectPaths) -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let hex_config = hexpm::Config::new();
     let api_key = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
-        .get_or_create_api_access_token()?;
+        .get_or_create_api_credentials()?;
 
     // Reset the build directory so we know the state of the project
     crate::fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, config.target))?;

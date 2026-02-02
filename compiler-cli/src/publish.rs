@@ -83,7 +83,7 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
     let http = HttpClient::new();
     let hex_config = hexpm::Config::new();
     let api_key = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
-        .get_or_create_api_access_token()?;
+        .get_or_create_api_credentials()?;
     let start = Instant::now();
     cli::print_publishing(&config.name, &config.version);
 
