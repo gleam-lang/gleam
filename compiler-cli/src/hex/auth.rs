@@ -21,7 +21,7 @@ pub struct EncryptedApiKey {
 
 pub struct HexAuthentication<'runtime> {
     runtime: &'runtime tokio::runtime::Runtime,
-    http: HttpClient,
+    http: &'runtime HttpClient,
     local_password: Option<EcoString>,
     hex_config: hexpm::Config,
 }
@@ -29,10 +29,14 @@ pub struct HexAuthentication<'runtime> {
 impl<'runtime> HexAuthentication<'runtime> {
     /// Reads the stored API key from disc, if it exists.
     ///
-    pub fn new(runtime: &'runtime tokio::runtime::Runtime, hex_config: hexpm::Config) -> Self {
+    pub fn new(
+        runtime: &'runtime tokio::runtime::Runtime,
+        http: &'runtime HttpClient,
+        hex_config: hexpm::Config,
+    ) -> Self {
         Self {
             runtime,
-            http: HttpClient::new(),
+            http,
             local_password: None,
             hex_config,
         }
