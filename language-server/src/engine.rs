@@ -27,9 +27,11 @@ use lsp_server::ResponseError;
 use lsp_types::{
     self as lsp, DocumentSymbol, Hover, HoverContents, MarkedString, Position,
     PrepareRenameResponse, Range, SignatureHelp, SymbolKind, SymbolTag, TextEdit, Url,
-    WorkspaceEdit,
+    WorkspaceEdit, WorkspaceSymbol,
 };
 use std::{collections::HashSet, sync::Arc};
+
+use crate::url_from_path;
 
 use super::{
     DownloadDependencies, MakeLocker,
@@ -564,7 +566,11 @@ where
             }
 
             for custom_type in &module.ast.definitions.custom_types {
-                symbols.push(custom_type_symbol(custom_type, &line_numbers, module));
+                symbols.push(custom_type_document_symbol(
+                    custom_type,
+                    &line_numbers,
+                    module,
+                ));
             }
 
             for constant in &module.ast.definitions.constants {
@@ -602,6 +608,88 @@ where
                     children: None,
                 });
             }
+
+            Ok(symbols)
+        })
+    }
+
+    pub fn workspace_symbol(
+        &mut self,
+        params: &lsp::WorkspaceSymbolParams,
+    ) -> Response<Vec<WorkspaceSymbol>> {
+        self.respond(|this| {
+            let query = &params.query.to_ascii_lowercase();
+
+            let symbols = this
+                .compiler
+                .modules
+                .iter()
+                .flat_map(|(_, module)| {
+                    let mut symbols = vec![];
+                    let line_numbers = LineNumbers::new(&module.code);
+                    let Some(module_url) = url_from_path(module.input_path.as_str()) else {
+                        return symbols;
+                    };
+
+                    for function in &module.ast.definitions.functions {
+                        let (name_location, name) = function
+                            .name
+                            .as_ref()
+                            .expect("Function in a definition must be named");
+
+                        symbols.push(WorkspaceSymbol {
+                            name: name.to_string(),
+                            kind: SymbolKind::FUNCTION,
+                            tags: make_deprecated_symbol_tag(&function.deprecation),
+                            container_name: None,
+                            location: lsp_types::OneOf::Left(lsp_types::Location {
+                                uri: module_url.clone(),
+                                range: src_span_to_lsp_range(*name_location, &line_numbers),
+                            }),
+                            data: None,
+                        });
+                    }
+
+                    for alias in &module.ast.definitions.type_aliases {
+                        symbols.push(WorkspaceSymbol {
+                            name: alias.alias.to_string(),
+                            kind: SymbolKind::CLASS,
+                            tags: make_deprecated_symbol_tag(&alias.deprecation),
+                            container_name: None,
+                            location: lsp_types::OneOf::Left(lsp_types::Location {
+                                uri: module_url.clone(),
+                                range: src_span_to_lsp_range(alias.name_location, &line_numbers),
+                            }),
+                            data: None,
+                        });
+                    }
+
+                    for custom_type in &module.ast.definitions.custom_types {
+                        symbols.extend(custom_type_workspace_symbols(
+                            custom_type,
+                            &line_numbers,
+                            &module_url,
+                        ));
+                    }
+
+                    for constant in &module.ast.definitions.constants {
+                        symbols.push(WorkspaceSymbol {
+                            name: constant.name.to_string(),
+                            kind: SymbolKind::CONSTANT,
+                            tags: make_deprecated_symbol_tag(&constant.deprecation),
+                            container_name: None,
+                            location: lsp_types::OneOf::Left(lsp_types::Location {
+                                uri: module_url.clone(),
+                                range: src_span_to_lsp_range(constant.name_location, &line_numbers),
+                            }),
+                            data: None,
+                        })
+                    }
+
+                    symbols
+                })
+                .filter(|symbol| symbol.name.to_ascii_lowercase().contains(query))
+                .collect_vec();
 
             Ok(symbols)
         })
@@ -1086,7 +1174,65 @@ Unused labelled fields:
     }
 }
 
-fn custom_type_symbol(
+fn custom_type_workspace_symbols(
+    type_: &CustomType<Arc<Type>>,
+    line_numbers: &LineNumbers,
+    module_url: &Url,
+) -> Vec<WorkspaceSymbol> {
+    let mut symbols = vec![];
+
+    symbols.push(WorkspaceSymbol {
+        name: type_.name.to_string(),
+        kind: SymbolKind::CLASS,
+        tags: make_deprecated_symbol_tag(&type_.deprecation),
+        container_name: None,
+        location: lsp_types::OneOf::Left(lsp_types::Location {
+            uri: module_url.clone(),
+            range: src_span_to_lsp_range(type_.name_location, line_numbers),
+        }),
+        data: None,
+    });
+
+    for constructor in type_.constructors.iter() {
+        symbols.push(WorkspaceSymbol {
+            name: constructor.name.to_string(),
+            kind: if constructor.arguments.is_empty() {
+                SymbolKind::ENUM_MEMBER
+            } else {
+                SymbolKind::CONSTRUCTOR
+            },
+            tags: make_deprecated_symbol_tag(&constructor.deprecation),
+            container_name: Some(type_.name.to_string()),
+            location: lsp_types::OneOf::Left(lsp_types::Location {
+                uri: module_url.clone(),
+                range: src_span_to_lsp_range(constructor.name_location, line_numbers),
+            }),
+            data: None,
+        });
+
+        for argument in &constructor.arguments {
+            let Some((label_location, label)) = &argument.label else {
+                continue;
+            };
+
+            symbols.push(WorkspaceSymbol {
+                name: label.to_string(),
+                kind: SymbolKind::FIELD,
+                tags: None,
+                container_name: Some(constructor.name.to_string()),
+                location: lsp_types::OneOf::Left(lsp_types::Location {
+                    uri: module_url.clone(),
+                    range: src_span_to_lsp_range(*label_location, line_numbers),
+                }),
+                data: None,
+            });
+        }
+    }
+
+    symbols
+}
+
+fn custom_type_document_symbol(
     type_: &CustomType<Arc<Type>>,
     line_numbers: &LineNumbers,
     module: &Module,
