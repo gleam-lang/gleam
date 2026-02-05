@@ -41,4 +41,4 @@ toml = "0.8"
 
 [build-dependencies]
 # Protobuf codegen
-prost-build = "0.13.5"
+prost-build = "0"
