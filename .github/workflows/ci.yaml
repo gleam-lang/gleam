@@ -399,7 +399,7 @@ jobs:
       - run: cargo build
 
       - name: Upload artifact (Ubuntu)
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: gleam
           path: target/debug/gleam
@@ -429,7 +429,7 @@ jobs:
           rebar3-version: "3"
 
       - name: Download Gleam binary from previous job
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: gleam
           path: ./test

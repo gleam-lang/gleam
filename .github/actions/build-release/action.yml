@@ -184,7 +184,7 @@ runs:
     # (SPDX and CycloneDX) for the gleam build.
     # We store those files alongside the build artifacts on the GitHub Release
     # page and also use them to create Container SBoMs for Docker images.
-    # 
+    #
     # Why is this helpful?
     # * It gives us and our users complete visibility into which dependencies
     #   and which versions are present in the build / container image.
@@ -248,7 +248,7 @@ runs:
         ATTESTATION: "${{ steps.attest-sbom.outputs.bundle-path }}"
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: release-${{ matrix.target }}
         path: |
