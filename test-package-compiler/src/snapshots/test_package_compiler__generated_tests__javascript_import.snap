@@ -36,7 +36,7 @@ import type * as _ from "../gleam.d.mts";
 
 export class A extends _.CustomType {}
 export function A$A(): A$;
-export function A$isA(value: A$): boolean;
+export function A$isA(value: any): value is A$;
 
 export type A$ = A;
 
