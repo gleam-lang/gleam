@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 983
 expression: "\npub type Wibble(value, error) {\n  Wibble(\n    wibble: value,\n    wobble: Result(value, error),\n    wubble: error,\n  )\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -31,7 +33,9 @@ export function Wibble$Wibble<I, J>(
   wobble: _.Result<I, J>,
   wubble: J,
 ): Wibble$<I, J>;
-export function Wibble$isWibble<I, J>(value: Wibble$<I, J>): boolean;
+export function Wibble$isWibble<I, J>(
+  value: any,
+): value is Wibble$<unknown, unknown>;
 export function Wibble$Wibble$0<I, J>(value: Wibble$<I, J>): I;
 export function Wibble$Wibble$wibble<I, J>(value: Wibble$<I, J>): I;
 export function Wibble$Wibble$1<I, J>(value: Wibble$<I, J>): _.Result<I, J>;
