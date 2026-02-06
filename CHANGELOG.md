@@ -20,8 +20,12 @@
 
   ([Adi Salimgereyev](https://github.com/abs0luty))
 
-- The JavaScript prelude JavaScript API now contains the `BitArray$isBitArray`
+- The JavaScript prelude TypeScript API now contains the `BitArray$isBitArray`
   and `BitArray$BitArray$data` functions.
+  ([Louis Pilfold](https://github.com/lpil))
+
+- The type-checking JavaScript functions for Gleam data structure now use the
+  `value is TypeName` TypeScript return type rather than `boolean`.
   ([Louis Pilfold](https://github.com/lpil))
 
 ### Build tool
