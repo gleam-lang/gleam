@@ -12346,3 +12346,64 @@ pub type Wobble {
         find_position_of("pub type Wobble {").select_until(find_position_of("}"))
     );
 }
+
+#[test]
+fn generate_dynamic_decoder_uses_decode_success_for_nil() {
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        r#"
+pub type Nothing {
+  No(val: Nil)
+  Nope(val: #(Nil, Nil))
+  Nothing(val: List(Nil))
+}
+    "#,
+        find_position_of("pub type Nothing {").select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn generate_to_json_function_uses_json_null_for_nil() {
+    let src = "
+import gleam/json
+import gleam/dict.{type Dict}
+
+
+pub type Nothing {
+  Nope(val: Nil)
+  Nothing(val1: List(Nil), val2: Dict(Int, Nil))
+}
+";
+
+    assert_code_action!(
+        GENERATE_TO_JSON_FUNCTION,
+        TestProject::for_source(src)
+            .add_package_module("gleam_json", "gleam/json", "pub type Json")
+            .add_hex_module("gleam/dict", "pub type Dict(key, value)"),
+        find_position_of("pub type Nothing {")
+            .select_until(find_position_of("}").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn generate_to_json_function_ignores_nil_and_nil_tuple_fields_with_underscore() {
+    let src = "
+import gleam/json
+import gleam/dict.{type Dict}
+
+
+pub type Nothing {
+  No(val: #(Nil), another: #(Nil, #(Nil, Int)))
+  Nope(val: List(#(Nil)))
+}
+";
+
+    assert_code_action!(
+        GENERATE_TO_JSON_FUNCTION,
+        TestProject::for_source(src)
+            .add_package_module("gleam_json", "gleam/json", "pub type Json")
+            .add_hex_module("gleam/dict", "pub type Dict(key, value)"),
+        find_position_of("pub type Nothing {")
+            .select_until(find_position_of("}").nth_occurrence(2))
+    );
+}

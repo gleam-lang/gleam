@@ -1,0 +1,44 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\nimport gleam/json\nimport gleam/dict.{type Dict}\n\n\npub type Nothing {\n  Nope(val: Nil)\n  Nothing(val1: List(Nil), val2: Dict(Int, Nil))\n}\n"
+---
+----- BEFORE ACTION
+
+import gleam/json
+import gleam/dict.{type Dict}
+
+
+pub type Nothing {
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  Nope(val: Nil)
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  Nothing(val1: List(Nil), val2: Dict(Int, Nil))
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+}
+↑
+
+
+----- AFTER ACTION
+
+import gleam/json
+import gleam/dict.{type Dict}
+
+
+pub type Nothing {
+  Nope(val: Nil)
+  Nothing(val1: List(Nil), val2: Dict(Int, Nil))
+}
+
+fn nothing_to_json(nothing: Nothing) -> json.Json {
+  case nothing {
+    Nope(val: _) -> json.object([
+      #("type", json.string("nope")),
+      #("val", json.null()),
+    ])
+    Nothing(val1:, val2:) -> json.object([
+      #("type", json.string("nothing")),
+      #("val1", json.array(val1, fn(_) { json.null() })),
+      #("val2", json.dict(val2, todo as "Function to stringify Int", fn(_) { json.null() })),
+    ])
+  }
+}
