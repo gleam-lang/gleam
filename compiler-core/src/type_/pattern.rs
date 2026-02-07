@@ -226,12 +226,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         );
                     }
                     ValueConstructorVariant::ModuleConstant { .. } => {
-                        // If the variable is a constant we shadow it with the refined type.
+                        // If the variable is a constant we shadow it with the inferred variant.
                         // We cannot convert it to a local variable as that would cause the
                         // code generator to look for a runtime variable that doesn't exist.
-                        let mut refined_constant = variable.clone();
-                        refined_constant.type_ = type_;
-                        let _ = self.environment.scope.insert(name, refined_constant);
+                        let mut inferred_variant_constant = variable.clone();
+                        inferred_variant_constant.type_ = type_;
+                        let _ = self.environment.scope.insert(name, inferred_variant_constant);
                     }
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::Record { .. } => {}
