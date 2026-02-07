@@ -3,7 +3,7 @@ name = "gleam-language-server"
 version = "1.14.0"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2024"
-license-file = "LICENCE"
+license = "Apache-2.0"
 
 [dependencies]
 gleam-core = { path = "../compiler-core" }

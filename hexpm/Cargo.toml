@@ -3,9 +3,9 @@ name = "hexpm"
 version = "5.1.1"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2024"
+license = "Apache-2.0"
 
 readme = "README.md"
-license = "Apache-2.0"
 repository = "https://github.com/gleam-lang/hexpm-rust"
 description = "A Rust client for the Hex package manager"
 keywords = ["erlang", "gleam", "elixir", "hex", "api-client"]

@@ -9,6 +9,7 @@ ignore = [
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
 allow = [
+    "Apache-2.0 WITH LLVM-exception",
     "Apache-2.0",
     "BSD-3-Clause",
     "BSL-1.0",
