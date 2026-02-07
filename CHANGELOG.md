@@ -66,6 +66,9 @@
   arguments by taking into account, whether it's a function or a constructor.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Added `gleam hex deauthenticate` command.
+  ([Samuel Cristobal](https://github.com/scristobal))
+
 ### Language server
 
 - The language server now allows extracting the start of a pipeline into a
