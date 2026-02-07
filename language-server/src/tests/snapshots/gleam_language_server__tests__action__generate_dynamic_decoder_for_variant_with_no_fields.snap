@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub type Wibble {\n  Wibble\n}\n"
 ---
 ----- BEFORE ACTION
@@ -21,6 +21,6 @@ fn wibble_decoder() -> decode.Decoder(Wibble) {
   use variant <- decode.then(decode.string)
   case variant {
     "wibble" -> decode.success(Wibble)
-    _ -> decode.failure(todo as "Zero value for Wibble", "Wibble")
+    _ -> decode.failure(Wibble, "Wibble")
   }
 }

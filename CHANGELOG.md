@@ -154,6 +154,14 @@
 
   ([Vladislav Shakitskiy](https://github.com/vshakitskiy))
 
+- The language server now performs best-effort zero value generation for
+  `decode.failure` when using the `Generate Dynamic Decoder` code action.
+  ([Hari Mohan](https://github.com/seafoamteal))
+
+- The `Generate Dynamic Decoder` and `Generate To-JSON Function` code action
+  now generate a decoder and an encoder, respectively, for `Nil` values.
+  ([Hari Mohan](https://github.com/seafoamteal))
+
 ### Formatter
 
 ### Bug fixes
