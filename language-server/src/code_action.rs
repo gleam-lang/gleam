@@ -7147,7 +7147,22 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToPipe<'ast> {
             next_arg: arguments
                 .get(position + 1)
                 .map(|argument| argument.location),
-        })
+        });
+
+        // We still want to visit the arguments so that if we're hovering a
+        // nested pipeline, that's going to be the one we transform:
+        //
+        // ```gleam
+        // wibble(Wobble(
+        //   field: call(other(last(1)))
+        //  //      ^^^^ We want to convert this one if we hover over it,
+        //  //           not the outer `wibble(Wobble(...))` call
+        // ))
+        // ```
+        //
+        for argument in arguments {
+            ast::visit::visit_typed_call_arg(self, argument);
+        }
     }
 
     fn visit_typed_expr_pipeline(

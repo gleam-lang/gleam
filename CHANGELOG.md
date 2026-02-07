@@ -143,6 +143,10 @@
   constant list with an `@internal` attribute.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The "convert to pipe" code action now works on nested function calls as well,
+  rather than always being applied to the outermost one.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server no longer recommends the deprecated `@target` attribute.
   ([Hari Mohan](https://github.com/seafoamteal))
 

@@ -8955,6 +8955,21 @@ fn bug() {
     );
 }
 
+#[test]
+fn convert_to_pipe_with_nested_calls_picks_the_innermost_one() {
+    assert_code_action!(
+        CONVERT_TO_PIPE,
+        "
+fn bug() {
+    wibble(Wobble(
+      field: woo(other_call(last))
+    ))
+}
+",
+        find_position_of("woo").to_selection()
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/4342
 #[test]
 fn inline_variable_in_record_update() {

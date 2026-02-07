@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  wibble(wobble(woo))\n}\n"
 ---
 ----- BEFORE ACTION
@@ -13,5 +13,5 @@ pub fn main() {
 ----- AFTER ACTION
 
 pub fn main() {
-  wobble(woo) |> wibble
+  wibble(woo |> wobble)
 }

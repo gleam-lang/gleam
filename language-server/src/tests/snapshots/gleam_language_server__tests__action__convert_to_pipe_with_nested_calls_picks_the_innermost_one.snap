@@ -1,0 +1,21 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\nfn bug() {\n    wibble(Wobble(\n      field: woo(other_call(last))\n    ))\n}\n"
+---
+----- BEFORE ACTION
+
+fn bug() {
+    wibble(Wobble(
+      field: woo(other_call(last))
+             ↑                    
+    ))
+}
+
+
+----- AFTER ACTION
+
+fn bug() {
+    wibble(Wobble(
+      field: other_call(last) |> woo
+    ))
+}
