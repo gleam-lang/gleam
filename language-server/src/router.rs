@@ -5,6 +5,7 @@ use gleam_core::{
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     paths::ProjectPaths,
 };
+use itertools::Itertools;
 use std::{
     collections::{HashMap, hash_map::Entry},
     time::SystemTime,
@@ -54,6 +55,32 @@ where
 
     pub fn project_path(&self, path: &Utf8Path) -> Option<Utf8PathBuf> {
         find_gleam_project_parent(&self.io, path)
+    }
+
+    pub fn all_projects(&mut self) -> Result<impl Iterator<Item = &mut Project<IO, Reporter>>> {
+        let paths = self.engines.keys().cloned().collect_vec();
+
+        for path in paths {
+            let Some(project) = self.engines.get(&path) else {
+                continue;
+            };
+
+            let project_paths = ProjectPaths::new(path.clone());
+
+            if !self.io.exists(&project_paths.build_directory())
+                || Self::gleam_toml_changed(&project_paths, project, &self.io)?
+            {
+                let _ = self.engines.remove(&path);
+                let project = Self::new_project(
+                    path.clone(),
+                    self.io.clone(),
+                    self.progress_reporter.clone(),
+                )?;
+                let _ = self.engines.insert(path, project);
+            }
+        }
+
+        Ok(self.engines.values_mut())
     }
 
     pub fn project_for_path(
