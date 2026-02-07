@@ -1,0 +1,19 @@
+---
+source: language-server/src/tests/inlay_hints.rs
+expression: hints
+---
+const int_val = 0
+
+fn identity(x) {
+  x
+}
+
+fn ret_str(_x) {
+  "abc"
+}
+
+pub fn example_pipe() {
+  int_val
+  |> ret_str()
+  |> identity()
+}
