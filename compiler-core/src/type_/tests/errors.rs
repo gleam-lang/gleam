@@ -3766,7 +3766,7 @@ pub fn main() {
 }
 
 #[test]
-fn unknown_variable_do_not_suggest_modules_from_the_another_package_with_internal_value() {
+fn unknown_variable_do_not_suggest_modules_from_another_package_with_internal_value() {
     assert_module_error!(
         (
             "anotherpackage",
@@ -3784,7 +3784,7 @@ pub fn main() {
 }
 
 #[test]
-fn unknown_variable_do_not_suggest_modules_from_the_another_package_with_internal_function() {
+fn unknown_variable_do_not_suggest_modules_from_another_package_with_internal_function() {
     assert_module_error!(
         (
             "anotherpackage",
@@ -3804,7 +3804,7 @@ pub fn main() {
 }
 
 #[test]
-fn unknown_variable_do_not_suggest_modules_from_the_another_package_with_internal_type() {
+fn unknown_variable_do_not_suggest_modules_from_another_package_with_internal_type() {
     assert_module_error!(
         (
             "anotherpackage",
@@ -3825,8 +3825,7 @@ pub fn main() {
 }
 
 #[test]
-fn unknown_variable_do_not_suggest_modules_from_the_another_package_with_internal_record_constructor()
- {
+fn unknown_variable_do_not_suggest_modules_from_another_package_with_internal_record_constructor() {
     assert_module_error!(
         (
             "anotherpackage",
