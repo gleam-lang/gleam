@@ -109,7 +109,7 @@ pub struct ProjectCompiler<IO> {
     /// The set of modules that have had partial compilation done since the last
     /// successful compilation.
     incomplete_modules: HashSet<EcoString>,
-    warnings: WarningEmitter,
+    warnings: Rc<WarningEmitter>,
     telemetry: &'static dyn Telemetry,
     options: Options,
     paths: ProjectPaths,
@@ -136,6 +136,26 @@ where
         paths: ProjectPaths,
         io: IO,
     ) -> Self {
+        Self::new_with_warning_emitter(
+            config,
+            options,
+            packages,
+            telemetry,
+            Rc::new(WarningEmitter::new(warning_emitter)),
+            paths,
+            io,
+        )
+    }
+
+    pub fn new_with_warning_emitter(
+        config: PackageConfig,
+        options: Options,
+        packages: Vec<ManifestPackage>,
+        telemetry: &'static dyn Telemetry,
+        warning_emitter: Rc<WarningEmitter>,
+        paths: ProjectPaths,
+        io: IO,
+    ) -> Self {
         let packages = packages
             .into_iter()
             .map(|p| (p.name.to_string(), p))
@@ -147,7 +167,7 @@ where
             stale_modules: StaleTracker::default(),
             incomplete_modules: HashSet::new(),
             ids: UniqueIdGenerator::new(),
-            warnings: WarningEmitter::new(warning_emitter),
+            warnings: warning_emitter,
             subprocess_stdio: Stdio::Inherit,
             telemetry,
             packages,

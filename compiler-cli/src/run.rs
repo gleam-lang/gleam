@@ -1,8 +1,9 @@
-use std::sync::OnceLock;
+use std::{rc::Rc, sync::OnceLock};
 
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use gleam_core::{
+    Warning,
     analyse::TargetSupport,
     build::{Built, Codegen, Compile, Mode, NullTelemetry, Options, Runtime, Target, Telemetry},
     config::{DenoFlag, PackageConfig},
@@ -10,9 +11,13 @@ use gleam_core::{
     io::{Command, CommandExecutor, Stdio},
     paths::ProjectPaths,
     type_::ModuleFunction,
+    warning::{WarningEmitter, WarningEmitterIO},
 };
 
-use crate::{config::PackageKind, fs::ProjectIO};
+use crate::{
+    config::PackageKind,
+    fs::{ConsoleWarningEmitter, ProjectIO},
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Which {
@@ -78,7 +83,7 @@ pub fn setup(
     };
 
     // Get the config for the module that is being run to check the target.
-    // Also get the kind of the package the module belongs to: wether the module
+    // Also get the kind of the package the module belongs to: whether the module
     // belongs to a dependency or to the root package.
     let (mod_config, package_kind) = match &module {
         Some(mod_path) => {
@@ -91,11 +96,13 @@ pub fn setup(
     let root_config = crate::config::root_config(paths)?;
 
     // Determine which module to run
-    let module = module.unwrap_or(match which {
-        Which::Src => root_config.name.to_string(),
-        Which::Test => format!("{}_test", &root_config.name),
-        Which::Dev => format!("{}_dev", &root_config.name),
-    });
+    let module: EcoString = module
+        .unwrap_or(match which {
+            Which::Src => root_config.name.to_string(),
+            Which::Test => format!("{}_test", &root_config.name),
+            Which::Dev => format!("{}_dev", &root_config.name),
+        })
+        .into();
 
     let target = target.unwrap_or(mod_config.target);
 
@@ -122,10 +129,49 @@ pub fn setup(
         no_print_progress,
     };
 
-    let built = crate::build::main(paths, options, manifest)?;
+    let console_warning_emitter = Rc::new(ConsoleWarningEmitter);
+    let warning_emitter_with_counter =
+        Rc::new(WarningEmitter::new(console_warning_emitter.clone()));
+    let built = crate::build::main_with_warnings(
+        paths,
+        options,
+        manifest,
+        warning_emitter_with_counter.clone(),
+    )?;
+
+    // Warn if the module being run is internal and NOT in the root package
+    match package_kind {
+        PackageKind::Root => {}
+        PackageKind::Dependency => {
+            if mod_config.is_internal_module(&module) {
+                let warning = Warning::InternalModuleMainFunction {
+                    module: module.clone(),
+                };
+                console_warning_emitter.emit_warning(warning);
+            }
+        }
+    }
 
     // A module can not be run if it does not exist or does not have a public main function.
     let main_function = get_or_suggest_main_function(built, &module, target)?;
+
+    // Warn if the main function being run has been deprecated
+    match main_function.deprecation {
+        gleam_core::type_::Deprecation::Deprecated { message } => {
+            let warning = Warning::DeprecatedMainFunction {
+                module: module.clone(),
+                message,
+            };
+            // warning_emitter.emit also increments a counter. However, we only want to
+            // increment that counter for root package warnings. For dependencies,
+            // we just print the warning directly to console.
+            match package_kind {
+                PackageKind::Root => warning_emitter_with_counter.emit(warning),
+                PackageKind::Dependency => console_warning_emitter.emit_warning(warning),
+            }
+        }
+        gleam_core::type_::Deprecation::NotDeprecated => {}
+    }
 
     telemetry.running(&format!("{module}.main"));
 
