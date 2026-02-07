@@ -1,0 +1,51 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub type Nothing {\n  No(val: Nil)\n  Nope(val: #(Nil, Nil))\n  Nothing(val: List(Nil))\n}\n    "
+---
+----- BEFORE ACTION
+
+pub type Nothing {
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  No(val: Nil)
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  Nope(val: #(Nil, Nil))
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  Nothing(val: List(Nil))
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+}
+↑
+    
+
+
+----- AFTER ACTION
+import gleam/dynamic/decode
+
+pub type Nothing {
+  No(val: Nil)
+  Nope(val: #(Nil, Nil))
+  Nothing(val: List(Nil))
+}
+
+fn nothing_decoder() -> decode.Decoder(Nothing) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "no" -> {
+      use val <- decode.field("val", decode.success(Nil))
+      decode.success(No(val:))
+    }
+    "nope" -> {
+      use val <- decode.field("val", {
+        use a <- decode.field(0, decode.success(Nil))
+        use b <- decode.field(1, decode.success(Nil))
+
+        decode.success(#(a, b))
+      })
+      decode.success(Nope(val:))
+    }
+    "nothing" -> {
+      use val <- decode.field("val", decode.list(decode.success(Nil)))
+      decode.success(Nothing(val:))
+    }
+    _ -> decode.failure(No(val: Nil), "Nothing")
+  }
+}

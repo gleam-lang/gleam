@@ -1,0 +1,56 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\nimport gleam/json\nimport gleam/dict.{type Dict}\n\n\npub type Nothing {\n  No(val: #(Nil), another: #(Nil, #(Nil, Int)))\n  Nope(val: List(#(Nil)))\n}\n"
+---
+----- BEFORE ACTION
+
+import gleam/json
+import gleam/dict.{type Dict}
+
+
+pub type Nothing {
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  No(val: #(Nil), another: #(Nil, #(Nil, Int)))
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  Nope(val: List(#(Nil)))
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+}
+↑
+
+
+----- AFTER ACTION
+
+import gleam/json
+import gleam/dict.{type Dict}
+
+
+pub type Nothing {
+  No(val: #(Nil), another: #(Nil, #(Nil, Int)))
+  Nope(val: List(#(Nil)))
+}
+
+fn nothing_to_json(nothing: Nothing) -> json.Json {
+  case nothing {
+    No(val: _, another:) -> json.object([
+      #("type", json.string("no")),
+      #("val", json.preprocessed_array([
+        json.null(),
+      ])),
+      #("another", json.preprocessed_array([
+        json.null(),
+        json.preprocessed_array([
+          json.null(),
+          json.int(another.1.1),
+        ]),
+      ])),
+    ])
+    Nope(val:) -> json.object([
+      #("type", json.string("nope")),
+      #("val", json.array(val, fn(_) {
+        json.preprocessed_array([
+          json.null(),
+        ])
+      })),
+    ])
+  }
+}
