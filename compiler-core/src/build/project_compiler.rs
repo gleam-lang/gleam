@@ -175,10 +175,30 @@ where
         self.stale_modules.empty();
     }
 
+    fn retain_only_production_packages(&mut self) {
+        let mut production = HashSet::new();
+        let mut queue: Vec<_> = self.config.dependencies.keys().cloned().collect();
+        while let Some(name) = queue.pop() {
+            if production.insert(name.clone())
+                && let Some(pkg) = self.packages.get(name.as_str())
+            {
+                queue.extend(pkg.requirements.iter().cloned());
+            }
+        }
+        self.packages
+            .retain(|name, _| production.contains(name.as_str()));
+    }
+
     /// Compiles all packages in the project and returns the compiled
     /// information from the root package
     pub fn compile(mut self) -> Result<Built> {
         self.reset_state_for_new_compile_run();
+
+        // In production mode, skip dev-only dependencies entirely so they
+        // are never compiled.
+        if self.mode() == Mode::Prod {
+            self.retain_only_production_packages();
+        }
 
         // Each package may specify a Gleam version that it supports, so we
         // verify that this version is appropriate.
