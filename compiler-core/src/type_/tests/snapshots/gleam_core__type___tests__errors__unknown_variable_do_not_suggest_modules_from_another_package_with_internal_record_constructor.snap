@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport module\npub fn main() {\n    MyRecord(1, 2)\n}"
+---
+----- SOURCE CODE
+-- module.gleam
+
+@internal
+pub type MyType {
+    MyRecord(x: Int, y: Int)
+}
+
+-- main.gleam
+
+import module
+pub fn main() {
+    MyRecord(1, 2)
+}
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:4:5
+  │
+4 │     MyRecord(1, 2)
+  │     ^^^^^^^^
+
+The custom type variant constructor `MyRecord` is not in scope here.
