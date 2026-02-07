@@ -115,7 +115,7 @@ pub enum ModuleSuggestion {
 }
 
 impl ModuleSuggestion {
-    pub fn suggestion(&self, module: &str) -> String {
+    pub fn suggest_import(&self, module: &str) -> String {
         match self {
             ModuleSuggestion::Importable(name) => {
                 // Add a little extra information if the names don't match
@@ -127,6 +127,23 @@ impl ModuleSuggestion {
                 }
             }
             ModuleSuggestion::Imported(name) => format!("Did you mean `{name}`?"),
+        }
+    }
+
+    pub fn suggest_unqualified_import(&self, name: &str, layer: Layer) -> String {
+        match self {
+            ModuleSuggestion::Importable(module) => match layer {
+                Layer::Type => {
+                    format!("Did you mean to import the `{name}` type from the `{module}` module?")
+                }
+                Layer::Value => {
+                    format!("Did you mean to import the `{name}` value from the `{module}` module?")
+                }
+            },
+
+            ModuleSuggestion::Imported(module) => {
+                format!("Did you mean to update the import of `{module}`?")
+            }
         }
     }
 
@@ -167,12 +184,14 @@ pub enum Error {
         /// this will contain its location.
         discarded_location: Option<SrcSpan>,
         type_with_name_in_scope: bool,
+        suggestions: Vec<ModuleSuggestion>,
     },
 
     UnknownType {
         location: SrcSpan,
         name: EcoString,
         hint: UnknownTypeHint,
+        suggestions: Vec<ModuleSuggestion>,
     },
 
     UnknownModule {
@@ -1421,6 +1440,7 @@ pub enum UnknownValueConstructorError {
         name: EcoString,
         variables: Vec<EcoString>,
         type_with_name_in_scope: bool,
+        suggestions: Vec<ModuleSuggestion>,
     },
 
     Module {
@@ -1446,12 +1466,14 @@ pub fn convert_get_value_constructor_error(
             name,
             variables,
             type_with_name_in_scope,
+            suggestions,
         } => Error::UnknownVariable {
             location,
             name,
             variables,
             discarded_location: None,
             type_with_name_in_scope,
+            suggestions,
         },
 
         UnknownValueConstructorError::Module { name, suggestions } => Error::UnknownModule {
@@ -1511,6 +1533,7 @@ pub enum UnknownTypeConstructorError {
     Type {
         name: EcoString,
         hint: UnknownTypeHint,
+        suggestions: Vec<ModuleSuggestion>,
     },
 
     Module {
@@ -1532,10 +1555,15 @@ pub fn convert_get_type_constructor_error(
     module_location: Option<SrcSpan>,
 ) -> Error {
     match e {
-        UnknownTypeConstructorError::Type { name, hint } => Error::UnknownType {
+        UnknownTypeConstructorError::Type {
+            name,
+            hint,
+            suggestions,
+        } => Error::UnknownType {
             location: *location,
             name,
             hint,
+            suggestions,
         },
 
         UnknownTypeConstructorError::Module { name, suggestions } => Error::UnknownModule {

@@ -2,7 +2,7 @@ use ecow::EcoString;
 use lsp_types::{Position, Range, TextEdit};
 
 use gleam_core::{
-    ast::{Import, SrcSpan, TypedDefinitions},
+    ast::{Import, Layer, SrcSpan, TypedDefinitions},
     build::Module,
     line_numbers::LineNumbers,
 };
@@ -103,6 +103,85 @@ pub fn insert_unqualified_import(
     } else {
         insert_into_unbraced_import(name, import, import_code)
     }
+}
+
+pub fn add_import_with_unqualified(
+    import_position: Position,
+    module_name: &str,
+    name_to_import: &str,
+    layer: Layer,
+    insert_newlines: &Newlines,
+) -> TextEdit {
+    let new_lines = match insert_newlines {
+        Newlines::Single => "\n",
+        Newlines::Double => "\n\n",
+    };
+    let prefix = match layer {
+        Layer::Type => "type ",
+        Layer::Value => "",
+    };
+    TextEdit {
+        range: Range {
+            start: import_position,
+            end: import_position,
+        },
+        new_text: [
+            "import ",
+            module_name,
+            ".{",
+            prefix,
+            name_to_import,
+            "}",
+            new_lines,
+        ]
+        .concat(),
+    }
+}
+
+pub fn add_unqualified_import(
+    name: &EcoString,
+    layer: Layer,
+    module: &Module,
+    import: &Import<EcoString>,
+    line_numbers: &LineNumbers,
+) -> TextEdit {
+    let import_code = get_import_code(module, import);
+    let has_brace = import_code.contains('}');
+
+    let name = match layer {
+        Layer::Type => &format!("type {}", name).into(),
+        Layer::Value => name,
+    };
+
+    let (pos, new_text) = if has_brace {
+        insert_into_braced_import(name.to_string(), import.location, import_code)
+    } else {
+        insert_into_unbraced_import(name.to_string(), import, import_code)
+    };
+
+    TextEdit {
+        range: src_span_to_lsp_range(
+            SrcSpan {
+                start: pos,
+                end: pos,
+            },
+            line_numbers,
+        ),
+        new_text,
+    }
+}
+
+fn get_import_code<'a>(module: &'a Module, import: &'a Import<EcoString>) -> &'a str {
+    module
+        .code
+        .get(import.location.start as usize..import.location.end as usize)
+        .expect(
+            format!(
+                "The code of the import of {} couldn't be found in the module {}",
+                import.module, module.name,
+            )
+            .as_str(),
+        )
 }
 
 // Handle inserting into an unbraced import

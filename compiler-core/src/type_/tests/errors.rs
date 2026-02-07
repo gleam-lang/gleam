@@ -3424,3 +3424,138 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn unknown_type_without_existing_import() {
+    assert_module_error!(
+        ("dependency", "wibble", "pub type Wibble { Wobble }"),
+        r#"
+fn wibble(wobble: Wibble) -> Nil { Nil }
+"#
+    );
+}
+
+#[test]
+fn unknown_type_with_existing_import() {
+    assert_module_error!(
+        ("dependency", "wibble", "pub type Wibble { Wobble }"),
+        r#"
+import wibble
+
+fn wibble(wobble: Wibble) -> Nil { Nil }
+"#
+    );
+}
+
+#[test]
+fn unknown_type_with_existing_import_without_alias() {
+    assert_module_error!(
+        ("dependency", "wibble", "pub type Wibble { Wobble }"),
+        r#"
+import wibble as _
+
+fn wibble(wobble: Wibble) -> Nil { Nil }
+"#
+    );
+}
+
+#[test]
+fn unknown_type_with_wrong_arity_without_existing_import_has_no_hint() {
+    assert_module_error!(
+        ("dependency", "wibble", "pub type Wibble { Wobble }"),
+        r#"
+fn wibble(wobble: Wibble(Int)) -> Nil { Nil }
+"#
+    );
+}
+
+#[test]
+fn unknown_type_with_wrong_arity_with_existing_import_has_no_hint() {
+    assert_module_error!(
+        ("dependency", "wibble", "pub type Wibble { Wobble }"),
+        r#"
+import wibble
+
+fn wibble(wobble: Wibble(Int)) -> Nil { Nil }
+"#
+    );
+}
+
+#[test]
+fn unknown_type_constructor_without_existing_import() {
+    assert_module_error!(
+        ("dependency", "wibble", "pub type Wibble { Wobble }"),
+        r#"
+fn wibble() { Wobble }
+"#
+    );
+}
+
+#[test]
+fn unknown_type_constructor_with_existing_import() {
+    assert_module_error!(
+        ("dependency", "wibble", "pub type Wibble { Wobble }"),
+        r#"
+import wibble
+
+fn wibble() { Wobble }
+"#
+    );
+}
+
+#[test]
+fn unknown_type_constructor_with_existing_import_without_alias() {
+    assert_module_error!(
+        ("dependency", "wibble", "pub type Wibble { Wobble }"),
+        r#"
+import wibble
+
+fn wibble() { Wobble }
+"#
+    );
+}
+
+/* TODO: Enhance arity detection for type constructors
+#[test]
+fn unknown_type_constructor_with_wrong_arity_without_existing_import_has_no_hint() {
+    assert_module_error!(
+        ("dependency", "wibble", "pub type Wibble { Wobble }"),
+        r#"
+fn wibble() { Wobble(123) }
+"#
+    );
+}
+
+#[test]
+fn unknown_type_constructor_with_wrong_arity_with_existing_import_has_no_hint() {
+    assert_module_error!(
+        ("dependency", "wibble", "pub type Wibble { Wobble }"),
+        r#"
+import wibble
+
+fn wibble() { Wobble(123) }
+"#
+    );
+}*/
+
+#[test]
+fn unknown_value_without_existing_import_has_no_hint() {
+    assert_module_error!(
+        ("dependency", "wibble", "pub const wib = 123"),
+        r#"
+fn wibble() { wib }
+"#
+    );
+}
+
+#[test]
+fn unknown_value_with_existing_import_has_no_hint() {
+    assert_module_error!(
+        ("dependency", "wibble", "pub const wib = 123"),
+        r#"
+import wibble
+
+fn wibble() { wib }
+"#
+    );
+}

@@ -1,6 +1,7 @@
 use std::{collections::HashSet, iter, sync::Arc};
 
 use ecow::{EcoString, eco_format};
+
 use gleam_core::{
     Error, STDLIB_PACKAGE_NAME,
     analyse::Inferred,
@@ -33,8 +34,10 @@ use vec1::{Vec1, vec1};
 use super::{
     TextEdits,
     compiler::LspProjectCompiler,
-    edits,
-    edits::{add_newlines_after_import, get_import_edit, position_of_first_definition_if_import},
+    edits::{
+        add_import_with_unqualified, add_newlines_after_import, add_unqualified_import,
+        get_import_edit, insert_unqualified_import, position_of_first_definition_if_import,
+    },
     engine::{overlaps, within},
     files::FileSystemProxy,
     reference::{FindVariableReferences, VariableReferenceKind},
@@ -1200,6 +1203,158 @@ fn suggest_imports(
     }
 }
 
+pub fn code_action_import_module_for_type_or_value(
+    module: &Module,
+    line_numbers: &LineNumbers,
+    params: &CodeActionParams,
+    error: &Option<Error>,
+    actions: &mut Vec<CodeAction>,
+) {
+    let uri = &params.text_document.uri;
+    let Some(Error::Type { errors, .. }) = error else {
+        return;
+    };
+
+    let missing_imports = errors
+        .into_iter()
+        .filter_map(|e| match e {
+            type_::Error::UnknownType {
+                location,
+                suggestions,
+                name,
+                ..
+            } => suggest_unqualified_imports(*location, suggestions)
+                .map(|(location, suggestions)| (location, suggestions, name, ast::Layer::Type)),
+            type_::Error::UnknownVariable {
+                location,
+                suggestions,
+                name,
+                ..
+            } => suggest_unqualified_imports(*location, suggestions)
+                .map(|(location, suggestions)| (location, suggestions, name, ast::Layer::Value)),
+            _ => None,
+        })
+        .collect_vec();
+
+    if missing_imports.is_empty() {
+        return;
+    }
+
+    let first_def_pos_if_import = position_of_first_definition_if_import(module, line_numbers);
+    let first_is_import = first_def_pos_if_import.is_some();
+    let import_location = first_def_pos_if_import.unwrap_or_default();
+
+    let after_import_newlines =
+        add_newlines_after_import(import_location, first_is_import, line_numbers, &module.code);
+
+    for (location, suggestions, name, layer) in missing_imports {
+        let range = src_span_to_lsp_range(location, line_numbers);
+        if !overlaps(params.range, range) {
+            continue;
+        }
+
+        for suggestion in suggestions {
+            let (edits, title) = match suggestion {
+                ModuleSuggestion::Importable(module_name) => (
+                    vec![
+                        get_import_edit(import_location, module_name, &after_import_newlines),
+                        TextEdit {
+                            range: Range {
+                                start: range.start,
+                                end: range.start,
+                            },
+                            new_text: suggestion.last_name_component().to_string() + ".",
+                        },
+                    ],
+                    &format!("Import `{module_name}` and qualify it"),
+                ),
+                ModuleSuggestion::Imported(module_name) => {
+                    let matching_import =
+                        module.ast.definitions.imports.iter().find_map(|import| {
+                            if &import.module == module_name {
+                                Some(import)
+                            } else {
+                                None
+                            }
+                        });
+
+                    let import = matching_import.expect("Couldn't find matching import");
+
+                    (
+                        vec![TextEdit {
+                            range: Range {
+                                start: range.start,
+                                end: range.start,
+                            },
+                            new_text: import.used_name().unwrap_or(name.clone()).to_string() + ".",
+                        }],
+                        &format!(
+                            "Qualify as `{}.{}`",
+                            import
+                                .used_name()
+                                .unwrap_or(suggestion.last_name_component().into()),
+                            name
+                        ),
+                    )
+                }
+            };
+
+            CodeActionBuilder::new(title)
+                .kind(CodeActionKind::QUICKFIX)
+                .changes(uri.clone(), edits)
+                .preferred(true)
+                .push_to(actions);
+
+            let (edit, title) = match suggestion {
+                ModuleSuggestion::Importable(module_name) => (
+                    add_import_with_unqualified(
+                        import_location,
+                        module_name,
+                        name,
+                        layer,
+                        &after_import_newlines,
+                    ),
+                    &format!("Import `{name}` from `{module_name}`"),
+                ),
+                ModuleSuggestion::Imported(module_name) => {
+                    let mut matching_import = None;
+
+                    for import in &module.ast.definitions.imports {
+                        if &import.module == module_name {
+                            matching_import = Some(import);
+                            break;
+                        }
+                    }
+
+                    let import = matching_import.expect("Couldn't find matching import");
+
+                    (
+                        add_unqualified_import(name, layer, module, import, line_numbers),
+                        &format!("Import `{name}` from `{module_name}`"),
+                    )
+                }
+            };
+
+            CodeActionBuilder::new(title)
+                .kind(CodeActionKind::QUICKFIX)
+                .changes(uri.clone(), vec![edit])
+                .preferred(true)
+                .push_to(actions);
+        }
+    }
+}
+
+fn suggest_unqualified_imports(
+    location: SrcSpan,
+    suggestions: &[ModuleSuggestion],
+) -> Option<(SrcSpan, &[ModuleSuggestion])> {
+    if suggestions.is_empty() {
+        None
+    } else {
+        Some((location, suggestions))
+    }
+}
+
 pub fn code_action_add_missing_patterns(
     module: &Module,
     line_numbers: &LineNumbers,
@@ -1983,7 +2138,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
         if is_imported {
             return;
         }
-        let (insert_pos, new_text) = edits::insert_unqualified_import(
+        let (insert_pos, new_text) = insert_unqualified_import(
             import,
             &self.module.code,
             self.qualified_constructor.constructor_import(),
