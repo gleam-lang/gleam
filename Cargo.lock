@@ -1094,6 +1094,7 @@ dependencies = [
  "hexpm",
  "hostname",
  "http",
+ "http-serde",
  "ignore",
  "im",
  "insta",
@@ -1268,10 +1269,11 @@ checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 
 [[package]]
 name = "hexpm"
-version = "5.1.1"
+version = "1.14.0"
 dependencies = [
  "base16",
  "bytes",
+ "ecow",
  "flate2",
  "http",
  "http-auth-basic",
@@ -1358,6 +1360,16 @@ dependencies = [
  "http",
  "http-body",
  "pin-project-lite",
+]
+
+[[package]]
+name = "http-serde"
+version = "2.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f056c8559e3757392c8d091e796416e4649d8e49e88b8d76df6c002f05027fd"
+dependencies = [
+ "http",
+ "serde",
 ]
 
 [[package]]

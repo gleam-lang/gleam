@@ -137,7 +137,11 @@ pub fn global_package_cache_package_tarball(checksum: &Base16Checksum) -> Utf8Pa
     global_packages_cache().join(format!("{}.tar", checksum.to_string()))
 }
 
-pub fn global_hexpm_credentials_path() -> Utf8PathBuf {
+pub fn global_hexpm_oauth_credentials_path() -> Utf8PathBuf {
+    global_hexpm_cache().join("credentials.toml")
+}
+
+pub fn global_hexpm_legacy_credentials_path() -> Utf8PathBuf {
     global_hexpm_cache().join("credentials")
 }
 

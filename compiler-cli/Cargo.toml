@@ -35,22 +35,22 @@ toml_edit = "0"
 fslock = "0"
 # Provides a way to determine if two files are the same using filesystem node ids
 same-file = "1"
-# Open generated docs in browser
-opener = "0"
 
-camino = { workspace = true, features = ["serde1"] }
 async-trait.workspace = true
 base16.workspace = true
+camino = { workspace = true, features = ["serde1"] }
 debug-ignore.workspace = true
 ecow.workspace = true
 flate2.workspace = true
 futures.workspace = true
 hexpm = { path = "../hexpm" }
 http.workspace = true
+http-serde.workspace = true
 im.workspace = true
 itertools.workspace = true
 lsp-server.workspace = true
 lsp-types.workspace = true
+opener.workspace = true
 regex.workspace = true
 serde.workspace = true
 serde_json.workspace = true

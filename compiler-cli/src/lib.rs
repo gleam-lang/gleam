@@ -442,7 +442,10 @@ enum Hex {
     /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
     ///
     #[command(verbatim_doc_comment)]
-    Unretire { package: String, version: String },
+    Unretire {
+        package: String,
+        version: String,
+    },
 
     /// Revert a release from Hex
     ///
@@ -463,7 +466,6 @@ enum Hex {
     #[command(subcommand)]
     Owner(Owner),
 
-    /// Authenticate with Hex
     Authenticate,
 }
 
