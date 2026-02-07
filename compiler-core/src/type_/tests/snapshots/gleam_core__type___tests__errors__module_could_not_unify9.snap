@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 771
 expression: "fn main() { let assert [1, 2, ..x]: List(String) = [1,2,3] x }"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 fn main() { let assert [1, 2, ..x]: List(String) = [1,2,3] x }

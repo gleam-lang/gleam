@@ -319,7 +319,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         for (pattern, subject) in multi_pattern.into_iter().zip(subjects) {
             let subject_variable = Self::subject_variable(subject);
 
-            let pattern = self.unify(pattern, subject.type_(), subject_variable);
+            let pattern = self.unify(pattern, subject.type_(), subject_variable, None);
             typed_multi.push(pattern);
         }
 
@@ -332,10 +332,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         &mut self,
         pattern: UntypedPattern,
         subject: &TypedExpr,
+        annotation_type: Option<Arc<Type>>,
     ) -> TypedPattern {
         let subject_variable = Self::subject_variable(subject);
-
-        let typed_pattern = self.unify(pattern, subject.type_(), subject_variable);
+        let subject_type = subject.type_();
+        let typed_pattern = self.unify(pattern, subject_type, subject_variable, annotation_type);
         self.register_variables();
         typed_pattern
     }
@@ -487,7 +488,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             .into_iter()
             .map(|option| {
                 analyse::infer_bit_array_option(option, |value, type_| {
-                    Ok(self.unify(value, type_, None))
+                    Ok(self.unify(value, type_, None, None))
                 })
             })
             .try_collect()
@@ -602,7 +603,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             | Pattern::Invalid { .. } => segment_type,
         };
 
-        let typed_value = self.unify(*segment.value, type_.clone(), None);
+        let typed_value = self.unify(*segment.value, type_.clone(), None, None);
 
         match &typed_value {
             // We can't directly match on the contents of a `Box`, so we must
@@ -671,6 +672,18 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         // in the inner scope, we can infer that the `some_wibble` variable is the `Wibble` variant
         //
         subject_variable: Option<EcoString>,
+        // An optional type annotation provided for the pattern.
+        //
+        // Example:
+        // ```gleam
+        // let assert [first, ..rest]: List(String) = numbers
+        // ```
+        //
+        // We pass `List(String)` annotation down so sub-patterns know
+        // that `first` must be a `String`. We still check `numbers`
+        // against its real inferred type and emit a mismatch if it is, say,
+        // `List(Int)`.
+        annotation_type: Option<Arc<Type>>,
     ) -> TypedPattern {
         match pattern {
             Pattern::Discard { name, location, .. } => {
@@ -680,7 +693,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     .discarded_names
                     .insert(name.clone(), location);
                 Pattern::Discard {
-                    type_,
+                    type_: annotation_type.unwrap_or_else(|| type_.clone()),
                     name,
                     location,
                 }
@@ -699,10 +712,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     Pattern::Invalid { location, type_ }
                 }
                 _ => {
-                    self.insert_variable(&name, type_.clone(), location, origin.clone());
+                    let variable_type = annotation_type.unwrap_or_else(|| type_.clone());
+                    self.insert_variable(&name, variable_type.clone(), location, origin.clone());
 
                     Pattern::Variable {
-                        type_,
+                        type_: variable_type,
                         name,
                         location,
                         origin,
@@ -782,7 +796,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 pattern,
                 location,
             } => {
-                let pattern = self.unify(*pattern, type_, subject_variable);
+                let pattern_annotation = annotation_type.clone();
+                let pattern = self.unify(
+                    *pattern,
+                    type_.clone(),
+                    subject_variable,
+                    pattern_annotation,
+                );
 
                 if pattern.is_discard() {
                     self.problems.warning(Warning::UnusedDiscardPattern {
@@ -790,9 +810,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         name: name.clone(),
                     });
                 }
+                let assigned_type = annotation_type.unwrap_or_else(|| pattern.type_().clone());
                 self.insert_variable(
                     &name,
-                    pattern.type_().clone(),
+                    assigned_type.clone(),
                     location,
                     VariableOrigin {
                         syntax: VariableSyntax::AssignmentPattern,
@@ -859,20 +880,45 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 self.environment,
             ) {
                 Some(arguments) => {
-                    let type_ = arguments
+                    let element_type = arguments
                         .first()
                         .expect("Failed to get type argument of List")
                         .clone();
+                    let list_type = list(element_type.clone());
+                    let annotation_element_type = annotation_type.as_ref().and_then(|annotation| {
+                        annotation
+                            .get_app_arguments(
+                                Publicity::Public,
+                                PRELUDE_PACKAGE_NAME,
+                                PRELUDE_MODULE_NAME,
+                                "List",
+                                1,
+                                self.environment,
+                            )
+                            .and_then(|arguments| arguments.into_iter().next())
+                    });
                     let elements = elements
                         .into_iter()
-                        .map(|element| self.unify(element, type_.clone(), None))
+                        .map(|element| {
+                            self.unify(
+                                element,
+                                element_type.clone(),
+                                None,
+                                annotation_element_type.clone(),
+                            )
+                        })
                         .collect();
-                    let type_ = list(type_);
 
                     let tail = tail.map(|tail| {
+                        let tail_annotation = annotation_type.clone();
                         Box::new(TailPattern {
                             location: tail.location,
-                            pattern: self.unify(tail.pattern, type_.clone(), None),
+                            pattern: self.unify(
+                                tail.pattern,
+                                list_type.clone(),
+                                None,
+                                tail_annotation,
+                            ),
                         })
                     });
 
@@ -880,7 +926,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         location,
                         elements,
                         tail,
-                        type_,
+                        type_: list_type,
                     }
                 }
 
@@ -912,10 +958,22 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         return Pattern::Invalid { location, type_ };
                     }
 
+                    let annotation_elements = annotation_type.as_ref().and_then(|annotation| {
+                        match collapse_links(annotation.clone()).deref() {
+                            Type::Tuple { elements } => Some(elements.clone()),
+                            _ => None,
+                        }
+                    });
                     let elements = elements
                         .into_iter()
                         .zip(type_elements)
-                        .map(|(pattern, type_)| self.unify(pattern, type_.clone(), None))
+                        .enumerate()
+                        .map(|(index, (pattern, type_))| {
+                            let annotation = annotation_elements
+                                .as_ref()
+                                .and_then(|elements| elements.get(index).cloned());
+                            self.unify(pattern, type_.clone(), None, annotation)
+                        })
                         .collect();
                     Pattern::Tuple { elements, location }
                 }
@@ -925,10 +983,22 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         .map(|_| self.environment.new_unbound_var())
                         .collect();
                     self.unify_types(tuple(elements_types.clone()), type_, location);
+                    let annotation_elements = annotation_type.as_ref().and_then(|annotation| {
+                        match collapse_links(annotation.clone()).deref() {
+                            Type::Tuple { elements } => Some(elements.clone()),
+                            _ => None,
+                        }
+                    });
                     let elements = elements
                         .into_iter()
                         .zip(elements_types)
-                        .map(|(pattern, type_)| self.unify(pattern, type_, None))
+                        .enumerate()
+                        .map(|(index, (pattern, type_))| {
+                            let annotation = annotation_elements
+                                .as_ref()
+                                .and_then(|elements| elements.get(index).cloned());
+                            self.unify(pattern, type_, None, annotation)
+                        })
                         .collect();
                     Pattern::Tuple { elements, location }
                 }
@@ -1311,7 +1381,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     .cloned()
                     .unwrap_or_else(|| self.environment.new_unbound_var());
 
-                let value = self.unify(value, type_, None);
+                let annotation = Some(type_.clone());
+                let value = self.unify(value, type_, None, annotation);
                 CallArg {
                     value,
                     location,

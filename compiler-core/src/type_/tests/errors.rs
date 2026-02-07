@@ -769,6 +769,37 @@ fn module_could_not_unify6() {
 }
 
 #[test]
+fn module_could_not_unify_let_binding_annotation_follow_up1() {
+    assert_module_error!(
+        "
+fn main() {
+  let x: String = 5
+  let y: Int = x
+  let z: String = x
+}
+"
+    );
+}
+
+#[test]
+fn module_could_not_unify_let_binding_annotation_follow_up2() {
+    assert_module_error!(
+        "
+fn main() {
+    let assert #(
+        a, 
+        [[_, ..] as b, ..], 
+        _ as c
+    ): #(String, List(List(Int)), String) = #(1, [[\"Hello\"]], 3)
+
+    let d: String = a <> c
+    let e: List(Int) = [0, ..b]
+}
+"
+    );
+}
+
+#[test]
 fn module_could_not_unify7() {
     assert_module_error!("fn main() { let assert 5 = \"\" }");
 }
