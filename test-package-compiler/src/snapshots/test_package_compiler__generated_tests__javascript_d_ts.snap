@@ -27,7 +27,7 @@ import type * as _ from "./gleam.d.mts";
 
 export class Woo extends _.CustomType {}
 export function Wibble$Woo(): Wibble$;
-export function Wibble$isWoo(value: Wibble$): boolean;
+export function Wibble$isWoo(value: any): value is Wibble$;
 
 export type Wibble$ = Woo;
 

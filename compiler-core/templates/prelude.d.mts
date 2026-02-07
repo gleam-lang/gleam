@@ -31,8 +31,8 @@ export const List: {
 }
 export function List$Empty<T>(): List<T>;
 export function List$NonEmpty<T>(head: T, tail: List<T>): List<T>;
-export function List$isEmpty<T>(list: List<T>): boolean;
-export function List$isNonEmpty<T>(list: List<T>): boolean;
+export function List$isEmpty(list: any): list is List<unknown>;
+export function List$isNonEmpty(list: any): list is List<unknown>;
 export function List$NonEmpty$first<T>(list: List<T>): T | undefined;
 export function List$NonEmpty$rest<T>(list: List<T>): List<T> | undefined;
 /** @deprecated */
@@ -72,6 +72,8 @@ export function BitArray$BitArray(
   bitSize: number,
   bitOffset: number,
 ): BitArray;
+export function BitArray$isBitArray(value: any): value is BitArray;
+export function BitArray$BitArray$data(value: BitArray): DataView;
 
 export interface UtfCodepoint {
   readonly __gleam: unique symbol;
@@ -95,8 +97,8 @@ export const Result: {
 }
 export function Result$Ok<T, E>(value: T): Result<T, E>;
 export function Result$Error<T, E>(error: E): Result<T, E>;
-export function Result$isError<T, E>(result: Result<T, E>): boolean;
-export function Result$isOk<T, E>(result: Result<T, E>): boolean;
+export function Result$isError(data: any): data is Result<unknown, unknown>;
+export function Result$isOk(data: any): data is Result<unknown, unknown>;
 export function Result$Ok$0<T, E>(result: Result<T, E>): T | undefined;
 export function Result$Error$0<T, E>(result: Result<T, E>): E | undefined;
 /** @deprecated */

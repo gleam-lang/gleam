@@ -44,8 +44,8 @@ export function TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveral
   b: string,
 ): TypeWithALongNameAndSeveralArguments$;
 export function TypeWithALongNameAndSeveralArguments$isTypeWithALongNameAndSeveralArguments(
-  value: TypeWithALongNameAndSeveralArguments$,
-): boolean;
+  value: any,
+): value is TypeWithALongNameAndSeveralArguments$;
 export function TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$0(value: TypeWithALongNameAndSeveralArguments$): string;
 export function TypeWithALongNameAndSeveralArguments$TypeWithALongNameAndSeveralArguments$1(
   value: TypeWithALongNameAndSeveralArguments$,

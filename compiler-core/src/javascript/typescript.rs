@@ -510,12 +510,8 @@ impl<'a> TypeScriptGenerator<'a> {
             type_name_with_generics,
             type_parameters,
         );
-        let variant_check_definition = self.variant_check_definition(
-            constructor,
-            type_name,
-            type_name_with_generics,
-            type_parameters,
-        );
+        let variant_check_definition =
+            self.variant_check_definition(constructor, type_name, type_parameters);
         let fields_definition = self.variant_fields_definition(
             constructor,
             type_name,
@@ -657,7 +653,6 @@ impl<'a> TypeScriptGenerator<'a> {
         &self,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
-        type_name_with_generics: &Document<'a>,
         type_parameters: &'a [Arc<Type>],
     ) -> Document<'a> {
         let function_name = eco_format!(
@@ -665,16 +660,28 @@ impl<'a> TypeScriptGenerator<'a> {
             variant_name = constructor.name
         )
         .to_doc();
-
-        docvec![
+        let mut document = docvec![
             "export function ",
             name_with_generics(function_name, type_parameters),
             "(",
-            docvec![break_("", "",), "value: ", type_name_with_generics.clone(),].nest(INDENT),
+            docvec![break_("", "",), "value: any"].nest(INDENT),
             break_(",", ""),
-            "): boolean;",
-        ]
-        .group()
+            "): value is ",
+            type_name,
+            "$",
+        ];
+        if !type_parameters.is_empty() {
+            for i in 0..type_parameters.len() {
+                if i == 0 {
+                    document = document.append("<unknown");
+                } else {
+                    document = document.append(", unknown");
+                }
+            }
+            document = document.append('>');
+        };
+        document = document.append(';');
+        document.group()
     }
 
     fn variant_fields_definition(
