@@ -4520,6 +4520,8 @@ impl<'a, 'b, IO> DecoderPrinter<'a, 'b, IO> {
             eco_format!("{module_name}.int")
         } else if type_.is_string() {
             eco_format!("{module_name}.string")
+        } else if type_.is_nil() {
+            eco_format!("{module_name}.success(Nil)")
         } else {
             match type_.tuple_types() {
                 Some(types) => {
@@ -4914,21 +4916,24 @@ impl<'a> GenerateJsonEncoder<'a> {
             let RecordConstructor { name, .. } = constructor;
             let encoder =
                 self.constructor_encoder(mode, constructor, custom_type.name.clone(), 4)?;
-            let unpacking = if constructor.arguments.is_empty() {
-                ""
+            if constructor.arguments.is_empty() {
+                clauses.push(eco_format!("    {name} -> {encoder}"));
             } else {
-                &eco_format!(
-                    "({}:)",
-                    constructor
-                        .arguments
-                        .iter()
-                        .filter_map(|argument| {
-                            argument.label.as_ref().map(|(_location, label)| label)
+                let unpacking = constructor
+                    .arguments
+                    .iter()
+                    .filter_map(|argument| {
+                        argument.label.as_ref().map(|(_location, label)| {
+                            if is_nil_like(&argument.type_) {
+                                eco_format!("{}: _", label)
+                            } else {
+                                eco_format!("{}:", label)
+                            }
                         })
-                        .join(":, ")
-                )
-            };
-            clauses.push(eco_format!("    {name}{unpacking} -> {encoder}"));
+                    })
+                    .join(", ");
+                clauses.push(eco_format!("    {name}({unpacking}) -> {encoder}"));
+            }
         }
 
         let clauses = clauses.join("\n");
@@ -4985,6 +4990,21 @@ impl<'a> GenerateJsonEncoder<'a> {
 {fields},
 {indent}])"
         ))
+    }
+}
+
+/// When generating an encoder, we need to know when we can ignore the fields
+/// destructured from a constructor.
+/// If a field is of type `Nil` or is a tuple type composed entirely of `Nil`
+/// types, then we will never need to use the field in our encoder function.
+fn is_nil_like(type_: &Type) -> bool {
+    if type_.is_nil() {
+        return true;
+    }
+
+    match type_.tuple_types() {
+        Some(types) => types.iter().all(|type_| is_nil_like(type_)),
+        _ => false,
     }
 }
 
@@ -5082,6 +5102,12 @@ impl<'a, 'b> JsonEncoderPrinter<'a, 'b> {
             maybe_capture(eco_format!("{module_name}.int"))
         } else if type_.is_string() {
             maybe_capture(eco_format!("{module_name}.string"))
+        } else if type_.is_nil() {
+            if is_capture {
+                eco_format!("fn(_) {{ {module_name}.null() }}")
+            } else {
+                eco_format!("{module_name}.null()")
+            }
         } else {
             match type_.tuple_types() {
                 Some(types) => {
@@ -5091,21 +5117,31 @@ impl<'a, 'b> JsonEncoderPrinter<'a, 'b> {
                         (encoded_value, indent + 2)
                     };
 
-                    let encoders = types
-                        .iter()
-                        .enumerate()
-                        .map(|(index, type_)| {
-                            self.encoder_for(&format!("{tuple}.{index}"), type_, new_indent)
-                        })
-                        .collect_vec();
+                    // We need to iterate over all of the tuple's fields
+                    // to obtain an encoder for each one, so we reuse the
+                    // iteration to check whether this tuple can be ignored
+                    // in the encoder without calling `is_nil_like`.
+                    let mut encoders = Vec::new();
+                    let all_values_are_nil = types.iter().enumerate().fold(
+                        true,
+                        |all_values_are_nil, (index, type_)| {
+                            encoders.push(self.encoder_for(
+                                &format!("{tuple}.{index}"),
+                                type_,
+                                new_indent,
+                            ));
+                            all_values_are_nil && is_nil_like(type_)
+                        },
+                    );
 
                     if is_capture {
                         eco_format!(
-                            "fn(value) {{
+                            "fn({value}) {{
 {indent}  {module_name}.preprocessed_array([
 {indent}    {encoders},
 {indent}  ])
 {indent}}}",
+                            value = if all_values_are_nil { "_" } else { "value" },
                             indent = " ".repeat(indent),
                             encoders = encoders.join(&format!(",\n{}", " ".repeat(new_indent))),
                         )
@@ -5137,7 +5173,7 @@ impl<'a, 'b> JsonEncoderPrinter<'a, 'b> {
                             eco_format!(
                                 "case {encoded_value} {{
 {indent}  {none} -> {module_name}.null()
-{indent}  {some}(value) -> {encoder}
+{indent}  {some}({value}) -> {encoder}
 {indent}}}",
                                 indent = " ".repeat(indent),
                                 none = self
@@ -5146,6 +5182,7 @@ impl<'a, 'b> JsonEncoderPrinter<'a, 'b> {
                                 some = self
                                     .printer
                                     .print_constructor(&"gleam/option".into(), &"Some".into()),
+                                value = if is_nil_like(some) { "_" } else { "value" },
                                 encoder = self.encoder_for("value", some, indent + 2)
                             )
                         }

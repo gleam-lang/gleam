@@ -102,7 +102,7 @@ fn wobble_decoder() -> decode.Decoder(Wobble) {
       use bool <- decode.field("bool", decode.bool)
       use list <- decode.field("list", decode.list(decode.int))
       use string <- decode.field("string", decode.string)
-      use nil <- decode.field("nil", todo as "Decoder for Nil")
+      use nil <- decode.field("nil", decode.success(Nil))
       use option <- decode.field("option", decode.optional(decode.string))
       use dict <- decode.field("dict", decode.dict(decode.int, decode.bool))
       decode.success(Wobble(bit_array:, int:, float:, bool:, list:, string:, nil:, option:, dict:))
