@@ -1734,12 +1734,12 @@ fn type_variable_ids_in_constructors_are_shared() {
     let expected = HashMap::from([(
         "SomeType".into(),
         TypeVariantConstructors {
-            type_parameters_ids: vec![1, 2, 0],
+            type_parameters_ids: vec![0, 1, 2],
             variants: vec![TypeValueConstructor {
                 name: "One".into(),
                 parameters: vec![
                     TypeValueConstructorField {
-                        type_: type_::generic_var(0),
+                        type_: type_::generic_var(2),
                         label: None,
                         documentation: Some("Here's some documentation".into()),
                     },
@@ -1749,7 +1749,7 @@ fn type_variable_ids_in_constructors_are_shared() {
                         documentation: None,
                     },
                     TypeValueConstructorField {
-                        type_: type_::tuple(vec![type_::generic_var(1), type_::generic_var(2)]),
+                        type_: type_::tuple(vec![type_::generic_var(0), type_::generic_var(1)]),
                         label: None,
                         documentation: None,
                     },
