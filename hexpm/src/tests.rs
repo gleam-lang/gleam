@@ -912,10 +912,10 @@ fn make_request_base_trailing_slash_is_optional() {
     let suffix = "suffix";
     let expect = "/path/suffix";
 
-    let slash = make_request(slash, http::Method::GET, suffix, None);
+    let slash = make_request(slash, http::Method::GET, suffix);
     assert_eq!(slash.uri_ref().unwrap().path(), expect);
 
-    let no_slash = make_request(no_slash, http::Method::GET, suffix, None);
+    let no_slash = make_request(no_slash, http::Method::GET, suffix);
     assert_eq!(no_slash.uri_ref().unwrap().path(), expect);
 }
 

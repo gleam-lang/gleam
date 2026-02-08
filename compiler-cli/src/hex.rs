@@ -10,6 +10,23 @@ use gleam_core::{
 
 pub use auth::HexAuthentication;
 
+/// Prepare credentials for user for write actions.
+/// This will prompt for a one-time-password if needed.
+pub fn write_credentials(
+    credentials: &hexpm::Credentials,
+) -> Result<hexpm::WriteActionCredentials> {
+    match credentials {
+        hexpm::Credentials::ApiKey(key) => Ok(hexpm::WriteActionCredentials::ApiKey(key.clone())),
+        hexpm::Credentials::OAuthAccessToken(token) => {
+            let one_time_password = cli::ask("Enter your MFA code")?.into();
+            Ok(hexpm::WriteActionCredentials::OAuthAccessToken {
+                access_token: token.clone(),
+                one_time_password,
+            })
+        }
+    }
+}
+
 pub fn retire(
     package: String,
     version: String,
@@ -19,7 +36,7 @@ pub fn retire(
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let config = hexpm::Config::new();
     let http = HttpClient::new();
-    let api_key =
+    let credentials =
         HexAuthentication::new(&runtime, &http, config.clone()).get_or_create_api_credentials()?;
 
     runtime.block_on(hex::retire_release(
@@ -27,7 +44,7 @@ pub fn retire(
         &version,
         reason,
         message.as_deref(),
-        &api_key,
+        &write_credentials(&credentials)?,
         &config,
         &http,
     ))?;
@@ -39,11 +56,15 @@ pub fn unretire(package: String, version: String) -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let http = HttpClient::new();
     let config = hexpm::Config::new();
-    let api_key =
+    let credentials =
         HexAuthentication::new(&runtime, &http, config.clone()).get_or_create_api_credentials()?;
 
     runtime.block_on(hex::unretire_release(
-        &package, &version, &api_key, &config, &http,
+        &package,
+        &version,
+        &write_credentials(&credentials)?,
+        &config,
+        &http,
     ))?;
     cli::print_unretired(&package, &version);
     Ok(())
@@ -78,12 +99,17 @@ pub fn revert(
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let hex_config = hexpm::Config::new();
     let http = HttpClient::new();
-    let api_key = HexAuthentication::new(&runtime, &http, hex_config.clone())
+    let credentials = HexAuthentication::new(&runtime, &http, hex_config.clone())
         .get_or_create_api_credentials()?;
 
     // Revert release from API
-    let request = hexpm::api_revert_release_request(&package, &version, &api_key, &hex_config)
-        .map_err(Error::hex)?;
+    let request = hexpm::api_revert_release_request(
+        &package,
+        &version,
+        &write_credentials(&credentials)?,
+        &hex_config,
+    )
+    .map_err(Error::hex)?;
     let response = runtime.block_on(http.send(request))?;
     hexpm::api_revert_release_response(response).map_err(Error::hex)?;
 
