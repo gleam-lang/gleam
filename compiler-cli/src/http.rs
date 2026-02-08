@@ -30,6 +30,11 @@ impl HttpClient {
 #[async_trait]
 impl gleam_core::io::HttpClient for HttpClient {
     async fn send(&self, request: Request<Vec<u8>>) -> Result<Response<Vec<u8>>> {
+        tracing::debug!(
+            method = request.method().as_str(),
+            url = request.uri().to_string(),
+            "http-send",
+        );
         let request = request
             .try_into()
             .expect("Unable to convert HTTP request for use by reqwest library");
@@ -53,7 +58,10 @@ fn init_client() -> Result<&'static Client, Error> {
     }
 
     let certificate_path = match std::env::var("GLEAM_CACERTS_PATH") {
-        Ok(path) => path,
+        Ok(path) => {
+            tracing::trace!("Using GLEAM_CACERTS_PATH environment variable");
+            path
+        }
         Err(_) => {
             return Ok(REQWEST_CLIENT.get_or_init(|| {
                 Client::builder()
