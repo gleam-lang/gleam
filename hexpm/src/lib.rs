@@ -181,7 +181,10 @@ pub fn api_remove_api_key_response(response: http::Response<Vec<u8>>) -> Result<
     let (parts, body) = response.into_parts();
 
     match parts.status {
+        // Key was removed
         StatusCode::NO_CONTENT | StatusCode::OK => Ok(()),
+        // Key has already been removed
+        StatusCode::NOT_FOUND => Ok(()),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
         StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
         status => Err(ApiError::unexpected_response(status, body)),
