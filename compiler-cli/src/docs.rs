@@ -25,13 +25,18 @@ pub fn remove(package: String, version: String) -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let http = HttpClient::new();
     let hex_config = hexpm::Config::new();
-    let api_key = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
+    let credentials = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
         .get_or_create_api_credentials()?;
     let http = HttpClient::new();
 
     // Remove docs from API
-    let request = hexpm::api_remove_docs_request(&package, &version, &api_key, &hex_config)
-        .map_err(Error::hex)?;
+    let request = hexpm::api_remove_docs_request(
+        &package,
+        &version,
+        &crate::hex::write_credentials(&credentials)?,
+        &hex_config,
+    )
+    .map_err(Error::hex)?;
     let response = runtime.block_on(http.send(request))?;
     hexpm::api_remove_docs_response(response).map_err(Error::hex)?;
 
@@ -171,7 +176,7 @@ pub fn publish(paths: &ProjectPaths) -> Result<()> {
     let http = HttpClient::new();
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let hex_config = hexpm::Config::new();
-    let api_key = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
+    let credentials = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
         .get_or_create_api_credentials()?;
 
     // Reset the build directory so we know the state of the project
@@ -225,7 +230,7 @@ pub fn publish(paths: &ProjectPaths) -> Result<()> {
         &config.name,
         &config.version,
         archive,
-        &api_key,
+        &crate::hex::write_credentials(&credentials)?,
         &hex_config,
         &http,
     ))?;

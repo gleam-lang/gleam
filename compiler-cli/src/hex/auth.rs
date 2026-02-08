@@ -7,6 +7,7 @@ use gleam_core::{
     paths,
 };
 use hexpm::OAuthTokens;
+use sha2::Digest as _;
 
 pub const HEX_OAUTH_CLIENT_ID: &str = "877731e8-cb88-45e1-9b84-9214de7da421";
 
@@ -84,8 +85,10 @@ Press Enter to open {uri}",
             code = device_authorisation.user_code,
         );
 
-        let _ = std::io::stdin().read_line(&mut String::new()).unwrap();
-        if let Err(_) = opener::open_browser(uri) {
+        let _ = std::io::stdin()
+            .read_line(&mut String::new())
+            .expect("stdin read_line");
+        if opener::open_browser(uri).is_err() {
             println!("\nFailed to open the browser, please navigate to {uri}");
         }
 
@@ -119,11 +122,17 @@ Press Enter to open {uri}",
                 .map_err(|e| Error::FailedToEncryptLocalHexApiKey {
                 detail: e.to_string(),
             })?;
+
         let credentials = StoredOAuthCredentials {
             hexpm: StoredOAuthRepoCredentials {
                 api: self.hex_config.api_base.clone(),
                 repository: self.hex_config.repository_base.clone(),
                 refresh_token: encrypted_refresh_token,
+                refresh_token_hash: {
+                    let mut hasher = sha2::Sha256::new();
+                    hasher.update(tokens.refresh_token.as_bytes());
+                    base16::encode_lower(&hasher.finalize())
+                },
             },
         };
         let toml = toml::to_string(&credentials).expect("OAuth credentials TOML encoding");
@@ -165,7 +174,7 @@ It will be used to locally encrypt your Hex API tokens.
 
         let password = cli::ask_password(LOCAL_PASS_PROMPT)?;
         self.local_password = Some(password.clone());
-        return Ok(password);
+        Ok(password)
     }
 
     /// Get a token that can be used to authenticate with the Hex API.
@@ -183,7 +192,7 @@ It will be used to locally encrypt your Hex API tokens.
             return Ok(tokens.as_credentials());
         }
 
-        Ok(self.create_and_store_new_credentials_via_oauth()?)
+        self.create_and_store_new_credentials_via_oauth()
     }
 
     fn read_env_api_key() -> Result<Option<hexpm::Credentials>> {
@@ -275,7 +284,10 @@ struct StoredOAuthRepoCredentials {
     api: http::Uri,
     #[serde(with = "http_serde::uri")]
     repository: http::Uri,
+    /// An encrypted refresh token.
     refresh_token: String,
+    /// The hash of the token, so it can be revoked even if it cannot be ecrypted.
+    refresh_token_hash: String,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]

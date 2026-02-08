@@ -82,8 +82,9 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let http = HttpClient::new();
     let hex_config = hexpm::Config::new();
-    let api_key = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
+    let credentials = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
         .get_or_create_api_credentials()?;
+    let credentials = crate::hex::write_credentials(&credentials)?;
     let start = Instant::now();
     cli::print_publishing(&config.name, &config.version);
 
@@ -91,7 +92,7 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         package_tarball,
         config.version.to_string(),
         &config.name,
-        &api_key,
+        &credentials,
         &hex_config,
         replace,
         &http,
@@ -102,7 +103,7 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         &config.name,
         &config.version,
         docs_tarball,
-        &api_key,
+        &credentials,
         &hex_config,
         &http,
     ))?;

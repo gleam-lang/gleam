@@ -45,7 +45,7 @@ impl Config {
 
     fn api_request(&self, method: http::Method, path_suffix: &str) -> RequestBuilder {
         RequestBuilder {
-            builder: make_request(self.api_base.clone(), method, path_suffix, None)
+            builder: make_request(self.api_base.clone(), method, path_suffix)
                 .header("content-type", "application/json")
                 .header("accept", "application/json"),
         }
@@ -57,12 +57,10 @@ impl Config {
         path_suffix: &str,
         credentials: Option<&Credentials>,
     ) -> http::request::Builder {
-        make_request(
-            self.repository_base.clone(),
-            method,
-            path_suffix,
-            credentials,
-        )
+        RequestBuilder {
+            builder: make_request(self.repository_base.clone(), method, path_suffix),
+        }
+        .read_credentials(credentials)
     }
 }
 
@@ -133,7 +131,6 @@ fn make_request(
     base: http::Uri,
     method: http::Method,
     path_suffix: &str,
-    credentials: Option<&Credentials>,
 ) -> http::request::Builder {
     let mut parts = base.into_parts();
     parts.path_and_query = Some(
@@ -1298,4 +1295,37 @@ pub fn get_me_response(response: http::Response<Vec<u8>>) -> Result<Me, ApiError
 #[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
 pub struct Me {
     pub username: String,
+}
+
+/// Create a request to revoke an OAuth token.
+///
+pub fn revoke_oauth_token_by_hash_request(
+    refresh_token_hash: &str,
+    credentials: &WriteActionCredentials,
+    config: &Config,
+) -> http::Request<Vec<u8>> {
+    let body = json!({
+        "token_hash": refresh_token_hash,
+    })
+    .to_string()
+    .into_bytes();
+    config
+        .api_request(Method::GET, &format!("oauth/revoke_by_hash"))
+        .write_credentials(credentials)
+        .header("accept", "application/json")
+        .body(body)
+        .expect("api_get_package_release_request request")
+}
+
+/// Parse a response to revoke an OAuth token.
+///
+pub fn revoke_oauth_token_by_hash_response(
+    response: http::Response<Vec<u8>>,
+) -> Result<(), ApiError> {
+    let (parts, body) = response.into_parts();
+    match parts.status {
+        StatusCode::OK => (),
+        status => return Err(ApiError::unexpected_response(status, body)),
+    };
+    Ok(())
 }

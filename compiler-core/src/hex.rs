@@ -2,7 +2,7 @@ use camino::Utf8Path;
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
 use futures::future;
-use hexpm::{ApiError, Credentials, version::Version};
+use hexpm::{ApiError, WriteActionCredentials, version::Version};
 use tar::Archive;
 
 use crate::{
@@ -31,7 +31,7 @@ pub async fn publish_package<Http: HttpClient>(
     release_tarball: Vec<u8>,
     version: String,
     name: &str,
-    api_key: &Credentials,
+    api_key: &WriteActionCredentials,
     config: &hexpm::Config,
     replace: bool,
     http: &Http,
@@ -67,7 +67,7 @@ pub async fn publish_package<Http: HttpClient>(
 }
 
 pub async fn transfer_owner<Http: HttpClient>(
-    api_key: &Credentials,
+    api_key: &WriteActionCredentials,
     package_name: String,
     new_owner_username_or_email: String,
     config: &hexpm::Config,
@@ -115,7 +115,7 @@ pub async fn retire_release<Http: HttpClient>(
     version: &str,
     reason: RetirementReason,
     message: Option<&str>,
-    api_key: &Credentials,
+    api_key: &WriteActionCredentials,
     config: &hexpm::Config,
     http: &Http,
 ) -> Result<()> {
@@ -135,7 +135,7 @@ pub async fn retire_release<Http: HttpClient>(
 pub async fn unretire_release<Http: HttpClient>(
     package: &str,
     version: &str,
-    api_key: &Credentials,
+    api_key: &WriteActionCredentials,
     config: &hexpm::Config,
     http: &Http,
 ) -> Result<()> {
@@ -148,7 +148,7 @@ pub async fn unretire_release<Http: HttpClient>(
 pub async fn remove_api_key<Http: HttpClient>(
     hostname: &str,
     config: &hexpm::Config,
-    auth_key: &Credentials,
+    auth_key: &WriteActionCredentials,
     http: &Http,
 ) -> Result<()> {
     tracing::info!("Deleting API key from Hex");
@@ -315,7 +315,7 @@ pub async fn publish_documentation<Http: HttpClient>(
     name: &str,
     version: &Version,
     archive: Vec<u8>,
-    api_key: &Credentials,
+    api_key: &WriteActionCredentials,
     config: &hexpm::Config,
     http: &Http,
 ) -> Result<()> {
