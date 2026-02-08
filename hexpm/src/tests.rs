@@ -724,7 +724,7 @@ fn get_repository_tarball_response_bad_checksum() {
 
     assert_eq!(
         err.to_string(),
-        "the downloaded data did not have the expected checksum"
+        "The downloaded data did not have the expected checksum"
     );
 }
 
@@ -735,7 +735,7 @@ fn get_repository_tarball_response_not_found() {
     let response = make_response(404, vec![]);
     let err = crate::repository_get_package_tarball_response(response, &checksum).unwrap_err();
 
-    assert_eq!(err.to_string(), "resource was not found");
+    assert_eq!(err.to_string(), "Resource was not found");
 }
 
 #[test]
