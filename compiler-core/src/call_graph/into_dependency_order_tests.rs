@@ -103,8 +103,7 @@ fn parse_and_order(
 fn empty() {
     let functions = [];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         Vec::<Vec<EcoString>>::new()
     );
 }
@@ -119,8 +118,7 @@ fn no_deps() {
         ("e", [].as_slice(), r#"todo"#),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["a"], vec!["b"], vec!["c"], vec!["d"], vec!["e"]]
     );
 }
@@ -133,8 +131,7 @@ fn one_dep() {
         ("c", [].as_slice(), r#"0"#),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["a"], vec!["c"], vec!["b"]]
     );
 }
@@ -147,8 +144,7 @@ fn unknown_vars() {
         ("c", [].as_slice(), r#"Ok"#),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["a"], vec!["b"], vec!["c"]]
     );
 }
@@ -161,8 +157,7 @@ fn calling_function() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["c"], vec!["b"], vec!["a"]]
     );
 }
@@ -175,8 +170,7 @@ fn ref_in_call_argument() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["c"], vec!["a"]]
     );
 }
@@ -189,8 +183,7 @@ fn sequence() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["c"], vec!["a"]]
     );
 }
@@ -203,8 +196,7 @@ fn tuple() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["c"], vec!["a"]]
     );
 }
@@ -217,8 +209,7 @@ fn pipeline() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["c"], vec!["a"]]
     );
 }
@@ -231,8 +222,7 @@ fn list() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["c"], vec!["a"]]
     );
 }
@@ -245,8 +235,7 @@ fn list_spread() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["c"], vec!["a"]]
     );
 }
@@ -259,8 +248,7 @@ fn record_access() {
         ("c", [].as_slice(), r#"123"#),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["a"], vec!["b"], vec!["c"]]
     );
 }
@@ -273,8 +261,7 @@ fn binop() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["a"], vec!["c"]]
     );
 }
@@ -287,8 +274,7 @@ fn bit_arrays() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["c"], vec!["a"]]
     );
 }
@@ -301,8 +287,7 @@ fn tuple_index() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["a"], vec!["c"]]
     );
 }
@@ -315,8 +300,7 @@ fn record_update() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["c"], vec!["a"]]
     );
 }
@@ -329,8 +313,7 @@ fn negate() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["c"], vec!["a"]]
     );
 }
@@ -343,8 +326,7 @@ fn use_() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["c"], vec!["a"]]
     );
 }
@@ -357,8 +339,7 @@ fn use_shadowing() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["a"], vec!["b"], vec!["c"]]
     );
 }
@@ -371,8 +352,7 @@ fn fn_argument_shadowing() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["c"], vec!["a"]]
     );
 }
@@ -385,8 +365,7 @@ fn fn_argument_shadowing_then_not() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["c"], vec!["a"]]
     );
 }
@@ -399,8 +378,7 @@ fn let_var() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["a"], vec!["c"]]
     );
 }
@@ -409,8 +387,7 @@ fn let_var() {
 fn pattern_int() {
     let functions = [("a", [].as_slice(), r#"{ let 1 = x }"#)];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["a"]]
     );
 }
@@ -419,8 +396,7 @@ fn pattern_int() {
 fn pattern_float() {
     let functions = [("a", [].as_slice(), r#"{ let 1.0 = x }"#)];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["a"]]
     );
 }
@@ -429,8 +405,7 @@ fn pattern_float() {
 fn pattern_string() {
     let functions = [("a", [].as_slice(), r#"{ let "1.0" = x }"#)];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["a"]]
     );
 }
@@ -439,8 +414,7 @@ fn pattern_string() {
 fn pattern_underscore() {
     let functions = [("a", [].as_slice(), r#"{ let _ = x }"#)];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["a"]]
     );
 }
@@ -453,8 +427,7 @@ fn pattern_concat() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["a"], vec!["c"]]
     );
 }
@@ -467,8 +440,7 @@ fn pattern_tuple() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["a"], vec!["c"]]
     );
 }
@@ -481,8 +453,7 @@ fn pattern_list() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["a"], vec!["c"]]
     );
 }
@@ -495,8 +466,7 @@ fn pattern_list_spread() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["a"], vec!["c"]]
     );
 }
@@ -513,8 +483,7 @@ fn pattern_bit_array_segment_size_var_usage() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["c"], vec!["a"]]
     );
 }
@@ -527,8 +496,7 @@ fn pattern_assign() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["c"], vec!["a"]]
     );
 }
@@ -541,8 +509,7 @@ fn pattern_constructor() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["c"], vec!["a"]]
     );
 }
@@ -555,8 +522,7 @@ fn scope_reset() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["a"], vec!["c"]]
     );
 }
@@ -569,8 +535,7 @@ fn case_subject() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["a"], vec!["c"]]
     );
 }
@@ -583,8 +548,7 @@ fn case_subjects() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["c"], vec!["a"]]
     );
 }
@@ -597,8 +561,7 @@ fn case_pattern_shadow() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["a"], vec!["b"], vec!["c"]]
     );
 }
@@ -611,8 +574,7 @@ fn case_use_in_clause() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["a"], vec!["c"]]
     );
 }
@@ -625,8 +587,7 @@ fn case_clause_doesnt_shadow_later_clauses() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["a"], vec!["c"]]
     );
 }
@@ -639,8 +600,7 @@ fn case_clause_doesnt_shadow_after() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["a"], vec!["c"]]
     );
 }
@@ -653,8 +613,7 @@ fn guard() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["a"], vec!["c"]]
     );
 }
@@ -671,8 +630,7 @@ fn big_guard() {
         ("c", [].as_slice(), "1"),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["a"], vec!["c"]]
     );
 }
@@ -702,9 +660,14 @@ fn more_complex_cycle() {
         ("a3", [].as_slice(), r#"{ a1 }"#),
     ];
     assert_eq!(
+<<<<<<< HEAD
         parse_and_order(functions.as_slice(), [].as_slice())
             .expect("Expected parse_and_order to succeed"),
         vec![vec!["a2", "a3", "a1"]]
+=======
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
+        vec![vec!["a2", "a1"], vec!["a3"]]
+>>>>>>> 4d3e8326f (chore: resolve comment issue)
     );
 }
 
@@ -715,8 +678,7 @@ fn function_argument_shadowing() {
         ("b", [].as_slice(), r#"Nil"#),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["a"], vec!["b"]]
     );
 }
@@ -729,8 +691,7 @@ fn constants_and_functions() {
     ];
     let constants = [("d", r#"c"#), ("c", r#"a"#)];
     assert_eq!(
-        parse_and_order(functions.as_slice(), constants.as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), constants.as_slice()).unwrap(),
         vec![vec!["a"], vec!["c"], vec!["b"], vec!["d"]]
     );
 }
@@ -743,8 +704,7 @@ fn bug_2275() {
         ("two", [].as_slice(), r#"two"#),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["two"], vec!["one"]]
     );
 }
@@ -756,8 +716,7 @@ fn let_assert_message() {
         ("b", [].as_slice(), r#"a()"#),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b", "a"]]
     );
 }
@@ -769,8 +728,7 @@ fn assert_subject() {
         ("b", [].as_slice(), r#"a()"#),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b", "a"]]
     );
 }
@@ -782,8 +740,7 @@ fn assert_message() {
         ("b", [].as_slice(), r#"a()"#),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice())
-            .expect("Expected parse_and_order to succeed"),
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b", "a"]]
     );
 }
