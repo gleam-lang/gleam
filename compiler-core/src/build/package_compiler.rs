@@ -332,24 +332,6 @@ where
             };
             self.io
                 .write_bytes(&cache_files.meta_path, &info.to_binary())?;
-
-            let cache_inline = bincode::serde::encode_to_vec(
-                &module.ast.type_info.inline_functions,
-                bincode::config::legacy(),
-            )
-            .expect("Failed to serialise inline functions");
-            self.io.write_bytes(&cache_files.inline_path, &cache_inline);
-
-            // Write warnings.
-            // Dependency packages don't get warnings persisted as the
-            // programmer doesn't want to be told every time about warnings they
-            // cannot fix directly.
-            if self.cached_warnings.should_use() {
-                let warnings = &module.ast.type_info.warnings;
-                let data = bincode::serde::encode_to_vec(warnings, bincode::config::legacy())
-                    .expect("Serialise warnings");
-                self.io.write_bytes(&cache_files.warnings_path, &data)?;
-            }
         }
         Ok(())
     }

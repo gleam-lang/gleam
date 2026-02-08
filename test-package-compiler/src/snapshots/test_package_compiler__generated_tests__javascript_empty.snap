@@ -1,14 +1,9 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 261
 expression: "./cases/javascript_empty"
-snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/empty.cache
 <.cache binary>
-
-//// /out/lib/the_package/_gleam_artefacts/empty.cache_inline
-<8 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/empty.cache_meta
 <57 byte binary>
