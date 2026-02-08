@@ -184,7 +184,17 @@ where
     fn load_cached_module(&self, info: CachedModule) -> Result<type_::ModuleInterface, Error> {
         let cache_files = CacheFiles::new(&self.artefact_directory, &info.name);
         let bytes = self.io.read_bytes(&cache_files.cache_path)?;
-        let mut module = metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())?;
+        let mut module = match metadata::decode(bytes.as_slice(), self.ids.clone()) {
+            Ok(module) => module,
+            Err(e) => {
+                return Err(Error::FileIo {
+                    kind: FileKind::File,
+                    action: FileIoAction::Parse,
+                    path: cache_files.inline_path,
+                    err: Some(e.to_string()),
+                });
+            }
+        };
 
         if self.io.exists(&cache_files.inline_path) {
             let bytes = self.io.read_bytes(&cache_files.inline_path)?;
