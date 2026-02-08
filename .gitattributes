@@ -1,8 +1,5 @@
 [attr]generated linguist-generated=true diff=generated
 
-# Generate Cap'n Proto code
-compiler-core/generated/schema_capnp.rs generated
-
 # Tests:
 test-package-compiler/src/generated_tests.rs generated
 
