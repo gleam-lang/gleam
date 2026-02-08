@@ -70,11 +70,8 @@ fn write_cache(
         inline_functions: Default::default(),
     };
     let path = Utf8Path::new("/artefact").join(format!("{artefact_name}.cache"));
-    fs.write_bytes(
-        &path,
-        &metadata::ModuleEncoder::new(&cache).encode().unwrap(),
-    )
-    .unwrap();
+    fs.write_bytes(&path, &metadata::encode(&cache).unwrap())
+        .unwrap();
 }
 
 fn run_loader(fs: InMemoryFileSystem, root: &Utf8Path, artefact: &Utf8Path) -> LoaderTestOutput {

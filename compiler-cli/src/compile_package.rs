@@ -9,6 +9,7 @@ use gleam_core::{
     build::{
         Mode, NullTelemetry, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration,
     },
+    error::{FileIoAction, FileKind},
     metadata,
     paths::{self, ProjectPaths},
     type_::ModuleInterface,
@@ -75,8 +76,18 @@ fn load_libraries(
             continue;
         }
         for module in fs::module_caches_paths(path)? {
-            let reader = fs::buffered_reader(module)?;
-            let module = metadata::ModuleDecoder::new(ids.clone()).read(reader)?;
+            let bytes = fs::read_bytes(module.clone())?;
+            let module = match metadata::decode(&bytes, ids.clone()) {
+                Ok(module) => module,
+                Err(e) => {
+                    return Err(Error::FileIo {
+                        kind: FileKind::File,
+                        action: FileIoAction::Parse,
+                        path: module,
+                        err: Some(e.to_string()),
+                    });
+                }
+            };
             let _ = manifests.insert(module.name.clone(), module);
         }
     }

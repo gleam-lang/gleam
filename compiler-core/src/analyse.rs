@@ -52,7 +52,7 @@ use vec1::Vec1;
 
 use self::imports::Importer;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum Inferred<T> {
     Known(T),
     #[default]
