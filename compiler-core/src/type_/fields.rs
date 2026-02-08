@@ -7,7 +7,7 @@ use ecow::EcoString;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct FieldMap {
     /// Number of accepted arguments, including unlabelled fields.
     pub arity: u32,

@@ -5,7 +5,6 @@ use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::build::package_loader::CacheFiles;
 
 use crate::error::DefinedModuleOrigin;
-use crate::inline;
 use crate::io::files_with_extension;
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
@@ -22,12 +21,12 @@ use crate::{
     config::PackageConfig,
     dep_tree, error,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
-    metadata::ModuleEncoder,
     parse::extra::ModuleExtra,
     paths, type_,
     uid::UniqueIdGenerator,
     warning::{TypeWarningEmitter, WarningEmitter},
 };
+use crate::{inline, metadata};
 use askama::Template;
 use ecow::EcoString;
 use std::collections::HashSet;
@@ -319,7 +318,8 @@ where
             let cache_files = CacheFiles::new(&artefact_dir, &module.name);
 
             // Write cache file
-            let bytes = ModuleEncoder::new(&module.ast.type_info).encode()?;
+            let bytes =
+                metadata::encode(&module.ast.type_info).expect("Failed to serialise module cache");
             self.io.write_bytes(&cache_files.cache_path, &bytes)?;
 
             // Write cache metadata

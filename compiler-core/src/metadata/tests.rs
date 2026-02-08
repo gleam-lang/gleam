@@ -22,16 +22,14 @@ use crate::{
     },
     uid::UniqueIdGenerator,
 };
-use std::{collections::HashMap, io::BufReader, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use pretty_assertions::assert_eq;
 
 fn roundtrip(input: &ModuleInterface) -> ModuleInterface {
-    let buffer = ModuleEncoder::new(input).encode().unwrap();
+    let buffer = encode(input).unwrap();
     let ids = UniqueIdGenerator::new();
-    ModuleDecoder::new(ids)
-        .read(BufReader::new(buffer.as_slice()))
-        .unwrap()
+    decode(buffer.as_slice(), ids).unwrap()
 }
 
 fn constant_module(constant: TypedConstant) -> ModuleInterface {
