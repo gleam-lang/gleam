@@ -15,9 +15,8 @@ pub const LOCAL_PASS_PROMPT: &str = "Local password";
 pub const API_ENV_NAME: &str = "HEXPM_API_KEY";
 
 #[derive(Debug)]
-pub struct EncryptedApiKey {
+pub struct EncryptedLegacyApiKey {
     pub name: String,
-    pub encrypted: String,
 }
 
 pub struct HexAuthentication<'runtime> {
@@ -48,58 +47,19 @@ impl<'runtime> HexAuthentication<'runtime> {
     /// Any already-existing tokens stored on the file system are revoked.
     ///
     pub fn create_and_store_new_credentials_via_oauth(&mut self) -> Result<hexpm::Credentials> {
-        // TODO: revoke any prior oauth tokens
-        // TODO: revoke any prior old api keys
+        let previous_oauth_token = self.read_stored_encrypted_oauth_refresh_token()?;
+        let previous_legacy_key = self.read_stored_legacy_api_key()?;
 
-        // Create a recognisable name for the client, so folks can more easily understand which
-        // session is which in the Hex console.
-        let client_name = format!(
-            "Gleam ({})",
-            hostname::get().expect("hostname").to_string_lossy()
-        );
-
-        // Create a device authorisation with HEx, starting the oauth flow.
-        let request = hexpm::oauth_device_authorisation_request(
-            HEX_OAUTH_CLIENT_ID,
-            &client_name,
-            &self.hex_config,
-        );
-        let response = self.runtime.block_on(self.http.send(request))?;
-        let mut device_authorisation =
-            hexpm::oauth_device_authorisation_response(HEX_OAUTH_CLIENT_ID.to_string(), response)
-                .map_err(Error::hex)?;
+        // Create a device authorisation with Hex, starting the oauth flow.
+        let mut device_authorisation = self.create_oauth_device_authorisation()?;
 
         // Show the user their code, and send them to Hex to log in.
-        // We make them press Enter to open the browser instead of going there immediately,
-        // to make sure they see the code before the browser window potentially hides the
-        // terminal window.
-        let uri = &device_authorisation.verification_uri;
-        println!(
-            "Your Hex verification code:
-
-    {code}
-
-Verify this code matches what is shown in your browser.
-
-Press Enter to open {uri}",
-            code = device_authorisation.user_code,
-        );
-
-        let _ = std::io::stdin()
-            .read_line(&mut String::new())
-            .expect("stdin read_line");
-        if opener::open_browser(uri).is_err() {
-            println!("\nFailed to open the browser, please navigate to {uri}");
-        }
+        send_user_to_oauth_verification_url(&device_authorisation);
 
         // The user has been sent to the Hex website to authenticate.
         // Poll the Hex API until they accept or reject the request, or it times out.
         let tokens = loop {
-            let request = device_authorisation.poll_token_request(&self.hex_config);
-            let response = self.runtime.block_on(self.http.send(request))?;
-            let next = device_authorisation
-                .poll_token_response(response)
-                .map_err(Error::hex)?;
+            let next = self.poll_for_oauth_next_step(&mut device_authorisation)?;
             match next {
                 hexpm::PollStep::Done(tokens) => break tokens,
                 hexpm::PollStep::SleepThenPollAgain(duration) => std::thread::sleep(duration),
@@ -111,7 +71,45 @@ Press Enter to open {uri}",
         self.ask_for_new_local_password()?;
         self.encrypt_and_store_oauth_refresh_token(&tokens)?;
 
-        Ok(tokens.as_credentials())
+        let credentials = tokens.as_credentials();
+
+        // Dispose of old tokens, if there was any.
+        self.revoke_old_tokens(&credentials, previous_oauth_token, previous_legacy_key)?;
+        self.delete_legacy_api_key_from_filesystem()?;
+
+        Ok(credentials)
+    }
+
+    fn poll_for_oauth_next_step(
+        &mut self,
+        device_authorisation: &mut hexpm::OAuthDeviceAuthorisation,
+    ) -> Result<hexpm::PollStep, Error> {
+        let request = device_authorisation.poll_token_request(&self.hex_config);
+        let response = self.runtime.block_on(self.http.send(request))?;
+        let next = device_authorisation
+            .poll_token_response(response)
+            .map_err(Error::hex)?;
+        Ok(next)
+    }
+
+    fn create_oauth_device_authorisation(
+        &mut self,
+    ) -> Result<hexpm::OAuthDeviceAuthorisation, Error> {
+        // Create a recognisable name for the client, so folks can more easily understand which
+        // session is which in the Hex console.
+        let client_name = format!(
+            "Gleam ({})",
+            hostname::get().expect("hostname").to_string_lossy()
+        );
+
+        let request = hexpm::oauth_device_authorisation_request(
+            HEX_OAUTH_CLIENT_ID,
+            &client_name,
+            &self.hex_config,
+        );
+        let response = self.runtime.block_on(self.http.send(request))?;
+        hexpm::oauth_device_authorisation_response(HEX_OAUTH_CLIENT_ID.to_string(), response)
+            .map_err(Error::hex)
     }
 
     fn encrypt_and_store_oauth_refresh_token(&mut self, tokens: &OAuthTokens) -> Result<(), Error> {
@@ -212,14 +210,13 @@ It will be used to locally encrypt your Hex API tokens.
     /// need to create a new one.
     ///
     fn read_and_decrypt_and_refresh_stored_tokens(&mut self) -> Result<Option<OAuthTokens>> {
-        let Some(encrypted_refresh_token) = self.read_stored_encrypted_oauth_refresh_token()?
-        else {
+        let Some(encrypted_credentials) = self.read_stored_encrypted_oauth_refresh_token()? else {
             return Ok(None);
         };
 
         let local_password = self.get_local_password()?;
         let refresh_token = encryption::decrypt_with_passphrase(
-            encrypted_refresh_token.as_bytes(),
+            encrypted_credentials.refresh_token.as_bytes(),
             &local_password,
         )
         .map_err(|e| Error::FailedToDecryptLocalHexApiKey {
@@ -241,8 +238,9 @@ It will be used to locally encrypt your Hex API tokens.
         Ok(Some(tokens))
     }
 
-    // TODO: use
-    fn read_stored_encrypted_oauth_refresh_token(&self) -> Result<Option<String>> {
+    fn read_stored_encrypted_oauth_refresh_token(
+        &self,
+    ) -> Result<Option<StoredOAuthRepoCredentials>> {
         let path = paths::global_hexpm_oauth_credentials_path();
         if !path.exists() {
             return Ok(None);
@@ -255,10 +253,18 @@ It will be used to locally encrypt your Hex API tokens.
                 path,
                 err: Some(e.to_string()),
             })?;
-        Ok(Some(credentials.hexpm.refresh_token))
+        Ok(Some(credentials.hexpm))
     }
 
-    fn read_stored_legacy_api_key(&self) -> Result<Option<EncryptedApiKey>> {
+    fn delete_legacy_api_key_from_filesystem(&self) -> Result<()> {
+        let path = paths::global_hexpm_legacy_credentials_path();
+        if !path.exists() {
+            return Ok(());
+        }
+        crate::fs::delete_file(&path)
+    }
+
+    fn read_stored_legacy_api_key(&self) -> Result<Option<EncryptedLegacyApiKey>> {
         let path = paths::global_hexpm_legacy_credentials_path();
         if !path.exists() {
             return Ok(None);
@@ -268,13 +274,69 @@ It will be used to locally encrypt your Hex API tokens.
         let Some(name) = chunks.next() else {
             return Ok(None);
         };
-        let Some(encrypted) = chunks.next() else {
+        // We no longer use this encrypted key, but we still parse it to ensure that
+        // the file is the correct format. If it is not then we cannot safely use it.
+        let Some(_encrypted) = chunks.next() else {
             return Ok(None);
         };
-        Ok(Some(EncryptedApiKey {
+        Ok(Some(EncryptedLegacyApiKey {
             name: name.to_string(),
-            encrypted: encrypted.to_string(),
         }))
+    }
+
+    fn revoke_old_tokens(
+        &self,
+        credentials: &hexpm::Credentials,
+        previous_oauth_token: Option<StoredOAuthRepoCredentials>,
+        previous_legacy_key: Option<EncryptedLegacyApiKey>,
+    ) -> Result<()> {
+        if previous_oauth_token.is_none() && previous_legacy_key.is_none() {
+            return Ok(());
+        }
+
+        println!("\nRevoking old authentication credentials");
+        let credentials = crate::hex::write_credentials(credentials)?;
+
+        if let Some(token) = previous_oauth_token {
+            let hash = token.refresh_token_hash;
+            let request =
+                hexpm::revoke_oauth_token_by_hash_request(&hash, &credentials, &self.hex_config);
+            let response = self.runtime.block_on(self.http.send(request))?;
+            hexpm::revoke_oauth_token_by_hash_response(response).map_err(Error::hex)?;
+        }
+
+        if let Some(key) = previous_legacy_key {
+            let request =
+                hexpm::api_remove_api_key_request(&key.name, &credentials, &self.hex_config);
+            let response = self.runtime.block_on(self.http.send(request))?;
+            hexpm::api_remove_api_key_response(response).map_err(Error::hex)?;
+        }
+
+        Ok(())
+    }
+}
+
+fn send_user_to_oauth_verification_url(device_authorisation: &hexpm::OAuthDeviceAuthorisation) {
+    // We make them press Enter to open the browser instead of going there immediately,
+    // to make sure they see the code before the browser window potentially hides the
+    // terminal window.
+    let uri = &device_authorisation.verification_uri;
+    println!(
+        "Your Hex verification code:
+
+    {code}
+
+Verify this code matches what is shown in your browser.
+
+Press Enter to open {uri}",
+        code = device_authorisation.user_code,
+    );
+
+    let _ = std::io::stdin()
+        .read_line(&mut String::new())
+        .expect("stdin read_line");
+    if opener::open_browser(uri).is_err() {
+        println!("\nFailed to open the browser, please navigate to {uri}");
     }
 }
 
