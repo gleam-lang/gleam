@@ -10,8 +10,6 @@ license = "Apache-2.0"
 codespan-reporting = "0"
 # Graph data structures
 petgraph = "0.8"
-# Cap'n Proto binary format runtime
-capnp = "0"
 # Template rendering
 askama = "0"
 # Markdown parsing
@@ -77,8 +75,6 @@ vec1.workspace = true
 [build-dependencies]
 # Data (de)serialisation
 serde_derive = "1"
-# Cap'n Proto binary format codegen
-capnpc = "0"
 
 [dev-dependencies]
 pretty_assertions.workspace = true

@@ -26,7 +26,9 @@ use itertools::Itertools;
 use num_bigint::BigInt;
 use vec1::Vec1;
 
-#[derive(Clone, Copy, Debug, Eq, PartialOrd, Ord, PartialEq, Serialize)]
+#[derive(
+    Clone, Copy, Debug, Eq, PartialOrd, Ord, PartialEq, serde::Serialize, serde::Deserialize,
+)]
 pub struct Implementations {
     /// Whether the function has a pure-gleam implementation.
     ///

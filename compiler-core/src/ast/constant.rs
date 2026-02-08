@@ -6,7 +6,7 @@ pub type TypedConstant = Constant<Arc<Type>, EcoString>;
 pub type UntypedConstant = Constant<(), ()>;
 
 // TODO: remove RecordTag paramter
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Constant<T, RecordTag> {
     Int {
         location: SrcSpan,

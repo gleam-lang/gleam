@@ -670,7 +670,7 @@ pub fn type_constructor_from_modules(
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Origin {
     Src,
     Test,

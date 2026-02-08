@@ -1695,7 +1695,7 @@ impl bit_array::GetLiteralValue for TypedExpr {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum InvalidExpression {
     ModuleSelect {
         module_name: EcoString,

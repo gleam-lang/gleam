@@ -215,9 +215,6 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("gleam.toml version {toml_ver} does not match .app version {app_ver}")]
     VersionDoesNotMatch { toml_ver: String, app_ver: String },
 
-    #[error("metadata decoding failed")]
-    MetadataDecodeError { error: Option<String> },
-
     #[error("warnings are not permitted")]
     ForbiddenWarnings { count: usize },
 
@@ -502,22 +499,6 @@ impl Error {
 impl<T> From<Error> for Outcome<T, Error> {
     fn from(error: Error) -> Self {
         Outcome::TotalFailure(error)
-    }
-}
-
-impl From<capnp::Error> for Error {
-    fn from(error: capnp::Error) -> Self {
-        Error::MetadataDecodeError {
-            error: Some(error.to_string()),
-        }
-    }
-}
-
-impl From<capnp::NotInSchema> for Error {
-    fn from(error: capnp::NotInSchema) -> Self {
-        Error::MetadataDecodeError {
-            error: Some(error.to_string()),
-        }
     }
 }
 
@@ -872,24 +853,6 @@ Remove or modify the main function that contains only:
 
                 vec![Diagnostic {
                     title: "Cannot publish with default main function".into(),
-                    text,
-                    level: Level::Error,
-                    location: None,
-                    hint: None,
-                }]
-            }
-
-            Error::MetadataDecodeError { error } => {
-                let mut text = "A problem was encountered when decoding the metadata for one \
-of the Gleam dependency modules."
-                    .to_string();
-                if let Some(error) = error {
-                    text.push_str("\nThe error from the decoder library was:\n\n");
-                    text.push_str(error);
-                }
-
-                vec![Diagnostic {
-                    title: "Failed to decode module metadata".into(),
                     text,
                     level: Level::Error,
                     location: None,

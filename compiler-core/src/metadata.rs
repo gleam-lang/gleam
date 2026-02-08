@@ -1,10 +1,18 @@
 //! Seriaisation and deserialisation of Gleam compiler metadata into binary files
-//! using the Cap'n Proto schema.
-
-mod module_decoder;
-mod module_encoder;
+//! using serde.
 
 #[cfg(test)]
 mod tests;
 
-pub use self::{module_decoder::ModuleDecoder, module_encoder::ModuleEncoder};
+use crate::{type_::ModuleInterface, uid::UniqueIdGenerator};
+
+pub fn encode(module: &ModuleInterface) -> Result<Vec<u8>, bincode::error::EncodeError> {
+    bincode::serde::encode_to_vec(module, bincode::config::legacy())
+}
+
+pub fn decode(
+    bytes: &[u8],
+    _ids: UniqueIdGenerator,
+) -> Result<ModuleInterface, bincode::error::DecodeError> {
+    bincode::serde::decode_from_slice(bytes, bincode::config::legacy()).map(|(module, _)| module)
+}
