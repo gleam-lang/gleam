@@ -343,6 +343,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("Cannot add a package with the same name as a dependency")]
     CannotAddSelfAsDependency { name: EcoString },
+
+    #[error("Incorrect Hex one-time-password")]
+    IncorrectHexOneTimePassword,
 }
 
 // A wrapper that ignores the inner value for equality:
@@ -433,11 +436,30 @@ impl Error {
         Self::Http(error.to_string())
     }
 
-    pub fn hex<E>(error: E) -> Error
-    where
-        E: std::error::Error,
-    {
-        Self::Hex(error.to_string())
+    pub fn hex(error: hexpm::ApiError) -> Error {
+        match error {
+            hexpm::ApiError::Json(_)
+            | hexpm::ApiError::Io(_)
+            | hexpm::ApiError::RateLimited
+            | hexpm::ApiError::InvalidCredentials
+            | hexpm::ApiError::UnexpectedResponse(_, _)
+            | hexpm::ApiError::InvalidPackageNameFormat(_)
+            | hexpm::ApiError::IncorrectPayloadSignature
+            | hexpm::ApiError::InvalidProtobuf(_)
+            | hexpm::ApiError::InvalidVersionFormat(_)
+            | hexpm::ApiError::NotFound
+            | hexpm::ApiError::InvalidVersionRequirementFormat(_)
+            | hexpm::ApiError::IncorrectChecksum
+            | hexpm::ApiError::Forbidden
+            | hexpm::ApiError::NotReplacing
+            | hexpm::ApiError::LateModification
+            | hexpm::ApiError::OAuthTimeout
+            | hexpm::ApiError::OAuthAccessDenied
+            | hexpm::ApiError::ExpiredToken
+            | hexpm::ApiError::OAuthRefreshTokenRejected => Self::Hex(error.to_string()),
+
+            hexpm::ApiError::IncorrectOneTimePassword => Self::IncorrectHexOneTimePassword,
+        }
     }
 
     pub fn add_tar<P, E>(path: P, error: E) -> Error
@@ -844,6 +866,23 @@ impl Error {
     pub fn to_diagnostics(&self) -> Vec<Diagnostic> {
         use crate::type_::Error as TypeError;
         match self {
+            Error::IncorrectHexOneTimePassword => {
+                let text = "That MFA code was rejected by Hex, please try again.
+
+If you need to reconfigure your Hex two-factor security it can be done
+via the Hex website: https://hex.pm/dashboard/security
+"
+                .into();
+
+                vec![Diagnostic {
+                    title: "Incorrect MFA code".into(),
+                    text,
+                    level: Level::Error,
+                    location: None,
+                    hint: None,
+                }]
+            }
+
             Error::HexPackageSquatting => {
                 let text =
                     "You appear to be attempting to reserve a name on Hex rather than publishing a

@@ -242,12 +242,11 @@ impl PackageFetchError {
         match &api_error {
             hexpm::ApiError::NotFound => Self::NotFoundError(package.to_string()),
 
-            // TODO: custom error messages for these
-            hexpm::ApiError::OAuthTimeout
-            | hexpm::ApiError::OAuthAccessDenied
-            | hexpm::ApiError::OAuthRefreshTokenRejected => Self::ApiError(api_error),
-
             hexpm::ApiError::Json(_)
+            | hexpm::ApiError::IncorrectOneTimePassword
+            | hexpm::ApiError::OAuthRefreshTokenRejected
+            | hexpm::ApiError::OAuthAccessDenied
+            | hexpm::ApiError::OAuthTimeout
             | hexpm::ApiError::ExpiredToken
             | hexpm::ApiError::Io(_)
             | hexpm::ApiError::InvalidProtobuf(_)
@@ -261,7 +260,6 @@ impl PackageFetchError {
             | hexpm::ApiError::IncorrectChecksum
             | hexpm::ApiError::Forbidden
             | hexpm::ApiError::NotReplacing
-            | hexpm::ApiError::IncorrectOneTimePassword
             | hexpm::ApiError::LateModification => Self::ApiError(api_error),
         }
     }

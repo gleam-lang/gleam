@@ -525,7 +525,6 @@ pub fn api_publish_package_request(
     config: &Config,
     replace: bool,
 ) -> http::Request<Vec<u8>> {
-    // TODO: do all the package tarball construction
     let path = format!("publish?replace={replace}");
     let mut builder = config
         .api_request(Method::POST, &path)
@@ -718,58 +717,58 @@ pub enum ApiError {
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
-    #[error("the rate limit for the Hex API has been exceeded for this IP")]
+    #[error("The rate limit for the Hex API has been exceeded for this IP")]
     RateLimited,
 
-    #[error("invalid authentication credentials")]
+    #[error("Invalid authentication credentials")]
     InvalidCredentials,
 
-    #[error("an unexpected response was sent by Hex: {0}: {1}")]
+    #[error("An unexpected response was sent by Hex: {0}: {1}")]
     UnexpectedResponse(StatusCode, String),
 
-    #[error("the given package name {0} is not valid")]
+    #[error("The given package name {0} is not valid")]
     InvalidPackageNameFormat(String),
 
-    #[error("the payload signature does not match the downloaded payload")]
+    #[error("The payload signature does not match the downloaded payload")]
     IncorrectPayloadSignature,
 
     #[error(transparent)]
     InvalidProtobuf(#[from] prost::DecodeError),
 
-    #[error("unexpected version format {0}")]
+    #[error("Unexpected version format {0}")]
     InvalidVersionFormat(String),
 
-    #[error("resource was not found")]
+    #[error("Resource was not found")]
     NotFound,
 
-    #[error("the version requirement format {0} is not valid")]
+    #[error("The version requirement format {0} is not valid")]
     InvalidVersionRequirementFormat(String),
 
-    #[error("the downloaded data did not have the expected checksum")]
+    #[error("The downloaded data did not have the expected checksum")]
     IncorrectChecksum,
 
-    #[error("this account is not authorized for this action")]
+    #[error("This account is not authorized for this action")]
     Forbidden,
 
-    #[error("must explicitly express your intention to replace the release")]
+    #[error("Must explicitly express your intention to replace the release")]
     NotReplacing,
 
-    #[error("can only modify a release up to one hour after publication")]
+    #[error("Can only modify a release up to one hour after publication")]
     LateModification,
 
-    #[error("the oauth request wasn't approved in time")]
+    #[error("The oauth request wasn't approved in time")]
     OAuthTimeout,
 
-    #[error("the oauth request was rejected")]
+    #[error("The oauth request was rejected")]
     OAuthAccessDenied,
 
-    #[error("the oauth token expired before the request was approved")]
+    #[error("The oauth token expired before the request was approved")]
     ExpiredToken,
 
-    #[error("the oauth refresh token was expired, revoked, or already used")]
+    #[error("The oauth refresh token was expired, revoked, or already used")]
     OAuthRefreshTokenRejected,
 
-    #[error("the supplied one-time-password was not correct")]
+    #[error("The supplied one-time-password was not correct")]
     IncorrectOneTimePassword,
 }
 
