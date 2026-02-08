@@ -1149,13 +1149,13 @@ impl OAuthDeviceAuthorisation {
             Ok(tokens) => Ok(PollStep::Done(tokens)),
 
             Err(PollResponseBodyError::AuthorizationPending) => {
-                Ok(PollStep::SleepThenPollAgain(self.poll_interval.clone()))
+                Ok(PollStep::SleepThenPollAgain(self.poll_interval))
             }
 
             Err(PollResponseBodyError::SlowDown) => {
                 let max_interval = Duration::from_secs(30);
                 self.poll_interval = self.poll_interval.saturating_mul(2).min(max_interval);
-                Ok(PollStep::SleepThenPollAgain(self.poll_interval.clone()))
+                Ok(PollStep::SleepThenPollAgain(self.poll_interval))
             }
 
             Err(PollResponseBodyError::AccessDenied) => Err(ApiError::OAuthAccessDenied),
@@ -1310,7 +1310,7 @@ pub fn revoke_oauth_token_by_hash_request(
     .to_string()
     .into_bytes();
     config
-        .api_request(Method::GET, &format!("oauth/revoke_by_hash"))
+        .api_request(Method::POST, "oauth/revoke_by_hash")
         .write_credentials(credentials)
         .header("accept", "application/json")
         .body(body)
