@@ -1,23 +1,15 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 272
 expression: "./cases/javascript_import"
-snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache
 <.cache binary>
-
-//// /out/lib/the_package/_gleam_artefacts/one@two.cache_inline
-<8 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache_meta
 <65 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>
-
-//// /out/lib/the_package/_gleam_artefacts/two.cache_inline
-<8 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
 <88 byte binary>
