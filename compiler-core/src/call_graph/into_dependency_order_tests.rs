@@ -657,14 +657,9 @@ fn more_complex_cycle() {
         ("a3", [].as_slice(), r#"{ a1 }"#),
     ];
     assert_eq!(
-<<<<<<< HEAD
         parse_and_order(functions.as_slice(), [].as_slice())
             .expect("Expected parse_and_order to succeed"),
         vec![vec!["a2", "a3", "a1"]]
-=======
-        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
-        vec![vec!["a2", "a1"], vec!["a3"]]
->>>>>>> 4d3e8326f (chore: resolve comment issue)
     );
 }
 
