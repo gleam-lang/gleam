@@ -890,9 +890,7 @@ impl Environment<'_> {
                     return None;
                 }
                 // If the module doesn't have this type, ignore it.
-                let Some(type_) = module_info.get_public_type(name) else {
-                    return None;
-                };
+                let type_ = module_info.get_public_type(name)?;
                 match arity {
                     // If we couldn't find the arity of the type, consider all modules.
                     None => {
@@ -946,11 +944,9 @@ impl Environment<'_> {
                     return None;
                 }
                 // If the module doesn't have this value, ignore it.
-                let Some(value) = module_info.get_public_value(name) else {
-                    return None;
-                };
+                let value = module_info.get_public_value(name)?;
                 // If we couldn't find the arity of the value, consider all modules.
-                if arity == None {
+                if arity.is_none() {
                     if is_imported {
                         // Should be impossible to exist already
                         let _ = imported_modules.insert(module_name.clone());

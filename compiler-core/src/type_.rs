@@ -532,7 +532,7 @@ impl Type {
     pub fn constructor_arity(&self) -> Option<usize> {
         match self {
             Self::Named { arguments, .. } => Some(arguments.len()),
-            _ => None,
+            Self::Fn { .. } | Self::Var { .. } | Self::Tuple { .. } => None,
         }
     }
 

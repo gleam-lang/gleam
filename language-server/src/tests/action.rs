@@ -11860,6 +11860,7 @@ pub fn main() {
     );
 }
 
+#[test]
 fn import_type_unqualified_without_existing_import() {
     let name = "Import `Wibble` from `wibble`";
     let src = r#"
@@ -11890,6 +11891,7 @@ pub type Wibble {
     );
 }
 
+#[test]
 fn import_type_qualified_without_existing_import() {
     let name = "Import `wibble` and qualify it";
     let src = r#"
@@ -11942,6 +11944,7 @@ pub type Wibble {
     );
 }
 
+#[test]
 fn import_type_qualified_with_existing_import() {
     let name = "Qualify as `wibble.Wibble`";
     let src = r#"
@@ -11963,6 +11966,7 @@ pub type Wibble {
     );
 }
 
+#[test]
 fn import_type_constructor_unqualified_without_existing_import() {
     let name = "Import `Wobble` from `wibble`";
     let src = r#"
@@ -11996,6 +12000,7 @@ pub type Wibble {
     );
 }
 
+#[test]
 fn import_type_constructor_qualified_without_existing_import() {
     let name = "Import `wibble` and qualify it";
     let src = r#"
