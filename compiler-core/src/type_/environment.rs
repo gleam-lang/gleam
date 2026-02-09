@@ -2,7 +2,7 @@ use pubgrub::Range;
 
 use crate::{
     analyse::TargetSupport,
-    ast::{PIPE_VARIABLE, Publicity},
+    ast::{Layer, PIPE_VARIABLE, Publicity},
     build::Target,
     error::edit_distance,
     reference::{EntityKind, ReferenceTracker},
@@ -408,6 +408,7 @@ impl Environment<'_> {
         &mut self,
         module: &Option<(EcoString, SrcSpan)>,
         name: &EcoString,
+        arity: Option<usize>,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
         match module {
             None => self
@@ -416,6 +417,7 @@ impl Environment<'_> {
                 .ok_or_else(|| UnknownTypeConstructorError::Type {
                     name: name.clone(),
                     hint: self.unknown_type_hint(name),
+                    suggestions: self.suggest_modules_for_type_or_value(name, Layer::Type, arity),
                 }),
 
             Some((module_name, _)) => {
@@ -453,6 +455,7 @@ impl Environment<'_> {
         &self,
         module: &EcoString,
         name: &EcoString,
+        arity: Option<usize>,
     ) -> Result<&TypeVariantConstructors, UnknownTypeConstructorError> {
         let module = if module.is_empty() || *module == self.current_module {
             None
@@ -464,6 +467,7 @@ impl Environment<'_> {
                 UnknownTypeConstructorError::Type {
                     name: name.clone(),
                     hint: self.unknown_type_hint(name),
+                    suggestions: self.suggest_modules_for_type_or_value(name, Layer::Type, arity),
                 }
             }),
 
@@ -492,6 +496,7 @@ impl Environment<'_> {
         &mut self,
         module: Option<&EcoString>,
         name: &EcoString,
+        arity: Option<usize>,
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
             None => self.scope.get(name).ok_or_else(|| {
@@ -500,6 +505,7 @@ impl Environment<'_> {
                     name: name.clone(),
                     variables: self.local_value_names(),
                     type_with_name_in_scope,
+                    suggestions: self.suggest_modules_for_type_or_value(name, Layer::Value, arity),
                 }
             }),
 
@@ -529,8 +535,9 @@ impl Environment<'_> {
         &self,
         module: &EcoString,
         name: &EcoString,
+        arity: Option<usize>,
     ) -> Vec<&EcoString> {
-        self.get_constructors_for_type(module, name)
+        self.get_constructors_for_type(module, name, arity)
             .iter()
             .flat_map(|c| &c.variants)
             .filter_map(|variant| {
@@ -844,6 +851,124 @@ impl Environment<'_> {
             .filter(|&t| PIPE_VARIABLE != t)
             .cloned()
             .collect()
+    }
+
+    /// Suggest modules to import or use unqualified
+    pub fn suggest_modules_for_type_or_value(
+        &self,
+        name: &EcoString,
+        layer: Layer,
+        arity: Option<usize>,
+    ) -> Vec<ModuleSuggestion> {
+        let suggestions = match layer {
+            Layer::Type => self.suggest_modules_for_type(name, arity),
+            Layer::Value => self.suggest_modules_for_value(name, arity),
+        };
+
+        // Sort options based on if its already imported and on lexicographical order.
+        suggestions.into_iter().sorted().collect()
+    }
+
+    fn suggest_modules_for_type(
+        &self,
+        name: &EcoString,
+        arity: Option<usize>,
+    ) -> Vec<ModuleSuggestion> {
+        let mut imported_modules = HashSet::new();
+
+        self.imported_modules
+            .iter()
+            .map(|(_, (_, module_info))| (&module_info.name, *module_info, true))
+            .chain(
+                self.importable_modules
+                    .iter()
+                    .map(|(module_name, module_info)| (module_name, module_info, false)),
+            )
+            .filter_map(|(module_name, module_info, is_imported)| {
+                // If the module was already registered as imported, ignore it.
+                if !is_imported && imported_modules.contains(module_name) {
+                    return None;
+                }
+                // If the module doesn't have this type, ignore it.
+                let type_ = module_info.get_public_type(name)?;
+                match arity {
+                    // If we couldn't find the arity of the type, consider all modules.
+                    None => {
+                        if is_imported {
+                            // Should be impossible to exist already
+                            let _ = imported_modules.insert(module_name.clone());
+                            Some(ModuleSuggestion::Imported(module_name.clone()))
+                        } else {
+                            Some(ModuleSuggestion::Importable(module_name.clone()))
+                        }
+                    }
+                    // Make sure the arities match.
+                    Some(arity) if arity == type_.parameters.len() => {
+                        if is_imported {
+                            // Should be impossible to exist already
+                            let _ = imported_modules.insert(module_name.clone());
+                            Some(ModuleSuggestion::Imported(module_name.clone()))
+                        } else {
+                            Some(ModuleSuggestion::Importable(module_name.clone()))
+                        }
+                    }
+                    Some(_) => None,
+                }
+            })
+            .collect_vec()
+    }
+
+    fn suggest_modules_for_value(
+        &self,
+        name: &EcoString,
+        arity: Option<usize>,
+    ) -> Vec<ModuleSuggestion> {
+        // Don't suggest unqualified imports for values which aren't record constructors.
+        if name.chars().next().is_none_or(|c| c.is_lowercase()) {
+            return vec![];
+        }
+
+        let mut imported_modules = HashSet::new();
+
+        self.imported_modules
+            .iter()
+            .map(|(_, (_, module_info))| (&module_info.name, *module_info, true))
+            .chain(
+                self.importable_modules
+                    .iter()
+                    .map(|(module_name, module_info)| (module_name, module_info, false)),
+            )
+            .filter_map(|(module_name, module_info, is_imported)| {
+                // If the module was already registered as imported, ignore it.
+                if !is_imported && imported_modules.contains(module_name) {
+                    return None;
+                }
+                // If the module doesn't have this value, ignore it.
+                let value = module_info.get_public_value(name)?;
+                // If we couldn't find the arity of the value, consider all modules.
+                if arity.is_none() {
+                    if is_imported {
+                        // Should be impossible to exist already
+                        let _ = imported_modules.insert(module_name.clone());
+                        return Some(ModuleSuggestion::Imported(module_name.clone()));
+                    } else {
+                        return Some(ModuleSuggestion::Importable(module_name.clone()));
+                    }
+                }
+                // Make sure the arities match.
+                if arity == value.type_.constructor_arity() {
+                    if is_imported {
+                        // Should be impossible to exist already
+                        let _ = imported_modules.insert(module_name.clone());
+                        Some(ModuleSuggestion::Imported(module_name.clone()))
+                    } else {
+                        Some(ModuleSuggestion::Importable(module_name.clone()))
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect_vec()
     }
 
     /// Suggest modules to import or use, for an unknown module

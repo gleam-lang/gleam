@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport wibble\n\nfn wibble() { wib }\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+pub const wib = 123
+
+-- main.gleam
+
+import wibble
+
+fn wibble() { wib }
+
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:4:15
+  │
+4 │ fn wibble() { wib }
+  │               ^^^ Did you mean `wibble`?
+
+The name `wib` is not in scope here.

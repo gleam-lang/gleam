@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport wobble\nimport wibble.{type Wibble}\n\nfn wibble() -> Nil {\n    Wobble\n    Nil\n}\n"
+---
+----- BEFORE ACTION
+
+import wobble
+import wibble.{type Wibble}
+
+fn wibble() -> Nil {
+    Wobble
+    ↑     
+    Nil
+}
+
+
+----- AFTER ACTION
+
+import wobble
+import wibble.{type Wibble, Wobble}
+
+fn wibble() -> Nil {
+    Wobble
+    Nil
+}
