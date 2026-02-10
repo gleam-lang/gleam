@@ -103,8 +103,8 @@ pub fn print_publishing(name: &str, version: &Version) {
     print_colourful_prefix("Publishing", &format!("{name} v{version}"))
 }
 
-pub fn print_published(duration: Duration) {
-    print_colourful_prefix("Published", &format!("in {}", seconds(duration)))
+pub fn print_published(detail: &str) {
+    print_colourful_prefix("Published", detail)
 }
 
 pub fn print_retired(package: &str, version: &str) {
