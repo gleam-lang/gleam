@@ -3843,3 +3843,56 @@ pub fn main() {
 }"
     );
 }
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_with_private_value() {
+    assert_module_error!(
+        (
+            "module",
+            "
+const one = 1"
+        ),
+        "
+import module
+pub fn main() {
+    one
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_with_private_type() {
+    assert_module_error!(
+        (
+            "module",
+            "
+type OneOrTwo {
+    One
+    Two
+}"
+        ),
+        "
+import module
+pub fn main() {
+    One
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_with_private_record_constructor() {
+    assert_module_error!(
+        (
+            "module",
+            "
+type MyType {
+    MyRecord(x: Int)
+}"
+        ),
+        "
+import module
+pub fn main() {
+    MyRecord(1)
+}"
+    );
+}
