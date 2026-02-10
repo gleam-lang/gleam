@@ -1013,3 +1013,23 @@ pub fn main() {
 }        "
     );
 }
+
+#[test]
+fn float_division_by_literal_zero() {
+    assert_erl!(
+        "
+pub fn main() {
+  1.0 /. 0.0
+}        "
+    );
+}
+
+#[test]
+fn float_division_by_literal_non_zero() {
+    assert_erl!(
+        "
+pub fn main() {
+  1.0 /. 2.0
+}        "
+    );
+}

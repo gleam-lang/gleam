@@ -1,5 +1,3 @@
-use std::sync::OnceLock;
-
 use type_::{FieldMap, TypedCallArg};
 
 use super::*;
@@ -607,7 +605,7 @@ impl TypedExpr {
     pub fn is_non_zero_compile_time_number(&self) -> bool {
         match self {
             Self::Int { int_value, .. } => int_value != &BigInt::ZERO,
-            Self::Float { value, .. } => is_non_zero_number(value),
+            Self::Float { float_value, .. } => !float_value.value().is_zero(),
             Self::String { .. }
             | Self::Block { .. }
             | Self::Pipeline { .. }
@@ -636,7 +634,7 @@ impl TypedExpr {
     pub fn is_zero_compile_time_number(&self) -> bool {
         match self {
             Self::Int { int_value, .. } => int_value == &BigInt::ZERO,
-            Self::Float { value, .. } => !is_non_zero_number(value),
+            Self::Float { float_value, .. } => float_value.value().is_zero(),
             Self::String { .. }
             | Self::Block { .. }
             | Self::Pipeline { .. }
@@ -1653,15 +1651,6 @@ impl TypedExpr {
 ///
 pub(crate) fn pairwise_all<A>(one: &[A], other: &[A], function: impl Fn((&A, &A)) -> bool) -> bool {
     one.len() == other.len() && one.iter().zip(other).all(function)
-}
-
-fn is_non_zero_number(value: &EcoString) -> bool {
-    use regex::Regex;
-    static NON_ZERO: OnceLock<Regex> = OnceLock::new();
-
-    NON_ZERO
-        .get_or_init(|| Regex::new(r"[1-9]").expect("NON_ZERO regex"))
-        .is_match(value)
 }
 
 impl<'a> From<&'a TypedExpr> for Located<'a> {

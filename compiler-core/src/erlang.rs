@@ -1115,6 +1115,8 @@ fn statement_sequence<'a>(statements: &'a [TypedStatement], env: &mut Env<'a>) -
 fn float_div<'a>(left: &'a TypedExpr, right: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     if right.is_non_zero_compile_time_number() {
         return binop_exprs(left, "/", right, env);
+    } else if right.is_zero_compile_time_number() {
+        return "+0.0".to_doc();
     }
 
     let left = expr(left, env);
