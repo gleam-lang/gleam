@@ -162,6 +162,10 @@
   unreachable.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the Gleam standard library's `dict.each` function would
+  incorrectly be assumed to be pure.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler now correctly tracks the minimum required version for constant
   record updates to be `>= 1.14.0`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
