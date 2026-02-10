@@ -324,8 +324,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         let purity = if is_trusted_pure_module(environment) {
-            // The standard library uses a lot of FFI, but as we are the maintainers we know that
-            // it can be trusted to pure pure.
+            // The standard library uses a lot of FFI, but as we are the
+            // maintainers we know that it can be trusted to be pure.
             Purity::TrustedPure
         } else if uses_externals {
             Purity::Impure
@@ -5335,11 +5335,10 @@ fn invalid_with_annotated_type(constant: TypedConstant, new_type: Arc<Type>) -> 
     }
 }
 
-/// Returns `true` if the current function is one that the Gleam core team
+/// Returns `true` if the current module is one that the Gleam core team
 /// maintains and we know it to be pure.
 /// Used in purity tracking.
 fn is_trusted_pure_module(environment: &Environment<'_>) -> bool {
-    // We only t
     if environment.current_package != STDLIB_PACKAGE_NAME {
         return false;
     }

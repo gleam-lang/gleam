@@ -3623,6 +3623,115 @@ pub fn main() {
 }
 
 #[test]
+fn stdlib_list_each_is_not_marked_as_pure() {
+    assert_no_warnings!(
+        (
+            "gleam",
+            "gleam/list",
+            r#"
+pub fn each(list, f) {
+  case list {
+    [] -> Nil
+    [first, ..rest] -> {
+      f(first)
+      each(rest, f)
+    }
+  }
+}
+"#
+        ),
+        "
+import gleam/list
+pub fn main() {
+  list.each([1, 2, 3, 4], fn(x) { echo x })
+  Nil
+}
+"
+    );
+}
+
+#[test]
+fn dict_each_function_is_not_marked_as_pure() {
+    assert_no_warnings!(
+        (
+            "gleam_stdlib",
+            "gleam/dict",
+            r#"
+pub type Dict(key, value)
+
+@external(erlang, "maps", "new")
+@external(javascript, "../dict.mjs", "make")
+pub fn new() -> Dict(k, v)
+
+pub fn each(dict: Dict(k, v), fun: fn(k, v) -> a) -> Nil {
+  fold(dict, Nil, fn(nil, k, v) {
+    fun(k, v)
+    nil
+  })
+}
+
+@external(javascript, "../dict.mjs", "fold")
+pub fn fold(
+  over dict: Dict(k, v),
+  from initial: acc,
+  with fun: fn(acc, k, v) -> acc,
+) -> acc {
+  let fun = fn(key, value, acc) { fun(acc, key, value) }
+  do_fold(fun, initial, dict)
+}
+
+@external(erlang, "maps", "fold")
+fn do_fold(fun: fn(k, v, acc) -> acc, initial: acc, dict: Dict(k, v)) -> acc
+"#
+        ),
+        "
+import gleam/dict
+pub fn main() {
+  dict.each(dict.new(), fn(_, _) { echo 1 })
+  Nil
+}
+"
+    );
+}
+
+#[test]
+fn dict_fold_function_is_not_marked_as_pure() {
+    assert_no_warnings!(
+        (
+            "gleam_stdlib",
+            "gleam/dict",
+            r#"
+pub type Dict(key, value)
+
+@external(erlang, "maps", "new")
+@external(javascript, "../dict.mjs", "make")
+pub fn new() -> Dict(k, v)
+
+@external(javascript, "../dict.mjs", "fold")
+pub fn fold(
+  over dict: Dict(k, v),
+  from initial: acc,
+  with fun: fn(acc, k, v) -> acc,
+) -> acc {
+  let fun = fn(key, value, acc) { fun(acc, key, value) }
+  do_fold(fun, initial, dict)
+}
+
+@external(erlang, "maps", "fold")
+fn do_fold(fun: fn(k, v, acc) -> acc, initial: acc, dict: Dict(k, v)) -> acc
+"#
+        ),
+        "
+import gleam/dict
+pub fn main() {
+  dict.fold(dict.new(), Nil, fn(_, _, _) { Nil })
+  Nil
+}
+"
+    );
+}
+
+#[test]
 fn calling_local_variable_not_marked_as_pure() {
     assert_no_warnings!(
         "

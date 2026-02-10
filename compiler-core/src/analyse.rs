@@ -5,7 +5,7 @@ pub mod name;
 mod tests;
 
 use crate::{
-    GLEAM_CORE_PACKAGE_NAME,
+    GLEAM_CORE_PACKAGE_NAME, STDLIB_PACKAGE_NAME,
     ast::{
         self, Arg, BitArrayOption, CustomType, DefinitionLocation, Function, GroupedDefinitions,
         Import, ModuleConstant, Publicity, RecordConstructor, RecordConstructorArg, SrcSpan,
@@ -632,13 +632,61 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 .last()
                 .map_or(prereg_return_type.clone(), |last| last.type_());
 
+            // `dict.do_fold` is a bit special: since it belongs to the stdlib
+            // it is considered pure by default.
+            // However, since it ends up calling its function argument its
+            // purity should actually be `Impure`. We need to special case it
+            // and set the value ourselves.
+            //
+            // You might wonder why `do_fold` needs this but other similar
+            // functions like `list.each` don't need this special handling.
+            // The key difference is `list.each` calls the higher order function
+            // in its gleam body:
+            //
+            // ```gleam
+            // fn each(list, fun) {
+            //   case list {
+            //     [] -> Nil
+            //     [first, ..rest] -> {
+            //       fun(first)
+            //       // ^^^ Here we're calling `fun`. It's happening in Gleam so
+            //       //     the compiler can see this and understand that `each`
+            //       //     is impure.
+            //       //     You might argue the purity actually depends on the
+            //       //     purity of `fun` itself. That's true! But it's a
+            //       //     separate known problem. For the time being we always
+            //       //     assume a function argument is impure.
+            //       each(rest, fun)
+            //     }
+            //   }
+            // }
+            // ```
+            //
+            // But since `do_fold` is an external the compiler can't know what
+            // is going on with its function argument and keeps thinking it must
+            // be pure
+            //
+            // ```gleam
+            // @external(erlang, "", "")
+            // fn do_fold(dict: Dict(k, v), fun: fn(k, v) -> a) -> Nil
+            // ```
+            //
+            let purity = if expr_typer.environment.current_package == STDLIB_PACKAGE_NAME
+                && expr_typer.environment.current_module == "gleam/dict"
+                && name == "do_fold"
+            {
+                Purity::Impure
+            } else {
+                expr_typer.purity
+            };
+
             let type_ = fn_(arguments_types, return_type);
             Ok((
                 type_,
                 body,
                 expr_typer.implementations,
                 expr_typer.minimum_required_version,
-                expr_typer.purity,
+                purity,
             ))
         });
 
