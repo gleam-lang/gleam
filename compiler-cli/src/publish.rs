@@ -18,7 +18,7 @@ use gleam_core::{
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
-use std::{collections::HashMap, io::Write, path::PathBuf, time::Instant};
+use std::{collections::HashMap, io::Write, path::PathBuf};
 
 use crate::{build, cli, docs, fs, http::HttpClient};
 
@@ -85,7 +85,6 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
     let credentials = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
         .get_or_create_api_credentials()?;
     let credentials = crate::hex::write_credentials(&credentials)?;
-    let start = Instant::now();
     cli::print_publishing(&config.name, &config.version);
 
     runtime.block_on(hex::publish_package(
@@ -107,7 +106,7 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         &hex_config,
         &http,
     ))?;
-    cli::print_published(start.elapsed());
+    cli::print_published("package and documentation");
     println!(
         "\nView your package at https://hex.pm/packages/{}",
         &config.name

@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    time::{Instant, SystemTime},
-};
+use std::{collections::HashMap, time::SystemTime};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
@@ -224,7 +221,6 @@ pub fn publish(paths: &ProjectPaths) -> Result<()> {
     )?;
     let archive = crate::fs::create_tar_archive(outputs)?;
 
-    let start = Instant::now();
     cli::print_publishing_documentation();
     runtime.block_on(hex::publish_documentation(
         &config.name,
@@ -234,6 +230,6 @@ pub fn publish(paths: &ProjectPaths) -> Result<()> {
         &hex_config,
         &http,
     ))?;
-    cli::print_published(start.elapsed());
+    cli::print_published("documentation");
     Ok(())
 }
