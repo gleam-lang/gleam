@@ -20,6 +20,10 @@
 
   ([Adi Salimgereyev](https://github.com/abs0luty))
 
+- Improved the code generated on the Erlang target when dividing a `Float`
+  number by the literal number `0.0`.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - When adding a package that does not exist on Hex, the message is a bit

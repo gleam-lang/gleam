@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/erlang/tests.rs
+expression: "\npub fn main() {\n  1.0 /. 0.0\n}        "
+---
+----- SOURCE CODE
+
+pub fn main() {
+  1.0 /. 0.0
+}        
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> float().
+main() ->
+    +0.0.
