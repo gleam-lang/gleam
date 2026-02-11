@@ -1,0 +1,18 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\nimport wibble/wobble\n\npub fn main() {\n  Nil\n}"
+---
+----- BEFORE ACTION
+
+import wibble/wobble
+              ↑     
+
+pub fn main() {
+  Nil
+}
+
+
+----- AFTER ACTION
+
+----- FILE OPERATIONS -----
+- Create /src/wibble/wobble.gleam

@@ -38,12 +38,12 @@ use super::{
     code_action::{
         AddAnnotations, AddMissingTypeParameter, AddOmittedLabels, AnnotateTopLevelDefinitions,
         CodeActionBuilder, CollapseNestedCase, ConvertFromUse, ConvertToFunctionCall,
-        ConvertToPipe, ConvertToUse, ExpandFunctionCapture, ExtractConstant, ExtractFunction,
-        ExtractVariable, FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
-        FixTruncatedBitArraySegment, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
-        GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase, MergeCaseBranches,
-        PatternMatchOnValue, RedundantTupleInCaseSubject, RemoveBlock, RemoveEchos,
-        RemovePrivateOpaque, RemoveUnreachableCaseClauses, RemoveUnusedImports,
+        ConvertToPipe, ConvertToUse, CreateUnknownModule, ExpandFunctionCapture, ExtractConstant,
+        ExtractFunction, ExtractVariable, FillInMissingLabelledArgs, FillUnusedFields,
+        FixBinaryOperation, FixTruncatedBitArraySegment, GenerateDynamicDecoder, GenerateFunction,
+        GenerateJsonEncoder, GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase,
+        MergeCaseBranches, PatternMatchOnValue, RedundantTupleInCaseSubject, RemoveBlock,
+        RemoveEchos, RemovePrivateOpaque, RemoveUnreachableCaseClauses, RemoveUnusedImports,
         UseLabelShorthandSyntax, WrapInBlock, code_action_add_missing_patterns,
         code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
@@ -470,6 +470,10 @@ where
             actions
                 .extend(AnnotateTopLevelDefinitions::new(module, &lines, &params).code_actions());
             actions.extend(AddMissingTypeParameter::new(module, &lines, &params).code_actions());
+            actions.extend(
+                CreateUnknownModule::new(module, &lines, &params, &this.paths, &this.error)
+                    .code_actions(),
+            );
             Ok(if actions.is_empty() {
                 None
             } else {
@@ -1596,7 +1600,7 @@ fn code_action_fix_names(
                 new_text: correction.to_string(),
             };
 
-            CodeActionBuilder::new(&format!("Rename to {correction}"))
+            CodeActionBuilder::new(format!("Rename to {correction}"))
                 .kind(lsp_types::CodeActionKind::QUICKFIX)
                 .changes(uri.clone(), vec![edit])
                 .preferred(true)

@@ -1,18 +1,25 @@
 use itertools::Itertools;
 use lsp_types::{
-    CodeActionContext, CodeActionParams, PartialResultParams, Position, Range, Url,
-    WorkDoneProgressParams,
+    CodeActionContext, CodeActionParams, DocumentChangeOperation, DocumentChanges,
+    PartialResultParams, Position, ResourceOp, Url, WorkDoneProgressParams,
 };
 
 use super::*;
+use crate::path;
 
-fn code_actions(tester: &TestProject<'_>, range: Range) -> Option<Vec<lsp_types::CodeAction>> {
+fn code_actions(
+    tester: &TestProject<'_>,
+    origin: Origin,
+    module: &str,
+    range_selector: RangeSelector,
+) -> Vec<lsp_types::CodeAction> {
     let position = Position {
         line: 0,
         character: 0,
     };
 
-    tester.at(position, |engine, params, _| {
+    tester.in_module_at(origin, module, position, |engine, params, code| {
+        let range = range_selector.find_range(&code);
         let params = CodeActionParams {
             text_document: params.text_document,
             range,
@@ -20,44 +27,51 @@ fn code_actions(tester: &TestProject<'_>, range: Range) -> Option<Vec<lsp_types:
             work_done_progress_params: WorkDoneProgressParams::default(),
             partial_result_params: PartialResultParams::default(),
         };
-        engine.code_actions(params).result.unwrap()
+        engine
+            .code_actions(params)
+            .result
+            .unwrap()
+            .unwrap_or_default()
     })
 }
 
 fn actions_with_title(
     titles: Vec<&str>,
     tester: &TestProject<'_>,
-    range: Range,
+    origin: Origin,
+    module: &str,
+    range_selector: RangeSelector,
 ) -> Vec<lsp_types::CodeAction> {
-    code_actions(tester, range)
+    code_actions(tester, origin, module, range_selector)
         .into_iter()
-        .flatten()
         .filter(|action| titles.contains(&action.title.as_str()))
         .collect_vec()
 }
 
-fn owned_actions_with_title(
-    titles: Vec<&str>,
-    tester: TestProject<'_>,
-    range: Range,
-) -> Vec<lsp_types::CodeAction> {
-    actions_with_title(titles, &tester, range)
-}
-
-fn apply_code_action(title: &str, tester: TestProject<'_>, range: Range) -> String {
+fn apply_code_action(
+    title: &str,
+    tester: &TestProject<'_>,
+    origin: Origin,
+    module: &str,
+    range_selector: RangeSelector,
+) -> (String, String) {
     let titles = vec![title];
-    let changes = actions_with_title(titles, &tester, range)
-        .pop()
+    let actions = actions_with_title(titles, &tester, origin, module, range_selector);
+    let changes = actions
+        .last()
         .expect("No action with the given title")
         .edit
-        .expect("No workspace edit found")
-        .changes
-        .expect("No text edit found");
-    apply_code_edit(tester, changes)
+        .as_ref()
+        .and_then(|edit| edit.changes.as_ref())
+        .cloned()
+        .unwrap_or_default();
+    let code_change = apply_code_edit(tester, changes);
+    let file_operations = format_code_action_file_operations(&actions);
+    (code_change, file_operations)
 }
 
 fn apply_code_edit(
-    tester: TestProject<'_>,
+    tester: &TestProject<'_>,
     changes: HashMap<Url, Vec<lsp_types::TextEdit>>,
 ) -> String {
     let mut changed_files: HashMap<Url, String> = HashMap::new();
@@ -75,7 +89,7 @@ fn apply_code_edit(
     show_code_edits(tester, changed_files)
 }
 
-fn show_code_edits(tester: TestProject<'_>, changed_files: HashMap<Url, String>) -> String {
+fn show_code_edits(tester: &TestProject<'_>, changed_files: HashMap<Url, String>) -> String {
     let format_code = |url: &Url, code: &String| {
         format!(
             "// --- Edits applied to module '{}'\n{}",
@@ -101,6 +115,56 @@ fn show_code_edits(tester: TestProject<'_>, changed_files: HashMap<Url, String>)
             .map(|(url, code)| format_code(url, code))
             .join("\n")
     }
+}
+
+fn format_code_action_file_operations<'a>(actions: &[lsp_types::CodeAction]) -> String {
+    // Display path the same on linux or windows so tests don't fail between targets
+    let normalized_path = |uri: &Url| {
+        format!(
+            "/{}",
+            path(uri)
+                .components()
+                // Skip root component (`/` on linux / `C:\` on windows)
+                .skip(1)
+                .join("/")
+        )
+    };
+
+    actions
+        .iter()
+        .filter_map(|action| {
+            if let Some(DocumentChanges::Operations(operations)) = action
+                .edit
+                .as_ref()
+                .and_then(|edit| edit.document_changes.as_ref())
+            {
+                Some(operations)
+            } else {
+                None
+            }
+        })
+        .flat_map(|operations| {
+            operations.into_iter().filter_map(|op| match op {
+                DocumentChangeOperation::Op(op) => Some(op),
+                DocumentChangeOperation::Edit(_) => None,
+            })
+        })
+        .map(|op| match op {
+            ResourceOp::Create(create) => {
+                format!("- Create {}", normalized_path(&create.uri))
+            }
+            ResourceOp::Rename(rename) => {
+                format!(
+                    "- Rename {} to {}",
+                    normalized_path(&rename.old_uri),
+                    normalized_path(&rename.new_uri)
+                )
+            }
+            ResourceOp::Delete(delete) => {
+                format!("- Delete {}", normalized_path(&delete.uri))
+            }
+        })
+        .join("\n")
 }
 
 const REMOVE_UNUSED_IMPORTS: &str = "Remove unused imports";
@@ -141,36 +205,83 @@ const MERGE_CASE_BRANCHES: &str = "Merge case branches";
 const ADD_MISSING_TYPE_PARAMETER: &str = "Add missing type parameter";
 
 macro_rules! assert_code_action {
-    ($title:expr, $code:literal, $range:expr $(,)?) => {
+    ($title:expr, $code:literal, $range_selector:expr $(,)?) => {
         let project = TestProject::for_source($code);
-        assert_code_action!($title, project, $range);
+        assert_code_action!($title, project, $range_selector);
     };
 
-    ($title:expr, $project:expr, $range:expr $(,)?) => {
-        let src = $project.src;
-        let range = $range.find_range(src);
-        let result = apply_code_action($title, $project, range);
-        let output = format!(
+    ($title:expr, $project:expr, $range_selector:expr $(,)?) => {
+        assert_code_action!(
+            $title,
+            $project,
+            Origin::Src,
+            LSP_TEST_ROOT_PACKAGE_NAME,
+            $range_selector
+        );
+    };
+
+    ($title:expr, $code:literal, $origin:expr, $module:expr, $range_selector:expr $(,)?) => {
+        let project = TestProject::for_source($code);
+        assert_code_action!($title, project, $origin, $module, $range_selector);
+    };
+
+    ($title:expr, $project:expr, $origin:expr, $module:expr, $range_selector:expr $(,)?) => {
+        let project = &$project;
+        let src = project
+            .src_from_origin_and_module_name($origin, $module)
+            .unwrap();
+        let range = $range_selector.find_range(src);
+        let (updated_src, file_operations) =
+            apply_code_action($title, project, $origin, $module, $range_selector);
+
+        let mut output = format!(
             "----- BEFORE ACTION\n{}\n\n----- AFTER ACTION\n{}",
             hover::show_hover(src, range, range.end),
-            result
+            updated_src
         );
+
+        if !file_operations.is_empty() {
+            output.push_str(&format!("\n----- FILE OPERATIONS -----\n{file_operations}"));
+        }
+
         insta::assert_snapshot!(insta::internals::AutoName, output, src);
     };
 }
 
 macro_rules! assert_no_code_actions {
-    ($title:ident $(| $titles:ident)*, $code:literal, $range:expr $(,)?) => {
+    ($title:ident $(| $titles:ident)*, $code:literal, $range_selector:expr $(,)?) => {
         let project = TestProject::for_source($code);
-        assert_no_code_actions!($title $(| $titles)*, project, $range);
+        assert_no_code_actions!($title $(| $titles)*, project, $range_selector);
     };
 
-    ($title:ident $(| $titles:ident)*, $project:expr, $range:expr $(,)?) => {
-        let src = $project.src;
-        let range = $range.find_range(src);
+    ($title:ident $(| $titles:ident)*, $project:expr, $range_selector:expr $(,)?) => {
         let all_titles = vec![$title $(, $titles)*];
         let expected: Vec<lsp_types::CodeAction> = vec![];
-        let result = owned_actions_with_title(all_titles, $project, range);
+        let result = actions_with_title(
+            all_titles,
+            &$project,
+            Origin::Src,
+            LSP_TEST_ROOT_PACKAGE_NAME,
+            $range_selector
+        );
+        assert_eq!(expected, result);
+    };
+
+    ($title:literal $(| $titles:literal)*, $code:literal, $range_selector:expr $(,)?) => {
+        let project = TestProject::for_source($code);
+        assert_no_code_actions!($title $(| $titles)*, project, $range_selector);
+    };
+
+    ($title:literal $(| $titles:literal)*, $project:expr, $range_selector:expr $(,)?) => {
+        let all_titles = vec![$title $(, $titles)*];
+        let expected: Vec<lsp_types::CodeAction> = vec![];
+        let result = actions_with_title(
+            all_titles,
+            &$project,
+            Origin::Src,
+            LSP_TEST_ROOT_PACKAGE_NAME,
+            $range_selector
+        );
         assert_eq!(expected, result);
     };
 }
@@ -12119,5 +12230,100 @@ pub fn main() {
             "
         ),
         find_position_of("fn(").select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn create_unknown_module_under_src() {
+    assert_code_action!(
+        "Create src/wibble/wobble.gleam",
+        "
+import wibble/wobble
+
+pub fn main() {
+  Nil
+}",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn create_unknown_module_under_dev() {
+    let project = TestProject::for_source(
+        "
+pub fn main() {
+  Nil
+}",
+    )
+    .add_dev_module(
+        "wibble",
+        "
+import wobble/woo",
+    );
+
+    assert_code_action!(
+        "Create dev/wobble/woo.gleam",
+        project,
+        Origin::Dev,
+        "wibble",
+        find_position_of("woo").to_selection()
+    );
+}
+
+#[test]
+fn create_unknown_module_under_test() {
+    let project = TestProject::for_source(
+        "
+pub fn main() {
+  Nil
+}",
+    )
+    .add_test_module(
+        "wibble",
+        "
+import wobble/woo",
+    );
+
+    assert_code_action!(
+        "Create test/wobble/woo.gleam",
+        project,
+        Origin::Test,
+        "wibble",
+        find_position_of("woo").to_selection()
+    );
+}
+
+#[test]
+fn create_unknown_module_doesnt_trigger_when_module_exists() {
+    let code = "
+import wibble/wobble
+
+pub fn main() {
+  Nil
+}
+";
+
+    assert_no_code_actions!(
+        "Create src/wibble/wobble.gleam",
+        TestProject::for_source(code)
+            .add_module("wibble/wobble", "pub type Wibble { Wobble(String) }"),
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn create_unknown_module_doesnt_trigger_when_import_not_selected() {
+    let code = "
+import wibble/wobble
+
+pub fn main() {
+  Nil
+}
+";
+
+    assert_no_code_actions!(
+        "Create src/wibble/wobble.gleam",
+        TestProject::for_source(code),
+        find_position_of("main").to_selection()
     );
 }
