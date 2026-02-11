@@ -155,11 +155,12 @@
   ([Vladislav Shakitskiy](https://github.com/vshakitskiy))
 
 - The "Interpolate String" code action now lets the user "cut out" any portion
-  of a string, regardless of whether it is a valid Gleam identifier or not. In
-  addition, when interpolating an expression at the very start or the very end
-  of a string, redundant empty string are no longer added before/after the
-  interpolated expression.
+  of a string, regardless of whether it is a valid Gleam identifier or not.
+  ([Hari Mohan](https://github.com/seafoamteal))
 
+- When interpolating an expression at the very start or the very end
+  of a string, redundant empty strings are no longer added before/after the
+  interpolated expression.
   ([Hari Mohan](https://github.com/seafoamteal))
 
 ### Formatter
