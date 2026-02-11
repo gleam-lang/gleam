@@ -12176,6 +12176,7 @@ fn interpolate_string_does_not_add_empty_string_right_at_the_start() {
     );
 }
 
+#[test]
 fn generate_dynamic_decoder_produces_zero_values_for_user_defined_type_in_the_same_package_1() {
     let src = r#"
 import wibble.{type Wibble}
