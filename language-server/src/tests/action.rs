@@ -920,17 +920,6 @@ fn interpolate_string_inside_string() {
 }
 
 #[test]
-fn fallback_to_split_string_when_selecting_invalid_name() {
-    assert_code_action!(
-        INTERPOLATE_STRING,
-        r#"pub fn main() {
-  "wibble wobble woo woo"
-}"#,
-        find_position_of("wobble").select_until(find_position_of("woo ").under_last_char()),
-    );
-}
-
-#[test]
 fn splitting_string_as_first_pipeline_step_inserts_brackets() {
     assert_code_action!(
         INTERPOLATE_STRING,
@@ -12119,5 +12108,39 @@ pub fn main() {
             "
         ),
         find_position_of("fn(").select_until(find_position_of("}"))
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5263
+#[test]
+fn interpolate_string_allows_extracting_record_access_syntax() {
+    assert_code_action!(
+        INTERPOLATE_STRING,
+        r#"pub fn main() {
+  "wibble wobble.some_field woo"
+}"#,
+        find_position_of("wobble").select_until(find_position_of("some_field ").under_last_char()),
+    );
+}
+
+#[test]
+fn interpolate_string_does_not_add_empty_string_right_at_the_start() {
+    assert_code_action!(
+        INTERPOLATE_STRING,
+        r#"pub fn main() {
+  "wibble wobble woo"
+}"#,
+        find_position_of("wibble ").select_until(find_position_of("wibble ").under_last_char()),
+    );
+}
+
+#[test]
+fn interpolate_string_does_not_add_empty_string_right_at_the_end() {
+    assert_code_action!(
+        INTERPOLATE_STRING,
+        r#"pub fn main() {
+  "wibble wobble woo"
+}"#,
+        find_position_of("woo\"").select_until(find_position_of("woo\"").under_last_char()),
     );
 }

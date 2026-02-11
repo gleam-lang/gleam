@@ -1,0 +1,15 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn main() {\n  \"wibble wobble woo\"\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  "wibble wobble woo"
+                 ▔▔▔↑
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  "wibble wobble " <> woo
+}

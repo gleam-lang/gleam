@@ -7416,19 +7416,21 @@ impl<'a> InterpolateString<'a> {
                     .get(value_location.start as usize..value_location.end as usize)
                     .expect("invalid value range");
 
-                if is_valid_lowercase_name(name) {
+                // We trust that the programmer has correctly selected the part
+                // of the string they want to interpolate and simply "cut it out"
+                // for them. In future, we could try and parse their selection to
+                // see if it is a valid expression in Gleam.
+                if value_location.start == string_location.start + 1 {
+                    self.edits
+                        .insert(string_location.start, format!("{name} <> "));
+                } else if value_location.end == string_location.end - 1 {
+                    self.edits
+                        .insert(string_location.end, format!(" <> {name}"));
+                } else {
                     self.edits
                         .insert(value_location.start, format!("\" <> {name} <> \""));
-                    self.edits.delete(value_location);
-                } else if self.can_split_string_at(value_location.end) {
-                    // If the string is not a valid name we just try and split
-                    // the string at the end of the selection.
-                    self.edits
-                        .insert(value_location.end, "\" <> todo <> \"".into());
-                } else {
-                    // Otherwise there's no meaningful action we can do.
-                    return vec![];
                 }
+                self.edits.delete(value_location);
             }
 
             StringInterpolation::SplitString { split_at } if self.can_split_string_at(split_at) => {
@@ -7473,7 +7475,26 @@ impl<'a> InterpolateString<'a> {
         let selection @ SrcSpan { start, end } =
             self.edits.lsp_range_to_src_span(self.params.range);
 
-        let interpolation = if start == end {
+        // We can't interpolate/split if the double quotes delimiting the
+        // string have been selected.
+        if start == string_location.start || end == string_location.end {
+            return;
+        }
+
+        let name = self
+            .module
+            .code
+            .get(start as usize..end as usize)
+            .expect("invalid value range");
+
+        // TUI editors like Helix and Kakoune that use the selection-action edit
+        // model are always in the equivalent of Vim's VISUAL mode, i.e. they always
+        // have something selected. For programmers using these editors, the
+        // smallest selection possible is a 1-character selection. The best we can do
+        // to provide parity with other editors is to consider a single-character SPACE
+        // selection as an empty selection, as they most likely want to split the
+        // string instead of interpolating a variable.
+        let interpolation = if start == end || (end - start == 1 && name == " ") {
             StringInterpolation::SplitString { split_at: start }
         } else {
             StringInterpolation::InterpolateValue {
