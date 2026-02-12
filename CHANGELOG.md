@@ -179,6 +179,10 @@
 
 ### Bug fixes
 
+- The compiler now emits correctly-scoped JavaScript code for `case` expressions
+  whose subjects directly match one of the branches.
+  ([Justin Lubin](https://github.com/justinlubin))
+
 - Fixed a bug where some bit array patterns would erroneously be marked as
   unreachable.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

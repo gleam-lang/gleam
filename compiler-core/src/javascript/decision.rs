@@ -391,7 +391,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             if let FallbackCheck::RuntimeCheck { check } = fallback_check {
                 self.variables.record_check_assignments(var, check);
             }
-            return self.decision(fallback);
+            return self.inside_new_scope(|this| this.decision(fallback));
         }
 
         // Otherwise we'll have to generate a series of if-else to check which
