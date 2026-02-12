@@ -1,14 +1,12 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nconst numbers = [2, 4, 6, 8]\n"
 ---
 const numbers = [2, 4, 6, 8]
                 ↑▔▔▔▔▔▔▔▔▔▔▔
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nList(Int)\n```",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+List(Int)
+```

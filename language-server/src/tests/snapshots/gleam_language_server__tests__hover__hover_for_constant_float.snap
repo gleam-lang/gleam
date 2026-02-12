@@ -1,14 +1,12 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nconst pi = 3.14\n"
 ---
 const pi = 3.14
            ↑▔▔▔
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nFloat\n```",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+Float
+```

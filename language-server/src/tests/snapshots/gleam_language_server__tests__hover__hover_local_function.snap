@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nfn my_fn() {\n  Nil\n}\n\nfn main() {\n  my_fn\n}\n"
 ---
 fn my_fn() {
@@ -12,9 +12,7 @@ fn main() {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nfn() -> Nil\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+fn() -> Nil
+```

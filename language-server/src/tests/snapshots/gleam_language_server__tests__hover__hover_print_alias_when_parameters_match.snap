@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\ntype MyResult(a, b) = Result(a, b)\n\nfn do_thing() -> MyResult(Int, Int) {\n  Error(1)\n}\n"
 ---
 type MyResult(a, b) = Result(a, b)
@@ -10,9 +10,7 @@ fn do_thing() -> MyResult(Int, Int) {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nfn() -> MyResult(Int, Int)\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+fn() -> MyResult(Int, Int)
+```

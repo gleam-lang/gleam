@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nfn b(fun: fn(Int) -> String) {\n  fun(42)\n}\n\nfn do_stuff() {\n  let c = \"done\"\n\n  use a <- b\n  c\n}\n"
 ---
 fn b(fun: fn(Int) -> String) {
@@ -15,9 +15,7 @@ fn do_stuff() {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nfn(fn(Int) -> String) -> String\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+fn(fn(Int) -> String) -> String
+```

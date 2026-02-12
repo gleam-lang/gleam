@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nimport wibble/wobble\n\npub fn main() {\n  let wibble = wobble.Wibble\n}\n"
 ---
 import wibble/wobble
@@ -10,9 +10,9 @@ pub fn main() {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nwobble.Wibble\n```\n\nView on [HexDocs](https://hexdocs.pm/hex/wibble/wobble.html#Wibble)",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+wobble.Wibble
+```
+
+View on [HexDocs](https://hexdocs.pm/hex/wibble/wobble.html#Wibble)

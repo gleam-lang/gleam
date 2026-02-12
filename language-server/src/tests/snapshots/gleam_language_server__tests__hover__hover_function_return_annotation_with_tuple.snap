@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\n/// Exciting documentation\n/// Maybe even multiple lines\nfn append(x: String, y: String) -> #(String, String) {\n  #(x, y)\n}\n"
 ---
 /// Exciting documentation
@@ -10,9 +10,7 @@ fn append(x: String, y: String) -> #(String, String) {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\ngleam.String\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+gleam.String
+```

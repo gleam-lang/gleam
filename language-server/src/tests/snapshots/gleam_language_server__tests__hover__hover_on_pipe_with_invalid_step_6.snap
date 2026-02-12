@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\npub fn main() {\n  [1, 2, 3]\n  |> wibble\n  |> filter(fn(value) { value })\n}\n\nfn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) { todo }\n"
 ---
 pub fn main() {
@@ -12,9 +12,7 @@ pub fn main() {
 fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) { todo }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nfn(List(Int)) -> List(Bool)\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+fn(List(Int)) -> List(Bool)
+```

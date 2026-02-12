@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\ntype Wibble {\n    Wibble(arg: String)\n}\n"
 ---
 type Wibble {
@@ -8,9 +8,7 @@ type Wibble {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\ngleam.String\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+gleam.String
+```

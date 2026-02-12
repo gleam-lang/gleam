@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nimport example_module\nfn main() {\n  example_module.my_fn\n}\n"
 ---
 import example_module
@@ -9,9 +9,7 @@ fn main() {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nfn() -> Nil\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+fn() -> Nil
+```

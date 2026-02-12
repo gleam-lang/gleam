@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nimport aliases.{type Aliased}\nconst thing: Aliased = 10\n"
 ---
 import aliases.{type Aliased}
@@ -7,9 +7,7 @@ const thing: Aliased = 10
 ▔▔▔▔▔▔▔▔▔▔↑▔▔▔▔▔▔▔▔▔     
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nAliased\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+Aliased
+```

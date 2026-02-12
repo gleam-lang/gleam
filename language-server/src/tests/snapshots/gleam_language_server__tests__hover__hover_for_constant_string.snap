@@ -1,14 +1,12 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nconst message = \"Hello!\"\n"
 ---
 const message = "Hello!"
                 ▔▔▔▔▔▔↑▔
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nString\n```",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+String
+```

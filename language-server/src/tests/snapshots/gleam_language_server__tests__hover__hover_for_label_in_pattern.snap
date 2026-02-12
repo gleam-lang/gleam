@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\ntype Wibble {\n  Wibble(wibble: Int, wobble: Int)\n}\n\npub fn main() {\n  let Wibble(wibble: _, wobble: _) = todo\n  todo\n}\n"
 ---
 type Wibble {
@@ -13,9 +13,7 @@ pub fn main() {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nInt\n```",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+Int
+```

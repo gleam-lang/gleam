@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nimport wibble\n\npub fn main() {\n  wibble.wibble()\n}\n"
 ---
 import wibble
@@ -10,9 +10,12 @@ pub fn main() {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nwibble\n```\n This is the wibble module.\n Here is some documentation about it.\n This module does stuff\n\nView on [HexDocs](https://hexdocs.pm/hex/wibble.html)",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+wibble
+```
+ This is the wibble module.
+ Here is some documentation about it.
+ This module does stuff
+
+View on [HexDocs](https://hexdocs.pm/hex/wibble.html)

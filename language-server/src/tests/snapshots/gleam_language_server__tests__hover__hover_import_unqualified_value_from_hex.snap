@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nimport example_module.{my_num}\nfn main() {\n  my_num\n}\n"
 ---
 import example_module.{my_num}
@@ -9,9 +9,11 @@ fn main() {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nInt\n```\n Exciting documentation\n Maybe even multiple lines\n\nView on [HexDocs](https://hexdocs.pm/hex/example_module.html#my_num)",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+Int
+```
+ Exciting documentation
+ Maybe even multiple lines
+
+View on [HexDocs](https://hexdocs.pm/hex/example_module.html#my_num)

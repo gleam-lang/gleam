@@ -1,14 +1,12 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nconst number = 100\n"
 ---
 const number = 100
 ▔▔▔▔▔▔▔▔▔↑▔▔      
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nInt\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+Int
+```

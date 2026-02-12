@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nfn append(x, y) {\n  x <> y\n}\n"
 ---
 fn append(x, y) {
@@ -8,9 +8,8 @@ fn append(x, y) {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nString\n```\nA locally defined variable.",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+String
+```
+A locally defined variable.
