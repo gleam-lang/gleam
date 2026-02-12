@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nimport wibble/wobble.{Wibble, Wobble, Wubble}\n\npub fn cycle(wibble: wobble.Wibble) {\n  case wibble {\n    Wibble -> Wobble\n    Wobble -> Wubble\n    Wubble -> Wibble\n  }\n}\n"
 ---
 import wibble/wobble.{Wibble, Wobble, Wubble}
@@ -14,9 +14,7 @@ pub fn cycle(wibble: wobble.Wibble) {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nwobble.Wibble\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+wobble.Wibble
+```

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nconst name = \"Bob\"\nconst message = \"Hello \" <> name\n"
 ---
 const name = "Bob"
@@ -7,9 +7,7 @@ const message = "Hello " <> name
                             ↑▔▔▔
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nString\n```",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+String
+```

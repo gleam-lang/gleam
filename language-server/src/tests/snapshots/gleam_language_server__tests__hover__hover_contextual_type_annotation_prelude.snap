@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nfn add_one(a: Int) -> Int {\n  a + 1\n}\n"
 ---
 fn add_one(a: Int) -> Int {
@@ -8,9 +8,7 @@ fn add_one(a: Int) -> Int {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\ngleam.Int\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+gleam.Int
+```

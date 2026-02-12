@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nimport wibble/wobble.{type Wibble as Wobble}\n\ntype Thing {\n  Thing(id: Int, value: Wobble)\n}\n\npub fn main(thing: Thing) {\n  case thing {\n    Thing(id: 0, ..) -> 12\n    _ -> 14\n  }\n}\n"
 ---
 import wibble/wobble.{type Wibble as Wobble}
@@ -17,9 +17,6 @@ pub fn main(thing: Thing) {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "Unused labelled fields:\n- `value: Wobble`",
-    ),
-)
+----- Hover content (markdown) -----
+Unused labelled fields:
+- `value: Wobble`

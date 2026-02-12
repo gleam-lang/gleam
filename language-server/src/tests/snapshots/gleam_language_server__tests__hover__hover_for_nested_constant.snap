@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\ntype Wibble {\n  Wibble\n  Wobble(BitArray)\n}\n\nconst value = #(1, 2, [Wibble, Wobble(<<1, 2, 3>>), Wibble])\n"
 ---
 type Wibble {
@@ -11,9 +11,7 @@ const value = #(1, 2, [Wibble, Wobble(<<1, 2, 3>>), Wibble])
                                               ↑             
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nInt\n```",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+Int
+```

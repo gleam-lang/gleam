@@ -1,4 +1,4 @@
-use lsp_types::{Hover, HoverParams, Position, Range};
+use lsp_types::{Hover, HoverContents, HoverParams, MarkedString, Position, Range};
 
 use super::*;
 
@@ -49,6 +49,33 @@ pub fn show_hover(code: &str, range: Range, position: Position) -> String {
     buffer
 }
 
+fn pretty_hover_contents(contents: HoverContents) -> String {
+    let (kind, content) = match contents {
+        HoverContents::Scalar(marked_string) => ("markdown", pretty_marked_string(marked_string)),
+        HoverContents::Array(marked_strings) => (
+            "markdown array",
+            marked_strings
+                .into_iter()
+                .map(pretty_marked_string)
+                .join("\n\n"),
+        ),
+        HoverContents::Markup(lsp_types::MarkupContent { kind, value }) => match kind {
+            lsp_types::MarkupKind::PlainText => ("plaintext", value),
+            lsp_types::MarkupKind::Markdown => ("markdown", value),
+        },
+    };
+    format!("----- Hover content ({kind}) -----\n{content}")
+}
+
+fn pretty_marked_string(marked_string: MarkedString) -> String {
+    match marked_string {
+        MarkedString::String(string) => string,
+        MarkedString::LanguageString(lsp_types::LanguageString { language, value }) => {
+            format!("```{language}\n{value}\n```")
+        }
+    }
+}
+
 #[macro_export]
 macro_rules! assert_hover {
     ($code:literal, $position:expr $(,)?) => {
@@ -62,8 +89,9 @@ macro_rules! assert_hover {
         let result = hover($project, position).expect("no hover produced");
         let pretty_hover = show_hover(src, result.range.expect("hover with no range"), position);
         let output = format!(
-            "{}\n\n----- Hover content -----\n{:#?}",
-            pretty_hover, result.contents
+            "{}\n\n{}",
+            pretty_hover,
+            pretty_hover_contents(result.contents)
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, src);
     };

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\ntype Result = #(Bool, String)\nconst ok = Ok(10)\n"
 ---
 type Result = #(Bool, String)
@@ -7,9 +7,7 @@ const ok = Ok(10)
 ▔▔▔▔▔▔▔↑         
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\ngleam.Result(Int, a)\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+gleam.Result(Int, a)
+```

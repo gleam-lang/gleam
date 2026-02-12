@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\ntype Int { Int }\nconst number = 100\n"
 ---
 type Int { Int }
@@ -7,9 +7,7 @@ const number = 100
 ▔▔▔▔▔▔▔▔▔↑▔▔      
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\ngleam.Int\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+gleam.Int
+```

@@ -1,14 +1,12 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: type Wibble = Int
 ---
 type Wibble = Int
               ▔↑▔
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\ngleam.Int\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+gleam.Int
+```

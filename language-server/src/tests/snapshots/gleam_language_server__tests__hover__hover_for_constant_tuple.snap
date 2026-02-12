@@ -1,14 +1,12 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nconst tuple = #(1, 3.5, False)\n"
 ---
 const tuple = #(1, 3.5, False)
               ↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\n#(Int, Float, Bool)\n```",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+#(Int, Float, Bool)
+```

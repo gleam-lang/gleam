@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nfn wibble(arg1 arg1: Int, arg2 arg2: Bool) { Nil }\n\nfn main() {\n  let arg1 = 1\n  let arg2 = True\n  wibble(arg2:, arg1:)\n}\n"
 ---
 fn wibble(arg1 arg1: Int, arg2 arg2: Bool) { Nil }
@@ -12,9 +12,8 @@ fn main() {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nBool\n```\nA locally defined variable.",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+Bool
+```
+A locally defined variable.

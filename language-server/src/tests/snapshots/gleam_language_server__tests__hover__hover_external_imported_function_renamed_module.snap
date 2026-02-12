@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nimport example_module as renamed_module\nfn main() {\n    renamed_module.my_fn\n}\n"
 ---
 import example_module as renamed_module
@@ -9,9 +9,9 @@ fn main() {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nfn() -> Nil\n```\n\nView on [HexDocs](https://hexdocs.pm/hex/example_module.html#my_fn)",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+fn() -> Nil
+```
+
+View on [HexDocs](https://hexdocs.pm/hex/example_module.html#my_fn)

@@ -1,14 +1,12 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nconst bits = <<1:2, 3:4>>\n"
 ---
 const bits = <<1:2, 3:4>>
                ↑         
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nInt\n```",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+Int
+```

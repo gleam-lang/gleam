@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\n/// Exciting documentation\n/// Maybe even multiple lines\ntype Wibble {\n    Wibble(arg: String)\n}\n\nfn identity(x: Wibble) -> Wibble {\n  x\n}\n"
 ---
 /// Exciting documentation
@@ -14,9 +14,9 @@ fn identity(x: Wibble) -> Wibble {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\napp.Wibble\n```\n Exciting documentation\n Maybe even multiple lines\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+app.Wibble
+```
+ Exciting documentation
+ Maybe even multiple lines

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nimport wibble/wobble\n\nfn make_wibble() -> wobble.Wibble { wobble.Wibble }\n"
 ---
 import wibble/wobble
@@ -8,9 +8,7 @@ fn make_wibble() -> wobble.Wibble { wobble.Wibble }
                     ▔▔▔▔▔▔▔▔↑▔▔▔▔                  
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nwobble.Wibble\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+wobble.Wibble
+```

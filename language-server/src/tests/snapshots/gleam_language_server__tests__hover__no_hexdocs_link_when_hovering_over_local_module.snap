@@ -1,14 +1,15 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nimport wibble\n"
 ---
 import wibble
 ▔▔▔▔▔▔▔↑▔▔▔▔▔
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nwibble\n```\n This is the wibble module.\n Here is some documentation about it.\n This module does stuff\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+wibble
+```
+ This is the wibble module.
+ Here is some documentation about it.
+ This module does stuff

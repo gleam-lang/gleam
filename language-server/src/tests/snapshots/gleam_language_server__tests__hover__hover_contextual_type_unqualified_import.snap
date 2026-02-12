@@ -1,14 +1,14 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nimport wibble/wobble.{type Wibble as Wobble, Wobble}\n"
 ---
 import wibble/wobble.{type Wibble as Wobble, Wobble}
                                              ↑▔▔▔▔▔ 
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nWobble\n```\n\nView on [HexDocs](https://hexdocs.pm/hex/wibble/wobble.html#Wobble)",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+Wobble
+```
+
+View on [HexDocs](https://hexdocs.pm/hex/wibble/wobble.html#Wobble)

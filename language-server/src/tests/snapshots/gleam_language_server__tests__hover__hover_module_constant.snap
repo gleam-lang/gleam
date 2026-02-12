@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\n/// Exciting documentation\n/// Maybe even multiple lines\nconst one = 1\n"
 ---
 /// Exciting documentation
@@ -8,9 +8,9 @@ const one = 1
 ▔▔▔▔▔▔↑▔▔    
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nInt\n```\n Exciting documentation\n Maybe even multiple lines",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+Int
+```
+ Exciting documentation
+ Maybe even multiple lines

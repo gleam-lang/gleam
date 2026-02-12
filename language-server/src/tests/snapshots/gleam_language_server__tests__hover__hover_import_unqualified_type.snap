@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nimport example_module.{type MyType, MyType}\nfn main() -> MyType {\n  MyType\n}\n"
 ---
 import example_module.{type MyType, MyType}
@@ -9,9 +9,9 @@ fn main() -> MyType {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nexample_module.MyType\n```\n Exciting documentation\n Maybe even multiple lines\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+example_module.MyType
+```
+ Exciting documentation
+ Maybe even multiple lines

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\ntype Wibble {\n  Wibble(Int)\n}\n\nconst w = Wibble(10)\n"
 ---
 type Wibble {
@@ -10,9 +10,7 @@ const w = Wibble(10)
           ▔↑▔▔▔▔▔▔▔▔
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nWibble\n```",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+Wibble
+```

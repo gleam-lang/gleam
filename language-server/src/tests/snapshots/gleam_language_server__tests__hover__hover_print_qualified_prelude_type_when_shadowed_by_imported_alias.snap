@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nimport alias.{type Bool}\nconst value = True\n"
 ---
 import alias.{type Bool}
@@ -7,9 +7,7 @@ const value = True
 ▔▔▔▔▔▔↑▔▔▔▔       
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\ngleam.Bool\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+gleam.Bool
+```

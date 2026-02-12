@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\nfn invalid() { 1 + Nil }\nfn valid() { Nil }\n"
 ---
 fn invalid() { 1 + Nil }
@@ -7,9 +7,7 @@ fn valid() { Nil }
 ▔▔▔↑▔▔▔▔▔▔        
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nfn() -> Nil\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+fn() -> Nil
+```

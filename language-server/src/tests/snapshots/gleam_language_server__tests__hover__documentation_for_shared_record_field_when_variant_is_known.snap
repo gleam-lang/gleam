@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\npub type Wibble {\n  Wibble(\n    /// This is some documentation about the wibble field.\n    wibble: Int\n  )\n  Wobble(\n    /// This won't show up because it's a Wibble variant\n    wibble: Int\n  )\n}\n\npub fn wibble(w: Wibble) {\n  let assert Wibble(..) = w\n  w.wibble\n}\n"
 ---
 pub type Wibble {
@@ -20,9 +20,8 @@ pub fn wibble(w: Wibble) {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nInt\n```\n This is some documentation about the wibble field.\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+Int
+```
+ This is some documentation about the wibble field.

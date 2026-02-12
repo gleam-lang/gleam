@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/hover.rs
+source: language-server/src/tests/hover.rs
 expression: "\npub fn main() {\n  use something: Int <- todo\n  todo\n}\n"
 ---
 pub fn main() {
@@ -9,9 +9,7 @@ pub fn main() {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\ngleam.Int\n```\n",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+gleam.Int
+```

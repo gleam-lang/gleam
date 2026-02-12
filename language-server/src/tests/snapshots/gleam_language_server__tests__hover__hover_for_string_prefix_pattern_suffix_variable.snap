@@ -11,9 +11,7 @@ pub fn main() {
 }
 
 
------ Hover content -----
-Scalar(
-    String(
-        "```gleam\nString\n```",
-    ),
-)
+----- Hover content (markdown) -----
+```gleam
+String
+```
