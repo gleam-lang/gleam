@@ -1377,6 +1377,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     .module_types
                                     .keys()
                                     .any(|type_| type_ == &name),
+                                possible_modules: self
+                                    .environment
+                                    .get_possible_modules_with_value(&name),
                             });
                         }
                     },

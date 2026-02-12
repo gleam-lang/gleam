@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport module\npub fn main() {\n    add(1, 1)\n}"
+---
+----- SOURCE CODE
+-- module.gleam
+
+pub fn add(x: Float, y: Float) {
+    x +. y
+}
+
+-- main.gleam
+
+import module
+pub fn main() {
+    add(1, 1)
+}
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:4:5
+  │
+4 │     add(1, 1)
+  │     ^^^
+
+The name `add` is not in scope here.
+Did you mean one of these:
+
+  - module.add

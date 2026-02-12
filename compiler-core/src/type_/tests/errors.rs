@@ -3424,3 +3424,525 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_from_another_package_with_internal_function() {
+    // Internal function from another modules in another package should not be suggested.
+    assert_module_error!(
+        (
+            "anotherpackage",
+            "module",
+            "
+@internal
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_from_another_package_with_internal_record_constructor() {
+    // Internal record constructor from another modules in another package should not be suggested.
+    assert_module_error!(
+        (
+            "anotherpackage",
+            "module",
+            "
+@internal
+pub type MyType {
+    MyRecord(x: Int, y: Int)
+}"
+        ),
+        "
+import module
+pub fn main() {
+    MyRecord(1, 2)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_from_another_package_with_internal_type() {
+    // Internal value from another modules in another package should not be suggested.
+    assert_module_error!(
+        (
+            "anotherpackage",
+            "module",
+            "
+@internal
+pub type OneOrTwo {
+    One
+    Two
+}"
+        ),
+        "
+import module
+pub fn main() {
+    One
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_from_another_package_with_internal_value() {
+    // Internal value from another modules in another package should not be suggested.
+    assert_module_error!(
+        (
+            "anotherpackage",
+            "module",
+            "
+@internal
+pub const one = 1"
+        ),
+        "
+import module
+pub fn main() {
+    one
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_with_private_function() {
+    // Private function from another module should not be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_with_private_record_constructor() {
+    // Private record constructor from another module should not be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+type MyType {
+    MyRecord(x: Int)
+}"
+        ),
+        "
+import module
+pub fn main() {
+    MyRecord(1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_with_private_type() {
+    // Private type from another module should not be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+type OneOrTwo {
+    One
+    Two
+}"
+        ),
+        "
+import module
+pub fn main() {
+    One
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_with_private_value() {
+    // Private value from another module should not be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+const one = 1"
+        ),
+        "
+import module
+pub fn main() {
+    one
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_with_public_function_with_incorrect_arity_1() {
+    // For functions, we only check the arity and not the type of arguments or the return value.
+    // Function with incorrect arity from another module should not be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int) {
+    x + 1
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_with_public_function_with_incorrect_arity_2() {
+    // For functions, we only check the arity and not the type of arguments or the return value.
+    // In pipelines, function calls are considered to have arity arguments.len() + 1.
+    // Function with incorrect arity from another module should not be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int) {
+    fn(y: Int) { x + y }
+}"
+        ),
+        "
+import module
+pub fn main() {
+    1 |> add(2)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_do_not_suggest_modules_with_public_function_with_incorrect_arity_3() {
+    // For functions, we only check the arity and not the type of arguments or the return value.
+    // In pipelines, function calls are considered to have arity arguments.len() + 1.
+    // Function with incorrect arity from another module should not be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int) {
+    fn(y: Int, z: Int) { x + y + z }
+}"
+        ),
+        "
+import module
+pub fn main() {
+    1 |> add(2)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_from_the_same_package_with_internal_function() {
+    // Internal function with correct arity from another module in the
+    // same package should be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+@internal
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_from_the_same_package_with_internal_record_constructor() {
+    // Internal record constructor with correct arity from another
+    // module in the same package should be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+@internal
+pub type MyType {
+    MyRecord(x: Int, y: Int)
+}"
+        ),
+        "
+import module
+pub fn main() {
+    MyRecord(1, 2)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_from_the_same_package_with_internal_type() {
+    // Internal type from another module in the same package should be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+@internal
+pub type OneOrTwo {
+    One
+    Two
+}"
+        ),
+        "
+import module
+pub fn main() {
+    One
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_from_the_same_package_with_internal_value() {
+    // Internal value from another module in the same package should be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+@internal
+pub const one = 1"
+        ),
+        "
+import module
+pub fn main() {
+    one
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_imported_using_an_alias() {
+    // Module aliases should be taken into account in the suggestion.
+    // Public function with correct arity from another module should be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import module as wibble
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_with_multiple_segments() {
+    // Module with multiple segments should be taken into account in the suggestion.
+    // Public function with correct arity from another module should be suggested.
+    assert_module_error!(
+        (
+            "gleam/module",
+            "
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import gleam/module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_with_public_function_with_correct_arity_1() {
+    // Public function with correct arity from another module should be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_with_public_function_with_correct_arity_2() {
+    // Public function with correct arity from another module should be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int) {
+    x + 1
+}"
+        ),
+        "
+import module
+pub fn main() {
+    1 |> add
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_with_public_function_with_correct_arity_3() {
+    // Public function with correct arity from another module should be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    1 |> add(2)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_with_public_function_with_correct_arity_4() {
+    // Public function with correct arity from another module should be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn wibble(_) {
+    1
+}"
+        ),
+        "
+import module
+pub fn main() {
+    use <- wibble
+    1
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_with_public_function_with_correct_arity_even_if_arguments_type_mismatch()
+ {
+    // Public function with correct arity from another module should be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+pub fn add(x: Float, y: Float) {
+    x +. y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_with_public_record_constructor_with_correct_arity() {
+    // Public record constructor with correct arity from another module should be suggested.
+    assert_module_error!(
+        (
+            "moduleone",
+            "
+pub type MyType {
+    MyRecord(x: Int, y: Int)
+}"
+        ),
+        (
+            "moduletwo",
+            "
+pub type AnotherType {
+    MyRecord(x: Int)
+}"
+        ),
+        "
+import moduleone
+import moduletwo
+pub fn main() {
+    MyRecord(1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_with_public_type() {
+    // Public type from another module should be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+pub type OneOrTwo {
+    One
+    Two
+}"
+        ),
+        "
+import module
+pub fn main() {
+    One
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_with_public_value_1() {
+    // Public value from another module should be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+pub const one = 1"
+        ),
+        "
+import module
+pub fn main() {
+    one
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_modules_with_public_value_2() {
+    // Public value from another module should be suggested.
+    assert_module_error!(
+        (
+            "module",
+            "
+pub const add = private_add
+fn private_add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+import module
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}

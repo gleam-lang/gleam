@@ -425,9 +425,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 message,
             } => Ok(self.infer_echo(location, keyword_end, expression, message)),
 
-            UntypedExpr::Var { location, name, .. } => {
-                self.infer_var(name, location, ReferenceRegistration::Register)
-            }
+            UntypedExpr::Var { location, name, .. } => self.infer_var(
+                name,
+                location,
+                ValueUsage::Other,
+                ReferenceRegistration::Register,
+            ),
 
             UntypedExpr::Int {
                 location,
@@ -846,6 +849,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // We use `stacker` to prevent overflowing the stack when many `use`
         // expressions are chained. See https://github.com/gleam-lang/gleam/issues/4287
         let infer_call = || {
+            // We need this in the case where `call.function` has a special call path depending
+            // on the type such as `UntypedExpr::Var`. In these cases, `infer_call` does not call
+            // `infer_or_error`. `infer_or_error` is responsible for registering warnings about
+            // unreachable code and thus, warnings about unreachable code are not registered.
+            if self.previous_panics {
+                self.warn_for_unreachable_code(call_location, PanicPosition::PreviousExpression);
+            }
+
             self.infer_call(
                 *call.function,
                 call.arguments,
@@ -1270,10 +1281,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         name: EcoString,
         location: SrcSpan,
+        value_usage: ValueUsage,
         register_reference: ReferenceRegistration,
     ) -> Result<TypedExpr, Error> {
-        let constructor =
-            self.do_infer_value_constructor(&None, &name, &location, register_reference)?;
+        let constructor = self.do_infer_value_constructor(
+            &None,
+            &name,
+            &location,
+            value_usage,
+            register_reference,
+        )?;
         self.narrow_implementations(location, &constructor.variant)?;
         Ok(TypedExpr::Var {
             constructor,
@@ -1359,7 +1376,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // If the left-hand-side of the record access is a variable, this might actually be
             // module access. In that case, we only want to register a reference to the variable
             // if we actually referencing it in the record access.
-            self.infer_var(name, location, ReferenceRegistration::DoNotRegister)
+            self.infer_var(
+                name,
+                location,
+                ValueUsage::Other,
+                ReferenceRegistration::DoNotRegister,
+            )
         } else {
             self.infer_or_error(container)
         };
@@ -2469,7 +2491,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_clause_guard(&mut self, guard: UntypedClauseGuard) -> Result<TypedClauseGuard, Error> {
         match guard {
             ClauseGuard::Var { location, name, .. } => {
-                let constructor = self.infer_value_constructor(&None, &name, &location)?;
+                let constructor =
+                    self.infer_value_constructor(&None, &name, &location, ValueUsage::Other)?;
 
                 // We cannot support all values in guard expressions as the BEAM does not
                 let definition_location = match &constructor.variant {
@@ -2780,13 +2803,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             let constructor =
                 module
-                    .get_public_value(&label)
+                    .get_importable_value(&label)
                     .ok_or_else(|| Error::UnknownModuleValue {
                         name: label.clone(),
                         location: select_location,
                         module_name: module.name.clone(),
                         value_constructors: module.public_value_names(),
-                        type_with_same_name: module.get_public_type(&label).is_some(),
+                        type_with_same_name: module.get_importable_type(&label).is_some(),
                         context: ModuleValueUsageContext::ModuleAccess,
                     })?;
 
@@ -3472,8 +3495,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         module: &Option<(EcoString, SrcSpan)>,
         name: &EcoString,
         location: &SrcSpan,
+        value_usage: ValueUsage,
     ) -> Result<ValueConstructor, Error> {
-        self.do_infer_value_constructor(module, name, location, ReferenceRegistration::Register)
+        self.do_infer_value_constructor(
+            module,
+            name,
+            location,
+            value_usage,
+            ReferenceRegistration::Register,
+        )
     }
 
     fn do_infer_value_constructor(
@@ -3481,6 +3511,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         module: &Option<(EcoString, SrcSpan)>,
         name: &EcoString,
         location: &SrcSpan,
+        value_usage: ValueUsage,
         register_reference: ReferenceRegistration,
     ) -> Result<ValueConstructor, Error> {
         let constructor = match module {
@@ -3489,7 +3520,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .environment
                 .get_variable(name)
                 .cloned()
-                .ok_or_else(|| self.report_name_error(name, location))?,
+                .ok_or_else(|| self.report_name_error(name, location, value_usage))?,
 
             // Look in an imported module for a binding with this name
             Some((module_name, module_location)) => {
@@ -3518,7 +3549,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         module_name: module_name.clone(),
                         name: name.clone(),
                         value_constructors: module.public_value_names(),
-                        type_with_same_name: module.get_public_type(name).is_some(),
+                        type_with_same_name: module.get_importable_type(name).is_some(),
                         context: ModuleValueUsageContext::ModuleAccess,
                     })?
             }
@@ -3656,7 +3687,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn report_name_error(&mut self, name: &EcoString, location: &SrcSpan) -> Error {
+    fn report_name_error(
+        &mut self,
+        name: &EcoString,
+        location: &SrcSpan,
+        value_usage: ValueUsage,
+    ) -> Error {
         // First try to see if this is a module alias:
         // `import gleam/io`
         // `io.debug(io)`
@@ -3667,21 +3703,35 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location: *location,
                 name: name.clone(),
             },
-            None => Error::UnknownVariable {
-                location: *location,
-                name: name.clone(),
-                variables: self.environment.local_value_names(),
-                discarded_location: self
-                    .environment
-                    .discarded_names
-                    .get(&eco_format!("_{name}"))
-                    .cloned(),
-                type_with_name_in_scope: self
-                    .environment
-                    .module_types
-                    .keys()
-                    .any(|typ| typ == name),
-            },
+            None => {
+                let possible_modules = match value_usage {
+                    // This is a function call, we need to suggest a public
+                    // value which is a function with the correct arity
+                    ValueUsage::Call { arity } => self
+                        .environment
+                        .get_possible_modules_with_function(name, arity),
+                    // This is a reference to a variable, we need to suggest
+                    // a public value of any type
+                    ValueUsage::Other => self.environment.get_possible_modules_with_value(name),
+                };
+
+                Error::UnknownVariable {
+                    location: *location,
+                    name: name.clone(),
+                    variables: self.environment.local_value_names(),
+                    discarded_location: self
+                        .environment
+                        .discarded_names
+                        .get(&eco_format!("_{name}"))
+                        .cloned(),
+                    type_with_name_in_scope: self
+                        .environment
+                        .module_types
+                        .keys()
+                        .any(|typ| typ == name),
+                    possible_modules,
+                }
+            }
         }
     }
 
@@ -3753,7 +3803,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 self.track_feature_usage(FeatureKind::ConstantRecordUpdate, location);
-                let constructor = match self.infer_value_constructor(&module, &name, &location) {
+                let constructor = match self.infer_value_constructor(
+                    &module,
+                    &name,
+                    &location,
+                    ValueUsage::Call {
+                        arity: arguments.len(),
+                    },
+                ) {
                     Ok(constructor) => constructor,
                     Err(error) => {
                         self.problems.error(error);
@@ -3990,7 +4047,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } if arguments.is_empty() => {
                 // Type check the record constructor
-                let constructor = match self.infer_value_constructor(&module, &name, &location) {
+                let constructor = match self.infer_value_constructor(
+                    &module,
+                    &name,
+                    &location,
+                    ValueUsage::Other,
+                ) {
                     Ok(constructor) => constructor,
                     Err(error) => {
                         self.problems.error(error);
@@ -4041,7 +4103,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 mut arguments,
                 ..
             } => {
-                let constructor = match self.infer_value_constructor(&module, &name, &location) {
+                let constructor = match self.infer_value_constructor(
+                    &module,
+                    &name,
+                    &location,
+                    ValueUsage::Call {
+                        arity: arguments.len(),
+                    },
+                ) {
                     Ok(constructor) => constructor,
                     Err(error) => {
                         self.problems.error(error);
@@ -4226,7 +4295,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 // Infer the type of this constant
-                let constructor = match self.infer_value_constructor(&module, &name, &location) {
+                let constructor = match self.infer_value_constructor(
+                    &module,
+                    &name,
+                    &location,
+                    ValueUsage::Other,
+                ) {
                     Ok(constructor) => constructor,
                     Err(error) => {
                         self.problems.error(error);
@@ -4435,6 +4509,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         kind: CallKind,
     ) -> (TypedExpr, Vec<TypedCallArg>, Arc<Type>) {
         let fun = match fun {
+            UntypedExpr::Var { location, name } => {
+                self.infer_called_var(name, location, arguments.len())
+            }
+
             UntypedExpr::FieldAccess {
                 label,
                 container,
@@ -4468,7 +4546,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             | UntypedExpr::Float { .. }
             | UntypedExpr::String { .. }
             | UntypedExpr::Block { .. }
-            | UntypedExpr::Var { .. }
             | UntypedExpr::Fn { .. }
             | UntypedExpr::List { .. }
             | UntypedExpr::Call { .. }
@@ -4489,6 +4566,38 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let (fun, arguments, type_) =
             self.do_infer_call_with_known_fun(fun, arguments, location, kind);
         (fun, arguments, type_)
+    }
+
+    /// Return the type of a called variable.
+    ///
+    /// This function is used everywhere we try to infer the type of a variable
+    /// that is called such as function calls, records constructor, use
+    /// expression and pipelines.
+    ///
+    pub fn infer_called_var(
+        &mut self,
+        name: EcoString,
+        location: SrcSpan,
+        arity: usize,
+    ) -> TypedExpr {
+        match self.infer_var(
+            name.clone(),
+            location,
+            ValueUsage::Call { arity },
+            ReferenceRegistration::Register,
+        ) {
+            Ok(typed_expr) => typed_expr,
+            Err(error) => {
+                let information = if let Error::UnknownVariable { name, .. } = &error {
+                    Some(InvalidExpression::UnknownVariable { name: name.clone() })
+                } else {
+                    None
+                };
+
+                self.problems.error(error);
+                self.error_expr_with_information(location, information)
+            }
+        }
     }
 
     fn infer_fn_with_call_context(
@@ -4855,7 +4964,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             ReferenceRegistration::Register
         };
 
-        match self.infer_var(argument_name.clone(), argument_location, references) {
+        match self.infer_var(
+            argument_name.clone(),
+            argument_location,
+            ValueUsage::Other,
+            references,
+        ) {
             Ok(result) => result,
             Err(error) => {
                 self.problems.error(error);

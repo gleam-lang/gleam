@@ -87,14 +87,14 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         let imported_name = import.as_name.as_ref().unwrap_or(&import.name);
 
         // Register the unqualified import if it is a type constructor
-        let Some(type_info) = module.get_public_type(&import.name) else {
+        let Some(type_info) = module.get_importable_type(&import.name) else {
             // TODO: refine to a type specific error
             self.problems.error(Error::UnknownModuleType {
                 location: import.location,
                 name: import.name.clone(),
                 module_name: module.name.clone(),
                 type_constructors: module.public_type_names(),
-                value_with_same_name: module.get_public_value(&import.name).is_some(),
+                value_with_same_name: module.get_importable_value(&import.name).is_some(),
             });
             return;
         };
@@ -143,7 +143,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         let used_name = import.as_name.as_ref().unwrap_or(&import.name);
 
         // Register the unqualified import if it is a value
-        let variant = match module.get_public_value(import_name) {
+        let variant = match module.get_importable_value(import_name) {
             Some(value) => {
                 let implementations = value.variant.implementations();
                 // Check the target support of the imported value
@@ -171,7 +171,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     name: import_name.clone(),
                     module_name: module.name.clone(),
                     value_constructors: module.public_value_names(),
-                    type_with_same_name: module.get_public_type(import_name).is_some(),
+                    type_with_same_name: module.get_importable_type(import_name).is_some(),
                     context: crate::type_::error::ModuleValueUsageContext::UnqualifiedImport,
                 });
                 return;

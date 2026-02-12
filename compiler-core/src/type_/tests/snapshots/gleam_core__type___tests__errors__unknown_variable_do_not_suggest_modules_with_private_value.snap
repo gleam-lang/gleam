@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport module\npub fn main() {\n    one\n}"
+---
+----- SOURCE CODE
+-- module.gleam
+
+const one = 1
+
+-- main.gleam
+
+import module
+pub fn main() {
+    one
+}
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:4:5
+  │
+4 │     one
+  │     ^^^
+
+The name `one` is not in scope here.

@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport module\npub fn main() {\n    One\n}"
+---
+----- SOURCE CODE
+-- module.gleam
+
+@internal
+pub type OneOrTwo {
+    One
+    Two
+}
+
+-- main.gleam
+
+import module
+pub fn main() {
+    One
+}
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:4:5
+  │
+4 │     One
+  │     ^^^
+
+The custom type variant constructor `One` is not in scope here.
