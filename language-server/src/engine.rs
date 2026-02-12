@@ -1,11 +1,12 @@
 use camino::Utf8PathBuf;
-use ecow::EcoString;
+use ecow::{EcoString, eco_format};
 use gleam_core::{
     Error, Result, Warning,
     analyse::name::correct_name_case,
     ast::{
         self, Constant, CustomType, DefinitionLocation, ModuleConstant, PatternUnusedArguments,
         SrcSpan, TypedArg, TypedConstant, TypedExpr, TypedFunction, TypedModule, TypedPattern,
+        TypedRecordConstructor,
     },
     build::{
         ExpressionPosition, Located, Module, UnqualifiedImport, type_constructor_from_modules,
@@ -939,7 +940,9 @@ where
                     Some(hover_for_custom_type(custom_type, lines))
                 }
                 Located::ModuleTypeAlias(_) => None,
-                Located::VariantConstructorDefinition(_) => None,
+                Located::VariantConstructorDefinition(constructor) => {
+                    Some(hover_for_constructor(constructor, lines, module))
+                }
                 Located::UnqualifiedImport(UnqualifiedImport {
                     name,
                     module: module_name,
@@ -1477,6 +1480,41 @@ fn hover_for_custom_type(type_: &CustomType<Arc<Type>>, line_numbers: LineNumber
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(type_.full_location(), &line_numbers)),
+    }
+}
+
+fn hover_for_constructor(
+    constructor: &TypedRecordConstructor,
+    line_numbers: LineNumbers,
+    module: &Module,
+) -> Hover {
+    let mut printer = Printer::new(&module.ast.names);
+
+    let arguments = constructor
+        .arguments
+        .iter()
+        .map(|argument| match &argument.label {
+            Some((_, label)) => eco_format!("{label}: {}", printer.print_type(&argument.type_)),
+            None => printer.print_type(&argument.type_),
+        })
+        .join(", ");
+
+    let documentation = constructor
+        .documentation
+        .as_ref()
+        .map(|(_, documentation)| documentation.clone())
+        .unwrap_or_default();
+
+    let constructor_doc = if arguments.is_empty() {
+        constructor.name.clone()
+    } else {
+        eco_format!("{}({arguments})", constructor.name)
+    };
+
+    let contents = format!("```gleam\n{constructor_doc}\n```\n{documentation}");
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(constructor.location, &line_numbers)),
     }
 }
 

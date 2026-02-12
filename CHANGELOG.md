@@ -80,6 +80,10 @@
   definitions.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now shows hover information when hovering over a custom
+  type's constructors.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server is now smarter when producing autocompletions. Imagine
   you're updating your code to fully qualify the uses of the `Json` type:
 

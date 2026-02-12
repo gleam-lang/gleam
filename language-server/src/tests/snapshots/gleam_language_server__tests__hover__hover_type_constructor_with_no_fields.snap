@@ -1,0 +1,18 @@
+---
+source: language-server/src/tests/hover.rs
+expression: "\n/// Exciting documentation\n/// Maybe even multiple lines\ntype Wibble {\n    /// Some more exciting documentation\n    Wibble\n}\n"
+---
+/// Exciting documentation
+/// Maybe even multiple lines
+type Wibble {
+    /// Some more exciting documentation
+    Wibble
+    ↑▔▔▔▔▔
+}
+
+
+----- Hover content (markdown) -----
+```gleam
+Wibble
+```
+ Some more exciting documentation
