@@ -1,0 +1,26 @@
+---
+source: language-server/src/tests/hover.rs
+expression: "/// Exciting documentation\n/// Maybe even multiple lines\ntype Wibble {\n  /// Some more exciting documentation\n  Wibble(String)\n  /// The most exciting documentation\n  Wobble(arg: Int)\n}"
+---
+/// Exciting documentation
+/// Maybe even multiple lines
+type Wibble {
+▔▔▔▔▔↑▔▔▔▔▔▔▔
+  /// Some more exciting documentation
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  Wibble(String)
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  /// The most exciting documentation
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  Wobble(arg: Int)
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+}
+▔
+
+
+----- Hover content (markdown) -----
+```gleam
+Wibble
+```
+ Exciting documentation
+ Maybe even multiple lines

@@ -935,7 +935,9 @@ where
                         &this.hex_deps,
                     ))
                 }
-                Located::ModuleCustomType(_) => None,
+                Located::ModuleCustomType(custom_type) => {
+                    Some(hover_for_custom_type(custom_type, lines))
+                }
                 Located::ModuleTypeAlias(_) => None,
                 Located::VariantConstructorDefinition(_) => None,
                 Located::UnqualifiedImport(UnqualifiedImport {
@@ -1460,6 +1462,21 @@ fn hover_for_module(
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(location, line_numbers)),
+    }
+}
+
+fn hover_for_custom_type(type_: &CustomType<Arc<Type>>, line_numbers: LineNumbers) -> Hover {
+    let name = &type_.name;
+    let documentation = type_
+        .documentation
+        .as_ref()
+        .map(|(_, documentation)| documentation.clone())
+        .unwrap_or_default();
+
+    let contents = format!("```gleam\n{name}\n```\n{documentation}");
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(type_.full_location(), &line_numbers)),
     }
 }
 
