@@ -60,6 +60,15 @@ pub struct ImportCycleLocationDetails {
     pub src: EcoString,
 }
 
+/// Describes where a defined module comes from.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct DefinedModuleOrigin {
+    /// The package defining the module
+    pub package_name: EcoString,
+    /// The path to the module
+    pub path: Utf8PathBuf,
+}
+
 #[derive(Debug, Eq, PartialEq, Error, Clone)]
 pub enum Error {
     #[error("failed to parse Gleam source code")]
@@ -87,8 +96,8 @@ pub enum Error {
     #[error("duplicate module {module}")]
     DuplicateModule {
         module: Name,
-        first: Utf8PathBuf,
-        second: Utf8PathBuf,
+        first: DefinedModuleOrigin,
+        second: DefinedModuleOrigin,
     },
 
     #[error("duplicate source file {file}")]
@@ -1409,11 +1418,25 @@ This was error from the Hex client library:
                 first,
                 second,
             } => {
+                // If the conflicting modules come from the same package just
+                // showing the same package name twice is not all that useful.
+                // So we will show the path to each one!
+                let should_show_path = first.package_name == second.package_name;
+                let format_origin = |origin: &DefinedModuleOrigin| {
+                    if should_show_path {
+                        format!("at {}", origin.path)
+                    } else {
+                        format!("by the package {}", origin.package_name)
+                    }
+                };
+
                 let text = format!(
                     "The module `{module}` is defined multiple times.
 
-First:  {first}
-Second: {second}"
+It is first defined {}
+It is defined a second time {}",
+                    format_origin(first),
+                    format_origin(second)
                 );
 
                 vec![Diagnostic {

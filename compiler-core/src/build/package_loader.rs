@@ -20,7 +20,7 @@ use crate::{
     build::{Module, Origin, module_loader::ModuleLoader},
     config::PackageConfig,
     dep_tree,
-    error::{FileIoAction, FileKind, ImportCycleLocationDetails},
+    error::{DefinedModuleOrigin, FileIoAction, FileKind, ImportCycleLocationDetails},
     io::{self, CommandExecutor, FileSystemReader, FileSystemWriter, files_with_extension},
     metadata,
     paths::ProjectPaths,
@@ -65,7 +65,7 @@ pub struct PackageLoader<'a, IO> {
     package_name: &'a EcoString,
     target: Target,
     stale_modules: &'a mut StaleTracker,
-    already_defined_modules: &'a mut im::HashMap<EcoString, Utf8PathBuf>,
+    already_defined_modules: &'a mut im::HashMap<EcoString, DefinedModuleOrigin>,
     incomplete_modules: &'a HashSet<EcoString>,
     cached_warnings: CachedWarnings,
 }
@@ -86,7 +86,7 @@ where
         target: Target,
         package_name: &'a EcoString,
         stale_modules: &'a mut StaleTracker,
-        already_defined_modules: &'a mut im::HashMap<EcoString, Utf8PathBuf>,
+        already_defined_modules: &'a mut im::HashMap<EcoString, DefinedModuleOrigin>,
         incomplete_modules: &'a HashSet<EcoString>,
     ) -> Self {
         Self {
@@ -127,10 +127,10 @@ where
         let mut dep_location_map = HashMap::new();
         let deps = inputs
             .values()
-            .map(|m| {
-                let name = m.name().clone();
-                let _ = dep_location_map.insert(name.clone(), m);
-                (name, m.dependencies())
+            .map(|(_, module)| {
+                let name = module.name().clone();
+                let _ = dep_location_map.insert(name.clone(), module);
+                (name, module.dependencies())
             })
             // Making sure that the module order is deterministic, to prevent different
             // compilations of the same project compiling in different orders. This could impact
@@ -139,14 +139,14 @@ where
             .sorted_by(|(a, _), (b, _)| a.cmp(b))
             .collect();
         let sequence = dep_tree::toposort_deps(deps)
-            .map_err(|e| self.convert_deps_tree_error(e, dep_location_map))?;
+            .map_err(|error| self.convert_deps_tree_error(error, dep_location_map))?;
 
         // Now that we have loaded sources and caches we check to see if any of
         // the caches need to be invalidated because their dependencies have
         // changed.
         let mut loaded = Loaded::default();
         for name in sequence {
-            let input = inputs
+            let (_, input) = inputs
                 .remove(&name)
                 .expect("Getting parsed module for name");
 
@@ -225,11 +225,13 @@ where
         Ok(module)
     }
 
-    fn read_sources_and_caches(&self) -> Result<HashMap<EcoString, Input>> {
+    fn read_sources_and_caches(
+        &mut self,
+    ) -> Result<HashMap<EcoString, (DefinedModuleOrigin, Input)>> {
         let span = tracing::info_span!("load");
         let _enter = span.enter();
 
-        let mut inputs = Inputs::new(self.already_defined_modules);
+        let mut inputs = Inputs::new(self.package_name.clone(), self.already_defined_modules);
 
         let src = self.paths.src_directory();
         let mut loader = ModuleLoader {
@@ -292,7 +294,7 @@ where
         // This would most commonly happen for modules like "user" and
         // "code". Emit an error so this never happens.
         if self.target.is_erlang() {
-            for input in inputs.collection.values() {
+            for (_, input) in inputs.collection.values() {
                 ensure_gleam_module_does_not_overwrite_standard_erlang_module(&input)?;
             }
         }
@@ -1686,13 +1688,19 @@ impl StaleTracker {
 
 #[derive(Debug)]
 pub struct Inputs<'a> {
-    collection: HashMap<EcoString, Input>,
-    already_defined_modules: &'a im::HashMap<EcoString, Utf8PathBuf>,
+    /// The name of the package for which we're loading the inputs.
+    package: EcoString,
+    collection: HashMap<EcoString, (DefinedModuleOrigin, Input)>,
+    already_defined_modules: &'a mut im::HashMap<EcoString, DefinedModuleOrigin>,
 }
 
 impl<'a> Inputs<'a> {
-    fn new(already_defined_modules: &'a im::HashMap<EcoString, Utf8PathBuf>) -> Self {
+    fn new(
+        package: EcoString,
+        already_defined_modules: &'a mut im::HashMap<EcoString, DefinedModuleOrigin>,
+    ) -> Self {
         Self {
+            package,
             collection: Default::default(),
             already_defined_modules,
         }
@@ -1703,20 +1711,30 @@ impl<'a> Inputs<'a> {
     fn insert(&mut self, input: Input) -> Result<()> {
         let name = input.name().clone();
 
-        if let Some(first) = self.already_defined_modules.get(&name) {
+        let origin = DefinedModuleOrigin {
+            package_name: self.package.clone(),
+            path: input.source_path().to_path_buf(),
+        };
+
+        if let Some(first) = self
+            .already_defined_modules
+            .insert(name.clone(), origin.clone())
+        {
             return Err(Error::DuplicateModule {
                 module: name.clone(),
-                first: first.to_path_buf(),
-                second: input.source_path().to_path_buf(),
+                first,
+                second: origin,
             });
         }
 
-        let second = input.source_path().to_path_buf();
-        if let Some(first) = self.collection.insert(name.clone(), input) {
+        if let Some((first, _)) = self
+            .collection
+            .insert(name.clone(), (origin.clone(), input))
+        {
             return Err(Error::DuplicateModule {
                 module: name,
-                first: first.source_path().to_path_buf(),
-                second,
+                first,
+                second: origin,
             });
         }
 
