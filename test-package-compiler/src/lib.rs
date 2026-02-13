@@ -7,7 +7,7 @@ use gleam_core::{
         ErlangAppCodegenConfiguration, Mode, NullTelemetry, Outcome, StaleTracker, Target,
         TargetCodegenConfiguration,
     },
-    config::PackageConfig,
+    config::{PackageConfig, PackageKind},
     io::{FileSystemReader, FileSystemWriter},
     warning::{VectorWarningEmitterIO, WarningEmitter},
 };
@@ -45,6 +45,7 @@ pub fn prepare(path: &str) -> String {
     let out = Utf8PathBuf::from("/out/lib/the_package");
     let lib = Utf8PathBuf::from("/out/lib");
     let mut compiler = gleam_core::build::PackageCompiler::new(
+        PackageKind::Root,
         &config,
         Mode::Dev,
         &root,

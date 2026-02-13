@@ -60,6 +60,13 @@ pub struct ImportCycleLocationDetails {
     pub src: EcoString,
 }
 
+/// Describes where a defined module comes from.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum DefinedModuleOrigin {
+    RootProject { path: Utf8PathBuf },
+    Dependency { package_name: EcoString },
+}
+
 #[derive(Debug, Eq, PartialEq, Error, Clone)]
 pub enum Error {
     #[error("failed to parse Gleam source code")]
@@ -87,8 +94,8 @@ pub enum Error {
     #[error("duplicate module {module}")]
     DuplicateModule {
         module: Name,
-        first: Utf8PathBuf,
-        second: Utf8PathBuf,
+        first: DefinedModuleOrigin,
+        second: DefinedModuleOrigin,
     },
 
     #[error("duplicate source file {file}")]
@@ -1409,17 +1416,51 @@ This was error from the Hex client library:
                 first,
                 second,
             } => {
+                let format_origin = |origin: &DefinedModuleOrigin| match origin {
+                    DefinedModuleOrigin::RootProject { path } => {
+                        format!("at `{path}`")
+                    }
+                    DefinedModuleOrigin::Dependency { package_name } => {
+                        format!("by dependency `{package_name}`")
+                    }
+                };
+
                 let text = format!(
                     "The module `{module}` is defined multiple times.
 
-First:  {first}
-Second: {second}"
+It is first defined {}
+It is defined a second time {}",
+                    format_origin(first),
+                    format_origin(second)
                 );
+
+                // If any of the conflicting modules belongs to the root project
+                // then this can be easily fixed by renaming it.
+                let hint = match (first, second) {
+                    (
+                        DefinedModuleOrigin::RootProject { .. },
+                        DefinedModuleOrigin::RootProject { .. },
+                    ) => Some("consider renaming one of the modules".into()),
+                    (
+                        DefinedModuleOrigin::RootProject { .. },
+                        DefinedModuleOrigin::Dependency { .. },
+                    )
+                    | (
+                        DefinedModuleOrigin::Dependency { .. },
+                        DefinedModuleOrigin::RootProject { .. },
+                    ) => Some(format!(
+                        "consider renaming the `{module}` module in your project"
+                    )),
+                    (
+                        DefinedModuleOrigin::Dependency { .. },
+                        DefinedModuleOrigin::Dependency { .. },
+                    ) => None,
+                };
 
                 vec![Diagnostic {
                     title: "Duplicate module".into(),
                     text,
-                    hint: None,
+                    hint,
                     level: Level::Error,
                     location: None,
                 }]

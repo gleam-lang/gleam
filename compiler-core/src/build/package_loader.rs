@@ -18,9 +18,9 @@ use crate::{
     Error, Result,
     ast::SrcSpan,
     build::{Module, Origin, module_loader::ModuleLoader},
-    config::PackageConfig,
+    config::{PackageConfig, PackageKind},
     dep_tree,
-    error::{FileIoAction, FileKind, ImportCycleLocationDetails},
+    error::{DefinedModuleOrigin, FileIoAction, FileKind, ImportCycleLocationDetails},
     io::{self, CommandExecutor, FileSystemReader, FileSystemWriter, files_with_extension},
     metadata,
     paths::ProjectPaths,
@@ -58,6 +58,7 @@ pub struct PackageLoader<'a, IO> {
     io: IO,
     ids: UniqueIdGenerator,
     mode: Mode,
+    package_kind: PackageKind,
     paths: ProjectPaths,
     warnings: &'a WarningEmitter,
     codegen: CodegenRequired,
@@ -65,7 +66,7 @@ pub struct PackageLoader<'a, IO> {
     package_name: &'a EcoString,
     target: Target,
     stale_modules: &'a mut StaleTracker,
-    already_defined_modules: &'a mut im::HashMap<EcoString, Utf8PathBuf>,
+    already_defined_modules: &'a mut im::HashMap<EcoString, DefinedModuleOrigin>,
     incomplete_modules: &'a HashSet<EcoString>,
     cached_warnings: CachedWarnings,
 }
@@ -78,6 +79,7 @@ where
         io: IO,
         ids: UniqueIdGenerator,
         mode: Mode,
+        package_kind: PackageKind,
         root: &'a Utf8Path,
         cached_warnings: CachedWarnings,
         warnings: &'a WarningEmitter,
@@ -86,13 +88,14 @@ where
         target: Target,
         package_name: &'a EcoString,
         stale_modules: &'a mut StaleTracker,
-        already_defined_modules: &'a mut im::HashMap<EcoString, Utf8PathBuf>,
+        already_defined_modules: &'a mut im::HashMap<EcoString, DefinedModuleOrigin>,
         incomplete_modules: &'a HashSet<EcoString>,
     ) -> Self {
         Self {
             io,
             ids,
             mode,
+            package_kind,
             paths: ProjectPaths::new(root.into()),
             warnings,
             codegen,
@@ -127,10 +130,10 @@ where
         let mut dep_location_map = HashMap::new();
         let deps = inputs
             .values()
-            .map(|m| {
-                let name = m.name().clone();
-                let _ = dep_location_map.insert(name.clone(), m);
-                (name, m.dependencies())
+            .map(|(_, module)| {
+                let name = module.name().clone();
+                let _ = dep_location_map.insert(name.clone(), module);
+                (name, module.dependencies())
             })
             // Making sure that the module order is deterministic, to prevent different
             // compilations of the same project compiling in different orders. This could impact
@@ -139,14 +142,14 @@ where
             .sorted_by(|(a, _), (b, _)| a.cmp(b))
             .collect();
         let sequence = dep_tree::toposort_deps(deps)
-            .map_err(|e| self.convert_deps_tree_error(e, dep_location_map))?;
+            .map_err(|error| self.convert_deps_tree_error(error, dep_location_map))?;
 
         // Now that we have loaded sources and caches we check to see if any of
         // the caches need to be invalidated because their dependencies have
         // changed.
         let mut loaded = Loaded::default();
         for name in sequence {
-            let input = inputs
+            let (_, input) = inputs
                 .remove(&name)
                 .expect("Getting parsed module for name");
 
@@ -225,7 +228,9 @@ where
         Ok(module)
     }
 
-    fn read_sources_and_caches(&self) -> Result<HashMap<EcoString, Input>> {
+    fn read_sources_and_caches(
+        &mut self,
+    ) -> Result<HashMap<EcoString, (DefinedModuleOrigin, Input)>> {
         let span = tracing::info_span!("load");
         let _enter = span.enter();
 
@@ -249,7 +254,7 @@ where
             match file {
                 Ok(file) => {
                     let input = loader.load(file)?;
-                    inputs.insert(input)?;
+                    inputs.insert(input, self.package_kind.clone())?;
                 }
                 Err(warning) => self.warnings.emit(warning),
             }
@@ -264,7 +269,7 @@ where
                 match file {
                     Ok(file) => {
                         let input = loader.load(file)?;
-                        inputs.insert(input)?;
+                        inputs.insert(input, self.package_kind.clone())?;
                     }
                     Err(warning) => self.warnings.emit(warning),
                 }
@@ -277,7 +282,7 @@ where
                 match file {
                     Ok(file) => {
                         let input = loader.load(file)?;
-                        inputs.insert(input)?;
+                        inputs.insert(input, self.package_kind.clone())?;
                     }
                     Err(warning) => self.warnings.emit(warning),
                 }
@@ -292,7 +297,7 @@ where
         // This would most commonly happen for modules like "user" and
         // "code". Emit an error so this never happens.
         if self.target.is_erlang() {
-            for input in inputs.collection.values() {
+            for (_, input) in inputs.collection.values() {
                 ensure_gleam_module_does_not_overwrite_standard_erlang_module(&input)?;
             }
         }
@@ -1686,12 +1691,12 @@ impl StaleTracker {
 
 #[derive(Debug)]
 pub struct Inputs<'a> {
-    collection: HashMap<EcoString, Input>,
-    already_defined_modules: &'a im::HashMap<EcoString, Utf8PathBuf>,
+    collection: HashMap<EcoString, (DefinedModuleOrigin, Input)>,
+    already_defined_modules: &'a mut im::HashMap<EcoString, DefinedModuleOrigin>,
 }
 
 impl<'a> Inputs<'a> {
-    fn new(already_defined_modules: &'a im::HashMap<EcoString, Utf8PathBuf>) -> Self {
+    fn new(already_defined_modules: &'a mut im::HashMap<EcoString, DefinedModuleOrigin>) -> Self {
         Self {
             collection: Default::default(),
             already_defined_modules,
@@ -1700,23 +1705,37 @@ impl<'a> Inputs<'a> {
 
     /// Insert a module into the hashmap. If there is already a module with the
     /// same name then an error is returned.
-    fn insert(&mut self, input: Input) -> Result<()> {
+    fn insert(&mut self, input: Input, origin: PackageKind) -> Result<()> {
         let name = input.name().clone();
 
-        if let Some(first) = self.already_defined_modules.get(&name) {
+        let origin = match origin {
+            PackageKind::Root => DefinedModuleOrigin::RootProject {
+                path: input.source_path().to_path_buf(),
+            },
+            PackageKind::Dependency { package_name } => {
+                DefinedModuleOrigin::Dependency { package_name }
+            }
+        };
+
+        if let Some(first) = self
+            .already_defined_modules
+            .insert(name.clone(), origin.clone())
+        {
             return Err(Error::DuplicateModule {
                 module: name.clone(),
-                first: first.to_path_buf(),
-                second: input.source_path().to_path_buf(),
+                first,
+                second: origin,
             });
         }
 
-        let second = input.source_path().to_path_buf();
-        if let Some(first) = self.collection.insert(name.clone(), input) {
+        if let Some((first, _)) = self
+            .collection
+            .insert(name.clone(), (origin.clone(), input))
+        {
             return Err(Error::DuplicateModule {
                 module: name,
-                first: first.source_path().to_path_buf(),
-                second,
+                first,
+                second: origin,
             });
         }
 

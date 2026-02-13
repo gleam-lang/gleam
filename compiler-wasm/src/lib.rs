@@ -9,7 +9,7 @@ use gleam_core::{
     build::{
         Mode, NullTelemetry, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration,
     },
-    config::PackageConfig,
+    config::{PackageConfig, PackageKind},
     io::{FileSystemReader, FileSystemWriter},
     uid::UniqueIdGenerator,
     warning::{VectorWarningEmitterIO, WarningEmitter},
@@ -191,6 +191,7 @@ fn do_compile_package(project: Project, target: Target) -> Result<(), Error> {
     let out = Utf8PathBuf::from("/build");
     let package = Utf8PathBuf::from("/");
     let mut compiler = PackageCompiler::new(
+        PackageKind::Root,
         &config,
         Mode::Dev,
         &package,

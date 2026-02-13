@@ -188,6 +188,12 @@ pub struct PackageConfig {
     pub tools: Table,
 }
 
+#[derive(Debug, Clone)]
+pub enum PackageKind {
+    Root,
+    Dependency { package_name: EcoString },
+}
+
 pub fn serialise_gleam_version<S>(
     gleam_gersion: &Option<GleamVersion>,
     serializer: S,

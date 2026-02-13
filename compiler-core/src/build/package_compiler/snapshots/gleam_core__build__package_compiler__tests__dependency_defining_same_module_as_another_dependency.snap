@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/build/package_compiler/tests.rs
+expression: output
+---
+error: Duplicate module
+
+The module `a_module` is defined multiple times.
+
+It is first defined by dependency `another_dependency`
+It is defined a second time by dependency `a_dependency`

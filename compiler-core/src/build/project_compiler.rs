@@ -9,9 +9,9 @@ use crate::{
         telemetry::Telemetry,
     },
     codegen::{self, ErlangApp},
-    config::PackageConfig,
+    config::{PackageConfig, PackageKind},
     dep_tree,
-    error::{FileIoAction, FileKind, ShellCommandFailureReason},
+    error::{DefinedModuleOrigin, FileIoAction, FileKind, ShellCommandFailureReason},
     io::{BeamCompiler, Command, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     manifest::{ManifestPackage, ManifestPackageSource},
     metadata,
@@ -104,7 +104,7 @@ pub struct ProjectCompiler<IO> {
     pub config: PackageConfig,
     pub packages: HashMap<String, ManifestPackage>,
     importable_modules: im::HashMap<EcoString, type_::ModuleInterface>,
-    pub(crate) defined_modules: im::HashMap<EcoString, Utf8PathBuf>,
+    pub(crate) defined_modules: im::HashMap<EcoString, DefinedModuleOrigin>,
     stale_modules: StaleTracker,
     /// The set of modules that have had partial compilation done since the last
     /// successful compilation.
@@ -173,6 +173,11 @@ where
         // LSP engine so state could be reused if we don't reset it.
 
         self.stale_modules.empty();
+
+        /// We also clear the defined modules, otherwise the language server
+        /// would start throwing errors for modules defined twice when compiling
+        /// a second time!
+        self.defined_modules.clear();
     }
 
     /// Compiles all packages in the project and returns the compiled
@@ -579,7 +584,16 @@ where
             },
         };
 
+        let package_kind = if is_root {
+            PackageKind::Root
+        } else {
+            PackageKind::Dependency {
+                package_name: config.name.clone(),
+            }
+        };
+
         let mut compiler = PackageCompiler::new(
+            package_kind,
             config,
             mode,
             &root_path,

@@ -5,6 +5,7 @@ use super::*;
 use crate::{
     Warning,
     build::SourceFingerprint,
+    config::PackageKind,
     io::{FileSystemWriter, memory::InMemoryFileSystem},
     line_numbers,
     parse::extra::ModuleExtra,
@@ -83,6 +84,7 @@ fn run_loader(fs: InMemoryFileSystem, root: &Utf8Path, artefact: &Utf8Path) -> L
     let (emitter, warnings) = WarningEmitter::vector();
 
     let loader = PackageLoader {
+        package_kind: PackageKind::Root,
         io: fs.clone(),
         ids,
         mode: Mode::Dev,

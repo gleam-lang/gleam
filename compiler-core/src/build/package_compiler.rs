@@ -1,5 +1,10 @@
+#[cfg(test)]
+mod tests;
+
 use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::build::package_loader::CacheFiles;
+use crate::config::PackageKind;
+use crate::error::DefinedModuleOrigin;
 use crate::inline;
 use crate::io::files_with_extension;
 use crate::line_numbers::{self, LineNumbers};
@@ -33,6 +38,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration, Telemetry};
 
+#[derive(Debug)]
 pub struct Compiled {
     /// The modules which were just compiled
     pub modules: Vec<Module>,
@@ -48,6 +54,7 @@ pub struct PackageCompiler<'a, IO> {
     pub root: &'a Utf8Path,
     pub mode: Mode,
     pub target: &'a TargetCodegenConfiguration,
+    pub package_kind: PackageKind,
     pub config: &'a PackageConfig,
     pub ids: UniqueIdGenerator,
     pub write_metadata: bool,
@@ -73,6 +80,7 @@ where
     IO: FileSystemReader + FileSystemWriter + CommandExecutor + BeamCompiler + Clone,
 {
     pub fn new(
+        package_kind: PackageKind,
         config: &'a PackageConfig,
         mode: Mode,
         root: &'a Utf8Path,
@@ -89,6 +97,7 @@ where
             lib,
             root,
             mode,
+            package_kind,
             config,
             target,
             write_metadata: true,
@@ -112,7 +121,7 @@ where
         mut self,
         warnings: &WarningEmitter,
         existing_modules: &mut im::HashMap<EcoString, type_::ModuleInterface>,
-        already_defined_modules: &mut im::HashMap<EcoString, Utf8PathBuf>,
+        already_defined_modules: &mut im::HashMap<EcoString, DefinedModuleOrigin>,
         stale_modules: &mut StaleTracker,
         incomplete_modules: &mut HashSet<EcoString>,
         telemetry: &dyn Telemetry,
@@ -136,6 +145,7 @@ where
             self.io.clone(),
             self.ids.clone(),
             self.mode,
+            self.package_kind.clone(),
             self.root,
             self.cached_warnings,
             warnings,

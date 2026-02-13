@@ -9,6 +9,7 @@ use gleam_core::{
     build::{
         Mode, NullTelemetry, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration,
     },
+    config::PackageKind,
     metadata,
     paths::{self, ProjectPaths},
     type_::ModuleInterface,
@@ -38,6 +39,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
     tracing::info!("Compiling package");
 
     let mut compiler = PackageCompiler::new(
+        PackageKind::Root,
         &config,
         Mode::Dev,
         &options.package_directory,

@@ -14,7 +14,7 @@ use crate::{
         self, Mode, NullTelemetry, Origin, PackageCompiler, StaleTracker,
         TargetCodegenConfiguration,
     },
-    config::{DocsPage, PackageConfig, Repository},
+    config::{DocsPage, PackageConfig, PackageKind, Repository},
     docs::{DocContext, search_item_for_module, search_item_for_type, search_item_for_value},
     io::{FileSystemWriter, memory::InMemoryFileSystem},
     paths::ProjectPaths,
@@ -69,8 +69,17 @@ fn compile_with_markdown_pages(
     let build = root.join("build");
     let lib = root.join("lib");
     let paths = ProjectPaths::new(root.clone());
-    let mut compiler =
-        PackageCompiler::new(&config, Mode::Dev, &root, &build, &lib, &target, ids, fs);
+    let mut compiler = PackageCompiler::new(
+        PackageKind::Root,
+        &config,
+        Mode::Dev,
+        &root,
+        &build,
+        &lib,
+        &target,
+        ids,
+        fs,
+    );
     compiler.write_entrypoint = false;
     compiler.write_metadata = false;
     compiler.compile_beam_bytecode = true;
