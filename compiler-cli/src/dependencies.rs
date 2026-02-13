@@ -634,10 +634,10 @@ pub(crate) fn is_same_requirements(
     Ok(true)
 }
 
-/// Checks if path dependencies' manifest files have changed since the last build.
-pub(crate) fn are_path_dependency_manifests_unchanged(
+/// Validates path dependencies' manifest files, updating cached hashes as needed.
+/// Returns true if all path dependency manifests are unchanged since last build.
+pub(crate) fn check_path_dependency_manifests(
     requirements: &HashMap<EcoString, Requirement>,
-    _root_path: &Utf8Path,
     paths: &ProjectPaths,
 ) -> Result<bool> {
     for (key, requirement) in requirements {
