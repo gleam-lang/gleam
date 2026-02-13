@@ -654,22 +654,33 @@ pub(crate) fn check_path_dependency_manifests(
 
             // Check mtimes before hashing, to avoid extra work
             if cached_hash_path.exists() {
-                let manifest_time = match std::fs::metadata(&dep_manifest_path).and_then(|m| m.modified()) {
-                    Ok(time) => time,
-                    Err(_) => {
-                        tracing::debug!(?dep_manifest_path, "cannot_read_manifest_mtime_forcing_rebuild");
-                        return Ok(false);
-                    }
-                };
-                let hash_time = match std::fs::metadata(&cached_hash_path).and_then(|m| m.modified()) {
-                    Ok(time) => time,
-                    Err(_) => {
-                        tracing::debug!(?cached_hash_path, "cannot_read_hash_mtime_forcing_rebuild");
-                        return Ok(false);
-                    }
-                };
+                let manifest_time =
+                    match std::fs::metadata(&dep_manifest_path).and_then(|m| m.modified()) {
+                        Ok(time) => time,
+                        Err(_) => {
+                            tracing::debug!(
+                                ?dep_manifest_path,
+                                "cannot_read_manifest_mtime_forcing_rebuild"
+                            );
+                            return Ok(false);
+                        }
+                    };
+                let hash_time =
+                    match std::fs::metadata(&cached_hash_path).and_then(|m| m.modified()) {
+                        Ok(time) => time,
+                        Err(_) => {
+                            tracing::debug!(
+                                ?cached_hash_path,
+                                "cannot_read_hash_mtime_forcing_rebuild"
+                            );
+                            return Ok(false);
+                        }
+                    };
                 if manifest_time <= hash_time {
-                    tracing::debug!(?dep_manifest_path, "path_dependency_manifest_unchanged_since_last_hash");
+                    tracing::debug!(
+                        ?dep_manifest_path,
+                        "path_dependency_manifest_unchanged_since_last_hash"
+                    );
                     continue;
                 }
             };
@@ -689,9 +700,11 @@ pub(crate) fn check_path_dependency_manifests(
                 // Save the current hash for future comparisons
                 match fs::write(&cached_hash_path, &current_hash) {
                     Ok(_) => {
-                        tracing::debug!("no_cached_manifest_hash_for_path_dependency_forcing_rebuild");
+                        tracing::debug!(
+                            "no_cached_manifest_hash_for_path_dependency_forcing_rebuild"
+                        );
                         return Ok(false);
-                    },
+                    }
                     Err(e) => {
                         tracing::debug!("failed_to_write_dependency_manifest_hash: {}", e);
                         return Err(e);
@@ -712,7 +725,7 @@ pub(crate) fn check_path_dependency_manifests(
                 match fs::write(&cached_hash_path, &current_hash) {
                     Ok(_) => {
                         return Ok(false);
-                    },
+                    }
                     Err(e) => {
                         tracing::debug!("failed_to_update_dependency_manifest_hash: {}", e);
                         return Err(e);
