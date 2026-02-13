@@ -18,7 +18,7 @@ use crate::{
     Error, Result,
     ast::SrcSpan,
     build::{Module, Origin, module_loader::ModuleLoader},
-    config::{PackageConfig, PackageKind},
+    config::PackageConfig,
     dep_tree,
     error::{DefinedModuleOrigin, FileIoAction, FileKind, ImportCycleLocationDetails},
     io::{self, CommandExecutor, FileSystemReader, FileSystemWriter, files_with_extension},
@@ -58,7 +58,6 @@ pub struct PackageLoader<'a, IO> {
     io: IO,
     ids: UniqueIdGenerator,
     mode: Mode,
-    package_kind: PackageKind,
     paths: ProjectPaths,
     warnings: &'a WarningEmitter,
     codegen: CodegenRequired,
@@ -79,7 +78,6 @@ where
         io: IO,
         ids: UniqueIdGenerator,
         mode: Mode,
-        package_kind: PackageKind,
         root: &'a Utf8Path,
         cached_warnings: CachedWarnings,
         warnings: &'a WarningEmitter,
@@ -95,7 +93,6 @@ where
             io,
             ids,
             mode,
-            package_kind,
             paths: ProjectPaths::new(root.into()),
             warnings,
             codegen,
@@ -234,7 +231,7 @@ where
         let span = tracing::info_span!("load");
         let _enter = span.enter();
 
-        let mut inputs = Inputs::new(self.already_defined_modules);
+        let mut inputs = Inputs::new(self.package_name.clone(), self.already_defined_modules);
 
         let src = self.paths.src_directory();
         let mut loader = ModuleLoader {
@@ -254,7 +251,7 @@ where
             match file {
                 Ok(file) => {
                     let input = loader.load(file)?;
-                    inputs.insert(input, self.package_kind.clone())?;
+                    inputs.insert(input)?;
                 }
                 Err(warning) => self.warnings.emit(warning),
             }
@@ -269,7 +266,7 @@ where
                 match file {
                     Ok(file) => {
                         let input = loader.load(file)?;
-                        inputs.insert(input, self.package_kind.clone())?;
+                        inputs.insert(input)?;
                     }
                     Err(warning) => self.warnings.emit(warning),
                 }
@@ -282,7 +279,7 @@ where
                 match file {
                     Ok(file) => {
                         let input = loader.load(file)?;
-                        inputs.insert(input, self.package_kind.clone())?;
+                        inputs.insert(input)?;
                     }
                     Err(warning) => self.warnings.emit(warning),
                 }
@@ -1691,13 +1688,19 @@ impl StaleTracker {
 
 #[derive(Debug)]
 pub struct Inputs<'a> {
+    /// The name of the package for which we're loading the inputs.
+    package: EcoString,
     collection: HashMap<EcoString, (DefinedModuleOrigin, Input)>,
     already_defined_modules: &'a mut im::HashMap<EcoString, DefinedModuleOrigin>,
 }
 
 impl<'a> Inputs<'a> {
-    fn new(already_defined_modules: &'a mut im::HashMap<EcoString, DefinedModuleOrigin>) -> Self {
+    fn new(
+        package: EcoString,
+        already_defined_modules: &'a mut im::HashMap<EcoString, DefinedModuleOrigin>,
+    ) -> Self {
         Self {
+            package,
             collection: Default::default(),
             already_defined_modules,
         }
@@ -1705,16 +1708,12 @@ impl<'a> Inputs<'a> {
 
     /// Insert a module into the hashmap. If there is already a module with the
     /// same name then an error is returned.
-    fn insert(&mut self, input: Input, origin: PackageKind) -> Result<()> {
+    fn insert(&mut self, input: Input) -> Result<()> {
         let name = input.name().clone();
 
-        let origin = match origin {
-            PackageKind::Root => DefinedModuleOrigin::RootProject {
-                path: input.source_path().to_path_buf(),
-            },
-            PackageKind::Dependency { package_name } => {
-                DefinedModuleOrigin::Dependency { package_name }
-            }
+        let origin = DefinedModuleOrigin {
+            package_name: self.package.clone(),
+            path: input.source_path().to_path_buf(),
         };
 
         if let Some(first) = self

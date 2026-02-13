@@ -9,7 +9,7 @@ use crate::{
         self, NullTelemetry, Outcome, PackageCompiler, StaleTracker, Target,
         TargetCodegenConfiguration, Telemetry, package_compiler::Compiled,
     },
-    config::{PackageConfig, PackageKind},
+    config::PackageConfig,
     error::DefinedModuleOrigin,
     io::{FileSystemWriter, memory::InMemoryFileSystem},
     uid::UniqueIdGenerator,
@@ -17,9 +17,9 @@ use crate::{
 };
 
 fn compile_modules(
-    package_kind: PackageKind,
+    package_name: &str,
     module: &str,
-    dependency_modules: Vec<(&str, &str)>,
+    existing_modules: Vec<(&str, &str)>,
 ) -> Outcome<Compiled, Error> {
     let mut fs = InMemoryFileSystem::new();
     fs.write(
@@ -28,9 +28,10 @@ fn compile_modules(
     )
     .expect("write module");
 
-    let config = PackageConfig::default();
+    let mut config = PackageConfig::default();
+    config.name = package_name.into();
+
     let compiler = PackageCompiler::new(
-        package_kind,
         &config,
         build::Mode::Dev,
         Utf8Path::new("/"),
@@ -41,13 +42,15 @@ fn compile_modules(
         fs,
     );
 
-    let mut already_defined_modules = dependency_modules
+    let mut already_defined_modules = existing_modules
         .into_iter()
         .map(|(package_name, module_name)| {
             (
                 EcoString::from(module_name),
-                DefinedModuleOrigin::Dependency {
+                DefinedModuleOrigin {
                     package_name: EcoString::from(package_name),
+                    path: Utf8Path::new(&format!("{package_name}/{module_name}.gleam"))
+                        .to_path_buf(),
                 },
             )
         })
@@ -64,8 +67,8 @@ fn compile_modules(
 }
 
 #[test]
-pub fn dependency_defining_same_module_as_root_package() {
-    let output = compile_modules(PackageKind::Root, "a_module", vec![("dep1", "a_module")])
+pub fn different_packages_defining_duplicate_module() {
+    let output = compile_modules("a_package", "a_module", vec![("dep1", "a_module")])
         .into_result()
         .expect_err("should produce an error")
         .pretty_string();
@@ -74,17 +77,11 @@ pub fn dependency_defining_same_module_as_root_package() {
 }
 
 #[test]
-pub fn dependency_defining_same_module_as_another_dependency() {
-    let output = compile_modules(
-        PackageKind::Dependency {
-            package_name: EcoString::from("a_dependency"),
-        },
-        "a_module",
-        vec![("another_dependency", "a_module")],
-    )
-    .into_result()
-    .expect_err("should produce an error")
-    .pretty_string();
+pub fn same_package_defining_duplicate_module() {
+    let output = compile_modules("a_package", "a_module", vec![("a_package", "a_module")])
+        .into_result()
+        .expect_err("should produce an error")
+        .pretty_string();
 
     insta::assert_snapshot!(insta::internals::AutoName, output);
 }

@@ -3,7 +3,7 @@ mod tests;
 
 use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::build::package_loader::CacheFiles;
-use crate::config::PackageKind;
+
 use crate::error::DefinedModuleOrigin;
 use crate::inline;
 use crate::io::files_with_extension;
@@ -54,7 +54,6 @@ pub struct PackageCompiler<'a, IO> {
     pub root: &'a Utf8Path,
     pub mode: Mode,
     pub target: &'a TargetCodegenConfiguration,
-    pub package_kind: PackageKind,
     pub config: &'a PackageConfig,
     pub ids: UniqueIdGenerator,
     pub write_metadata: bool,
@@ -80,7 +79,6 @@ where
     IO: FileSystemReader + FileSystemWriter + CommandExecutor + BeamCompiler + Clone,
 {
     pub fn new(
-        package_kind: PackageKind,
         config: &'a PackageConfig,
         mode: Mode,
         root: &'a Utf8Path,
@@ -97,7 +95,6 @@ where
             lib,
             root,
             mode,
-            package_kind,
             config,
             target,
             write_metadata: true,
@@ -145,7 +142,6 @@ where
             self.io.clone(),
             self.ids.clone(),
             self.mode,
-            self.package_kind.clone(),
             self.root,
             self.cached_warnings,
             warnings,

@@ -62,9 +62,11 @@ pub struct ImportCycleLocationDetails {
 
 /// Describes where a defined module comes from.
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum DefinedModuleOrigin {
-    RootProject { path: Utf8PathBuf },
-    Dependency { package_name: EcoString },
+pub struct DefinedModuleOrigin {
+    /// The package defining the module
+    pub package_name: EcoString,
+    /// The path to the module
+    pub path: Utf8PathBuf,
 }
 
 #[derive(Debug, Eq, PartialEq, Error, Clone)]
@@ -1416,12 +1418,15 @@ This was error from the Hex client library:
                 first,
                 second,
             } => {
-                let format_origin = |origin: &DefinedModuleOrigin| match origin {
-                    DefinedModuleOrigin::RootProject { path } => {
-                        format!("at `{path}`")
-                    }
-                    DefinedModuleOrigin::Dependency { package_name } => {
-                        format!("by dependency `{package_name}`")
+                // If the conflicting modules come from the same package just
+                // showing the same package name twice is not all that useful.
+                // So we will show the path to each one!
+                let should_show_path = first.package_name == second.package_name;
+                let format_origin = |origin: &DefinedModuleOrigin| {
+                    if should_show_path {
+                        format!("at {}", origin.path)
+                    } else {
+                        format!("by the package {}", origin.package_name)
                     }
                 };
 
@@ -1434,33 +1439,10 @@ It is defined a second time {}",
                     format_origin(second)
                 );
 
-                // If any of the conflicting modules belongs to the root project
-                // then this can be easily fixed by renaming it.
-                let hint = match (first, second) {
-                    (
-                        DefinedModuleOrigin::RootProject { .. },
-                        DefinedModuleOrigin::RootProject { .. },
-                    ) => Some("consider renaming one of the modules".into()),
-                    (
-                        DefinedModuleOrigin::RootProject { .. },
-                        DefinedModuleOrigin::Dependency { .. },
-                    )
-                    | (
-                        DefinedModuleOrigin::Dependency { .. },
-                        DefinedModuleOrigin::RootProject { .. },
-                    ) => Some(format!(
-                        "consider renaming the `{module}` module in your project"
-                    )),
-                    (
-                        DefinedModuleOrigin::Dependency { .. },
-                        DefinedModuleOrigin::Dependency { .. },
-                    ) => None,
-                };
-
                 vec![Diagnostic {
                     title: "Duplicate module".into(),
                     text,
-                    hint,
+                    hint: None,
                     level: Level::Error,
                     location: None,
                 }]

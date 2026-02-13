@@ -9,7 +9,7 @@ use crate::{
         telemetry::Telemetry,
     },
     codegen::{self, ErlangApp},
-    config::{PackageConfig, PackageKind},
+    config::PackageConfig,
     dep_tree,
     error::{DefinedModuleOrigin, FileIoAction, FileKind, ShellCommandFailureReason},
     io::{BeamCompiler, Command, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
@@ -584,16 +584,7 @@ where
             },
         };
 
-        let package_kind = if is_root {
-            PackageKind::Root
-        } else {
-            PackageKind::Dependency {
-                package_name: config.name.clone(),
-            }
-        };
-
         let mut compiler = PackageCompiler::new(
-            package_kind,
             config,
             mode,
             &root_path,

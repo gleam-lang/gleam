@@ -6,6 +6,5 @@ error: Duplicate module
 
 The module `main` is defined multiple times.
 
-It is first defined at `src/main.gleam`
-It is defined a second time at `test/main.gleam`
-Hint: consider renaming one of the modules
+It is first defined at src/main.gleam
+It is defined a second time at test/main.gleam

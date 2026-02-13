@@ -6,5 +6,5 @@ error: Duplicate module
 
 The module `a_module` is defined multiple times.
 
-It is first defined by dependency `another_dependency`
-It is defined a second time by dependency `a_dependency`
+It is first defined at a_package/a_module.gleam
+It is defined a second time at /src/a_module.gleam
