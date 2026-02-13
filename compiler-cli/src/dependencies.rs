@@ -616,7 +616,7 @@ impl LocalPackages {
     }
 }
 
-fn is_same_requirements(
+pub(crate) fn is_same_requirements(
     requirements1: &HashMap<EcoString, Requirement>,
     requirements2: &HashMap<EcoString, Requirement>,
     root_path: &Utf8Path,
@@ -635,7 +635,7 @@ fn is_same_requirements(
 }
 
 /// Checks if path dependencies' manifest files have changed since the last build.
-fn are_path_dependency_manifests_unchanged(
+pub(crate) fn are_path_dependency_manifests_unchanged(
     requirements: &HashMap<EcoString, Requirement>,
     _root_path: &Utf8Path,
     paths: &ProjectPaths,
