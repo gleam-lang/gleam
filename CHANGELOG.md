@@ -298,3 +298,8 @@
 - Fixed a bug where diagnostic about incorrect `size` and `unit` options would
   use incorrect error location.
   ([Andrey Kozhev](https://github.com/ankddev))
+
+- Fixed a bug where changes to a path dependency's own dependencies were not
+  detected when rebuilding the root project, causing the compiler to report
+  errors about missing modules.
+  ([daniellionel01](https://github.com/daniellionel01))

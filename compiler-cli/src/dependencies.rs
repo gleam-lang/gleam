@@ -634,6 +634,112 @@ fn is_same_requirements(
     Ok(true)
 }
 
+/// Validates path dependencies' manifest files, updating cached hashes as needed.
+/// Returns true if all path dependency manifests are unchanged since last build.
+fn check_path_dependency_manifests(
+    requirements: &HashMap<EcoString, Requirement>,
+    paths: &ProjectPaths,
+) -> Result<bool> {
+    for (key, requirement) in requirements {
+        if let Requirement::Path { path } = requirement {
+            let dep_manifest_path = paths.dependency_manifest_path(path);
+
+            let cached_hash_path = paths.dependency_manifest_hash_path(key.as_str());
+
+            // Skip dependencies without a manifest file
+            if !dep_manifest_path.exists() {
+                tracing::debug!("path_dependency_manifest_not_found_skipping_check");
+                continue;
+            }
+
+            // Check mtimes before hashing, to avoid extra work
+            if cached_hash_path.exists() {
+                let manifest_time =
+                    match std::fs::metadata(&dep_manifest_path).and_then(|m| m.modified()) {
+                        Ok(time) => time,
+                        Err(_) => {
+                            tracing::debug!(
+                                ?dep_manifest_path,
+                                "cannot_read_manifest_mtime_forcing_rebuild"
+                            );
+                            return Ok(false);
+                        }
+                    };
+                let hash_time =
+                    match std::fs::metadata(&cached_hash_path).and_then(|m| m.modified()) {
+                        Ok(time) => time,
+                        Err(_) => {
+                            tracing::debug!(
+                                ?cached_hash_path,
+                                "cannot_read_hash_mtime_forcing_rebuild"
+                            );
+                            return Ok(false);
+                        }
+                    };
+                if manifest_time <= hash_time {
+                    tracing::debug!(
+                        ?dep_manifest_path,
+                        "path_dependency_manifest_unchanged_since_last_hash"
+                    );
+                    continue;
+                }
+            };
+
+            let manifest_content = match fs::read(&dep_manifest_path) {
+                Ok(content) => content,
+                Err(_) => {
+                    tracing::debug!("cannot_read_path_dependency_manifest_forcing_rebuild");
+                    return Ok(false);
+                }
+            };
+
+            let current_hash = xxhash_rust::xxh3::xxh3_64(manifest_content.as_bytes()).to_string();
+
+            // If cached hash file doesn't exist, this is the first time we're checking this dependency
+            if !cached_hash_path.exists() {
+                // Save the current hash for future comparisons
+                match fs::write(&cached_hash_path, &current_hash) {
+                    Ok(_) => {
+                        tracing::debug!(
+                            "no_cached_manifest_hash_for_path_dependency_forcing_rebuild"
+                        );
+                        return Ok(false);
+                    }
+                    Err(e) => {
+                        tracing::debug!("failed_to_write_dependency_manifest_hash: {}", e);
+                        return Err(e);
+                    }
+                }
+            }
+
+            let cached_hash = match std::fs::read_to_string(&cached_hash_path) {
+                Ok(content) => content,
+                Err(_) => {
+                    tracing::debug!("cannot_read_cached_manifest_hash_forcing_rebuild");
+                    return Ok(false);
+                }
+            };
+
+            if cached_hash != current_hash {
+                tracing::debug!("path_dependency_manifest_changed_forcing_rebuild");
+                match fs::write(&cached_hash_path, &current_hash) {
+                    Ok(_) => {
+                        return Ok(false);
+                    }
+                    Err(e) => {
+                        tracing::debug!("failed_to_update_dependency_manifest_hash: {}", e);
+                        return Err(e);
+                    }
+                }
+            }
+
+            tracing::debug!("path_dependency_manifest_unchanged_no_rebuild_needed");
+        }
+    }
+
+    Ok(true)
+}
+
 fn same_requirements(
     requirement1: &Requirement,
     requirement2: Option<&Requirement>,
@@ -772,6 +878,7 @@ fn provide_local_package(
     } else {
         fs::canonicalise(&parent_path.join(package_path))?
     };
+
     let package_source = ProvidedPackageSource::Local {
         path: package_path.clone(),
     };

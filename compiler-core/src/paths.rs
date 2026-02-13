@@ -131,6 +131,17 @@ impl ProjectPaths {
         self.build_directory_for_target(mode, target)
             .join("gleam_version")
     }
+
+    pub fn dependency_manifest_path(&self, dependency_path: &Utf8Path) -> Utf8PathBuf {
+        // We're creating a new ProjectPaths with the dependency's root path
+        let dep_project_paths = Self::new(self.root().join(dependency_path));
+        dep_project_paths.manifest()
+    }
+
+    pub fn dependency_manifest_hash_path(&self, dependency_name: &str) -> Utf8PathBuf {
+        self.build_packages_directory()
+            .join(format!("{}.manifest_hash", dependency_name))
+    }
 }
 
 pub fn global_package_cache_package_tarball(checksum: &Base16Checksum) -> Utf8PathBuf {
