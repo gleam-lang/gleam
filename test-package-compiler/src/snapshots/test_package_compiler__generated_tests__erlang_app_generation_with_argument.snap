@@ -1,14 +1,9 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 85
 expression: "./cases/erlang_app_generation_with_argument"
-snapshot_kind: text
 ---
 //// /out/lib/the_package/_gleam_artefacts/main.cache
 <.cache binary>
-
-//// /out/lib/the_package/_gleam_artefacts/main.cache_inline
-<8 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/main.cache_meta
 <57 byte binary>

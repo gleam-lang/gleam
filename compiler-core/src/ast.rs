@@ -1456,7 +1456,7 @@ impl BinOp {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CallArg<A> {
     pub label: Option<EcoString>,
     pub location: SrcSpan,
@@ -1464,7 +1464,7 @@ pub struct CallArg<A> {
     pub implicit: Option<ImplicitCallArgOrigin>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub enum ImplicitCallArgOrigin {
     /// The implicit callback argument passed as the last argument to the
     /// function on the right hand side of `use`.
@@ -1688,13 +1688,13 @@ impl<T> HasLocation for CallArg<T> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct RecordBeingUpdated<A> {
     pub base: Box<A>,
     pub location: SrcSpan,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct RecordUpdateArg<A> {
     pub label: EcoString,
     pub location: SrcSpan,
@@ -3390,7 +3390,7 @@ pub type TypedConstantBitArraySegment = BitArraySegment<TypedConstant, Arc<Type>
 pub type UntypedPatternBitArraySegment = BitArraySegment<UntypedPattern, ()>;
 pub type TypedPatternBitArraySegment = BitArraySegment<TypedPattern, Arc<Type>>;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct BitArraySegment<Value, Type> {
     pub location: SrcSpan,
     pub value: Box<Value>,
@@ -3689,7 +3689,7 @@ impl TypedConstantBitArraySegment {
 
 pub type TypedConstantBitArraySegmentOption = BitArrayOption<TypedConstant>;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, serde::Serialize, serde::Deserialize)]
 pub enum BitArrayOption<Value> {
     Bytes {
         location: SrcSpan,

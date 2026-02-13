@@ -21,7 +21,6 @@ pub use fields::FieldMap;
 use hexpm::version::Version;
 pub use prelude::*;
 use printer::Names;
-use serde::Serialize;
 
 use crate::{
     ast::{
@@ -658,7 +657,7 @@ pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
     t
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct AccessorsMap {
     pub publicity: Publicity,
     pub type_: Arc<Type>,
@@ -683,7 +682,7 @@ impl AccessorsMap {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct RecordAccessor {
     // TODO: smaller int. Doesn't need to be this big
     pub index: u64,
@@ -692,7 +691,7 @@ pub struct RecordAccessor {
     pub documentation: Option<EcoString>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ValueConstructorVariant {
     /// A locally defined variable or function parameter
     LocalVariable {
@@ -977,7 +976,7 @@ pub struct ModuleFunction {
     pub package: EcoString,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ModuleInterface {
     pub name: EcoString,
     pub origin: Origin,
@@ -1013,21 +1012,21 @@ impl ModuleInterface {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct References {
     pub imported_modules: HashSet<EcoString>,
     pub value_references: ReferenceMap,
     pub type_references: ReferenceMap,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Opaque {
     Opaque,
     NotOpaque,
 }
 
 /// Information on the constructors of a custom type.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct TypeVariantConstructors {
     /// The id of the generic type variables of the generic version of the type that these
     /// constructors belong to.
@@ -1081,14 +1080,14 @@ impl TypeVariantConstructors {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct TypeValueConstructor {
     pub name: EcoString,
     pub parameters: Vec<TypeValueConstructorField>,
     pub documentation: Option<EcoString>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct TypeValueConstructorField {
     /// This type of this parameter
     pub type_: Arc<Type>,
@@ -1372,7 +1371,7 @@ impl TypeVar {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct TypeConstructor {
     pub publicity: Publicity,
     pub origin: SrcSpan,
@@ -1390,7 +1389,7 @@ impl TypeConstructor {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ValueConstructor {
     pub publicity: Publicity,
     pub deprecation: Deprecation,
@@ -1398,7 +1397,7 @@ pub struct ValueConstructor {
     pub type_: Arc<Type>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum Deprecation {
     #[default]
     NotDeprecated,
@@ -1499,7 +1498,7 @@ impl ValueConstructor {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct TypeAliasConstructor {
     pub publicity: Publicity,
     pub module: EcoString,

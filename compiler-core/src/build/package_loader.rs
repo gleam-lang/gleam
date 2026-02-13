@@ -184,42 +184,21 @@ where
     fn load_cached_module(&self, info: CachedModule) -> Result<type_::ModuleInterface, Error> {
         let cache_files = CacheFiles::new(&self.artefact_directory, &info.name);
         let bytes = self.io.read_bytes(&cache_files.cache_path)?;
-        let mut module = metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())?;
-
-        if self.io.exists(&cache_files.inline_path) {
-            let bytes = self.io.read_bytes(&cache_files.inline_path)?;
-            module.inline_functions =
-                match bincode::serde::decode_from_slice(&bytes, bincode::config::legacy()) {
-                    Ok((data, _)) => data,
-                    Err(e) => {
-                        return Err(Error::FileIo {
-                            kind: FileKind::File,
-                            action: FileIoAction::Parse,
-                            path: cache_files.inline_path,
-                            err: Some(e.to_string()),
-                        });
-                    }
-                };
-        }
-
-        // Load warnings
-        if self.cached_warnings.should_use() {
-            let path = cache_files.warnings_path;
-            if self.io.exists(&path) {
-                let bytes = self.io.read_bytes(&path)?;
-                module.warnings =
-                    match bincode::serde::decode_from_slice(&bytes, bincode::config::legacy()) {
-                        Ok((data, _)) => data,
-                        Err(e) => {
-                            return Err(Error::FileIo {
-                                kind: FileKind::File,
-                                action: FileIoAction::Parse,
-                                path,
-                                err: Some(e.to_string()),
-                            });
-                        }
-                    };
+        let mut module = match metadata::decode(bytes.as_slice(), self.ids.clone()) {
+            Ok(module) => module,
+            Err(e) => {
+                return Err(Error::FileIo {
+                    kind: FileKind::File,
+                    action: FileIoAction::Parse,
+                    path: cache_files.cache_path,
+                    err: Some(e.to_string()),
+                });
             }
+        };
+
+        // Discard warnings if they should not be cached
+        if !self.cached_warnings.should_use() {
+            module.warnings.clear();
         }
 
         Ok(module)
@@ -1806,8 +1785,6 @@ impl GleamFile {
 pub struct CacheFiles {
     pub cache_path: Utf8PathBuf,
     pub meta_path: Utf8PathBuf,
-    pub warnings_path: Utf8PathBuf,
-    pub inline_path: Utf8PathBuf,
 }
 
 impl CacheFiles {
@@ -1819,26 +1796,16 @@ impl CacheFiles {
         let meta_path = artefact_directory
             .join(file_name.as_str())
             .with_extension("cache_meta");
-        let warnings_path = artefact_directory
-            .join(file_name.as_str())
-            .with_extension("cache_warnings");
-        let inline_path = artefact_directory
-            .join(file_name.as_str())
-            .with_extension("cache_inline");
 
         Self {
             cache_path,
             meta_path,
-            warnings_path,
-            inline_path,
         }
     }
 
     pub fn delete(&self, io: &dyn io::FileSystemWriter) -> Result<()> {
         io.delete_file(&self.cache_path)?;
-        io.delete_file(&self.meta_path)?;
-        io.delete_file(&self.warnings_path)?;
-        io.delete_file(&self.inline_path)
+        io.delete_file(&self.meta_path)
     }
 
     /// Iterates over `.cache_meta` files in the given directory,

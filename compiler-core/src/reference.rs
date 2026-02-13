@@ -8,7 +8,7 @@ use petgraph::{
     stable_graph::{NodeIndex, StableGraph},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ReferenceKind {
     Qualified,
     Unqualified,
@@ -17,7 +17,7 @@ pub enum ReferenceKind {
     Alias,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Reference {
     pub location: SrcSpan,
     pub kind: ReferenceKind,

@@ -1,6 +1,5 @@
 use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::build::package_loader::CacheFiles;
-use crate::inline;
 use crate::io::files_with_extension;
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
@@ -17,12 +16,12 @@ use crate::{
     config::PackageConfig,
     dep_tree, error,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
-    metadata::ModuleEncoder,
     parse::extra::ModuleExtra,
     paths, type_,
     uid::UniqueIdGenerator,
     warning::{TypeWarningEmitter, WarningEmitter},
 };
+use crate::{inline, metadata};
 use askama::Template;
 use ecow::EcoString;
 use std::collections::HashSet;
@@ -313,7 +312,8 @@ where
             let cache_files = CacheFiles::new(&artefact_dir, &module.name);
 
             // Write cache file
-            let bytes = ModuleEncoder::new(&module.ast.type_info).encode()?;
+            let bytes =
+                metadata::encode(&module.ast.type_info).expect("Failed to serialise module cache");
             self.io.write_bytes(&cache_files.cache_path, &bytes)?;
 
             // Write cache metadata
@@ -326,24 +326,6 @@ where
             };
             self.io
                 .write_bytes(&cache_files.meta_path, &info.to_binary())?;
-
-            let cache_inline = bincode::serde::encode_to_vec(
-                &module.ast.type_info.inline_functions,
-                bincode::config::legacy(),
-            )
-            .expect("Failed to serialise inline functions");
-            self.io.write_bytes(&cache_files.inline_path, &cache_inline);
-
-            // Write warnings.
-            // Dependency packages don't get warnings persisted as the
-            // programmer doesn't want to be told every time about warnings they
-            // cannot fix directly.
-            if self.cached_warnings.should_use() {
-                let warnings = &module.ast.type_info.warnings;
-                let data = bincode::serde::encode_to_vec(warnings, bincode::config::legacy())
-                    .expect("Serialise warnings");
-                self.io.write_bytes(&cache_files.warnings_path, &data)?;
-            }
         }
         Ok(())
     }

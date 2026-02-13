@@ -53,7 +53,7 @@ javascript-prelude-test-watch: ## Run the JavaScript prelude core tests when fil
 
 .PHONY: test-watch
 test-watch: ## Run compiler tests when files change
-	watchexec -e rs,toml,gleam,html,capnp "cargo test --quiet"
+	watchexec -e rs,toml,gleam,html "cargo test --quiet"
 
 .PHONY: export-hex-tarball-test
 export-hex-tarball-test: ## Run `gleam export hex-tarball` and verify it is created

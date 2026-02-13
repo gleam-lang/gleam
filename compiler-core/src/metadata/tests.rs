@@ -22,16 +22,14 @@ use crate::{
     },
     uid::UniqueIdGenerator,
 };
-use std::{collections::HashMap, io::BufReader, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use pretty_assertions::assert_eq;
 
 fn roundtrip(input: &ModuleInterface) -> ModuleInterface {
-    let buffer = ModuleEncoder::new(input).encode().unwrap();
+    let buffer = encode(input).unwrap();
     let ids = UniqueIdGenerator::new();
-    ModuleDecoder::new(ids)
-        .read(BufReader::new(buffer.as_slice()))
-        .unwrap()
+    decode(buffer.as_slice(), ids).unwrap()
 }
 
 fn constant_module(constant: TypedConstant) -> ModuleInterface {
@@ -1736,12 +1734,12 @@ fn type_variable_ids_in_constructors_are_shared() {
     let expected = HashMap::from([(
         "SomeType".into(),
         TypeVariantConstructors {
-            type_parameters_ids: vec![1, 2, 0],
+            type_parameters_ids: vec![0, 1, 2],
             variants: vec![TypeValueConstructor {
                 name: "One".into(),
                 parameters: vec![
                     TypeValueConstructorField {
-                        type_: type_::generic_var(0),
+                        type_: type_::generic_var(2),
                         label: None,
                         documentation: Some("Here's some documentation".into()),
                     },
@@ -1751,7 +1749,7 @@ fn type_variable_ids_in_constructors_are_shared() {
                         documentation: None,
                     },
                     TypeValueConstructorField {
-                        type_: type_::tuple(vec![type_::generic_var(1), type_::generic_var(2)]),
+                        type_: type_::tuple(vec![type_::generic_var(0), type_::generic_var(1)]),
                         label: None,
                         documentation: None,
                     },
