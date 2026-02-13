@@ -1,0 +1,18 @@
+---
+source: language-server/src/tests/inlay_hints.rs
+expression: hints
+---
+const int_val = 0
+
+fn identity(x) {
+  x
+}
+
+fn main(a) {
+  case a {
+    _ -> {
+        int_val "Int"
+        |> identity() "Int"
+    }
+  }
+}

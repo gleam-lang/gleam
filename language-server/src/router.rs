@@ -7,14 +7,16 @@ use gleam_core::{
 };
 use std::{
     collections::{HashMap, hash_map::Entry},
+    sync::{Arc, RwLock},
     time::SystemTime,
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
 
 use super::{
-    DownloadDependencies, MakeLocker, engine::LanguageServerEngine, feedback::FeedbackBookKeeper,
-    files::FileSystemProxy, progress::ProgressReporter,
+    DownloadDependencies, MakeLocker, configuration::UserConfiguration,
+    engine::LanguageServerEngine, feedback::FeedbackBookKeeper, files::FileSystemProxy,
+    progress::ProgressReporter,
 };
 
 /// The language server instance serves a language client, typically a text
@@ -29,6 +31,7 @@ pub(crate) struct Router<IO, Reporter> {
     io: FileSystemProxy<IO>,
     engines: HashMap<Utf8PathBuf, Project<IO, Reporter>>,
     progress_reporter: Reporter,
+    user_config: Arc<RwLock<UserConfiguration>>,
 }
 
 impl<IO, Reporter> Router<IO, Reporter>
@@ -44,11 +47,16 @@ where
     // IO to be supplied from inside of gleam-core
     Reporter: ProgressReporter + Clone,
 {
-    pub fn new(progress_reporter: Reporter, io: FileSystemProxy<IO>) -> Self {
+    pub fn new(
+        progress_reporter: Reporter,
+        io: FileSystemProxy<IO>,
+        user_config: Arc<RwLock<UserConfiguration>>,
+    ) -> Self {
         Self {
             io,
             engines: HashMap::new(),
             progress_reporter,
+            user_config,
         }
     }
 
@@ -89,8 +97,12 @@ where
         Ok(Some(match self.engines.entry(path.clone()) {
             Entry::Occupied(entry) => entry.into_mut(),
             Entry::Vacant(entry) => {
-                let project =
-                    Self::new_project(path, self.io.clone(), self.progress_reporter.clone())?;
+                let project = Self::new_project(
+                    path,
+                    self.io.clone(),
+                    self.progress_reporter.clone(),
+                    self.user_config.clone(),
+                )?;
                 entry.insert(project)
             }
         }))
@@ -127,19 +139,21 @@ where
         path: Utf8PathBuf,
         io: FileSystemProxy<IO>,
         progress_reporter: Reporter,
+        user_config: Arc<RwLock<UserConfiguration>>,
     ) -> Result<Project<IO, Reporter>, Error> {
         tracing::info!(?path, "creating_new_language_server_engine");
         let paths = ProjectPaths::new(path);
         let config_path = paths.root_config();
         let modification_time = io.modification_time(&config_path)?;
         let toml = io.read(&config_path)?;
-        let config = toml::from_str(&toml).map_err(|e| Error::FileIo {
+        let package_config = toml::from_str(&toml).map_err(|e| Error::FileIo {
             action: FileIoAction::Parse,
             kind: FileKind::File,
             path: config_path,
             err: Some(e.to_string()),
         })?;
-        let engine = LanguageServerEngine::new(config, progress_reporter, io, paths)?;
+        let engine =
+            LanguageServerEngine::new(package_config, progress_reporter, io, paths, user_config)?;
         let project = Project {
             engine,
             feedback: FeedbackBookKeeper::default(),

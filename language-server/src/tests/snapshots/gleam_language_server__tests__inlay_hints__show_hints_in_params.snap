@@ -1,0 +1,8 @@
+---
+source: language-server/src/tests/inlay_hints.rs
+expression: hints
+---
+fn example_fn(
+  flex_type_arg": a",
+  b: do_not_show_this,
+) { 0 }
