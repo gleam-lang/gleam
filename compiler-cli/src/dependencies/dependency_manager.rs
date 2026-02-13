@@ -18,9 +18,10 @@ use crate::{
 };
 
 use super::{
-    CheckMajorVersions, LocalPackages, UseManifest, add_missing_packages, is_same_requirements,
-    lookup_package, provide_git_package, provide_local_package, read_manifest_from_disc,
-    remove_extra_packages, unlock_packages,
+    CheckMajorVersions, LocalPackages, UseManifest, add_missing_packages,
+    are_path_dependency_manifests_unchanged, is_same_requirements, lookup_package,
+    provide_git_package, provide_local_package, read_manifest_from_disc, remove_extra_packages,
+    unlock_packages,
 };
 
 /// Verifies that all specified packages exist in the manifest.
@@ -108,16 +109,24 @@ where
         let (requirements_changed, manifest_for_resolver) = match self.use_manifest {
             UseManifest::No => (true, None),
             UseManifest::Yes => {
+                let config_dependencies = config.all_direct_dependencies()?;
                 let same_requirements = is_same_requirements(
                     &existing_manifest.requirements,
-                    &config.all_direct_dependencies()?,
+                    &config_dependencies,
                     paths.root(),
                 )?;
 
                 // If the manifest is to be used and the requirements have not changed then there's
                 // no point in performing resolution, it'll always result in the same versions
                 // already specified in the manifest.
-                if packages_to_update.is_empty() && same_requirements {
+                if packages_to_update.is_empty()
+                    && same_requirements
+                    && are_path_dependency_manifests_unchanged(
+                        &config_dependencies,
+                        paths.root(),
+                        paths,
+                    )?
+                {
                     return Ok(Resolved::no_change(existing_manifest));
                 }
 
