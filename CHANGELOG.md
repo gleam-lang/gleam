@@ -287,6 +287,10 @@
   when emitting TypeScript declarations.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where dev dependencies would be compiled and included in
+  production builds such as `gleam export erlang-shipment`.
+  ([John Downey](https://github.com/jtdowney))
+
 - Fixed a bug where the package cache would not properly be reset when a version
   of a package was replaced on Hex.
   ([Surya Rose](https://github.com/GearsDatapacks))
