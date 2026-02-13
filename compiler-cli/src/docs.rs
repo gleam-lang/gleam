@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    time::{Instant, SystemTime},
-};
+use std::{collections::HashMap, time::SystemTime};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
@@ -23,14 +20,20 @@ use gleam_core::{
 
 pub fn remove(package: String, version: String) -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let http = HttpClient::new();
     let hex_config = hexpm::Config::new();
-    let api_key =
-        crate::hex::HexAuthentication::new(&runtime, hex_config.clone()).get_or_create_api_key()?;
+    let credentials = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
+        .get_or_create_api_credentials()?;
     let http = HttpClient::new();
 
     // Remove docs from API
-    let request = hexpm::api_remove_docs_request(&package, &version, &api_key, &hex_config)
-        .map_err(Error::hex)?;
+    let request = hexpm::api_remove_docs_request(
+        &package,
+        &version,
+        &crate::hex::write_credentials(&credentials)?,
+        &hex_config,
+    )
+    .map_err(Error::hex)?;
     let response = runtime.block_on(http.send(request))?;
     hexpm::api_remove_docs_response(response).map_err(Error::hex)?;
 
@@ -167,11 +170,11 @@ pub(crate) fn build_documentation(
 
 pub fn publish(paths: &ProjectPaths) -> Result<()> {
     let config = crate::config::root_config(paths)?;
-
+    let http = HttpClient::new();
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let hex_config = hexpm::Config::new();
-    let api_key =
-        crate::hex::HexAuthentication::new(&runtime, hex_config.clone()).get_or_create_api_key()?;
+    let credentials = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
+        .get_or_create_api_credentials()?;
 
     // Reset the build directory so we know the state of the project
     crate::fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, config.target))?;
@@ -218,16 +221,15 @@ pub fn publish(paths: &ProjectPaths) -> Result<()> {
     )?;
     let archive = crate::fs::create_tar_archive(outputs)?;
 
-    let start = Instant::now();
     cli::print_publishing_documentation();
     runtime.block_on(hex::publish_documentation(
         &config.name,
         &config.version,
         archive,
-        &api_key,
+        &crate::hex::write_credentials(&credentials)?,
         &hex_config,
-        &HttpClient::new(),
+        &http,
     ))?;
-    cli::print_published(start.elapsed());
+    cli::print_published("documentation");
     Ok(())
 }

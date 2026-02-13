@@ -12,95 +12,28 @@ fn make_json_response(status: u16, body: serde_json::Value) -> http::Response<Ve
 }
 
 #[test]
-fn authenticate_request() {
-    let username = "me@example.com";
-    let password = "password";
-    let name = "louis-test";
-
-    let config = Config::new();
-    let request = crate::api_create_api_key_request(username, password, name, &config);
-
-    assert_eq!(request.method(), http::Method::POST);
-    assert_eq!(request.uri().path(), "/api/keys");
-    assert_eq!(
-        request.headers().get("authorization").unwrap(),
-        "Basic bWVAZXhhbXBsZS5jb206cGFzc3dvcmQ="
-    );
-    assert_eq!(
-        request.headers().get("content-type").unwrap(),
-        "application/json"
-    );
-    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
-
-    let body: serde_json::Value = serde_json::from_slice(request.body()).unwrap();
-    assert_eq!(body["name"], "louis-test");
-    assert_eq!(body["permissions"][0]["domain"], "api");
-    assert_eq!(body["permissions"][0]["resource"], "write");
-}
-
-#[test]
-fn authenticate_response_success() {
-    let expected_secret = "some-secret-here";
-    let resp_body = json!({
-        "authing_key": false,
-        "inserted_at": "2020-05-02T17:18:23.336328Z",
-        "name": "authenticate_test_1",
-        "permissions": [{"domain": "api", "resource": "write"}],
-        "revoked_at": null,
-        "secret": expected_secret,
-        "updated_at": "2020-05-02T17: 18: 23.336328Z",
-        "url": "https: //hex.pm/api/keys/authenticate_test_1"
-    });
-
-    let response = make_json_response(201, resp_body);
-    let secret = crate::api_create_api_key_response(response).unwrap();
-
-    assert_eq!(expected_secret, secret);
-}
-
-#[test]
-fn authenticate_response_rate_limited() {
-    let response = make_response(429, vec![]);
-    let result = crate::api_create_api_key_response(response).unwrap_err();
-
-    match result {
-        ApiError::RateLimited => (),
-        result => panic!("expected RateLimited, got {result:?}"),
-    }
-}
-
-#[test]
-fn authenticate_response_bad_creds() {
-    let resp_body = json!({
-        "message": "invalid username and password combination",
-        "status": 401,
-    });
-
-    let response = make_json_response(401, resp_body);
-    let result = crate::api_create_api_key_response(response).unwrap_err();
-
-    match result {
-        ApiError::InvalidCredentials => (),
-        result => panic!("expected InvalidCredentials, got {result:?}"),
-    }
-}
-
-#[test]
 fn remove_docs_request() {
-    let key = "my-api-key-here";
+    let key = WriteActionCredentials::OAuthAccessToken {
+        access_token: EcoString::from("my-api-key-here"),
+        one_time_password: EcoString::from("test-otp"),
+    };
     let package = "gleam_experimental_stdlib";
     let version = "0.8.0";
 
     let config = Config::new();
-    let request = crate::api_remove_docs_request(package, version, key, &config).unwrap();
+    let request = crate::api_remove_docs_request(package, version, &key, &config).unwrap();
 
     assert_eq!(request.method(), http::Method::DELETE);
     assert_eq!(
         request.uri().path(),
         "/api/packages/gleam_experimental_stdlib/releases/0.8.0/docs"
     );
-    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(
+        request.headers().get("authorization").unwrap(),
+        "Bearer my-api-key-here"
+    );
     assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+    assert_eq!(request.headers().get("x-hex-otp").unwrap(), "test-otp");
 }
 
 #[test]
@@ -112,20 +45,27 @@ fn remove_docs_response_success() {
 
 #[test]
 fn revert_release_request() {
-    let key = "my-api-key-here";
+    let key = WriteActionCredentials::OAuthAccessToken {
+        access_token: EcoString::from("my-api-key-here"),
+        one_time_password: EcoString::from("test-otp"),
+    };
     let package = "gleam_experimental_stdlib";
     let version = "0.8.0";
 
     let config = Config::new();
-    let request = crate::api_revert_release_request(package, version, key, &config).unwrap();
+    let request = crate::api_revert_release_request(package, version, &key, &config).unwrap();
 
     assert_eq!(request.method(), http::Method::DELETE);
     assert_eq!(
         request.uri().path(),
         "/api/packages/gleam_experimental_stdlib/releases/0.8.0"
     );
-    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(
+        request.headers().get("authorization").unwrap(),
+        "Bearer my-api-key-here"
+    );
     assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+    assert_eq!(request.headers().get("x-hex-otp").unwrap(), "test-otp");
 }
 
 #[test]
@@ -137,21 +77,28 @@ fn revert_release_response_success() {
 
 #[test]
 fn add_owner_request() {
-    let key = "my-api-key-here";
+    let key = WriteActionCredentials::OAuthAccessToken {
+        access_token: EcoString::from("my-api-key-here"),
+        one_time_password: EcoString::from("test-otp"),
+    };
     let package = "gleam_experimental_stdlib";
     let owner = "lpil";
     let level = OwnerLevel::Maintainer;
 
     let config = Config::new();
-    let request = crate::api_add_owner_request(package, owner, level, key, &config);
+    let request = crate::api_add_owner_request(package, owner, level, &key, &config);
 
     assert_eq!(request.method(), http::Method::PUT);
     assert_eq!(
         request.uri().path(),
         "/api/packages/gleam_experimental_stdlib/owners/lpil"
     );
-    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(
+        request.headers().get("authorization").unwrap(),
+        "Bearer my-api-key-here"
+    );
     assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+    assert_eq!(request.headers().get("x-hex-otp").unwrap(), "test-otp");
 
     let body: serde_json::Value = serde_json::from_slice(request.body()).unwrap();
     assert_eq!(body["level"], "maintainer");
@@ -167,20 +114,27 @@ fn add_owner_response_success() {
 
 #[test]
 fn transfer_owner_request() {
-    let key = "my-api-key-here";
+    let key = WriteActionCredentials::OAuthAccessToken {
+        access_token: EcoString::from("my-api-key-here"),
+        one_time_password: EcoString::from("test-otp"),
+    };
     let package = "gleam_experimental_stdlib";
     let owner = "lpil";
 
     let config = Config::new();
-    let request = crate::api_transfer_owner_request(package, owner, key, &config);
+    let request = crate::api_transfer_owner_request(package, owner, &key, &config);
 
     assert_eq!(request.method(), http::Method::PUT);
     assert_eq!(
         request.uri().path(),
         "/api/packages/gleam_experimental_stdlib/owners/lpil"
     );
-    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(
+        request.headers().get("authorization").unwrap(),
+        "Bearer my-api-key-here"
+    );
     assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+    assert_eq!(request.headers().get("x-hex-otp").unwrap(), "test-otp");
 
     let body: serde_json::Value = serde_json::from_slice(request.body()).unwrap();
     assert_eq!(body["level"], "full");
@@ -196,20 +150,27 @@ fn transfer_owner_response_success() {
 
 #[test]
 fn remove_owner_request() {
-    let key = "my-api-key-here";
+    let key = WriteActionCredentials::OAuthAccessToken {
+        access_token: EcoString::from("my-api-key-here"),
+        one_time_password: EcoString::from("test-otp"),
+    };
     let package = "gleam_experimental_stdlib";
     let owner = "lpil";
 
     let config = Config::new();
-    let request = crate::api_remove_owner_request(package, owner, key, &config);
+    let request = crate::api_remove_owner_request(package, owner, &key, &config);
 
     assert_eq!(request.method(), http::Method::DELETE);
     assert_eq!(
         request.uri().path(),
         "/api/packages/gleam_experimental_stdlib/owners/lpil"
     );
-    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(
+        request.headers().get("authorization").unwrap(),
+        "Bearer my-api-key-here"
+    );
     assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+    assert_eq!(request.headers().get("x-hex-otp").unwrap(), "test-otp");
 }
 
 #[test]
@@ -222,15 +183,22 @@ fn remove_owner_response_success() {
 #[test]
 fn remove_key_request() {
     let name = "some-key-name";
-    let key = "my-api-key-here";
+    let key = WriteActionCredentials::OAuthAccessToken {
+        access_token: EcoString::from("my-api-key-here"),
+        one_time_password: EcoString::from("test-otp"),
+    };
 
     let config = Config::new();
-    let request = crate::api_remove_api_key_request(name, key, &config);
+    let request = crate::api_remove_api_key_request(name, &key, &config);
 
     assert_eq!(request.method(), http::Method::DELETE);
     assert_eq!(request.uri().path(), "/api/keys/some-key-name");
-    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(
+        request.headers().get("authorization").unwrap(),
+        "Bearer my-api-key-here"
+    );
     assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+    assert_eq!(request.headers().get("x-hex-otp").unwrap(), "test-otp");
 }
 
 #[test]
@@ -279,7 +247,7 @@ fn remove_docs_response_invalid_key() {
     let result = crate::api_remove_docs_response(response).unwrap_err();
 
     match result {
-        ApiError::InvalidApiKey => (),
+        ApiError::InvalidCredentials => (),
         result => panic!("expected ApiError::InvalidApiKey got {result:?}"),
     }
 }
@@ -301,13 +269,16 @@ fn remove_docs_response_forbidden() {
 
 #[test]
 fn remove_docs_bad_package_name() {
-    let key = "my-api-key-here";
+    let key = WriteActionCredentials::OAuthAccessToken {
+        access_token: EcoString::from("my-api-key-here"),
+        one_time_password: EcoString::from("test-otp"),
+    };
     let package = "not valid";
     let version = "1.2.0";
 
     let config = Config::new();
 
-    match crate::api_remove_docs_request(package, version, key, &config).unwrap_err() {
+    match crate::api_remove_docs_request(package, version, &key, &config).unwrap_err() {
         ApiError::InvalidPackageNameFormat(p) if p == package => (),
         result => panic!("expected Err(ApiError::BadPackage), got {result:?}"),
     }
@@ -315,22 +286,29 @@ fn remove_docs_bad_package_name() {
 
 #[test]
 fn publish_docs_request() {
-    let key = "my-api-key-here";
+    let key = WriteActionCredentials::OAuthAccessToken {
+        access_token: EcoString::from("my-api-key-here"),
+        one_time_password: EcoString::from("test-otp"),
+    };
     let package = "gleam_experimental_stdlib_123";
     let version = "0.8.0";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let config = Config::new();
     let request =
-        crate::api_publish_docs_request(package, version, tarball.clone(), key, &config).unwrap();
+        crate::api_publish_docs_request(package, version, tarball.clone(), &key, &config).unwrap();
 
     assert_eq!(request.method(), http::Method::POST);
     assert_eq!(
         request.uri().path(),
         "/api/packages/gleam_experimental_stdlib_123/releases/0.8.0/docs"
     );
-    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(
+        request.headers().get("authorization").unwrap(),
+        &"Bearer my-api-key-here"
+    );
     assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+    assert_eq!(request.headers().get("x-hex-otp").unwrap(), "test-otp");
     assert_eq!(
         request.headers().get("content-type").unwrap(),
         "application/x-tar"
@@ -352,14 +330,17 @@ fn publish_docs_response_success() {
 
 #[test]
 fn publish_docs_bad_package_name() {
-    let key = "my-api-key-here";
+    let key = WriteActionCredentials::OAuthAccessToken {
+        access_token: EcoString::from("my-api-key-here"),
+        one_time_password: EcoString::from("test-otp"),
+    };
     let package = "not valid";
     let version = "1.2.0";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let config = Config::new();
 
-    match crate::api_publish_docs_request(package, version, tarball, key, &config).unwrap_err() {
+    match crate::api_publish_docs_request(package, version, tarball, &key, &config).unwrap_err() {
         ApiError::InvalidPackageNameFormat(p) if p == package => (),
         result => panic!("expected Err(ApiError::BadPackage), got {result:?}"),
     }
@@ -367,14 +348,17 @@ fn publish_docs_bad_package_name() {
 
 #[test]
 fn publish_docs_bad_package_version() {
-    let key = "my-api-key-here";
+    let key = WriteActionCredentials::OAuthAccessToken {
+        access_token: EcoString::from("my-api-key-here"),
+        one_time_password: EcoString::from("test-otp"),
+    };
     let package = "name";
     let version = "invalid version";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let config = Config::new();
 
-    match crate::api_publish_docs_request(package, version, tarball, key, &config).unwrap_err() {
+    match crate::api_publish_docs_request(package, version, tarball, &key, &config).unwrap_err() {
         ApiError::InvalidVersionFormat(v) if v == version => (),
         result => panic!("expected ApiError::BadPackage, got {result:?}"),
     }
@@ -412,8 +396,28 @@ fn publish_docs_response_invalid_api_key() {
     let result = crate::api_publish_docs_response(response);
 
     match result {
-        Err(ApiError::InvalidApiKey) => (),
+        Err(ApiError::InvalidCredentials) => (),
         result => panic!("expected Err(ApiError::InvalidApiKey), got {result:?}"),
+    }
+}
+
+#[test]
+fn publish_docs_response_incorrect_totp_key() {
+    let resp_body = json!({
+        "status": 401,
+    });
+    let mut response = make_json_response(401, resp_body);
+    response.headers_mut().insert(
+        "www-authenticate",
+        "Bearer realm=\"hex\", error=\"invalid_totp\""
+            .try_into()
+            .expect("Header value"),
+    );
+    let result = crate::api_publish_docs_response(response);
+
+    match result {
+        Err(ApiError::IncorrectOneTimePassword) => (),
+        result => panic!("expected Err(ApiError::IncorrectOneTimePassword), got {result:?}"),
     }
 }
 
@@ -720,7 +724,7 @@ fn get_repository_tarball_response_bad_checksum() {
 
     assert_eq!(
         err.to_string(),
-        "the downloaded data did not have the expected checksum"
+        "The downloaded data did not have the expected checksum"
     );
 }
 
@@ -731,23 +735,26 @@ fn get_repository_tarball_response_not_found() {
     let response = make_response(404, vec![]);
     let err = crate::repository_get_package_tarball_response(response, &checksum).unwrap_err();
 
-    assert_eq!(err.to_string(), "resource was not found");
+    assert_eq!(err.to_string(), "Resource was not found");
 }
 
 #[test]
 fn publish_package_request() {
-    let key = "my-api-key-here";
+    let key = WriteActionCredentials::ApiKey(EcoString::from("my-api-key-here"));
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let config = Config::new();
-    let request = crate::api_publish_package_request(tarball.clone(), key, &config, false);
+    let request = crate::api_publish_package_request(tarball.clone(), &key, &config, false);
 
     assert_eq!(request.method(), http::Method::POST);
     assert_eq!(
         request.uri().path_and_query().unwrap(),
         "/api/publish?replace=false"
     );
-    assert_eq!(request.headers().get("authorization").unwrap(), key);
+    assert_eq!(
+        request.headers().get("authorization").unwrap(),
+        "my-api-key-here"
+    );
     assert_eq!(request.headers().get("accept").unwrap(), "application/json");
     assert_eq!(
         request.headers().get("content-type").unwrap(),
@@ -758,16 +765,20 @@ fn publish_package_request() {
 
 #[test]
 fn publish_package_request_replace() {
-    let key = "my-api-key-here";
+    let key = WriteActionCredentials::OAuthAccessToken {
+        access_token: EcoString::from("my-api-key-here"),
+        one_time_password: EcoString::from("test-otp"),
+    };
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let config = Config::new();
-    let request = crate::api_publish_package_request(tarball.clone(), key, &config, true);
+    let request = crate::api_publish_package_request(tarball.clone(), &key, &config, true);
 
     assert_eq!(
         request.uri().path_and_query().unwrap(),
         "/api/publish?replace=true"
     );
+    assert_eq!(request.headers().get("x-hex-otp").unwrap(), "test-otp");
 }
 
 #[test]
@@ -901,9 +912,227 @@ fn make_request_base_trailing_slash_is_optional() {
     let suffix = "suffix";
     let expect = "/path/suffix";
 
-    let slash = make_request(slash, http::Method::GET, suffix, None);
+    let slash = make_request(slash, http::Method::GET, suffix);
     assert_eq!(slash.uri_ref().unwrap().path(), expect);
 
-    let no_slash = make_request(no_slash, http::Method::GET, suffix, None);
+    let no_slash = make_request(no_slash, http::Method::GET, suffix);
     assert_eq!(no_slash.uri_ref().unwrap().path(), expect);
+}
+
+#[test]
+fn oauth_device_authorisation_request() {
+    let client_id = "test-client-id";
+
+    let config = Config::new();
+    let request = crate::oauth_device_authorisation_request(client_id, "My client", &config);
+
+    assert_eq!(request.method(), http::Method::POST);
+    assert_eq!(request.uri().path(), "/api/oauth/device_authorization");
+    assert_eq!(
+        request.headers().get("content-type").unwrap(),
+        "application/json"
+    );
+    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+
+    let body: serde_json::Value = serde_json::from_slice(request.body()).unwrap();
+    assert_eq!(body["client_id"], "test-client-id");
+    assert_eq!(body["scope"], "api:write");
+    assert_eq!(body["name"], "My client");
+}
+
+#[test]
+fn oauth_device_authorisation_response_success() {
+    let client_id = "test-client-id".to_string();
+    let resp_body = json!({
+        "device_code": "device-code-123",
+        "user_code": "USER-CODE",
+        "verification_uri": "https://hex.pm/oauth/device",
+        "interval": 5
+    });
+
+    let response = make_json_response(200, resp_body);
+    let auth = crate::oauth_device_authorisation_response(client_id, response).unwrap();
+
+    assert_eq!(auth.user_code, "USER-CODE");
+    assert_eq!(auth.verification_uri, "https://hex.pm/oauth/device");
+}
+
+#[test]
+fn oauth_device_authorisation_response_success_with_complete_uri() {
+    let client_id = "test-client-id".to_string();
+    let resp_body = json!({
+        "device_code": "device-code-123",
+        "user_code": "USER-CODE",
+        "verification_uri": "https://hex.pm/oauth/device",
+        "verification_uri_complete": "https://hex.pm/oauth/device?user_code=USER-CODE",
+        "interval": 5
+    });
+
+    let response = make_json_response(200, resp_body);
+    let auth = crate::oauth_device_authorisation_response(client_id, response).unwrap();
+
+    assert_eq!(auth.user_code, "USER-CODE");
+    // When verification_uri_complete is present, it should be used instead
+    assert_eq!(
+        auth.verification_uri,
+        "https://hex.pm/oauth/device?user_code=USER-CODE"
+    );
+}
+
+#[test]
+fn oauth_device_authorisation_response_default_interval() {
+    let client_id = "test-client-id".to_string();
+    // Response without "interval" field - should use default of 5 seconds
+    let resp_body = json!({
+        "device_code": "device-code-123",
+        "user_code": "USER-CODE",
+        "verification_uri": "https://hex.pm/oauth/device"
+    });
+
+    let response = make_json_response(200, resp_body);
+    let auth = crate::oauth_device_authorisation_response(client_id, response).unwrap();
+
+    assert_eq!(auth.user_code, "USER-CODE");
+    assert_eq!(auth.verification_uri, "https://hex.pm/oauth/device");
+}
+
+#[test]
+fn oauth_device_authorisation_response_rate_limited() {
+    let client_id = "test-client-id".to_string();
+    let response = make_response(429, vec![]);
+    let result = crate::oauth_device_authorisation_response(client_id, response).unwrap_err();
+
+    match result {
+        ApiError::RateLimited => (),
+        result => panic!("expected RateLimited, got {:?}", result),
+    }
+}
+
+#[test]
+fn oauth_device_authorisation_response_unexpected_status() {
+    let client_id = "test-client-id".to_string();
+    let resp_body = json!({
+        "message": "Internal server error",
+        "status": 500,
+    });
+    let response = make_json_response(500, resp_body);
+    let result = crate::oauth_device_authorisation_response(client_id, response).unwrap_err();
+
+    match result {
+        ApiError::UnexpectedResponse(status, _) => {
+            assert_eq!(status, http::StatusCode::INTERNAL_SERVER_ERROR);
+        }
+        result => panic!("expected UnexpectedResponse, got {:?}", result),
+    }
+}
+
+fn make_device_authorisation() -> crate::OAuthDeviceAuthorisation {
+    let client_id = "test-client-id".to_string();
+    let resp_body = json!({
+        "device_code": "device-code-123",
+        "user_code": "USER-CODE",
+        "verification_uri": "https://hex.pm/oauth/device",
+        "interval": 5
+    });
+    let response = make_json_response(200, resp_body);
+    crate::oauth_device_authorisation_response(client_id, response).unwrap()
+}
+
+#[test]
+fn poll_token_request() {
+    let auth = make_device_authorisation();
+    let config = Config::new();
+    let request = auth.poll_token_request(&config);
+
+    assert_eq!(request.method(), http::Method::POST);
+    assert_eq!(request.uri().path(), "/api/oauth/token");
+    assert_eq!(
+        request.headers().get("content-type").unwrap(),
+        "application/json"
+    );
+    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+
+    let body: serde_json::Value = serde_json::from_slice(request.body()).unwrap();
+    assert_eq!(
+        body["grant_type"],
+        "urn:ietf:params:oauth:grant-type:device_code"
+    );
+    assert_eq!(body["client_id"], "test-client-id");
+    assert_eq!(body["device_code"], "device-code-123");
+}
+
+#[test]
+fn poll_token_response_success() {
+    let mut auth = make_device_authorisation();
+    let resp_body = json!({
+        "access_token": "access-token-abc",
+        "refresh_token": "refresh-token-xyz"
+    });
+    let response = make_json_response(200, resp_body);
+
+    let result = auth.poll_token_response(response).unwrap();
+
+    match result {
+        crate::PollStep::Done(tokens) => {
+            assert_eq!(tokens.access_token, "access-token-abc");
+            assert_eq!(tokens.refresh_token, "refresh-token-xyz");
+        }
+        result => panic!("expected PollStep::Done, got {:?}", result),
+    }
+}
+
+#[test]
+fn poll_token_response_authorization_pending() {
+    let mut auth = make_device_authorisation();
+    let resp_body = json!({
+        "error": "authorization_pending"
+    });
+    let response = make_json_response(200, resp_body);
+
+    let result = auth.poll_token_response(response).unwrap();
+
+    match result {
+        crate::PollStep::SleepThenPollAgain(duration) => {
+            assert_eq!(duration, std::time::Duration::from_secs(5));
+        }
+        result => panic!("expected PollStep::SleepThenPollAgain, got {:?}", result),
+    }
+}
+
+#[test]
+fn poll_token_response_slow_down() {
+    let mut auth = make_device_authorisation();
+    let resp_body = json!({
+        "error": "slow_down"
+    });
+    let response = make_json_response(200, resp_body);
+
+    let result = auth.poll_token_response(response).unwrap();
+
+    match result {
+        crate::PollStep::SleepThenPollAgain(duration) => {
+            // Interval should be doubled from 5 to 10 seconds
+            assert_eq!(duration, std::time::Duration::from_secs(10));
+        }
+        result => panic!("expected PollStep::SleepThenPollAgain, got {:?}", result),
+    }
+}
+
+#[test]
+fn poll_token_response_unexpected_status() {
+    let mut auth = make_device_authorisation();
+    let resp_body = json!({
+        "message": "Internal server error",
+        "status": 500,
+    });
+    let response = make_json_response(500, resp_body);
+
+    let result = auth.poll_token_response(response).unwrap_err();
+
+    match result {
+        ApiError::UnexpectedResponse(status, _) => {
+            assert_eq!(status, http::StatusCode::INTERNAL_SERVER_ERROR);
+        }
+        result => panic!("expected UnexpectedResponse, got {:?}", result),
+    }
 }

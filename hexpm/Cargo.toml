@@ -1,6 +1,6 @@
 [package]
 name = "hexpm"
-version = "5.1.1"
+version = "1.14.0"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2024"
 license = "Apache-2.0"
@@ -28,6 +28,7 @@ http-auth-basic = "0.3"
 prost = "0.13.5"
 
 base16 = { workspace = true, features = ["alloc"] }
+ecow = { workspace = true, features = ["serde"] }
 http.workspace = true
 pubgrub.workspace = true
 regex.workspace = true

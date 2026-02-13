@@ -18,7 +18,7 @@ use gleam_core::{
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
-use std::{collections::HashMap, io::Write, path::PathBuf, time::Instant};
+use std::{collections::HashMap, io::Write, path::PathBuf};
 
 use crate::{build, cli, docs, fs, http::HttpClient};
 
@@ -80,20 +80,21 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
     }
 
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let http = HttpClient::new();
     let hex_config = hexpm::Config::new();
-    let api_key =
-        crate::hex::HexAuthentication::new(&runtime, hex_config.clone()).get_or_create_api_key()?;
-    let start = Instant::now();
+    let credentials = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
+        .get_or_create_api_credentials()?;
+    let credentials = crate::hex::write_credentials(&credentials)?;
     cli::print_publishing(&config.name, &config.version);
 
     runtime.block_on(hex::publish_package(
         package_tarball,
         config.version.to_string(),
         &config.name,
-        &api_key,
+        &credentials,
         &hex_config,
         replace,
-        &HttpClient::new(),
+        &http,
     ))?;
 
     cli::print_publishing_documentation();
@@ -101,11 +102,11 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         &config.name,
         &config.version,
         docs_tarball,
-        &api_key,
+        &credentials,
         &hex_config,
-        &HttpClient::new(),
+        &http,
     ))?;
-    cli::print_published(start.elapsed());
+    cli::print_published("package and documentation");
     println!(
         "\nView your package at https://hex.pm/packages/{}",
         &config.name

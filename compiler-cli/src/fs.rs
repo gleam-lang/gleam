@@ -194,7 +194,7 @@ impl CommandExecutor for ProjectIO {
             cwd,
             stdio,
         } = command;
-        tracing::trace!(program=program, args=?args.join(" "), env=?env, cwd=?cwd, "command_exec");
+        tracing::debug!(program=program, args=?args.join(" "), env=?env, cwd=?cwd, "command_exec");
         let result = std::process::Command::new(&program)
             .args(args)
             .stdin(stdio.get_process_stdio())
@@ -260,7 +260,7 @@ impl DownloadDependencies for ProjectIO {
 }
 
 pub fn delete_directory(dir: &Utf8Path) -> Result<(), Error> {
-    tracing::trace!(path=?dir, "deleting_directory");
+    tracing::debug!(path=?dir, "deleting_directory");
     if dir.exists() {
         std::fs::remove_dir_all(dir).map_err(|e| Error::FileIo {
             action: FileIoAction::Delete,
@@ -269,13 +269,13 @@ pub fn delete_directory(dir: &Utf8Path) -> Result<(), Error> {
             err: Some(e.to_string()),
         })?;
     } else {
-        tracing::trace!(path=?dir, "directory_did_not_exist_for_deletion");
+        tracing::debug!(path=?dir, "directory_did_not_exist_for_deletion");
     }
     Ok(())
 }
 
 pub fn delete_file(file: &Utf8Path) -> Result<(), Error> {
-    tracing::trace!("Deleting file {:?}", file);
+    tracing::debug!("Deleting file {:?}", file);
     if file.exists() {
         std::fs::remove_file(file).map_err(|e| Error::FileIo {
             action: FileIoAction::Delete,
@@ -284,7 +284,7 @@ pub fn delete_file(file: &Utf8Path) -> Result<(), Error> {
             err: Some(e.to_string()),
         })?;
     } else {
-        tracing::trace!("Did not exist for deletion: {:?}", file);
+        tracing::debug!("Did not exist for deletion: {:?}", file);
     }
     Ok(())
 }
@@ -315,7 +315,7 @@ pub fn write(path: &Utf8Path, text: &str) -> Result<(), Error> {
 #[cfg(target_family = "unix")]
 pub fn make_executable(path: impl AsRef<Utf8Path>) -> Result<(), Error> {
     use std::os::unix::fs::PermissionsExt;
-    tracing::trace!(path = ?path.as_ref(), "setting_permissions");
+    tracing::debug!(path = ?path.as_ref(), "setting_permissions");
 
     std::fs::set_permissions(path.as_ref(), std::fs::Permissions::from_mode(0o755)).map_err(
         |e| Error::FileIo {
@@ -334,7 +334,7 @@ pub fn make_executable(_path: impl AsRef<Utf8Path>) -> Result<(), Error> {
 }
 
 pub fn write_bytes(path: &Utf8Path, bytes: &[u8]) -> Result<(), Error> {
-    tracing::trace!(path=?path, "writing_file");
+    tracing::debug!(path=?path, "writing_file");
 
     let dir_path = path.parent().ok_or_else(|| Error::FileIo {
         action: FileIoAction::FindParent,
@@ -482,7 +482,7 @@ pub fn erlang_files(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
 }
 
 pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
-    tracing::trace!("creating_tar_archive");
+    tracing::debug!("creating_tar_archive");
 
     let encoder = flate2::write::GzEncoder::new(vec![], flate2::Compression::default());
     let mut builder = tar::Builder::new(encoder);
@@ -515,7 +515,7 @@ pub fn mkdir(path: impl AsRef<Utf8Path> + Debug) -> Result<(), Error> {
         return Ok(());
     }
 
-    tracing::trace!(path=?path, "creating_directory");
+    tracing::debug!(path=?path, "creating_directory");
 
     std::fs::create_dir_all(path.as_ref()).map_err(|err| Error::FileIo {
         kind: FileKind::Directory,
@@ -526,7 +526,7 @@ pub fn mkdir(path: impl AsRef<Utf8Path> + Debug) -> Result<(), Error> {
 }
 
 pub fn read_dir(path: impl AsRef<Utf8Path> + Debug) -> Result<ReadDirUtf8, Error> {
-    tracing::trace!(path=?path,"reading_directory");
+    tracing::debug!(path=?path,"reading_directory");
 
     Utf8Path::read_dir_utf8(path.as_ref()).map_err(|e| Error::FileIo {
         action: FileIoAction::Read,
@@ -546,7 +546,7 @@ pub fn module_caches_paths(
 }
 
 pub fn read(path: impl AsRef<Utf8Path> + Debug) -> Result<String, Error> {
-    tracing::trace!(path=?path,"reading_file");
+    tracing::debug!(path=?path,"reading_file");
 
     std::fs::read_to_string(path.as_ref()).map_err(|err| Error::FileIo {
         action: FileIoAction::Read,
@@ -557,7 +557,7 @@ pub fn read(path: impl AsRef<Utf8Path> + Debug) -> Result<String, Error> {
 }
 
 pub fn read_bytes(path: impl AsRef<Utf8Path> + Debug) -> Result<Vec<u8>, Error> {
-    tracing::trace!(path=?path,"reading_file");
+    tracing::debug!(path=?path,"reading_file");
 
     std::fs::read(path.as_ref()).map_err(|err| Error::FileIo {
         action: FileIoAction::Read,
@@ -568,7 +568,7 @@ pub fn read_bytes(path: impl AsRef<Utf8Path> + Debug) -> Result<Vec<u8>, Error> 
 }
 
 pub fn reader(path: impl AsRef<Utf8Path> + Debug) -> Result<WrappedReader, Error> {
-    tracing::trace!(path=?path,"opening_file_reader");
+    tracing::debug!(path=?path,"opening_file_reader");
 
     let reader = File::open(path.as_ref()).map_err(|err| Error::FileIo {
         action: FileIoAction::Open,
@@ -581,7 +581,7 @@ pub fn reader(path: impl AsRef<Utf8Path> + Debug) -> Result<WrappedReader, Error
 }
 
 pub fn buffered_reader<P: AsRef<Utf8Path> + Debug>(path: P) -> Result<impl BufRead, Error> {
-    tracing::trace!(path=?path,"opening_file_buffered_reader");
+    tracing::debug!(path=?path,"opening_file_buffered_reader");
     let reader = File::open(path.as_ref()).map_err(|err| Error::FileIo {
         action: FileIoAction::Open,
         kind: FileKind::File,
@@ -595,7 +595,7 @@ pub fn copy(
     path: impl AsRef<Utf8Path> + Debug,
     to: impl AsRef<Utf8Path> + Debug,
 ) -> Result<(), Error> {
-    tracing::trace!(from=?path, to=?to, "copying_file");
+    tracing::debug!(from=?path, to=?to, "copying_file");
 
     // TODO: include the destination in the error message
     std::fs::copy(path.as_ref(), to.as_ref())
@@ -609,7 +609,7 @@ pub fn copy(
 }
 
 // pub fn rename(path: impl AsRef<Utf8Path> + Debug, to: impl AsRef<Utf8Path> + Debug) -> Result<(), Error> {
-//     tracing::trace!(from=?path, to=?to, "renaming_file");
+//     tracing::debug!(from=?path, to=?to, "renaming_file");
 
 //     // TODO: include the destination in the error message
 //     std::fs::rename(&path, &to)
@@ -626,7 +626,7 @@ pub fn copy_dir(
     path: impl AsRef<Utf8Path> + Debug,
     to: impl AsRef<Utf8Path> + Debug,
 ) -> Result<(), Error> {
-    tracing::trace!(from=?path, to=?to, "copying_directory");
+    tracing::debug!(from=?path, to=?to, "copying_directory");
 
     // TODO: include the destination in the error message
     fs_extra::dir::copy(
@@ -649,7 +649,7 @@ pub fn symlink_dir(
     src: impl AsRef<Utf8Path> + Debug,
     dest: impl AsRef<Utf8Path> + Debug,
 ) -> Result<(), Error> {
-    tracing::trace!(src=?src, dest=?dest, "symlinking");
+    tracing::debug!(src=?src, dest=?dest, "symlinking");
     let src = canonicalise(src.as_ref())?;
 
     #[cfg(target_family = "windows")]
@@ -670,7 +670,7 @@ pub fn hardlink(
     from: impl AsRef<Utf8Path> + Debug,
     to: impl AsRef<Utf8Path> + Debug,
 ) -> Result<(), Error> {
-    tracing::trace!(from=?from, to=?to, "hardlinking");
+    tracing::debug!(from=?from, to=?to, "hardlinking");
     std::fs::hard_link(from.as_ref(), to.as_ref())
         .map_err(|err| Error::FileIo {
             action: FileIoAction::Link,
@@ -687,7 +687,7 @@ pub fn hardlink(
 /// tree.
 ///
 fn is_inside_git_work_tree(path: &Utf8Path) -> Result<bool, Error> {
-    tracing::trace!(path=?path, "checking_for_git_repo");
+    tracing::debug!(path=?path, "checking_for_git_repo");
 
     let args: Vec<&str> = vec!["rev-parse", "--is-inside-work-tree", "--quiet"];
 
@@ -716,17 +716,17 @@ fn is_inside_git_work_tree(path: &Utf8Path) -> Result<bool, Error> {
 }
 
 pub(crate) fn is_git_work_tree_root(path: &Utf8Path) -> bool {
-    tracing::trace!(path=?path, "checking_for_git_repo_root");
+    tracing::debug!(path=?path, "checking_for_git_repo_root");
     exists(path.join(".git")).unwrap_or(false)
 }
 
 /// Run `git init` in the given path.
 /// If git is not installed then we do nothing.
 pub fn git_init(path: &Utf8Path) -> Result<(), Error> {
-    tracing::trace!(path=?path, "initializing git");
+    tracing::debug!(path=?path, "initializing git");
 
     if is_inside_git_work_tree(path)? {
-        tracing::trace!(path=?path, "git_repo_already_exists");
+        tracing::debug!(path=?path, "git_repo_already_exists");
         return Ok(());
     }
 

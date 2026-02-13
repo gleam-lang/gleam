@@ -1,3 +1,4 @@
+use ecow::EcoString;
 use gleam_core::{
     build::Telemetry,
     error::{Error, StandardIoAction},
@@ -88,22 +89,22 @@ pub fn confirm_with_text(response: &str) -> Result<bool, Error> {
     Ok(response == answer)
 }
 
-pub fn ask_password(question: &str) -> Result<String, Error> {
+pub fn ask_password(question: &str) -> Result<EcoString, Error> {
     let prompt = format!("{question} (will not be printed as you type): ");
     rpassword::prompt_password(prompt)
         .map_err(|e| Error::StandardIo {
             action: StandardIoAction::Read,
             err: Some(e.kind()),
         })
-        .map(|s| s.trim().to_string())
+        .map(|s| EcoString::from(s.trim()))
 }
 
 pub fn print_publishing(name: &str, version: &Version) {
     print_colourful_prefix("Publishing", &format!("{name} v{version}"))
 }
 
-pub fn print_published(duration: Duration) {
-    print_colourful_prefix("Published", &format!("in {}", seconds(duration)))
+pub fn print_published(detail: &str) {
+    print_colourful_prefix("Published", detail)
 }
 
 pub fn print_retired(package: &str, version: &str) {

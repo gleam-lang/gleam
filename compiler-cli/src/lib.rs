@@ -463,7 +463,7 @@ enum Hex {
     #[command(subcommand)]
     Owner(Owner),
 
-    /// Authenticate with Hex
+    /// Log in to Hex. Replaces the credentials with new ones if already logged in.
     Authenticate,
 }
 
