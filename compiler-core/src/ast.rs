@@ -2161,6 +2161,7 @@ pub enum ClauseGuard<Type, RecordTag> {
         type_: Type,
         name: EcoString,
         definition_location: SrcSpan,
+        origin: VariableOrigin,
     },
 
     TupleIndex {
@@ -2180,6 +2181,8 @@ pub enum ClauseGuard<Type, RecordTag> {
 
     ModuleSelect {
         location: SrcSpan,
+        field_start: u32,
+        definition_location: SrcSpan,
         type_: Type,
         label: EcoString,
         module_name: EcoString,
@@ -2292,7 +2295,7 @@ impl TypedClauseGuard {
                         layer: Layer::Value,
                     })
                 } else {
-                    None
+                    Some(Located::ClauseGuard(self))
                 }
             }
 
@@ -2309,7 +2312,7 @@ impl TypedClauseGuard {
             }
             | ClauseGuard::Block { value, .. } => value.find_node(byte_index),
             ClauseGuard::Constant(constant) => constant.find_node(byte_index),
-            ClauseGuard::Var { .. } => None,
+            ClauseGuard::Var { .. } => Some(Located::ClauseGuard(self)),
         }
     }
 
@@ -2407,6 +2410,32 @@ impl TypedClauseGuard {
                 one.syntactically_eq(other)
             }
             (ClauseGuard::Constant(_), _) => false,
+        }
+    }
+
+    pub fn definition_location(&self) -> Option<DefinitionLocation> {
+        match self {
+            ClauseGuard::Block { .. }
+            | ClauseGuard::BinaryOperator { .. }
+            | ClauseGuard::Not { .. }
+            | ClauseGuard::TupleIndex { .. }
+            | ClauseGuard::FieldAccess { .. } => None,
+            ClauseGuard::Constant(constant) => constant.definition_location(),
+            ClauseGuard::Var {
+                definition_location,
+                ..
+            } => Some(DefinitionLocation {
+                module: None,
+                span: *definition_location,
+            }),
+            ClauseGuard::ModuleSelect {
+                module_name,
+                definition_location,
+                ..
+            } => Some(DefinitionLocation {
+                module: Some(module_name.clone()),
+                span: *definition_location,
+            }),
         }
     }
 }

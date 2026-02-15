@@ -10542,6 +10542,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
         name: &'ast EcoString,
         type_: &'ast Arc<Type>,
         definition_location: &'ast SrcSpan,
+        _origin: &'ast VariableOrigin,
     ) {
         self.register_referenced_variable(name, type_, *location, *definition_location);
     }

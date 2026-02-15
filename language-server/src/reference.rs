@@ -6,8 +6,8 @@ use lsp_types::Location;
 use gleam_core::{
     analyse,
     ast::{
-        self, ArgNames, AssignName, BitArraySize, CustomType, Function, ModuleConstant, Pattern,
-        RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
+        self, ArgNames, AssignName, BitArraySize, ClauseGuard, CustomType, Function,
+        ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
     },
     build::Located,
     type_::{
@@ -167,7 +167,6 @@ pub fn reference_for_ast_node(
         } => Some(Referenced::ModuleValue {
             module: module_name.clone(),
             name: label.clone(),
-
             location: SrcSpan::new(*field_start, location.end),
             name_kind: Named::Function,
             target_kind: RenameTarget::Qualified,
@@ -332,7 +331,36 @@ pub fn reference_for_ast_node(
 
             Some(module_name)
         }
+
+        Located::ClauseGuard(ClauseGuard::Var {
+            location,
+            type_: _,
+            name,
+            definition_location,
+            origin,
+        }) => Some(Referenced::LocalVariable {
+            definition_location: *definition_location,
+            location: *location,
+            origin: Some(origin.clone()),
+            name: name.clone(),
+        }),
+
+        Located::ClauseGuard(ClauseGuard::ModuleSelect {
+            location,
+            field_start,
+            label,
+            module_name,
+            ..
+        }) => Some(Referenced::ModuleValue {
+            module: module_name.clone(),
+            name: label.clone(),
+            location: SrcSpan::new(*field_start, location.end),
+            name_kind: Named::Function,
+            target_kind: RenameTarget::Qualified,
+        }),
+
         Located::Pattern(_)
+        | Located::ClauseGuard(_)
         | Located::PatternSpread { .. }
         | Located::Statement(_)
         | Located::Expression { .. }
@@ -620,6 +648,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
         _name: &'ast EcoString,
         _type_: &'ast std::sync::Arc<Type>,
         definition_location: &'ast SrcSpan,
+        _origin: &'ast VariableOrigin,
     ) {
         if *definition_location == self.definition_origin_location() {
             _ = self.references.insert(VariableReference {
@@ -822,6 +851,8 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
     fn visit_typed_clause_guard_module_select(
         &mut self,
         location: &'ast SrcSpan,
+        field_start: &'ast u32,
+        definition_location: &'ast SrcSpan,
         type_: &'ast std::sync::Arc<Type>,
         label: &'ast EcoString,
         module_name: &'ast EcoString,
@@ -841,6 +872,8 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
         ast::visit::visit_typed_clause_guard_module_select(
             self,
             location,
+            field_start,
+            definition_location,
             type_,
             label,
             module_name,

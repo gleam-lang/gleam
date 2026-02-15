@@ -390,8 +390,9 @@ pub trait Visit<'ast> {
         name: &'ast EcoString,
         type_: &'ast Arc<Type>,
         definition_location: &'ast SrcSpan,
+        origin: &'ast VariableOrigin,
     ) {
-        visit_typed_clause_guard_var(self, location, name, type_, definition_location);
+        visit_typed_clause_guard_var(self, location, name, type_, definition_location, origin);
     }
 
     fn visit_typed_clause_guard_tuple_index(
@@ -415,9 +416,12 @@ pub trait Visit<'ast> {
         visit_typed_clause_guard_field_access(self, label_location, index, label, type_, container)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn visit_typed_clause_guard_module_select(
         &mut self,
         location: &'ast SrcSpan,
+        field_start: &'ast u32,
+        definition_location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         label: &'ast EcoString,
         module_name: &'ast EcoString,
@@ -427,6 +431,8 @@ pub trait Visit<'ast> {
         visit_typed_clause_guard_module_select(
             self,
             location,
+            field_start,
+            definition_location,
             type_,
             label,
             module_name,
@@ -1705,7 +1711,8 @@ where
             type_,
             name,
             definition_location,
-        } => v.visit_typed_clause_guard_var(location, name, type_, definition_location),
+            origin,
+        } => v.visit_typed_clause_guard_var(location, name, type_, definition_location, origin),
         super::ClauseGuard::TupleIndex {
             location,
             index,
@@ -1723,6 +1730,8 @@ where
         }
         super::ClauseGuard::ModuleSelect {
             location,
+            field_start,
+            definition_location,
             type_,
             label,
             module_name,
@@ -1730,6 +1739,8 @@ where
             literal,
         } => v.visit_typed_clause_guard_module_select(
             location,
+            field_start,
+            definition_location,
             type_,
             label,
             module_name,
@@ -1746,6 +1757,7 @@ pub fn visit_typed_clause_guard_var<'a, V>(
     _name: &'a EcoString,
     _type_: &'a Arc<Type>,
     _definition_location: &'a SrcSpan,
+    _origin: &'a VariableOrigin,
 ) where
     V: Visit<'a> + ?Sized,
 {
@@ -1776,9 +1788,12 @@ pub fn visit_typed_clause_guard_field_access<'a, V>(
     v.visit_typed_clause_guard(container);
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn visit_typed_clause_guard_module_select<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
+    _field_start: &'a u32,
+    _definition_location: &'a SrcSpan,
     _type_: &'a Arc<Type>,
     _label: &'a EcoString,
     _module_name: &'a EcoString,
