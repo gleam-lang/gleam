@@ -8,7 +8,7 @@ use gleam_core::{
     build::{Codegen, Compile, Mode, Options, Package, Target},
     config::{GleamVersion, PackageConfig, SpdxLicense},
     docs::{Dependency, DependencyKind, DocContext},
-    error::{SmallVersion, wrap},
+    error::{InvalidReadmeReason, SmallVersion, wrap},
     hex,
     manifest::ManifestPackageSource,
     paths::{self, ProjectPaths},
@@ -31,7 +31,7 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         && check_for_version_zero(&config)?
         && check_repo_url(&config, i_am_sure)?;
 
-    check_for_default_readme(&config, paths)?;
+    check_for_invalid_readme(&config, paths)?;
 
     if !should_publish {
         println!("Not publishing.");
@@ -132,33 +132,43 @@ HTML documentation will work:
     Ok(())
 }
 
-fn check_for_default_readme(config: &PackageConfig, paths: &ProjectPaths) -> Result<(), Error> {
-    let default_readme = default_readme(config.name.as_str());
-    let project_readme = match fs::read(paths.readme()) {
-        Err(Error::FileIo {
-            err: Some(message), ..
-        }) if message.contains("No such file or directory") => {
-            return Err(Error::CannotPublishWithNoReadme);
-        }
-        Err(error) => return Err(error),
-        Ok(project_readme) => project_readme,
-    };
-
-    // We consider the two READMEs equal modulo whitespace, otherwise it would
-    // be pretty trivial to trick this check by just formatting the default
-    // README differently.
+fn check_for_invalid_readme(config: &PackageConfig, paths: &ProjectPaths) -> Result<(), Error> {
     let normalise = |string: String| {
         string
+            .trim()
             .replace("\r\n", "")
             .replace("\n", "")
             .replace("\t", "")
             .replace(" ", "")
     };
-    if normalise(project_readme) == normalise(default_readme) {
-        Err(Error::CannotPublishWithDefaultReadme)
-    } else {
-        Ok(())
+
+    let project_readme = match fs::read(paths.readme()) {
+        Err(Error::FileIo {
+            err: Some(message), ..
+        }) if message.contains("No such file or directory") => {
+            return Err(Error::CannotPublishWithInvalidReadme {
+                reason: InvalidReadmeReason::Missing,
+            });
+        }
+        Err(error) => return Err(error),
+        Ok(project_readme) => project_readme,
+    };
+
+    let normalised_project_readme = normalise(project_readme);
+    if normalised_project_readme.is_empty() {
+        return Err(Error::CannotPublishWithInvalidReadme {
+            reason: InvalidReadmeReason::Empty,
+        });
     }
+
+    let default_readme = default_readme(config.name.as_str());
+    if normalised_project_readme == normalise(default_readme) {
+        return Err(Error::CannotPublishWithInvalidReadme {
+            reason: InvalidReadmeReason::Default,
+        });
+    }
+
+    Ok(())
 }
 
 fn check_for_name_squatting(package: &Package) -> Result<(), Error> {

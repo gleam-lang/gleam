@@ -474,7 +474,7 @@ jobs:
         run: make test
         working-directory: ./test/hextarball
 
-      - name: Test running modules
+      - name: test/running_modules
         run: make test-all
         working-directory: ./test/running_modules
 
@@ -482,7 +482,7 @@ jobs:
         run: ./test.sh
         working-directory: ./test/multi_namespace
 
-      - name: Test multi namespace bug
+      - name: test/multi_namespace_not_top_level
         run: ./test.sh
         working-directory: ./test/multi_namespace_not_top_level
 
