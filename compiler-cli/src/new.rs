@@ -84,34 +84,7 @@ impl FileToCreate {
         };
 
         match self {
-            Self::Readme => Some(format!(
-                r#"# {project_name}
-
-[![Package Version](https://img.shields.io/hexpm/v/{project_name})](https://hex.pm/packages/{project_name})
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/{project_name}/)
-
-```sh
-gleam add {project_name}@1
-```
-```gleam
-import {project_name}
-
-pub fn main() -> Nil {{
-  // TODO: An example of the project in use
-}}
-```
-
-Further documentation can be found at <https://hexdocs.pm/{project_name}>.
-
-## Development
-
-```sh
-gleam run   # Run the project
-gleam test  # Run the tests
-```
-"#,
-            )),
-
+            Self::Readme => Some(default_readme(project_name)),
             Self::Gitignore if !skip_git => Some(
                 "*.beam
 *.ez
@@ -200,6 +173,36 @@ jobs:
             Self::GithubCi | Self::Gitignore => None,
         }
     }
+}
+
+pub fn default_readme(project_name: &str) -> String {
+    format!(
+        r#"# {project_name}
+
+[![Package Version](https://img.shields.io/hexpm/v/{project_name})](https://hex.pm/packages/{project_name})
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/{project_name}/)
+
+```sh
+gleam add {project_name}@1
+```
+```gleam
+import {project_name}
+
+pub fn main() -> Nil {{
+  // TODO: An example of the project in use
+}}
+```
+
+Further documentation can be found at <https://hexdocs.pm/{project_name}>.
+
+## Development
+
+```sh
+gleam run   # Run the project
+gleam test  # Run the tests
+```
+"#,
+    )
 }
 
 impl Creator {

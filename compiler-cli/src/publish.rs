@@ -20,7 +20,7 @@ use itertools::Itertools;
 use sha2::Digest;
 use std::{collections::HashMap, io::Write, path::PathBuf, time::Instant};
 
-use crate::{build, cli, docs, fs, http::HttpClient};
+use crate::{build, cli, docs, fs, http::HttpClient, new::default_readme};
 
 const CORE_TEAM_PUBLISH_PASSWORD: &str = "Trans rights are human rights";
 
@@ -30,6 +30,8 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
     let should_publish = check_for_gleam_prefix(&config)?
         && check_for_version_zero(&config)?
         && check_repo_url(&config, i_am_sure)?;
+
+    check_for_default_readme(&config, paths)?;
 
     if !should_publish {
         println!("Not publishing.");
@@ -128,6 +130,27 @@ HTML documentation will work:
         )
     }
     Ok(())
+}
+
+fn check_for_default_readme(config: &PackageConfig, paths: &ProjectPaths) -> Result<(), Error> {
+    let default_readme = default_readme(config.name.as_str());
+    let project_readme = fs::read(paths.readme())?;
+
+    // We consider the two READMEs equal modulo whitespace, otherwise it would
+    // be pretty trivial to trick this check by just formatting the default
+    // README differently.
+    let normalise = |string: String| {
+        string
+            .replace("\r\n", "")
+            .replace("\n", "")
+            .replace("\t", "")
+            .replace(" ", "")
+    };
+    if normalise(project_readme) == normalise(default_readme) {
+        Err(Error::CannotPublishWithDefaultReadme)
+    } else {
+        Ok(())
+    }
 }
 
 fn check_for_name_squatting(package: &Package) -> Result<(), Error> {
