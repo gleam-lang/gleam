@@ -3251,10 +3251,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
                     .expect("Variant has already checked to be valid");
 
+                // Positional fields must always be defined before any labelled fields.
+                // As such, we expect that field indices 0..(positional_fields.length)
+                // all correspond to positional fields. If this is not the case, then the
+                // user currently has a mistake in the definition of their custom type.
+                //
+                // For example, when a user starts adding a new labelled field to a custom
+                // type constructor, the field label will be parsed as a custom type name
+                // until they type the colon i.e. as a new positional field.
                 let type_ = positional_fields
                     .get(index as usize)
-                    .expect("Field exists")
+                    .ok_or_else(|| Error::UnlabelledAfterlabelled { location })?
                     .clone();
+
                 let mut type_vars = im::HashMap::new();
                 let accessor_type = self.instantiate(accessor_type, &mut type_vars);
                 let type_ = self.instantiate(type_, &mut type_vars);
