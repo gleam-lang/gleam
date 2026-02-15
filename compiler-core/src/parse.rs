@@ -1805,6 +1805,12 @@ where
                             type_: (),
                             name,
                             definition_location: SrcSpan::default(),
+                            // We don't know the origin until type analysis, so
+                            // we just put `Generated` here as a placeholder.
+                            origin: VariableOrigin {
+                                syntax: VariableSyntax::Generated,
+                                declaration: VariableDeclaration::Generated,
+                            },
                         },
                     };
 

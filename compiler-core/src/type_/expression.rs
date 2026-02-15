@@ -2472,8 +2472,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 let constructor = self.infer_value_constructor(&None, &name, &location)?;
 
                 // We cannot support all values in guard expressions as the BEAM does not
-                let definition_location = match &constructor.variant {
-                    ValueConstructorVariant::LocalVariable { location, .. } => *location,
+                let (definition_location, origin) = match &constructor.variant {
+                    ValueConstructorVariant::LocalVariable {
+                        location, origin, ..
+                    } => (*location, origin.clone()),
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::Record { .. } => {
                         return Err(Error::NonLocalClauseGuardVariable { location, name });
@@ -2487,6 +2489,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 Ok(ClauseGuard::Var {
                     location,
                     name,
+                    origin,
                     type_: constructor.type_,
                     definition_location,
                 })
@@ -2713,7 +2716,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 } = ma
                 {
                     match constructor {
-                        ModuleValueConstructor::Constant { literal, .. } => {
+                        ModuleValueConstructor::Constant {
+                            literal,
+                            location: definition_location,
+                            ..
+                        } => {
                             self.environment.references.register_value_reference(
                                 module_name.clone(),
                                 label.clone(),
@@ -2724,6 +2731,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                             Ok(ClauseGuard::ModuleSelect {
                                 location,
+                                field_start: label_location.start,
+                                definition_location,
                                 type_,
                                 label,
                                 module_name,

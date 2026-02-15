@@ -1345,6 +1345,7 @@ impl<'ast> Visit<'ast> for FindInlinableParameters {
         name: &'ast EcoString,
         _type_: &'ast Arc<Type>,
         location: &'ast SrcSpan,
+        _origin: &'ast VariableOrigin,
     ) {
         self.register_reference(name, *location);
     }

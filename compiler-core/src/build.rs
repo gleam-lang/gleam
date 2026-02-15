@@ -453,6 +453,7 @@ pub enum Located<'a> {
         layer: ast::Layer,
     },
     Constant(&'a TypedConstant),
+    ClauseGuard(&'a TypedClauseGuard),
 
     // A module's top level definitions
     ModuleFunction(&'a TypedFunction),
@@ -541,6 +542,7 @@ impl<'a> Located<'a> {
                 span: SrcSpan::new(0, 0),
             }),
             Self::Constant(constant) => constant.definition_location(),
+            Self::ClauseGuard(guard) => guard.definition_location(),
         }
     }
 
@@ -553,6 +555,7 @@ impl<'a> Located<'a> {
             Located::Arg(arg) => Some(arg.type_.clone()),
             Located::Label(_, type_) | Located::Annotation { type_, .. } => Some(type_.clone()),
             Located::Constant(constant) => Some(constant.type_()),
+            Located::ClauseGuard(guard) => Some(guard.type_()),
 
             Located::PatternSpread { .. }
             | Located::ModuleConstant(_)

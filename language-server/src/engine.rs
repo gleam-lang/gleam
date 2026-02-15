@@ -5,8 +5,8 @@ use gleam_core::{
     analyse::name::correct_name_case,
     ast::{
         self, Constant, CustomType, DefinitionLocation, ModuleConstant, PatternUnusedArguments,
-        SrcSpan, TypedArg, TypedConstant, TypedExpr, TypedFunction, TypedModule, TypedPattern,
-        TypedRecordConstructor,
+        SrcSpan, TypedArg, TypedClauseGuard, TypedConstant, TypedExpr, TypedFunction, TypedModule,
+        TypedPattern, TypedRecordConstructor,
     },
     build::{
         ExpressionPosition, Located, Module, UnqualifiedImport, type_constructor_from_modules,
@@ -377,6 +377,8 @@ where
                     layer: ast::Layer::Value,
                     ..
                 } => Some(completer.completion_values()),
+
+                Located::ClauseGuard(_) => Some(completer.completion_values()),
             };
 
             Ok(completions)
@@ -1052,6 +1054,8 @@ Unused labelled fields:
                     };
                     Some(hover_for_module(module, location, &lines, &this.hex_deps))
                 }
+
+                Located::ClauseGuard(guard) => Some(hover_for_clause_guard(guard, lines, module)),
             })
         })
     }
@@ -1368,6 +1372,19 @@ fn hover_for_constant(
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(constant.location(), &line_numbers)),
+    }
+}
+
+fn hover_for_clause_guard(
+    guard: &TypedClauseGuard,
+    line_numbers: LineNumbers,
+    module: &Module,
+) -> Hover {
+    let type_ = Printer::new(&module.ast.names).print_type(&guard.type_());
+    let contents = format!("```gleam\n{type_}\n```");
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(guard.location(), &line_numbers)),
     }
 }
 
