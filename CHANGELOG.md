@@ -333,3 +333,8 @@
   detected when rebuilding the root project, causing the compiler to report
   errors about missing modules.
   ([daniellionel01](https://github.com/daniellionel01))
+
+- Fixed a bug where the compiler would crash when type-checking record
+  updates if the constructor definition has a positional field defined after
+  labelled fields.
+  ([Hari Mohan](https://gituhub.com/seafoamteal))
