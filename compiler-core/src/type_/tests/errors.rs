@@ -3424,3 +3424,20 @@ pub fn main() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5296
+#[test]
+fn no_crash_on_record_update_when_constructor_definition_is_invalid() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Int, Bool)
+}
+
+pub fn main() {
+  let one = Wibble(False, a: 5, b: 6)
+  let two = Wibble(..one, b: 1)
+}
+        "
+    );
+}

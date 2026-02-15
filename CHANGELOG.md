@@ -298,3 +298,8 @@
 - Fixed a bug where diagnostic about incorrect `size` and `unit` options would
   use incorrect error location.
   ([Andrey Kozhev](https://github.com/ankddev))
+
+- Fixed a bug where the compiler would crash when type-checking record
+  updates if the constructor definition has a positional field defined after
+  labelled fields.
+  ([Hari Mohan](https://gituhub.com/seafoamteal))

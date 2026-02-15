@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Wibble {\n  Wibble(a: Int, b: Int, Bool)\n}\n\npub fn main() {\n  let one = Wibble(False, a: 5, b: 6)\n  let two = Wibble(..one, b: 1)\n}\n        "
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(a: Int, b: Int, Bool)
+}
+
+pub fn main() {
+  let one = Wibble(False, a: 5, b: 6)
+  let two = Wibble(..one, b: 1)
+}
+        
+
+----- ERROR
+error: Unlabelled argument after labelled argument
+  ┌─ /src/one/two.gleam:3:26
+  │
+3 │   Wibble(a: Int, b: Int, Bool)
+  │                          ^^^^
+
+All unlabelled arguments must come before any labelled arguments.

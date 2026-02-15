@@ -3251,10 +3251,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
                     .expect("Variant has already checked to be valid");
 
-                let type_ = positional_fields
-                    .get(index as usize)
-                    .expect("Field exists")
-                    .clone();
+                // In valid Gleam code, positional fields must always be defined before
+                // any labelled fields. As such, we expect that field indices 0..(positional_fields.length)
+                // all correspond to positional fields. If this is not the case, then the user made a
+                // mistake in the definition of their custom type, the error for which will be displayed
+                // to them at the definition location. So, we can silently ignore the error here to
+                // avoid displaying too many related errors downstream of the first.
+                //
+                // Note that when a user starts adding a new labelled field to a custom type, the field
+                // name will be parsed as a custom type name until they type the colon i.e. as a new
+                // positional field.
+                let Some(type_) = positional_fields.get(index as usize).cloned() else {
+                    continue;
+                };
+
                 let mut type_vars = im::HashMap::new();
                 let accessor_type = self.instantiate(accessor_type, &mut type_vars);
                 let type_ = self.instantiate(type_, &mut type_vars);
