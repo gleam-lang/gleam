@@ -134,7 +134,15 @@ HTML documentation will work:
 
 fn check_for_default_readme(config: &PackageConfig, paths: &ProjectPaths) -> Result<(), Error> {
     let default_readme = default_readme(config.name.as_str());
-    let project_readme = fs::read(paths.readme())?;
+    let project_readme = match fs::read(paths.readme()) {
+        Err(Error::FileIo {
+            err: Some(message), ..
+        }) if message.contains("No such file or directory") => {
+            return Err(Error::CannotPublishWithNoReadme);
+        }
+        Err(error) => return Err(error),
+        Ok(project_readme) => project_readme,
+    };
 
     // We consider the two READMEs equal modulo whitespace, otherwise it would
     // be pretty trivial to trick this check by just formatting the default

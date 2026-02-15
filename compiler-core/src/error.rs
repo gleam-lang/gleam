@@ -315,6 +315,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Publishing a package with the default README is not permitted")]
     CannotPublishWithDefaultReadme,
 
+    #[error("Publishing a package with no README is not permitted")]
+    CannotPublishWithNoReadme,
+
     #[error("Publishing packages to reserve names is not permitted")]
     HexPackageSquatting,
 
@@ -883,6 +886,19 @@ published package should have its own carefully written README.
                     ),
                 }]
             }
+
+            Error::CannotPublishWithNoReadme => {
+                let text = "You appear to be attempting to publish a package with no README.
+All published packages should have one.
+"
+                .into();
+
+                vec![Diagnostic {
+                    title: "Cannot publish with no README".into(),
+                    text,
+                    level: Level::Error,
+                    location: None,
+                    hint: Some("Add a README to your project before publishing.".into()),
                 }]
             }
 
