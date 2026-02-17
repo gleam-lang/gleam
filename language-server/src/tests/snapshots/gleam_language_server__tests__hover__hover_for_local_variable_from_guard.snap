@@ -1,0 +1,20 @@
+---
+source: language-server/src/tests/hover.rs
+expression: "\npub fn main() {\n  let wibble = True\n  let wobble = False\n  case wibble {\n    True if wobble -> !wibble\n    False if !wobble -> wibble\n    _ -> wobble\n  }\n}\n"
+---
+pub fn main() {
+  let wibble = True
+  let wobble = False
+  case wibble {
+    True if wobble -> !wibble
+            ▔↑▔▔▔▔           
+    False if !wobble -> wibble
+    _ -> wobble
+  }
+}
+
+
+----- Hover content (markdown) -----
+```gleam
+Bool
+```

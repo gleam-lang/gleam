@@ -95,6 +95,10 @@ expression: "\nlet my_string = \"hello \"\ncase my_string {\n    _ if my_string 
                                             start: 0,
                                             end: 0,
                                         },
+                                        origin: VariableOrigin {
+                                            syntax: Generated,
+                                            declaration: Generated,
+                                        },
                                     },
                                     right: Constant(
                                         String {

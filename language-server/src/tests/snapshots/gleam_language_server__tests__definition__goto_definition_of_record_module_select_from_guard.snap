@@ -1,0 +1,22 @@
+---
+source: language-server/src/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+import mod
+
+pub fn main() {
+  let wibble = True
+  let wobble = mod.Wibble
+  case wibble {
+    True if wobble == mod.Wobble -> !wibble
+    False if wobble == mod.Wibble -> wibble
+                            ↑              
+    _ -> mod.Wibble
+  }
+}
+
+----- Jumped to `src/mod.gleam`
+pub type Wobble { Wibble Wobble }
+                  ↑▔▔▔▔▔

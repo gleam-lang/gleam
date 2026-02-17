@@ -1,0 +1,29 @@
+---
+source: language-server/src/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+pub fn main() {
+  let wibble = True
+  let wobble = False
+  case wibble {
+    True if wobble -> !wibble
+             ↑               
+    False if !wobble -> wibble
+    _ -> wobble
+  }
+}
+
+----- Jumped to `src/app.gleam`
+
+pub fn main() {
+  let wibble = True
+  let wobble = False
+      ↑▔▔▔▔▔        
+  case wibble {
+    True if wobble -> !wibble
+    False if !wobble -> wibble
+    _ -> wobble
+  }
+}

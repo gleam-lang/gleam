@@ -1,0 +1,19 @@
+---
+source: language-server/src/tests/reference.rs
+expression: "\npub fn main() {\n  let wibble = True\n  let wobble = False\n  case wibble {\n    True if wobble -> !wibble\n    False if !wobble -> wibble\n    _ -> wobble\n  }\n}\n"
+---
+-- app.gleam
+
+pub fn main() {
+  let wibble = True
+  let wobble = False
+      ▔▔▔▔▔▔        
+  case wibble {
+    True if wobble -> !wibble
+            ▔↑▔▔▔▔           
+    False if !wobble -> wibble
+              ▔▔▔▔▔▔          
+    _ -> wobble
+         ▔▔▔▔▔▔
+  }
+}
