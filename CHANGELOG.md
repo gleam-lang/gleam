@@ -187,6 +187,10 @@
   now generate a decoder and an encoder, respectively, for `Nil` values.
   ([Hari Mohan](https://github.com/seafoamteal))
 
+- The language server now supports renaming, go to definition, hover, and
+   finding references from expressions in case clause guards.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 - The formatter no longer wraps multiple tuple or field access into a block.
