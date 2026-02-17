@@ -1057,3 +1057,41 @@ fn main() {
         find_position_of("digit").nth_occurrence(1)
     );
 }
+
+#[test]
+fn references_for_local_variable_from_guard() {
+    assert_references!(
+        "
+pub fn main() {
+  let wibble = True
+  let wobble = False
+  case wibble {
+    True if wobble -> !wibble
+    False if !wobble -> wibble
+    _ -> wobble
+  }
+}
+",
+        find_position_of("wobble").nth_occurrence(2).under_char('o')
+    );
+}
+
+#[test]
+fn references_for_module_select_from_guard() {
+    assert_references!(
+        ("mod", "pub const wibble = 10"),
+        "
+import mod
+
+pub fn main() {
+  let wibble = True
+  case wibble {
+    True if mod.wibble < 5 -> !wibble
+    False if mod.wibble != 10 -> wibble
+    _ -> mod.wibble + 1
+  }
+}
+",
+        find_position_of("mod.wibble").under_char('w')
+    );
+}

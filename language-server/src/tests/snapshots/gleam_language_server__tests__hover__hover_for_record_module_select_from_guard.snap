@@ -1,0 +1,22 @@
+---
+source: language-server/src/tests/hover.rs
+expression: "\nimport mod\n\npub fn main() {\n  let wibble = True\n  let wobble = mod.Wibble\n  case wibble {\n    True if wobble == mod.Wobble -> !wibble\n    False if wobble == mod.Wibble -> wibble\n    _ -> mod.Wibble\n  }\n}\n"
+---
+import mod
+
+pub fn main() {
+  let wibble = True
+  let wobble = mod.Wibble
+  case wibble {
+    True if wobble == mod.Wobble -> !wibble
+    False if wobble == mod.Wibble -> wibble
+                       ▔▔▔▔▔↑▔▔▔▔          
+    _ -> mod.Wibble
+  }
+}
+
+
+----- Hover content (markdown) -----
+```gleam
+mod.Wobble
+```

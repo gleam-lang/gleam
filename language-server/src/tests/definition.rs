@@ -893,3 +893,85 @@ fn warble(wibble: Wibble) {
         find_position_of("Wobble ->")
     );
 }
+
+#[test]
+fn goto_definition_of_local_variable_from_guard() {
+    assert_goto!(
+        "
+pub fn main() {
+  let wibble = True
+  let wobble = False
+  case wibble {
+    True if wobble -> !wibble
+    False if !wobble -> wibble
+    _ -> wobble
+  }
+}
+",
+        find_position_of("wobble").nth_occurrence(2).under_char('o')
+    );
+}
+
+#[test]
+fn goto_definition_of_record_from_guard() {
+    assert_goto!(
+        "
+type Wibble {
+  Wibble
+  Wobble
+}
+
+pub fn main() {
+  let wibble = True
+  let wobble = Wibble
+  case wibble {
+    True if wobble == Wibble -> !wibble
+    False if wobble == Wobble -> wibble
+    _ -> Wibble
+  }
+}
+",
+        find_position_of("== Wibble").under_char('l')
+    );
+}
+
+#[test]
+fn goto_definition_of_module_select_from_guard() {
+    let src = "
+import mod
+
+pub fn main() {
+  let wibble = True
+  case wibble {
+    True if mod.wibble < 5 -> !wibble
+    False if mod.wibble != 10 -> wibble
+    _ -> mod.wibble + 1
+  }
+}
+";
+    assert_goto!(
+        TestProject::for_source(src).add_module("mod", "pub const wibble = 10"),
+        find_position_of("mod.wibble").under_char('w')
+    );
+}
+
+#[test]
+fn goto_definition_of_record_module_select_from_guard() {
+    let src = "
+import mod
+
+pub fn main() {
+  let wibble = True
+  let wobble = mod.Wibble
+  case wibble {
+    True if wobble == mod.Wobble -> !wibble
+    False if wobble == mod.Wibble -> wibble
+    _ -> mod.Wibble
+  }
+}
+";
+    assert_goto!(
+        TestProject::for_source(src).add_module("mod", "pub type Wobble { Wibble Wobble }"),
+        find_position_of("== mod.Wibble").under_char('i')
+    );
+}

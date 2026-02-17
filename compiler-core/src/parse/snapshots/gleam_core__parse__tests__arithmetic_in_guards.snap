@@ -89,6 +89,10 @@ expression: "\ncase 2, 3 {\n    x, y if x + y == 1 -> True\n}"
                                             start: 0,
                                             end: 0,
                                         },
+                                        origin: VariableOrigin {
+                                            syntax: Generated,
+                                            declaration: Generated,
+                                        },
                                     },
                                     right: Var {
                                         location: SrcSpan {
@@ -100,6 +104,10 @@ expression: "\ncase 2, 3 {\n    x, y if x + y == 1 -> True\n}"
                                         definition_location: SrcSpan {
                                             start: 0,
                                             end: 0,
+                                        },
+                                        origin: VariableOrigin {
+                                            syntax: Generated,
+                                            declaration: Generated,
                                         },
                                     },
                                 },

@@ -2355,3 +2355,64 @@ pub fn main() {
         find_position_of("m").nth_occurrence(5)
     );
 }
+
+#[test]
+fn rename_local_variable_from_guard() {
+    assert_rename!(
+        "
+pub fn main() {
+  let wibble = True
+  let wobble = False
+  case wibble {
+    True if wobble -> !wibble
+    False if !wobble -> wibble
+    _ -> wobble
+  }
+}
+",
+        "something_else",
+        find_position_of("wobble").nth_occurrence(2).under_char('o')
+    );
+}
+
+#[test]
+fn alias_imported_module_from_guard() {
+    assert_rename!(
+        ("mod", "pub const wibble = 10"),
+        "
+import mod
+
+pub fn main() {
+  let wibble = True
+  case wibble {
+    True if mod.wibble < 5 -> !wibble
+    False if mod.wibble != 10 -> wibble
+    _ -> mod.wibble + 1
+  }
+}
+",
+        "module",
+        find_position_of("mod.wibble").under_char('m')
+    );
+}
+
+#[test]
+fn rename_module_select_from_guard() {
+    assert_rename!(
+        ("mod", "pub const wibble = 10"),
+        "
+import mod
+
+pub fn main() {
+  let wibble = True
+  case wibble {
+    True if mod.wibble < 5 -> !wibble
+    False if mod.wibble != 10 -> wibble
+    _ -> mod.wibble + 1
+  }
+}
+",
+        "ten",
+        find_position_of("mod.wibble").under_char('w')
+    );
+}

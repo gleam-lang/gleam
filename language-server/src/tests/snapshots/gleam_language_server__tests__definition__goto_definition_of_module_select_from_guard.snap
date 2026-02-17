@@ -1,0 +1,21 @@
+---
+source: language-server/src/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+import mod
+
+pub fn main() {
+  let wibble = True
+  case wibble {
+    True if mod.wibble < 5 -> !wibble
+                ↑                    
+    False if mod.wibble != 10 -> wibble
+    _ -> mod.wibble + 1
+  }
+}
+
+----- Jumped to `src/mod.gleam`
+pub const wibble = 10
+↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔

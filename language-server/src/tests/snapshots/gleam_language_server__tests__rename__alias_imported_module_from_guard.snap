@@ -1,0 +1,39 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\nimport mod\n\npub fn main() {\n  let wibble = True\n  case wibble {\n    True if mod.wibble < 5 -> !wibble\n    False if mod.wibble != 10 -> wibble\n    _ -> mod.wibble + 1\n  }\n}\n"
+---
+----- BEFORE RENAME
+-- mod.gleam
+pub const wibble = 10
+
+-- app.gleam
+
+import mod
+
+pub fn main() {
+  let wibble = True
+  case wibble {
+    True if mod.wibble < 5 -> !wibble
+            ↑▔▔                      
+    False if mod.wibble != 10 -> wibble
+    _ -> mod.wibble + 1
+  }
+}
+
+
+----- AFTER RENAME
+-- mod.gleam
+pub const wibble = 10
+
+-- app.gleam
+
+import mod as module
+
+pub fn main() {
+  let wibble = True
+  case wibble {
+    True if module.wibble < 5 -> !wibble
+    False if module.wibble != 10 -> wibble
+    _ -> module.wibble + 1
+  }
+}

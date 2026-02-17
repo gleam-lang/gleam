@@ -1,0 +1,25 @@
+---
+source: language-server/src/tests/hover.rs
+expression: "\ntype Wibble {\n  Wibble\n  Wobble\n}\n\npub fn main() {\n  let wibble = True\n  let wobble = Wibble\n  case wibble {\n    True if wobble == Wibble -> !wibble\n    False if wobble == Wobble -> wibble\n    _ -> Wibble\n  }\n}\n"
+---
+type Wibble {
+  Wibble
+  Wobble
+}
+
+pub fn main() {
+  let wibble = True
+  let wobble = Wibble
+  case wibble {
+    True if wobble == Wibble -> !wibble
+                      ▔▔▔▔↑▔           
+    False if wobble == Wobble -> wibble
+    _ -> Wibble
+  }
+}
+
+
+----- Hover content (markdown) -----
+```gleam
+Wibble
+```
