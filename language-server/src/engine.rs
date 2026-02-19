@@ -26,9 +26,9 @@ use itertools::Itertools;
 use lsp::CodeAction;
 use lsp_server::ResponseError;
 use lsp_types::{
-    self as lsp, DocumentSymbol, Hover, HoverContents, MarkedString, Position,
-    PrepareRenameResponse, Range, SignatureHelp, SymbolKind, SymbolTag, TextEdit, Url,
-    WorkspaceEdit,
+    self as lsp, DocumentSymbol, FoldingRange, FoldingRangeKind, Hover, HoverContents,
+    MarkedString, Position, PrepareRenameResponse, Range, SignatureHelp, SymbolKind, SymbolTag,
+    TextEdit, Url, WorkspaceEdit,
 };
 use std::{collections::HashSet, sync::Arc};
 
@@ -614,6 +614,71 @@ where
         })
     }
 
+    pub fn folding_range(
+        &mut self,
+        params: lsp::FoldingRangeParams,
+    ) -> Response<Vec<FoldingRange>> {
+        self.respond(|this| {
+            let mut ranges: Vec<(u32, FoldingRange)> = vec![];
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(vec![]);
+            };
+
+            let line_numbers = LineNumbers::new(&module.code);
+
+            for import in
+                import_folding_spans(&module.ast.definitions.imports, &module.code, &line_numbers)
+            {
+                let Some(range) =
+                    folding_range_for_span(import, &line_numbers, Some(FoldingRangeKind::Imports))
+                else {
+                    continue;
+                };
+
+                ranges.push((import.start, range));
+            }
+
+            for type_ in &module.ast.definitions.custom_types {
+                let span = type_.full_location();
+                let Some(range) = folding_range_for_span(span, &line_numbers, None) else {
+                    continue;
+                };
+                ranges.push((span.start, range));
+            }
+
+            for constant in &module.ast.definitions.constants {
+                let span = SrcSpan::new(constant.location.start, constant.value.location().end);
+                let Some(range) = folding_range_for_span(span, &line_numbers, None) else {
+                    continue;
+                };
+                ranges.push((span.start, range));
+            }
+
+            for alias in &module.ast.definitions.type_aliases {
+                let span = alias.location;
+                let Some(range) = folding_range_for_span(span, &line_numbers, None) else {
+                    continue;
+                };
+                ranges.push((span.start, range));
+            }
+
+            for function in &module.ast.definitions.functions {
+                let Some(body_start) = function.body_start else {
+                    continue;
+                };
+
+                let span = SrcSpan::new(body_start, function.end_position);
+                let Some(range) = folding_range_for_span(span, &line_numbers, None) else {
+                    continue;
+                };
+                ranges.push((span.start, range));
+            }
+
+            ranges.sort_by_key(|(start, _)| *start);
+            Ok(ranges.into_iter().map(|(_, range)| range).collect())
+        })
+    }
+
     /// Check whether a particular module is in the same package as this one
     fn is_same_package(&self, current_module: &Module, module_name: &str) -> bool {
         let other_module = self
@@ -1116,6 +1181,74 @@ Unused labelled fields:
 
         self.compiler.modules.get(&module_name)
     }
+}
+
+fn import_folding_spans(
+    imports: &[ast::Import<EcoString>],
+    code: &str,
+    line_numbers: &LineNumbers,
+) -> Vec<SrcSpan> {
+    let mut spans = vec![];
+    let mut imports = imports.iter();
+
+    let Some(first_import) = imports.next() else {
+        return spans;
+    };
+
+    let mut current_start = first_import.location.start;
+    let mut current_end = first_import.location.end;
+    let mut current_len = 1;
+
+    for import in imports {
+        let previous_span = SrcSpan::new(current_end, current_end);
+        let next_span = SrcSpan::new(import.location.start, import.location.start);
+        let previous_line = src_span_to_lsp_range(previous_span, line_numbers)
+            .start
+            .line;
+        let next_line = src_span_to_lsp_range(next_span, line_numbers).start.line;
+        let separated_by_blank_line = next_line > previous_line + 1;
+        let between = &code[current_end as usize..import.location.start as usize];
+        let has_non_whitespace_between = between.chars().any(|char| !char.is_whitespace());
+
+        if separated_by_blank_line || has_non_whitespace_between {
+            if current_len > 1 {
+                spans.push(SrcSpan::new(current_start, current_end));
+            }
+            current_start = import.location.start;
+            current_end = import.location.end;
+            current_len = 1;
+        } else {
+            current_end = import.location.end;
+            current_len += 1;
+        }
+    }
+
+    if current_len > 1 {
+        spans.push(SrcSpan::new(current_start, current_end));
+    }
+
+    spans
+}
+
+fn folding_range_for_span(
+    span: SrcSpan,
+    line_numbers: &LineNumbers,
+    kind: Option<FoldingRangeKind>,
+) -> Option<FoldingRange> {
+    let range = src_span_to_lsp_range(span, line_numbers);
+
+    if range.start.line >= range.end.line {
+        return None;
+    }
+
+    Some(FoldingRange {
+        start_line: range.start.line,
+        start_character: None,
+        end_line: range.end.line,
+        end_character: None,
+        kind,
+        collapsed_text: None,
+    })
 }
 
 fn custom_type_symbol(
