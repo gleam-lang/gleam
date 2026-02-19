@@ -1,0 +1,4 @@
+name = "delete_escript_after_compilation"
+version = "1.0.0"
+description = "Test project to delete escript compile file after compilation"
+licences = ["Apache-2.0"]
