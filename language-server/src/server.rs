@@ -104,6 +104,7 @@ where
             Request::CodeAction(param) => self.code_action(param),
             Request::SignatureHelp(param) => self.signature_help(param),
             Request::DocumentSymbol(param) => self.document_symbol(param),
+            Request::FoldingRange(param) => self.folding_range(param),
             Request::PrepareRename(param) => self.prepare_rename(param),
             Request::Rename(param) => self.rename(param),
             Request::GoToTypeDefinition(param) => self.goto_type_definition(param),
@@ -402,6 +403,14 @@ where
         self.respond_with_engine(path, |engine| engine.document_symbol(params))
     }
 
+    fn folding_range(
+        &mut self,
+        params: lsp::FoldingRangeParams,
+    ) -> (Result<Json, ResponseError>, Feedback) {
+        let path = super::path(&params.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.folding_range(params))
+    }
+
     fn prepare_rename(
         &mut self,
         params: lsp::TextDocumentPositionParams,
@@ -520,7 +529,7 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         })),
         document_link_provider: None,
         color_provider: None,
-        folding_range_provider: None,
+        folding_range_provider: Some(lsp::FoldingRangeProviderCapability::Simple(true)),
         declaration_provider: None,
         execute_command_provider: None,
         workspace: None,
