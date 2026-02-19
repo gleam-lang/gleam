@@ -207,6 +207,26 @@
    finding references from expressions in case clause guards.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The language server now supports `textDocument/foldingRange`, enabling
+  folding for contiguous import blocks and multiline top-level definitions such
+  as function bodies, custom types, constants, and type aliases.
+
+  For example, this import block:
+
+  ```gleam
+  import gleam/int
+  import gleam/list
+  import gleam/string
+  ```
+
+  can now be folded in the editor to:
+
+  ```gleam
+  import gleam/int ...
+  ```
+
+  ([Aayush Tripathi](https://github.com/aayush-tripathi))
+
 ### Formatter
 
 - The formatter no longer wraps multiple tuple or field access into a block.
