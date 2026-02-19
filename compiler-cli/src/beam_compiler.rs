@@ -66,6 +66,11 @@ impl BeamCompiler {
         let mut buf = String::new();
         let mut accumulated_modules: Vec<String> = Vec::new();
         while let (Ok(_), Ok(None)) = (inner.stdout.read_line(&mut buf), inner.process.try_wait()) {
+            let escript_path = get_escript_path(out);
+
+            // Delete unnecessary after compilation escript file
+            io.delete_file(&escript_path)?;
+
             match buf.trim() {
                 "gleam-compile-result-ok" => {
                     // Return Ok with the accumulated modules
@@ -103,9 +108,7 @@ impl BeamCompiler {
         io: &IO,
         out: &Utf8Path,
     ) -> Result<BeamCompilerInner, Error> {
-        let escript_path = out
-            .join(paths::ARTEFACT_DIRECTORY_NAME)
-            .join("gleam@@compile.erl");
+        let escript_path = get_escript_path(out);
 
         let escript_source = std::include_str!("../templates/gleam@@compile.erl");
         io.write(&escript_path, escript_source)?;
@@ -151,4 +154,9 @@ impl Drop for BeamCompiler {
 
 fn escape_path<T: AsRef<str>>(path: T) -> String {
     path.as_ref().replace("\\", "\\\\")
+}
+
+fn get_escript_path(out: &Utf8Path) -> Utf8PathBuf {
+    out.join(paths::ARTEFACT_DIRECTORY_NAME)
+        .join("gleam@@compile.erl")
 }
