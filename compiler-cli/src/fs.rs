@@ -685,17 +685,13 @@ pub fn symlink_dir(src: impl AsRef<Utf8Path>, dest: impl AsRef<Utf8Path>) -> Res
     let src = canonicalise(src)?;
 
     #[cfg(target_family = "windows")]
-    let result = std::os::windows::fs::symlink_dir(src, dest);
+    let result = std::os::windows::fs::symlink_dir(&src, dest);
     #[cfg(not(target_family = "windows"))]
-    let result = std::os::unix::fs::symlink(src, dest);
+    let result = std::os::unix::fs::symlink(&src, dest);
 
-    result.map_err(|err| Error::FileIo {
-        action: FileIoAction::Link,
-        kind: FileKind::File,
-        path: Utf8PathBuf::from(dest),
-        err: Some(err.to_string()),
-    })?;
-    Ok(())
+    // Fallback to copying if we can't symlink. This occurs, for example,
+    // on Windows without developer mode enabled.
+    result.or_else(|_| copy_dir(src, dest))
 }
 
 pub fn hardlink(from: impl AsRef<Utf8Path>, to: impl AsRef<Utf8Path>) -> Result<(), Error> {
