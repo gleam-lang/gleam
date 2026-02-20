@@ -44,6 +44,10 @@
 - More readable error message when trying to revert an old release.
   ([Moritz Böhme](https://github.com/MoritzBoehme))
 
+- The build tool now falls back to copying directories when it fails to symlink
+  one. This often occurs on Windows without "Developer mode" enabled.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server now supports go-to-definition, find-references and rename
