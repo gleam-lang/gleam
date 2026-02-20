@@ -28,6 +28,10 @@
   `package.hexdocs.pm` rather than `hexdocs.pm/package`.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The build tool now falls back to copying directories when it fails to symlink
+  one. This often occurs on Windows without "Developer mode" enabled.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 ### Formatter
