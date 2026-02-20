@@ -62,6 +62,10 @@
   an empty README.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The build tool now falls back to copying directories when it fails to symlink
+  one. This often occurs on Windows without "Developer mode" enabled.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server now allows extracting the start of a pipeline into a
