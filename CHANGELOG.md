@@ -298,3 +298,7 @@
 - Fixed a bug where diagnostic about incorrect `size` and `unit` options would
   use incorrect error location.
   ([Andrey Kozhev](https://github.com/ankddev))
+
+- Fixed a bug where referencing a constant record inside a case branch matching
+  on that constant would generate invalid code on the Erlang target.
+  ([Igor Castejón](https://github.com/IgorCastejon))

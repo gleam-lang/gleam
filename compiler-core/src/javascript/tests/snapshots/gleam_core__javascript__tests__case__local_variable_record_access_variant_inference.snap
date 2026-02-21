@@ -1,0 +1,46 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub type User {\n  User(name: String, age: Int)\n  Guest\n}\n\npub fn main() {\n  let user = User(\"Gleam\", 42)\n  \n  case user {\n    User(..) -> user.name\n    Guest -> \"Guest\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type User {
+  User(name: String, age: Int)
+  Guest
+}
+
+pub fn main() {
+  let user = User("Gleam", 42)
+  
+  case user {
+    User(..) -> user.name
+    Guest -> "Guest"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class User extends $CustomType {
+  constructor(name, age) {
+    super();
+    this.name = name;
+    this.age = age;
+  }
+}
+export const User$User = (name, age) => new User(name, age);
+export const User$isUser = (value) => value instanceof User;
+export const User$User$name = (value) => value.name;
+export const User$User$0 = (value) => value.name;
+export const User$User$age = (value) => value.age;
+export const User$User$1 = (value) => value.age;
+
+export class Guest extends $CustomType {}
+export const User$Guest = () => new Guest();
+export const User$isGuest = (value) => value instanceof Guest;
+
+export function main() {
+  let user = new User("Gleam", 42);
+  return user.name;
+}

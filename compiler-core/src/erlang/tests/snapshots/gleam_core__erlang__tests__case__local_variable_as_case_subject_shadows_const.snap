@@ -1,0 +1,44 @@
+---
+source: compiler-core/src/erlang/tests/case.rs
+expression: "\npub type Wibble {\n  Wibble\n  Wobble(int: Int)\n}\n\nconst wibble = Wibble\n\npub fn main() {\n  echo wibble\n  // This 'wibble' shadows the const\n  let wibble = Wobble(42)\n  case wibble {\n    // This matches the local variable, not the const\n    Wobble(_) -> wibble\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble
+  Wobble(int: Int)
+}
+
+const wibble = Wibble
+
+pub fn main() {
+  echo wibble
+  // This 'wibble' shadows the const
+  let wibble = Wobble(42)
+  case wibble {
+    // This matches the local variable, not the const
+    Wobble(_) -> wibble
+  }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+-export_type([wibble/0]).
+
+-type wibble() :: wibble | {wobble, integer()}.
+
+-file("project/test/my/mod.gleam", 9).
+-spec main() -> wibble().
+main() ->
+    echo(wibble, nil, 10),
+    Wibble = {wobble, 42},
+    case Wibble of
+        {wobble, _} ->
+            Wibble
+    end.
+
+% ...omitted code from `templates/echo.erl`...

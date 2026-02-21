@@ -1,0 +1,61 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub type Wibble {\n  Wibble\n  Wobble(int: Int)\n}\n\nconst wibble = Wibble\n\npub fn main() {\n  echo wibble\n  // This 'wibble' shadows the const\n  let wibble = Wobble(42)\n  case wibble {\n    // This matches the local variable, not the const\n    Wobble(_) -> wibble\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble
+  Wobble(int: Int)
+}
+
+const wibble = Wibble
+
+pub fn main() {
+  echo wibble
+  // This 'wibble' shadows the const
+  let wibble = Wobble(42)
+  case wibble {
+    // This matches the local variable, not the const
+    Wobble(_) -> wibble
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $stdlib$dict from "../../gleam_stdlib/gleam/dict.mjs";
+import {
+  Empty as $Empty,
+  NonEmpty as $NonEmpty,
+  CustomType as $CustomType,
+  bitArraySlice,
+  bitArraySliceToInt,
+  BitArray as $BitArray,
+  List as $List,
+  UtfCodepoint as $UtfCodepoint,
+} from "../gleam.mjs";
+
+export class Wibble extends $CustomType {}
+export const Wibble$Wibble = () => new Wibble();
+export const Wibble$isWibble = (value) => value instanceof Wibble;
+
+export class Wobble extends $CustomType {
+  constructor(int) {
+    super();
+    this.int = int;
+  }
+}
+export const Wibble$Wobble = (int) => new Wobble(int);
+export const Wibble$isWobble = (value) => value instanceof Wobble;
+export const Wibble$Wobble$int = (value) => value.int;
+export const Wibble$Wobble$0 = (value) => value.int;
+
+const wibble = /* @__PURE__ */ new Wibble();
+
+export function main() {
+  echo(wibble, undefined, "src/module.gleam", 10);
+  let wibble$1 = new Wobble(42);
+  return wibble$1;
+}
+
+// ...omitted code from `templates/echo.mjs`...
