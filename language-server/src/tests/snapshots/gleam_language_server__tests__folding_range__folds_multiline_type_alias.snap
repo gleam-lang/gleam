@@ -1,0 +1,14 @@
+---
+source: language-server/src/tests/folding_range.rs
+expression: "pub type Pair =\n  #(Int, Int)"
+snapshot_kind: text
+---
+----- Code -----
+pub type Pair =
+  #(Int, Int)
+
+----- Ranges -----
+1. lines 0..1 kind: none
+
+----- Fold 1 (lines 0..1) -----
+pub type Pair = ...

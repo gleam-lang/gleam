@@ -1,0 +1,33 @@
+---
+source: language-server/src/tests/folding_range.rs
+expression: "import one\nimport two\n\nimport three\nimport four\n\npub fn main() { 1 }"
+snapshot_kind: text
+---
+----- Code -----
+import one
+import two
+
+import three
+import four
+
+pub fn main() { 1 }
+
+----- Ranges -----
+1. lines 0..1 kind: imports
+2. lines 3..4 kind: imports
+
+----- Fold 1 (lines 0..1) -----
+import one ...
+
+import three
+import four
+
+pub fn main() { 1 }
+
+----- Fold 2 (lines 3..4) -----
+import one
+import two
+
+import three ...
+
+pub fn main() { 1 }

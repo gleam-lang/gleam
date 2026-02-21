@@ -1,0 +1,37 @@
+---
+source: language-server/src/tests/folding_range.rs
+expression: "pub fn one() {\n  1\n}\n\npub fn two() { 2 }\n\npub fn three() {\n  3\n}"
+snapshot_kind: text
+---
+----- Code -----
+pub fn one() {
+  1
+}
+
+pub fn two() { 2 }
+
+pub fn three() {
+  3
+}
+
+----- Ranges -----
+1. lines 0..2 kind: none
+2. lines 6..8 kind: none
+
+----- Fold 1 (lines 0..2) -----
+pub fn one() { ...
+
+pub fn two() { 2 }
+
+pub fn three() {
+  3
+}
+
+----- Fold 2 (lines 6..8) -----
+pub fn one() {
+  1
+}
+
+pub fn two() { 2 }
+
+pub fn three() { ...
