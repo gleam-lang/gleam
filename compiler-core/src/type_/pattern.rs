@@ -231,7 +231,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         // code generator to look for a runtime variable that doesn't exist.
                         let mut inferred_variant_constant = variable.clone();
                         inferred_variant_constant.type_ = type_;
-                        let _ = self.environment.scope.insert(name, inferred_variant_constant);
+                        let _ = self
+                            .environment
+                            .scope
+                            .insert(name, inferred_variant_constant);
                     }
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::Record { .. } => {}
