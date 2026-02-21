@@ -1,0 +1,10 @@
+---
+source: language-server/src/tests/folding_range.rs
+expression: "pub fn main() { 1 }"
+snapshot_kind: text
+---
+----- Code -----
+pub fn main() { 1 }
+
+----- Ranges -----
+(none)

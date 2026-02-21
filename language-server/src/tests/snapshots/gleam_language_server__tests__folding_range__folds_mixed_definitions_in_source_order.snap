@@ -1,0 +1,87 @@
+---
+source: language-server/src/tests/folding_range.rs
+expression: "import one\nimport two\n\npub type W {\n  W(Int)\n}\n\npub const xs = [\n  1,\n  2,\n]\n\npub fn main() {\n  1\n}"
+snapshot_kind: text
+---
+----- Code -----
+import one
+import two
+
+pub type W {
+  W(Int)
+}
+
+pub const xs = [
+  1,
+  2,
+]
+
+pub fn main() {
+  1
+}
+
+----- Ranges -----
+1. lines 0..1 kind: imports
+2. lines 3..5 kind: none
+3. lines 7..10 kind: none
+4. lines 12..14 kind: none
+
+----- Fold 1 (lines 0..1) -----
+import one ...
+
+pub type W {
+  W(Int)
+}
+
+pub const xs = [
+  1,
+  2,
+]
+
+pub fn main() {
+  1
+}
+
+----- Fold 2 (lines 3..5) -----
+import one
+import two
+
+pub type W { ...
+
+pub const xs = [
+  1,
+  2,
+]
+
+pub fn main() {
+  1
+}
+
+----- Fold 3 (lines 7..10) -----
+import one
+import two
+
+pub type W {
+  W(Int)
+}
+
+pub const xs = [ ...
+
+pub fn main() {
+  1
+}
+
+----- Fold 4 (lines 12..14) -----
+import one
+import two
+
+pub type W {
+  W(Int)
+}
+
+pub const xs = [
+  1,
+  2,
+]
+
+pub fn main() { ...

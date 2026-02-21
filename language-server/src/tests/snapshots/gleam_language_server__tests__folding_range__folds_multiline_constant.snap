@@ -1,0 +1,16 @@
+---
+source: language-server/src/tests/folding_range.rs
+expression: "pub const xs = [\n  1,\n  2,\n]"
+snapshot_kind: text
+---
+----- Code -----
+pub const xs = [
+  1,
+  2,
+]
+
+----- Ranges -----
+1. lines 0..3 kind: none
+
+----- Fold 1 (lines 0..3) -----
+pub const xs = [ ...

@@ -1,0 +1,15 @@
+---
+source: language-server/src/tests/folding_range.rs
+expression: "pub type W {\n  W(Int)\n}"
+snapshot_kind: text
+---
+----- Code -----
+pub type W {
+  W(Int)
+}
+
+----- Ranges -----
+1. lines 0..2 kind: none
+
+----- Fold 1 (lines 0..2) -----
+pub type W { ...

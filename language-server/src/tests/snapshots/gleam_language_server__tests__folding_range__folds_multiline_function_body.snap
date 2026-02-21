@@ -1,0 +1,16 @@
+---
+source: language-server/src/tests/folding_range.rs
+expression: "pub fn main() {\n  let x = 1\n  x\n}"
+snapshot_kind: text
+---
+----- Code -----
+pub fn main() {
+  let x = 1
+  x
+}
+
+----- Ranges -----
+1. lines 0..3 kind: none
+
+----- Fold 1 (lines 0..3) -----
+pub fn main() { ...
