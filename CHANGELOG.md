@@ -175,6 +175,9 @@
   now generate a decoder and an encoder, respectively, for `Nil` values.
   ([Hari Mohan](https://github.com/seafoamteal))
 
+- The language server now cleans up compilation engines when all project
+  files are closed ([Nonso Chukwurah](https://github.com/TrippleCCC))
+
 ### Formatter
 
 ### Bug fixes
