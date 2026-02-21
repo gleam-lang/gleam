@@ -90,9 +90,13 @@ impl Request {
 #[derive(Debug)]
 pub enum Notification {
     /// A Gleam file has been modified in memory, and the new text is provided.
-    SourceFileChangedInMemory { path: Utf8PathBuf, text: String },
+    SourceFileChangedInMemory {
+        path: Utf8PathBuf,
+        opened: bool,
+        text: String,
+    },
     /// A Gleam file has been saved or closed in the editor.
-    SourceFileMatchesDisc { path: Utf8PathBuf },
+    SourceFileMatchesDisc { path: Utf8PathBuf, closed: bool },
     /// gleam.toml has changed.
     ConfigFileChanged { path: Utf8PathBuf },
     /// It's time to compile all open projects.
@@ -107,6 +111,7 @@ impl Notification {
                 let notification = Notification::SourceFileChangedInMemory {
                     path: super::path(&params.text_document.uri),
                     text: params.text_document.text,
+                    opened: true,
                 };
                 Some(Message::Notification(notification))
             }
@@ -115,6 +120,7 @@ impl Notification {
                 let notification = Notification::SourceFileChangedInMemory {
                     path: super::path(&params.text_document.uri),
                     text: params.content_changes.into_iter().next_back()?.text,
+                    opened: false,
                 };
                 Some(Message::Notification(notification))
             }
@@ -123,6 +129,7 @@ impl Notification {
                 let params = cast_notification::<DidSaveTextDocument>(notification);
                 let notification = Notification::SourceFileMatchesDisc {
                     path: super::path(&params.text_document.uri),
+                    closed: false,
                 };
                 Some(Message::Notification(notification))
             }
@@ -130,6 +137,7 @@ impl Notification {
                 let params = cast_notification::<DidCloseTextDocument>(notification);
                 let notification = Notification::SourceFileMatchesDisc {
                     path: super::path(&params.text_document.uri),
+                    closed: true,
                 };
                 Some(Message::Notification(notification))
             }

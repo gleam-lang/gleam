@@ -41,6 +41,7 @@ pub struct LanguageServer<'a, IO> {
     outside_of_project_feedback: FeedbackBookKeeper,
     router: Router<IO, ConnectionProgressReporter<'a>>,
     changed_projects: HashSet<Utf8PathBuf>,
+    open_files: HashSet<Utf8PathBuf>,
     io: FileSystemProxy<IO>,
 }
 
@@ -63,6 +64,7 @@ where
             connection: connection.into(),
             initialise_params,
             changed_projects: HashSet::new(),
+            open_files: HashSet::new(),
             outside_of_project_feedback: FeedbackBookKeeper::default(),
             router,
             io,
@@ -131,12 +133,35 @@ where
             .expect("channel send LSP response")
     }
 
+    fn cleanup_engine(&mut self, path: &Utf8PathBuf) {
+        _ = self.open_files.remove(path);
+        if let Some(project_path) = self.router.project_path(path) {
+            if self
+                .open_files
+                .iter()
+                .any(|path| path.starts_with(&project_path))
+            {
+                self.router.delete_engine_for_path(&project_path);
+            }
+        }
+    }
+
     fn handle_notification(&mut self, notification: Notification) {
         let feedback = match notification {
             Notification::CompilePlease => self.compile_please(),
-            Notification::SourceFileMatchesDisc { path } => self.discard_in_memory_cache(path),
-            Notification::SourceFileChangedInMemory { path, text } => {
-                self.cache_file_in_memory(path, text)
+            Notification::SourceFileMatchesDisc { path, closed } => {
+                let feedback = self.discard_in_memory_cache(&path);
+                if closed {
+                    self.cleanup_engine(&path);
+                }
+                feedback
+            }
+            Notification::SourceFileChangedInMemory { path, opened, text } => {
+                let feedback = self.cache_file_in_memory(&path, text);
+                if opened {
+                    _ = self.open_files.insert(path);
+                }
+                feedback
             }
             Notification::ConfigFileChanged { path } => self.watched_files_changed(path),
         };
@@ -428,17 +453,17 @@ where
         self.respond_with_engine(path, |engine| engine.find_references(params))
     }
 
-    fn cache_file_in_memory(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
-        self.project_changed(&path);
-        if let Err(error) = self.io.write_mem_cache(&path, &text) {
+    fn cache_file_in_memory(&mut self, path: &Utf8PathBuf, text: String) -> Feedback {
+        self.project_changed(path);
+        if let Err(error) = self.io.write_mem_cache(path, &text) {
             return self.outside_of_project_feedback.error(error);
         }
         Feedback::none()
     }
 
-    fn discard_in_memory_cache(&mut self, path: Utf8PathBuf) -> Feedback {
-        self.project_changed(&path);
-        if let Err(error) = self.io.delete_mem_cache(&path) {
+    fn discard_in_memory_cache(&mut self, path: &Utf8PathBuf) -> Feedback {
+        self.project_changed(path);
+        if let Err(error) = self.io.delete_mem_cache(path) {
             return self.outside_of_project_feedback.error(error);
         }
         Feedback::none()
