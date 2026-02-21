@@ -26,6 +26,9 @@
 
 ### Build tool
 
+- Upgraded `actions/checkout` from v4 to v6 in the GitHub Actions workflow used by `gleam new`.
+  ([Christian Widlund](https://github.com/chrillep))
+
 - When adding a package that does not exist on Hex, the message is a bit
   friendlier.
   ([Ameen Radwan](https://github.com/Acepie))
