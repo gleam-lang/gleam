@@ -41,7 +41,7 @@ pub struct LanguageServer<'a, IO> {
     outside_of_project_feedback: FeedbackBookKeeper,
     router: Router<IO, ConnectionProgressReporter<'a>>,
     changed_projects: HashSet<Utf8PathBuf>,
-    open_files: HashSet<Utf8PathBuf>,
+    opened_files: HashMap<Utf8PathBuf, bool>,
     io: FileSystemProxy<IO>,
 }
 
@@ -64,7 +64,7 @@ where
             connection: connection.into(),
             initialise_params,
             changed_projects: HashSet::new(),
-            open_files: HashSet::new(),
+            opened_files: HashMap::new(),
             outside_of_project_feedback: FeedbackBookKeeper::default(),
             router,
             io,
@@ -133,16 +133,23 @@ where
             .expect("channel send LSP response")
     }
 
-    fn cleanup_engine(&mut self, path: &Utf8PathBuf) {
-        _ = self.open_files.remove(path);
-        if let Some(project_path) = self.router.project_path(path) {
-            if self
-                .open_files
+    fn attempt_engine_cleanup(&mut self, path: &Utf8PathBuf, feedback: &mut Feedback) {
+        if let Some(project_path) = self.router.project_path(path)
+            && self
+                .opened_files
                 .iter()
-                .any(|path| path.starts_with(&project_path))
-            {
-                self.router.delete_engine_for_path(&project_path);
-            }
+                .filter(|(path, _)| path.starts_with(&project_path))
+                .all(|(_, is_open)| !*is_open)
+        {
+            self.router.delete_engine_for_path(&project_path);
+            _ = self.changed_projects.remove(&project_path);
+            self.opened_files
+                .extract_if(|path, _| path.starts_with(&project_path))
+                .map(|(path, _)| path)
+                .into_iter()
+                .for_each(|path| {
+                    feedback.unset_existing_diagnostics(path);
+                });
         }
     }
 
@@ -150,16 +157,20 @@ where
         let feedback = match notification {
             Notification::CompilePlease => self.compile_please(),
             Notification::SourceFileMatchesDisc { path, closed } => {
-                let feedback = self.discard_in_memory_cache(&path);
+                let mut feedback = self.discard_in_memory_cache(&path);
                 if closed {
-                    self.cleanup_engine(&path);
+                    let _ = self
+                        .opened_files
+                        .get_mut(&path)
+                        .map(|is_open| *is_open = false);
+                    self.attempt_engine_cleanup(&path, &mut feedback);
                 }
                 feedback
             }
             Notification::SourceFileChangedInMemory { path, opened, text } => {
                 let feedback = self.cache_file_in_memory(&path, text);
-                if opened {
-                    _ = self.open_files.insert(path);
+                if opened && feedback.diagnostics.is_empty() {
+                    let _ = self.opened_files.insert(path, true);
                 }
                 feedback
             }
