@@ -4,11 +4,11 @@ Hello! Welcome to the documentation for the Gleam compiler. I hope you have fun
 with the project!
 
 <!-- vscode-markdown-toc -->
-* [Project structure](#Projectstructure)
-* [Compilation flow](#Compilationflow)
-* [Testing](#Testing)
-	* [Running the tests](#Runningthetests)
-	* [Snapshot testing](#Snapshottesting)
+* [Project structure](#project-structure)
+* [Compilation flow](#compilation-flow)
+* [Testing](#testing)
+	* [Running the tests](#running-the-tests)
+	* [Snapshot testing](#snapshot-testing)
 
 <!-- vscode-markdown-toc-config
 	numbering=false
