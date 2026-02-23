@@ -17,10 +17,9 @@ fn folding_ranges(tester: TestProject<'_>) -> Vec<FoldingRange> {
 
 fn kind_name(kind: &Option<FoldingRangeKind>) -> &'static str {
     match kind {
-        Some(kind) if *kind == FoldingRangeKind::Imports => "imports",
-        Some(kind) if *kind == FoldingRangeKind::Comment => "comment",
-        Some(kind) if *kind == FoldingRangeKind::Region => "region",
-        Some(_) => "other",
+        Some(FoldingRangeKind::Imports) => "imports",
+        Some(FoldingRangeKind::Comment) => "comment",
+        Some(FoldingRangeKind::Region) => "region",
         None => "none",
     }
 }
@@ -81,23 +80,30 @@ fn folding_snapshot_output(project: TestProject<'_>) -> String {
     pretty_folding_output(src, &ranges)
 }
 
+macro_rules! assert_folding {
+    ($src:literal $(,)?) => {
+        let output = folding_snapshot_output(TestProject::for_source($src));
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+    ($project:expr, $src:expr $(,)?) => {
+        let output = folding_snapshot_output($project);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+}
+
 #[test]
 fn folds_multiline_function_body() {
-    let code = "pub fn main() {
+    assert_folding!(
+        "pub fn main() {
   let x = 1
   x
-}";
-
-    let output = folding_snapshot_output(TestProject::for_source(code));
-    insta::assert_snapshot!(insta::internals::AutoName, output, code);
+}"
+    );
 }
 
 #[test]
 fn does_not_fold_single_line_function_body() {
-    let code = "pub fn main() { 1 }";
-
-    let output = folding_snapshot_output(TestProject::for_source(code));
-    insta::assert_snapshot!(insta::internals::AutoName, output, code);
+    assert_folding!("pub fn main() { 1 }");
 }
 
 #[test]
@@ -108,13 +114,13 @@ import three
 
 pub fn main() { 1 }";
 
-    let output = folding_snapshot_output(
+    assert_folding!(
         TestProject::for_source(code)
             .add_dep_module("one", "pub fn value() { 1 }")
             .add_dep_module("two", "pub fn value() { 2 }")
             .add_dep_module("three", "pub fn value() { 3 }"),
+        code
     );
-    insta::assert_snapshot!(insta::internals::AutoName, output, code);
 }
 
 #[test]
@@ -127,55 +133,56 @@ import four
 
 pub fn main() { 1 }";
 
-    let output = folding_snapshot_output(
+    assert_folding!(
         TestProject::for_source(code)
             .add_dep_module("one", "pub fn value() { 1 }")
             .add_dep_module("two", "pub fn value() { 2 }")
             .add_dep_module("three", "pub fn value() { 3 }")
             .add_dep_module("four", "pub fn value() { 4 }"),
+        code
     );
-    insta::assert_snapshot!(insta::internals::AutoName, output, code);
 }
 
 #[test]
 fn folds_multiline_custom_type() {
-    let code = "pub type W {
+    assert_folding!(
+        "pub type W {
   W(Int)
-}";
-
-    let output = folding_snapshot_output(TestProject::for_source(code));
-    insta::assert_snapshot!(insta::internals::AutoName, output, code);
+}"
+    );
 }
 
 #[test]
 fn folds_multiline_constant() {
-    let code = "pub const xs = [
+    assert_folding!(
+        "pub const xs = [
   1,
   2,
-]";
-
-    let output = folding_snapshot_output(TestProject::for_source(code));
-    insta::assert_snapshot!(insta::internals::AutoName, output, code);
+]"
+    );
 }
 
 #[test]
 fn folds_multiline_type_alias() {
-    let code = "pub type Pair =
-  #(Int, Int)";
-
-    let output = folding_snapshot_output(TestProject::for_source(code));
-    insta::assert_snapshot!(insta::internals::AutoName, output, code);
+    assert_folding!(
+        "pub type Pair =
+  #(Int, Int)"
+    );
 }
 
 #[test]
-fn does_not_fold_single_line_top_level_definitions() {
-    let code = "pub type W { W(Int) }
-pub const x = 1
-pub type Pair = #(Int, Int)
-pub fn main() { 1 }";
+fn does_not_fold_single_line_custom_type() {
+    assert_folding!("pub type W { W(Int) }");
+}
 
-    let output = folding_snapshot_output(TestProject::for_source(code));
-    insta::assert_snapshot!(insta::internals::AutoName, output, code);
+#[test]
+fn does_not_fold_single_line_constant() {
+    assert_folding!("pub const x = 1");
+}
+
+#[test]
+fn does_not_fold_single_line_type_alias() {
+    assert_folding!("pub type Pair = #(Int, Int)");
 }
 
 #[test]
@@ -196,17 +203,18 @@ pub fn main() {
   1
 }";
 
-    let output = folding_snapshot_output(
+    assert_folding!(
         TestProject::for_source(code)
             .add_dep_module("one", "pub fn value() { 1 }")
             .add_dep_module("two", "pub fn value() { 2 }"),
+        code
     );
-    insta::assert_snapshot!(insta::internals::AutoName, output, code);
 }
 
 #[test]
 fn folds_only_multiline_functions_in_source_order() {
-    let code = "pub fn one() {
+    assert_folding!(
+        "pub fn one() {
   1
 }
 
@@ -214,8 +222,6 @@ pub fn two() { 2 }
 
 pub fn three() {
   3
-}";
-
-    let output = folding_snapshot_output(TestProject::for_source(code));
-    insta::assert_snapshot!(insta::internals::AutoName, output, code);
+}"
+    );
 }

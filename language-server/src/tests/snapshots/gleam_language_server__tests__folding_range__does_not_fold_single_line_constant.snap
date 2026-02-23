@@ -1,0 +1,10 @@
+---
+source: language-server/src/tests/folding_range.rs
+expression: pub const x = 1
+snapshot_kind: text
+---
+----- Code -----
+pub const x = 1
+
+----- Ranges -----
+(none)
