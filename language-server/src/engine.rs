@@ -1195,17 +1195,23 @@ fn import_folding_spans(
         return spans;
     };
 
+    let mut previous_line = src_span_to_lsp_range(
+        SrcSpan::new(first_import.location.start, first_import.location.start),
+        line_numbers,
+    )
+    .start
+    .line;
     let mut current_start = first_import.location.start;
     let mut current_end = first_import.location.end;
     let mut current_len = 1;
 
     for import in imports {
-        let previous_span = SrcSpan::new(current_end, current_end);
-        let next_span = SrcSpan::new(import.location.start, import.location.start);
-        let previous_line = src_span_to_lsp_range(previous_span, line_numbers)
-            .start
-            .line;
-        let next_line = src_span_to_lsp_range(next_span, line_numbers).start.line;
+        let next_line = src_span_to_lsp_range(
+            SrcSpan::new(import.location.start, import.location.start),
+            line_numbers,
+        )
+        .start
+        .line;
         let separated_by_blank_line = next_line > previous_line + 1;
         let between = &code[current_end as usize..import.location.start as usize];
         let has_non_whitespace_between = between.chars().any(|char| !char.is_whitespace());
@@ -1221,6 +1227,8 @@ fn import_folding_spans(
             current_end = import.location.end;
             current_len += 1;
         }
+
+        previous_line = next_line;
     }
 
     if current_len > 1 {
