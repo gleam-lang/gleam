@@ -21,69 +21,69 @@ const my_constant = a|
 Error
   kind:   Constructor
   detail: gleam
-  sort:   4_Error
+  sort:   5_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   5_False
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   4_Nil
+  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   4_Ok
+  sort:   5_Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   5_True
 Wibble
   kind:   EnumMember
   detail: Wibble
-  sort:   2_Wibble
+  sort:   3_Wibble
   desc:   app
   edits:
     [13:20-13:21]: "Wibble"
 Wobble
   kind:   EnumMember
   detail: Wibble
-  sort:   3_Wobble
+  sort:   4_Wobble
   desc:   app
   edits:
     [13:20-13:21]: "Wobble"
 my_constant
   kind:   Constant
   detail: a
-  sort:   2_my_constant
+  sort:   3_my_constant
   desc:   app
   edits:
     [13:20-13:21]: "my_constant"
 pi
   kind:   Constant
   detail: Float
-  sort:   2_pi
+  sort:   3_pi
   desc:   app
   edits:
     [13:20-13:21]: "pi"
 some_function
   kind:   Function
   detail: fn() -> a
-  sort:   2_some_function
+  sort:   3_some_function
   desc:   app
   edits:
     [13:20-13:21]: "some_function"
 wibble.Wobble
   kind:   EnumMember
   detail: Wibble
-  sort:   3_wibble.Wobble
+  sort:   4_wibble.Wobble
   desc:   app
   edits:
     [13:20-13:21]: "wibble.Wobble"
 wibble.Wubble
   kind:   EnumMember
   detail: Wibble
-  sort:   3_wibble.Wubble
+  sort:   4_wibble.Wubble
   desc:   app
   edits:
     [13:20-13:21]: "wibble.Wubble"

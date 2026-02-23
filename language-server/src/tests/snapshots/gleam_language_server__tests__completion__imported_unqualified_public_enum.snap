@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\nimport dep.{Left}\n"
 ---
 |
@@ -10,41 +10,41 @@ import dep.{Left}
 Error
   kind:   Constructor
   detail: gleam
-  sort:   4_Error
+  sort:   5_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   5_False
 Left
   kind:   EnumMember
   detail: Direction
-  sort:   3_Left
+  sort:   4_Left
   desc:   app
   edits:
     [1:0-1:0]: "Left"
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   4_Nil
+  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   4_Ok
+  sort:   5_Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   5_True
 dep.Left
   kind:   EnumMember
   detail: Direction
-  sort:   3_dep.Left
+  sort:   4_dep.Left
   desc:   app
   edits:
     [1:0-1:0]: "dep.Left"
 dep.Right
   kind:   EnumMember
   detail: Direction
-  sort:   3_dep.Right
+  sort:   4_dep.Right
   desc:   app
   edits:
     [1:0-1:0]: "dep.Right"

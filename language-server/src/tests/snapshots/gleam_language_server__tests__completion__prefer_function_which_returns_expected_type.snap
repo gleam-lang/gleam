@@ -15,48 +15,48 @@ fn addf(a, b) { a +. b }
 Error
   kind:   Constructor
   detail: gleam
-  sort:   4_Error
+  sort:   5_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   5_False
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   4_Nil
+  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   4_Ok
+  sort:   5_Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   5_True
 add
   kind:   Function
   detail: fn(Int, Int) -> Int
-  sort:   02_add
+  sort:   03_add
   desc:   app
   edits:
     [2:2-2:3]: "add"
 addf
   kind:   Function
   detail: fn(Float, Float) -> Float
-  sort:   2_addf
+  sort:   3_addf
   desc:   app
   edits:
     [2:2-2:3]: "addf"
 main
   kind:   Function
   detail: fn() -> Int
-  sort:   02_main
+  sort:   03_main
   desc:   app
   edits:
     [2:2-2:3]: "main"
 sub
   kind:   Function
   detail: fn(Int, Int) -> Int
-  sort:   02_sub
+  sort:   03_sub
   desc:   app
   edits:
     [2:2-2:3]: "sub"

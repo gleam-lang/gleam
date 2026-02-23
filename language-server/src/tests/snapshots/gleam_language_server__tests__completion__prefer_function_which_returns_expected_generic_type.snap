@@ -13,34 +13,34 @@ pub fn main() -> Result(Int, Nil) {
 Error
   kind:   Constructor
   detail: gleam
-  sort:   04_Error
+  sort:   05_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   5_False
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   4_Nil
+  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   04_Ok
+  sort:   05_Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   5_True
 main
   kind:   Function
   detail: fn() -> Result(Int, Nil)
-  sort:   02_main
+  sort:   03_main
   desc:   app
   edits:
     [4:2-4:3]: "main"
 result
   kind:   Variable
   detail: Result(Int, a)
-  sort:   02_result
+  sort:   03_result
   desc:   app
   docs:   "A locally defined variable."
   edits:
@@ -48,7 +48,7 @@ result
 result2
   kind:   Variable
   detail: Result(a, Bool)
-  sort:   2_result2
+  sort:   3_result2
   desc:   app
   docs:   "A locally defined variable."
   edits:

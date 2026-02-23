@@ -14,34 +14,34 @@ pub fn main(wibble: Int) {
 Error
   kind:   Constructor
   detail: gleam
-  sort:   4_Error
+  sort:   5_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   5_False
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   4_Nil
+  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   4_Ok
+  sort:   5_Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   5_True
 main
   kind:   Function
   detail: fn(Int) -> Int
-  sort:   2_main
+  sort:   3_main
   desc:   app
   edits:
     [3:2-3:3]: "main"
 wibble
   kind:   Variable
   detail: Int
-  sort:   2_wibble
+  sort:   3_wibble
   desc:   app
   docs:   "A locally defined variable."
   edits:
@@ -49,7 +49,7 @@ wibble
 wobble
   kind:   Variable
   detail: Int
-  sort:   2_wobble
+  sort:   3_wobble
   desc:   app
   docs:   "A locally defined variable."
   edits:

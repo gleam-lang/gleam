@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\nfn wibble(wibble arg1: String, wobble arg2: String) {\n  arg1 <> arg2\n}\n\nfn fun() { // completion inside parens below includes labels\n  let wibble = wibble()\n}\n"
 ---
 fn wibble(wibble arg1: String, wobble arg2: String) {
@@ -15,42 +15,42 @@ fn fun() { // completion inside parens below includes labels
 Error
   kind:   Constructor
   detail: gleam
-  sort:   4_Error
+  sort:   5_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   5_False
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   4_Nil
+  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   4_Ok
+  sort:   5_Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   5_True
 fun
   kind:   Function
   detail: fn() -> String
-  sort:   2_fun
+  sort:   3_fun
   desc:   app
   edits:
     [6:22-6:22]: "fun"
 wibble
   kind:   Function
   detail: fn(String, String) -> String
-  sort:   2_wibble
+  sort:   3_wibble
   desc:   app
   edits:
     [6:22-6:22]: "wibble"
 wibble:
   kind:   Field
   detail: String
-  sort:   0_wibble:
+  sort:   1_wibble:
 wobble:
   kind:   Field
   detail: String
-  sort:   0_wobble:
+  sort:   1_wobble:

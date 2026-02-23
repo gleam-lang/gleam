@@ -22,7 +22,7 @@ pub fn show_complete(code: &str, position: Position) -> String {
     str
 }
 
-fn apply_conversion(src: &str, completions: Vec<CompletionItem>, value: &str) -> String {
+fn apply_completion(src: &str, completions: Vec<CompletionItem>, value: &str) -> String {
     let completion = completions
         .iter()
         .find(|c| c.label == value)
@@ -43,7 +43,7 @@ macro_rules! assert_apply_completion {
         let output = format!(
             "{}\n\n----- After applying completion -----\n{}",
             show_complete(src, $position),
-            apply_conversion(src, completions, $name)
+            apply_completion(src, completions, $name)
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, src);
     };
@@ -2319,5 +2319,32 @@ pub fn new() {
     assert_completion!(
         TestProject::for_source(code).add_dep_module("gleam/list", dep),
         Position::new(4, 8)
+    );
+}
+
+#[test]
+fn complete_keyword_being_typed() {
+    assert_apply_completion!(
+        TestProject::for_source("pub fn main() { t }"),
+        "todo",
+        Position::new(0, 17)
+    );
+}
+
+#[test]
+fn complete_echo_keyword() {
+    assert_apply_completion!(
+        TestProject::for_source("pub fn main() { e wibble }"),
+        "echo",
+        Position::new(0, 17)
+    );
+}
+
+#[test]
+fn complete_panic_keyword() {
+    assert_apply_completion!(
+        TestProject::for_source("pub fn main() { wibble(p) }"),
+        "panic",
+        Position::new(0, 24)
     );
 }

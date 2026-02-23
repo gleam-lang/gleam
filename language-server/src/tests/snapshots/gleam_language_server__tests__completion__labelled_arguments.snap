@@ -15,42 +15,42 @@ pub fn main() {
 Error
   kind:   Constructor
   detail: gleam
-  sort:   4_Error
+  sort:   5_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   5_False
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   4_Nil
+  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   4_Ok
+  sort:   5_Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   5_True
 Wibble
   kind:   Constructor
   detail: fn(Int, Float) -> Wibble
-  sort:   2_Wibble
+  sort:   3_Wibble
   desc:   app
   edits:
     [6:9-6:10]: "Wibble"
 main
   kind:   Function
   detail: fn() -> Wibble
-  sort:   2_main
+  sort:   3_main
   desc:   app
   edits:
     [6:9-6:10]: "main"
 wibble:
   kind:   Field
   detail: Int
-  sort:   0_wibble:
+  sort:   1_wibble:
 wobble:
   kind:   Field
   detail: Float
-  sort:   0_wobble:
+  sort:   1_wobble:

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\npub type Direction {\n  /// Hello\n  Left\n  /// Goodbye\n  Right\n}\n"
 ---
 |
@@ -15,15 +15,15 @@ pub type Direction {
 Error
   kind:   Constructor
   detail: gleam
-  sort:   4_Error
+  sort:   5_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   5_False
 Left
   kind:   EnumMember
   detail: Direction
-  sort:   2_Left
+  sort:   3_Left
   desc:   app
   docs:   " Hello\n"
   edits:
@@ -31,15 +31,15 @@ Left
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   4_Nil
+  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   4_Ok
+  sort:   5_Ok
 Right
   kind:   EnumMember
   detail: Direction
-  sort:   2_Right
+  sort:   3_Right
   desc:   app
   docs:   " Goodbye\n"
   edits:
@@ -47,4 +47,4 @@ Right
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   5_True

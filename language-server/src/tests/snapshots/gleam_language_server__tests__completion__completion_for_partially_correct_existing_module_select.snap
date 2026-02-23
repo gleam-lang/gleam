@@ -14,7 +14,7 @@ pub fn new() {
 list.filter
   kind:   Function
   detail: fn() -> a
-  sort:   3_list.filter
+  sort:   4_list.filter
   desc:   app
   edits:
     [4:2-4:10]: "list.filter"

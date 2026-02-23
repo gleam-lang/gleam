@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\npub fn wibble(\n  _: String,\n) -> Nil {\n  Nil\n}\n"
 ---
 pub fn wibble(
@@ -13,36 +13,36 @@ pub fn wibble(
 BitArray
   kind:   Class
   detail: Type
-  sort:   4_BitArray
+  sort:   5_BitArray
 Bool
   kind:   Class
   detail: Type
-  sort:   4_Bool
+  sort:   5_Bool
 Float
   kind:   Class
   detail: Type
-  sort:   4_Float
+  sort:   5_Float
 Int
   kind:   Class
   detail: Type
-  sort:   4_Int
+  sort:   5_Int
 List
   kind:   Class
   detail: Type
-  sort:   4_List
+  sort:   5_List
 Nil
   kind:   Class
   detail: Type
-  sort:   4_Nil
+  sort:   5_Nil
 Result
   kind:   Class
   detail: Type
-  sort:   4_Result
+  sort:   5_Result
 String
   kind:   Class
   detail: Type
-  sort:   4_String
+  sort:   5_String
 UtfCodepoint
   kind:   Class
   detail: Type
-  sort:   4_UtfCodepoint
+  sort:   5_UtfCodepoint

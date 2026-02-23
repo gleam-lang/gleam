@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\npub fn main() {\n  let x = 1\n  let x = [1, 2]\n\n}\n"
 ---
 pub fn main() {
@@ -13,34 +13,34 @@ pub fn main() {
 Error
   kind:   Constructor
   detail: gleam
-  sort:   4_Error
+  sort:   5_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   5_False
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   4_Nil
+  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   4_Ok
+  sort:   5_Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   5_True
 main
   kind:   Function
   detail: fn() -> List(Int)
-  sort:   2_main
+  sort:   3_main
   desc:   app
   edits:
     [4:0-4:0]: "main"
 x
   kind:   Variable
   detail: List(Int)
-  sort:   2_x
+  sort:   3_x
   desc:   app
   docs:   "A locally defined variable."
   edits:

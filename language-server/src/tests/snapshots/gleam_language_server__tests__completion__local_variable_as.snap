@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\nfn wibble() {\n  let b as c = 5\n\n}\n"
 ---
 fn wibble() {
@@ -12,27 +12,27 @@ fn wibble() {
 Error
   kind:   Constructor
   detail: gleam
-  sort:   4_Error
+  sort:   5_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   5_False
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   4_Nil
+  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   4_Ok
+  sort:   5_Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   5_True
 b
   kind:   Variable
   detail: Int
-  sort:   2_b
+  sort:   3_b
   desc:   app
   docs:   "A locally defined variable."
   edits:
@@ -40,7 +40,7 @@ b
 c
   kind:   Variable
   detail: Int
-  sort:   2_c
+  sort:   3_c
   desc:   app
   docs:   "A locally defined variable."
   edits:
@@ -48,7 +48,7 @@ c
 wibble
   kind:   Function
   detail: fn() -> Int
-  sort:   2_wibble
+  sort:   3_wibble
   desc:   app
   edits:
     [3:0-3:0]: "wibble"

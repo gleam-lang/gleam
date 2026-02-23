@@ -13,38 +13,38 @@ pub fn main() {
 Error
   kind:   Constructor
   detail: gleam
-  sort:   4_Error
+  sort:   5_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   5_False
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   4_Nil
+  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   4_Ok
+  sort:   5_Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   5_True
 by:
   kind:   Field
   detail: Int
-  sort:   0_by:
+  sort:   1_by:
 main
   kind:   Function
   detail: fn() -> Int
-  sort:   2_main
+  sort:   3_main
   desc:   app
   edits:
     [4:20-4:21]: "main"
 wibble.divide
   kind:   Function
   detail: fn(Int, Int) -> Int
-  sort:   3_wibble.divide
+  sort:   4_wibble.divide
   desc:   app
   edits:
     [4:20-4:21]: "wibble.divide"

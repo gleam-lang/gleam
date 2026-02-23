@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: import dep
 ---
 |import dep
@@ -9,48 +9,48 @@ expression: import dep
 Error
   kind:   Constructor
   detail: gleam
-  sort:   4_Error
+  sort:   5_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   5_False
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   4_Nil
+  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   4_Ok
+  sort:   5_Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   5_True
 dep.Wobble
   kind:   EnumMember
   detail: Wibble
-  sort:   3_dep.Wobble
+  sort:   4_dep.Wobble
   desc:   app
   edits:
     [1:0-1:0]: "dep.Wobble"
 dep.main
   kind:   Function
   detail: fn() -> Int
-  sort:   3_dep.main
+  sort:   4_dep.main
   desc:   app
   edits:
     [1:0-1:0]: "dep.main"
 dep.random_float
   kind:   Function
   detail: fn() -> Float
-  sort:   3_dep.random_float
+  sort:   4_dep.random_float
   desc:   app
   edits:
     [1:0-1:0]: "dep.random_float"
 dep.wibble
   kind:   Constant
   detail: Int
-  sort:   3_dep.wibble
+  sort:   4_dep.wibble
   desc:   app
   edits:
     [1:0-1:0]: "dep.wibble"

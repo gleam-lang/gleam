@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\nimport dep\n\nfn fun() { // completion inside parens below includes labels\n  let wibble = dep.Wibble()\n}\n"
 ---
 import dep
@@ -13,42 +13,42 @@ fn fun() { // completion inside parens below includes labels
 Error
   kind:   Constructor
   detail: gleam
-  sort:   4_Error
+  sort:   5_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   5_False
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   4_Nil
+  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   4_Ok
+  sort:   5_Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   5_True
 dep.Wibble
   kind:   Constructor
   detail: fn(String, Int) -> Wibble
-  sort:   3_dep.Wibble
+  sort:   4_dep.Wibble
   desc:   app
   edits:
     [4:26-4:26]: "dep.Wibble"
 fun
   kind:   Function
   detail: fn() -> Wibble
-  sort:   2_fun
+  sort:   3_fun
   desc:   app
   edits:
     [4:26-4:26]: "fun"
 wibble:
   kind:   Field
   detail: String
-  sort:   0_wibble:
+  sort:   1_wibble:
 wobble:
   kind:   Field
   detail: Int
-  sort:   0_wobble:
+  sort:   1_wobble:

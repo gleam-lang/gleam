@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\ntype Wibble {\n  Wibble(a: Int, b: Int, c: Int, d: Int)\n  Wobble(z: Bool)\n}\n\nfn fun(some_wibble: Wibble) {\n  case some_wibble {\n    Wibble(..) as w -> w.a\n    Wobble(..) -> panic\n  }\n}\n"
 ---
 type Wibble {
@@ -19,16 +19,16 @@ fn fun(some_wibble: Wibble) {
 a
   kind:   Field
   detail: Int
-  sort:   01_a
+  sort:   02_a
 b
   kind:   Field
   detail: Int
-  sort:   01_b
+  sort:   02_b
 c
   kind:   Field
   detail: Int
-  sort:   01_c
+  sort:   02_c
 d
   kind:   Field
   detail: Int
-  sort:   01_d
+  sort:   02_d

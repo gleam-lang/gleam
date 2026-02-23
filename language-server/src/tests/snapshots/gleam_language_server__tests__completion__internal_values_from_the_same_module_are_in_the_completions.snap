@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\n@external(erlang, \"rand\", \"uniform\")\n@internal pub fn random_float() -> Float\n@internal pub fn main() { 0 }\n@internal pub type Wibble { Wobble }\n@internal pub const wibble = 1\n"
 ---
 |
@@ -14,48 +14,48 @@ expression: "\n@external(erlang, \"rand\", \"uniform\")\n@internal pub fn random
 Error
   kind:   Constructor
   detail: gleam
-  sort:   4_Error
+  sort:   5_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   5_False
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   4_Nil
+  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   4_Ok
+  sort:   5_Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   5_True
 Wobble
   kind:   EnumMember
   detail: Wibble
-  sort:   2_Wobble
+  sort:   3_Wobble
   desc:   app
   edits:
     [1:0-1:0]: "Wobble"
 main
   kind:   Function
   detail: fn() -> Int
-  sort:   2_main
+  sort:   3_main
   desc:   app
   edits:
     [1:0-1:0]: "main"
 random_float
   kind:   Function
   detail: fn() -> Float
-  sort:   2_random_float
+  sort:   3_random_float
   desc:   app
   edits:
     [1:0-1:0]: "random_float"
 wibble
   kind:   Constant
   detail: Int
-  sort:   2_wibble
+  sort:   3_wibble
   desc:   app
   edits:
     [1:0-1:0]: "wibble"

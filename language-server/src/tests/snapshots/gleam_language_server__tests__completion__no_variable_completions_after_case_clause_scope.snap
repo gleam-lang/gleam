@@ -15,34 +15,34 @@ pub fn main() {
 Error
   kind:   Constructor
   detail: gleam
-  sort:   4_Error
+  sort:   5_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   5_False
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   04_Nil
+  sort:   05_Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   4_Ok
+  sort:   5_Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   5_True
 main
   kind:   Function
   detail: fn() -> a
-  sort:   2_main
+  sort:   3_main
   desc:   app
   edits:
     [4:22-4:23]: "main"
 something_else
   kind:   Variable
   detail: a
-  sort:   02_something_else
+  sort:   03_something_else
   desc:   app
   docs:   "A locally defined variable."
   edits:

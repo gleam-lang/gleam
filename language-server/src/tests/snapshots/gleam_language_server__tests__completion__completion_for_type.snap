@@ -9,5 +9,5 @@ pub fn new() -> wibble.|Wibble {}
 wibble.Wibble
   kind:   Class
   detail: Type
-  sort:   5_wibble.Wibble
+  sort:   6_wibble.Wibble
     [0:0-0:0]: "import wibble\n\n"

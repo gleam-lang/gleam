@@ -16,34 +16,34 @@ fn wibble() {
 Error
   kind:   Constructor
   detail: gleam
-  sort:   4_Error
+  sort:   5_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   04_False
+  sort:   05_False
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   4_Nil
+  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   4_Ok
+  sort:   5_Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   04_True
+  sort:   05_True
 Wobble
   kind:   Constructor
   detail: fn(List(#(Bool))) -> Wibble
-  sort:   2_Wobble
+  sort:   3_Wobble
   desc:   app
   edits:
     [5:4-5:7]: "Wobble"
 wibble
   kind:   Variable
   detail: Bool
-  sort:   02_wibble
+  sort:   03_wibble
   desc:   app
   docs:   "A locally defined variable."
   edits:
@@ -51,5 +51,5 @@ wibble
 wibble
   kind:   Function
   detail: fn() -> a
-  sort:   2_wibble
+  sort:   3_wibble
   desc:   app

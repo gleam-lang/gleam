@@ -1,0 +1,9 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "pub fn main() { e wibble }"
+---
+pub fn main() { e| wibble }
+
+
+----- After applying completion -----
+pub fn main() { echo wibble }

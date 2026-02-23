@@ -13,27 +13,27 @@ pub fn main() {
 Error
   kind:   Constructor
   detail: gleam
-  sort:   4_Error
+  sort:   5_Error
 False
   kind:   EnumMember
   detail: gleam
-  sort:   4_False
+  sort:   5_False
 Nil
   kind:   EnumMember
   detail: gleam
-  sort:   4_Nil
+  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
-  sort:   4_Ok
+  sort:   5_Ok
 True
   kind:   EnumMember
   detail: gleam
-  sort:   4_True
+  sort:   5_True
 add_one
   kind:   Variable
   detail: fn(Int) -> Int
-  sort:   02_add_one
+  sort:   03_add_one
   desc:   app
   docs:   "A locally defined variable."
   edits:
@@ -41,14 +41,14 @@ add_one
 main
   kind:   Function
   detail: fn() -> Int
-  sort:   2_main
+  sort:   3_main
   desc:   app
   edits:
     [4:12-4:19]: "main"
 wobble
   kind:   Variable
   detail: Int
-  sort:   2_wobble
+  sort:   3_wobble
   desc:   app
   docs:   "A locally defined variable."
   edits:

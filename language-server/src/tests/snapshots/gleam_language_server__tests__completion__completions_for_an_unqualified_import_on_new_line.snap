@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\nimport dep.{\n  wibble,\n\n}\n\npub fn main() {\n  0\n}"
 ---
 import dep.{
@@ -16,13 +16,13 @@ pub fn main() {
 Wibble
   kind:   Class
   detail: Type
-  sort:   3_Wibble
+  sort:   4_Wibble
   edits:
     [3:0-3:0]: "type Wibble"
 myfun
   kind:   Function
   detail: fn() -> Int
-  sort:   3_myfun
+  sort:   4_myfun
   desc:   dep
   edits:
     [3:0-3:0]: "myfun"

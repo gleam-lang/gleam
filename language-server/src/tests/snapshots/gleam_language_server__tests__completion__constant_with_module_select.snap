@@ -21,28 +21,28 @@ const my_constant = wibble.W|
 wibble.Wobble
   kind:   EnumMember
   detail: Wibble
-  sort:   3_wibble.Wobble
+  sort:   4_wibble.Wobble
   desc:   app
   edits:
     [13:20-13:28]: "wibble.Wobble"
 wibble.Wubble
   kind:   EnumMember
   detail: Wibble
-  sort:   3_wibble.Wubble
+  sort:   4_wibble.Wubble
   desc:   app
   edits:
     [13:20-13:28]: "wibble.Wubble"
 wibble.some_constant
   kind:   Constant
   detail: Int
-  sort:   3_wibble.some_constant
+  sort:   4_wibble.some_constant
   desc:   app
   edits:
     [13:20-13:28]: "wibble.some_constant"
 wibble.some_function
   kind:   Function
   detail: fn() -> a
-  sort:   3_wibble.some_function
+  sort:   4_wibble.some_function
   desc:   app
   edits:
     [13:20-13:28]: "wibble.some_function"
