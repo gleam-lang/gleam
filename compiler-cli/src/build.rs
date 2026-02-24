@@ -1,9 +1,10 @@
-use std::{rc::Rc, time::Instant};
+use std::{collections::HashSet, rc::Rc, time::Instant};
 
 use gleam_core::{
     Result,
-    build::{Built, Codegen, NullTelemetry, Options, ProjectCompiler, Telemetry},
-    manifest::Manifest,
+    build::{Built, Codegen, Mode, NullTelemetry, Options, ProjectCompiler, Telemetry},
+    config::PackageConfig,
+    manifest::{Manifest, ManifestPackage},
     paths::ProjectPaths,
     warning::WarningEmitterIO,
 };
@@ -52,13 +53,18 @@ pub(crate) fn main_with_warnings(
         options.target.unwrap_or(root_config.target),
     )?;
 
+    let packages = match options.mode {
+        Mode::Prod => prod_only_packages(&root_config, manifest.packages),
+        Mode::Dev | Mode::Lsp => manifest.packages,
+    };
+
     tracing::info!("Compiling packages");
     let result = {
         let _guard = lock.lock(telemetry);
         let compiler = ProjectCompiler::new(
             root_config,
             options,
-            manifest.packages,
+            packages,
             telemetry,
             warnings,
             paths.clone(),
@@ -73,4 +79,32 @@ pub(crate) fn main_with_warnings(
     };
 
     Ok(result)
+}
+
+/// Filter manifest packages to only those transitively reachable from
+/// production dependencies, excluding dev-only dependencies.
+fn prod_only_packages(
+    config: &PackageConfig,
+    packages: Vec<ManifestPackage>,
+) -> Vec<ManifestPackage> {
+    let index: std::collections::HashMap<&str, &ManifestPackage> =
+        packages.iter().map(|p| (p.name.as_str(), p)).collect();
+
+    let mut needed: HashSet<String> = HashSet::new();
+    let mut queue: Vec<String> = config.dependencies.keys().map(|s| s.to_string()).collect();
+
+    while let Some(name) = queue.pop() {
+        if needed.insert(name.clone()) {
+            if let Some(pkg) = index.get(name.as_str()) {
+                for req in &pkg.requirements {
+                    queue.push(req.to_string());
+                }
+            }
+        }
+    }
+
+    packages
+        .into_iter()
+        .filter(|p| needed.contains(p.name.as_str()))
+        .collect()
 }
