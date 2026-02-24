@@ -42,6 +42,10 @@
   8 characters in length.
   ([Louis Pilfold](https://github.com/lpil))
 
+- The `gleam help add`, `gleam help deps`, and `gleam help docs` commands have
+  been improved with much more detailed documentation output.
+  ([Louis Pilfold](https://github.com/lpil))
+
 - The build tool now emits errors for unknown fields in package config,
   except for the ones under `[tools]`. For example, with this:
 

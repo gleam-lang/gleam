@@ -148,10 +148,11 @@ struct TreeOptions {
 enum Command {
     /// Build the project
     Build {
-        /// Emit compile time warnings as errors
+        /// Consider the build failed if the package contains any warnings
         #[arg(long)]
         warnings_as_errors: bool,
 
+        /// Which compilation target to use
         #[arg(short, long, ignore_case = true, help = target_doc())]
         target: Option<Target>,
 
@@ -162,15 +163,21 @@ enum Command {
 
     /// Type check the project
     Check {
+        /// Which compilation target to use
         #[arg(short, long, ignore_case = true, help = target_doc())]
         target: Option<Target>,
     },
 
-    /// Publish the project to the Hex package manager
+    /// Publish the project to the Hex package repository
     ///
-    /// This command uses the environment variable:
+    /// Please ensure your package is suitable for production use before
+    /// publishing. If you have a prototype package that you wish to use
+    /// in another project then use git dependencies instead of publishing
+    /// to the package repository.
     ///
-    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
+    /// This command optionally accepts the environment variable
+    /// `HEXPM_API_KEY`, which can hold a Hex API key to authenticate
+    /// with Hex.
     ///
     #[command(verbatim_doc_comment)]
     Publish {
@@ -180,12 +187,91 @@ enum Command {
         yes: bool,
     },
 
-    /// Render HTML documentation
-    #[command(subcommand)]
+    /// Render HTML documentation for the package
+    ///
+    /// There are several options in `gleam.toml` that can be used to
+    /// configure the output.
+    ///
+    ///    repository = { type = "github", user = "lpil", repo = "wibble" }
+    ///
+    /// Specify the location of the source code repository for the package.
+    /// This will add a link to the side bar, and add "view code" links for
+    /// the documented types and values.
+    ///
+    ///    links = [
+    ///      { title = "Home page", href = "https://example.com" },
+    ///      { title = "Other site", href = "https://another.example.com" },
+    ///    ]
+    ///
+    /// Specify some additional links to include in the sidebar.
+    ///
+    ///    [documentation]
+    ///    pages = [
+    ///      { title = "My Page", path = "my-page.html", source = "./path/to/my-page.md" },
+    ///    ]
+    ///
+    /// Specify additional markdown pages to include in the documentation,
+    /// with links for each added to the sidebar.
+    ///
+    #[command(subcommand, verbatim_doc_comment)]
     Docs(Docs),
 
     /// Work with dependency packages
-    #[command(subcommand)]
+    ///
+    /// The packages and the acceptable version ranges are specified in
+    /// `gleam.toml`. You can edit this file manually, or use the `gleam add`
+    /// and `gleam remove` commands.
+    ///
+    /// Packge versions follow semantic versioning: MAJOR.MINOR.PATCH.
+    /// - Major updates include breaking changes, either type changes or
+    ///   semantic changes.
+    /// - Minor updates include new functionality, but no breaking changes.
+    /// - Patch updates include only bug fixes.
+    ///
+    /// Dependency resolution will be performed automatically by any command
+    /// that builds your project. Once versions have been selected they are
+    /// written to `manifest.toml`, which locks the package to those versions,
+    /// make your build deterministic. You should not edit this file manually.
+    ///
+    /// To upgrade the dependencies you can use the `gleam update` command,
+    /// which will select the newest versions compatible with the requirements
+    /// in `gleam.toml`.
+    ///
+    /// The `[dependencies]` section of `gleam.toml` holds the production
+    /// dependencies. These are included in your production application, or
+    /// are used as the dependencies when published as a library. The
+    /// `[dev_dependencies]` section holds dependencies that are only used
+    /// during development. e.g. code used for testing the package.
+    ///
+    /// ## Syntax examples:
+    ///
+    ///    [dependencies]
+    ///    wibble = ">= 1.2.0 and < 2.0.0"
+    ///
+    /// Require the package `wibble`, permitting versions greater than or
+    /// equal to 1.2.0, but lower than 2.0.0.
+    ///
+    ///    [dependencies]
+    ///    wibble = ">= 1.2.0 and < 2.0.0 and != 1.4.1"
+    ///
+    /// Permit a range, but deny a specific version within that range. This
+    /// could be useful if there is a version known to have a bug.
+    ///
+    ///    [dependencies]
+    ///    wibble = { git = "https://example.com/wibble.git", ref = "a8b3c5d82" }
+    ///
+    /// A dependency fetched from git instead of from Hex. This is useful
+    /// for using packages of yours that are not-yet production-ready, or
+    /// for bug fixes that have not yet been published to Hex.
+    ///
+    ///    [dependencies]
+    ///    wibble = { path = "../wibble" }
+    ///
+    /// A local dependency, on your computer. This is useful for testing and
+    /// and for applications made of multiple packages in a single version
+    /// control repository.
+    ///
+    #[command(subcommand, verbatim_doc_comment)]
     Deps(Dependencies),
 
     /// Update dependency packages to their latest versions
@@ -200,22 +286,23 @@ enum Command {
 
     /// Format source code
     Format {
-        /// Files to format
+        /// The files or directories to format
         #[arg(default_value = ".")]
         files: Vec<String>,
 
-        /// Read source from STDIN
+        /// Read source from standard-input
         #[arg(long)]
         stdin: bool,
 
-        /// Check if inputs are formatted without changing them
+        /// Only check if inputs are formatted correctly, erroring if they are not
         #[arg(long)]
         check: bool,
     },
+
     /// Rewrite deprecated Gleam code
     Fix,
 
-    /// Start an Erlang shell
+    /// Start an Erlang REPL with the Gleam code loaded
     Shell,
 
     /// Run the project
@@ -268,15 +355,44 @@ enum Command {
         arguments: Vec<String>,
     },
 
-    /// Compile a single Gleam package
-    #[command(hide = true)]
+    /// A low-level API for compiling a single Gleam package
+    ///
+    /// This is to be used by other build tools to implement support for Gleam
+    /// code. It is not used directly by humans.
+    ///
+    #[command(verbatim_doc_comment)]
     CompilePackage(CompilePackage),
 
     /// Read and print gleam.toml for debugging
     #[command(hide = true)]
     PrintConfig,
 
-    /// Add new project dependencies
+    /// Add new dependencies
+    ///
+    /// The newest compatible version of the package is determined, and then
+    /// `gleam.toml` is updated to require at least that version, with a range
+    /// permitting future patch and minor updates.
+    ///
+    /// Add the package "wibble":
+    ///     gleam add wibble
+    ///
+    /// Add the package "wibble", requiring version v2.0.0 or higher:
+    ///     gleam add wibble@2
+    ///
+    /// Add the package "wibble", requiring version v2.5.1 or higher:
+    ///     gleam add wibble@2.5.1
+    ///
+    /// Add multiple packages:
+    ///     gleam add wibble@2 warble@1
+    ///
+    /// Add a package as a non-production dependency.
+    ///     gleam add --dev wibble
+    ///
+    /// You can also edit `gleam.toml` directly, for further control over your
+    /// package dependencies. Run `gleam help deps` for documentation on the
+    /// format.
+    ///
+    #[command(verbatim_doc_comment)]
     Add {
         /// The names of Hex packages to add
         #[arg(required = true)]
@@ -294,7 +410,7 @@ enum Command {
         packages: Vec<String>,
     },
 
-    /// Clean build artifacts
+    /// Delete any build artifacts for this project
     Clean,
 
     /// Run the language server, to be used by editors
@@ -392,7 +508,7 @@ pub struct CompilePackage {
     #[arg(verbatim_doc_comment, long = "javascript-prelude")]
     javascript_prelude: Option<Utf8PathBuf>,
 
-    /// Skip Erlang to BEAM bytecode compilation if given
+    /// Skip Erlang to BEAM bytecode compilation
     #[arg(long = "no-beam")]
     skip_beam_compilation: bool,
 }
