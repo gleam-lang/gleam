@@ -222,7 +222,7 @@ enum Command {
     /// `gleam.toml`. You can edit this file manually, or use the `gleam add`
     /// and `gleam remove` commands.
     ///
-    /// Packge versions follow semantic versioning: MAJOR.MINOR.PATCH.
+    /// Package versions follow semantic versioning: MAJOR.MINOR.PATCH.
     /// - Major updates include breaking changes, either type changes or
     ///   semantic changes.
     /// - Minor updates include new functionality, but no breaking changes.
@@ -241,7 +241,7 @@ enum Command {
     /// dependencies. These are included in your production application, or
     /// are used as the dependencies when published as a library. The
     /// `[dev_dependencies]` section holds dependencies that are only used
-    /// during development. e.g. code used for testing the package.
+    /// during development, e.g. code used for testing the package.
     ///
     /// ## Syntax examples:
     ///
@@ -382,10 +382,10 @@ target: Option<Target>,
     /// Add the package "wibble":
     ///     gleam add wibble
     ///
-    /// Add the package "wibble", requiring version v2.0.0 or higher:
+    /// Add the package "wibble", requiring version >= v2.0.0 and < v3.0.0:
     ///     gleam add wibble@2
     ///
-    /// Add the package "wibble", requiring version v2.5.1 or higher:
+    /// Add the package "wibble", requiring version >= v2.5.1 and < v3.0.0:
     ///     gleam add wibble@2.5.1
     ///
     /// Add multiple packages:
