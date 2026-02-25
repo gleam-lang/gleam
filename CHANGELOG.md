@@ -46,29 +46,6 @@
   been improved with much more detailed documentation output.
   ([Louis Pilfold](https://github.com/lpil))
 
-- The build tool now emits errors for unknown fields in package config,
-  except for the ones under `[tools]`. For example, with this:
-
-  ```toml
-  name = "hello"
-  version = "1.0.0"
-
-  [tools.my-tool]
-  my-awesome-setting = true
-  ```
-
-  Building the project won't give any errors. But with this:
-
-  ```toml
-  name = "hello"
-  version = "1.0.0"
-  my-awesome-setting = true
-  ```
-
-  Building the project will emit an error.
-
-  ([Andrey Kozhev](https://github.com/ankddev))
-
 - When attempting to publish a package on Hex with an already taken name,
   the message is clearer.
   ([vyacheslavhere](https://github.com/vyacheslavhere))
