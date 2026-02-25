@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/docs.rs
+assertion_line: 770
 expression: output
+snapshot_kind: text
 ---
 --- GLEAM.TOML
 
@@ -121,7 +123,6 @@ allow_read = ["./database.sqlite"]
     "target": "erlang",
     "internal_modules": [
       "my_app/internal"
-    ],
-    "tools": {}
+    ]
   }
 }

@@ -1,9 +1,0 @@
----
-source: compiler-core/src/config.rs
-expression: "toml::from_str::<PackageConfig>(input).unwrap_err().to_string()"
----
-TOML parse error at line 5, column 1
-  |
-5 | unknown = true
-  | ^^^^^^^
-unknown field `unknown`, expected one of `name`, `version`, `gleam`, `licences`, `licenses`, `description`, `docs`, `documentation`, `dependencies`, `dev-dependencies`, `dev_dependencies`, `repository`, `links`, `erlang`, `javascript`, `target`, `internal_modules`, `tools`

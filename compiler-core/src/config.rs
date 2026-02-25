@@ -1169,9 +1169,6 @@ allow_ffi = true
 allow_env = ["DATABASE_URL"]
 allow_net = ["example.com:443"]
 allow_read = ["./database.sqlite"]
-
-[tools.my-tool]
-enable = true
 "#;
 
     let config = toml::from_str::<PackageConfig>(input).unwrap();
@@ -1215,21 +1212,4 @@ wibble = ">= 1.0.0 and < 2.0.0"
 "#;
     let canonical = deserialise_config("gleam.toml", toml.into()).expect("valid config");
     assert_eq!(canonical, hyphen_alternative)
-}
-
-#[test]
-fn unknown_field_root() {
-    let input = r#"
-name = "wibble"
-version = "1.0.0"
-
-unknown = true
-"#;
-
-    insta::assert_snapshot!(
-        insta::internals::AutoName,
-        toml::from_str::<PackageConfig>(input)
-            .unwrap_err()
-            .to_string(),
-    )
 }
