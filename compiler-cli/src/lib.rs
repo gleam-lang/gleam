@@ -231,7 +231,7 @@ enum Command {
     /// Dependency resolution will be performed automatically by any command
     /// that builds your project. Once versions have been selected they are
     /// written to `manifest.toml`, which locks the package to those versions,
-    /// make your build deterministic. You should not edit this file manually.
+    /// making your build deterministic. You should not edit this file manually.
     ///
     /// To upgrade the dependencies you can use the `gleam update` command,
     /// which will select the newest versions compatible with the requirements
@@ -260,7 +260,7 @@ enum Command {
     ///    [dependencies]
     ///    wibble = { git = "https://example.com/wibble.git", ref = "a8b3c5d82" }
     ///
-    /// A dependency fetched from git instead of from Hex. This is useful
+    /// A dependency fetched from Git instead of from Hex. This is useful
     /// for using packages of yours that are not-yet production-ready, or
     /// for bug fixes that have not yet been published to Hex.
     ///
@@ -311,7 +311,9 @@ enum Command {
     #[command(trailing_var_arg = true)]
     Run {
         #[arg(short, long, ignore_case = true, help = target_doc())]
-        target: Option<Target>,
+/// Which compilation target to use
+#[arg(short, long, ignore_case = true, help = target_doc())]
+target: Option<Target>,
 
         #[arg(long, ignore_case = true, help = runtime_doc())]
         runtime: Option<Runtime>,
@@ -333,7 +335,9 @@ enum Command {
     #[command(trailing_var_arg = true)]
     Test {
         #[arg(short, long, ignore_case = true, help = target_doc())]
-        target: Option<Target>,
+/// Which compilation target to use
+#[arg(short, long, ignore_case = true, help = target_doc())]
+target: Option<Target>,
 
         #[arg(long, ignore_case = true, help = runtime_doc())]
         runtime: Option<Runtime>,
@@ -347,7 +351,9 @@ enum Command {
     #[command(trailing_var_arg = true)]
     Dev {
         #[arg(short, long, ignore_case = true, help = target_doc())]
-        target: Option<Target>,
+/// Which compilation target to use
+#[arg(short, long, ignore_case = true, help = target_doc())]
+target: Option<Target>,
 
         #[arg(long, ignore_case = true, help = runtime_doc())]
         runtime: Option<Runtime>,
@@ -385,7 +391,7 @@ enum Command {
     /// Add multiple packages:
     ///     gleam add wibble@2 warble@1
     ///
-    /// Add a package as a non-production dependency.
+    /// Add a package as a non-production dependency:
     ///     gleam add --dev wibble
     ///
     /// You can also edit `gleam.toml` directly, for further control over your
