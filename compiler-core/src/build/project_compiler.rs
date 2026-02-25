@@ -177,12 +177,12 @@ where
 
     fn retain_only_production_packages(&mut self) {
         let mut production = HashSet::new();
-        let mut queue: Vec<_> = self.config.dependencies.keys().cloned().collect();
+        let mut queue: Vec<_> = self.config.dependencies.keys().collect();
         while let Some(name) = queue.pop() {
             if production.insert(name.clone())
                 && let Some(pkg) = self.packages.get(name.as_str())
             {
-                queue.extend(pkg.requirements.iter().cloned());
+                queue.extend(pkg.requirements.iter());
             }
         }
         self.packages
