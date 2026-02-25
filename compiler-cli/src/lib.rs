@@ -311,9 +311,9 @@ enum Command {
     #[command(trailing_var_arg = true)]
     Run {
         #[arg(short, long, ignore_case = true, help = target_doc())]
-/// Which compilation target to use
-#[arg(short, long, ignore_case = true, help = target_doc())]
-target: Option<Target>,
+        /// Which compilation target to use
+        #[arg(short, long, ignore_case = true, help = target_doc())]
+        target: Option<Target>,
 
         #[arg(long, ignore_case = true, help = runtime_doc())]
         runtime: Option<Runtime>,
@@ -335,9 +335,9 @@ target: Option<Target>,
     #[command(trailing_var_arg = true)]
     Test {
         #[arg(short, long, ignore_case = true, help = target_doc())]
-/// Which compilation target to use
-#[arg(short, long, ignore_case = true, help = target_doc())]
-target: Option<Target>,
+        /// Which compilation target to use
+        #[arg(short, long, ignore_case = true, help = target_doc())]
+        target: Option<Target>,
 
         #[arg(long, ignore_case = true, help = runtime_doc())]
         runtime: Option<Runtime>,
@@ -351,9 +351,9 @@ target: Option<Target>,
     #[command(trailing_var_arg = true)]
     Dev {
         #[arg(short, long, ignore_case = true, help = target_doc())]
-/// Which compilation target to use
-#[arg(short, long, ignore_case = true, help = target_doc())]
-target: Option<Target>,
+        /// Which compilation target to use
+        #[arg(short, long, ignore_case = true, help = target_doc())]
+        target: Option<Target>,
 
         #[arg(long, ignore_case = true, help = runtime_doc())]
         runtime: Option<Runtime>,
