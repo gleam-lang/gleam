@@ -1,0 +1,30 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\n@internal\npub type Wibble {\n  Wibble(Int)\n  Wobble(String)\n}\n\npub fn main(thing: Wibble) {}\n"
+---
+----- BEFORE ACTION
+
+@internal
+pub type Wibble {
+  Wibble(Int)
+  Wobble(String)
+}
+
+pub fn main(thing: Wibble) {}
+            ↑                
+
+
+----- AFTER ACTION
+
+@internal
+pub type Wibble {
+  Wibble(Int)
+  Wobble(String)
+}
+
+pub fn main(thing: Wibble) {
+  case thing {
+    Wibble(int) -> todo
+    Wobble(string) -> todo
+  }
+}

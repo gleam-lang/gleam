@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "import wibble.{type Wibble}\n\npub type Type {\n  Type(wibble: Wibble, list: List(Int))\n}\n\npub fn go(value: Type) {\n  case value {}\n}"
+---
+----- SOURCE CODE
+-- wibble.gleam
+@internal
+            pub type Wibble { Wibble Wobble Woo }
+
+-- main.gleam
+import wibble.{type Wibble}
+
+pub type Type {
+  Type(wibble: Wibble, list: List(Int))
+}
+
+pub fn go(value: Type) {
+  case value {}
+}
+
+----- ERROR
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:8:3
+  │
+8 │   case value {}
+  │   ^^^^^^^^^^^^^
+
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    Type(wibble:, list:)

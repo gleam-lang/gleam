@@ -1,0 +1,31 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\nimport wibble\n\npub type Type {\n  Type(wibble.Wibble)\n}\n\npub fn main(thing: Type) {\n  case thing {}\n}\n"
+---
+----- BEFORE ACTION
+
+import wibble
+
+pub type Type {
+  Type(wibble.Wibble)
+}
+
+pub fn main(thing: Type) {
+  case thing {}
+             ↑ 
+}
+
+
+----- AFTER ACTION
+
+import wibble
+
+pub type Type {
+  Type(wibble.Wibble)
+}
+
+pub fn main(thing: Type) {
+  case thing {
+    Type(_) -> todo
+  }
+}

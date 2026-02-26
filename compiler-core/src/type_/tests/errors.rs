@@ -3441,3 +3441,39 @@ pub fn main() {
         "
     );
 }
+
+#[test]
+fn incomplete_pattern_does_not_show_structure_of_internal_type_outside_of_its_module() {
+    assert_module_error!(
+        (
+            "wibble",
+            "@internal
+            pub type Wibble { Wibble Wobble Woo }"
+        ),
+        "import wibble.{type Wibble}
+
+pub fn go(wibble: Wibble) {
+  case wibble {}
+}"
+    );
+}
+
+#[test]
+fn incomplete_pattern_does_not_show_structure_of_internal_type_outside_of_its_module_2() {
+    assert_module_error!(
+        (
+            "wibble",
+            "@internal
+            pub type Wibble { Wibble Wobble Woo }"
+        ),
+        "import wibble.{type Wibble}
+
+pub type Type {
+  Type(wibble: Wibble, list: List(Int))
+}
+
+pub fn go(value: Type) {
+  case value {}
+}"
+    );
+}

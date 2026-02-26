@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\nimport wibble\n\npub fn main(w: wibble.Wibble) {\n  case w {}\n}\n"
+---
+----- BEFORE ACTION
+
+import wibble
+
+pub fn main(w: wibble.Wibble) {
+  case w {}
+         ↑ 
+}
+
+
+----- AFTER ACTION
+
+import wibble
+
+pub fn main(w: wibble.Wibble) {
+  case w {
+    _ -> todo
+  }
+}

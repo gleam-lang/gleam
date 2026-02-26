@@ -24,9 +24,15 @@
   number by the literal number `0.0`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler no longer shows the structure of internal types when displaying
+  an "Inexhaustive patterns" error, making it harder to inadvertently rely on
+  internal implementation details.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
-- Upgraded `actions/checkout` from v4 to v6 in the GitHub Actions workflow used by `gleam new`.
+- Upgraded `actions/checkout` from v4 to v6 in the GitHub Actions workflow used
+  by `gleam new`.
   ([Christian Widlund](https://github.com/chrillep))
 
 - When adding a package that does not exist on Hex, the message is a bit
@@ -99,6 +105,11 @@
 
 - The language server now suggests completions for keywords like `echo`,
   `panic`, and `todo`.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The "Add missing patterns" code action will insert a catch all pattern for
+  internal types, making it harder to inadvertently rely on internal
+  implementation details.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - The language server now suggests adding missing type parameters

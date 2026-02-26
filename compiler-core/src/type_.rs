@@ -529,6 +529,15 @@ impl Type {
         }
     }
 
+    /// If the type is named, return its publicity.
+    ///
+    pub fn publicity(&self) -> Option<Publicity> {
+        match self {
+            Type::Named { publicity, .. } => Some(*publicity),
+            Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => None,
+        }
+    }
+
     #[must_use]
     /// Returns `true` is the two types are the same. This differs from the
     /// standard `Eq` implementation as it also follows all links to check if
