@@ -24,6 +24,25 @@
   number by the literal number `0.0`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Type inference now preserves generic type parameters when constructors or functions are used without explicit annotations, eliminating false errors in mutually recursive code:
+  ```gleam
+  type Test(a) {
+    Test(a)
+  }
+
+  fn it(value: Test(a)) {
+    it2(value)
+  }
+
+  fn it2(value: Test(a)) -> Test(a) {
+    it(value)
+  }
+  ```
+  Previously this could fail with an incorrect "type mismatch" error.
+
+  ([Adi Salimgereyev](https://github.com/abs0luty))
+>>>>>>> 26617cc1f (fix(type-checker): instantiate generics in mutually recursive functions before unification)
+
 ### Build tool
 
 - Upgraded `actions/checkout` from v4 to v6 in the GitHub Actions workflow used by `gleam new`.

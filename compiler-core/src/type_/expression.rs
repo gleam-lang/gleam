@@ -4971,31 +4971,39 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             if let Ok(body) = Vec1::try_from_vec(body) {
                 let mut body = body_typer.infer_statements(body);
 
-                // Check that any return type is accurate.
-                if let Some(return_type) = return_type
-                    && let Err(error) = unify(return_type, body.last().type_())
-                {
-                    let error = error
-                        .return_annotation_mismatch()
-                        .into_error(body.last().type_defining_location());
-                    body_typer.problems.error(error);
+                // Check that any return type is compatible with the annotation.
+                if let Some(return_type) = return_type {
+                    let mut instantiated_ids = hashmap![];
+                    let flexible_hydrator = Hydrator::new();
+                    let instantiated_annotation = body_typer.environment.instantiate(
+                        return_type.clone(),
+                        &mut instantiated_ids,
+                        &flexible_hydrator,
+                    );
 
-                    // If the return type doesn't match with the annotation we
-                    // add a new expression to the end of the function to match
-                    // the annotated type and allow type inference to keep
-                    // going.
-                    body.push(Statement::Expression(TypedExpr::Invalid {
-                        // This is deliberately an empty span since this
-                        // placeholder expression is implicitly inserted by the
-                        // compiler and doesn't actually appear in the source
-                        // code.
-                        location: SrcSpan {
-                            start: body.last().location().end,
-                            end: body.last().location().end,
-                        },
-                        type_: body_typer.new_unbound_var(),
-                        extra_information: None,
-                    }))
+                    if let Err(error) = unify(instantiated_annotation, body.last().type_()) {
+                        let error = error
+                            .return_annotation_mismatch()
+                            .into_error(body.last().type_defining_location());
+                        body_typer.problems.error(error);
+
+                        // If the return type doesn't match with the annotation we
+                        // add a new expression to the end of the function to match
+                        // the annotated type and allow type inference to keep
+                        // going.
+                        body.push(Statement::Expression(TypedExpr::Invalid {
+                            // This is deliberately an empty span since this
+                            // placeholder expression is implicitly inserted by the
+                            // compiler and doesn't actually appear in the source
+                            // code.
+                            location: SrcSpan {
+                                start: body.last().location().end,
+                                end: body.last().location().end,
+                            },
+                            type_: body_typer.new_unbound_var(),
+                            extra_information: None,
+                        }))
+                    }
                 };
 
                 Ok((arguments, body.to_vec()))

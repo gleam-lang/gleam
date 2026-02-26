@@ -743,8 +743,18 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         // Assert that the inferred type matches the type of any recursive call
-        if let Err(error) = unify(preregistered_type.clone(), type_) {
-            self.problems.error(convert_unify_error(error, location));
+        if let Err(error) = unify(preregistered_type.clone(), type_.clone()) {
+            let mut instantiated_ids = im::HashMap::new();
+            let flexible_hydrator = Hydrator::new();
+            let instantiated_annotation = environment.instantiate(
+                preregistered_type.clone(),
+                &mut instantiated_ids,
+                &flexible_hydrator,
+            );
+
+            if unify(instantiated_annotation, type_.clone()).is_err() {
+                self.problems.error(convert_unify_error(error, location));
+            }
         }
 
         // Ensure that the current target has an implementation for the function.
@@ -785,10 +795,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             purity,
         };
 
+        // Store the inferred type (not the preregistered type) in the environment.
+        // This ensures concrete type information flows through recursive calls - e.g., if we infer
+        // `fn() -> Test(Int)`, callers see that instead of the generic `fn() -> Test(a)`.
         environment.insert_variable(
             name.clone(),
             variant,
-            preregistered_type.clone(),
+            type_.clone(),
             publicity,
             deprecation.clone(),
         );
@@ -801,6 +814,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             ReferenceKind::Definition,
         );
 
+        // Use the inferred return type for the typed AST node.
+        // This matches the type stored in the environment above.
         let function = Function {
             documentation: doc,
             location,
@@ -811,7 +826,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             body_start,
             end_position: end_location,
             return_annotation,
-            return_type: preregistered_type
+            return_type: type_
                 .return_type()
                 .expect("Could not find return type for fn"),
             body,
