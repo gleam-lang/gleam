@@ -661,9 +661,20 @@ pub fn symlink_dir(
     #[cfg(not(target_family = "windows"))]
     let result = std::os::unix::fs::symlink(&src, dest.as_ref());
 
-    // Fallback to copying if we can't symlink. This occurs, for example,
-    // on Windows without developer mode enabled.
-    result.or_else(|_| copy_dir(src, dest))
+    match result {
+        Ok(()) => Ok(()),
+
+        // Fallback to copying if we can't symlink. This occurs on Windows without Developer Mode enabled.
+        // We match on the raw OS code, since this error has no specific error kind.
+        #[cfg(target_family = "windows")]
+        Err(err) if err.raw_os_error() == Some(1314) => copy_dir(src, dest),
+        Err(err) => Err(Error::FileIo {
+            action: FileIoAction::Link,
+            kind: FileKind::File,
+            path: Utf8PathBuf::from(dest.as_ref()),
+            err: Some(err.to_string()),
+        }),
+    }
 }
 
 pub fn hardlink(
