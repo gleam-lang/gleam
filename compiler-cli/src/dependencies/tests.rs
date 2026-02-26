@@ -843,258 +843,88 @@ fn verified_requirements_equality_with_canonicalized_paths() {
 }
 
 #[test]
-fn test_path_dependency_manifest_hash_change() {
+fn test_path_dependency_config_updates() {
     let temp_dir = tempfile::tempdir().expect("Failed to create a temp directory");
     let root_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
         .expect("Path should be valid UTF-8");
-
+    let paths = ProjectPaths::new(root_path.clone());
     let dep_path = root_path.join("dep");
     std::fs::create_dir_all(&dep_path).expect("Failed to create dependency directory");
-
     let build_packages_dir = root_path.join("build").join("packages");
     std::fs::create_dir_all(&build_packages_dir)
         .expect("Failed to create build/packages directory");
 
-    let dep_manifest_path = dep_path.join("manifest.toml");
-    fs::write(&dep_manifest_path, "# Initial manifest content")
-        .expect("Failed to write to manifest file");
-
-    let requirements = HashMap::from([(
-        EcoString::from("dep"),
-        Requirement::Path {
-            path: Utf8PathBuf::from("dep"),
-        },
-    )]);
-
-    let project_paths = ProjectPaths::new(root_path.clone());
-    let first_check = check_path_dependency_manifests(&requirements, &project_paths)
-        .expect("First check should succeed");
-    assert!(
-        !first_check,
-        "First check should be false as no hash exists yet"
-    );
-
-    let hash_path = build_packages_dir.join("dep.manifest_hash");
-    assert!(hash_path.exists(), "Hash file should have been created");
-
-    let second_check = check_path_dependency_manifests(&requirements, &project_paths)
-        .expect("Second check should succeed");
-    assert!(
-        second_check,
-        "Second check should be true as manifest hasn't changed"
-    );
-
-    std::thread::sleep(std::time::Duration::from_millis(100));
-
-    fs::write(&dep_manifest_path, "# Modified manifest content\nname = \"dep\"\nversion = \"0.1.0\"\n\n[dependencies]\nsome_package = \"1.0.0\"")
-        .expect("Failed to update manifest file");
-
-    let future_time = std::time::SystemTime::now() + std::time::Duration::from_secs(10);
-    filetime::set_file_mtime(
-        &dep_manifest_path,
-        filetime::FileTime::from_system_time(future_time),
-    )
-    .expect("Failed to set manifest file mtime");
-
-    let third_check = check_path_dependency_manifests(&requirements, &project_paths)
-        .expect("Third check should succeed");
-    assert!(
-        !third_check,
-        "Third check should be false as manifest has changed"
-    );
-
-    let fourth_check = check_path_dependency_manifests(&requirements, &project_paths)
-        .expect("Fourth check should succeed");
-    assert!(
-        fourth_check,
-        "Fourth check should be true as hash has been updated"
-    );
-}
-
-#[test]
-fn test_path_dependency_with_missing_manifest() {
-    let temp_dir = tempfile::tempdir().expect("Failed to create a temp directory");
-    let root_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
-        .expect("Path should be valid UTF-8");
-
-    let dep_path = root_path.join("dep");
-    std::fs::create_dir_all(&dep_path).expect("Failed to create dependency directory");
-
-    let build_packages_dir = root_path.join("build").join("packages");
-    std::fs::create_dir_all(&build_packages_dir)
-        .expect("Failed to create build/packages directory");
-
-    let requirements = HashMap::from([(
-        EcoString::from("dep"),
-        Requirement::Path {
-            path: Utf8PathBuf::from("dep"),
-        },
-    )]);
-
-    let project_paths = ProjectPaths::new(root_path.clone());
-    let check = check_path_dependency_manifests(&requirements, &project_paths)
-        .expect("Check should succeed");
-    assert!(check, "Check should be true when manifest is missing");
-
-    let hash_path = build_packages_dir.join("dep.manifest_hash");
-    assert!(
-        !hash_path.exists(),
-        "Hash file should not be created when manifest is missing"
-    );
-}
-
-#[test]
-fn test_path_dependency_manifest_mtime_optimization() {
-    let temp_dir = tempfile::tempdir().expect("Failed to create a temp directory");
-    let root_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
-        .expect("Path should be valid UTF-8");
-
-    let dep_path = root_path.join("dep");
-    std::fs::create_dir_all(&dep_path).expect("Failed to create dependency directory");
-
-    let build_packages_dir = root_path.join("build").join("packages");
-    std::fs::create_dir_all(&build_packages_dir)
-        .expect("Failed to create build/packages directory");
-
-    let dep_manifest_path = dep_path.join("manifest.toml");
-    fs::write(&dep_manifest_path, "# Initial manifest content")
-        .expect("Failed to write to manifest file");
-    let requirements = HashMap::from([(
-        EcoString::from("dep"),
-        Requirement::Path {
-            path: Utf8PathBuf::from("dep"),
-        },
-    )]);
-
-    let project_paths = ProjectPaths::new(root_path.clone());
-    let first_check = check_path_dependency_manifests(&requirements, &project_paths)
-        .expect("First check should succeed");
-    assert!(
-        !first_check,
-        "First check should be false as no hash exists yet"
-    );
-
-    let hash_path = build_packages_dir.join("dep.manifest_hash");
-    assert!(hash_path.exists(), "Hash file should have been created");
-
-    let manifest_metadata =
-        std::fs::metadata(&dep_manifest_path).expect("Should get manifest metadata");
-    let manifest_mtime = manifest_metadata
-        .modified()
-        .expect("Should get manifest mtime");
-
-    std::thread::sleep(std::time::Duration::from_millis(10));
-
-    let original_hash =
-        std::fs::read_to_string(&hash_path).expect("Should be able to read hash file");
-    fs::write(&hash_path, "deliberately wrong hash").expect("Failed to update hash file");
-    let future_time = manifest_mtime + std::time::Duration::from_secs(10);
-    filetime::set_file_mtime(
-        &hash_path,
-        filetime::FileTime::from_system_time(future_time),
-    )
-    .expect("Failed to set hash file mtime");
-
-    let check = check_path_dependency_manifests(&requirements, &project_paths)
-        .expect("Check should succeed");
-    assert!(
-        check,
-        "Check should be true when hash file mtime is newer than manifest mtime"
-    );
-
-    let current_hash =
-        std::fs::read_to_string(&hash_path).expect("Should be able to read hash file");
-    assert_ne!(
-        original_hash, current_hash,
-        "Hash content should not have been updated"
-    );
-    assert_eq!(
-        current_hash, "deliberately wrong hash",
-        "Hash should not have been recalculated"
-    );
-}
-
-#[test]
-fn test_adding_dependency_to_path_dependency_manifest() {
-    let temp_dir = tempfile::tempdir().expect("Failed to create a temp directory");
-    let root_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
-        .expect("Path should be valid UTF-8");
-
-    let bar_path = root_path.join("bar");
-    std::fs::create_dir_all(&bar_path).expect("Failed to create bar directory");
-
-    let bar_manifest_path = bar_path.join("manifest.toml");
-    let initial_bar_manifest = r#"name = "bar"
-version = "0.1.0"
+    let config = "name = \"dep\"
+version = \"1.0.0\"
 
 [dependencies]
-gleam_stdlib = "~> 0.29"
-"#;
+";
+    let dep_config_path = dep_path.join("gleam.toml");
+    fs::write(&dep_config_path, config).expect("Failed to write to manifest file");
 
-    fs::write(&bar_manifest_path, initial_bar_manifest)
-        .expect("Failed to write initial bar manifest file");
-
-    let build_packages_dir = root_path.join("build").join("packages");
-    std::fs::create_dir_all(&build_packages_dir)
-        .expect("Failed to create build/packages directory");
     let requirements = HashMap::from([(
-        EcoString::from("bar"),
+        EcoString::from("dep"),
         Requirement::Path {
-            path: Utf8PathBuf::from("bar"),
+            path: Utf8PathBuf::from("dep"),
         },
     )]);
 
-    let project_paths = ProjectPaths::new(root_path.clone());
-    let first_check = check_path_dependency_manifests(&requirements, &project_paths)
-        .expect("First check should succeed");
-    assert!(
-        !first_check,
-        "First check should be false as no hash exists yet"
-    );
+    // Initial check testing
 
-    let hash_path = build_packages_dir.join("bar.manifest_hash");
-    assert!(hash_path.exists(), "Hash file should have been created");
+    let unchanged = path_dependency_configs_unchanged(&requirements, &paths).unwrap();
+    assert!(!unchanged, "fresh always needs resolution");
 
-    let second_check = check_path_dependency_manifests(&requirements, &project_paths)
-        .expect("Second check should succeed");
-    assert!(
-        second_check,
-        "Second check should be true as manifest hasn't changed"
-    );
+    let fingerprint_path = build_packages_dir.join("dep.config_fingerprint");
+    assert!(fingerprint_path.exists(), "fingerprint must exist");
 
-    std::thread::sleep(std::time::Duration::from_millis(100));
-    let updated_bar_manifest = r#"name = "bar"
-version = "0.1.0"
+    let unchanged = path_dependency_configs_unchanged(&requirements, &paths).unwrap();
+    assert!(unchanged, "is unchanged");
+
+    // Set fingerprint mtime to some time in the past. This causes the mtime check to fail,
+    // so it moves on to checking the fingerprint itself.
+    let past = std::time::SystemTime::now() - std::time::Duration::from_secs(10);
+    let past = filetime::FileTime::from_system_time(past);
+    filetime::set_file_mtime(&fingerprint_path, past).unwrap();
+
+    let unchanged = path_dependency_configs_unchanged(&requirements, &paths).unwrap();
+    assert!(unchanged, "mtime is outdated, but content has not changed");
+
+    // Writing new content means the mtime and the fingerprint checks will fail.
+    let config = "name = \"dep\"
+version = \"1.0.0\"
 
 [dependencies]
-gleam_stdlib = "~> 0.29"
-simplifile = "~> 0.1"
-some_other_package = "1.2.3"
-"#;
+blah = \">= 1.0.0\"
+";
+    fs::write(&dep_config_path, config).unwrap();
 
-    fs::write(&bar_manifest_path, updated_bar_manifest)
-        .expect("Failed to update bar manifest file");
+    let unchanged = path_dependency_configs_unchanged(&requirements, &paths).unwrap();
+    assert!(!unchanged, "content has changed");
 
-    let future_time = std::time::SystemTime::now() + std::time::Duration::from_secs(10);
-    filetime::set_file_mtime(
-        &bar_manifest_path,
-        filetime::FileTime::from_system_time(future_time),
-    )
-    .expect("Failed to set manifest file mtime");
+    // Run again, to ensure that the fingerprint has been updated.
+    let unchanged = path_dependency_configs_unchanged(&requirements, &paths).unwrap();
+    assert!(unchanged, "no changes since last run");
 
-    let third_check = check_path_dependency_manifests(&requirements, &project_paths)
-        .expect("Third check should succeed");
-    assert!(
-        !third_check,
-        "Third check should be false as manifest has changed with new dependency"
-    );
+    // Test that mtime is checked first, and that content is not checked when the mtime
+    // is still valid. We do this by having having content that would fail the fingerprint
+    // check, but having a fresh mtime so it never gets checked.
+    // This can never happen in reality as you can't update the content without updating
+    // the mtime, but we create the situation in this test to verify the short-circuiting
+    // behaviour.
+    let config = "name = \"dep\"
+version = \"1.0.0\"
 
-    let fourth_check = check_path_dependency_manifests(&requirements, &project_paths)
-        .expect("Fourth check should succeed");
-    assert!(
-        fourth_check,
-        "Fourth check should be true as hash has been updated"
-    );
+[dependencies]
+blah = \">= 1.0.0\"
+wub = \">= 1.0.0\"
+";
+    fs::write(&dep_config_path, config).unwrap();
+    let future = std::time::SystemTime::now() + std::time::Duration::from_secs(10);
+    let future = filetime::FileTime::from_system_time(future);
+    filetime::set_file_mtime(&fingerprint_path, future).unwrap();
+
+    let unchanged = path_dependency_configs_unchanged(&requirements, &paths).unwrap();
+    assert!(unchanged, "fingerprint is outdated, but mtime is not");
 }
 
 fn create_testable_unlock_manifest(

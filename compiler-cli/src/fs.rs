@@ -128,19 +128,23 @@ impl FileSystemReader for ProjectIO {
     }
 
     fn modification_time(&self, path: &Utf8Path) -> Result<SystemTime, Error> {
-        path.metadata()
-            .map(|m| m.modified().unwrap_or_else(|_| SystemTime::now()))
-            .map_err(|e| Error::FileIo {
-                action: FileIoAction::ReadMetadata,
-                kind: FileKind::File,
-                path: path.to_path_buf(),
-                err: Some(e.to_string()),
-            })
+        modification_time(path)
     }
 
     fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, Error> {
         canonicalise(path)
     }
+}
+
+pub fn modification_time(path: &Utf8Path) -> std::result::Result<SystemTime, Error> {
+    path.metadata()
+        .map(|m| m.modified().unwrap_or_else(|_| SystemTime::now()))
+        .map_err(|e| Error::FileIo {
+            action: FileIoAction::ReadMetadata,
+            kind: FileKind::File,
+            path: path.to_path_buf(),
+            err: Some(e.to_string()),
+        })
 }
 
 impl FileSystemWriter for ProjectIO {

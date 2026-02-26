@@ -750,6 +750,10 @@ impl SourceFingerprint {
     pub fn new(source: &str) -> Self {
         SourceFingerprint(xxhash_rust::xxh3::xxh3_64(source.as_bytes()))
     }
+
+    pub fn to_numerical_string(&self) -> String {
+        self.0.to_string()
+    }
 }
 
 /// Like a `Result`, but the operation can partially succeed or fail.

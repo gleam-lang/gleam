@@ -132,15 +132,14 @@ impl ProjectPaths {
             .join("gleam_version")
     }
 
-    pub fn dependency_manifest_path(&self, dependency_path: &Utf8Path) -> Utf8PathBuf {
-        // We're creating a new ProjectPaths with the dependency's root path
-        let dep_project_paths = Self::new(self.root().join(dependency_path));
-        dep_project_paths.manifest()
+    /// The path to the source gleam.toml file for a path dependency.
+    pub fn path_dependency_gleam_toml_path(&self, dependency_path: &Utf8Path) -> Utf8PathBuf {
+        self.root().join(dependency_path).join("gleam.toml")
     }
 
-    pub fn dependency_manifest_hash_path(&self, dependency_name: &str) -> Utf8PathBuf {
+    pub fn dependency_gleam_toml_fingerprint_path(&self, dependency_name: &str) -> Utf8PathBuf {
         self.build_packages_directory()
-            .join(format!("{}.manifest_hash", dependency_name))
+            .join(format!("{}.config_fingerprint", dependency_name))
     }
 }
 

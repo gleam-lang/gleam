@@ -18,9 +18,9 @@ use crate::{
 };
 
 use super::{
-    CheckMajorVersions, LocalPackages, UseManifest, add_missing_packages,
-    check_path_dependency_manifests, is_same_requirements, lookup_package, provide_git_package,
-    provide_local_package, read_manifest_from_disc, remove_extra_packages, unlock_packages,
+    CheckMajorVersions, LocalPackages, UseManifest, add_missing_packages, is_same_requirements,
+    lookup_package, path_dependency_configs_unchanged, provide_git_package, provide_local_package,
+    read_manifest_from_disc, remove_extra_packages, unlock_packages,
 };
 
 /// Verifies that all specified packages exist in the manifest.
@@ -120,7 +120,7 @@ where
                 // already specified in the manifest.
                 if packages_to_update.is_empty()
                     && same_requirements
-                    && check_path_dependency_manifests(&config_dependencies, paths)?
+                    && path_dependency_configs_unchanged(&config_dependencies, paths)?
                 {
                     return Ok(Resolved::no_change(existing_manifest));
                 }

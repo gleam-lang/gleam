@@ -14,7 +14,7 @@ use ecow::{EcoString, eco_format};
 use flate2::read::GzDecoder;
 use gleam_core::{
     Error, Result,
-    build::{Mode, Target, Telemetry},
+    build::{Mode, SourceFingerprint, Target, Telemetry},
     config::PackageConfig,
     dependency::{self, PackageFetchError},
     error::{FileIoAction, FileKind, ShellCommandFailureReason, StandardIoAction},
@@ -634,106 +634,67 @@ fn is_same_requirements(
     Ok(true)
 }
 
-/// Validates path dependencies' manifest files, updating cached hashes as needed.
-/// Returns true if all path dependency manifests are unchanged since last build.
-fn check_path_dependency_manifests(
+/// Returns true if all path dependency configs are unchanged since last build.
+///
+/// If any of the path dependency configs have changed that means that we need to
+/// re-perform dependency resolution, as their dependencies could have changed
+/// themselves.
+///
+/// We use gleam.toml rather than manifest.toml as:
+///
+/// 1. The dependency requirements could have changed but resolution not have been
+///    run in that package yet, so the manifest would be the same, resulting in us
+///    failing to detect that resolution is required.
+///
+/// 2. Dependency manifests are not used in any way, so a change in the manifest
+///    may not have any impact on this package.
+///
+/// This does mean that changes unrelated to the path dependency's dependencies
+/// will trigger resolution, but gleam.toml is edited rarely, and no-change
+/// resolution is fast enough, so that's OK.
+///
+/// Note: This does not check path dependencies of path dependencies! Changes to
+/// their configs will fail to be picked up. To resolve this we would need to keep
+/// a list of all the path dependencies in the project, instead of only the direct
+/// path dependencies.
+///
+fn path_dependency_configs_unchanged(
     requirements: &HashMap<EcoString, Requirement>,
     paths: &ProjectPaths,
 ) -> Result<bool> {
-    for (key, requirement) in requirements {
-        if let Requirement::Path { path } = requirement {
-            let dep_manifest_path = paths.dependency_manifest_path(path);
+    for (name, requirement) in requirements {
+        let Requirement::Path { path } = requirement else {
+            continue;
+        };
 
-            let cached_hash_path = paths.dependency_manifest_hash_path(key.as_str());
+        let config_path = paths.path_dependency_gleam_toml_path(path);
+        let fingerprint_path = paths.dependency_gleam_toml_fingerprint_path(name.as_str());
 
-            // Skip dependencies without a manifest file
-            if !dep_manifest_path.exists() {
-                tracing::debug!("path_dependency_manifest_not_found_skipping_check");
+        // Check mtimes before hashing, to avoid extra work
+        if fingerprint_path.exists() {
+            let config_time = fs::modification_time(&config_path)?;
+            let fingerprint_time = fs::modification_time(&fingerprint_path)?;
+            if config_time <= fingerprint_time {
                 continue;
             }
+        };
 
-            // Check mtimes before hashing, to avoid extra work
-            if cached_hash_path.exists() {
-                let manifest_time =
-                    match std::fs::metadata(&dep_manifest_path).and_then(|m| m.modified()) {
-                        Ok(time) => time,
-                        Err(_) => {
-                            tracing::debug!(
-                                ?dep_manifest_path,
-                                "cannot_read_manifest_mtime_forcing_rebuild"
-                            );
-                            return Ok(false);
-                        }
-                    };
-                let hash_time =
-                    match std::fs::metadata(&cached_hash_path).and_then(|m| m.modified()) {
-                        Ok(time) => time,
-                        Err(_) => {
-                            tracing::debug!(
-                                ?cached_hash_path,
-                                "cannot_read_hash_mtime_forcing_rebuild"
-                            );
-                            return Ok(false);
-                        }
-                    };
-                if manifest_time <= hash_time {
-                    tracing::debug!(
-                        ?dep_manifest_path,
-                        "path_dependency_manifest_unchanged_since_last_hash"
-                    );
-                    continue;
-                }
-            };
+        let config_text = fs::read(&config_path)?;
+        let current_fingerprint = SourceFingerprint::new(&config_text).to_numerical_string();
 
-            let manifest_content = match fs::read(&dep_manifest_path) {
-                Ok(content) => content,
-                Err(_) => {
-                    tracing::debug!("cannot_read_path_dependency_manifest_forcing_rebuild");
-                    return Ok(false);
-                }
-            };
+        // If cached hash file doesn't exist, this is the first time we're checking this dependency
+        if !fingerprint_path.exists() {
+            // Save the current hash for future comparisons
+            fs::write(&fingerprint_path, &current_fingerprint)?;
+            return Ok(false);
+        }
 
-            let current_hash = xxhash_rust::xxh3::xxh3_64(manifest_content.as_bytes()).to_string();
+        let previous_fingerprint = fs::read(&fingerprint_path)?;
 
-            // If cached hash file doesn't exist, this is the first time we're checking this dependency
-            if !cached_hash_path.exists() {
-                // Save the current hash for future comparisons
-                match fs::write(&cached_hash_path, &current_hash) {
-                    Ok(_) => {
-                        tracing::debug!(
-                            "no_cached_manifest_hash_for_path_dependency_forcing_rebuild"
-                        );
-                        return Ok(false);
-                    }
-                    Err(e) => {
-                        tracing::debug!("failed_to_write_dependency_manifest_hash: {}", e);
-                        return Err(e);
-                    }
-                }
-            }
-
-            let cached_hash = match std::fs::read_to_string(&cached_hash_path) {
-                Ok(content) => content,
-                Err(_) => {
-                    tracing::debug!("cannot_read_cached_manifest_hash_forcing_rebuild");
-                    return Ok(false);
-                }
-            };
-
-            if cached_hash != current_hash {
-                tracing::debug!("path_dependency_manifest_changed_forcing_rebuild");
-                match fs::write(&cached_hash_path, &current_hash) {
-                    Ok(_) => {
-                        return Ok(false);
-                    }
-                    Err(e) => {
-                        tracing::debug!("failed_to_update_dependency_manifest_hash: {}", e);
-                        return Err(e);
-                    }
-                }
-            }
-
-            tracing::debug!("path_dependency_manifest_unchanged_no_rebuild_needed");
+        if previous_fingerprint != current_fingerprint {
+            tracing::debug!("path_dependency_config_changed_forcing_rebuild");
+            fs::write(&fingerprint_path, &current_fingerprint)?;
+            return Ok(false);
         }
     }
 
