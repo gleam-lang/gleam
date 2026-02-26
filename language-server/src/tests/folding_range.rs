@@ -82,13 +82,27 @@ fn folding_snapshot_output(project: TestProject<'_>) -> String {
 
 macro_rules! assert_folding {
     ($src:literal $(,)?) => {
-        let output = folding_snapshot_output(TestProject::for_source($src));
-        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+        assert_folding!(TestProject::for_source($src));
     };
-    ($project:expr, $src:expr $(,)?) => {
-        let output = folding_snapshot_output($project);
-        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    ($project:expr $(,)?) => {{
+        let project = $project;
+        let src = project.src;
+        let output = folding_snapshot_output(project);
+        insta::assert_snapshot!(insta::internals::AutoName, output, src);
+    }};
+}
+
+macro_rules! assert_no_folding {
+    ($src:literal $(,)?) => {
+        assert_no_folding!(TestProject::for_source($src));
     };
+    ($project:expr $(,)?) => {{
+        let ranges = folding_ranges($project);
+        assert!(
+            ranges.is_empty(),
+            "Expected no folding ranges, got: {ranges:#?}"
+        );
+    }};
 }
 
 #[test]
@@ -103,7 +117,7 @@ fn folds_multiline_function_body() {
 
 #[test]
 fn does_not_fold_single_line_function_body() {
-    assert_folding!("pub fn main() { 1 }");
+    assert_no_folding!("pub fn main() { 1 }");
 }
 
 #[test]
@@ -119,7 +133,6 @@ pub fn main() { 1 }";
             .add_dep_module("one", "pub fn value() { 1 }")
             .add_dep_module("two", "pub fn value() { 2 }")
             .add_dep_module("three", "pub fn value() { 3 }"),
-        code
     );
 }
 
@@ -139,7 +152,6 @@ pub fn main() { 1 }";
             .add_dep_module("two", "pub fn value() { 2 }")
             .add_dep_module("three", "pub fn value() { 3 }")
             .add_dep_module("four", "pub fn value() { 4 }"),
-        code
     );
 }
 
@@ -172,17 +184,17 @@ fn folds_multiline_type_alias() {
 
 #[test]
 fn does_not_fold_single_line_custom_type() {
-    assert_folding!("pub type W { W(Int) }");
+    assert_no_folding!("pub type W { W(Int) }");
 }
 
 #[test]
 fn does_not_fold_single_line_constant() {
-    assert_folding!("pub const x = 1");
+    assert_no_folding!("pub const x = 1");
 }
 
 #[test]
 fn does_not_fold_single_line_type_alias() {
-    assert_folding!("pub type Pair = #(Int, Int)");
+    assert_no_folding!("pub type Pair = #(Int, Int)");
 }
 
 #[test]
@@ -207,7 +219,6 @@ pub fn main() {
         TestProject::for_source(code)
             .add_dep_module("one", "pub fn value() { 1 }")
             .add_dep_module("two", "pub fn value() { 2 }"),
-        code
     );
 }
 
