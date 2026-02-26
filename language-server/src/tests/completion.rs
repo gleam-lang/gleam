@@ -1814,6 +1814,68 @@ pub type Wibble {
 }
 
 #[test]
+fn no_completions_for_imported_internal_record_fields() {
+    let code = "
+import dep
+
+fn fun(wibble: dep.Wibble) {
+  wibble.
+  //     ^ We should see no completions here!
+}
+";
+    let dep = "
+@internal
+pub type Wibble {
+  Wibble(wibble: String, wobble: Int)
+}
+";
+
+    assert_completion!(
+        TestProject::for_source(code).add_dep_module("dep", dep),
+        Position::new(4, 9)
+    );
+}
+
+#[test]
+fn completions_for_internal_record_fields_inside_the_same_module() {
+    let code = "
+@internal
+pub type Wibble {
+    Wibble(wibble: String, wobble: Int)
+}
+
+fn fun(wibble: Wibble) {
+  wibble.
+  //     ^ We should see some completions here!
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(7, 9));
+}
+
+#[test]
+fn completions_for_imported_record_fields() {
+    let code = "
+import dep
+
+fn fun(wibble: dep.Wibble) {
+  wibble.
+  //     ^ We should see wibble and wobble completions here!
+}
+";
+    let dep = "
+pub type Wibble {
+  Wibble(wibble: String, wobble: Int)
+}
+";
+
+    assert_completion!(
+        TestProject::for_source(code).add_dep_module("dep", dep),
+        Position::new(4, 9)
+    );
+}
+
+#[test]
 fn completions_for_function_labels() {
     let code = "
 fn wibble(wibble arg1: String, wobble arg2: String) {
