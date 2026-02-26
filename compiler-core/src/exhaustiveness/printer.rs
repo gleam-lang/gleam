@@ -2,18 +2,26 @@ use std::collections::HashMap;
 
 use ecow::EcoString;
 
-use crate::type_::printer::{NameContextInformation, Names};
+use crate::{
+    ast::Publicity,
+    type_::printer::{NameContextInformation, Names},
+};
 
 use super::{Variable, missing_patterns::Term};
 
 #[derive(Debug)]
 pub struct Printer<'a> {
     names: &'a Names,
+    /// This is the module that is being currently analysed.
+    current_module: EcoString,
 }
 
 impl<'a> Printer<'a> {
-    pub fn new(names: &'a Names) -> Self {
-        Printer { names }
+    pub fn new(current_module: EcoString, names: &'a Names) -> Self {
+        Printer {
+            current_module,
+            names,
+        }
     }
 
     pub fn print_terms(
@@ -51,8 +59,27 @@ impl<'a> Printer<'a> {
                 name,
                 module,
                 fields,
-                ..
+                variable,
             } => {
+                let is_defined_in_current_module = *module == self.current_module;
+                let is_internal = variable
+                    .type_
+                    .publicity()
+                    .unwrap_or(Publicity::Public)
+                    .is_internal();
+
+                // We don't want to expose information about an internal type,
+                // making it easy to rely on its internal structure.
+                // So what we do is we just show a catch all pattern `_` for
+                // those.
+                // We do this only if the internal type is defined in a
+                // different module from the one being analysed, otherwise it's
+                // totally fair to want to match on such type.
+                if is_internal && !is_defined_in_current_module {
+                    buffer.push('_');
+                    return;
+                }
+
                 let (module, name) = match self.names.named_constructor(module, name) {
                     NameContextInformation::Qualified(module, name) => (Some(module), name),
                     NameContextInformation::Unqualified(name) => (None, name),
@@ -232,17 +259,17 @@ mod tests {
 
     #[test]
     fn test_value_in_current_module() {
+        let current_module = EcoString::from("module");
         let mut names = Names::new();
+        names.named_constructor_in_scope(current_module.clone(), "Wibble".into(), "Wibble".into());
 
-        names.named_constructor_in_scope("module".into(), "Wibble".into(), "Wibble".into());
-
-        let printer = Printer::new(&names);
+        let printer = Printer::new(current_module.clone(), &names);
 
         let subjects = &[make_variable(0)];
         let term = Term::Variant {
             variable: subjects[0].clone(),
             name: "Wibble".into(),
-            module: "module".into(),
+            module: current_module,
             fields: Vec::new(),
         };
 
@@ -254,11 +281,11 @@ mod tests {
 
     #[test]
     fn test_value_in_current_module_with_arguments() {
+        let current_module = EcoString::from("module");
         let mut names = Names::new();
+        names.named_constructor_in_scope(current_module.clone(), "Wibble".into(), "Wibble".into());
 
-        names.named_constructor_in_scope("module".into(), "Wibble".into(), "Wibble".into());
-
-        let printer = Printer::new(&names);
+        let printer = Printer::new(current_module.clone(), &names);
 
         let var1 = make_variable(1);
 
@@ -268,7 +295,7 @@ mod tests {
         let term = Term::Variant {
             variable: subjects[0].clone(),
             name: "Wibble".into(),
-            module: "module".into(),
+            module: current_module,
             fields: vec![field(var1.clone(), None), field(var2.clone(), None)],
         };
 
@@ -287,11 +314,11 @@ mod tests {
 
     #[test]
     fn test_value_in_current_module_with_labelled_arguments() {
+        let current_module = EcoString::from("module");
         let mut names = Names::new();
+        names.named_constructor_in_scope(current_module.clone(), "Wibble".into(), "Wibble".into());
 
-        names.named_constructor_in_scope("module".into(), "Wibble".into(), "Wibble".into());
-
-        let printer = Printer::new(&names);
+        let printer = Printer::new(current_module.clone(), &names);
 
         let var1 = make_variable(1);
 
@@ -301,7 +328,7 @@ mod tests {
         let term = Term::Variant {
             variable: subjects[0].clone(),
             name: "Wibble".into(),
-            module: "module".into(),
+            module: current_module,
             fields: vec![
                 field(var1.clone(), Some("list")),
                 field(var2.clone(), Some("other")),
@@ -331,7 +358,7 @@ mod tests {
                 .is_none()
         );
 
-        let printer = Printer::new(&names);
+        let printer = Printer::new("module".into(), &names);
 
         let subjects = &[make_variable(0)];
         let term = Term::Variant {
@@ -356,7 +383,7 @@ mod tests {
 
         names.named_constructor_in_scope("regex".into(), "Regex".into(), "Regex".into());
 
-        let printer = Printer::new(&names);
+        let printer = Printer::new("module".into(), &names);
 
         let arg = make_variable(1);
 
@@ -381,7 +408,7 @@ mod tests {
         names.named_constructor_in_scope("regex".into(), "Regex".into(), "Reg".into());
         names.named_constructor_in_scope("gleam".into(), "None".into(), "None".into());
 
-        let printer = Printer::new(&names);
+        let printer = Printer::new("current_module".into(), &names);
 
         let arg = make_variable(1);
 
@@ -413,7 +440,7 @@ mod tests {
 
         names.named_constructor_in_scope("module".into(), "Type".into(), "Type".into());
 
-        let printer = Printer::new(&names);
+        let printer = Printer::new("module".into(), &names);
 
         let var1 = make_variable(1);
         let var2 = make_variable(2);
@@ -456,7 +483,7 @@ mod tests {
         names.named_constructor_in_scope("gleam".into(), "Ok".into(), "Ok".into());
         names.named_constructor_in_scope("gleam".into(), "False".into(), "False".into());
 
-        let printer = Printer::new(&names);
+        let printer = Printer::new("module".into(), &names);
 
         let subjects = &[make_variable(0), make_variable(1), make_variable(2)];
 

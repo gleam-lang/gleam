@@ -9722,6 +9722,158 @@ pub fn main(w: mod.Wibble) {
     );
 }
 
+#[test]
+fn pattern_match_on_variable_does_not_add_patterns_for_internal_type() {
+    let src = "
+import wibble
+
+pub type Type {
+  Type(wibble: wibble.Wibble, list: List(Int))
+}
+
+pub fn main(thing: Type) {
+  case thing {
+    Type(wibble:, ..) -> todo
+  }
+}
+";
+
+    assert_no_code_actions!(
+        PATTERN_MATCH_ON_VARIABLE,
+        TestProject::for_source(src).add_module(
+            "wibble",
+            "@internal pub type Wibble { Wibble(Int) Wobble(String) }"
+        ),
+        find_position_of("wibble").nth_occurrence(3).to_selection(),
+    );
+}
+
+#[test]
+fn pattern_match_on_argument_does_not_add_patterns_for_internal_type() {
+    let src = "
+import wibble
+
+pub fn main(thing: wibble.Wibble) {}
+";
+
+    assert_no_code_actions!(
+        PATTERN_MATCH_ON_ARGUMENT,
+        TestProject::for_source(src).add_module(
+            "wibble",
+            "@internal pub type Wibble { Wibble(Int) Wobble(String) }"
+        ),
+        find_position_of("thing").to_selection(),
+    );
+}
+
+#[test]
+fn pattern_match_on_argument_adds_patterns_for_internal_type_inside_module_where_it_is_defined() {
+    let src = "
+@internal
+pub type Wibble {
+  Wibble(Int)
+  Wobble(String)
+}
+
+pub fn main(thing: Wibble) {}
+";
+
+    assert_code_action!(
+        PATTERN_MATCH_ON_ARGUMENT,
+        TestProject::for_source(src),
+        find_position_of("thing").to_selection(),
+    );
+}
+
+#[test]
+fn add_missing_patterns_adds_a_discard_for_opaque_type() {
+    let src = "
+import wibble
+
+pub fn main(w: wibble.Wibble) {
+  case w {}
+}
+";
+
+    assert_code_action!(
+        ADD_MISSING_PATTERNS,
+        TestProject::for_source(src).add_module(
+            "wibble",
+            "@internal pub type Wibble { Wibble(Int) Wobble(String) }"
+        ),
+        find_position_of("{}").to_selection(),
+    );
+}
+
+#[test]
+fn add_missing_patterns_adds_a_discard_for_opaque_type_1() {
+    let src = "
+import wibble
+
+pub type Type {
+  Type(wibble: wibble.Wibble, list: List(Int))
+}
+
+pub fn main(thing: Type) {
+  case thing {}
+}
+";
+
+    assert_code_action!(
+        ADD_MISSING_PATTERNS,
+        TestProject::for_source(src).add_module(
+            "wibble",
+            "@internal pub type Wibble { Wibble(Int) Wobble(String) }"
+        ),
+        find_position_of("{}").to_selection(),
+    );
+}
+
+#[test]
+fn add_missing_patterns_adds_a_discard_for_opaque_type_2() {
+    let src = "
+import wibble
+
+pub type Type {
+  Type(wibble.Wibble)
+}
+
+pub fn main(thing: Type) {
+  case thing {}
+}
+";
+
+    assert_code_action!(
+        ADD_MISSING_PATTERNS,
+        TestProject::for_source(src).add_module(
+            "wibble",
+            "@internal pub type Wibble { Wibble(Int) Wobble(String) }"
+        ),
+        find_position_of("{}").to_selection(),
+    );
+}
+
+#[test]
+fn add_missing_patterns_adds_patterns_for_internal_type_inside_same_module_where_it_is_defined() {
+    let src = "
+@internal
+pub type Wibble {
+  Wibble(Int)
+  Wobble(String)
+}
+
+pub fn main(thing: Wibble) {
+  case thing {}
+}
+";
+
+    assert_code_action!(
+        ADD_MISSING_PATTERNS,
+        TestProject::for_source(src),
+        find_position_of("thing").nth_occurrence(2).to_selection(),
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/4653
 #[test]
 fn generate_function_capture() {

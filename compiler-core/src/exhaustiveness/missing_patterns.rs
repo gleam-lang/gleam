@@ -76,7 +76,7 @@ impl<'a, 'env> MissingPatternsGenerator<'a, 'env> {
             terms: vec![],
             missing: IndexSet::new(),
             environment,
-            printer: Printer::new(&environment.names),
+            printer: Printer::new(environment.current_module.clone(), &environment.names),
         }
     }
 
