@@ -1,0 +1,21 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "\nimport dep\n\nfn fun(wibble: dep.Wibble) {\n  wibble.\n  //     ^ We should see wibble and wobble completions here!\n}\n"
+---
+import dep
+
+fn fun(wibble: dep.Wibble) {
+  wibble.|
+  //     ^ We should see wibble and wobble completions here!
+}
+
+
+----- Completion content -----
+wibble
+  kind:   Field
+  detail: String
+  sort:   2_wibble
+wobble
+  kind:   Field
+  detail: Int
+  sort:   2_wobble

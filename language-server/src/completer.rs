@@ -1021,6 +1021,21 @@ impl<'a, IO> Completer<'a, IO> {
     /// Provides completions for field accessors when the context being editted
     /// is a custom type instance
     pub fn completion_field_accessors(&'a self, type_: Arc<Type>) -> Vec<CompletionItem> {
+        if let Type::Named {
+            publicity,
+            module: type_module,
+            ..
+        } = type_.as_ref()
+            && publicity.is_internal()
+            && *type_module != self.module.name
+        {
+            // If we're asking for field completions for an internal type that
+            // is not defined in the current module we don't want to show
+            // anything. This makes it a lot harder to inadvertently rely on
+            // internal implementation details without noticing.
+            return vec![];
+        }
+
         self.type_accessors_from_modules(
             self.compiler.project_compiler.get_importable_modules(),
             type_,

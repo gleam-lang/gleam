@@ -1,0 +1,13 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "\nimport dep\n\nfn fun(wibble: dep.Wibble) {\n  wibble.\n  //     ^ We should see no completions here!\n}\n"
+---
+import dep
+
+fn fun(wibble: dep.Wibble) {
+  wibble.|
+  //     ^ We should see no completions here!
+}
+
+
+----- Completion content -----

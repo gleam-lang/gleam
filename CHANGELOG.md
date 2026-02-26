@@ -112,6 +112,11 @@
   implementation details.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server will no longer show completions for the fields of internal
+  types outside the module they're defined in, making it harder to inadvertently
+  rely on internal implementation details.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server now suggests adding missing type parameters
   to custom generic types.
   ([Andi Pabst](https://github.com/andipabst))
