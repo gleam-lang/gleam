@@ -156,27 +156,30 @@ where
     fn handle_notification(&mut self, notification: Notification) {
         let feedback = match notification {
             Notification::CompilePlease => self.compile_please(),
-            Notification::SourceFileMatchesDisc { path, closed } => {
-                let mut feedback = self.discard_in_memory_cache(&path);
-                if closed {
-                    let _ = self
-                        .opened_files
-                        .get_mut(&path)
-                        .map(|is_open| *is_open = false);
-                    self.attempt_engine_cleanup(&path, &mut feedback);
-                }
-                feedback
+            Notification::SourceFileClosed { path } => self.handle_file_close(&path),
+            Notification::SourceFileSaved { path } => self.discard_in_memory_cache(&path),
+            Notification::SourceFileChangedInMemory { path, text } => {
+                self.cache_file_in_memory(&path, text)
             }
-            Notification::SourceFileChangedInMemory { path, opened, text } => {
-                let feedback = self.cache_file_in_memory(&path, text);
-                if opened && feedback.diagnostics.is_empty() {
-                    let _ = self.opened_files.insert(path, true);
-                }
-                feedback
-            }
+            Notification::SourceFileOpened { path, text } => self.handle_file_open(path, text),
             Notification::ConfigFileChanged { path } => self.watched_files_changed(path),
         };
         self.publish_feedback(feedback);
+    }
+
+    fn handle_file_close(&mut self, path: &Utf8PathBuf) -> Feedback {
+        let mut feedback = self.discard_in_memory_cache(path);
+        if let Some(is_open) = self.opened_files.get_mut(path) {
+            *is_open = false;
+        }
+        self.attempt_engine_cleanup(path, &mut feedback);
+        feedback
+    }
+
+    fn handle_file_open(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
+        let feedback = self.cache_file_in_memory(&path, text);
+        let _ = self.opened_files.insert(path, true);
+        feedback
     }
 
     fn publish_feedback(&self, feedback: Feedback) {
