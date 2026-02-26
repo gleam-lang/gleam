@@ -41,6 +41,21 @@ pub struct LanguageServer<'a, IO> {
     outside_of_project_feedback: FeedbackBookKeeper,
     router: Router<IO, ConnectionProgressReporter<'a>>,
     changed_projects: HashSet<Utf8PathBuf>,
+
+    /// Tracks all files that have ever been opened and their current
+    /// open state.
+    ///
+    /// All files that have been opened are tracked so that upon
+    /// termination of a complilation engine, the server can send
+    /// back an empty list of diagnostics for each opened file for
+    /// a project. We keep track of the open state so we can determine
+    /// when all files in a project are closed.
+    ///
+    /// Files are removed from the map when a compilation engine is
+    /// terminated.
+    ///
+    /// This approach allows the editor to still display diagnostics
+    /// for files that have been closed.
     opened_files: HashMap<Utf8PathBuf, bool>,
     io: FileSystemProxy<IO>,
 }
