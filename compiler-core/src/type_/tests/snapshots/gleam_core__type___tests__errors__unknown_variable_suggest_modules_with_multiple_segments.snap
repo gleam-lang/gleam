@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\nimport gleam/module\npub fn main() {\n    add(1, 1)\n}"
+expression: "\n// Module with multiple segments should be taken into account in the suggestion.\n// Public function with correct arity from another module should be suggested.\n\nimport gleam/module\npub fn main() {\n    add(1, 1)\n}"
 ---
 ----- SOURCE CODE
 -- gleam/module.gleam
@@ -11,6 +11,9 @@ pub fn add(x: Int, y: Int) {
 
 -- main.gleam
 
+// Module with multiple segments should be taken into account in the suggestion.
+// Public function with correct arity from another module should be suggested.
+
 import gleam/module
 pub fn main() {
     add(1, 1)
@@ -18,9 +21,9 @@ pub fn main() {
 
 ----- ERROR
 error: Unknown variable
-  ┌─ /src/one/two.gleam:4:5
+  ┌─ /src/one/two.gleam:7:5
   │
-4 │     add(1, 1)
+7 │     add(1, 1)
   │     ^^^
 
 The name `add` is not in scope here.

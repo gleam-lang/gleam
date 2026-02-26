@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\nimport module\npub fn main() {\n    one\n}"
+expression: "\n// Internal value from another modules in another package should not be\n// suggested.\n\nimport module\npub fn main() {\n    one\n}"
 ---
 ----- SOURCE CODE
 -- module.gleam
@@ -10,6 +10,9 @@ pub const one = 1
 
 -- main.gleam
 
+// Internal value from another modules in another package should not be
+// suggested.
+
 import module
 pub fn main() {
     one
@@ -17,9 +20,9 @@ pub fn main() {
 
 ----- ERROR
 error: Unknown variable
-  ┌─ /src/one/two.gleam:4:5
+  ┌─ /src/one/two.gleam:7:5
   │
-4 │     one
+7 │     one
   │     ^^^
 
 The name `one` is not in scope here.

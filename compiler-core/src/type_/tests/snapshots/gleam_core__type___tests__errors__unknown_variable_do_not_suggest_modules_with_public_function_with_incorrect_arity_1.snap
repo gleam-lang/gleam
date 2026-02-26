@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\nimport module\npub fn main() {\n    add(1, 1)\n}"
+expression: "\n// For functions, we only check the arity and not the type of arguments or the\n// return value.\n// Function with incorrect arity from another module should not be suggested.\n\nimport module\npub fn main() {\n    add(1, 1)\n}"
 ---
 ----- SOURCE CODE
 -- module.gleam
@@ -11,6 +11,10 @@ pub fn add(x: Int) {
 
 -- main.gleam
 
+// For functions, we only check the arity and not the type of arguments or the
+// return value.
+// Function with incorrect arity from another module should not be suggested.
+
 import module
 pub fn main() {
     add(1, 1)
@@ -18,9 +22,9 @@ pub fn main() {
 
 ----- ERROR
 error: Unknown variable
-  ┌─ /src/one/two.gleam:4:5
+  ┌─ /src/one/two.gleam:8:5
   │
-4 │     add(1, 1)
+8 │     add(1, 1)
   │     ^^^
 
 The name `add` is not in scope here.

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\nimport module\npub fn main() {\n    1 |> add(2)\n}"
+expression: "\n// Public function with correct arity from another module should be suggested.\n\nimport module\npub fn main() {\n    1 |> add(2)\n}"
 ---
 ----- SOURCE CODE
 -- module.gleam
@@ -11,6 +11,8 @@ pub fn add(x: Int, y: Int) {
 
 -- main.gleam
 
+// Public function with correct arity from another module should be suggested.
+
 import module
 pub fn main() {
     1 |> add(2)
@@ -18,9 +20,9 @@ pub fn main() {
 
 ----- ERROR
 error: Unknown variable
-  ┌─ /src/one/two.gleam:4:10
+  ┌─ /src/one/two.gleam:6:10
   │
-4 │     1 |> add(2)
+6 │     1 |> add(2)
   │          ^^^
 
 The name `add` is not in scope here.

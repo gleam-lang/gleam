@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\nimport module\npub fn main() {\n    One\n}"
+expression: "\n// Private type from another module should not be suggested.\n\nimport module\npub fn main() {\n    One\n}"
 ---
 ----- SOURCE CODE
 -- module.gleam
@@ -12,6 +12,8 @@ type OneOrTwo {
 
 -- main.gleam
 
+// Private type from another module should not be suggested.
+
 import module
 pub fn main() {
     One
@@ -19,9 +21,9 @@ pub fn main() {
 
 ----- ERROR
 error: Unknown variable
-  ┌─ /src/one/two.gleam:4:5
+  ┌─ /src/one/two.gleam:6:5
   │
-4 │     One
+6 │     One
   │     ^^^
 
 The custom type variant constructor `One` is not in scope here.

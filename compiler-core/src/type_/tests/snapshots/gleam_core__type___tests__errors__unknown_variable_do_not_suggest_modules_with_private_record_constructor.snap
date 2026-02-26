@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\nimport module\npub fn main() {\n    MyRecord(1)\n}"
+expression: "\n// Private record constructor from another module should not be suggested.\n\nimport module\npub fn main() {\n    MyRecord(1)\n}"
 ---
 ----- SOURCE CODE
 -- module.gleam
@@ -11,6 +11,8 @@ type MyType {
 
 -- main.gleam
 
+// Private record constructor from another module should not be suggested.
+
 import module
 pub fn main() {
     MyRecord(1)
@@ -18,9 +20,9 @@ pub fn main() {
 
 ----- ERROR
 error: Unknown variable
-  ┌─ /src/one/two.gleam:4:5
+  ┌─ /src/one/two.gleam:6:5
   │
-4 │     MyRecord(1)
+6 │     MyRecord(1)
   │     ^^^^^^^^
 
 The custom type variant constructor `MyRecord` is not in scope here.

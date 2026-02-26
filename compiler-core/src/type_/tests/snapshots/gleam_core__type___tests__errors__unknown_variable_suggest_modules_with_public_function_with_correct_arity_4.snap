@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\nimport module\npub fn main() {\n    use <- wibble\n    1\n}"
+expression: "\n// Public function with correct arity from another module should be suggested.\n\nimport module\npub fn main() {\n    use <- wibble\n    1\n}"
 ---
 ----- SOURCE CODE
 -- module.gleam
@@ -11,6 +11,8 @@ pub fn wibble(_) {
 
 -- main.gleam
 
+// Public function with correct arity from another module should be suggested.
+
 import module
 pub fn main() {
     use <- wibble
@@ -19,9 +21,9 @@ pub fn main() {
 
 ----- ERROR
 error: Unknown variable
-  ┌─ /src/one/two.gleam:4:12
+  ┌─ /src/one/two.gleam:6:12
   │
-4 │     use <- wibble
+6 │     use <- wibble
   │            ^^^^^^
 
 The name `wibble` is not in scope here.
