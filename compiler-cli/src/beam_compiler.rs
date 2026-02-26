@@ -68,7 +68,7 @@ impl BeamCompiler {
         while let (Ok(_), Ok(None)) = (inner.stdout.read_line(&mut buf), inner.process.try_wait()) {
             let escript_path = get_escript_path(out);
 
-            // Delete unnecessary after compilation escript file
+            // Delete escript file, which is unnecessary after compilation
             io.delete_file(&escript_path)?;
 
             match buf.trim() {
@@ -96,7 +96,7 @@ impl BeamCompiler {
             buf.clear()
         }
 
-        // if we get here, stdout got closed before we got an "ok" or "err".
+        // If we get here, stdout got closed before we got an "ok" or "err".
         Err(Error::ShellCommand {
             program: "escript".into(),
             reason: ShellCommandFailureReason::Unknown,
