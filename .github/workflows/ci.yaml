@@ -482,7 +482,7 @@ jobs:
         working-directory: ./test/hextarball
 
       - name: Test deletion of escript compile file after compilation
-        run: make test
+        run: ./test.sh
         working-directory: ./test/delete_escript_after_compilation
 
       - name: Test running modules
