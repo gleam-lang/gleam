@@ -149,22 +149,25 @@ where
     }
 
     fn attempt_engine_cleanup(&mut self, path: &Utf8PathBuf, feedback: &mut Feedback) {
-        if let Some(project_path) = self.router.project_path(path)
-            && self
+        if let Some(project_path) = self.router.project_path(path) {
+            let all_files_closed = self
                 .opened_files
                 .iter()
                 .filter(|(path, _)| path.starts_with(&project_path))
-                .all(|(_, is_open)| !*is_open)
-        {
-            self.router.delete_engine_for_path(&project_path);
-            _ = self.changed_projects.remove(&project_path);
-            self.opened_files
-                .extract_if(|path, _| path.starts_with(&project_path))
-                .map(|(path, _)| path)
-                .into_iter()
-                .for_each(|path| {
+                .all(|(_, is_open)| !*is_open);
+
+            if all_files_closed {
+                self.router.delete_engine_for_path(&project_path);
+                _ = self.changed_projects.remove(&project_path);
+
+                for (path, _) in self
+                    .opened_files
+                    .extract_if(|path, _| path.starts_with(&project_path))
+                    .into_iter()
+                {
                     feedback.unset_existing_diagnostics(path);
-                });
+                }
+            }
         }
     }
 
