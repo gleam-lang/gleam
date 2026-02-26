@@ -18,6 +18,7 @@ use gleam_core::{
     },
     build::{Module, Origin},
     line_numbers::LineNumbers,
+    parse::{LiteralFloatValue, parse_int_value},
     type_::{
         self, FieldMap, ModuleInterface, PRELUDE_MODULE_NAME, PreludeType, RecordAccessor, Type,
         TypeConstructor, ValueConstructorVariant, collapse_links, error::VariableOrigin,
@@ -751,6 +752,28 @@ impl<'a, IO> Completer<'a, IO> {
         let mut completions = vec![];
         let mod_name = self.module.name.as_str();
         let cursor = self.src_line_numbers.byte_index(*self.cursor_position);
+
+        // If the value for which we've been asked to give completions is a regular
+        // number it doesn't make sense to provide any completion!
+        //
+        // ```gleam
+        // // imagine you're typing a number...
+        //   2
+        // // ^ it would be quite annoying if suggestions popped up:
+        // //   [list.window_by_2]
+        // //   [int.to_base32]
+        // //   ...
+        // ```
+        //
+        // This usually happens in IDEs like Zed that still ask for completions
+        // even if the programmer is typing in a number. We can't control when
+        // an IDE asks for completions, but we can avoid replying nonsense in
+        // this context.
+        if parse_int_value(&cursor_surroundings.surrounding_text).is_some()
+            || LiteralFloatValue::parse(&cursor_surroundings.surrounding_text).is_some()
+        {
+            return vec![];
+        }
 
         // Keyword completions
         if !cursor_surroundings.surrounding_text.is_empty() {

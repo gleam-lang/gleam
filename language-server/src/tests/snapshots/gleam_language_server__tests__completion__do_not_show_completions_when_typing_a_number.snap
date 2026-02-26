@@ -1,0 +1,10 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "\npub fn main() { 2 }\npub fn window_by_2() {}\npub fn to_base_32() {}\n"
+---
+pub fn main() { 2| }
+pub fn window_by_2() {}
+pub fn to_base_32() {}
+
+
+----- Completion content -----

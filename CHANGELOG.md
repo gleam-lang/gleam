@@ -232,6 +232,9 @@
   in a project's dependencies.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server no longer shows completions when typing a number.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server no longer recommends the deprecated `@target` attribute.
   ([Hari Mohan](https://github.com/seafoamteal))
 

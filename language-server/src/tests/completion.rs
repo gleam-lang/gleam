@@ -2348,3 +2348,17 @@ fn complete_panic_keyword() {
         Position::new(0, 24)
     );
 }
+
+#[test]
+fn do_not_show_completions_when_typing_a_number() {
+    assert_completion!(
+        TestProject::for_source(
+            "
+pub fn main() { 2 }
+pub fn window_by_2() {}
+pub fn to_base_32() {}
+"
+        ),
+        Position::new(1, 17)
+    );
+}
