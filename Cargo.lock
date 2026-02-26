@@ -1120,7 +1120,6 @@ dependencies = [
  "toml_edit 0.23.6",
  "tracing",
  "tracing-subscriber",
- "xxhash-rust",
 ]
 
 [[package]]
