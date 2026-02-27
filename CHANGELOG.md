@@ -125,6 +125,10 @@
   details.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- `gleam remove` now cleans build caches after removing dependencies, which
+  ensures that dependencies are actually deleted.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The "extract variable" code action can now pick better names for variables in
