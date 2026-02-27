@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{self};
 use std::marker::PhantomData;
+use toml::Table;
 
 #[cfg(test)]
 use crate::manifest::ManifestPackage;
@@ -188,6 +189,14 @@ pub struct PackageConfig {
     pub target: Target,
     #[serde(default)]
     pub internal_modules: Option<Vec<Glob>>,
+    /// This entry contains values from [tools] table, which is the only way
+    /// for tools to store configuration inside package config, other unknown
+    /// values are unsupported. It isn't used anywhere in the compiler and build tool.
+    #[serde(default)]
+    pub tools: Table,
+    /// This entry contains unknown values, which are used later to generate warning
+    #[serde(default, flatten)]
+    pub unknown: Table,
 }
 
 pub fn serialise_gleam_version<S>(
@@ -739,6 +748,8 @@ impl Default for PackageConfig {
             links: Default::default(),
             internal_modules: Default::default(),
             target: Target::Erlang,
+            tools: Default::default(),
+            unknown: Default::default(),
         }
     }
 }
