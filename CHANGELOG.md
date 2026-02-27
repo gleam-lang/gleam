@@ -28,6 +28,10 @@
   `package.hexdocs.pm` rather than `hexdocs.pm/package`.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- `gleam remove` now cleans build caches after removing dependencies, which
+  ensures that dependencies are actually deleted.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 ### Formatter
