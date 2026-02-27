@@ -294,6 +294,11 @@ pub fn cleanup<Telem: Telemetry>(paths: &ProjectPaths, telemetry: Telem) -> Resu
     let changes = PackageChanges::between_manifests(&old_manifest, &manifest);
     telemetry.resolved_package_versions(&changes);
 
+    // Invalidate build caches after removing package. This deletes the entire
+    // build directory.
+    let build_directory_path = paths.build_directory();
+    fs::delete_directory(build_directory_path.as_ref())?;
+
     Ok(manifest)
 }
 
