@@ -174,6 +174,8 @@ fn package_from_module(module: Module) -> Package {
                     .build()
                     .expect("internals glob"),
             ]),
+            tools: Default::default(),
+            unknown: Default::default(),
         },
         cached_module_names: Vec::new(),
         modules: vec![module],
