@@ -22,11 +22,3 @@ error: Unlabelled argument after labelled argument
   │                          ^^^^
 
 All unlabelled arguments must come before any labelled arguments.
-
-error: Unlabelled argument after labelled argument
-  ┌─ /src/one/two.gleam:8:13
-  │
-8 │   let two = Wibble(..one, b: 1)
-  │             ^^^^^^^^^^^^^^^^^^^
-
-All unlabelled arguments must come before any labelled arguments.
