@@ -45,7 +45,7 @@ num-traits = "0.2.19"
 age = { version = "0.11", features = ["armor"] }
 radix_trie = "0.3"
 # Ensuring recursive type-checking doesn't stack overflow
-stacker = "0.1.21"
+stacker = "0.1.23"
 # Manipulating bit arrays
 bitvec = { version = "1", features = ["serde"] }
 
