@@ -199,10 +199,10 @@ impl DeprecatedEnvironmentVariable {
     fn message(&self) -> &'static str {
         match self {
             DeprecatedEnvironmentVariable::HexpmUser => {
-                "Use the `{API_ENV_NAME}` environment variable instead."
+                "Use the `HEXPM_API_KEY` environment variable instead."
             }
             DeprecatedEnvironmentVariable::HexpmPass => {
-                "Use the `{API_ENV_NAME}` environment variable instead."
+                "Use the `HEXPM_API_KEY` environment variable instead."
             }
         }
     }
