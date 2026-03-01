@@ -189,6 +189,9 @@
 
 ### Formatter
 
+- The formatter no longer wraps multiple tuple or field access into a block.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - The compiler now emits correctly-scoped JavaScript code for `case` expressions

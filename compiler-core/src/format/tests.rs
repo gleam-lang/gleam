@@ -6836,3 +6836,24 @@ pub const list = [
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5401
+#[test]
+fn multiple_field_access_are_not_put_in_a_block() {
+    assert_format!(
+        "pub fn main() {
+  a.wib.wob
+}
+"
+    );
+}
+
+#[test]
+fn multiple_tuple_field_access_are_not_put_in_a_block() {
+    assert_format!(
+        "pub fn main() {
+  #(1, 2).1.2
+}
+"
+    );
+}
