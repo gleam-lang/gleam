@@ -1118,13 +1118,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::FieldAccess {
                 label, container, ..
-            } => if let UntypedExpr::TupleIndex { .. } = container.as_ref() {
-                self.expr(container).surround("{ ", " }")
-            } else {
-                self.expr(container)
-            }
-            .append(".")
-            .append(label.as_str()),
+            } => self.expr(container).append(".").append(label.as_str()),
 
             UntypedExpr::Tuple { elements, location } => self.tuple(elements, location),
 
