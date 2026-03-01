@@ -185,7 +185,6 @@ pub enum Warning {
 
     UnknownConfigKey {
         name: EcoString,
-        path: Utf8PathBuf,
     },
 }
 
@@ -1502,7 +1501,7 @@ The imported value could not be used in this module anyway."
                 location: None,
             },
 
-            Warning::UnknownConfigKey { name, path: _ } => Diagnostic {
+            Warning::UnknownConfigKey { name } => Diagnostic {
                 title: "Unknown config key".into(),
                 text: format!("Config key '{name}' isn't allowed."),
                 hint: Some(
