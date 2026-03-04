@@ -84,6 +84,10 @@
   an empty README.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The build tool now deletes `escript` file after compilation, which is
+  unnecessary once the build is completed.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server now allows extracting the start of a pipeline into a

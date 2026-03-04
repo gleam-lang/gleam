@@ -143,6 +143,10 @@ impl ProjectPaths {
     }
 }
 
+pub fn compilation_escript_path(out: &Utf8Path) -> Utf8PathBuf {
+    out.join(ARTEFACT_DIRECTORY_NAME).join("gleam@@compile.erl")
+}
+
 pub fn global_package_cache_package_tarball(checksum: &Base16Checksum) -> Utf8PathBuf {
     global_packages_cache().join(format!("{}.tar", checksum.to_string()))
 }
