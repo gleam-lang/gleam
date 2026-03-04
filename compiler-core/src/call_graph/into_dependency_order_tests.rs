@@ -85,7 +85,10 @@ fn parse_and_order(
             level
                 .into_iter()
                 .map(|function| match function {
-                    CallGraphNode::Function(f) => f.name.map(|(_, name)| name).unwrap(),
+                    CallGraphNode::Function(f) => f
+                        .name
+                        .map(|(_, name)| name)
+                        .expect("Expected function name to be present"),
                     CallGraphNode::ModuleConstant(c) => c.name,
                 })
                 .collect_vec()
@@ -632,7 +635,8 @@ fn big_guard() {
 #[test]
 fn duplicate_external_function_name() {
     let functions = [("c", [].as_slice(), "1"), ("c", [].as_slice(), "1")];
-    _ = parse_and_order(functions.as_slice(), [].as_slice()).unwrap_err();
+    _ = parse_and_order(functions.as_slice(), [].as_slice())
+        .expect_err("Expected parse_and_order to fail");
 }
 
 #[test]
@@ -641,7 +645,8 @@ fn duplicate_function_name() {
         ("b", [].as_slice(), r#"123456"#),
         ("b", [].as_slice(), r#"123456"#),
     ];
-    _ = parse_and_order(functions.as_slice(), [].as_slice()).unwrap_err();
+    _ = parse_and_order(functions.as_slice(), [].as_slice())
+        .expect_err("Expected parse_and_order to fail");
 }
 
 #[test]
@@ -652,7 +657,8 @@ fn more_complex_cycle() {
         ("a3", [].as_slice(), r#"{ a1 }"#),
     ];
     assert_eq!(
-        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
+        parse_and_order(functions.as_slice(), [].as_slice())
+            .expect("Expected parse_and_order to succeed"),
         vec![vec!["a2", "a3", "a1"]]
     );
 }
