@@ -24,7 +24,6 @@ pub fn remove(package: String, version: String) -> Result<()> {
     let hex_config = hexpm::Config::new();
     let credentials = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
         .get_or_create_api_credentials()?;
-    let http = HttpClient::new();
 
     // Remove docs from API
     let request = hexpm::api_remove_docs_request(

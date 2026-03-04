@@ -97,10 +97,9 @@ impl<'runtime> HexAuthentication<'runtime> {
     ) -> Result<hexpm::OAuthDeviceAuthorisation, Error> {
         // Create a recognisable name for the client, so folks can more easily understand which
         // session is which in the Hex console.
-        let client_name = format!(
-            "Gleam ({})",
-            hostname::get().expect("hostname").to_string_lossy()
-        );
+        // It is expected that we can always get the hostname.
+        let hostname = hostname::get().expect("hostname");
+        let client_name = format!("Gleam ({})", hostname.to_string_lossy());
 
         let request = hexpm::oauth_device_authorisation_request(
             HEX_OAUTH_CLIENT_ID,
@@ -179,7 +178,8 @@ It will be used to locally encrypt your Hex API tokens.
     /// In order, it will try these sources:
     ///
     /// 1. An API key from the HEXPM_API_KEY environment variable.
-    /// 2. An OAuth refresh token from the file system, which is the exchanged for an access token.
+    /// 2. An OAuth refresh token from the file system, which is then exchanged for
+    ///    an access token.
     /// 3. The OAuth flow.
     pub fn get_or_create_api_credentials(&mut self) -> Result<hexpm::Credentials> {
         if let Some(key) = Self::read_env_api_key()? {
@@ -348,7 +348,7 @@ struct StoredOAuthRepoCredentials {
     repository: http::Uri,
     /// An encrypted refresh token.
     refresh_token: String,
-    /// The hash of the token, so it can be revoked even if it cannot be ecrypted.
+    /// The hash of the token, so it can be revoked even if it cannot be encrypted.
     refresh_token_hash: String,
 }
 

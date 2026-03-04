@@ -1237,7 +1237,8 @@ enum PollResponseBodyError {
 fn default_poll_interval_seconds() -> u64 {
     5
 }
-/// Use a refresh tokent to get an access token that can be used to
+
+/// Use a refresh token to get an access token that can be used to
 /// authenticate with the API.
 pub fn oauth_refresh_token_request(
     hex_oauth_client_id: &str,
