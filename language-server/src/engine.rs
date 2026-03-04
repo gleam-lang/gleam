@@ -619,7 +619,7 @@ where
         params: lsp::FoldingRangeParams,
     ) -> Response<Vec<FoldingRange>> {
         self.respond(|this| {
-            let mut ranges: Vec<(u32, FoldingRange)> = vec![];
+            let mut ranges: Vec<FoldingRange> = vec![];
             let Some(module) = this.module_for_uri(&params.text_document.uri) else {
                 return Ok(vec![]);
             };
@@ -635,7 +635,7 @@ where
                     continue;
                 };
 
-                ranges.push((import.start, range));
+                ranges.push(range);
             }
 
             for type_ in &module.ast.definitions.custom_types {
@@ -643,7 +643,7 @@ where
                 let Some(range) = folding_range_for_span(span, &line_numbers, None) else {
                     continue;
                 };
-                ranges.push((span.start, range));
+                ranges.push(range);
             }
 
             for constant in &module.ast.definitions.constants {
@@ -651,7 +651,7 @@ where
                 let Some(range) = folding_range_for_span(span, &line_numbers, None) else {
                     continue;
                 };
-                ranges.push((span.start, range));
+                ranges.push(range);
             }
 
             for alias in &module.ast.definitions.type_aliases {
@@ -659,7 +659,7 @@ where
                 let Some(range) = folding_range_for_span(span, &line_numbers, None) else {
                     continue;
                 };
-                ranges.push((span.start, range));
+                ranges.push(range);
             }
 
             for function in &module.ast.definitions.functions {
@@ -671,11 +671,11 @@ where
                 let Some(range) = folding_range_for_span(span, &line_numbers, None) else {
                     continue;
                 };
-                ranges.push((span.start, range));
+                ranges.push(range);
             }
 
-            ranges.sort_by_key(|(start, _)| *start);
-            Ok(ranges.into_iter().map(|(_, range)| range).collect())
+            ranges.sort_by_key(|range| range.start_line);
+            Ok(ranges)
         })
     }
 
