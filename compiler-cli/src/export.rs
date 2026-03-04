@@ -76,11 +76,16 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
         }
     }
 
+    let version_check = detect_otp_version()
+        .map(|v| format!("-eval '{}'", otp_version_check(&v)))
+        .unwrap_or_default();
+
     // PowerShell entry point script.
     write_entrypoint_script(
         &out.join(ENTRYPOINT_FILENAME_POWERSHELL),
         ENTRYPOINT_TEMPLATE_POWERSHELL,
         &built.root_package.config.name,
+        &version_check,
     )?;
 
     // POSIX Shell entry point script.
@@ -88,6 +93,7 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
         &out.join(ENTRYPOINT_FILENAME_POSIX_SHELL),
         ENTRYPOINT_TEMPLATE_POSIX_SHELL,
         &built.root_package.config.name,
+        &version_check,
     )?;
 
     crate::cli::print_exported(&built.root_package.config.name);
@@ -108,13 +114,46 @@ one of the following scripts:
 
 fn write_entrypoint_script(
     entrypoint_output_path: &Utf8PathBuf,
-    entrypoint_template_path: &str,
+    entrypoint_template: &str,
     package_name: &str,
+    otp_version_check: &str,
 ) -> Result<()> {
-    let text = entrypoint_template_path.replace("$PACKAGE_NAME_FROM_GLEAM", package_name);
+    let text = entrypoint_template
+        .replace("$PACKAGE_NAME_FROM_GLEAM", package_name)
+        .replace("$OTP_VERSION_CHECK_FROM_GLEAM", otp_version_check);
     crate::fs::write(entrypoint_output_path, &text)?;
     crate::fs::make_executable(entrypoint_output_path)?;
     Ok(())
+}
+
+fn detect_otp_version() -> Option<String> {
+    let output = std::process::Command::new("erl")
+        .args([
+            "-noshell",
+            "-eval",
+            "io:format(erlang:system_info(otp_release)), halt().",
+        ])
+        .output()
+        .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let version = String::from_utf8(output.stdout).ok()?;
+    let version = version.trim().to_string();
+
+    if version.is_empty() || !version.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return None;
+    }
+
+    Some(version)
+}
+
+fn otp_version_check(version: &str) -> String {
+    format!(
+        r#"case erlang:system_info(otp_release) of "{version}" -> ok; V -> io:format(standard_error, "warning: This Erlang shipment was built with Erlang/OTP {version} but you are running Erlang/OTP ~s.~nThe shipment may fail to run. Please use Erlang/OTP {version} or rebuild the shipment with your current version.~n", [V]) end"#
+    )
 }
 
 pub fn hex_tarball(paths: &ProjectPaths) -> Result<()> {

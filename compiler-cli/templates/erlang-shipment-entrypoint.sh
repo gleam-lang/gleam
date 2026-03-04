@@ -8,13 +8,16 @@ COMMAND="${1-default}"
 run() {
   exec erl \
     -pa "$BASE"/*/ebin \
+    $OTP_VERSION_CHECK_FROM_GLEAM \
     -eval "$PACKAGE@@main:run($PACKAGE)" \
     -noshell \
     -extra "$@"
 }
 
 shell() {
-  erl -pa "$BASE"/*/ebin
+  erl \
+    -pa "$BASE"/*/ebin \
+    $OTP_VERSION_CHECK_FROM_GLEAM
 }
 
 case "$COMMAND" in
