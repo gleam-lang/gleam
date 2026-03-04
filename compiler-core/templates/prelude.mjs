@@ -298,6 +298,8 @@ export const BitArray$BitArray = (buffer, bitSize, bitOffset) =>
   new BitArray(buffer, bitSize, bitOffset);
 export const BitArray$isBitArray = (value) => value instanceof BitArray;
 export const BitArray$BitArray$data = (bitArray) => {
+  if (bitArray.bitSize % 8 !== 0)
+    throw new Error("BitArray$BitArray$data called on un-aligned bit array");
   const array = bitArray.rawBuffer;
   return new DataView(array.buffer, array.byteOffest, bitArray.byteLength);
 };
@@ -496,7 +498,7 @@ export function bitArraySliceToInt(
 
   // Handle the case of the slice being completely contained in a single byte
   if (startByteIndex == endByteIndex) {
-    const mask = 0xff >> start % 8;
+    const mask = 0xff >> (start % 8);
     const unusedLowBitCount = (8 - (end % 8)) % 8;
 
     let value =

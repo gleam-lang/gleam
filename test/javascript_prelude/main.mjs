@@ -1213,10 +1213,9 @@ assert(
   assertEqual(bitArray.byteSize, 3);
   assertEqual(bitArray.bitOffset, 1);
   assertEqual(bitArray.rawBuffer, new Uint8Array([1, 2, 3]));
-  assertEqual(
-    BitArray$BitArray$data(bitArray),
-    new DataView(new Uint8Array([1, 2, 3]).buffer),
-  );
+  assertThrows("BitArray$BitArray$data of un-aligned bit array", () => {
+    BitArray$BitArray$data(bitArray);
+  });
 }
 
 assertEqual(
