@@ -7,6 +7,7 @@
 main(_) ->
     ok = io:setopts([binary, {encoding, utf8}]),
     ok = configure_logging(),
+    io:put_chars("gleam-otp-version:" ++ erlang:system_info(otp_release) ++ "\n"),
     compile_package_loop().
 
 compile_package_loop() ->
