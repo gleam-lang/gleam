@@ -273,14 +273,14 @@ impl Environment<'_> {
     /// original names for them.
     pub fn resolve_deferred_type_variable_aliases(&mut self) {
         for (source_id, type_) in self.deferred_type_variable_aliases.drain(..) {
-            if let Some(alias) = self.names.get_type_variable(source_id).cloned() {
+            if let Some(alias) = self.names.get_type_variable(source_id) {
                 let final_id = Self::resolve_type_var_id(&type_);
                 if let Some(id) = final_id {
                     // Only register if the target doesn't already have a name.
                     // This avoids overwriting user-provided names (e.g. from
                     // annotations) with names from instantiated type parameters.
                     if self.names.get_type_variable(id).is_none() {
-                        self.names.type_variable_in_scope(id, alias);
+                        self.names.type_variable_in_scope(id, alias.clone());
                     }
                 }
             }
