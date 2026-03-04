@@ -1068,7 +1068,7 @@ dependencies = [
 
 [[package]]
 name = "gleam"
-version = "1.14.0"
+version = "1.15.0-rc1"
 dependencies = [
  "gleam-cli",
  "static_vcruntime",
@@ -1076,7 +1076,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-cli"
-version = "1.14.0"
+version = "1.15.0-rc1"
 dependencies = [
  "async-trait",
  "base16",
@@ -1118,14 +1118,14 @@ dependencies = [
  "termcolor",
  "tokio",
  "toml 0.9.11+spec-1.1.0",
- "toml_edit 0.23.6",
+ "toml_edit",
  "tracing",
  "tracing-subscriber",
 ]
 
 [[package]]
 name = "gleam-core"
-version = "1.14.0"
+version = "1.15.0-rc1"
 dependencies = [
  "age",
  "askama",
@@ -1181,7 +1181,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-language-server"
-version = "1.14.0"
+version = "1.15.0-rc1"
 dependencies = [
  "camino",
  "debug-ignore",
@@ -1203,7 +1203,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-wasm"
-version = "1.14.0"
+version = "1.15.0-rc1"
 dependencies = [
  "camino",
  "console_error_panic_hook",
@@ -1270,7 +1270,7 @@ checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 
 [[package]]
 name = "hexpm"
-version = "1.14.0"
+version = "1.15.0-rc1"
 dependencies = [
  "base16",
  "bytes",
@@ -3143,7 +3143,7 @@ dependencies = [
 
 [[package]]
 name = "test-output"
-version = "1.14.0"
+version = "1.15.0-rc1"
 dependencies = [
  "camino",
  "gleam-cli",
@@ -3154,7 +3154,7 @@ dependencies = [
 
 [[package]]
 name = "test-package-compiler"
-version = "1.14.0"
+version = "1.15.0-rc1"
 dependencies = [
  "camino",
  "gleam-core",
@@ -3168,7 +3168,7 @@ dependencies = [
 
 [[package]]
 name = "test-project-compiler"
-version = "1.14.0"
+version = "1.15.0-rc1"
 dependencies = [
  "camino",
  "gleam-core",
@@ -3337,7 +3337,7 @@ dependencies = [
  "serde",
  "serde_spanned 0.6.9",
  "toml_datetime 0.6.11",
- "toml_edit 0.22.27",
+ "toml_edit",
 ]
 
 [[package]]
@@ -3384,19 +3384,6 @@ dependencies = [
  "serde_spanned 0.6.9",
  "toml_datetime 0.6.11",
  "toml_write",
- "winnow",
-]
-
-[[package]]
-name = "toml_edit"
-version = "0.23.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3effe7c0e86fdff4f69cdd2ccc1b96f933e24811c5441d44904e8683e27184b"
-dependencies = [
- "indexmap",
- "toml_datetime 0.7.5+spec-1.1.0",
- "toml_parser",
- "toml_writer",
  "winnow",
 ]
 
