@@ -84,6 +84,10 @@
   an empty README.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The build tool now falls back to recursively hardlinking directories on
+  Windows when it fails to symlink one due to disabled "Developer mode".
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server now allows extracting the start of a pipeline into a
