@@ -74,6 +74,7 @@ pub struct Built {
     pub root_package: Package,
     pub module_interfaces: im::HashMap<EcoString, type_::ModuleInterface>,
     compiled_dependency_modules: Vec<Module>,
+    pub otp_version: Option<u64>,
 }
 
 impl Built {
@@ -231,10 +232,17 @@ where
             });
         }
 
+        let otp_version = if self.target().is_erlang() && self.options.codegen == Codegen::All {
+            Some(self.io.otp_version())
+        } else {
+            None
+        };
+
         Ok(Built {
             root_package,
             module_interfaces: self.importable_modules,
             compiled_dependency_modules,
+            otp_version,
         })
     }
 

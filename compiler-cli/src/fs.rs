@@ -279,6 +279,17 @@ impl BeamCompilerIO for ProjectIO {
             }
         }
     }
+
+    fn otp_version(&self) -> u64 {
+        let guard = self
+            .beam_compiler
+            .lock()
+            .expect("could not lock beam_compiler");
+        guard
+            .as_ref()
+            .expect("OTP version not available after Erlang compilation")
+            .otp_version
+    }
 }
 
 impl MakeLocker for ProjectIO {

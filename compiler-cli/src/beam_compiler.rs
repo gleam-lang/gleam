@@ -24,6 +24,7 @@ pub struct BeamCompilerInstance {
     process: Child,
     stdin: Option<ChildStdin>,
     stdout: BufReader<ChildStdout>,
+    pub otp_version: u64,
     // A guard held for cleaning up the temporary file used to start the BEAM instance.
     _source: tempfile::NamedTempFile,
 }
@@ -131,11 +132,27 @@ impl BeamCompilerInstance {
 
         let stdin = process.stdin.take().expect("could not get child stdin");
         let stdout = process.stdout.take().expect("could not get child stdout");
+        let mut stdout = BufReader::new(stdout);
+
+        let mut version_line = String::new();
+        let _ = stdout
+            .read_line(&mut version_line)
+            .map_err(|e| Error::ShellCommand {
+                program: "escript".into(),
+                reason: ShellCommandFailureReason::IoError(e.kind()),
+            })?;
+        let otp_version = version_line
+            .trim()
+            .strip_prefix("gleam-otp-version:")
+            .expect("BEAM compiler did not report OTP version")
+            .parse()
+            .expect("BEAM compiler reported invalid OTP version");
 
         Ok(Self {
             process,
             stdin: Some(stdin),
-            stdout: BufReader::new(stdout),
+            stdout,
+            otp_version,
             _source: escript_file,
         })
     }
