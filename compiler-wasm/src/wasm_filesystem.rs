@@ -35,6 +35,10 @@ impl BeamCompiler for WasmFileSystem {
     ) -> Result<Vec<String>, Error> {
         Ok(Vec::new()) // Always succeed.
     }
+
+    fn otp_version(&self) -> Option<String> {
+        None
+    }
 }
 
 impl FileSystemWriter for WasmFileSystem {
