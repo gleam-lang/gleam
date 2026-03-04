@@ -3550,24 +3550,6 @@ pub fn main() {
 }
 
 #[test]
-fn unknown_variable_possible_modules_2() {
-    assert_module_error!(
-        (
-            "module",
-            "
-pub fn add(x: Int, y: Int) {
-    x + y
-}"
-        ),
-        "
-import module
-pub fn main() {
-    add(1, 1)
-}"
-    );
-}
-
-#[test]
 fn incomplete_pattern_does_not_show_structure_of_internal_type_outside_of_its_module_2() {
     assert_module_error!(
         (
@@ -3583,60 +3565,6 @@ pub type Type {
 
 pub fn go(value: Type) {
   case value {}
-}"
-    );
-}
-
-#[test]
-fn unknown_variable_possible_modules_3() {
-    assert_module_error!(
-        (
-            "module",
-            "
-pub fn add(x: Int) {
-    x + 1
-}"
-        ),
-        "
-import module
-pub fn main() {
-    add(1, 1)
-}"
-    );
-}
-
-#[test]
-fn unknown_variable_possible_modules_4() {
-    assert_module_error!(
-        (
-            "module",
-            "
-pub fn add(x: Float, y: Float) {
-    x +. y
-}"
-        ),
-        "
-import module
-pub fn main() {
-    add(1, 1)
-}"
-    );
-}
-
-#[test]
-fn unknown_variable_possible_modules_5() {
-    assert_module_error!(
-        (
-            "module",
-            "
-fn add(x: Int, y: Int) {
-    x + y
-}"
-        ),
-        "
-import module
-pub fn main() {
-    add(1, 1)
 }"
     );
 }

@@ -500,7 +500,7 @@ impl Environment<'_> {
                 .ok_or_else(|| UnknownValueConstructorError::Variable {
                     name: name.clone(),
                     variables: self.local_value_names(),
-                    type_with_name_in_scope: self.module_types.keys().any(|typ| typ == name),
+                    type_with_name_in_scope: self.module_types.contains_key(name),
                     possible_modules: self.get_possible_modules_with_value(name),
                 }),
 
