@@ -64,7 +64,7 @@ impl<'a> Printer<'a> {
                 let is_defined_in_current_module = *module == self.current_module;
                 let is_internal = variable
                     .type_
-                    .publicity()
+                    .named_type_publicity()
                     .unwrap_or(Publicity::Public)
                     .is_internal();
 
