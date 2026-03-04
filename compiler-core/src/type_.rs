@@ -531,7 +531,7 @@ impl Type {
 
     /// If the type is named, return its publicity.
     ///
-    pub fn publicity(&self) -> Option<Publicity> {
+    pub fn named_type_publicity(&self) -> Option<Publicity> {
         match self {
             Type::Named { publicity, .. } => Some(*publicity),
             Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => None,
