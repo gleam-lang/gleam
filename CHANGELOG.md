@@ -17,6 +17,10 @@
 
 ### Bug fixes
 
+- Fixed a bug where the compiler would crash when trying to read the cache for
+  modules containing large constants.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.15.1 - 2026-03-17
 
 ### Bug fixes
