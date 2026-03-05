@@ -562,6 +562,14 @@ impl From<capnp::NotInSchema> for Error {
     }
 }
 
+impl From<std::io::Error> for Error {
+    fn from(error: std::io::Error) -> Self {
+        Error::MetadataDecodeError {
+            error: Some(error.to_string()),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum InvalidProjectNameReason {
     Format,

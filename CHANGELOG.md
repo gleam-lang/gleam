@@ -84,6 +84,9 @@
   an empty README.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- When create a Hex credentials file, use mode 0600 so only the user can read it.
+  ([Peter Bhat Harkins](https://github.com/peterbhatharkins))
+
 ### Language server
 
 - The language server now allows extracting the start of a pipeline into a
