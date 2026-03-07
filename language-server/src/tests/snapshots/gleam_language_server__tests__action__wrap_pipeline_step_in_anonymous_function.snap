@@ -1,0 +1,32 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn main() {\n  1 |> wibble |> wobble\n}\n\nfn wibble(i) {\n  todo\n}\n\nfn wobble(i) {\n  todo\n}\n\n"
+---
+----- BEFORE ACTION
+pub fn main() {
+  1 |> wibble |> wobble
+       ↑               
+}
+
+fn wibble(i) {
+  todo
+}
+
+fn wobble(i) {
+  todo
+}
+
+
+
+----- AFTER ACTION
+pub fn main() {
+  1 |> fn(int) { wibble(int) } |> wobble
+}
+
+fn wibble(i) {
+  todo
+}
+
+fn wobble(i) {
+  todo
+}

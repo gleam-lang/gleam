@@ -494,8 +494,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location,
                 fun,
                 arguments,
+                argument_parentheses,
                 ..
-            } => Ok(self.infer_call(*fun, arguments, location, CallKind::Function)),
+            } => Ok(self.infer_call(
+                *fun,
+                arguments,
+                location,
+                Some(argument_parentheses),
+                CallKind::Function,
+            )),
 
             UntypedExpr::BinOp {
                 location,
@@ -850,6 +857,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 *call.function,
                 call.arguments,
                 call_location,
+                None,
                 CallKind::Use {
                     call_location: use_call_location,
                     assignments_location: use_.assignments_location,
@@ -1148,6 +1156,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         fun: UntypedExpr,
         arguments: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
+        argument_parentheses: Option<SrcSpan>,
         kind: CallKind,
     ) -> TypedExpr {
         let (fun, arguments, type_) = self.do_infer_call(fun, arguments, location, kind);
@@ -1205,6 +1214,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             location,
             type_,
             arguments,
+            argument_parentheses,
             fun: Box::new(fun),
         }
     }

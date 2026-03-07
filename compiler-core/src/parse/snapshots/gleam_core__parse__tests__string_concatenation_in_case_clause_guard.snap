@@ -161,6 +161,10 @@ expression: "\nlet my_string = \"hello \"\ncase my_string {\n    _ if my_string 
                                     implicit: None,
                                 },
                             ],
+                            argument_parentheses: SrcSpan {
+                                start: 101,
+                                end: 107,
+                            },
                         },
                     },
                 ],

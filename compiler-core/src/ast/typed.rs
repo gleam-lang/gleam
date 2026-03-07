@@ -76,6 +76,13 @@ pub enum TypedExpr {
         type_: Arc<Type>,
         fun: Box<Self>,
         arguments: Vec<CallArg<Self>>,
+        /// Specifies the source location of the argument list, if present. Can
+        /// be None in cases where the function call has been inferred as part
+        /// of a pipeline.
+        ///
+        /// The endpoints of the span will sit before and after the list's
+        /// parentheses.
+        argument_parentheses: Option<SrcSpan>,
     },
 
     BinOp {
