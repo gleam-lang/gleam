@@ -1,5 +1,7 @@
 use crate::{cli, http::HttpClient};
 use ecow::EcoString;
+use std::fs::Permissions;
+use std::os::unix::fs::PermissionsExt;
 use gleam_core::{
     Error, Result, encryption,
     error::{FileIoAction, FileKind},
@@ -133,6 +135,8 @@ impl<'runtime> HexAuthentication<'runtime> {
             },
         };
         let toml = toml::to_string(&credentials).expect("OAuth credentials TOML encoding");
+        let perm = Permissions::from_mode(0o600);
+        std::fs::set_permissions(&path, perm)?;
         crate::fs::write(&path, &toml)?;
         Ok(())
     }
