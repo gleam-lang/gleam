@@ -90,7 +90,7 @@ pub enum Error {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{assert_eq, *};
 
     #[test]
     fn toposort_deps_test() {
