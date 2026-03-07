@@ -1544,13 +1544,23 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
             tuple(elements.iter().map(|element| const_inline(element, env)))
         }
 
-        Constant::List { elements, .. } => join(
-            elements.iter().map(|element| const_inline(element, env)),
-            break_(",", ", "),
-        )
-        .nest(INDENT)
-        .surround("[", "]")
-        .group(),
+        Constant::List { elements, tail, .. } => {
+            let tail_elements = tail
+                .as_deref()
+                .and_then(|tail| tail.list_elements())
+                .unwrap_or_default();
+
+            join(
+                elements
+                    .iter()
+                    .chain(tail_elements.into_iter())
+                    .map(|element| const_inline(element, env)),
+                break_(",", ", "),
+            )
+            .nest(INDENT)
+            .surround("[", "]")
+            .group()
+        }
 
         Constant::BitArray { segments, .. } => bit_array(
             segments

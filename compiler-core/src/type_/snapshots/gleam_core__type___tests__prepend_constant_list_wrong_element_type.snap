@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "\nconst list = [3, 4, 5]\npub const full_list = [1.0, 2.0, ..list]\n"
+---
+----- SOURCE CODE
+
+const list = [3, 4, 5]
+pub const full_list = [1.0, 2.0, ..list]
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:36
+  │
+3 │ pub const full_list = [1.0, 2.0, ..list]
+  │                                    ^^^^
+
+Expected type:
+
+    List(Float)
+
+Found type:
+
+    List(Int)

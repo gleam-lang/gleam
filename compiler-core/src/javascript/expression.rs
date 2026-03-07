@@ -1969,11 +1969,18 @@ impl<'module, 'a> Generator<'module, 'a> {
                     .map(|element| self.constant_expression(context, element)),
             ),
 
-            Constant::List { elements, .. } => {
+            Constant::List { elements, tail, .. } => {
                 self.tracker.list_used = true;
+
+                let tail_elements = tail
+                    .as_deref()
+                    .and_then(|tail| tail.list_elements())
+                    .unwrap_or_default();
+
                 let list = list(
                     elements
                         .iter()
+                        .chain(tail_elements.into_iter())
                         .map(|element| self.constant_expression(context, element)),
                 );
 
@@ -2605,7 +2612,7 @@ pub(crate) fn array<'a, Elements: IntoIterator<Item = Document<'a>>>(
 
 pub(crate) fn list<'a, I: IntoIterator<Item = Document<'a>>>(elements: I) -> Document<'a>
 where
-    I::IntoIter: DoubleEndedIterator + ExactSizeIterator,
+    I::IntoIter: DoubleEndedIterator,
 {
     let array = array(elements);
     docvec!["toList(", array, ")"]

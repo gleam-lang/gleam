@@ -479,8 +479,11 @@ impl<'comments> Formatter<'comments> {
             Constant::String { value, .. } => self.string(value),
 
             Constant::List {
-                elements, location, ..
-            } => self.const_list(elements, location),
+                elements,
+                location,
+                tail,
+                ..
+            } => self.const_list(elements, location, tail),
 
             Constant::Tuple {
                 elements, location, ..
@@ -587,6 +590,7 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         elements: &'a [Constant<A, B>],
         location: &SrcSpan,
+        tail: &'a Option<Box<Constant<A, B>>>,
     ) -> Document<'a> {
         if elements.is_empty() {
             // We take all comments that come _before_ the end of the list,
@@ -609,7 +613,7 @@ impl<'comments> Formatter<'comments> {
 
         let list_packing = self.items_sequence_packing(
             elements,
-            None,
+            tail.as_deref(),
             |element| element.can_have_multiple_per_line(),
             *location,
         );
@@ -642,7 +646,19 @@ impl<'comments> Formatter<'comments> {
         }
         elements_doc = elements_doc.next_break_fits(NextBreakFitsMode::Disabled);
 
-        let doc = break_("[", "[").append(elements_doc).nest(INDENT);
+        let doc = break_("[", "[").append(elements_doc);
+        let (doc, final_break) = match tail {
+            None => (doc.nest(INDENT), break_(",", "")),
+            Some(tail) => {
+                let comments = self.pop_comments(tail.location().start);
+
+                let tail = commented(docvec!["..", self.const_expr(tail)], comments);
+                (
+                    doc.append(break_(",", ", ")).append(tail).nest(INDENT),
+                    break_("", ""),
+                )
+            }
+        };
 
         // We get all remaining comments that come before the list's closing
         // square bracket.
@@ -651,9 +667,9 @@ impl<'comments> Formatter<'comments> {
         // Otherwise those would be moved out of the list.
         let comments = self.pop_comments(location.end);
         let doc = match printed_comments(comments, false) {
-            None => doc.append(break_(",", "")).append("]"),
+            None => doc.append(final_break).append("]"),
             Some(comment) => doc
-                .append(break_(",", "").nest(INDENT))
+                .append(final_break.nest(INDENT))
                 // ^ See how here we're adding the missing indentation to the
                 //   final break so that the final comment is as indented as the
                 //   list's items.

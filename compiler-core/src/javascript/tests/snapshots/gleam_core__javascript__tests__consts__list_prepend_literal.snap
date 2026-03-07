@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/javascript/tests/consts.rs
+expression: "\npub const wibble = [0, 1, ..[2, 3, 4]]\n"
+---
+----- SOURCE CODE
+
+pub const wibble = [0, 1, ..[2, 3, 4]]
+
+
+----- COMPILED JAVASCRIPT
+import { toList } from "../gleam.mjs";
+
+export const wibble = /* @__PURE__ */ toList([0, 1, 2, 3, 4]);

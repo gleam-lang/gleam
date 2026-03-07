@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/erlang/tests/consts.rs
+expression: "\nconst wibble = [2, 3, 4]\npub const wobble = [0, 1, ..wibble]\n\npub fn main() {\n  wobble\n}\n"
+---
+----- SOURCE CODE
+
+const wibble = [2, 3, 4]
+pub const wobble = [0, 1, ..wibble]
+
+pub fn main() {
+  wobble
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 5).
+-spec main() -> list(integer()).
+main() ->
+    [0, 1, 2, 3, 4].

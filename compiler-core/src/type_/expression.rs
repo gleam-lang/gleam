@@ -3747,8 +3747,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => self.infer_const_tuple(elements, location),
 
             Constant::List {
-                elements, location, ..
-            } => self.infer_const_list(elements, location),
+                elements,
+                location,
+                tail,
+                ..
+            } => self.infer_const_list(elements, location, tail),
 
             Constant::BitArray { location, segments } => {
                 match self.infer_constant_bit_array(segments, location) {
@@ -4384,13 +4387,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         untyped_elements: Vec<UntypedConstant>,
         location: SrcSpan,
+        tail: Option<Box<UntypedConstant>>,
     ) -> TypedConstant {
-        let type_ = self.new_unbound_var();
+        let element_type = self.new_unbound_var();
         let mut elements = Vec::with_capacity(untyped_elements.len());
 
         for element in untyped_elements {
             let element = self.infer_const(&None, element);
-            if let Err(error) = unify(type_.clone(), element.type_()) {
+            if let Err(error) = unify(element_type.clone(), element.type_()) {
                 self.problems
                     .error(convert_unify_error(error, element.location()));
             }
@@ -4398,10 +4402,24 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             elements.push(element);
         }
 
+        let type_ = list(element_type);
+
+        let tail = if let Some(tail) = tail {
+            let tail = self.infer_const(&None, *tail);
+            if let Err(error) = unify(type_.clone(), tail.type_()) {
+                self.problems
+                    .error(convert_unify_error(error, tail.location()))
+            }
+            Some(Box::new(tail))
+        } else {
+            None
+        };
+
         Constant::List {
             elements,
             location,
-            type_: list(type_),
+            type_,
+            tail,
         }
     }
 
@@ -5292,10 +5310,12 @@ fn invalid_with_annotated_type(constant: TypedConstant, new_type: Arc<Type>) -> 
             location,
             elements,
             type_: _,
+            tail,
         } => Constant::List {
             location,
             elements,
             type_: new_type,
+            tail,
         },
 
         Constant::Record {

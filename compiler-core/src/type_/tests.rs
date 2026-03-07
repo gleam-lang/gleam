@@ -3503,3 +3503,47 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn prepend_constant_list() {
+    assert_module_infer!(
+        "
+const list = [3, 4, 5]
+pub const full_list = [1, 2, ..list]
+",
+        vec![("full_list", "List(Int)")],
+    );
+}
+
+#[test]
+fn prepend_constant_list_from_other_module() {
+    assert_module_infer!(
+        ("mod", "pub const list = [3, 4, 5]"),
+        "
+import mod
+
+pub const full_list = [1, 2, ..mod.list]
+",
+        vec![("full_list", "List(Int)")],
+    );
+}
+
+#[test]
+fn prepend_constant_list_wrong_type() {
+    assert_module_error!(
+        "
+const pi = 3.14
+pub const full_list = [1.0, 2.0, ..pi]
+"
+    );
+}
+
+#[test]
+fn prepend_constant_list_wrong_element_type() {
+    assert_module_error!(
+        "
+const list = [3, 4, 5]
+pub const full_list = [1.0, 2.0, ..list]
+"
+    );
+}

@@ -2106,3 +2106,56 @@ const local_const = other.Record(..other.base, field: value)
 "
     );
 }
+
+#[test]
+fn prepend_to_const_list_without_comma() {
+    // While this is valid (but deprecated) syntax for expressions, prepending to
+    // constant lists wasn't added until after the deprecation, so it was never
+    // valid in the first place.
+    assert_module_error!(
+        "
+const wibble = [2, 3]
+const wobble = [1 ..wibble]
+"
+    );
+}
+
+#[test]
+fn prepend_to_const_list_with_multiple_spreads() {
+    assert_module_error!(
+        "
+const wibble = [2, 3]
+const wobble = [0, 1]
+const wubble = [..wobble, ..wibble]
+"
+    );
+}
+
+#[test]
+fn prepend_to_const_list_with_no_tail() {
+    assert_module_error!(
+        "
+const wibble = [1, 2, ..]
+"
+    );
+}
+
+#[test]
+fn prepend_no_elements_to_const_list() {
+    assert_module_error!(
+        "
+const wibble = [2, 3]
+const wobble = [..wibble]
+"
+    );
+}
+
+#[test]
+fn append_to_const_list() {
+    assert_module_error!(
+        "
+const wibble = [2, 3]
+const wobble = [..wibble, 4, 5]
+"
+    );
+}

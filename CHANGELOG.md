@@ -4,6 +4,16 @@
 
 ### Compiler
 
+- The compiler now supports list prepending in constants. For example:
+
+  ```gleam
+  pub const viviparous_mammals = ["dog", "cat", "human"]
+
+  pub const all_mammals = ["platypus", "echidna", ..viviparous_mammals]
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - When publishing, the package manager now uses the full term instead of the

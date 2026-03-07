@@ -206,3 +206,46 @@ fn use_private_in_tuple() {
         "#
     )
 }
+
+#[test]
+fn list_prepend() {
+    assert_erl!(
+        "
+const wibble = [2, 3, 4]
+pub const wobble = [0, 1, ..wibble]
+
+pub fn main() {
+  wobble
+}
+"
+    );
+}
+
+#[test]
+fn list_prepend_from_other_module() {
+    assert_erl!(
+        ("thepackage", "mod", "pub const wibble = [2, 3, 4]"),
+        "
+import mod
+
+pub const wobble = [0, 1, ..mod.wibble]
+
+pub fn main() {
+  wobble
+}
+"
+    );
+}
+
+#[test]
+fn list_prepend_literal() {
+    assert_erl!(
+        "
+pub const wibble = [0, 1, ..[2, 3, 4]]
+
+pub fn main() {
+  wibble
+}
+"
+    );
+}
