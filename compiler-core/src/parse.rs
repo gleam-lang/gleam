@@ -3195,14 +3195,105 @@ where
 
             Some((start, Token::LeftSquare, _)) => {
                 self.advance();
-                let elements =
-                    Parser::series_of(self, &Parser::parse_const_value, Some(&Token::Comma))?;
+
+                let (elements, elements_end_with_comma) = self.series_of_has_trailing_separator(
+                    &Parser::parse_const_value,
+                    Some(&Token::Comma),
+                )?;
+
+                // Parse an optional tail
+                let mut tail = None;
+                let mut elements_after_tail = None;
+                let mut dot_dot_location = None;
+
+                // If there are no elements, we still want to parse a tail so
+                // that we can report a better error message.
+                if (elements_end_with_comma || elements.is_empty())
+                    && let Some((start, end)) = self.maybe_one(&Token::DotDot)
+                {
+                    dot_dot_location = Some((start, end));
+                    tail = self.parse_const_value()?.map(Box::new);
+                    if self.maybe_one(&Token::Comma).is_some() {
+                        // See if there's a list of items after the tail,
+                        // like `[..wibble, wobble, wabble]`
+                        let elements =
+                            self.series_of(&Parser::parse_const_value, Some(&Token::Comma));
+                        match elements {
+                            Err(_) => {}
+                            Ok(elements) => {
+                                elements_after_tail = Some(elements);
+                            }
+                        };
+                    };
+
+                    if tail.is_some() {
+                        // Give a better error when there are two lists being
+                        // concatenated like `[..wibble, ..wabble, woo]`, or if
+                        // there are elements after the tail.
+                        if let Some((second_start, second_end)) = self.maybe_one(&Token::DotDot) {
+                            let _second_tail = self.parse_const_value();
+
+                            if elements_after_tail.is_none()
+                                || elements_after_tail
+                                    .as_ref()
+                                    .is_some_and(|vec| vec.is_empty())
+                            {
+                                return parse_error(
+                                    ParseErrorType::ListSpreadWithAnotherSpread {
+                                        first_spread_location: SrcSpan { start, end },
+                                    },
+                                    SrcSpan {
+                                        start: second_start,
+                                        end: second_end,
+                                    },
+                                );
+                            }
+                        }
+                    }
+                }
+
                 let (_, end) =
                     self.expect_one_following_series(&Token::RightSquare, "a constant value")?;
+
+                // Return errors for malformed lists
+                match dot_dot_location {
+                    Some((start, end)) if tail.is_none() => {
+                        return parse_error(
+                            ParseErrorType::ListSpreadWithoutTail,
+                            SrcSpan { start, end },
+                        );
+                    }
+                    _ => {}
+                }
+                if tail.is_some()
+                    && elements.is_empty()
+                    && elements_after_tail.as_ref().is_none_or(|e| e.is_empty())
+                {
+                    return parse_error(
+                        ParseErrorType::ListSpreadWithoutElements,
+                        SrcSpan { start, end },
+                    );
+                }
+
+                match elements_after_tail {
+                    Some(elements) if !elements.is_empty() => {
+                        let (start, end) = match (dot_dot_location, tail) {
+                            (Some((start, _)), Some(tail)) => (start, tail.location().end),
+                            (_, _) => (start, end),
+                        };
+                        return parse_error(
+                            ParseErrorType::ListSpreadFollowedByElements,
+                            SrcSpan { start, end },
+                        );
+                    }
+                    _ => {}
+                }
+
                 Ok(Some(Constant::List {
                     elements,
                     location: SrcSpan { start, end },
                     type_: (),
+                    tail,
                 }))
             }
             // BitArray

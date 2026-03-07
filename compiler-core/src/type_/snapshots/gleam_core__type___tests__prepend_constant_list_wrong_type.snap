@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "\nconst pi = 3.14\npub const full_list = [1.0, 2.0, ..pi]\n"
+---
+----- SOURCE CODE
+
+const pi = 3.14
+pub const full_list = [1.0, 2.0, ..pi]
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:36
+  │
+3 │ pub const full_list = [1.0, 2.0, ..pi]
+  │                                    ^^
+
+Expected type:
+
+    List(Float)
+
+Found type:
+
+    Float

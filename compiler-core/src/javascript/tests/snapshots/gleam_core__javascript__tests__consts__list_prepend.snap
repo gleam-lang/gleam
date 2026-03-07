@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/javascript/tests/consts.rs
+expression: "\nconst wibble = [2, 3, 4]\npub const wobble = [0, 1, ..wibble]\n"
+---
+----- SOURCE CODE
+
+const wibble = [2, 3, 4]
+pub const wobble = [0, 1, ..wibble]
+
+
+----- COMPILED JAVASCRIPT
+import { toList } from "../gleam.mjs";
+
+const wibble = /* @__PURE__ */ toList([2, 3, 4]);
+
+export const wobble = /* @__PURE__ */ toList([0, 1, 2, 3, 4]);

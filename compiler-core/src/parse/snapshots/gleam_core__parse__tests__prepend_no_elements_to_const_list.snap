@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\nconst wibble = [2, 3]\nconst wobble = [..wibble]\n"
+---
+----- SOURCE CODE
+
+const wibble = [2, 3]
+const wobble = [..wibble]
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:16
+  │
+3 │ const wobble = [..wibble]
+  │                ^^^^^^^^^^ This spread does nothing
+
+See: https://tour.gleam.run/basics/lists/
+Hint: Try prepending some elements [1, 2, ..list].

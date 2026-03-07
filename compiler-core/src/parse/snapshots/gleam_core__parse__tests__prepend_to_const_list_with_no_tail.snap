@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\nconst wibble = [1, 2, ..]\n"
+---
+----- SOURCE CODE
+
+const wibble = [1, 2, ..]
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:23
+  │
+2 │ const wibble = [1, 2, ..]
+  │                       ^^ I was expecting a value after this spread
+
+If a list expression has a spread then a tail must also be given.

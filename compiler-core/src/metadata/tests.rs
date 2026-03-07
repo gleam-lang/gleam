@@ -1141,6 +1141,23 @@ fn constant_list() {
                 int_value: 3.into(),
             },
         ],
+        tail: Some(Box::new(Constant::List {
+            location: Default::default(),
+            type_: type_::list(type_::int()),
+            elements: vec![
+                Constant::Int {
+                    location: Default::default(),
+                    value: "4".into(),
+                    int_value: 4.into(),
+                },
+                Constant::Int {
+                    location: Default::default(),
+                    value: "5".into(),
+                    int_value: 5.into(),
+                },
+            ],
+            tail: None,
+        })),
     });
 
     assert_eq!(roundtrip(&module), module);

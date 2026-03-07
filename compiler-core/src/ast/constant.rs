@@ -35,6 +35,7 @@ pub enum Constant<T, RecordTag> {
         location: SrcSpan,
         elements: Vec<Self>,
         type_: T,
+        tail: Option<Box<Self>>,
     },
 
     Record {
@@ -138,9 +139,14 @@ impl TypedConstant {
                 ValueConstructorVariant::LocalVariable { .. } => Located::Constant(self),
             },
             Constant::Var { .. } => Located::Constant(self),
-            Constant::Tuple { elements, .. } | Constant::List { elements, .. } => elements
+            Constant::Tuple { elements, .. } => elements
                 .iter()
                 .find_map(|element| element.find_node(byte_index))
+                .unwrap_or(Located::Constant(self)),
+            Constant::List { elements, tail, .. } => elements
+                .iter()
+                .find_map(|element| element.find_node(byte_index))
+                .or_else(|| tail.as_deref().and_then(|tail| tail.find_node(byte_index)))
                 .unwrap_or(Located::Constant(self)),
             Constant::Record { arguments, .. } => arguments
                 .iter()
@@ -376,6 +382,42 @@ impl TypedConstant {
             (Constant::StringConcatenation { .. }, _) => false,
 
             (Constant::Invalid { .. }, _) => false,
+        }
+    }
+
+    pub fn list_elements(&self) -> Option<Vec<&Self>> {
+        match self {
+            Constant::List { elements, tail, .. } => Some(
+                elements
+                    .iter()
+                    .chain(
+                        tail.as_deref()
+                            .and_then(|tail| tail.list_elements())
+                            .unwrap_or_default()
+                            .into_iter(),
+                    )
+                    .collect(),
+            ),
+            Constant::Var {
+                constructor: Some(constructor),
+                ..
+            } => match &constructor.variant {
+                ValueConstructorVariant::ModuleConstant { literal, .. } => literal.list_elements(),
+                ValueConstructorVariant::LocalVariable { .. }
+                | ValueConstructorVariant::ModuleFn { .. }
+                | ValueConstructorVariant::Record { .. } => None,
+            },
+
+            Constant::Int { .. }
+            | Constant::Float { .. }
+            | Constant::String { .. }
+            | Constant::Tuple { .. }
+            | Constant::Record { .. }
+            | Constant::RecordUpdate { .. }
+            | Constant::BitArray { .. }
+            | Constant::StringConcatenation { .. }
+            | Constant::Var { .. }
+            | Constant::Invalid { .. } => None,
         }
     }
 }

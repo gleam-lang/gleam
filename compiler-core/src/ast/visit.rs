@@ -705,8 +705,9 @@ pub trait Visit<'ast> {
         location: &'ast SrcSpan,
         elements: &'ast Vec<TypedConstant>,
         type_: &'ast Arc<Type>,
+        tail: &'ast Option<Box<TypedConstant>>,
     ) {
-        visit_typed_constant_list(self, location, elements, type_);
+        visit_typed_constant_list(self, location, elements, type_, tail);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -878,9 +879,13 @@ fn visit_typed_constant_list<'a, V: Visit<'a> + ?Sized>(
     _location: &'a SrcSpan,
     elements: &'a Vec<TypedConstant>,
     _type_: &'a Arc<Type>,
+    tail: &'a Option<Box<TypedConstant>>,
 ) {
     for element in elements {
         v.visit_typed_constant(element)
+    }
+    if let Some(tail) = tail {
+        v.visit_typed_constant(tail);
     }
 }
 
@@ -1133,7 +1138,8 @@ pub fn visit_typed_constant<'a, V: Visit<'a> + ?Sized>(v: &mut V, constant: &'a 
             location,
             elements,
             type_,
-        } => v.visit_typed_constant_list(location, elements, type_),
+            tail,
+        } => v.visit_typed_constant_list(location, elements, type_, tail),
         super::Constant::Record {
             location,
             module,

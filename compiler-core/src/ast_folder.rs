@@ -969,7 +969,8 @@ pub trait UntypedConstantFolder {
                 location,
                 elements,
                 type_: (),
-            } => self.fold_constant_list(location, elements),
+                tail,
+            } => self.fold_constant_list(location, elements, tail),
 
             Constant::Record {
                 location,
@@ -1073,11 +1074,13 @@ pub trait UntypedConstantFolder {
         &mut self,
         location: SrcSpan,
         elements: Vec<UntypedConstant>,
+        tail: Option<Box<UntypedConstant>>,
     ) -> UntypedConstant {
         Constant::List {
             location,
             elements,
             type_: (),
+            tail,
         }
     }
 
@@ -1184,15 +1187,18 @@ pub trait UntypedConstantFolder {
                 location,
                 elements,
                 type_,
+                tail,
             } => {
                 let elements = elements
                     .into_iter()
                     .map(|element| self.fold_constant(element))
                     .collect();
+                let tail = tail.map(|tail| Box::new(self.fold_constant(*tail)));
                 Constant::List {
                     location,
                     elements,
                     type_,
+                    tail,
                 }
             }
 
