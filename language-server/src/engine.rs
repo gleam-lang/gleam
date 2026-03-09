@@ -301,7 +301,13 @@ where
                 }
                 | Located::Constant(Constant::String { .. }) => None,
                 Located::Expression {
-                    expression: TypedExpr::Call { fun, arguments, .. },
+                    expression:
+                        TypedExpr::Call { fun, arguments, .. }
+                        | TypedExpr::RecordUpdate {
+                            constructor: fun,
+                            arguments,
+                            ..
+                        },
                     ..
                 } => {
                     let mut completions = vec![];
