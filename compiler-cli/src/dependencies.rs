@@ -227,9 +227,7 @@ pub fn outdated(paths: &ProjectPaths) -> Result<()> {
 
     let version_updates = dependency::check_for_version_updates(&manifest, &package_fetcher);
 
-    if !version_updates.is_empty() {
-        print!("{}", pretty_print_version_updates(version_updates));
-    }
+    print!("{}", format_version_updates(version_updates));
 
     Ok(())
 }
@@ -434,6 +432,15 @@ fn pretty_print_major_versions_available(versions: dependency::PackageVersionDif
 fn pretty_print_version_updates(versions: dependency::PackageVersionDiffs) -> EcoString {
     let versions = format_versions_and_extract_longest_parts(versions);
     space_table(&["Package", "Current", "Latest"], &versions)
+}
+
+/// Format a message suitable for the user-facing gleam deps outdated command.
+fn format_version_updates(versions: dependency::PackageVersionDiffs) -> EcoString {
+    if versions.is_empty() {
+        EcoString::from("No outdated dependencies found.\n")
+    } else {
+        pretty_print_version_updates(versions)
+    }
 }
 
 async fn add_missing_packages<Telem: Telemetry>(
