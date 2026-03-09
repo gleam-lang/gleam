@@ -49,7 +49,8 @@ To run the compiler tests. This will require a recent stable version of Rust,
 Erlang, Elixir, NodeJS, Deno, and Bun to be installed.
 
 If you are using the Nix package manager, there's a [gleam-nix flake](https://github.com/vic/gleam-nix)
-you can use for running any Gleam version or quickly obtaining a development environment for Gleam.
+you can use for running any Gleam version or quickly obtaining a development
+environment for Gleam.
 
 ```sh
 cargo test
@@ -66,8 +67,8 @@ version of Rust, Erlang, and NodeJS to be installed.
 make language-test
 ```
 
-If you don't have Rust or Cargo installed you can run the above command in a docker sandbox.
-Run the command below from this directory.
+If you don't have Rust or Cargo installed you can run the above command in a
+docker sandbox. Run the command below from this directory.
 
 ```sh
 docker run -v $(pwd):/opt/app -it -w /opt/app rust:latest bash
@@ -109,3 +110,14 @@ in `compiler-core/build.rs`. Then you should be able to re-generate that file wi
 cd compiler-core
 cargo build
 ```
+
+## Operating system specific code
+
+This project is used on FreeBSD, Linux, MacOS, OpenBSD, Windows, and presumably
+other operating systems, so there is some amount of code that needs to be
+different depending on which is it running on. So far this is hidden inside
+dependencies, with the exception of some code for working with file paths in
+tests and for setting file permissions, which is different on Windows. If you
+are working in this area then you may get a CI failure relating to this for
+your first attempt. If you need help resolving any issues do not hesitate to
+ask.
