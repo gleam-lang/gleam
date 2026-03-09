@@ -64,6 +64,10 @@
   the message is clearer.
   ([vyacheslavhere](https://github.com/vyacheslavhere))
 
+- The `gleam deps outdated` command now prints a message when there are no
+  updates, e.g. `No outdated dependencies found.` Previously it was silent
+  which could be confusing. ([Daniele Scaratti](https://github.com/lupodevelop))
+
 - The build tool now shows better error message on passing unexpected labeled
   arguments by taking into account, whether it's a function or a constructor.
   ([Andrey Kozhev](https://github.com/ankddev))
