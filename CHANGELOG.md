@@ -74,10 +74,8 @@
 
 - The build tool now uses OAuth and time-based one-time-passwords for
   authentication with Hex, improving security.
-
   Any legacy API tokens previously stored will be revoked after authenticating
   using OAuth.
-
   ([Louis Pilfold](https://github.com/lpil))
 
 - The build tool will now refuse to publish any package that has no README, or
@@ -108,7 +106,6 @@
 
   Accepting the `json.Json` completion will now produce the correct `json.Json`
   annotation rather than generating invalid code: `json.JsonJson`.
-
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - The language server now suggests completions for keywords like `echo`,
