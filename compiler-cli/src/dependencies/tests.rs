@@ -356,6 +356,33 @@ fn parse_gleam_add_specifier_major_minor_and_patch() {
     assert_eq!("bobble", package);
 }
 
+//------------------------------------------------------------------------
+// tests related to the `outdated` command logic
+
+#[test]
+fn format_version_updates_empty_shows_message() {
+    let versions = dependency::PackageVersionDiffs::new();
+    let out = format_version_updates(versions);
+    assert!(out.contains("No outdated dependencies found."));
+}
+
+#[test]
+fn format_version_updates_nonempty_tables_content() {
+    let mut versions = dependency::PackageVersionDiffs::new();
+    // insert a single package diff
+    let _ = versions.insert(
+        "foo".into(),
+        (
+            Version::parse("1.0.0").unwrap(),
+            Version::parse("1.1.0").unwrap(),
+        ),
+    );
+    let out = format_version_updates(versions);
+    assert!(out.contains("foo"));
+    // should not print the empty‑message
+    assert!(!out.contains("No outdated dependencies found."));
+}
+
 #[test]
 fn missing_local_packages() {
     let manifest = Manifest {
