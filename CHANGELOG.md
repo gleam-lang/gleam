@@ -82,6 +82,10 @@
   an empty README.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- `gleam remove` now cleans build caches after removing dependencies, which
+  ensures that dependencies are actually deleted.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server now allows extracting the start of a pipeline into a
