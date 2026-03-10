@@ -109,6 +109,7 @@ where
             Request::Rename(param) => self.rename(param),
             Request::GoToTypeDefinition(param) => self.goto_type_definition(param),
             Request::FindReferences(param) => self.find_references(param),
+            Request::DocumentHighlight(param) => self.document_highlight(param),
         };
 
         self.publish_feedback(feedback);
@@ -439,6 +440,14 @@ where
         self.respond_with_engine(path, |engine| engine.find_references(params))
     }
 
+    fn document_highlight(
+        &mut self,
+        params: lsp_types::DocumentHighlightParams,
+    ) -> (Result<Json, ResponseError>, Feedback) {
+        let path = super::path(&params.text_document_position_params.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.document_highlight(params))
+    }
+
     fn cache_file_in_memory(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
         self.project_changed(&path);
         if let Err(error) = self.io.write_mem_cache(&path, &text) {
@@ -533,7 +542,7 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         type_definition_provider: Some(true.into()),
         implementation_provider: None,
         references_provider: Some(true.into()),
-        document_highlight_provider: None,
+        document_highlight_provider: Some(true.into()),
         document_symbol_provider: Some(true.into()),
         workspace_symbol_provider: None,
         code_action_provider: Some(true.into()),
