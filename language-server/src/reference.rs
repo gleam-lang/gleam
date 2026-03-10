@@ -920,7 +920,8 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
         name_location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
-        arguments: &'ast Vec<ast::TypeAst>,
+        arguments: &'ast [ast::TypeAst],
+        arguments_types: Option<Vec<std::sync::Arc<Type>>>,
     ) {
         if let Some((module_alias, module_location)) = module
             && module_alias == self.module_alias
@@ -938,6 +939,7 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
             module,
             name,
             arguments,
+            arguments_types,
         );
     }
 
@@ -1007,14 +1009,6 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
             type_,
             field_map,
         )
-    }
-
-    fn visit_typed_module_constant(&mut self, constant: &'ast ast::TypedModuleConstant) {
-        if let Some(annotation) = &constant.annotation {
-            ast::visit::visit_type_ast(self, annotation);
-        }
-
-        ast::visit::visit_typed_constant(self, &constant.value);
     }
 
     fn visit_typed_constant_var(
