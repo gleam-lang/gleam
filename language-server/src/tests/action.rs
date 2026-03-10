@@ -139,6 +139,7 @@ const ADD_OMITTED_LABELS: &str = "Add omitted labels";
 const EXTRACT_FUNCTION: &str = "Extract function";
 const MERGE_CASE_BRANCHES: &str = "Merge case branches";
 const ADD_MISSING_TYPE_PARAMETER: &str = "Add missing type parameter";
+const REPLACE_UNDERSCORE_WITH_TYPE: &str = "Replace `_` with type";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -12686,5 +12687,109 @@ pub type Nothing {
             .add_hex_module("gleam/dict", "pub type Dict(key, value)"),
         find_position_of("pub type Nothing {")
             .select_until(find_position_of("}").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn replace_underscore_with_function_return_type() {
+    assert_code_action!(
+        REPLACE_UNDERSCORE_WITH_TYPE,
+        r#"
+pub fn wibble() -> _ {
+    12
+}
+    "#,
+        find_position_of("_").to_selection()
+    );
+}
+
+#[test]
+fn replace_nested_underscore_with_generic_type() {
+    assert_code_action!(
+        REPLACE_UNDERSCORE_WITH_TYPE,
+        r#"
+pub fn wibble() -> Result(a, _) {
+    Ok(todo)
+}
+    "#,
+        find_position_of("_").to_selection()
+    );
+}
+
+#[test]
+fn replace_nested_underscore_with_function_return_type() {
+    assert_code_action!(
+        REPLACE_UNDERSCORE_WITH_TYPE,
+        r#"
+pub fn wibble() -> Result(Result(_, Nil), Int) {
+    Ok(Ok("hello"))
+}
+    "#,
+        find_position_of("_").to_selection()
+    );
+}
+
+#[test]
+fn replace_nested_underscore_in_let_annotation() {
+    assert_code_action!(
+        REPLACE_UNDERSCORE_WITH_TYPE,
+        r#"
+pub fn wibble() {
+    let a: Result(Result(_, Nil), Nil) = Ok(Ok("hello"))
+}
+    "#,
+        find_position_of("_").to_selection()
+    );
+}
+
+#[test]
+fn replace_underscore_in_let_annotation() {
+    assert_code_action!(
+        REPLACE_UNDERSCORE_WITH_TYPE,
+        r#"
+pub fn wibble() {
+    let a: _ = Ok(Ok("hello"))
+}
+    "#,
+        find_position_of("_").to_selection()
+    );
+}
+
+#[test]
+fn replace_nested_underscore_with_tuple_type() {
+    assert_code_action!(
+        REPLACE_UNDERSCORE_WITH_TYPE,
+        r#"
+pub fn wibble() {
+    let a: #(Int, _, Int) = #(1, "hello", 2)
+}
+    "#,
+        find_position_of("_").to_selection()
+    );
+}
+
+#[test]
+fn replace_underscore_in_function_argument() {
+    assert_code_action!(
+        REPLACE_UNDERSCORE_WITH_TYPE,
+        r#"
+pub fn wibble(a: _) -> Int {
+    a + 2
+}
+    "#,
+        find_position_of("_").to_selection()
+    );
+}
+
+#[test]
+fn replace_underscore_in_fn_expr_argument() {
+    assert_code_action!(
+        REPLACE_UNDERSCORE_WITH_TYPE,
+        r#"
+pub fn wibble() {
+    fn(a: _) { a + 2 }
+}
+    "#,
+        find_position_of("_").to_selection()
     );
 }
