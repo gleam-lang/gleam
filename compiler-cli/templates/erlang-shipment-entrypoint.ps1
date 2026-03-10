@@ -9,13 +9,16 @@ $CodePath = Join-Path -Path $BaseDirectory -ChildPath "\*\ebin" -Resolve
 function Run {
   erl `
     -pa $CodePath `
+    $OTP_VERSION_CHECK_FROM_GLEAM `
     -eval "$PackageName@@main:run($PackageName)" `
     -noshell `
     -extra $args
 }
 
 function Shell {
-  erl -pa $CodePath
+  erl `
+    -pa $CodePath `
+    $OTP_VERSION_CHECK_FROM_GLEAM
 }
 
 switch ($ScriptCommand) {

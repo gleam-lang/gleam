@@ -82,6 +82,10 @@
   an empty README.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Erlang shipments now warn when run on a different OTP version than they were
+  built with.
+  ([Joris Hartog](https://github.com/nootr))
+
 ### Language server
 
 - The language server now allows extracting the start of a pipeline into a
