@@ -206,6 +206,10 @@ impl FileSystemWriter for LanguageServerTestIO {
         self.io.hardlink(from, to)
     }
 
+    fn hardlink_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
+        self.io.hardlink_dir(from, to)
+    }
+
     fn symlink_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
         self.io.symlink_dir(from, to)
     }

@@ -168,6 +168,10 @@ impl FileSystemWriter for ProjectIO {
         hardlink(from, to)
     }
 
+    fn hardlink_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error> {
+        hardlink_dir(from, to)
+    }
+
     fn symlink_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error> {
         symlink_dir(from, to)
     }
@@ -657,17 +661,24 @@ pub fn symlink_dir(
     let src = canonicalise(src.as_ref())?;
 
     #[cfg(target_family = "windows")]
-    let result = std::os::windows::fs::symlink_dir(src, dest.as_ref());
+    let result = std::os::windows::fs::symlink_dir(&src, dest.as_ref());
     #[cfg(not(target_family = "windows"))]
-    let result = std::os::unix::fs::symlink(src, dest.as_ref());
+    let result = std::os::unix::fs::symlink(&src, dest.as_ref());
 
-    result.map_err(|err| Error::FileIo {
-        action: FileIoAction::Link,
-        kind: FileKind::File,
-        path: Utf8PathBuf::from(dest.as_ref()),
-        err: Some(err.to_string()),
-    })?;
-    Ok(())
+    match result {
+        Ok(()) => Ok(()),
+
+        // Fallback to hardlinking if we can't symlink. This occurs on Windows without Developer Mode enabled.
+        // We match on the raw OS code, since this error has no specific error kind.
+        #[cfg(target_family = "windows")]
+        Err(err) if err.raw_os_error() == Some(1314) => hardlink_dir(src, dest),
+        Err(err) => Err(Error::FileIo {
+            action: FileIoAction::Link,
+            kind: FileKind::File,
+            path: Utf8PathBuf::from(dest.as_ref()),
+            err: Some(err.to_string()),
+        }),
+    }
 }
 
 pub fn hardlink(
@@ -683,6 +694,50 @@ pub fn hardlink(
             err: Some(err.to_string()),
         })
         .map(|_| ())
+}
+
+/// Hardlink directory.
+/// This is done by deleting destination directory if it exists and recursively
+/// creating directories and hardlinking files inside the directory.
+///
+pub fn hardlink_dir(
+    src: impl AsRef<Utf8Path> + Debug,
+    dest: impl AsRef<Utf8Path> + Debug,
+) -> Result<(), Error> {
+    tracing::trace!(src=?src, dest=?dest, "hardlinking_dir");
+
+    let src = src.as_ref();
+    let dest = dest.as_ref();
+
+    // Recreate destination directory to avoid getting it in weird state.
+    delete_directory(dest)?;
+    mkdir(dest)?;
+
+    for entry in read_dir(src)? {
+        let entry = entry.map_err(|e| Error::FileIo {
+            action: FileIoAction::Read,
+            kind: FileKind::Directory,
+            path: src.to_path_buf(),
+            err: Some(e.to_string()),
+        })?;
+
+        let path = entry.path();
+
+        let file_name = path.file_name().ok_or_else(|| Error::NonUtf8Path {
+            path: path.to_path_buf().into(),
+        })?;
+
+        let destination = &dest.join(file_name);
+
+        if path.is_dir() {
+            // Recursively hardlink directory.
+            hardlink_dir(path, destination)?;
+        } else {
+            hardlink(path, destination)?;
+        }
+    }
+
+    Ok(())
 }
 
 /// Check if the given path is inside a git work tree.
