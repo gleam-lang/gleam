@@ -961,6 +961,120 @@ where
         })
     }
 
+    pub fn document_highlight(
+        &mut self,
+        params: lsp::DocumentHighlightParams,
+    ) -> Response<Option<Vec<lsp::DocumentHighlight>>> {
+        self.respond(|this| {
+            let position = &params.text_document_position_params;
+
+            let (lines, found) = match this.node_at_position(position) {
+                Some(value) => value,
+                None => return Ok(None),
+            };
+
+            let uri = position.text_document.uri.clone();
+
+            let Some(module) = this.module_for_uri(&uri) else {
+                return Ok(None);
+            };
+
+            let byte_index = lines.byte_index(position.position);
+
+            let referenced = reference_for_ast_node(found, &module.name);
+
+            Ok(match referenced {
+                Some(Referenced::LocalVariable {
+                    origin,
+                    definition_location,
+                    location,
+                    name,
+                }) if location.contains(byte_index) => match origin.map(|origin| origin.syntax) {
+                    Some(VariableSyntax::Generated) => None,
+                    Some(
+                        VariableSyntax::LabelShorthand(_)
+                        | VariableSyntax::AssignmentPattern
+                        | VariableSyntax::Variable { .. },
+                    )
+                    | None => {
+                        let variable_references =
+                            FindVariableReferences::new(definition_location, name)
+                                .find_in_module(&module.ast);
+
+                        let mut reference_locations =
+                            Vec::with_capacity(variable_references.len() + 1);
+                        reference_locations.push(lsp::DocumentHighlight {
+                            range: src_span_to_lsp_range(definition_location, &lines),
+                            kind: Some(lsp::DocumentHighlightKind::WRITE),
+                        });
+
+                        for reference in variable_references {
+                            let range = src_span_to_lsp_range(reference.location, &lines);
+                            reference_locations.push(lsp::DocumentHighlight {
+                                range,
+                                kind: Some(lsp::DocumentHighlightKind::WRITE),
+                            })
+                        }
+
+                        Some(reference_locations)
+                    }
+                },
+                Some(Referenced::ModuleValue {
+                    module: module_name,
+                    name,
+                    location,
+                    ..
+                }) if location.contains(byte_index) => {
+                    match this.compiler.get_module_interface(&module.name) {
+                        Some(module) => Some(
+                            find_module_references(
+                                module_name,
+                                name,
+                                // Only search in the current module
+                                &im::HashMap::unit(module.name.clone(), module.clone()),
+                                &this.compiler.sources,
+                                ast::Layer::Value,
+                            )
+                            .into_iter()
+                            .map(|location| lsp::DocumentHighlight {
+                                range: location.range,
+                                kind: None,
+                            })
+                            .collect(),
+                        ),
+                        None => None,
+                    }
+                }
+                Some(Referenced::ModuleType {
+                    module: module_name,
+                    name,
+                    location,
+                    ..
+                }) if location.contains(byte_index) => {
+                    match this.compiler.get_module_interface(&module.name) {
+                        Some(module) => Some(
+                            find_module_references(
+                                module_name,
+                                name,
+                                &im::HashMap::unit(module.name.clone(), module.clone()),
+                                &this.compiler.sources,
+                                ast::Layer::Type,
+                            )
+                            .into_iter()
+                            .map(|location| lsp::DocumentHighlight {
+                                range: location.range,
+                                kind: None,
+                            })
+                            .collect(),
+                        ),
+                        None => None,
+                    }
+                }
+                _ => None,
+            })
+        })
+    }
+
     fn respond<T>(&mut self, handler: impl FnOnce(&mut Self) -> Result<T>) -> Response<T> {
         let result = handler(self);
         let warnings = self.take_warnings();
