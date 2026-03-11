@@ -879,6 +879,7 @@ where
         })
     }
 
+    /// Shared core of find references and document highlight.
     fn find_references_in_modules(
         &mut self,
         position: &lsp_types::TextDocumentPositionParams,

@@ -1,0 +1,27 @@
+---
+source: language-server/src/tests/document_highlight.rs
+expression: "\nimport mod.{Wibble}\n\nfn wobble() {\n  mod.Wibble\n}\n\nfn other() {\n  Wibble\n}\n"
+---
+-- mod.gleam
+
+pub type Wibble { Wibble }
+
+pub fn main() {
+  Wibble
+}
+
+
+-- app.gleam
+
+import mod.{Wibble}
+            ▔▔▔▔▔▔ 
+
+fn wobble() {
+  mod.Wibble
+      ▔▔▔▔▔▔
+}
+
+fn other() {
+  Wibble
+  ↑▔▔▔▔▔
+}
