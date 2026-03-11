@@ -1,0 +1,18 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn wibble(a: _) -> Int {\n    a + 2\n}\n    "
+---
+----- BEFORE ACTION
+
+pub fn wibble(a: _) -> Int {
+                 ↑          
+    a + 2
+}
+    
+
+
+----- AFTER ACTION
+
+pub fn wibble(a: Int) -> Int {
+    a + 2
+}

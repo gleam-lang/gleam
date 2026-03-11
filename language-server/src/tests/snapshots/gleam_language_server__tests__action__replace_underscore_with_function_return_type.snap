@@ -1,0 +1,18 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn wibble() -> _ {\n    12\n}\n    "
+---
+----- BEFORE ACTION
+
+pub fn wibble() -> _ {
+                   ↑  
+    12
+}
+    
+
+
+----- AFTER ACTION
+
+pub fn wibble() -> Int {
+    12
+}

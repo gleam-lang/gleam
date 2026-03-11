@@ -122,6 +122,29 @@
   rely on internal implementation details.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now has a code action to replace a `_` in a type
+  annotation with the corresponding type. For example:
+
+  ```gleam
+  pub fn load_user(id: Int) -> Result(_, Error) {
+    //                                ^
+    //      Triggering the code action here
+    sql.find_by_id(id)
+    |> result.map_error(CannotLoadUser)
+  }
+  ```
+
+  Triggering the code action over the `_` will result in the following code:
+
+  ```gleam
+  pub fn load_user(id: Int) -> Result(User, Error) {
+    sql.find_by_id(id)
+    |> result.map_error(CannotLoadUser)
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server now suggests adding missing type parameters
   to custom generic types.
   ([Andi Pabst](https://github.com/andipabst))
