@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub type Wibble {\n  Wibble(a: Int, b: Bool)\n}\n\npub fn main() {\n  let original = Wibble(a: 1, b: True)\n  Wibble(..original, a: True, b: 1)\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(a: Int, b: Bool)
+}
+
+pub fn main() {
+  let original = Wibble(a: 1, b: True)
+  Wibble(..original, a: True, b: 1)
+}
+
+
+----- WARNING
+warning: Redundant record update
+  ┌─ /src/warning/wrn.gleam:8:3
+  │
+8 │   Wibble(..original, a: True, b: 1)
+  │   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ This record update specifies all fields
+
+Hint: It is better style to use the record creation syntax.
