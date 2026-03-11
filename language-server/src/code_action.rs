@@ -104,6 +104,28 @@ fn count_indentation(code: &str, line_numbers: &LineNumbers, line: u32) -> usize
     indent_size
 }
 
+// Given a string and a position in it, if the position points to whitespace,
+// this function returns the next position which doesn't.
+fn next_nonwhitespace(string: &EcoString, position: u32) -> u32 {
+    let mut n = position;
+    let mut chars = string[position as usize..].chars();
+    while chars.next().is_some_and(char::is_whitespace) {
+        n += 1;
+    }
+    n
+}
+
+// Given a string and a position in it, if the position points after whitespace,
+// this function returns the previous position which doesn't.
+fn previous_nonwhitespace(string: &EcoString, position: u32) -> u32 {
+    let mut n = position;
+    let mut chars = string[..position as usize].chars();
+    while chars.next_back().is_some_and(char::is_whitespace) {
+        n -= 1;
+    }
+    n
+}
+
 /// Code action to remove literal tuples in case subjects, essentially making
 /// the elements of the tuples into the case's subjects.
 ///
@@ -919,6 +941,7 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
+        argument_parentheses: &'ast Option<SrcSpan>,
     ) {
         let call_range = self.edits.src_span_to_lsp_range(*location);
         if !within(self.params.range, call_range) {
@@ -943,7 +966,14 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         // we're inside a nested call.
         let previous = self.use_right_hand_side_location;
         self.use_right_hand_side_location = None;
-        ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments);
+        ast::visit::visit_typed_expr_call(
+            self,
+            location,
+            type_,
+            fun,
+            arguments,
+            argument_parentheses,
+        );
         self.use_right_hand_side_location = previous;
     }
 
@@ -1447,7 +1477,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
         let location = match kind {
             // Function captures don't need any type annotations
             FunctionLiteralKind::Capture { .. } => return,
-            FunctionLiteralKind::Anonymous { head } => head,
+            FunctionLiteralKind::Anonymous { head, .. } => head,
             FunctionLiteralKind::Use { location } => location,
         };
 
@@ -4145,11 +4175,13 @@ impl<'ast> ast::visit::Visit<'ast> for ExpandFunctionCapture<'ast> {
     }
 }
 
+/// A set of variable names used in some gleam. Useful for passing to [NameGenerator::reserve_variable_names].
 struct VariablesNames {
     names: HashSet<EcoString>,
 }
 
 impl VariablesNames {
+    /// Creates a `VariableNames` by collecting all variables used in a list of statements.
     fn from_statements(statements: &[TypedStatement]) -> Self {
         let mut variables = Self {
             names: HashSet::new(),
@@ -4158,6 +4190,16 @@ impl VariablesNames {
         for statement in statements {
             variables.visit_typed_statement(statement);
         }
+        variables
+    }
+
+    /// Creates a `VariableNames` by collecting all variables used within an expression.
+    fn from_expression(expression: &TypedExpr) -> Self {
+        let mut variables = Self {
+            names: HashSet::new(),
+        };
+
+        variables.visit_typed_expr(expression);
         variables
     }
 }
@@ -6367,6 +6409,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
         type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
+        argument_parentheses: &'ast Option<SrcSpan>,
     ) {
         // If the function being called is invalid we need to generate a
         // function that has the proper labels.
@@ -6423,8 +6466,14 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
                 | TypedExpr::Invalid { .. } => {}
             }
         }
-
-        ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments);
+        ast::visit::visit_typed_expr_call(
+            self,
+            location,
+            type_,
+            fun,
+            arguments,
+            argument_parentheses,
+        );
     }
 }
 
@@ -6739,6 +6788,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
         type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
+        argument_parentheses: &'ast Option<SrcSpan>,
     ) {
         // If the function being called is invalid we need to generate a
         // function that has the proper labels.
@@ -6752,7 +6802,14 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
                 );
             }
         } else {
-            ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments);
+            ast::visit::visit_typed_expr_call(
+                self,
+                location,
+                type_,
+                fun,
+                arguments,
+                argument_parentheses,
+            );
         }
     }
 
@@ -7274,12 +7331,7 @@ impl<'a> InlineVariable<'a> {
         }
 
         let mut location = assignment.location;
-
-        let mut chars = self.module.code[location.end as usize..].chars();
-        // Delete any whitespace after the removed statement
-        while chars.next().is_some_and(char::is_whitespace) {
-            location.end += 1;
-        }
+        location.end = next_nonwhitespace(&self.module.code, location.end);
 
         self.edits.delete(location);
 
@@ -7537,6 +7589,7 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToPipe<'ast> {
         _type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
+        _argument_parentheses: &'ast Option<SrcSpan>,
     ) {
         if arguments.iter().any(|arg| arg.is_capture_hole()) {
             return;
@@ -9601,15 +9654,30 @@ impl<'ast> ast::visit::Visit<'ast> for AddOmittedLabels<'ast> {
         type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
+        argument_parentheses: &'ast Option<SrcSpan>,
     ) {
         let called_function_range = self.edits.src_span_to_lsp_range(fun.location());
         if !within(self.params.range, called_function_range) {
-            ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments);
+            ast::visit::visit_typed_expr_call(
+                self,
+                location,
+                type_,
+                fun,
+                arguments,
+                argument_parentheses,
+            );
             return;
         }
 
         let Some(field_map) = fun.field_map() else {
-            ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments);
+            ast::visit::visit_typed_expr_call(
+                self,
+                location,
+                type_,
+                fun,
+                arguments,
+                argument_parentheses,
+            );
             return;
         };
         let argument_index_to_label = field_map.indices_to_labels();
@@ -10955,5 +11023,327 @@ impl<'ast> ast::visit::Visit<'ast> for AddMissingTypeParameter<'ast> {
                 }
             }
         }
+    }
+}
+
+/// Code action to turn a function used as a reference into a one-statement anonymous function.
+///
+/// For example, if the code action was used on `op` here:
+///
+/// ```gleam
+/// list.map([1, 2, 3], op)
+/// ```
+///
+/// it would become:
+///
+/// ```gleam
+/// list.map([1, 2, 3], fn(int) {
+///   op(int)
+/// })
+/// ```
+pub struct WrapInAnonymousFunction<'a> {
+    module: &'a Module,
+    line_numbers: &'a LineNumbers,
+    params: &'a CodeActionParams,
+    functions: Vec<FunctionToWrap>,
+}
+
+/// Helper struct, a target for [WrapInAnonymousFunction].
+struct FunctionToWrap {
+    location: SrcSpan,
+    arguments: Vec<Arc<Type>>,
+    variables_names: VariablesNames,
+}
+
+impl<'a> WrapInAnonymousFunction<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            line_numbers,
+            params,
+            functions: vec![],
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let mut actions = Vec::with_capacity(self.functions.len());
+        for target in self.functions {
+            let mut name_generator = NameGenerator::new();
+            name_generator.reserve_variable_names(target.variables_names);
+            let arguments = target
+                .arguments
+                .iter()
+                .map(|t| name_generator.generate_name_from_type(t))
+                .join(", ");
+
+            let mut edits = TextEdits::new(self.line_numbers);
+            edits.insert(target.location.start, format!("fn({arguments}) {{ "));
+            edits.insert(target.location.end, format!("({arguments}) }}"));
+
+            CodeActionBuilder::new("Wrap in anonymous function")
+                .kind(CodeActionKind::REFACTOR_REWRITE)
+                .changes(self.params.text_document.uri.clone(), edits.edits)
+                .push_to(&mut actions);
+        }
+        actions
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
+    fn visit_typed_expr(&mut self, expression: &'ast TypedExpr) {
+        let expression_range = src_span_to_lsp_range(expression.location(), self.line_numbers);
+        if !overlaps(self.params.range, expression_range) {
+            return;
+        }
+
+        let is_excluded = if let TypedExpr::Fn { kind, .. } = expression {
+            kind.is_anonymous() || kind.is_capture()
+        } else {
+            false
+        };
+
+        if let Type::Fn { arguments, .. } = &*expression.type_()
+            && !is_excluded
+        {
+            self.functions.push(FunctionToWrap {
+                location: expression.location(),
+                arguments: arguments.clone(),
+                variables_names: VariablesNames::from_expression(expression),
+            });
+        };
+
+        ast::visit::visit_typed_expr(self, expression);
+    }
+
+    /// We don't want to apply to functions that are being explicitly called
+    /// already, so we need to intercept visits to function calls and bounce
+    /// them out again so they don't end up in our impl for visit_typed_expr.
+    /// Otherwise this is the same as [].
+    fn visit_typed_expr_call(
+        &mut self,
+        _location: &'ast SrcSpan,
+        _type: &'ast Arc<Type>,
+        fun: &'ast TypedExpr,
+        arguments: &'ast [TypedCallArg],
+        _argument_parentheses: &'ast Option<SrcSpan>,
+    ) {
+        // We only need to do this interception for explicit calls, so if any
+        // of our arguments are explicit we re-enter the visitor as usual.
+        if arguments.iter().any(|a| a.is_implicit()) {
+            self.visit_typed_expr(fun);
+        } else {
+            // We still want to visit other nodes nested in the function being
+            // called so we bounce the call back out.
+            ast::visit::visit_typed_expr(self, fun);
+        }
+
+        for argument in arguments {
+            self.visit_typed_call_arg(argument);
+        }
+    }
+}
+
+/// Code action to unwrap trivial one-statement anonymous functions into just a
+/// reference to the function called
+///
+/// For example, if the code action was used on the anonymous function here:
+///
+/// ```gleam
+/// list.map([1, 2, 3], fn(int) {
+///   op(int)
+/// })
+/// ```
+///
+/// it would become:
+///
+/// ```gleam
+/// list.map([1, 2, 3], op)
+/// ```
+pub struct UnwrapAnonymousFunction<'a> {
+    module: &'a Module,
+    line_numbers: &'a LineNumbers,
+    params: &'a CodeActionParams,
+    functions: Vec<FunctionToUnwrap>,
+}
+
+/// Helper struct, a target for [UnwrapAnonymousFunction]
+struct FunctionToUnwrap {
+    /// Location of the anonymous function to apply the action to.
+    outer_function: SrcSpan,
+    /// Location of the opening brace of the anonymous function.
+    outer_function_body_start: u32,
+    /// Location of the function being called inside the anonymous function.
+    /// This will be all that's left after the action, plus any comments.
+    inner_function: SrcSpan,
+    // Location of the opening parenthesis of the inner function's argument list.
+    inner_function_arguments_start: u32,
+}
+
+impl<'a> UnwrapAnonymousFunction<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            line_numbers,
+            params,
+            functions: vec![],
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let mut actions = Vec::with_capacity(self.functions.len());
+        for function in &self.functions {
+            let mut edits = TextEdits::new(self.line_numbers);
+
+            // We need to delete the anonymous function's head and the opening
+            // brace but preserve comments between it and the inner function call.
+            // We set our endpoint at the start of the function body, and move
+            // it on through any whitespace.
+            let head_deletion_end =
+                next_nonwhitespace(&self.module.code, function.outer_function_body_start + 1);
+            edits.delete(SrcSpan {
+                start: function.outer_function.start,
+                end: head_deletion_end,
+            });
+
+            // Delete the inner function call's arguments.
+            edits.delete(SrcSpan {
+                start: function.inner_function_arguments_start,
+                end: function.inner_function.end,
+            });
+
+            // To delete the tail we remove the function end (the '}') and any
+            // whitespace before it.
+            let tail_deletion_start =
+                previous_nonwhitespace(&self.module.code, function.outer_function.end - 1);
+            edits.delete(SrcSpan {
+                start: tail_deletion_start,
+                end: function.outer_function.end,
+            });
+
+            CodeActionBuilder::new("Remove anonymous function wrapper")
+                .kind(CodeActionKind::REFACTOR_REWRITE)
+                .changes(self.params.text_document.uri.clone(), edits.edits)
+                .push_to(&mut actions);
+        }
+        actions
+    }
+
+    /// If an anonymous function can be unwrapped, save it to our list
+    ///
+    /// We need to ensure our subjects:
+    /// - are anonymous function literals (not captures)
+    /// - only contain a single statement
+    /// - that statement is a function call
+    /// - that call's arguments exactly match the arguments of the enclosing
+    ///   function
+    fn register_function(
+        &mut self,
+        location: &'a SrcSpan,
+        kind: &'a FunctionLiteralKind,
+        arguments: &'a [TypedArg],
+        body: &'a Vec1<TypedStatement>,
+    ) {
+        let function_range = src_span_to_lsp_range(*location, self.line_numbers);
+        if !overlaps(self.params.range, function_range) {
+            return;
+        }
+
+        let outer_body = match kind {
+            FunctionLiteralKind::Anonymous { head, .. } => SrcSpan::new(
+                next_nonwhitespace(&self.module.code, head.end),
+                location.end,
+            ),
+            _ => return,
+        };
+
+        // We can only apply to anonymous functions containing a single function call
+        let [
+            TypedStatement::Expression(TypedExpr::Call {
+                location: call_location,
+                arguments: call_arguments,
+                argument_parentheses:
+                    Some(SrcSpan {
+                        start: arguments_start,
+                        ..
+                    }),
+                ..
+            }),
+        ] = body.as_slice()
+        else {
+            return;
+        };
+
+        // We need the existing argument list for the fn to be a 1:1 match for
+        // the args we pass to the called function, so we need to collect the
+        // names used in both lists and check they're equal.
+
+        let outer_argument_names = arguments.iter().map(|a| match &a.names {
+            ArgNames::Named { name, .. } => Some(name),
+            // We can bail out early if any arguments are discarded, since
+            // they couldn't match those actually used.
+            ArgNames::Discard { .. } => None,
+            // Anonymous functions can't have labelled arguments.
+            ArgNames::NamedLabelled { .. } => unreachable!(),
+            ArgNames::LabelledDiscard { .. } => unreachable!(),
+        });
+
+        let inner_argument_names = call_arguments.iter().map(|a| match &a.value {
+            TypedExpr::Var { name, .. } => Some(name),
+            // We can bail out early if any of these aren't variables, since
+            // they couldn't match the inputs.
+            _ => None,
+        });
+
+        if !inner_argument_names.eq(outer_argument_names) {
+            return;
+        }
+
+        self.functions.push(FunctionToUnwrap {
+            outer_function: *location,
+            outer_function_body_start: outer_body.start,
+            inner_function: *call_location,
+            inner_function_arguments_start: *arguments_start,
+        })
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for UnwrapAnonymousFunction<'ast> {
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        kind: &'ast FunctionLiteralKind,
+        arguments: &'ast [TypedArg],
+        body: &'ast Vec1<TypedStatement>,
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        let function_range = src_span_to_lsp_range(*location, self.line_numbers);
+        if !overlaps(self.params.range, function_range) {
+            return;
+        }
+
+        self.register_function(location, kind, arguments, body);
+
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            kind,
+            arguments,
+            body,
+            return_annotation,
+        )
     }
 }

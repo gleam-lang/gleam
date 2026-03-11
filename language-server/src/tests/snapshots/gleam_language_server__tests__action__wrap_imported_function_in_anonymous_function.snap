@@ -1,0 +1,21 @@
+---
+source: language-server/src/tests/action.rs
+expression: "import gleam/list\nimport gleam/int\n\npub fn main() {\n  list.map([1, 2, 3], int.is_even)\n}\n"
+---
+----- BEFORE ACTION
+import gleam/list
+import gleam/int
+
+pub fn main() {
+  list.map([1, 2, 3], int.is_even)
+                      ↑           
+}
+
+
+----- AFTER ACTION
+import gleam/list
+import gleam/int
+
+pub fn main() {
+  list.map([1, 2, 3], fn(int) { int.is_even(int) })
+}
