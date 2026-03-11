@@ -34,6 +34,7 @@ use std::{collections::HashSet, sync::Arc};
 
 use crate::{
     code_action::{ReplaceUnderscoreWithType, type_errors_for_module},
+    reference::find_module_references_in_module,
     rename::rename_module_alias,
 };
 
@@ -878,89 +879,119 @@ where
         })
     }
 
+    fn find_references_in_modules(
+        &mut self,
+        position: &lsp_types::TextDocumentPositionParams,
+        search_scope: FindReferencesSearchScope,
+    ) -> Option<Vec<lsp::Location>> {
+        let (lines, found) = self.node_at_position(position)?;
+
+        let uri = position.text_document.uri.clone();
+
+        let source_module = self.module_for_uri(&uri)?;
+
+        let byte_index = lines.byte_index(position.position);
+
+        let referenced = reference_for_ast_node(found, &source_module.name);
+
+        match referenced {
+            Some(Referenced::LocalVariable {
+                origin,
+                definition_location,
+                location,
+                name,
+            }) if location.contains(byte_index) => match origin.map(|origin| origin.syntax) {
+                Some(VariableSyntax::Generated) => None,
+                Some(
+                    VariableSyntax::LabelShorthand(_)
+                    | VariableSyntax::AssignmentPattern
+                    | VariableSyntax::Variable { .. },
+                )
+                | None => {
+                    let variable_references =
+                        FindVariableReferences::new(definition_location, name)
+                            .find_in_module(&source_module.ast);
+
+                    let mut reference_locations = Vec::with_capacity(variable_references.len() + 1);
+                    reference_locations.push(lsp::Location {
+                        uri: uri.clone(),
+                        range: src_span_to_lsp_range(definition_location, &lines),
+                    });
+
+                    for reference in variable_references {
+                        reference_locations.push(lsp::Location {
+                            uri: uri.clone(),
+                            range: src_span_to_lsp_range(reference.location, &lines),
+                        })
+                    }
+
+                    Some(reference_locations)
+                }
+            },
+            Some(Referenced::ModuleValue {
+                module,
+                name,
+                location,
+                ..
+            }) if location.contains(byte_index) => match search_scope {
+                FindReferencesSearchScope::AllImportableModules => Some(find_module_references(
+                    module,
+                    name,
+                    self.compiler.project_compiler.get_importable_modules(),
+                    &self.compiler.sources,
+                    ast::Layer::Value,
+                )),
+                FindReferencesSearchScope::CurrentModule => {
+                    let source_information = self.compiler.get_source(&source_module.name)?;
+                    let source_module = self.compiler.get_module_interface(&source_module.name)?;
+                    Some(find_module_references_in_module(
+                        module,
+                        name,
+                        source_module,
+                        source_information,
+                        ast::Layer::Value,
+                    ))
+                }
+            },
+            Some(Referenced::ModuleType {
+                module,
+                name,
+                location,
+                ..
+            }) if location.contains(byte_index) => match search_scope {
+                FindReferencesSearchScope::AllImportableModules => Some(find_module_references(
+                    module,
+                    name,
+                    self.compiler.project_compiler.get_importable_modules(),
+                    &self.compiler.sources,
+                    ast::Layer::Type,
+                )),
+                FindReferencesSearchScope::CurrentModule => {
+                    let source_information = self.compiler.get_source(&source_module.name)?;
+                    let source_module = self.compiler.get_module_interface(&source_module.name)?;
+                    Some(find_module_references_in_module(
+                        module,
+                        name,
+                        source_module,
+                        source_information,
+                        ast::Layer::Type,
+                    ))
+                }
+            },
+            _ => None,
+        }
+    }
+
     pub fn find_references(
         &mut self,
         params: lsp::ReferenceParams,
     ) -> Response<Option<Vec<lsp::Location>>> {
         self.respond(|this| {
             let position = &params.text_document_position;
-
-            let (lines, found) = match this.node_at_position(position) {
-                Some(value) => value,
-                None => return Ok(None),
-            };
-
-            let uri = position.text_document.uri.clone();
-
-            let Some(module) = this.module_for_uri(&uri) else {
-                return Ok(None);
-            };
-
-            let byte_index = lines.byte_index(position.position);
-
-            let referenced = reference_for_ast_node(found, &module.name);
-
-            Ok(match referenced {
-                Some(Referenced::LocalVariable {
-                    origin,
-                    definition_location,
-                    location,
-                    name,
-                }) if location.contains(byte_index) => match origin.map(|origin| origin.syntax) {
-                    Some(VariableSyntax::Generated) => None,
-                    Some(
-                        VariableSyntax::LabelShorthand(_)
-                        | VariableSyntax::AssignmentPattern
-                        | VariableSyntax::Variable { .. },
-                    )
-                    | None => {
-                        let variable_references =
-                            FindVariableReferences::new(definition_location, name)
-                                .find_in_module(&module.ast);
-
-                        let mut reference_locations =
-                            Vec::with_capacity(variable_references.len() + 1);
-                        reference_locations.push(lsp::Location {
-                            uri: uri.clone(),
-                            range: src_span_to_lsp_range(definition_location, &lines),
-                        });
-
-                        for reference in variable_references {
-                            reference_locations.push(lsp::Location {
-                                uri: uri.clone(),
-                                range: src_span_to_lsp_range(reference.location, &lines),
-                            })
-                        }
-
-                        Some(reference_locations)
-                    }
-                },
-                Some(Referenced::ModuleValue {
-                    module,
-                    name,
-                    location,
-                    ..
-                }) if location.contains(byte_index) => Some(find_module_references(
-                    module,
-                    name,
-                    this.compiler.project_compiler.get_importable_modules(),
-                    &this.compiler.sources,
-                    ast::Layer::Value,
-                )),
-                Some(Referenced::ModuleType {
-                    module,
-                    name,
-                    location,
-                    ..
-                }) if location.contains(byte_index) => Some(find_module_references(
-                    module,
-                    name,
-                    this.compiler.project_compiler.get_importable_modules(),
-                    &this.compiler.sources,
-                    ast::Layer::Type,
-                )),
-                _ => None,
-            })
+            Ok(this.find_references_in_modules(
+                position,
+                FindReferencesSearchScope::AllImportableModules,
+            ))
         })
     }
 
@@ -970,111 +1001,17 @@ where
     ) -> Response<Option<Vec<lsp::DocumentHighlight>>> {
         self.respond(|this| {
             let position = &params.text_document_position_params;
-
-            let (lines, found) = match this.node_at_position(position) {
-                Some(value) => value,
-                None => return Ok(None),
-            };
-
-            let uri = position.text_document.uri.clone();
-
-            let Some(module) = this.module_for_uri(&uri) else {
-                return Ok(None);
-            };
-
-            let byte_index = lines.byte_index(position.position);
-
-            let referenced = reference_for_ast_node(found, &module.name);
-
-            Ok(match referenced {
-                Some(Referenced::LocalVariable {
-                    origin,
-                    definition_location,
-                    location,
-                    name,
-                }) if location.contains(byte_index) => match origin.map(|origin| origin.syntax) {
-                    Some(VariableSyntax::Generated) => None,
-                    Some(
-                        VariableSyntax::LabelShorthand(_)
-                        | VariableSyntax::AssignmentPattern
-                        | VariableSyntax::Variable { .. },
-                    )
-                    | None => {
-                        let variable_references =
-                            FindVariableReferences::new(definition_location, name)
-                                .find_in_module(&module.ast);
-
-                        let mut reference_locations =
-                            Vec::with_capacity(variable_references.len() + 1);
-                        reference_locations.push(lsp::DocumentHighlight {
-                            range: src_span_to_lsp_range(definition_location, &lines),
-                            kind: Some(lsp::DocumentHighlightKind::WRITE),
-                        });
-
-                        for reference in variable_references {
-                            let range = src_span_to_lsp_range(reference.location, &lines);
-                            reference_locations.push(lsp::DocumentHighlight {
-                                range,
-                                kind: Some(lsp::DocumentHighlightKind::WRITE),
-                            })
-                        }
-
-                        Some(reference_locations)
-                    }
-                },
-                Some(Referenced::ModuleValue {
-                    module: module_name,
-                    name,
-                    location,
-                    ..
-                }) if location.contains(byte_index) => {
-                    match this.compiler.get_module_interface(&module.name) {
-                        Some(module) => Some(
-                            find_module_references(
-                                module_name,
-                                name,
-                                // Only search in the current module
-                                &im::HashMap::unit(module.name.clone(), module.clone()),
-                                &this.compiler.sources,
-                                ast::Layer::Value,
-                            )
-                            .into_iter()
-                            .map(|location| lsp::DocumentHighlight {
-                                range: location.range,
-                                kind: None,
-                            })
-                            .collect(),
-                        ),
-                        None => None,
-                    }
-                }
-                Some(Referenced::ModuleType {
-                    module: module_name,
-                    name,
-                    location,
-                    ..
-                }) if location.contains(byte_index) => {
-                    match this.compiler.get_module_interface(&module.name) {
-                        Some(module) => Some(
-                            find_module_references(
-                                module_name,
-                                name,
-                                &im::HashMap::unit(module.name.clone(), module.clone()),
-                                &this.compiler.sources,
-                                ast::Layer::Type,
-                            )
-                            .into_iter()
-                            .map(|location| lsp::DocumentHighlight {
-                                range: location.range,
-                                kind: None,
-                            })
-                            .collect(),
-                        ),
-                        None => None,
-                    }
-                }
-                _ => None,
-            })
+            Ok(this
+                .find_references_in_modules(position, FindReferencesSearchScope::CurrentModule)
+                .map(|references| {
+                    references
+                        .into_iter()
+                        .map(|loc| lsp::DocumentHighlight {
+                            range: loc.range,
+                            kind: None,
+                        })
+                        .collect()
+                }))
         })
     }
 
@@ -2096,4 +2033,9 @@ fn make_deprecated_symbol_tag(deprecation: &Deprecation) -> Option<Vec<SymbolTag
     deprecation
         .is_deprecated()
         .then(|| vec![SymbolTag::DEPRECATED])
+}
+
+enum FindReferencesSearchScope {
+    AllImportableModules,
+    CurrentModule,
 }

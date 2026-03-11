@@ -404,6 +404,27 @@ pub fn find_module_references(
     reference_locations
 }
 
+pub fn find_module_references_in_module(
+    module_name: EcoString,
+    name: EcoString,
+    module: &ModuleInterface,
+    source_information: &ModuleSourceInformation,
+    layer: ast::Layer,
+) -> Vec<Location> {
+    let mut reference_locations = Vec::new();
+
+    find_references_in_module(
+        &module_name,
+        &name,
+        module,
+        source_information,
+        &mut reference_locations,
+        layer,
+    );
+
+    reference_locations
+}
+
 fn find_references_in_module(
     module_name: &EcoString,
     name: &EcoString,
