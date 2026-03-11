@@ -14,6 +14,11 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The analysis of record update expressions is now fault tolerant, meaning the
+  compiler will no longer stop reporting errors at the first invalid field it
+  finds.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - When publishing, the package manager now uses the full term instead of the

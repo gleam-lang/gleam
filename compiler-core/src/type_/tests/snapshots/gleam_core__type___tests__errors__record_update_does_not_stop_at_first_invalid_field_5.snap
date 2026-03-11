@@ -1,0 +1,57 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Wibble {\n  Wibble(a: Int, b: Bool)\n}\n\npub fn go(wibble: Wibble) {\n    Wibble(..wibble, b: 1, a: True, c: 2)\n}"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(a: Int, b: Bool)
+}
+
+pub fn go(wibble: Wibble) {
+    Wibble(..wibble, b: 1, a: True, c: 2)
+}
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:7:22
+  │
+7 │     Wibble(..wibble, b: 1, a: True, c: 2)
+  │                      ^^^^
+
+Expected type:
+
+    Bool
+
+Found type:
+
+    Int
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:7:28
+  │
+7 │     Wibble(..wibble, b: 1, a: True, c: 2)
+  │                            ^^^^^^^
+
+Expected type:
+
+    Int
+
+Found type:
+
+    Bool
+
+error: Unknown record field
+  ┌─ /src/one/two.gleam:7:37
+  │
+7 │     Wibble(..wibble, b: 1, a: True, c: 2)
+  │                                     ^^^^ Did you mean `a`?
+
+The value being accessed has this type:
+
+    Wibble
+
+It has these accessible fields:
+
+    .a
+    .b

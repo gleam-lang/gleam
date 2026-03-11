@@ -3028,9 +3028,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let value_constructor = self
             .environment
             .get_value_constructor(module.map(|(module, _)| module), name)
-            .map_err(|e| {
+            .map_err(|error| {
                 convert_get_value_constructor_error(
-                    e,
+                    error,
                     location,
                     module.map(|(_, location)| *location),
                 )
@@ -3045,8 +3045,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let (record_var, record_assignment) = if record.is_var() {
             (record, None)
         } else {
-            // We create an Assignment for the old record expression and will use a Var expression
-            // to refer back to it while constructing the arguments.
+            // We create an Assignment for the old record expression and will
+            // use a Var expression to refer back to it while constructing the
+            // arguments.
             let record_assignment = Assignment {
                 location: record_location,
                 pattern: Pattern::Variable {
@@ -3104,62 +3105,64 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let record_type = record.type_();
         let return_type = variant.return_type.clone();
 
-        // We clone the fields to remove all explicitly mentioned fields in the record update.
+        // We clone the fields to remove all explicitly mentioned fields in the
+        // record update.
         let mut fields = variant.field_map.fields.clone();
 
-        // collect explicit arguments given in the record update
-        let explicit_arguments = arguments
-            .iter()
-            .map(
-                |arg @ UntypedRecordUpdateArg {
-                     label,
-                     value,
-                     location,
-                 }| {
-                    let value = self.infer_or_error(value.clone())?;
+        // We go over all arguments used in the record update and infer those.
+        let mut explicit_arguments = vec![];
+        for argument in arguments.iter() {
+            let UntypedRecordUpdateArg {
+                label,
+                value,
+                location,
+            } = argument;
+            let value = self.infer(value.clone());
+            if argument.uses_label_shorthand() {
+                self.track_feature_usage(FeatureKind::LabelShorthandSyntax, *location);
+            }
 
-                    if arg.uses_label_shorthand() {
-                        self.track_feature_usage(FeatureKind::LabelShorthandSyntax, *location);
-                    }
+            if let Some(index) = fields.remove(label) {
+                // If the variant has the given field, we need to check it's
+                // inferred type is correct.
+                // If an error happens we record it, but don't early return.
+                // We still want to accumulate errors for all field to come!
+                if let Err(error) = unify(variant.arg_type(index), value.type_()) {
+                    self.problems.error(convert_unify_error(error, *location));
+                };
 
-                    match fields.remove(label) {
-                        Some(index) => {
-                            unify(variant.arg_type(index), value.type_())
-                                .map_err(|e| convert_unify_error(e, *location))?;
+                explicit_arguments.push((
+                    index,
+                    CallArg {
+                        label: Some(label.clone()),
+                        location: *location,
+                        value,
+                        implicit: None,
+                    },
+                ))
+            } else if variant.has_field(label) {
+                // The variant has this field but it was already removed in a
+                // previous iteration. This means we've found a duplicate field!
+                self.problems.error(Error::DuplicateArgument {
+                    location: *location,
+                    label: label.clone(),
+                })
+            } else {
+                // Otherwise, it's just an unknown field!
+                self.problems.error(self.unknown_field_error(
+                    variant.field_names(),
+                    record_type.clone(),
+                    *location,
+                    label.clone(),
+                    FieldAccessUsage::RecordUpdate,
+                ))
+            };
+        }
 
-                            Ok((
-                                index,
-                                CallArg {
-                                    label: Some(label.clone()),
-                                    location: *location,
-                                    value,
-                                    implicit: None,
-                                },
-                            ))
-                        }
-                        _ => {
-                            if variant.has_field(label) {
-                                Err(Error::DuplicateArgument {
-                                    location: *location,
-                                    label: label.clone(),
-                                })
-                            } else {
-                                Err(self.unknown_field_error(
-                                    variant.field_names(),
-                                    record_type.clone(),
-                                    *location,
-                                    label.clone(),
-                                    FieldAccessUsage::RecordUpdate,
-                                ))
-                            }
-                        }
-                    }
-                },
-            )
-            .collect::<Result<Vec<_>, _>>()?;
-
-        // Generate the remaining copied arguments, making sure they unify with our return type.
-        let convert_incompatible_fields_error = |e: UnifyError, field: RecordField| match e {
+        // Generate the remaining copied arguments, making sure they unify with
+        // our return type.
+        let convert_incompatible_fields_error = |error: UnifyError, field: RecordField| match error
+        {
             UnifyError::CouldNotUnify {
                 expected, given, ..
             } => Error::UnsafeRecordUpdate {
@@ -3175,7 +3178,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             UnifyError::ExtraVarInAlternativePattern { .. }
             | UnifyError::MissingVarInAlternativePattern { .. }
             | UnifyError::DuplicateVarInPattern { .. }
-            | UnifyError::RecursiveType => convert_unify_error(e, record_location),
+            | UnifyError::RecursiveType => convert_unify_error(error, record_location),
         };
 
         let indices_to_labels = variant.field_map.indices_to_labels();
@@ -3306,7 +3309,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         }
 
-        if explicit_arguments.is_empty() {
+        if arguments.is_empty() {
             self.problems
                 .warning(Warning::NoFieldsRecordUpdate { location });
         }
