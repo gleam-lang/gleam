@@ -259,6 +259,26 @@
 
   ([Samuel Cristobal](https://github.com/scristobal))
 
+- The language server now supports `textDocument/documentHighlight` for values
+  and types in modules (including functions).
+
+  For example, triggering it with the cursor over any instance of `bar` will
+  result in all of the instances of it being highlighted.
+
+  ```gleam
+  import gleam/int
+
+  fn foo(bar: Int) {
+  //     ^^^
+    let baz = bar * 20
+    //        ^^^
+    let qux = int.absolute_value(bar) + baz
+    //                           ^^^
+    int.to_string(bar) <> int.to_string(qux) <> int.to_string(bar)
+    //            ^^^                                         ^^^
+  }
+  ```
+
 ### Formatter
 
 - The formatter no longer wraps multiple tuple or field access into a block.
