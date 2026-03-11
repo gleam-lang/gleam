@@ -1097,7 +1097,17 @@ impl<'a, IO> Completer<'a, IO> {
         let fun_type = fun.type_().fn_types().map(|(arguments, _)| arguments);
         let already_included_labels = existing_arguments
             .iter()
-            .filter_map(|a| a.label.clone())
+            .filter_map(|argument| {
+                // Record updates can have implicit arguments added as placeholders
+                // by the compiler. Those are still arguments that could be typed
+                // by the developer and used, so we don't want to include those
+                // in the ones that have already been included and won't be recommended.
+                if argument.is_implicit() && !argument.is_use_implicit_callback() {
+                    None
+                } else {
+                    argument.label.clone()
+                }
+            })
             .collect_vec();
         let Some(field_map) =
             self.callable_field_map(fun, self.compiler.project_compiler.get_importable_modules())

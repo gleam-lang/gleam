@@ -96,6 +96,10 @@
   type's constructors.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now shows completions for the labelled argument of a
+  record when writing a record update.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server is now smarter when producing autocompletions. Imagine
   you're updating your code to fully qualify the uses of the `Json` type:
 
