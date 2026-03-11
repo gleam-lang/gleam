@@ -2098,3 +2098,51 @@ pub fn go(x: mod.Wibble) {
             .nth_occurrence(2)
     );
 }
+
+#[test]
+fn hover_for_invalid_record_update_1() {
+    assert_hover!(
+        "
+type Wibble {
+  Wibble(a: Int, b: Bool)
+}
+
+pub fn go(wibble: Wibble) {
+    Wibble(..wibble, a: True, b: 1)
+}
+",
+        find_position_of("True")
+    );
+}
+
+#[test]
+fn hover_for_invalid_record_update_2() {
+    assert_hover!(
+        "
+type Wibble {
+  Wibble(a: Int, b: Bool)
+}
+
+pub fn go(wibble: Wibble) {
+    Wibble(..wibble, a: True, b: 1)
+}
+",
+        find_position_of("1")
+    );
+}
+
+#[test]
+fn hover_for_invalid_record_update_3() {
+    assert_hover!(
+        "
+type Wibble {
+  Wibble(a: Int, b: Bool)
+}
+
+pub fn go(wibble: Wibble) {
+    Wibble(..wibble, a: True, b: 1)
+}
+",
+        find_position_of("Wibble").nth_occurrence(4)
+    );
+}

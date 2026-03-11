@@ -3477,3 +3477,73 @@ pub fn go(value: Type) {
 }"
     );
 }
+
+#[test]
+fn record_update_does_not_stop_at_first_invalid_field_1() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Bool)
+}
+
+pub fn go(wibble: Wibble) {
+    Wibble(..wibble, c: 1, a: 1.0)
+}"
+    );
+}
+
+#[test]
+fn record_update_does_not_stop_at_first_invalid_field_2() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Bool)
+}
+
+pub fn go(wibble: Wibble) {
+    Wibble(..wibble, a: 1.0, a: 2, c: 2)
+}"
+    );
+}
+
+#[test]
+fn record_update_does_not_stop_at_first_invalid_field_3() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Bool)
+}
+
+pub fn go(wibble: Wibble) {
+    Wibble(..wibble, a: 1.0, a: 2)
+}"
+    );
+}
+
+#[test]
+fn record_update_does_not_stop_at_first_invalid_field_4() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Bool)
+}
+
+pub fn go(wibble: Wibble) {
+    Wibble(..wibble, a: 2, a: 3, b: 1)
+}"
+    );
+}
+
+#[test]
+fn record_update_does_not_stop_at_first_invalid_field_5() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Bool)
+}
+
+pub fn go(wibble: Wibble) {
+    Wibble(..wibble, b: 1, a: True, c: 2)
+}"
+    );
+}
