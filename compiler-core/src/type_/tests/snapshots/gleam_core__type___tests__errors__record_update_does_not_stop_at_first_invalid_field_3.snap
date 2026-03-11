@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Wibble {\n  Wibble(a: Int, b: Bool)\n}\n\npub fn go(wibble: Wibble) {\n    Wibble(..wibble, a: 1.0, a: 2)\n}"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(a: Int, b: Bool)
+}
+
+pub fn go(wibble: Wibble) {
+    Wibble(..wibble, a: 1.0, a: 2)
+}
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:7:22
+  │
+7 │     Wibble(..wibble, a: 1.0, a: 2)
+  │                      ^^^^^^
+
+Expected type:
+
+    Int
+
+Found type:
+
+    Float
+
+error: Duplicate argument
+  ┌─ /src/one/two.gleam:7:30
+  │
+7 │     Wibble(..wibble, a: 1.0, a: 2)
+  │                              ^^^^
+
+The labelled argument `a` has already been supplied.

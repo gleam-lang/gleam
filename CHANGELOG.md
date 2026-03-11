@@ -29,6 +29,11 @@
   internal implementation details.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The analysis of record update expressions is now fault tolerant, meaning the
+  compiler will no longer stop reporting errors at the first invalid field it
+  finds.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The JavaScript prelude TypeScript API now contains the `BitArray$isBitArray`
   and `BitArray$BitArray$data` functions.
   ([Louis Pilfold](https://github.com/lpil))

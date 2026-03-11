@@ -4830,3 +4830,51 @@ pub fn main(x) {
 }",
     );
 }
+
+#[test]
+fn record_update_with_all_wrong_fields_produces_no_warnings_1() {
+    assert_no_warnings!(
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Bool)
+}
+
+pub fn main() {
+  let original = Wibble(a: 1, b: True)
+  Wibble(..original, c: 2)
+}
+",
+    );
+}
+
+#[test]
+fn record_update_with_all_wrong_fields_produces_no_warnings_2() {
+    assert_no_warnings!(
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Bool)
+}
+
+pub fn main() {
+  let original = Wibble(a: 1, b: True)
+  Wibble(..original, a: True)
+}
+",
+    );
+}
+
+#[test]
+fn record_update_with_wrong_types_but_all_fields_produces_warning() {
+    assert_warning!(
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Bool)
+}
+
+pub fn main() {
+  let original = Wibble(a: 1, b: True)
+  Wibble(..original, a: True, b: 1)
+}
+"
+    );
+}
