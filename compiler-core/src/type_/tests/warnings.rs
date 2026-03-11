@@ -1945,13 +1945,28 @@ fn doesnt_warn_twice_for_unreachable_code_if_has_already_warned_in_a_block_2() {
 }
 
 #[test]
-fn unreachable_use_after_panic() {
+fn unreachable_use_after_panic_1() {
     assert_warning!(
         r#"
         pub fn wibble(_) { 1 }
         pub fn main() {
             panic
             use <- wibble
+            1
+        }
+        "#
+    );
+}
+
+#[test]
+fn unreachable_use_after_panic_2() {
+    assert_warning!(
+        ("package", "module", r#"pub fn wibble(_) { 1 }"#),
+        r#"
+        import module
+        pub fn a() {
+            panic
+            use <- module.wibble
             1
         }
         "#
