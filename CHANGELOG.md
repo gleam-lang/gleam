@@ -112,6 +112,25 @@
   dependencies.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The language server now supports `textDocument/documentHighlight` anywhere
+  that `textDocument/references` is available.
+
+  For example, triggering it with the cursor over any instance of `vec` will
+  result in all of the instances of it being highlighted.
+
+  ```gleam
+  fn to_cartesian(vec) {
+  //              ^^^
+    let x = vec.rho * cos(vec.theta)
+    //      ^^^           ^^^
+    let y = vec.rho * sin(vec.theta)
+    //      ^^^           ^^^
+    #(x, y)
+  }
+  ```
+
+  ([Gavin Morrow](https://github.com/gavinmorrow))
+
 ### Formatter
 
 ### Bug fixes
