@@ -30,6 +30,10 @@
   is not set.
   ([Alex Hinde](https://github.com/apex-hinde))
 
+- The Hex credentials file is now written with read-write permissions for the
+  owner only (0600 on Unix), preventing other users from reading it.
+  ([bala-bhargav](https://github.com/bala-bhargav))
+
 ### Language server
 
 - The language server will now offer "Discard unused variable" on each of
