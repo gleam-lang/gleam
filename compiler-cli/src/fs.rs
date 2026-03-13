@@ -337,6 +337,27 @@ pub fn make_executable(_path: impl AsRef<Utf8Path>) -> Result<(), Error> {
     Ok(())
 }
 
+#[cfg(target_family = "unix")]
+pub fn make_private(path: impl AsRef<Utf8Path>) -> Result<(), Error> {
+    use std::os::unix::fs::PermissionsExt;
+    tracing::debug!(path = ?path.as_ref(), "setting_permissions");
+
+    std::fs::set_permissions(path.as_ref(), std::fs::Permissions::from_mode(0o600)).map_err(
+        |e| Error::FileIo {
+            action: FileIoAction::UpdatePermissions,
+            kind: FileKind::File,
+            path: path.as_ref().to_path_buf(),
+            err: Some(e.to_string()),
+        },
+    )?;
+    Ok(())
+}
+
+#[cfg(not(target_family = "unix"))]
+pub fn make_private(_path: impl AsRef<Utf8Path>) -> Result<(), Error> {
+    Ok(())
+}
+
 pub fn write_bytes(path: &Utf8Path, bytes: &[u8]) -> Result<(), Error> {
     tracing::debug!(path=?path, "writing_file");
 

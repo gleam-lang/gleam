@@ -78,6 +78,10 @@
   using OAuth.
   ([Louis Pilfold](https://github.com/lpil))
 
+- The Hex credentials file is now written with read-write permissions for the
+  owner only (0600 on Unix), preventing other users from reading it.
+  ([bala-bhargav](https://github.com/bala-bhargav))
+
 - The build tool will now refuse to publish any package that has no README, or
   an empty README.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

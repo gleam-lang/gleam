@@ -134,6 +134,7 @@ impl<'runtime> HexAuthentication<'runtime> {
         };
         let toml = toml::to_string(&credentials).expect("OAuth credentials TOML encoding");
         crate::fs::write(&path, &toml)?;
+        crate::fs::make_private(&path)?;
         Ok(())
     }
 
