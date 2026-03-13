@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  let x: Wobble = todo\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let x: Wobble = todo
+         ↑            
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let x: Wobble = todo
+}
+
+type Wobble {
+  Wobble
+}

@@ -1170,6 +1170,44 @@ pub fn code_action_import_module(
     }
 }
 
+pub fn code_action_generate_type(
+    module: &Module,
+    line_numbers: &LineNumbers,
+    params: &CodeActionParams,
+    error: &Option<Error>,
+    actions: &mut Vec<CodeAction>,
+) {
+    let uri = &params.text_document.uri;
+    let Some(Error::Type { errors, .. }) = error else {
+        return;
+    };
+
+    for error in errors {
+        let type_::Error::UnknownType { location, name, .. } = error else {
+            continue;
+        };
+
+        let range = src_span_to_lsp_range(*location, line_numbers);
+        if !overlaps(params.range, range) {
+            continue;
+        }
+
+        let insert_at = module.code.len() as u32;
+        let insert_range =
+            src_span_to_lsp_range(SrcSpan { start: insert_at, end: insert_at }, line_numbers);
+        let edit = TextEdit {
+            range: insert_range,
+            new_text: format!("\ntype {name} {{\n  {name}\n}}\n"),
+        };
+
+        CodeActionBuilder::new("Generate type")
+            .kind(CodeActionKind::QUICKFIX)
+            .changes(uri.clone(), vec![edit])
+            .preferred(true)
+            .push_to(actions);
+    }
+}
+
 fn suggest_imports(
     location: SrcSpan,
     importable_modules: &[ModuleSuggestion],

@@ -123,6 +123,7 @@ const GENERATE_TO_JSON_FUNCTION: &str = "Generate to-JSON function";
 const PATTERN_MATCH_ON_ARGUMENT: &str = "Pattern match on argument";
 const PATTERN_MATCH_ON_VARIABLE: &str = "Pattern match on variable";
 const GENERATE_FUNCTION: &str = "Generate function";
+const GENERATE_TYPE: &str = "Generate type";
 const CONVERT_TO_FUNCTION_CALL: &str = "Convert to function call";
 const INLINE_VARIABLE: &str = "Inline variable";
 const CONVERT_TO_PIPE: &str = "Convert to pipe";
@@ -8142,6 +8143,19 @@ pub fn main() -> Bool {
 }
 ",
         find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn generate_type_works_for_unknown_type() {
+    assert_code_action!(
+        GENERATE_TYPE,
+        "
+pub fn main() {
+  let x: Wobble = todo
+}
+",
+        find_position_of("Wobble").to_selection()
     );
 }
 

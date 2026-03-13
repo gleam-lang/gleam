@@ -47,8 +47,8 @@ use super::{
         RemovePrivateOpaque, RemoveUnreachableCaseClauses, RemoveUnusedImports,
         UseLabelShorthandSyntax, WrapInBlock, code_action_add_missing_patterns,
         code_action_convert_qualified_constructor_to_unqualified,
-        code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
-        code_action_inexhaustive_let_to_case,
+        code_action_convert_unqualified_constructor_to_qualified, code_action_generate_type,
+        code_action_import_module, code_action_inexhaustive_let_to_case,
     },
     compiler::LspProjectCompiler,
     completer::Completer,
@@ -391,10 +391,10 @@ where
     ) -> Response<Option<Vec<CodeAction>>> {
         self.respond(|this| {
             let mut actions = vec![];
-            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+            let module_uri = &params.text_document.uri;
+            let Some(module) = this.module_for_uri(module_uri) else {
                 return Ok(None);
             };
-
             let lines = LineNumbers::new(&module.code);
 
             code_action_unused_values(module, &lines, &params, &mut actions);
@@ -414,6 +414,7 @@ where
             );
             code_action_fix_names(&lines, &params, &this.error, &mut actions);
             code_action_import_module(module, &lines, &params, &this.error, &mut actions);
+            code_action_generate_type(module, &lines, &params, &this.error, &mut actions);
             code_action_add_missing_patterns(module, &lines, &params, &this.error, &mut actions);
             actions
                 .extend(RemoveUnreachableCaseClauses::new(module, &lines, &params).code_actions());
