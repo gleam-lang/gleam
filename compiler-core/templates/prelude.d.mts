@@ -69,8 +69,8 @@ export const BitArray: {
 }
 export function BitArray$BitArray(
   buffer: Uint8Array,
-  bitSize: number,
-  bitOffset: number,
+  bitSize?: number,
+  bitOffset?: number,
 ): BitArray;
 export function BitArray$isBitArray(value: any): value is BitArray;
 export function BitArray$BitArray$data(value: BitArray): DataView;

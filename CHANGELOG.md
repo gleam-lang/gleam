@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Marked the `bitSize` and `bitOffset` fields of `BitArray$BitArray` TypeScript
+  definition as optional.
+  ([acandoo](https://github.com/acandoo))
+
 ## v1.15.0-rc1 - 2026-03-04
 
 ### Compiler
