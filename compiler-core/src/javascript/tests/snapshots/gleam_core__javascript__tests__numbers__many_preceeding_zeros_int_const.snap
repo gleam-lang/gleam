@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/javascript/tests/numbers.rs
+expression: "\npub const x = 0000_000_00_9_179\n"
+---
+----- SOURCE CODE
+
+pub const x = 0000_000_00_9_179
+
+
+----- COMPILED JAVASCRIPT
+export const x = 9_179;

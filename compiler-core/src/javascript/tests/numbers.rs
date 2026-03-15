@@ -256,6 +256,18 @@ pub fn main() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/5459
+#[test]
+fn many_preceeding_zeros_int() {
+    assert_js!(
+        r#"
+pub fn main() {
+  0000_000_00_9_179
+}
+"#
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/2412
 #[test]
 fn preceeding_zeros_float() {
@@ -263,6 +275,18 @@ fn preceeding_zeros_float() {
         r#"
 pub fn main() {
   09_179.1
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5459
+#[test]
+fn many_preceeding_zeros_float() {
+    assert_js!(
+        r#"
+pub fn main() {
+  0000_000_00_9_179.1
 }
 "#
     );
@@ -278,12 +302,32 @@ pub const x = 09_179
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/5459
+#[test]
+fn many_preceeding_zeros_int_const() {
+    assert_js!(
+        r#"
+pub const x = 0000_000_00_9_179
+"#
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/2412
 #[test]
 fn preceeding_zeros_float_const() {
     assert_js!(
         r#"
 pub const x = 09_179.1
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5459
+#[test]
+fn many_preceeding_zeros_float_const() {
+    assert_js!(
+        r#"
+pub const x = 0000_000_00_9_179.1
 "#
     );
 }
@@ -300,6 +344,18 @@ pub fn main(x) {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/5459
+#[test]
+fn many_preceeding_zeros_int_pattern() {
+    assert_js!(
+        r#"
+pub fn main(x) {
+  let assert 0000_000_00_9_179 = x
+}
+"#
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/2412
 #[test]
 fn preceeding_zeros_float_pattern() {
@@ -307,6 +363,18 @@ fn preceeding_zeros_float_pattern() {
         r#"
 pub fn main(x) {
   let assert 09_179.1 = x
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5459
+#[test]
+fn many_preceeding_zeros_float_pattern() {
+    assert_js!(
+        r#"
+pub fn main(x) {
+  let assert 0000_000_00_9_179.1 = x
 }
 "#
     );

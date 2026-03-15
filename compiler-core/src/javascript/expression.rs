@@ -2464,15 +2464,10 @@ pub fn eco_string_int<'a>(value: EcoString) -> Document<'a> {
         value
     };
 
-    let value = value.trim_start_matches('0');
+    let value = value.trim_start_matches(['0', '_']);
     if value.is_empty() {
         out.push('0');
     }
-
-    // If the number starts with a `0` then an underscore, the `0` will be stripped,
-    // leaving the number to look something like `_1_2_3`, which is not valid syntax.
-    // Therefore, we strip the `_` to avoid this case.
-    let value = value.trim_start_matches('_');
 
     out.push_str(value);
 
@@ -2489,7 +2484,7 @@ pub fn float(value: &str) -> Document<'_> {
     };
     let value = value.trim_start_matches(['+', '-'].as_ref());
 
-    let value = value.trim_start_matches('0');
+    let value = value.trim_start_matches(['0', '_']);
     if value.starts_with(['.', 'e', 'E']) {
         out.push('0');
     }
