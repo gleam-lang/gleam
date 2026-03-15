@@ -126,6 +126,12 @@ where
         };
         let _ = lxr.next_char();
         let _ = lxr.next_char();
+
+        // Check whether the first character is a UTF-8 byte order mark, and if so, consume it.
+        if lxr.chr0 == Some('\u{feff}') {
+            let _ = lxr.next_char();
+        }
+
         lxr
     }
 

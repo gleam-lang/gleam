@@ -26,6 +26,10 @@
   arrays to include extra bytes from the underlying buffer on JavaScript.
   ([John Downey](https://github.com/jtdowney))
 
+- The compiler now parses UTF-8 source files with a byte-order mark correctly,
+  instead of raising an error.
+  ([Lucy McPhail](https://github.com/lucymcphail))
+
 ## v1.15.1 - 2026-03-17
 
 ### Bug fixes
