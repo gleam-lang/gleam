@@ -421,3 +421,6 @@
   updates if the constructor definition has a positional field defined after
   labelled fields.
   ([Hari Mohan](https://gituhub.com/seafoamteal))
+
+- Fixed invalid JavaScript code generation when ints or floats had prefixed `0`s
+  before and after an `_` (e.g. `000_001`).

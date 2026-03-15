@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/javascript/tests/numbers.rs
+expression: "\npub fn main(x) {\n  let assert 0000_000_00_9_179.1 = x\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(x) {
+  let assert 0000_000_00_9_179.1 = x
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function main(x) {
+  if (!(x === 9179.1)) {
+    throw makeError(
+      "let_assert",
+      FILEPATH,
+      "my/mod",
+      3,
+      "main",
+      "Pattern match failed, no pattern matched the value.",
+      { value: x, start: 20, end: 54, pattern_start: 31, pattern_end: 50 }
+    )
+  }
+  return x;
+}
