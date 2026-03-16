@@ -2080,3 +2080,21 @@ pub fn main() {
         find_position_of("== mod.Wibble").under_char('i')
     );
 }
+
+#[test]
+fn hover_for_module_select_pattern() {
+    let src = "
+import mod
+pub fn go(x: mod.Wibble) {
+  case x {
+    mod.Wibble -> 1
+  }
+}
+";
+    assert_hover!(
+        TestProject::for_source(src).add_module("mod", "pub type Wibble { Wibble }"),
+        find_position_of("mod.Wibble")
+            .under_char('W')
+            .nth_occurrence(2)
+    );
+}
