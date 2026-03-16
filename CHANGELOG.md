@@ -107,25 +107,6 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- Type inference now preserves generic type parameters when constructors or functions are used without explicit annotations, 
-  eliminating false errors in mutually recursive code:
-
-  ```gleam
-  type Test(a) {
-    Test(a)
-  }
-
-  fn it(value: Test(a)) {
-    it2(value)
-  }
-
-  fn it2(value: Test(a)) -> Test(a) {
-    it(value)
-  }
-  ```
-
-  Previously this could fail with an incorrect "type mismatch" error. ([Adi Salimgereyev](https://github.com/abs0luty))
-
 ### Build tool
 
 - The `gleam hex owner add` command has been added, which allows adding
@@ -340,6 +321,18 @@
   declarations for internal variables after a `case` expression whose subject
   directly matches one of the branches.
   ([Eyup Can Akman](https://github.com/eyupcanakman))
+
+- The compiler no longer reports false type mismatch errors when type-checking
+  mutually recursive function definitions such as these:
+
+  ```gleam
+  type Test(a) { Test(a) }
+
+  fn it(value: Test(a)) { it2(value) }
+  fn it2(value: Test(a)) -> Test(a) { it(value) }
+  ```
+
+  ([Adi Salimgereyev](https://github.com/abs0luty))
 
 ## v1.15.1 - 2026-03-17
 
