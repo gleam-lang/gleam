@@ -8,6 +8,10 @@
   definition as optional.
   ([acandoo](https://github.com/acandoo))
 
+- Fixed invalid JavaScript code generation when ints or floats had prefixed `0`s
+  before and after an `_` (e.g. `000_001`).
+  ([Gavin Morrow](https://github.com/gavinmorrow))
+
 ## v1.15.0-rc1 - 2026-03-04
 
 ### Compiler
@@ -421,6 +425,3 @@
   updates if the constructor definition has a positional field defined after
   labelled fields.
   ([Hari Mohan](https://gituhub.com/seafoamteal))
-
-- Fixed invalid JavaScript code generation when ints or floats had prefixed `0`s
-  before and after an `_` (e.g. `000_001`).
