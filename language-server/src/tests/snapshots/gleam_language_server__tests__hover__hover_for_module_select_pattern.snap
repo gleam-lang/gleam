@@ -1,0 +1,17 @@
+---
+source: language-server/src/tests/hover.rs
+expression: "\nimport mod\npub fn go(x: mod.Wibble) {\n  case x {\n    mod.Wibble -> 1\n  }\n}\n"
+---
+import mod
+pub fn go(x: mod.Wibble) {
+  case x {
+    mod.Wibble -> 1
+    ▔▔▔▔↑▔▔▔▔▔     
+  }
+}
+
+
+----- Hover content (markdown) -----
+```gleam
+mod.Wibble
+```

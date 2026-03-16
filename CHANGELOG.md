@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug where the language server wouldn't show the correct hover for some
+  patterns.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.15.0-rc2 - 2026-03-16
 
 ### Bug fixes

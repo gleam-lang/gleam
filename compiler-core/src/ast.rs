@@ -3131,35 +3131,35 @@ impl TypedPattern {
                 .or_else(|| Some(Located::Pattern(self))),
 
             Pattern::Constructor {
-                module: Some((module_alias, module_location)),
-                constructor: Inferred::Known(constructor),
+                module,
+                spread,
+                arguments,
+                constructor,
                 ..
             } => {
-                if !module_location.contains(byte_index) {
-                    return None;
-                }
-
-                Some(Located::ModuleName {
-                    location: *module_location,
-                    module_name: constructor.module.clone(),
-                    module_alias: module_alias.clone(),
-                    layer: Layer::Value,
-                })
-            }
-            Pattern::Constructor {
-                spread, arguments, ..
-            } => match spread {
-                Some(spread_location) if spread_location.contains(byte_index) => {
+                if let Some((module_alias, module_location)) = module
+                    && let Inferred::Known(constructor) = constructor
+                    && module_location.contains(byte_index)
+                {
+                    Some(Located::ModuleName {
+                        location: *module_location,
+                        module_name: constructor.module.clone(),
+                        module_alias: module_alias.clone(),
+                        layer: Layer::Value,
+                    })
+                } else if let Some(spread_location) = spread
+                    && spread_location.contains(byte_index)
+                {
                     Some(Located::PatternSpread {
                         spread_location: *spread_location,
                         pattern: self,
                     })
+                } else {
+                    arguments
+                        .iter()
+                        .find_map(|argument| argument.find_node(byte_index))
                 }
-
-                Some(_) | None => arguments
-                    .iter()
-                    .find_map(|argument| argument.find_node(byte_index)),
-            },
+            }
 
             Pattern::List { elements, tail, .. } => elements
                 .iter()
