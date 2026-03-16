@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.15.0 - 2026-03-16
 
 - Fixed a bug where the language server wouldn't show the correct hover for some
   patterns.
