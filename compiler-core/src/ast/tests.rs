@@ -12,7 +12,7 @@ use crate::type_::expression::{FunctionDefinition, Purity};
 use crate::type_::{Deprecation, PRELUDE_MODULE_NAME, Problems};
 use crate::warning::WarningEmitter;
 use crate::{
-    ast::{SrcSpan, TypedExpr},
+    ast::{BinOp, SrcSpan, TypedExpr},
     build::Located,
     type_::{
         self, AccessorsMap, EnvironmentArguments, ExprTyper, FieldMap, ModuleValueConstructor,
@@ -603,6 +603,47 @@ fn find_node_binop() {
     assert!(expr.find_node(3).is_none());
     assert!(expr.find_node(4).is_some());
     assert!(expr.find_node(5).is_some());
+}
+
+#[test]
+fn subtraction_is_left_associative_in_ast() {
+    // `1 - 2 - 3` must parse as `(1 - 2) - 3`, not `1 - (2 - 3)`.
+    let statement = compile_expression("1 - 2 - 3");
+    let expr = get_bare_expression(&statement);
+
+    let TypedExpr::BinOp {
+        name: BinOp::SubInt,
+        left,
+        right,
+        ..
+    } = expr
+    else {
+        panic!("expected outer SubInt, got {expr:?}");
+    };
+
+    let TypedExpr::Int { value: right_val, .. } = right.as_ref() else {
+        panic!("expected int on right, got {right:?}");
+    };
+    assert_eq!(right_val, "3");
+
+    let TypedExpr::BinOp {
+        name: BinOp::SubInt,
+        left: ll,
+        right: lr,
+        ..
+    } = left.as_ref()
+    else {
+        panic!("expected inner SubInt on left, got {left:?}");
+    };
+
+    let TypedExpr::Int { value: ll_val, .. } = ll.as_ref() else {
+        panic!("expected int as left-left, got {ll:?}");
+    };
+    let TypedExpr::Int { value: lr_val, .. } = lr.as_ref() else {
+        panic!("expected int as left-right, got {lr:?}");
+    };
+    assert_eq!(ll_val, "1");
+    assert_eq!(lr_val, "2");
 }
 
 #[test]
