@@ -134,8 +134,9 @@
   rely on internal implementation details.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The language server now suggests adding missing type parameters
-  to custom generic types.
+- The language server now suggests a quick-fix code action for when a custom type
+  definition uses a type parameter in its variants that have not been declared in
+  its header.
   ([Andi Pabst](https://github.com/andipabst))
 
 - The `Extract function` code action now provides more ergonomic/idiomatic
