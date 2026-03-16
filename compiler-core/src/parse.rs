@@ -3868,13 +3868,13 @@ where
                 _ = self.next_tok();
                 let right = self.expect_bit_array_size()?;
 
-                Ok(self.bit_array_size_binary_operator(left, right, IntOperator::Add))
+                Ok(self.bit_array_size_additive_operator(left, right, IntOperator::Add))
             }
             Token::Minus => {
                 _ = self.next_tok();
                 let right = self.expect_bit_array_size()?;
 
-                Ok(self.bit_array_size_binary_operator(left, right, IntOperator::Subtract))
+                Ok(self.bit_array_size_additive_operator(left, right, IntOperator::Subtract))
             }
             Token::Star => {
                 _ = self.next_tok();
@@ -4019,11 +4019,44 @@ where
                 right,
                 ..
             } => self.bit_array_size_binary_operator(
-                self.bit_array_size_binary_operator(left, *middle, operator),
+                self.bit_array_size_high_precedence_operator(left, *middle, operator),
                 *right,
                 right_operator,
             ),
         }
+    }
+
+    /// Ensures that `+` and `-` are left-associative when used in bit array
+    /// size patterns. Since `expect_bit_array_size` is right-recursive, parsing
+    /// `a - b - c` yields `right = b - c`; 
+    /// this function rearranges same precedence operators on the right into a 
+    /// left-nested tree so that `a - (b - c)` becomes `(a - b) - c`.
+    ///
+    /// High-precedence operators (`*`, `/`, `%`) on the right are left as-is
+    /// because they already bind tighter: `a - (b * c)` is correct.
+    fn bit_array_size_additive_operator(
+        &self,
+        left: BitArraySize<()>,
+        right: BitArraySize<()>,
+        operator: IntOperator,
+    ) -> BitArraySize<()> {
+        if let BitArraySize::BinaryOperator {
+            operator: right_operator @ (IntOperator::Add | IntOperator::Subtract),
+            left: middle,
+            right,
+            ..
+        } = right
+        {
+            // Same-precedence: rearrange for left-associativity.
+            // `a - (b - c)` → `(a - b) - c`, recursively for chains.
+            return self.bit_array_size_binary_operator(
+                self.bit_array_size_additive_operator(left, *middle, operator),
+                *right,
+                right_operator,
+            );
+        }
+
+        self.bit_array_size_binary_operator(left, right, operator)
     }
 
     fn expect_const_int(&mut self) -> Result<UntypedConstant, ParseError> {
