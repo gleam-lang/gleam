@@ -17,7 +17,7 @@ const FILEPATH = "src/module.gleam";
 export function go(x) {
   let $ = toBitArray([1, 2, 3]);
   let b;
-  if ($.bitSize >= 8 && ($.bitSize - 8) % 8 === 0) {
+  if ($.bitSize >= 8 && $.bitSize % 8 === 0) {
     b = bitArraySlice($, 8);
   } else {
     throw makeError(

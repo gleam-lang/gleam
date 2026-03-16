@@ -1494,7 +1494,7 @@ impl BitArrayTest {
                     } else {
                         succeeding_bits - test_bits
                     };
-                    if diff % 8 == BigInt::from(0) {
+                    if diff % 8u32 == BigInt::ZERO {
                         Confidence::Certain
                     } else {
                         Confidence::Uncertain
@@ -2121,6 +2121,69 @@ impl Decision {
             if_false: Box::new(if_false),
         }
     }
+
+    /// Simplifies the decision tree bottom-up by removing choices that lead
+    /// to the same decision as the fallback. If all choices are removed, the
+    /// switch is replaced by the fallback itself.
+    ///
+    /// This is particularly effective for bit-array patterns where nested
+    /// size/modulo checks can become redundant once their sub-trees are
+    /// simplified.
+    ///
+    fn simplify(self) -> Decision {
+        match self {
+            Decision::Switch {
+                var,
+                choices,
+                fallback,
+                fallback_check,
+            } => {
+                let fallback = Box::new(fallback.simplify());
+                let choices: Vec<_> = choices
+                    .into_iter()
+                    .map(|(check, decision)| (check, decision.simplify()))
+                    .collect();
+                
+                if matches!(
+                    fallback_check.as_ref(),
+                    FallbackCheck::InfiniteCatchAll
+                ) {
+                    let choices: Vec<_> = choices
+                        .into_iter()
+                        .filter(|(_, decision)| decision != fallback.as_ref())
+                        .collect();
+
+                    if choices.is_empty() {
+                        return *fallback;
+                    }
+
+                    return Decision::Switch {
+                        var,
+                        choices,
+                        fallback,
+                        fallback_check,
+                    };
+                }
+
+                Decision::Switch {
+                    var,
+                    choices,
+                    fallback,
+                    fallback_check,
+                }
+            }
+            Decision::Guard {
+                guard,
+                if_true,
+                if_false,
+            } => Decision::Guard {
+                guard,
+                if_true,
+                if_false: Box::new(if_false.simplify()),
+            },
+            other => other,
+        }
+    }
 }
 
 /// The `case` compiler itself (shocking, I know).
@@ -2520,84 +2583,8 @@ impl<'a> Compiler<'a> {
     /// branch.
     ///
     fn splitter_to_switch(&mut self, var: Variable, splitter: BranchSplitter) -> Decision {
-        let mut choices = self.compile_all_choices(splitter.choices);
+        let choices = self.compile_all_choices(splitter.choices);
         let fallback = self.compile(splitter.fallback);
-
-        // Remove redundant choices: if two choices produce the same decision and
-        // one check implies the other, the more restrictive check is unnecessary.
-        // This avoids output like `if (x>=16 && ...) { ... } else if (x%8==0) { ... }`.
-        {
-            let original_choices = std::mem::take(&mut choices);
-            let mut filtered = Vec::with_capacity(original_choices.len());
-            for i in 0..original_choices.len() {
-                let (check_i, decision_i) = &original_choices[i];
-                let is_redundant = original_choices.iter().any(|(check_j, decision_j)| {
-                    // We only remove this choice if there's another choice with the
-                    // same resulting decision and whose condition is weaker (implied
-                    // by the current one). In that case, the current one is
-                    // redundant because the weaker condition already covers all
-                    // cases where it would have matched.
-                    decision_j == decision_i
-                        && check_j != check_i
-                        && match (check_j, check_i) {
-                            (
-                                RuntimeCheck::BitArray { test: weaker },
-                                RuntimeCheck::BitArray { test: stronger },
-                            ) => weaker.succeeds_if_succeeding(stronger) == Confidence::Certain,
-                            _ => false,
-                        }
-                });
-
-                if !is_redundant {
-                    filtered.push((check_i.clone(), decision_i.clone()));
-                }
-            }
-            choices = filtered;
-
-            // Additionally, remove any choices that are completely redundant with
-            // the fallback branch.
-            choices = choices
-                .into_iter()
-                .filter(|(_, decision)| {
-                    // Only consider redundant when the choice leads to a switch
-                    // that ultimately just falls back to the same decision.
-                    match decision {
-                        Decision::Switch {
-                            choices: inner_choices,
-                            fallback: inner_fallback,
-                            ..
-                        } if inner_fallback.as_ref() == &fallback && inner_choices.len() == 1 => {
-                            let (inner_check, inner_decision) = &inner_choices[0];
-
-                            // The fallback must be a switch with a single choice, and
-                            // that choice must lead to the same decision.
-                            let (fallback_check, fallback_decision) = match &fallback {
-                                Decision::Switch { choices, .. } if choices.len() == 1 =>
-                                    &choices[0],
-                                _ => return true,
-                            };
-
-                            if inner_decision != fallback_decision {
-                                return true;
-                            }
-
-                            match (inner_check, fallback_check) {
-                                (
-                                    RuntimeCheck::BitArray { test: inner },
-                                    RuntimeCheck::BitArray { test: outer },
-                                ) => {
-                                    // If the inner check implies the fallback check,
-                                    // then this entire choice is redundant.
-                                    outer.succeeds_if_succeeding(inner) != Confidence::Certain
-                                }
-                                _ => true,
-                            }
-                        }
-                        _ => true,
-                    }
-                })
-                .collect();
-        }
 
         Decision::Switch {
             var,
@@ -3464,7 +3451,8 @@ impl CaseToCompile {
             compiler.split_and_compile_with_pivot_var(var, VecDeque::new())
         } else {
             compiler.compile(self.branches.into())
-        };
+        }
+        .simplify();
 
         CompileCaseResult {
             diagnostics: compiler.diagnostics,
@@ -3625,9 +3613,19 @@ impl CaseToCompile {
             let is_last_segment = i + 1 == segments_count;
             match &segment_size {
                 ReadSize::RemainingBits => (),
-                ReadSize::RemainingBytes => tests.push_back(BitArrayTest::CatchAllIsBytes {
-                    size_so_far: previous_end.clone(),
-                }),
+                ReadSize::RemainingBytes => {
+                    // Normalize the constant part of the offset modulo 8.
+                    // `(bitSize - c) % 8 === 0` is equivalent to
+                    // `(bitSize - (c % 8)) % 8 === 0` for any constant c,
+                    // because c ≡ c%8 (mod 8). This ensures structurally
+                    // identical CatchAllIsBytes tests for equivalent checks,
+                    // allowing the simplify pass to collapse redundant branches.
+                    let mut normalized = previous_end.clone();
+                    normalized.constant = &normalized.constant % 8u32;
+                    tests.push_back(BitArrayTest::CatchAllIsBytes {
+                        size_so_far: normalized,
+                    });
+                }
                 ReadSize::ConstantBits(_)
                 | ReadSize::VariableBits { .. }
                 | ReadSize::BinaryOperator { .. } => {

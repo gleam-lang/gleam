@@ -21,7 +21,7 @@ export function main() {
     $.byteAt(0) === 97 &&
     $.bitSize >= 16 &&
     $.byteAt(1) === 98 &&
-    ($.bitSize - 16) % 8 === 0
+    $.bitSize % 8 === 0
   ) {
     return 1;
   } else {
