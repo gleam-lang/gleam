@@ -1636,7 +1636,7 @@ fn collect_type_variables(printer: &mut Printer<'_>, function: &TypedFunction) {
 }
 
 impl<'ast, 'a, 'b> ast::visit::Visit<'ast> for TypeVariableCollector<'a, 'b> {
-    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+    fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
         for argument in fun.arguments.iter() {
             if let Some(annotation) = &argument.annotation {
                 register_type_variables_from_annotation(
