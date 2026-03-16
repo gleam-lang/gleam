@@ -16,7 +16,7 @@
 
 ### Compiler
 
-- The compiler now reports an error when integer and float binary operators are
+- The compiler now reports an error when int and float binary operators are
   used incorrectly in case expression guards.
   ([Adi Salimgereyev](https://github.com/abs0luty))
 
