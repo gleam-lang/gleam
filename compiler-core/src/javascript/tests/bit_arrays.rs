@@ -2675,3 +2675,36 @@ pub fn main(x) {
         "#
     )
 }
+
+#[test]
+fn redundant_size_test() {
+    assert_js!(
+        r#"
+pub fn go(bits) {
+  case bits {
+    <<_:16, _:bytes>> |
+    <<_:bytes>> -> 1
+    _ -> 0
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn redundant_size_test_harder() {
+    assert_js!(
+        r#"
+pub fn go(bits) {
+  case bits {
+    <<_:16, _:32, _:bytes>> -> 1
+    <<_:24, _:16, _:bytes>> -> 1
+    <<_:8, _:8, _:8, _:bytes>> -> 1
+    <<_:bytes>> -> 1
+    _ -> 0
+  }
+}
+"#,
+    );
+}
+

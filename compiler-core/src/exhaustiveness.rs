@@ -153,14 +153,6 @@ impl Branch {
         }
     }
 
-    /// Removes and returns a `PatternCheck` on the given variable from this
-    /// branch.
-    ///
-    fn pop_check_on_var(&mut self, var: &Variable) -> Option<PatternCheck> {
-        let index = self.checks.iter().position(|check| check.var == *var)?;
-        Some(self.checks.remove(index))
-    }
-
     fn add_check(&mut self, check: PatternCheck) {
         self.checks.push(check);
     }
@@ -1485,6 +1477,32 @@ impl BitArrayTest {
                     Confidence::Uncertain
                 }
             }
+            (
+                BitArrayTest::CatchAllIsBytes { size_so_far: succeeding },
+                BitArrayTest::CatchAllIsBytes { size_so_far: test },
+            ) => {
+                // `(bits.bitSize - s1) % 8 === 0` is equivalent to
+                // `(bits.bitSize - s2) % 8 === 0` whenever `s1` and `s2`
+                // differ by a multiple of 8. In those cases one test implies
+                // the other and we can consider them equivalent.
+                if let (Some(succeeding_bits), Some(test_bits)) = (
+                    succeeding.constant_bits(),
+                    test.constant_bits(),
+                ) {
+                    let diff = if succeeding_bits < test_bits {
+                        test_bits - succeeding_bits
+                    } else {
+                        succeeding_bits - test_bits
+                    };
+                    if diff % 8 == BigInt::from(0) {
+                        Confidence::Certain
+                    } else {
+                        Confidence::Uncertain
+                    }
+                } else {
+                    Confidence::Uncertain
+                }
+            }
             // The tests are not comparable, we can't deduce any new information.
             _ => Confidence::Uncertain,
         }
@@ -2443,7 +2461,34 @@ impl<'a> Compiler<'a> {
         branch_mode: &BranchMode,
     ) {
         for mut branch in branches {
-            let Some(pattern_check) = branch.pop_check_on_var(&pivot_var) else {
+            // Prefer to split on `CatchAllIsBytes` checks when matching against a
+            // bit array. This tends to produce simpler decision trees where the
+            // modulo-8 check is performed early, allowing later size-oriented
+            // checks to be eliminated when redundant.
+            let check_index = branch
+                .checks
+                .iter()
+                .enumerate()
+                .find_map(|(i, check)| {
+                    if check.var != pivot_var {
+                        return None;
+                    }
+                    let pattern = self.pattern(check.pattern);
+                    if let Pattern::BitArray { tests } = pattern {
+                        if tests
+                            .iter()
+                            .any(|test| matches!(test, BitArrayTest::CatchAllIsBytes { .. }))
+                        {
+                            return Some(i);
+                        }
+                    }
+                    None
+                })
+                // If we didn't find a catch-all check, fall back to the first
+                // check on this variable (existing behavior).
+                .or_else(|| branch.checks.iter().position(|check| check.var == pivot_var));
+
+            let Some(index) = check_index else {
                 // If the branch doesn't perform any check on the pivot variable, it means
                 // it could still match no matter what shape `pivot_var` has. So we must
                 // add it as a fallback branch, that is a branch that is still relevant
@@ -2451,6 +2496,8 @@ impl<'a> Compiler<'a> {
                 splitter.add_fallback_branch(branch);
                 continue;
             };
+
+            let pattern_check = branch.checks.remove(index);
 
             let checked_pattern = self.pattern(pattern_check.pattern);
 
@@ -2473,12 +2520,89 @@ impl<'a> Compiler<'a> {
     /// branch.
     ///
     fn splitter_to_switch(&mut self, var: Variable, splitter: BranchSplitter) -> Decision {
-        let choices = self.compile_all_choices(splitter.choices);
-        let last_choice = self.compile(splitter.fallback);
+        let mut choices = self.compile_all_choices(splitter.choices);
+        let fallback = self.compile(splitter.fallback);
+
+        // Remove redundant choices: if two choices produce the same decision and
+        // one check implies the other, the more restrictive check is unnecessary.
+        // This avoids output like `if (x>=16 && ...) { ... } else if (x%8==0) { ... }`.
+        {
+            let original_choices = std::mem::take(&mut choices);
+            let mut filtered = Vec::with_capacity(original_choices.len());
+            for i in 0..original_choices.len() {
+                let (check_i, decision_i) = &original_choices[i];
+                let is_redundant = original_choices.iter().any(|(check_j, decision_j)| {
+                    // We only remove this choice if there's another choice with the
+                    // same resulting decision and whose condition is weaker (implied
+                    // by the current one). In that case, the current one is
+                    // redundant because the weaker condition already covers all
+                    // cases where it would have matched.
+                    decision_j == decision_i
+                        && check_j != check_i
+                        && match (check_j, check_i) {
+                            (
+                                RuntimeCheck::BitArray { test: weaker },
+                                RuntimeCheck::BitArray { test: stronger },
+                            ) => weaker.succeeds_if_succeeding(stronger) == Confidence::Certain,
+                            _ => false,
+                        }
+                });
+
+                if !is_redundant {
+                    filtered.push((check_i.clone(), decision_i.clone()));
+                }
+            }
+            choices = filtered;
+
+            // Additionally, remove any choices that are completely redundant with
+            // the fallback branch.
+            choices = choices
+                .into_iter()
+                .filter(|(_, decision)| {
+                    // Only consider redundant when the choice leads to a switch
+                    // that ultimately just falls back to the same decision.
+                    match decision {
+                        Decision::Switch {
+                            choices: inner_choices,
+                            fallback: inner_fallback,
+                            ..
+                        } if inner_fallback.as_ref() == &fallback && inner_choices.len() == 1 => {
+                            let (inner_check, inner_decision) = &inner_choices[0];
+
+                            // The fallback must be a switch with a single choice, and
+                            // that choice must lead to the same decision.
+                            let (fallback_check, fallback_decision) = match &fallback {
+                                Decision::Switch { choices, .. } if choices.len() == 1 =>
+                                    &choices[0],
+                                _ => return true,
+                            };
+
+                            if inner_decision != fallback_decision {
+                                return true;
+                            }
+
+                            match (inner_check, fallback_check) {
+                                (
+                                    RuntimeCheck::BitArray { test: inner },
+                                    RuntimeCheck::BitArray { test: outer },
+                                ) => {
+                                    // If the inner check implies the fallback check,
+                                    // then this entire choice is redundant.
+                                    outer.succeeds_if_succeeding(inner) != Confidence::Certain
+                                }
+                                _ => true,
+                            }
+                        }
+                        _ => true,
+                    }
+                })
+                .collect();
+        }
+
         Decision::Switch {
             var,
             choices,
-            fallback: Box::new(last_choice),
+            fallback: Box::new(fallback),
             fallback_check: Box::new(FallbackCheck::InfiniteCatchAll),
         }
     }
