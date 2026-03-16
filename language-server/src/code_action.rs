@@ -1182,8 +1182,16 @@ pub fn code_action_generate_type(
         return;
     };
 
+    let mut seen_names = HashSet::new();
+
     for error in errors {
-        let type_::Error::UnknownType { location, name, .. } = error else {
+        let type_::Error::UnknownType {
+            location,
+            name,
+            arity,
+            ..
+        } = error
+        else {
             continue;
         };
 
@@ -1192,12 +1200,31 @@ pub fn code_action_generate_type(
             continue;
         }
 
+        // Avoid offering duplicate actions for the same type name.
+        if !seen_names.insert(name.clone()) {
+            continue;
+        }
+
         let insert_at = module.code.len() as u32;
         let insert_range =
             src_span_to_lsp_range(SrcSpan { start: insert_at, end: insert_at }, line_numbers);
+
+        let new_text = if *arity == 0 {
+            format!("\ntype {name} {{\n  {name}\n}}\n")
+        } else {
+            let params: Vec<_> = (0..*arity)
+                .map(|i| {
+                    let c = (b'a' + i as u8) as char;
+                    c.to_string()
+                })
+                .collect();
+            let params_str = params.join(", ");
+            format!("\ntype {name}({params_str}) {{\n  {name}({params_str})\n}}\n")
+        };
+
         let edit = TextEdit {
             range: insert_range,
-            new_text: format!("\ntype {name} {{\n  {name}\n}}\n"),
+            new_text,
         };
 
         CodeActionBuilder::new("Generate type")

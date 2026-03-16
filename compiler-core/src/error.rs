@@ -2591,6 +2591,7 @@ a label or use a record constructor.",
                         location,
                         name,
                         hint,
+                        ..
                     } => {
                         let label_text = match hint {
                             UnknownTypeHint::AlternativeTypes(types) => did_you_mean(name, types),

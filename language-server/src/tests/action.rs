@@ -8160,6 +8160,32 @@ pub fn main() {
 }
 
 #[test]
+fn generate_type_works_for_unknown_type_with_parameters() {
+    assert_code_action!(
+        GENERATE_TYPE,
+        "
+type Wibble {
+  Wibble(Wobble(Int, String))
+}
+",
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn generate_type_not_offered_when_cursor_is_elsewhere() {
+    assert_no_code_actions!(
+        GENERATE_TYPE,
+        "
+pub fn main() {
+  let x: Wobble = todo
+}
+",
+        find_position_of("main").to_selection()
+    );
+}
+
+#[test]
 fn generate_function_works_with_constants() {
     assert_code_action!(
         GENERATE_FUNCTION,

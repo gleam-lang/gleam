@@ -173,6 +173,7 @@ pub enum Error {
         location: SrcSpan,
         name: EcoString,
         hint: UnknownTypeHint,
+        arity: usize,
     },
 
     UnknownModule {
@@ -1511,6 +1512,7 @@ pub enum UnknownTypeConstructorError {
     Type {
         name: EcoString,
         hint: UnknownTypeHint,
+        arity: usize,
     },
 
     Module {
@@ -1532,10 +1534,11 @@ pub fn convert_get_type_constructor_error(
     module_location: Option<SrcSpan>,
 ) -> Error {
     match e {
-        UnknownTypeConstructorError::Type { name, hint } => Error::UnknownType {
+        UnknownTypeConstructorError::Type { name, hint, arity } => Error::UnknownType {
             location: *location,
             name,
             hint,
+            arity,
         },
 
         UnknownTypeConstructorError::Module { name, suggestions } => Error::UnknownModule {

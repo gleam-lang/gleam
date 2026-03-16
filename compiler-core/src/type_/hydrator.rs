@@ -136,11 +136,15 @@ impl Hydrator {
                 } = environment
                     .get_type_constructor(module, name)
                     .map_err(|e| {
-                        convert_get_type_constructor_error(
+                        let mut err = convert_get_type_constructor_error(
                             e,
                             location,
                             module.as_ref().map(|(_, location)| *location),
-                        )
+                        );
+                        if let Error::UnknownType { ref mut arity, .. } = err {
+                            *arity = arguments.len();
+                        }
+                        err
                     })?
                     .clone();
 
@@ -283,6 +287,7 @@ impl Hydrator {
                             name: name.clone(),
                             location: *location,
                             hint,
+                            arity: 0,
                         })
                     }
                 }

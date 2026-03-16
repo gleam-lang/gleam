@@ -456,6 +456,7 @@ impl Environment<'_> {
                 .ok_or_else(|| UnknownTypeConstructorError::Type {
                     name: name.clone(),
                     hint: self.unknown_type_hint(name),
+                    arity: 0,
                 }),
 
             Some((module_name, _)) => {
@@ -504,6 +505,7 @@ impl Environment<'_> {
                 UnknownTypeConstructorError::Type {
                     name: name.clone(),
                     hint: self.unknown_type_hint(name),
+                    arity: 0,
                 }
             }),
 
