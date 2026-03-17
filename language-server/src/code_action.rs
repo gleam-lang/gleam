@@ -6863,13 +6863,13 @@ fn labels_are_correct<A>(arguments: &[CallArg<A>]) -> bool {
 
 #[derive(Clone)]
 struct NameGenerator {
-    used_names: HashSet<EcoString>,
+    used_names: im::HashSet<EcoString>,
 }
 
 impl NameGenerator {
     pub fn new() -> Self {
         NameGenerator {
-            used_names: HashSet::new(),
+            used_names: im::HashSet::new(),
         }
     }
 
