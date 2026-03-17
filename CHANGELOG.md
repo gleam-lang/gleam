@@ -4,6 +4,25 @@
 
 ### Compiler
 
+- Type inference now preserves generic type parameters when constructors or functions are used without explicit annotations, 
+  eliminating false errors in mutually recursive code:
+
+  ```gleam
+  type Test(a) {
+    Test(a)
+  }
+
+  fn it(value: Test(a)) {
+    it2(value)
+  }
+
+  fn it2(value: Test(a)) -> Test(a) {
+    it(value)
+  }
+  ```
+
+  Previously this could fail with an incorrect "type mismatch" error. ([Adi Salimgereyev](https://github.com/abs0luty))
+
 ### Build tool
 
 ### Language server
