@@ -1209,17 +1209,29 @@ pub fn code_action_generate_type(
         let insert_range =
             src_span_to_lsp_range(SrcSpan { start: insert_at, end: insert_at }, line_numbers);
 
+        // Ensure proper spacing before the new type definition.
+        let prefix = if module.code.ends_with('\n') {
+            "\n"
+        } else {
+            "\n\n"
+        };
+
         let new_text = if *arity == 0 {
-            format!("\ntype {name} {{\n  {name}\n}}\n")
+            format!("{prefix}type {name} {{\n  {name}\n}}\n")
         } else {
             let params: Vec<_> = (0..*arity)
                 .map(|i| {
-                    let c = (b'a' + i as u8) as char;
-                    c.to_string()
+                    let letter = (b'a' + (i % 26) as u8) as char;
+                    let suffix = i / 26;
+                    if suffix == 0 {
+                        letter.to_string()
+                    } else {
+                        format!("{letter}{suffix}")
+                    }
                 })
                 .collect();
             let params_str = params.join(", ");
-            format!("\ntype {name}({params_str}) {{\n  {name}({params_str})\n}}\n")
+            format!("{prefix}type {name}({params_str}) {{\n  {name}({params_str})\n}}\n")
         };
 
         let edit = TextEdit {
