@@ -393,8 +393,7 @@ impl TypedConstant {
                     .chain(
                         tail.as_deref()
                             .and_then(|tail| tail.list_elements())
-                            .unwrap_or_default()
-                            .into_iter(),
+                            .unwrap_or_default(),
                     )
                     .collect(),
             ),

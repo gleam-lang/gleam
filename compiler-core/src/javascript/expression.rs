@@ -1980,7 +1980,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                 let list = list(
                     elements
                         .iter()
-                        .chain(tail_elements.into_iter())
+                        .chain(tail_elements)
                         .map(|element| self.constant_expression(context, element)),
                 );
 

@@ -1553,7 +1553,7 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
             join(
                 elements
                     .iter()
-                    .chain(tail_elements.into_iter())
+                    .chain(tail_elements)
                     .map(|element| const_inline(element, env)),
                 break_(",", ", "),
             )
