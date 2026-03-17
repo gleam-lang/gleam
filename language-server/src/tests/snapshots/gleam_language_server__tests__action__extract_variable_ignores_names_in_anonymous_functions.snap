@@ -1,0 +1,28 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  let fun = fn() {\n    let int = 1\n    int + 2\n  }\n\n  wibble(11)\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let fun = fn() {
+    let int = 1
+    int + 2
+  }
+
+  wibble(11)
+         ↑  
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let fun = fn() {
+    let int = 1
+    int + 2
+  }
+
+  let int = 11
+  wibble(int)
+}

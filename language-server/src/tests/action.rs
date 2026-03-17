@@ -5655,6 +5655,134 @@ fn extract_variable() {
 }
 
 #[test]
+fn extract_variable_ignores_names_in_other_branches() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main(x: Result(_, _)) {
+  case x {
+    Ok(_) -> {
+      let int = 1
+      int + 2
+    }
+    Error(_) -> wibble(11)
+  }
+
+}"#,
+        find_position_of("11").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_ignores_names_in_other_branches_2() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"
+pub fn main(x: Result(_, _)) {
+  case x {
+    Ok(_) -> {
+      let int = 1
+      int + 2
+    }
+    Error(_) -> {
+        wibble(11)
+    }
+  }
+}
+"#,
+        find_position_of("11").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_ignores_names_in_other_blocks() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"
+pub fn main() {
+  {
+    let int = 1
+    int + 2
+  }
+  wibble(11)
+}
+"#,
+        find_position_of("11").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_ignores_names_in_anonymous_functions() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"
+pub fn main() {
+  let fun = fn() {
+    let int = 1
+    int + 2
+  }
+
+  wibble(11)
+}
+"#,
+        find_position_of("11").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_does_not_shadow_names_in_anonymous_function() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"
+pub fn main() {
+  let fun = fn() {
+    let int = 1
+    wibble(11)
+  }
+  fun()
+}
+"#,
+        find_position_of("11").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_does_not_shadow_name_in_same_branch() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"
+pub fn main(x: Result(_, _)) {
+  case x {
+    Ok(_) -> {
+        let int = 1
+        wibble(11)
+    }
+    Error(_) -> {
+        panic
+    }
+  }
+}
+"#,
+        find_position_of("11").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_does_not_shadow_name_in_same_block() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"
+pub fn main() {
+  let result = {
+    let int = 1
+    wibble(11)
+  }
+  result
+}"#,
+        find_position_of("11").to_selection()
+    );
+}
+
+#[test]
 fn extract_variable_does_not_extract_a_variable() {
     assert_no_code_actions!(
         EXTRACT_VARIABLE,

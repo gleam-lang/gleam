@@ -1,0 +1,34 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main(x: Result(_, _)) {\n  case x {\n    Ok(_) -> {\n        let int = 1\n        wibble(11)\n    }\n    Error(_) -> {\n        panic\n    }\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main(x: Result(_, _)) {
+  case x {
+    Ok(_) -> {
+        let int = 1
+        wibble(11)
+               ↑  
+    }
+    Error(_) -> {
+        panic
+    }
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn main(x: Result(_, _)) {
+  case x {
+    Ok(_) -> {
+        let int = 1
+        let int_2 = 11
+        wibble(int_2)
+    }
+    Error(_) -> {
+        panic
+    }
+  }
+}
