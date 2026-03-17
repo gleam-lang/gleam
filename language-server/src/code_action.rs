@@ -3182,8 +3182,8 @@ pub struct ExtractVariable<'a> {
 }
 
 pub enum ExtractedToVariable {
-    Expression { location: SrcSpan, type_: Arc<Type> },
-    StartOfPipeline { location: SrcSpan, type_: Arc<Type> },
+    Expression { location: SrcSpan, name: EcoString },
+    StartOfPipeline { location: SrcSpan, name: EcoString },
 }
 
 /// The Position of the selected code
@@ -3196,7 +3196,7 @@ enum ExtractVariablePosition {
     PipelineCall,
     /// The right hand side of the `->` in a case expression.
     InsideCaseClause,
-    // A call argument. This can also be a `use` callback.
+    /// A call argument. This can also be a `use` callback.
     CallArg,
 }
 
@@ -3212,8 +3212,8 @@ impl<'a> ExtractVariable<'a> {
             edits: TextEdits::new(line_numbers),
             position: None,
             selected_expression: None,
-            latest_statement: None,
             statement_before_selected_expression: None,
+            latest_statement: None,
             to_be_wrapped: false,
             name_generator: NameGenerator::new(),
         }
@@ -3229,16 +3229,15 @@ impl<'a> ExtractVariable<'a> {
             return vec![];
         };
 
-        let expression_type = match &extracted_value {
-            ExtractedToVariable::Expression { type_, .. }
-            | ExtractedToVariable::StartOfPipeline { type_, .. } => type_,
+        let variable_name = match &extracted_value {
+            ExtractedToVariable::Expression { name, .. }
+            | ExtractedToVariable::StartOfPipeline { name, .. } => name,
         };
         let expression_span = match &extracted_value {
             ExtractedToVariable::Expression { location, .. }
             | ExtractedToVariable::StartOfPipeline { location, .. } => location,
         };
 
-        let variable_name = self.name_generator.generate_name_from_type(expression_type);
         let content = self
             .module
             .code
@@ -3287,6 +3286,30 @@ impl<'a> ExtractVariable<'a> {
             .preferred(false)
             .push_to(&mut action);
         action
+    }
+
+    fn inside_new_scope<F>(&mut self, fun: F)
+    where
+        F: Fn(&mut Self),
+    {
+        let names = self.name_generator.clone();
+        fun(self);
+        self.name_generator = names;
+    }
+
+    fn generate_candidate_name(&mut self, type_: Arc<Type>) -> EcoString {
+        let name = self.name_generator.generate_name_from_type(&type_);
+        // When the generator generates a name, it rightfully inserts it in the
+        // current scope so that it cannot be used again.
+        // However, in our case it's not what we want: the name we're generating
+        // is a candidate for what we might use for a single variable, at the
+        // end of the whole process we're gonna pick just a single name.
+        // If we were to insert this name into scope, that means that all the
+        // other candidates would have a suffix `int_2`, `int_3`, ...
+        // When we finally pick one it would be strange if the picked name had
+        // a suffix but no `int`, `int_1`, ... were in scope!
+        let _ = self.name_generator.used_names.remove(&name);
+        name
     }
 
     fn at_position<F>(&mut self, position: ExtractVariablePosition, fun: F)
@@ -3349,8 +3372,9 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
             return;
         }
 
-        // We reset the name generator to purge the variable names from other scopes.
-        // We then add the reserve the constant names.
+        // We reset the name generator to purge the variable names from other
+        // scopes.
+        // We then reserve the names already used by top level definitions.
         self.name_generator = NameGenerator::new();
         self.name_generator
             .reserve_module_value_names(&self.module.ast.definitions);
@@ -3407,7 +3431,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
             let location = first_value.location.merge(&last.value.location());
             self.selected_expression = Some(ExtractedToVariable::StartOfPipeline {
                 location,
-                type_: last.type_(),
+                name: self.generate_candidate_name(last.type_()),
             });
             return;
         }
@@ -3518,7 +3542,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
                 };
                 self.selected_expression = Some(ExtractedToVariable::Expression {
                     location: *location,
-                    type_: expr.type_(),
+                    name: self.generate_candidate_name(expr.type_()),
                 });
             }
         }
@@ -3543,7 +3567,9 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
     fn visit_typed_clause(&mut self, clause: &'ast ast::TypedClause) {
         let range = self.edits.src_span_to_lsp_range(clause.location());
         if !within(self.params.range, range) {
-            ast::visit::visit_typed_clause(self, clause);
+            self.inside_new_scope(|this| {
+                ast::visit::visit_typed_clause(this, clause);
+            });
             return;
         }
 
@@ -3551,7 +3577,9 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         self.latest_statement = Some(clause.then.location());
         self.to_be_wrapped = true;
         self.at_position(ExtractVariablePosition::InsideCaseClause, |this| {
-            ast::visit::visit_typed_clause(this, clause);
+            this.inside_new_scope(|this| {
+                ast::visit::visit_typed_clause(this, clause);
+            });
         });
     }
 
@@ -3562,7 +3590,9 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
     ) {
         let range = self.edits.src_span_to_lsp_range(*location);
         if !within(self.params.range, range) {
-            ast::visit::visit_typed_expr_block(self, location, statements);
+            self.inside_new_scope(|this| {
+                ast::visit::visit_typed_expr_block(this, location, statements);
+            });
             return;
         }
 
@@ -3574,7 +3604,9 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         }
 
         self.at_optional_position(position, |this| {
-            ast::visit::visit_typed_expr_block(this, location, statements);
+            this.inside_new_scope(|this| {
+                ast::visit::visit_typed_expr_block(this, location, statements);
+            });
         });
     }
 
@@ -3589,15 +3621,17 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
     ) {
         let range = self.edits.src_span_to_lsp_range(*location);
         if !within(self.params.range, range) {
-            ast::visit::visit_typed_expr_fn(
-                self,
-                location,
-                type_,
-                kind,
-                arguments,
-                body,
-                return_annotation,
-            );
+            self.inside_new_scope(|this| {
+                ast::visit::visit_typed_expr_fn(
+                    this,
+                    location,
+                    type_,
+                    kind,
+                    arguments,
+                    body,
+                    return_annotation,
+                );
+            });
             return;
         }
 
@@ -3611,15 +3645,17 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         };
 
         self.at_optional_position(position, |this| {
-            ast::visit::visit_typed_expr_fn(
-                this,
-                location,
-                type_,
-                kind,
-                arguments,
-                body,
-                return_annotation,
-            );
+            this.inside_new_scope(|this| {
+                ast::visit::visit_typed_expr_fn(
+                    this,
+                    location,
+                    type_,
+                    kind,
+                    arguments,
+                    body,
+                    return_annotation,
+                );
+            });
         });
     }
 
