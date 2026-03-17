@@ -1,4 +1,5 @@
 import ffi
+import gleam/bit_array
 
 pub fn utf8_emoji_equal_test() {
   let left = <<"Gleam":utf8, "👍":utf8>>
@@ -173,4 +174,12 @@ pub fn unicode_overflow_test() {
   // See: https://github.com/gleam-lang/gleam/issues/457
   let string = "5"
   assert "🌵" != string
+}
+
+pub fn sliced_bit_array_data_view_offset_test() {
+  let data = <<0xAA, 0xBB, 0xCC, 0xDD>>
+  let assert Ok(sliced) = bit_array.slice(data, 1, 3)
+  assert sliced == <<0xBB, 0xCC, 0xDD>>
+  let value = ffi.read_uint16_from_bit_array(sliced)
+  assert value == 48_076
 }
