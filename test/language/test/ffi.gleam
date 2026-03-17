@@ -27,3 +27,7 @@ pub fn to_dynamic(a: x) -> Dynamic
 @external(erlang, "ffi_erlang", "to_codepoint")
 @external(javascript, "./ffi_javascript.mjs", "toCodepoint")
 pub fn utf_codepoint(a: Int) -> UtfCodepoint
+
+@external(erlang, "ffi_erlang", "read_uint16_from_bit_array")
+@external(javascript, "./ffi_javascript.mjs", "readUint16FromBitArray")
+pub fn read_uint16_from_bit_array(a: BitArray) -> Int
