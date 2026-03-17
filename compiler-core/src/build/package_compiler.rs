@@ -320,6 +320,9 @@ where
             let result = if self.cached_warnings.should_use() {
                 metadata::encode(&module.ast.type_info)
             } else {
+                // Dependency packages don't get warnings persisted as the
+                // programmer doesn't want to be told every time about warnings they
+                // cannot fix directly.
                 let warnings = std::mem::take(&mut module.ast.type_info.warnings);
                 let result = metadata::encode(&module.ast.type_info);
                 module.ast.type_info.warnings = warnings;
