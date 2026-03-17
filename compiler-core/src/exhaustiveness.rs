@@ -2172,6 +2172,8 @@ impl Decision {
                     fallback_check,
                 }
             }
+            // We only simplify `if_false`: the `if_true` branch runs a body directly
+            // and can't contain redundant switches, so there's nothing to collapse there.
             Decision::Guard {
                 guard,
                 if_true,

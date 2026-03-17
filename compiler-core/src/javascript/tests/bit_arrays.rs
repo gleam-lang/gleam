@@ -2690,7 +2690,10 @@ pub fn go(bits) {
 "#,
     );
 }
-
+// In practice, simplify() only collapses Switch nodes
+// the outer size checks are Guard nodes and aren't merged even 
+// when both branches produce the same result.
+// The tree is still correct and shorter than without simplification.
 #[test]
 fn redundant_size_test_harder() {
     assert_js!(
