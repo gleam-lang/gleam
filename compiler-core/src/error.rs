@@ -868,12 +868,13 @@ impl Error {
         use crate::type_::Error as TypeError;
         match self {
             Error::IncorrectHexOneTimePassword => {
-                let text = "That two-factor authentication code was rejected by Hex, please try again.
+                let text =
+                    "That two-factor authentication code was rejected by Hex, please try again.
 
 If you need to reconfigure your Hex two-factor security it can be done
 via the Hex website: https://hex.pm/dashboard/security
 "
-                .into();
+                    .into();
 
                 vec![Diagnostic {
                     title: "Incorrect two-factor authentication code".into(),

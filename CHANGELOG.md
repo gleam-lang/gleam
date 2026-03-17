@@ -6,6 +6,10 @@
 
 ### Build tool
 
+- When publishing, the package manager now uses the full term instead of the
+  shorthand "MFA" in the prompt and error message.
+  ([Luka Ivanović](https://github.com/luka-hash))
+
 ### Language server
 
 - The "extract variable" code action can now pick better names for variables in
