@@ -965,9 +965,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 // Register the value as seen for detection of unused values
                 self.environment.increment_usage(&name);
 
-                let constructor = self
-                    .environment
-                    .get_value_constructor(module.as_ref().map(|(module, _)| module), &name);
+                let constructor = self.environment.get_value_constructor(
+                    module.as_ref().map(|(module, _)| module),
+                    &name,
+                    Some(pattern_arguments.len()),
+                );
 
                 let constructor = match constructor {
                     Ok(constructor) => constructor,
@@ -1377,6 +1379,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     .module_types
                                     .keys()
                                     .any(|type_| type_ == &name),
+                                suggestions: self.environment.suggest_modules_for_type_or_value(
+                                    &name,
+                                    Layer::Value,
+                                    None,
+                                ),
                             });
                         }
                     },

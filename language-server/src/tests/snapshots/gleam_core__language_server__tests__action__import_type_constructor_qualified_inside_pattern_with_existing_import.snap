@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport wibble\n\nfn wibble(wib: wibble.Wibble) -> Nil {\n    case wib {\n        Wobble -> Nil\n    }\n}\n"
+---
+----- BEFORE ACTION
+
+import wibble
+
+fn wibble(wib: wibble.Wibble) -> Nil {
+    case wib {
+        Wobble -> Nil
+        ↑            
+    }
+}
+
+
+----- AFTER ACTION
+
+import wibble
+
+fn wibble(wib: wibble.Wibble) -> Nil {
+    case wib {
+        wibble.Wobble -> Nil
+    }
+}
