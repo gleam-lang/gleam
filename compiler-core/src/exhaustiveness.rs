@@ -2143,11 +2143,8 @@ impl Decision {
                     .into_iter()
                     .map(|(check, decision)| (check, decision.simplify()))
                     .collect();
-                
-                if matches!(
-                    fallback_check.as_ref(),
-                    FallbackCheck::InfiniteCatchAll
-                ) {
+
+                let choices = if matches!(*fallback_check, FallbackCheck::InfiniteCatchAll) {
                     let choices: Vec<_> = choices
                         .into_iter()
                         .filter(|(_, decision)| decision != fallback.as_ref())
@@ -2157,13 +2154,10 @@ impl Decision {
                         return *fallback;
                     }
 
-                    return Decision::Switch {
-                        var,
-                        choices,
-                        fallback,
-                        fallback_check,
-                    };
-                }
+                    choices
+                } else {
+                    choices
+                };
 
                 Decision::Switch {
                     var,
@@ -2172,8 +2166,8 @@ impl Decision {
                     fallback_check,
                 }
             }
-            // We only simplify `if_false`: the `if_true` branch runs a body directly
-            // and can't contain redundant switches, so there's nothing to collapse there.
+            // We only simplify `if_false`: `if_true` is a `Body`, not a `Decision`,
+            // so it cannot contain any switches to collapse.
             Decision::Guard {
                 guard,
                 if_true,
