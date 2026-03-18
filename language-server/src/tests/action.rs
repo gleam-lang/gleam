@@ -8173,6 +8173,17 @@ type Wibble {
 }
 
 #[test]
+fn generate_type_works_for_unknown_type_in_argument_annotation() {
+    assert_code_action!(
+        GENERATE_TYPE,
+        "
+pub fn wibble(arg: Wibble(some, generics)) { todo }
+",
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+#[test]
 fn generate_type_not_offered_when_cursor_is_elsewhere() {
     assert_no_code_actions!(
         GENERATE_TYPE,
