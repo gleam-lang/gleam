@@ -391,10 +391,10 @@ where
     ) -> Response<Option<Vec<CodeAction>>> {
         self.respond(|this| {
             let mut actions = vec![];
-            let module_uri = &params.text_document.uri;
-            let Some(module) = this.module_for_uri(module_uri) else {
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
                 return Ok(None);
             };
+
             let lines = LineNumbers::new(&module.code);
 
             code_action_unused_values(module, &lines, &params, &mut actions);
