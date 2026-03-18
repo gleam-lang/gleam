@@ -1227,16 +1227,17 @@ pub fn code_action_generate_type(
     }
 }
 
-/// Returns the source offset of the top-level definition that contains `pos`,
+/// Returns the source offset of the top-level definition that contains `position`,
 /// so the caller can insert code before it.
-fn definition_start_containing(defs: &TypedDefinitions, pos: u32) -> Option<u32> {
-    defs.functions
+fn definition_start_containing(definitions: &TypedDefinitions, position: u32) -> Option<u32> {
+    definitions
+        .functions
         .iter()
-        .map(|f| SrcSpan { start: f.location.start, end: f.end_position })
-        .chain(defs.custom_types.iter().map(|ct| ct.location))
-        .chain(defs.type_aliases.iter().map(|ta| ta.location))
-        .chain(defs.constants.iter().map(|c| c.location))
-        .filter(|span| span.start <= pos && pos <= span.end)
+        .map(|function| function.full_location())
+        .chain(definitions.custom_types.iter().map(|custom_type| custom_type.full_location()))
+        .chain(definitions.type_aliases.iter().map(|type_alias| type_alias.location))
+        .chain(definitions.constants.iter().map(|constant| constant.location))
+        .filter(|span| span.start <= position && position <= span.end)
         .map(|span| span.start)
         .next()
 }
