@@ -55,6 +55,10 @@
   shorthand "MFA" in the prompt and error message.
   ([Luka Ivanović](https://github.com/luka-hash))
 
+- When Hex rejects publish with error 422, show error message instead of
+  defaulting to "can only modify a release up to one hour after publication"
+  ([David Matz](https://github.com/d-matz))
+
 ### Language server
 
 - The "extract variable" code action can now pick better names for variables in
