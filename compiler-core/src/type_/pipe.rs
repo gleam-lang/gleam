@@ -117,6 +117,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                             arguments,
                             type_: return_type,
                             fun: Box::new(func),
+                            argument_parentheses: None,
                         },
                     )
                 }
@@ -294,6 +295,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             type_,
             arguments,
             fun: Box::new(function),
+            argument_parentheses: None,
         };
         let arguments = vec![self.untyped_left_hand_value_variable_call_argument()];
         // TODO: use `.with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)`
@@ -312,6 +314,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             type_,
             arguments,
             fun: Box::new(function),
+            argument_parentheses: None,
         }
     }
 
@@ -339,6 +342,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             type_,
             arguments,
             fun: Box::new(fun),
+            argument_parentheses: None,
         }
     }
 
@@ -377,6 +381,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             type_: return_type,
             fun: function,
             arguments: vec![self.typed_left_hand_value_variable_call_argument()],
+            argument_parentheses: None,
         }
     }
 

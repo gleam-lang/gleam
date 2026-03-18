@@ -1,0 +1,39 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn main() {\n  fn(a) {\n    // look out,\n    // there's a comment!\n\n    // another comment!\n    //here's one without a leading space\n      // here's one indented wrong\n  // here's one indented even wronger\n    op(a)\n  }\n}\n\nfn op(a) {\n  todo\n}\n"
+---
+----- BEFORE ACTION
+pub fn main() {
+  fn(a) {
+  ↑      
+    // look out,
+    // there's a comment!
+
+    // another comment!
+    //here's one without a leading space
+      // here's one indented wrong
+  // here's one indented even wronger
+    op(a)
+  }
+}
+
+fn op(a) {
+  todo
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  // look out,
+    // there's a comment!
+
+    // another comment!
+    //here's one without a leading space
+      // here's one indented wrong
+  // here's one indented even wronger
+    op
+}
+
+fn op(a) {
+  todo
+}

@@ -1715,6 +1715,7 @@ impl<'comments> Formatter<'comments> {
             fun,
             arguments,
             location,
+            ..
         })) = call.first()
         else {
             // The body of a capture being not a fn shouldn't be possible...

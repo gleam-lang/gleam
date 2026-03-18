@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn main() {\n  int\n}\n\nfn int(i: Int) {\n  todo\n}\n"
+---
+----- BEFORE ACTION
+pub fn main() {
+  int
+  ↑  
+}
+
+fn int(i: Int) {
+  todo
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  fn(int_2) { int(int_2) }
+}
+
+fn int(i: Int) {
+  todo
+}
