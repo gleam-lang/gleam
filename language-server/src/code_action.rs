@@ -1182,8 +1182,6 @@ pub fn code_action_generate_type(
         return;
     };
 
-    let mut seen_names = HashSet::new();
-
     for error in errors {
         let type_::Error::UnknownType {
             location,
@@ -1196,42 +1194,24 @@ pub fn code_action_generate_type(
         };
 
         let range = src_span_to_lsp_range(*location, line_numbers);
-        if !overlaps(params.range, range) {
+        if !within(params.range, range) {
             continue;
         }
 
-        // Avoid offering duplicate actions for the same type name.
-        if !seen_names.insert(name.clone()) {
-            continue;
-        }
-
-        let insert_at = module.code.len() as u32;
+        // Insert the new type stub before the top-level definition that
+        // contains the error, so it appears close to where it is used.
+        let insert_at =
+            definition_start_containing(&module.ast.definitions, location.start)
+                .unwrap_or(module.code.len() as u32);
         let insert_range =
             src_span_to_lsp_range(SrcSpan { start: insert_at, end: insert_at }, line_numbers);
 
-        // Ensure proper spacing before the new type definition.
-        let prefix = if module.code.ends_with('\n') {
-            "\n"
-        } else {
-            "\n\n"
-        };
-
         let new_text = if *arity == 0 {
-            format!("{prefix}type {name} {{\n  {name}\n}}\n")
+            format!("type {name}\n\n")
         } else {
-            let params: Vec<_> = (0..*arity)
-                .map(|i| {
-                    let letter = (b'a' + (i % 26) as u8) as char;
-                    let suffix = i / 26;
-                    if suffix == 0 {
-                        letter.to_string()
-                    } else {
-                        format!("{letter}{suffix}")
-                    }
-                })
-                .collect();
-            let params_str = params.join(", ");
-            format!("{prefix}type {name}({params_str}) {{\n  {name}({params_str})\n}}\n")
+            let mut printer = Printer::new_without_type_variables(&module.ast.names);
+            let params_str = printer.fresh_generic_names(*arity).join(", ");
+            format!("type {name}({params_str})\n\n")
         };
 
         let edit = TextEdit {
@@ -1245,6 +1225,20 @@ pub fn code_action_generate_type(
             .preferred(true)
             .push_to(actions);
     }
+}
+
+/// Returns the source offset of the top-level definition that contains `pos`,
+/// so the caller can insert code before it.
+fn definition_start_containing(defs: &TypedDefinitions, pos: u32) -> Option<u32> {
+    defs.functions
+        .iter()
+        .map(|f| SrcSpan { start: f.location.start, end: f.end_position })
+        .chain(defs.custom_types.iter().map(|ct| ct.location))
+        .chain(defs.type_aliases.iter().map(|ta| ta.location))
+        .chain(defs.constants.iter().map(|c| c.location))
+        .filter(|span| span.start <= pos && pos <= span.end)
+        .map(|span| span.start)
+        .next()
 }
 
 fn suggest_imports(
