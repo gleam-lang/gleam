@@ -338,24 +338,49 @@ pub fn make_executable(_path: impl AsRef<Utf8Path>) -> Result<(), Error> {
 }
 
 #[cfg(target_family = "unix")]
-pub fn make_private(path: impl AsRef<Utf8Path>) -> Result<(), Error> {
-    use std::os::unix::fs::PermissionsExt;
-    tracing::debug!(path = ?path.as_ref(), "setting_permissions");
+pub fn write_private(path: &Utf8Path, text: &str) -> Result<(), Error> {
+    use std::os::unix::fs::OpenOptionsExt;
+    tracing::debug!(path=?path, "writing_private_file");
 
-    std::fs::set_permissions(path.as_ref(), std::fs::Permissions::from_mode(0o600)).map_err(
-        |e| Error::FileIo {
-            action: FileIoAction::UpdatePermissions,
+    let dir_path = path.parent().ok_or_else(|| Error::FileIo {
+        action: FileIoAction::FindParent,
+        kind: FileKind::Directory,
+        path: path.to_path_buf(),
+        err: None,
+    })?;
+
+    std::fs::create_dir_all(dir_path).map_err(|e| Error::FileIo {
+        action: FileIoAction::Create,
+        kind: FileKind::Directory,
+        path: dir_path.to_path_buf(),
+        err: Some(e.to_string()),
+    })?;
+
+    let mut f = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(path)
+        .map_err(|e| Error::FileIo {
+            action: FileIoAction::Create,
             kind: FileKind::File,
-            path: path.as_ref().to_path_buf(),
+            path: path.to_path_buf(),
             err: Some(e.to_string()),
-        },
-    )?;
+        })?;
+
+    f.write_all(text.as_bytes()).map_err(|e| Error::FileIo {
+        action: FileIoAction::WriteTo,
+        kind: FileKind::File,
+        path: path.to_path_buf(),
+        err: Some(e.to_string()),
+    })?;
     Ok(())
 }
 
 #[cfg(not(target_family = "unix"))]
-pub fn make_private(_path: impl AsRef<Utf8Path>) -> Result<(), Error> {
-    Ok(())
+pub fn write_private(path: &Utf8Path, text: &str) -> Result<(), Error> {
+    write(path, text)
 }
 
 pub fn write_bytes(path: &Utf8Path, bytes: &[u8]) -> Result<(), Error> {

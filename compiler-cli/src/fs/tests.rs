@@ -190,17 +190,19 @@ HOME_URL=\"https://www.ubuntu.com/\"
 
 #[cfg(target_family = "unix")]
 #[test]
-fn make_private_sets_owner_only_permissions() {
+fn write_private_sets_owner_only_permissions() {
     use std::os::unix::fs::PermissionsExt;
 
     let tmp_dir = tempfile::tempdir().unwrap();
     let path = Utf8Path::from_path(tmp_dir.path()).expect("Non Utf-8 Path");
     let file_path = path.join("secret.toml");
 
-    super::write(&file_path, "secret content").unwrap();
-    super::make_private(&file_path).unwrap();
+    super::write_private(&file_path, "secret content").unwrap();
 
     let metadata = std::fs::metadata(file_path.as_std_path()).unwrap();
     let mode = metadata.permissions().mode() & 0o777;
     assert_eq!(mode, 0o600);
+
+    let content = std::fs::read_to_string(file_path.as_std_path()).unwrap();
+    assert_eq!(content, "secret content");
 }
