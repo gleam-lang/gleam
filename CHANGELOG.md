@@ -49,6 +49,11 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now generates simpler decision trees for bit array pattern
+  matching by eliminating redundant size and modulo checks when multiple
+  patterns overlap.
+  ([Daniele Scaratti](https://github.com/lupodevelop))
+
 ### Build tool
 
 - When publishing, the package manager now uses the full term instead of the
