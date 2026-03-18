@@ -9,8 +9,8 @@
 ### Language server
 
 - The language server now offers a code action to generate a missing type
-  definition when an unknown type is referenced. The generated stub includes
-  the correct number of type parameters.
+  definition when an unknown type is referenced.
+
   ([Daniele Scaratti](https://github.com/lupodevelop))
 
 - The "extract variable" code action can now pick better names for variables in
