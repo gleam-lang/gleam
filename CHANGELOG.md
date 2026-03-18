@@ -263,6 +263,11 @@
   non-ASCII characters were used in field names other than `description`.
   ([Niklas Kirschall](https://github.com/nkxxll))
 
+- Fixed a bug where subtraction in bit array size expressions was
+  right-associative on the JavaScript target, causing `a - b - c` to be
+  evaluated as `a - (b - c)` instead of `(a - b) - c`.
+  ([Daniele Scaratti](https://github.com/lupodevelop))
+
 - Fixed a bug where the compiler would crash when trying to read the cache for
   modules containing large constants.
   ([Surya Rose](https://github.com/GearsDatapacks))
