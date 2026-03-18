@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  let x: Wobble = todo\n}\n"
 ---
 ----- BEFORE ACTION
@@ -12,10 +12,8 @@ pub fn main() {
 
 ----- AFTER ACTION
 
+type Wobble
+
 pub fn main() {
   let x: Wobble = todo
-}
-
-type Wobble {
-  Wobble
 }

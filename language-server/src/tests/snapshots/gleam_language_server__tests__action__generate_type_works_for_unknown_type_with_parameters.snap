@@ -15,7 +15,4 @@ type Wibble {
 type Wibble {
   Wibble(Wobble(Int, String))
 }
-
-type Wobble(a, b) {
-  Wobble(a, b)
-}
+type Wobble(a, b)

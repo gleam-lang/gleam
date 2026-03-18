@@ -1,0 +1,15 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn wibble(arg: Wibble(some, generics)) { todo }\n"
+---
+----- BEFORE ACTION
+
+pub fn wibble(arg: Wibble(some, generics)) { todo }
+                   ↑                               
+
+
+----- AFTER ACTION
+
+type Wibble(a, b)
+
+pub fn wibble(arg: Wibble(some, generics)) { todo }
