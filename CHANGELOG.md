@@ -25,6 +25,10 @@
   shorthand "MFA" in the prompt and error message.
   ([Luka Ivanović](https://github.com/luka-hash))
 
+- `gleam remove` now cleans build caches after removing dependencies, which
+  ensures that dependencies are actually deleted.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The "extract variable" code action can now pick better names for variables in
