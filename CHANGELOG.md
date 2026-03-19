@@ -12,6 +12,14 @@
 
 ### Bug fixes
 
+## v1.15.2 - 2026-03-19
+
+### Bug fixes
+
+- Fixed a bug where the "Add missing type parameter" code action could be
+  triggered on types that do not exist instead of type variables.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a bug where `BitArray$BitArray$data` constructed a `DataView` with
   incorrect byte length instead of the slice's actual size, causing sliced bit
   arrays to include extra bytes from the underlying buffer on JavaScript.
@@ -25,7 +33,3 @@
   offset 0 instead of the slice's actual byte offset, causing sliced bit arrays
   to read from the wrong position in the underlying buffer on JavaScript.
   ([John Downey](https://github.com/jtdowney))
-
-- Fixed a bug where the "Add missing type parameter" code action could be
-  triggered on types that do not exist instead of type variables.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
