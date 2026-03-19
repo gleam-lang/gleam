@@ -2676,10 +2676,15 @@ impl<T> BitArraySize<T> {
     }
 
     pub fn non_zero_compile_time_number(&self) -> bool {
+        self.compile_time_number()
+            .is_some_and(|number| number != BigInt::ZERO)
+    }
+
+    pub fn compile_time_number(&self) -> Option<BigInt> {
         match self {
-            BitArraySize::Int { int_value, .. } => !int_value.is_zero(),
-            BitArraySize::Block { inner, .. } => inner.non_zero_compile_time_number(),
-            BitArraySize::Variable { .. } | BitArraySize::BinaryOperator { .. } => false,
+            BitArraySize::Int { int_value, .. } => Some(int_value.clone()),
+            BitArraySize::Block { inner, .. } => inner.compile_time_number(),
+            BitArraySize::Variable { .. } | BitArraySize::BinaryOperator { .. } => None,
         }
     }
 

@@ -494,6 +494,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             .expect("The function always returns Ok");
 
         self.check_pattern_segment_size_expression(&options);
+        self.check_matched_int_is_in_js_bounds(segment.value.as_ref(), &options);
 
         let segment_type = match bit_array::type_options_for_pattern(
             &options,
@@ -1498,6 +1499,70 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             | BitArraySize::Block { location, .. } => {
                 self.track_feature_usage(FeatureKind::ExpressionInSegmentSize, *location)
             }
+        }
+    }
+
+    /// This raises a warning if we're on the js target and we're matching on
+    /// an integer segment that has an explicit literal size over 52 bits.
+    /// That's the maximum size of ints on the JS target, matching on anything
+    /// bigger would result in the number being truncated.
+    ///
+    fn check_matched_int_is_in_js_bounds(
+        &mut self,
+        pattern: &UntypedPattern,
+        options: &[BitArrayOption<TypedPattern>],
+    ) {
+        // This only makes sense to check on the js target
+        // And if the segment actually defines a variable that would end up
+        // being truncated.
+        if self.environment.target != Target::JavaScript {
+            return;
+        }
+        let (Pattern::Assign { .. } | Pattern::Variable { .. }) = pattern else {
+            return;
+        };
+
+        // We need to check if there's an explicit size value for the segment.
+        let Some((location, size_value)) = options.iter().find_map(|option| match option {
+            BitArrayOption::Size {
+                value, location, ..
+            } => Some((location, value)),
+
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Unit { .. } => None,
+        }) else {
+            return;
+        };
+
+        // The size must be a compile time known number, otherwise there's not
+        // much we can tell about it.
+        let Pattern::BitArraySize(size) = size_value.as_ref() else {
+            return;
+        };
+        let Some(size) = size.compile_time_number() else {
+            return;
+        };
+
+        // If the size is above the JS limit we raise a warning.
+        if size > BigInt::from(52) {
+            self.problems.warning(Warning::JavaScriptBitArrayUnsafeInt {
+                location: *location,
+                size,
+            });
         }
     }
 }

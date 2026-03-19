@@ -23,8 +23,7 @@ warning: Inefficient use of `list.length`
 6 │             let _ = 0 < list.length(a_list)
   │                     ^^^^^^^^^^^^^^^^^^^^^^^
 
-The `list.length` function has to iterate across the whole
-list to calculate the length, which is wasteful if you only
-need to know if the list is empty or not.
-
+The `list.length` function has to iterate across the whole list to
+calculate the length, which is wasteful if you only need to know if the
+list is empty or not.
 Hint: You can use `the_list != []` instead.
