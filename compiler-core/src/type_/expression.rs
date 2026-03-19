@@ -3358,7 +3358,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             ValueConstructorVariant::Record {
                 field_map: None, ..
             } => {
-                return Err(Error::RecordUpdateInvalidConstructor {
+                return Err(Error::RecordUpdateVariantWithNoFields {
                     location: constructor.location(),
                 });
             }
@@ -3798,7 +3798,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     ValueConstructorVariant::Record {
                         field_map: None, ..
                     } => {
-                        self.problems.error(Error::RecordUpdateInvalidConstructor {
+                        self.problems.error(Error::RecordUpdateVariantWithNoFields {
                             location: constructor_location,
                         });
                         return self.new_invalid_constant(location);

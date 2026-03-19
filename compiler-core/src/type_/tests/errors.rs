@@ -3547,3 +3547,31 @@ pub fn go(wibble: Wibble) {
 }"
     );
 }
+
+#[test]
+fn record_update_with_constructor_with_no_labelled_fields() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(Int, Bool)
+}
+
+pub fn go(wibble: Wibble) {
+    Wibble(..wibble, b: 1)
+}"
+    );
+}
+
+#[test]
+fn const_record_update_with_constructor_with_no_labelled_fields() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(Int, Bool)
+}
+
+pub const wibble = Wibble(1, True)
+pub const wobble = Wibble(..wobble)
+"
+    );
+}

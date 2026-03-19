@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Wibble {\n  Wibble(Int, Bool)\n}\n\npub fn go(wibble: Wibble) {\n    Wibble(..wibble, b: 1)\n}"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(Int, Bool)
+}
+
+pub fn go(wibble: Wibble) {
+    Wibble(..wibble, b: 1)
+}
+
+----- ERROR
+error: Invalid record constructor
+  ┌─ /src/one/two.gleam:7:5
+  │
+7 │     Wibble(..wibble, b: 1)
+  │     ^^^^^^ This constructor has no labelled fields
+
+Only constructors with at least one labelled field can be used with the
+update syntax.

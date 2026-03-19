@@ -19,6 +19,10 @@
   finds.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now shows a better error message when trying to use the record
+  update syntax with variants that have no labelled fields.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - When publishing, the package manager now uses the full term instead of the

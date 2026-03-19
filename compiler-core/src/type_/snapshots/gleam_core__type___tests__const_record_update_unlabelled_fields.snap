@@ -13,6 +13,7 @@ error: Invalid record constructor
   ┌─ /src/one/two.gleam:4:27
   │
 4 │         pub const point = Point(..origin)
-  │                           ^^^^^ This is not a record constructor
+  │                           ^^^^^ This constructor has no labelled fields
 
-Only record constructors can be used with the update syntax.
+Only constructors with at least one labelled field can be used with the
+update syntax.

@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Wibble {\n  Wibble(Int, Bool)\n}\n\npub const wibble = Wibble(1, True)\npub const wobble = Wibble(..wobble)\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(Int, Bool)
+}
+
+pub const wibble = Wibble(1, True)
+pub const wobble = Wibble(..wobble)
+
+
+----- ERROR
+error: Invalid record constructor
+  ┌─ /src/one/two.gleam:7:20
+  │
+7 │ pub const wobble = Wibble(..wobble)
+  │                    ^^^^^^ This constructor has no labelled fields
+
+Only constructors with at least one labelled field can be used with the
+update syntax.

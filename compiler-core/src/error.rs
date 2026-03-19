@@ -3265,6 +3265,25 @@ UTF-codepoint pattern matching.",
                         }),
                     },
 
+                    TypeError::RecordUpdateVariantWithNoFields { location } => Diagnostic {
+                        title: "Invalid record constructor".into(),
+                        text: wrap(
+                            "Only constructors with at least one labelled \
+field can be used with the update syntax.",
+                        ),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("This constructor has no labelled fields".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
+
                     TypeError::UnexpectedTypeHole { location } => Diagnostic {
                         title: "Unexpected type hole".into(),
                         text: "We need to know the exact type here so type holes cannot be used."
