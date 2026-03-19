@@ -18,7 +18,7 @@ pub fn write_credentials(
     match credentials {
         hexpm::Credentials::ApiKey(key) => Ok(hexpm::WriteActionCredentials::ApiKey(key.clone())),
         hexpm::Credentials::OAuthAccessToken(token) => {
-            let one_time_password = cli::ask("Enter your MFA code")?.into();
+            let one_time_password = cli::ask("Enter your two-factor authentication code")?.into();
             Ok(hexpm::WriteActionCredentials::OAuthAccessToken {
                 access_token: token.clone(),
                 one_time_password,

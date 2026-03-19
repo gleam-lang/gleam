@@ -1,0 +1,18 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn wibble() {\n    let a: _ = Ok(Ok(\"hello\"))\n}\n    "
+---
+----- BEFORE ACTION
+
+pub fn wibble() {
+    let a: _ = Ok(Ok("hello"))
+           ↑                  
+}
+    
+
+
+----- AFTER ACTION
+
+pub fn wibble() {
+    let a: Result(Result(String, a), b) = Ok(Ok("hello"))
+}

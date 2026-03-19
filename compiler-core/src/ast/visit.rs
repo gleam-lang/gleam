@@ -594,8 +594,15 @@ pub trait Visit<'ast> {
         visit_typed_pattern_invalid(self, location, type_);
     }
 
-    fn visit_type_ast(&mut self, node: &'ast TypeAst) {
-        visit_type_ast(self, node);
+    fn visit_type_ast(
+        &mut self,
+        node: &'ast TypeAst,
+        // The type inferred for this annotation.
+        // It might not always be possible to infer one in presence of type
+        // errors, so this is optional!
+        inferred_type: Option<Arc<Type>>,
+    ) {
+        visit_type_ast(self, node, inferred_type);
     }
 
     fn visit_type_ast_constructor(
@@ -604,30 +611,58 @@ pub trait Visit<'ast> {
         name_location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
-        arguments: &'ast Vec<TypeAst>,
+        arguments: &'ast [TypeAst],
+        inferred_arguments_types: Option<Vec<Arc<Type>>>,
     ) {
-        visit_type_ast_constructor(self, location, name_location, module, name, arguments);
+        visit_type_ast_constructor(
+            self,
+            location,
+            name_location,
+            module,
+            name,
+            arguments,
+            inferred_arguments_types,
+        );
     }
 
     fn visit_type_ast_fn(
         &mut self,
         location: &'ast SrcSpan,
-        arguments: &'ast Vec<TypeAst>,
+        arguments: &'ast [TypeAst],
+        arguments_types: Option<Vec<Arc<Type>>>,
         return_: &'ast TypeAst,
+        return_type: Option<Arc<Type>>,
     ) {
-        visit_type_ast_fn(self, location, arguments, return_);
+        visit_type_ast_fn(
+            self,
+            location,
+            arguments,
+            arguments_types,
+            return_,
+            return_type,
+        );
     }
 
     fn visit_type_ast_var(&mut self, location: &'ast SrcSpan, name: &'ast EcoString) {
         visit_type_ast_var(self, location, name);
     }
 
-    fn visit_type_ast_tuple(&mut self, location: &'ast SrcSpan, elements: &'ast Vec<TypeAst>) {
-        visit_type_ast_tuple(self, location, elements);
+    fn visit_type_ast_tuple(
+        &mut self,
+        location: &'ast SrcSpan,
+        elements: &'ast [TypeAst],
+        elements_types: Option<&Vec<Arc<Type>>>,
+    ) {
+        visit_type_ast_tuple(self, location, elements, elements_types);
     }
 
-    fn visit_type_ast_hole(&mut self, location: &'ast SrcSpan, name: &'ast EcoString) {
-        visit_type_ast_hole(self, location, name);
+    fn visit_type_ast_hole(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        type_: Option<Arc<Type>>,
+    ) {
+        visit_type_ast_hole(self, location, name, type_);
     }
 
     fn visit_typed_constant(&mut self, constant: &'ast TypedConstant) {
@@ -670,8 +705,9 @@ pub trait Visit<'ast> {
         location: &'ast SrcSpan,
         elements: &'ast Vec<TypedConstant>,
         type_: &'ast Arc<Type>,
+        tail: &'ast Option<Box<TypedConstant>>,
     ) {
-        visit_typed_constant_list(self, location, elements, type_);
+        visit_typed_constant_list(self, location, elements, type_, tail);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -843,9 +879,13 @@ fn visit_typed_constant_list<'a, V: Visit<'a> + ?Sized>(
     _location: &'a SrcSpan,
     elements: &'a Vec<TypedConstant>,
     _type_: &'a Arc<Type>,
+    tail: &'a Option<Box<TypedConstant>>,
 ) {
     for element in elements {
         v.visit_typed_constant(element)
+    }
+    if let Some(tail) = tail {
+        v.visit_typed_constant(tail);
     }
 }
 
@@ -925,11 +965,11 @@ where
 {
     for argument in fun.arguments.iter() {
         if let Some(annotation) = &argument.annotation {
-            v.visit_type_ast(annotation);
+            v.visit_type_ast(annotation, Some(argument.type_.clone()));
         }
     }
     if let Some(annotation) = &fun.return_annotation {
-        v.visit_type_ast(annotation);
+        v.visit_type_ast(annotation, Some(fun.return_type.clone()));
     }
 
     for statement in &fun.body {
@@ -937,7 +977,7 @@ where
     }
 }
 
-pub fn visit_type_ast<'a, V>(v: &mut V, node: &'a TypeAst)
+pub fn visit_type_ast<'a, V>(v: &mut V, node: &'a TypeAst, type_: Option<Arc<Type>>)
 where
     V: Visit<'a> + ?Sized,
 {
@@ -950,23 +990,40 @@ where
             name,
             start_parentheses: _,
         }) => {
-            v.visit_type_ast_constructor(location, name_location, module, name, arguments);
+            v.visit_type_ast_constructor(
+                location,
+                name_location,
+                module,
+                name,
+                arguments,
+                type_.and_then(|type_| type_.constructor_types()),
+            );
         }
         TypeAst::Fn(super::TypeAstFn {
             location,
             arguments,
             return_,
         }) => {
-            v.visit_type_ast_fn(location, arguments, return_);
+            let (arguments_types, return_type) = match type_.and_then(|type_| type_.fn_types()) {
+                Some((arguments_types, return_type)) => (Some(arguments_types), Some(return_type)),
+                None => (None, None),
+            };
+
+            v.visit_type_ast_fn(location, arguments, arguments_types, return_, return_type);
         }
         TypeAst::Var(super::TypeAstVar { location, name }) => {
             v.visit_type_ast_var(location, name);
         }
         TypeAst::Tuple(super::TypeAstTuple { location, elements }) => {
-            v.visit_type_ast_tuple(location, elements);
+            let elements_types = if let Some(Type::Tuple { elements }) = type_.as_deref() {
+                Some(elements)
+            } else {
+                None
+            };
+            v.visit_type_ast_tuple(location, elements, elements_types);
         }
         TypeAst::Hole(super::TypeAstHole { location, name }) => {
-            v.visit_type_ast_hole(location, name);
+            v.visit_type_ast_hole(location, name, type_);
         }
     }
 }
@@ -977,27 +1034,39 @@ pub fn visit_type_ast_constructor<'a, V>(
     _name_location: &'a SrcSpan,
     _module: &'a Option<(EcoString, SrcSpan)>,
     _name: &'a EcoString,
-    arguments: &'a Vec<TypeAst>,
+    arguments: &'a [TypeAst],
+    inferred_arguments_types: Option<Vec<Arc<Type>>>,
 ) where
     V: Visit<'a> + ?Sized,
 {
-    for argument in arguments {
-        v.visit_type_ast(argument);
+    for (i, argument) in arguments.iter().enumerate() {
+        let argument_type = inferred_arguments_types
+            .as_ref()
+            .and_then(|types| types.get(i));
+        v.visit_type_ast(argument, argument_type.cloned());
     }
 }
 
 pub fn visit_type_ast_fn<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
-    arguments: &'a Vec<TypeAst>,
+    arguments: &'a [TypeAst],
+    arguments_types: Option<Vec<Arc<Type>>>,
     return_: &'a TypeAst,
+    return_type: Option<Arc<Type>>,
 ) where
     V: Visit<'a> + ?Sized,
 {
-    for argument in arguments {
-        v.visit_type_ast(argument);
+    for (i, argument) in arguments.iter().enumerate() {
+        v.visit_type_ast(
+            argument,
+            arguments_types
+                .as_ref()
+                .and_then(|types| types.get(i))
+                .cloned(),
+        );
     }
-    v.visit_type_ast(return_);
+    v.visit_type_ast(return_, return_type.clone());
 }
 
 pub fn visit_type_ast_var<'a, V>(_v: &mut V, _location: &'a SrcSpan, _name: &'a EcoString)
@@ -1007,17 +1076,29 @@ where
     // No further traversal needed for variables
 }
 
-pub fn visit_type_ast_tuple<'a, V>(v: &mut V, _location: &'a SrcSpan, elements: &'a Vec<TypeAst>)
-where
+pub fn visit_type_ast_tuple<'a, V>(
+    v: &mut V,
+    _location: &'a SrcSpan,
+    elements: &'a [TypeAst],
+    elements_types: Option<&Vec<Arc<Type>>>,
+) where
     V: Visit<'a> + ?Sized,
 {
-    for element in elements {
-        v.visit_type_ast(element);
+    for (i, element) in elements.iter().enumerate() {
+        let element_type = elements_types
+            .as_ref()
+            .and_then(|types| types.get(i))
+            .cloned();
+        v.visit_type_ast(element, element_type);
     }
 }
 
-pub fn visit_type_ast_hole<'a, V>(_v: &mut V, _location: &'a SrcSpan, _name: &'a EcoString)
-where
+pub fn visit_type_ast_hole<'a, V>(
+    _v: &mut V,
+    _location: &'a SrcSpan,
+    _name: &'a EcoString,
+    _type_: Option<Arc<Type>>,
+) where
     V: Visit<'a> + ?Sized,
 {
     // No further traversal needed for holes
@@ -1027,6 +1108,9 @@ pub fn visit_typed_module_constant<'a, V>(v: &mut V, constant: &'a TypedModuleCo
 where
     V: Visit<'a> + ?Sized,
 {
+    if let Some(annotation) = &constant.annotation {
+        v.visit_type_ast(annotation, Some(constant.type_.clone()));
+    }
     v.visit_typed_constant(&constant.value);
 }
 
@@ -1054,7 +1138,8 @@ pub fn visit_typed_constant<'a, V: Visit<'a> + ?Sized>(v: &mut V, constant: &'a 
             location,
             elements,
             type_,
-        } => v.visit_typed_constant_list(location, elements, type_),
+            tail,
+        } => v.visit_typed_constant_list(location, elements, type_, tail),
         super::Constant::Record {
             location,
             module,
@@ -1124,7 +1209,7 @@ where
 {
     for record in &custom_type.constructors {
         for argument in &record.arguments {
-            v.visit_type_ast(&argument.ast);
+            v.visit_type_ast(&argument.ast, Some(argument.type_.clone()));
         }
     }
 }
@@ -1133,7 +1218,7 @@ pub fn visit_typed_type_alias<'a, V>(v: &mut V, type_alias: &'a TypedTypeAlias)
 where
     V: Visit<'a> + ?Sized,
 {
-    v.visit_type_ast(&type_alias.type_ast);
+    v.visit_type_ast(&type_alias.type_ast, Some(type_alias.type_.clone()));
 }
 
 pub fn visit_typed_import<'a, V>(_v: &mut V, _import: &'a TypedImport)
@@ -1390,7 +1475,7 @@ pub fn visit_typed_expr_var<'a, V>(
 pub fn visit_typed_expr_fn<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
-    _type_: &'a Arc<Type>,
+    type_: &'a Arc<Type>,
     _kind: &'a FunctionLiteralKind,
     arguments: &'a [TypedArg],
     body: &'a Vec1<TypedStatement>,
@@ -1400,11 +1485,14 @@ pub fn visit_typed_expr_fn<'a, V>(
 {
     for argument in arguments {
         if let Some(annotation) = &argument.annotation {
-            v.visit_type_ast(annotation);
+            v.visit_type_ast(annotation, Some(argument.type_.clone()));
         }
     }
     if let Some(return_) = return_annotation {
-        v.visit_type_ast(return_);
+        v.visit_type_ast(
+            return_,
+            type_.fn_types().map(|(_, return_)| return_.clone()),
+        );
     }
 
     for statement in body {
@@ -1643,7 +1731,7 @@ where
     V: Visit<'a> + ?Sized,
 {
     if let Some(annotation) = &assignment.annotation {
-        v.visit_type_ast(annotation);
+        v.visit_type_ast(annotation, Some(assignment.type_()));
     }
     v.visit_typed_expr(&assignment.value);
     v.visit_typed_pattern(&assignment.pattern);

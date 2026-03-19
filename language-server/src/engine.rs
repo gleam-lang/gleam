@@ -32,7 +32,7 @@ use lsp_types::{
 };
 use std::{collections::HashSet, sync::Arc};
 
-use crate::rename::rename_module_alias;
+use crate::{code_action::ReplaceUnderscoreWithType, rename::rename_module_alias};
 
 use super::{
     DownloadDependencies, MakeLocker,
@@ -301,7 +301,13 @@ where
                 }
                 | Located::Constant(Constant::String { .. }) => None,
                 Located::Expression {
-                    expression: TypedExpr::Call { fun, arguments, .. },
+                    expression:
+                        TypedExpr::Call { fun, arguments, .. }
+                        | TypedExpr::RecordUpdate {
+                            constructor: fun,
+                            arguments,
+                            ..
+                        },
                     ..
                 } => {
                     let mut completions = vec![];
@@ -474,6 +480,7 @@ where
             actions
                 .extend(AnnotateTopLevelDefinitions::new(module, &lines, &params).code_actions());
             actions.extend(AddMissingTypeParameter::new(module, &lines, &params).code_actions());
+            actions.extend(ReplaceUnderscoreWithType::new(module, &lines, &params).code_actions());
             Ok(if actions.is_empty() {
                 None
             } else {
@@ -1020,11 +1027,11 @@ where
                     .get_module_interface(module_name.as_str())
                     .and_then(|module_interface| {
                         if is_type {
-                            module_interface.types.get(name).map(|t| {
+                            module_interface.types.get(name).map(|constructor| {
                                 hover_for_annotation(
                                     *location,
-                                    t.type_.as_ref(),
-                                    Some(t),
+                                    constructor.type_.as_ref(),
+                                    Some(constructor),
                                     lines,
                                     module,
                                 )
@@ -1457,7 +1464,7 @@ fn hover_for_annotation(
 ) -> Hover {
     let empty_str = EcoString::from("");
     let documentation = type_constructor
-        .and_then(|t| t.documentation.as_ref())
+        .and_then(|constructor| constructor.documentation.as_ref())
         .unwrap_or(&empty_str);
     // If a user is hovering an annotation, it's not very useful to show the
     // local representation of that type, since that's probably what they see

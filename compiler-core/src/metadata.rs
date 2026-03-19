@@ -320,6 +320,7 @@ impl RemapIds {
                 location,
                 elements,
                 type_,
+                tail,
             } => Constant::List {
                 location,
                 elements: elements
@@ -327,6 +328,7 @@ impl RemapIds {
                     .map(|element| self.constant(element))
                     .collect(),
                 type_: self.type_(type_),
+                tail: tail.map(|tail| Box::new(self.constant(*tail))),
             },
             Constant::Record {
                 location,

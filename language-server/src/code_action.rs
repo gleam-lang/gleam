@@ -1750,7 +1750,8 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
         name_location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
-        arguments: &'ast Vec<ast::TypeAst>,
+        arguments: &'ast [ast::TypeAst],
+        arguments_types: Option<Vec<Arc<Type>>>,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
         if overlaps(self.params.range, range)
@@ -1771,6 +1772,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
             module,
             name,
             arguments,
+            arguments_types,
         );
     }
 
@@ -2001,7 +2003,8 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
         name_location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
-        arguments: &'ast Vec<ast::TypeAst>,
+        arguments: &'ast [ast::TypeAst],
+        arguments_types: Option<Vec<Arc<Type>>>,
     ) {
         if let Some((module_name, _)) = module {
             let QualifiedConstructor {
@@ -2022,6 +2025,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
             module,
             name,
             arguments,
+            arguments_types,
         );
     }
 
@@ -2265,7 +2269,8 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         name_location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
-        arguments: &'ast Vec<ast::TypeAst>,
+        arguments: &'ast [ast::TypeAst],
+        arguments_types: Option<Vec<Arc<Type>>>,
     ) {
         if module.is_none()
             && overlaps(
@@ -2283,6 +2288,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
             module,
             name,
             arguments,
+            arguments_types,
         );
     }
 
@@ -2507,7 +2513,8 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
         name_location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
-        arguments: &'ast Vec<ast::TypeAst>,
+        arguments: &'ast [ast::TypeAst],
+        arguments_types: Option<Vec<Arc<Type>>>,
     ) {
         if module.is_none() {
             let UnqualifiedConstructor {
@@ -2524,6 +2531,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
             module,
             name,
             arguments,
+            arguments_types,
         );
     }
 
@@ -10962,13 +10970,12 @@ impl<'a> AddMissingTypeParameter<'a> {
 
 impl<'ast> ast::visit::Visit<'ast> for AddMissingTypeParameter<'ast> {
     fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
-        let full_type_definition_range = self.edits.src_span_to_lsp_range(SrcSpan::new(
-            custom_type.location.start,
-            custom_type.end_position,
-        ));
+        let custom_type_range = self
+            .edits
+            .src_span_to_lsp_range(custom_type.full_location());
 
         // Only continue, if the action was selected anywhere within the custom type definition.
-        if !overlaps(self.params.range, full_type_definition_range) {
+        if !overlaps(self.params.range, custom_type_range) {
             return;
         }
 
@@ -10979,17 +10986,106 @@ impl<'ast> ast::visit::Visit<'ast> for AddMissingTypeParameter<'ast> {
 
         self.has_existing_parameters = !custom_type.typed_parameters.is_empty();
 
+        let existing_names: HashSet<_> = custom_type
+            .parameters
+            .iter()
+            .map(|(_, name)| name)
+            .collect();
+
         // Collect the remaining type parameters from the variant constructors.
         for record in &custom_type.constructors {
             for argument in &record.arguments {
-                if let Type::Var { .. } = argument.type_.as_ref()
-                    && !custom_type.typed_parameters.contains(&argument.type_)
+                if let ast::TypeAst::Var(ast::TypeAstVar { name, .. }) = &argument.ast
+                    && !existing_names.contains(name)
                 {
-                    let mut name = EcoString::new();
-                    argument.ast.print(&mut name);
-                    let _ = self.missing_parameters.insert(name);
+                    let _ = self.missing_parameters.insert(name.clone());
                 }
             }
+        }
+    }
+}
+
+/// Code action to replace a `_` with its actual type in an annotation.
+///
+/// Before:
+/// ```gleam
+/// fn wibble() -> Ok(_) { Ok(1) }
+/// //                ^ Trigger it here
+/// ```
+///
+/// After:
+/// ```gleam
+/// fn wibble() -> Ok(Int) { Ok(1) }
+/// ```
+///
+pub struct ReplaceUnderscoreWithType<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    hovered_hole: Option<HoveredHole>,
+}
+
+struct HoveredHole {
+    type_: Arc<Type>,
+    location: SrcSpan,
+}
+
+impl<'a> ReplaceUnderscoreWithType<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            hovered_hole: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let mut action = Vec::with_capacity(1);
+
+        let Some(HoveredHole { type_, location }) = self.hovered_hole else {
+            return vec![];
+        };
+        let mut printer = Printer::new(&self.module.ast.names);
+        self.edits
+            .replace(location, format!("{}", printer.print_type(&type_)));
+
+        CodeActionBuilder::new("Replace `_` with type")
+            .kind(CodeActionKind::QUICKFIX)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(true)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for ReplaceUnderscoreWithType<'ast> {
+    fn visit_type_ast(&mut self, node: &'ast ast::TypeAst, inferred_type: Option<Arc<Type>>) {
+        // We never traverse a type annotation we're not hovering
+        let node_location = self.edits.src_span_to_lsp_range(node.location());
+        if !within(self.params.range, node_location) {
+            return;
+        }
+        ast::visit::visit_type_ast(self, node, inferred_type);
+    }
+
+    fn visit_type_ast_hole(
+        &mut self,
+        location: &'ast SrcSpan,
+        _name: &'ast EcoString,
+        type_: Option<Arc<Type>>,
+    ) {
+        if let Some(type_) = type_ {
+            self.hovered_hole = Some(HoveredHole {
+                type_,
+                location: *location,
+            })
         }
     }
 }

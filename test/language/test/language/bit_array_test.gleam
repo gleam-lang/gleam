@@ -183,3 +183,9 @@ pub fn sliced_bit_array_data_view_offset_test() {
   let value = ffi.read_uint16_from_bit_array(sliced)
   assert value == 48_076
 }
+
+pub fn sliced_bit_array_data_view_byte_length_test() {
+  let data = <<0xAA, 0xBB, 0xCC, 0xDD>>
+  let assert Ok(sliced) = bit_array.slice(data, 1, 2)
+  assert sliced == <<0xBB, 0xCC>>
+}

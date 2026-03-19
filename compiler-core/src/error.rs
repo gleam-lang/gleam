@@ -883,15 +883,16 @@ You'll need to re-authenticate to continue using Hex."
             }],
 
             Error::IncorrectHexOneTimePassword => {
-                let text = "That MFA code was rejected by Hex, please try again.
+                let text =
+                    "That two-factor authentication code was rejected by Hex, please try again.
 
 If you need to reconfigure your Hex two-factor security it can be done
 via the Hex website: https://hex.pm/dashboard/security
 "
-                .into();
+                    .into();
 
                 vec![Diagnostic {
-                    title: "Incorrect MFA code".into(),
+                    title: "Incorrect two-factor authentication code".into(),
                     text,
                     level: Level::Error,
                     location: None,
