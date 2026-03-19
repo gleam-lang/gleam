@@ -35,3 +35,17 @@ fn test_shell_program_not_found_error() {
         }
     }
 }
+
+#[test]
+fn hex_session_revoked() {
+    let err = Error::HexSessionRevoked.to_diagnostics();
+    assert_snapshot!("hex_session_revoked", err[0].text);
+}
+
+#[test]
+fn hex_error_conversion() {
+    assert_eq!(
+        Error::hex(hexpm::ApiError::OAuthRefreshTokenRejected),
+        Error::HexSessionRevoked
+    );
+}
