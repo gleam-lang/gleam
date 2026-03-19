@@ -454,6 +454,12 @@ impl<'a> Printer<'a> {
         _ = self.printed_type_variable_names.insert(name);
     }
 
+    /// Record that the given type-variable id is already using the supplied name.
+    pub fn register_type_variable_with_id(&mut self, id: u64, name: EcoString) {
+        _ = self.printed_type_variable_names.insert(name.clone());
+        _ = self.printed_type_variables.insert(id, name);
+    }
+
     pub fn print_type(&mut self, type_: &Type) -> EcoString {
         let mut buffer = EcoString::new();
         self.print(type_, &mut buffer, PrintMode::Normal);
