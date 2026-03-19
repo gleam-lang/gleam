@@ -2096,3 +2096,13 @@ const local_const = other.Record(..other.base, field: value)
 fn byte_order_mark() {
     assert_parse!("\u{feff}todo");
 }
+
+// https://github.com/gleam-lang/gleam/issues/5391
+#[test]
+fn byte_order_mark_module() {
+    assert_parse_module!(
+        "\u{feff}
+const local_const = other.Record(..other.base, field: value)
+"
+    );
+}
