@@ -4028,8 +4028,8 @@ where
 
     /// Ensures that `+` and `-` are left-associative when used in bit array
     /// size patterns. Since `expect_bit_array_size` is right-recursive, parsing
-    /// `a - b - c` yields `right = b - c`; 
-    /// this function rearranges same precedence operators on the right into a 
+    /// `a - b - c` yields `right = b - c`;
+    /// this function rearranges same precedence operators on the right into a
     /// left-nested tree so that `a - (b - c)` becomes `(a - b) - c`.
     ///
     /// High-precedence operators (`*`, `/`, `%`) on the right are left as-is
