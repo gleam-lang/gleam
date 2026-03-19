@@ -621,7 +621,10 @@ fn subtraction_is_left_associative_in_ast() {
         panic!("expected outer SubInt, got {expr:?}");
     };
 
-    let TypedExpr::Int { value: right_val, .. } = right.as_ref() else {
+    let TypedExpr::Int {
+        value: right_val, ..
+    } = right.as_ref()
+    else {
         panic!("expected int on right, got {right:?}");
     };
     assert_eq!(right_val, "3");
@@ -637,10 +640,10 @@ fn subtraction_is_left_associative_in_ast() {
     };
 
     let TypedExpr::Int { value: ll_val, .. } = ll.as_ref() else {
-        panic!("expected int as left-left, got {ll:?}");
+        panic!("expected int as left-left, got {ll:?}")
     };
     let TypedExpr::Int { value: lr_val, .. } = lr.as_ref() else {
-        panic!("expected int as left-right, got {lr:?}");
+        panic!("expected int as left-right, got {lr:?}")
     };
     assert_eq!(ll_val, "1");
     assert_eq!(lr_val, "2");
