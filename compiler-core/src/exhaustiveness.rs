@@ -1478,17 +1478,18 @@ impl BitArrayTest {
                 }
             }
             (
-                BitArrayTest::CatchAllIsBytes { size_so_far: succeeding },
+                BitArrayTest::CatchAllIsBytes {
+                    size_so_far: succeeding,
+                },
                 BitArrayTest::CatchAllIsBytes { size_so_far: test },
             ) => {
                 // `(bits.bitSize - s1) % 8 === 0` is equivalent to
                 // `(bits.bitSize - s2) % 8 === 0` whenever `s1` and `s2`
                 // differ by a multiple of 8. In those cases one test implies
                 // the other and we can consider them equivalent.
-                if let (Some(succeeding_bits), Some(test_bits)) = (
-                    succeeding.constant_bits(),
-                    test.constant_bits(),
-                ) {
+                if let (Some(succeeding_bits), Some(test_bits)) =
+                    (succeeding.constant_bits(), test.constant_bits())
+                {
                     let diff = if succeeding_bits < test_bits {
                         test_bits - succeeding_bits
                     } else {
@@ -2545,7 +2546,12 @@ impl<'a> Compiler<'a> {
                 })
                 // If we didn't find a catch-all check, fall back to the first
                 // check on this variable (existing behavior).
-                .or_else(|| branch.checks.iter().position(|check| check.var == pivot_var));
+                .or_else(|| {
+                    branch
+                        .checks
+                        .iter()
+                        .position(|check| check.var == pivot_var)
+                });
 
             let Some(check_index) = check_index else {
                 // If the branch doesn't perform any check on the pivot variable, it means
