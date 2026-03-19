@@ -10926,13 +10926,12 @@ impl<'a> AddMissingTypeParameter<'a> {
 
 impl<'ast> ast::visit::Visit<'ast> for AddMissingTypeParameter<'ast> {
     fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
-        let full_type_definition_range = self.edits.src_span_to_lsp_range(SrcSpan::new(
-            custom_type.location.start,
-            custom_type.end_position,
-        ));
+        let custom_type_range = self
+            .edits
+            .src_span_to_lsp_range(custom_type.full_location());
 
         // Only continue, if the action was selected anywhere within the custom type definition.
-        if !overlaps(self.params.range, full_type_definition_range) {
+        if !overlaps(self.params.range, custom_type_range) {
             return;
         }
 
@@ -10943,15 +10942,19 @@ impl<'ast> ast::visit::Visit<'ast> for AddMissingTypeParameter<'ast> {
 
         self.has_existing_parameters = !custom_type.typed_parameters.is_empty();
 
+        let existing_names: HashSet<_> = custom_type
+            .parameters
+            .iter()
+            .map(|(_, name)| name)
+            .collect();
+
         // Collect the remaining type parameters from the variant constructors.
         for record in &custom_type.constructors {
             for argument in &record.arguments {
-                if let Type::Var { .. } = argument.type_.as_ref()
-                    && !custom_type.typed_parameters.contains(&argument.type_)
+                if let ast::TypeAst::Var(ast::TypeAstVar { name, .. }) = &argument.ast
+                    && !existing_names.contains(name)
                 {
-                    let mut name = EcoString::new();
-                    argument.ast.print(&mut name);
-                    let _ = self.missing_parameters.insert(name);
+                    let _ = self.missing_parameters.insert(name.clone());
                 }
             }
         }
