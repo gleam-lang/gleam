@@ -23,6 +23,32 @@
   update syntax with variants that have no labelled fields.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now raises a warning on the JavaScript target when defining an
+  integer segment with a size higher than 52 bits. For example, this code:
+
+  ```gleam
+  pub fn go(sha: BitArray) {
+      let <<_, number:152>> = sha
+      number
+  }
+  ```
+
+  Will result in the following warning:
+
+  ```txt
+  warning: Truncated bit array segment
+    ┌─ /src/warning/wrn.gleam:3:20
+    │
+  3 │     let <<_, number:152>> = sha
+    │                     ^^^
+
+  This segment is a 152-bit long integer, but on the JavaScript target
+  numbers have at most 52 bits. It would be truncated to its first 52 bits.
+  Hint: Did you mean to use the `bytes` segment option?
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - When publishing, the package manager now uses the full term instead of the

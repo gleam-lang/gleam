@@ -16,7 +16,6 @@ warning: Panic used as a function
 
 `panic` is not a function and will crash before it can do anything with
 this argument.
-
 Hint: if you want to display an error message you should write
 `panic as "my error message"`
 See: https://tour.gleam.run/advanced-features/panic/

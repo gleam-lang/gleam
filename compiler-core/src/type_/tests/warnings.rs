@@ -4878,3 +4878,29 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn bit_array_match_on_integer_over_js_limit() {
+    assert_js_warning!(
+        "
+pub fn go(x: BitArray) {
+    let <<number:123>> = x
+    number
+}
+"
+    );
+}
+
+#[test]
+fn bit_array_match_on_integer_over_js_limit_1() {
+    assert_js_warning!(
+        "
+pub fn go(x: BitArray) {
+  case x {
+    <<n:size(53)>> -> n
+    _ -> 1
+  }
+}
+"
+    );
+}

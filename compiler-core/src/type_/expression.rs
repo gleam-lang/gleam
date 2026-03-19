@@ -1711,7 +1711,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             infer_bit_array_option(segment_option, |value, type_| {
                 let typed_value = infer(self, value)?;
                 unify(type_, typed_value.type_())
-                    .map_err(|e| convert_unify_error(e, typed_value.location()))?;
+                    .map_err(|error| convert_unify_error(error, typed_value.location()))?;
                 Ok(typed_value)
             })
         };
