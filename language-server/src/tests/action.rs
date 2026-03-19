@@ -12241,6 +12241,19 @@ type Wibble {
     );
 }
 
+#[test]
+fn add_missing_type_parameter_does_not_add_types_that_do_not_exist() {
+    assert_no_code_actions!(
+        ADD_MISSING_TYPE_PARAMETER,
+        r#"
+type Wibble {
+  Wibble(Wobble)
+}
+"#,
+        find_position_of("Wibble").nth_occurrence(2).to_selection()
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/5288
 #[test]
 fn extract_anonymous_function_without_variable_capture_1() {
