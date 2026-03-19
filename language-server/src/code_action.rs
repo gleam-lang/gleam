@@ -1200,11 +1200,15 @@ pub fn code_action_generate_type(
 
         // Insert the new type stub before the top-level definition that
         // contains the error, so it appears close to where it is used.
-        let insert_at =
-            definition_start_containing(&module.ast.definitions, location.start)
-                .unwrap_or(module.code.len() as u32);
-        let insert_range =
-            src_span_to_lsp_range(SrcSpan { start: insert_at, end: insert_at }, line_numbers);
+        let insert_at = definition_start_containing(&module.ast.definitions, location.start)
+            .unwrap_or(module.code.len() as u32);
+        let insert_range = src_span_to_lsp_range(
+            SrcSpan {
+                start: insert_at,
+                end: insert_at,
+            },
+            line_numbers,
+        );
 
         let new_text = if *arity == 0 {
             format!("type {name}\n\n")
@@ -1234,9 +1238,24 @@ fn definition_start_containing(definitions: &TypedDefinitions, position: u32) ->
         .functions
         .iter()
         .map(|function| function.full_location())
-        .chain(definitions.custom_types.iter().map(|custom_type| custom_type.full_location()))
-        .chain(definitions.type_aliases.iter().map(|type_alias| type_alias.location))
-        .chain(definitions.constants.iter().map(|constant| constant.location))
+        .chain(
+            definitions
+                .custom_types
+                .iter()
+                .map(|custom_type| custom_type.full_location()),
+        )
+        .chain(
+            definitions
+                .type_aliases
+                .iter()
+                .map(|type_alias| type_alias.location),
+        )
+        .chain(
+            definitions
+                .constants
+                .iter()
+                .map(|constant| constant.location),
+        )
         .filter(|span| span.start <= position && position <= span.end)
         .map(|span| span.start)
         .next()
