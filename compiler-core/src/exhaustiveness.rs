@@ -1494,7 +1494,7 @@ impl BitArrayTest {
                     } else {
                         succeeding_bits - test_bits
                     };
-                    if diff % 8u32 == BigInt::ZERO {
+                    if diff % 8 == BigInt::ZERO {
                         Confidence::Certain
                     } else {
                         Confidence::Uncertain
@@ -2145,16 +2145,16 @@ impl Decision {
                     .collect();
 
                 let choices = if matches!(*fallback_check, FallbackCheck::InfiniteCatchAll) {
-                    let choices: Vec<_> = choices
+                    let filtered: Vec<_> = choices
                         .into_iter()
                         .filter(|(_, decision)| decision != fallback.as_ref())
                         .collect();
 
-                    if choices.is_empty() {
+                    if filtered.is_empty() {
                         return *fallback;
                     }
 
-                    choices
+                    filtered
                 } else {
                     choices
                 };
@@ -2547,7 +2547,7 @@ impl<'a> Compiler<'a> {
                 // check on this variable (existing behavior).
                 .or_else(|| branch.checks.iter().position(|check| check.var == pivot_var));
 
-            let Some(index) = check_index else {
+            let Some(check_index) = check_index else {
                 // If the branch doesn't perform any check on the pivot variable, it means
                 // it could still match no matter what shape `pivot_var` has. So we must
                 // add it as a fallback branch, that is a branch that is still relevant
@@ -2556,7 +2556,7 @@ impl<'a> Compiler<'a> {
                 continue;
             };
 
-            let pattern_check = branch.checks.remove(index);
+            let pattern_check = branch.checks.remove(check_index);
 
             let checked_pattern = self.pattern(pattern_check.pattern);
 
@@ -3617,7 +3617,7 @@ impl CaseToCompile {
                     // identical CatchAllIsBytes tests for equivalent checks,
                     // allowing the simplify pass to collapse redundant branches.
                     let mut normalized = previous_end.clone();
-                    normalized.constant = &normalized.constant % 8u32;
+                    normalized.constant = &normalized.constant % 8;
                     tests.push_back(BitArrayTest::CatchAllIsBytes {
                         size_so_far: normalized,
                     });
