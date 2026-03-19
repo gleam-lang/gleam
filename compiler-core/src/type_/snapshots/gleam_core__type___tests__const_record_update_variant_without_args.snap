@@ -12,6 +12,7 @@ error: Invalid record constructor
   ┌─ /src/one/two.gleam:3:29
   │
 3 │         pub const status2 = Active(..status1)
-  │                             ^^^^^^ This is not a record constructor
+  │                             ^^^^^^ This constructor has no labelled fields
 
-Only record constructors can be used with the update syntax.
+Only constructors with at least one labelled field can be used with the
+update syntax.
