@@ -21,6 +21,10 @@
 
 ### Build tool
 
+- The package manager now has a specific error and automatic re-authentication
+  flow for when a Hex session has been revoked or has expired.
+  ([Sahil Upasane](https://github.com/404salad))
+
 - When publishing, the package manager now uses the full term instead of the
   shorthand "MFA" in the prompt and error message.
   ([Luka Ivanović](https://github.com/luka-hash))
