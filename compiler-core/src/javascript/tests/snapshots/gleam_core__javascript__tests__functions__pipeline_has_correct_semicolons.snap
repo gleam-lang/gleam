@@ -1,22 +1,18 @@
 ---
-source: compiler-core/src/javascript/tests/echo.rs
-expression: "\npub fn main() {\n  [1, 2, 3]\n  |> echo\n  |> wibble\n}\n\npub fn wibble(n) { n }\n"
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\npub fn main() {\n  1 |> echo |> fn(x) { { x + 1 } * 2 }\n  { 1 + 2 } * 3\n}\n"
 ---
 ----- SOURCE CODE
 
 pub fn main() {
-  [1, 2, 3]
-  |> echo
-  |> wibble
+  1 |> echo |> fn(x) { { x + 1 } * 2 }
+  { 1 + 2 } * 3
 }
-
-pub fn wibble(n) { n }
 
 
 ----- COMPILED JAVASCRIPT
 import * as $stdlib$dict from "../../gleam_stdlib/gleam/dict.mjs";
 import {
-  toList,
   Empty as $Empty,
   NonEmpty as $NonEmpty,
   CustomType as $CustomType,
@@ -27,14 +23,11 @@ import {
   UtfCodepoint as $UtfCodepoint,
 } from "../gleam.mjs";
 
-export function wibble(n) {
-  return n;
-}
-
 export function main() {
-  let _pipe = toList([1, 2, 3]);
-  echo(_pipe, undefined, "src/module.gleam", 4);
-  return wibble(_pipe);
+  let _pipe = 1;
+  echo(_pipe, undefined, "src/module.gleam", 3);
+  (_pipe + 1) * 2;
+  return (1 + 2) * 3;
 }
 
 // ...omitted code from `templates/echo.mjs`...

@@ -33,7 +33,7 @@ export function wibble(n) {
 
 export function main() {
   let _pipe = toList([1, 2, 3]);
-  echo(_pipe, "message!!", "src/module.gleam", 4)
+  echo(_pipe, "message!!", "src/module.gleam", 4);
   return wibble(_pipe);
 }
 
