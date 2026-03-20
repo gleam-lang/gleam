@@ -596,3 +596,28 @@ pub fn main() { 1 }
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5488
+#[test]
+fn pipeline_has_correct_semicolons() {
+    assert_js!(
+        "
+pub fn main() {
+  1 |> echo |> fn(x) { { x + 1 } * 2 }
+  { 1 + 2 } * 3
+}
+"
+    );
+}
+
+#[test]
+fn pipeline_with_final_has_correct_semicolon() {
+    assert_js!(
+        "
+pub fn main() {
+  1 |> echo
+  { 1 + 2 } * 3
+}
+"
+    );
+}

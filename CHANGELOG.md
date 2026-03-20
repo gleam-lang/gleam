@@ -76,6 +76,10 @@
   instead of raising an error.
   ([Lucy McPhail](https://github.com/lucymcphail))
 
+- Fixed a bug where semicolons would not be properly added to pipelines in
+  generated JavaScript code, leading to runtime errors in certain circumstances.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.15.1 - 2026-03-17
 
 ### Bug fixes
