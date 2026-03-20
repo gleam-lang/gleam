@@ -12,7 +12,6 @@ use crate::{
     },
     format::break_block,
     javascript::{
-        create_cursor_position_observer,
         expression::{eco_string_int, string},
         maybe_escape_property,
     },
@@ -84,11 +83,7 @@ pub fn case<'a>(
     docvec![
         subjects
             .first()
-            .map(|subject| create_cursor_position_observer(
-                &expression_generator.source_map_builder.0,
-                expression_generator.line_numbers,
-                subject.location().start
-            ))
+            .map(|subject| expression_generator.source_map_tracker(subject.location().start))
             .unwrap_or_else(nil),
         assignments_to_doc(&mut *expression_generator, assignments),
         decision
@@ -343,12 +338,12 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
                         subject_location, ..
                     } => subject_location,
                 };
+                let source_map_tracker = self
+                    .variables
+                    .expression_generator
+                    .source_map_tracker(location.start);
                 let bindings = docvec![
-                    create_cursor_position_observer(
-                        &self.variables.expression_generator.source_map_builder.0,
-                        self.variables.expression_generator.line_numbers,
-                        location.start
-                    ),
+                    source_map_tracker,
                     self.variables.bindings_doc(&body.bindings)
                 ];
                 let body = self.body_expression(body.clause_index);
@@ -1855,11 +1850,7 @@ fn assignments_to_doc<'a>(
             continue;
         };
         assignments_docs.push(docvec![
-            create_cursor_position_observer(
-                &expression_generator.source_map_builder.0,
-                expression_generator.line_numbers,
-                location.start
-            ),
+            expression_generator.source_map_tracker(location.start),
             let_doc(name, value),
             line()
         ])

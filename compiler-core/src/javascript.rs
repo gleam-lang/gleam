@@ -498,11 +498,7 @@ impl<'a> Generator<'a> {
         .group();
 
         docvec![
-            create_cursor_position_observer(
-                &self.source_map_builder.0,
-                self.line_numbers,
-                constructor.location.start
-            ),
+            self.source_map_tracker(constructor.location.start),
             "export const ",
             type_name,
             "$",
@@ -528,11 +524,7 @@ impl<'a> Generator<'a> {
         .group();
 
         docvec![
-            create_cursor_position_observer(
-                &self.source_map_builder.0,
-                self.line_numbers,
-                constructor.location.start
-            ),
+            self.source_map_tracker(constructor.location.start),
             "export const ",
             type_name,
             "$is",
@@ -576,11 +568,7 @@ impl<'a> Generator<'a> {
 
                 functions.push(docvec![
                     line(),
-                    create_cursor_position_observer(
-                        &self.source_map_builder.0,
-                        self.line_numbers,
-                        constructor.location.start
-                    ),
+                    self.source_map_tracker(constructor.location.start),
                     "export const ",
                     function_name,
                     " = (value) =>",
@@ -592,11 +580,7 @@ impl<'a> Generator<'a> {
 
             functions.push(docvec![
                 line(),
-                create_cursor_position_observer(
-                    &self.source_map_builder.0,
-                    self.line_numbers,
-                    constructor.location.start
-                ),
+                self.source_map_tracker(constructor.location.start),
                 "export const ",
                 function_name,
                 " = (value) =>",
@@ -653,11 +637,8 @@ impl<'a> Generator<'a> {
             "class "
         };
 
-        let sourcemap_cursor_position_observer = create_cursor_position_observer(
-            &self.source_map_builder.0,
-            self.line_numbers,
-            constructor.location.start,
-        );
+        let sourcemap_cursor_position_observer =
+            self.source_map_tracker(constructor.location.start);
 
         let head = docvec![
             sourcemap_cursor_position_observer,
@@ -883,11 +864,7 @@ impl<'a> Generator<'a> {
 
         Some(docvec![
             jsdoc,
-            create_cursor_position_observer(
-                &self.source_map_builder.0,
-                self.line_numbers,
-                location.start
-            ),
+            self.source_map_tracker(location.start),
             head,
             maybe_escape_identifier(name),
             " = ",
@@ -921,11 +898,7 @@ impl<'a> Generator<'a> {
         if !function.implementations.supports(Target::JavaScript) {
             return None;
         }
-        let function_source_mapping = create_cursor_position_observer(
-            &self.source_map_builder.0,
-            self.line_numbers,
-            function.location.start,
-        );
+        let function_source_mapping = self.source_map_tracker(function.location.start);
 
         let (_, name) = function
             .name
@@ -999,6 +972,10 @@ impl<'a> Generator<'a> {
         }
 
         docvec!["const FILEPATH = ", self.src_path.clone(), ';', lines(2)]
+    }
+
+    fn source_map_tracker(&self, start_index: u32) -> Document<'a> {
+        create_cursor_position_observer(&self.source_map_builder.0, self.line_numbers, start_index)
     }
 }
 
