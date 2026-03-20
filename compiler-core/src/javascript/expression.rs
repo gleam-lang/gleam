@@ -177,7 +177,7 @@ pub(crate) struct Generator<'module, 'ast> {
     /// in the same block!
     pub let_assert_always_panics: bool,
 
-    pub source_map_builder: DebugIgnore<Option<Rc<RefCell<sourcemap::SourceMapBuilder>>>>,
+    pub source_map_builder: Option<Rc<RefCell<DebugIgnore<sourcemap::SourceMapBuilder>>>>,
 }
 
 impl<'module, 'a> Generator<'module, 'a> {
@@ -190,7 +190,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         function_arguments: Vec<Option<&'module EcoString>>,
         tracker: &'module mut UsageTracker,
         mut current_scope_vars: im::HashMap<EcoString, usize>,
-        source_map_builder: DebugIgnore<Option<Rc<RefCell<sourcemap::SourceMapBuilder>>>>,
+        source_map_builder: Option<Rc<RefCell<DebugIgnore<sourcemap::SourceMapBuilder>>>>,
     ) -> Self {
         let mut current_function = CurrentFunction::Module;
         for &name in function_arguments.iter().flatten() {
@@ -2481,7 +2481,7 @@ impl<'module, 'a> Generator<'module, 'a> {
     }
 
     pub fn source_map_tracker(&mut self, start_index: u32) -> Document<'a> {
-        create_cursor_position_observer(&self.source_map_builder.0, self.line_numbers, start_index)
+        create_cursor_position_observer(&self.source_map_builder, self.line_numbers, start_index)
     }
 }
 

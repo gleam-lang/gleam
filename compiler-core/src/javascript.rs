@@ -60,28 +60,21 @@ impl CursorPositionObserver for NullCursorPositionObserver {
 /// to the source map builder. When notified it will take the destination
 /// location and map it to the initial source location given when
 /// creating the observer.
+#[derive(Debug)]
 pub struct SourceMapCursorPositionObserver {
     source_start_location: LineColumn,
-    source_map_builder: Rc<RefCell<sourcemap::SourceMapBuilder>>,
+    source_map_builder: Rc<RefCell<DebugIgnore<sourcemap::SourceMapBuilder>>>,
 }
 
 impl SourceMapCursorPositionObserver {
     pub fn new(
         source_start_location: LineColumn,
-        source_map_builder: Rc<RefCell<sourcemap::SourceMapBuilder>>,
+        source_map_builder: Rc<RefCell<DebugIgnore<sourcemap::SourceMapBuilder>>>,
     ) -> Self {
         Self {
             source_start_location,
             source_map_builder,
         }
-    }
-}
-
-impl std::fmt::Debug for SourceMapCursorPositionObserver {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SourceMapCursorPositionObserver")
-            .field("source_start_location", &self.source_start_location)
-            .finish()
     }
 }
 
@@ -111,7 +104,7 @@ pub struct Generator<'a> {
     current_module_name_segments_count: usize,
     typescript: TypeScriptDeclarations,
     // Debug ignored since SourceMapBuilder doesn't implement debug
-    source_map_builder: DebugIgnore<Option<Rc<RefCell<sourcemap::SourceMapBuilder>>>>,
+    source_map_builder: Option<Rc<RefCell<DebugIgnore<sourcemap::SourceMapBuilder>>>>,
     stdlib_package: StdlibPackage,
     /// Relative path to the module, surrounded in `"`s to make it a string, and with `\`s escaped
     /// to `\\`.
@@ -155,9 +148,9 @@ impl<'a> Generator<'a> {
                 let mut source_map_builder =
                     sourcemap::SourceMapBuilder::new(Some(&output_path.clone()));
                 let _ = source_map_builder.add_source(src_path_str);
-                DebugIgnore(Some(Rc::new(RefCell::new(source_map_builder))))
+                Some(Rc::new(RefCell::new(DebugIgnore(source_map_builder))))
             } else {
-                DebugIgnore(None)
+                None
             },
             stdlib_package,
         }
@@ -181,7 +174,7 @@ impl<'a> Generator<'a> {
     }
 
     fn sourcemap_reference(&self) -> Document<'a> {
-        match self.source_map_builder.0 {
+        match self.source_map_builder {
             None => "".to_doc(),
             Some(_) => {
                 // Get the name of the module relative the directory (similar to basename)
@@ -975,7 +968,7 @@ impl<'a> Generator<'a> {
     }
 
     fn source_map_tracker(&self, start_index: u32) -> Document<'a> {
-        create_cursor_position_observer(&self.source_map_builder.0, self.line_numbers, start_index)
+        create_cursor_position_observer(&self.source_map_builder, self.line_numbers, start_index)
     }
 }
 
@@ -1014,7 +1007,7 @@ pub fn module(config: ModuleConfig<'_>) -> (String, Option<SourceMap>) {
     let (output, sourcemap_builder) = {
         let mut generator = Generator::new(config);
         let document = generator.compile();
-        let builder = generator.source_map_builder.0;
+        let builder = generator.source_map_builder;
         (document.to_pretty_string(80), builder)
     };
     let source_map = sourcemap_builder.map(|builder| {
@@ -1022,6 +1015,7 @@ pub fn module(config: ModuleConfig<'_>) -> (String, Option<SourceMap>) {
         Rc::try_unwrap(builder)
             .unwrap_or_else(|_| panic!("Failed to take ownership of sourcemap builder"))
             .into_inner()
+            .0
             .into_sourcemap()
     });
     (output, source_map)
@@ -1033,7 +1027,7 @@ pub fn ts_declaration(module: &TypedModule) -> String {
 }
 
 fn create_cursor_position_observer<'a>(
-    builder: &Option<Rc<RefCell<sourcemap::SourceMapBuilder>>>,
+    builder: &Option<Rc<RefCell<DebugIgnore<sourcemap::SourceMapBuilder>>>>,
     line_numbers: &LineNumbers,
     start_index: u32,
 ) -> Document<'a> {
