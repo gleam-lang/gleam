@@ -3,22 +3,23 @@ source: compiler-core/src/javascript/tests/sourcemaps.rs
 expression: "\n/// my function\npub fn wibble() {\n  let wibble = \"hello\\nworld\"\n  wibble <> \"!\"\n}"
 ---
 ----- SOURCE CODE
-
-/// my function
-pub fn wibble() {
-  let wibble = "hello\nworld"
-  wibble <> "!"
-}
+0 | 
+1 | /// my function
+2 | pub fn wibble() {
+3 |   let wibble = "hello\nworld"
+4 |   wibble <> "!"
+5 | }
 
 ----- COMPILED JAVASCRIPT
-//# sourceMappingURL=mod.mjs.map
-/**
- * my function
- */
-export function wibble() {
-  let wibble$1 = "hello\nworld";
-  return wibble$1 + "!";
-}
+0 | //# sourceMappingURL=mod.mjs.map
+1 | /**
+2 |  * my function
+3 |  */
+4 | export function wibble() {
+5 |   let wibble$1 = "hello\nworld";
+6 |   return wibble$1 + "!";
+7 | }
+
 ----- SOURCE MAP
 Mappings Raw:
 2:0 -> 4:0

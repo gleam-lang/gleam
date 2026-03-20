@@ -88,24 +88,15 @@ macro_rules! assert_js {
 
 #[macro_export]
 macro_rules! assert_source_map {
-    ($(($name:literal, $module_src:literal)),+, $src:literal $(,)?) => {{        let (compiled, source_map) =
-            $crate::javascript::tests::compile_js_with_source_map($src, vec![$(($crate::javascript::tests::CURRENT_PACKAGE, $name, $module_src)),*]);
-        let mut output = String::from("----- SOURCE CODE\n");
-        for (name, src) in [$(($name, $module_src)),*] {
-            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
-        }
-        let source_map_string = $crate::javascript::tests::source_map_to_string(source_map);
-        output.push_str(&format!("-- main.gleam\n{}\n\n----- COMPILED JAVASCRIPT\n{compiled}----- SOURCE MAP\n{source_map_string}", $src));
-        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
-    }};
-
     ($src:expr $(,)?) => {{
         let (compiled, source_map) =
             $crate::javascript::tests::compile_js_with_source_map($src, vec![]);
 
         let output = format!(
-            "----- SOURCE CODE\n{}\n\n----- COMPILED JAVASCRIPT\n{}----- SOURCE MAP\n{}",
-            $src, compiled, crate::javascript::tests::source_map_to_string(source_map)
+            "----- SOURCE CODE\n{}\n\n----- COMPILED JAVASCRIPT\n{}\n\n----- SOURCE MAP\n{}",
+            $crate::javascript::tests::append_line_numbers($src),
+            $crate::javascript::tests::append_line_numbers(&compiled),
+            $crate::javascript::tests::source_map_to_string(source_map)
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
@@ -264,6 +255,15 @@ pub fn compile_js_with_source_map(src: &str, deps: Vec<(&str, &str, &str)>) -> (
 pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
     let ast = compile(src, deps);
     ts_declaration(&ast)
+}
+
+// Append zero indexed line numbers to the code for easier reading of source maps.
+pub fn append_line_numbers(src: &str) -> String {
+    src.lines()
+        .enumerate()
+        .map(|(line, content)| format!("{} | {}", line, content))
+        .collect::<Vec<String>>()
+        .join("\n")
 }
 
 // Pretty-print a sourcemap to a string that might be readable by humans.
