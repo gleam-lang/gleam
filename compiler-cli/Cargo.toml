@@ -12,8 +12,6 @@ gleam-core = { path = "../compiler-core" }
 gleam-language-server = { path = "../language-server" }
 # OS SIGINT and SIGTERM signal handling
 ctrlc = { version = "3", features = ["termination"] }
-# Command line interface
-clap = { version = "4", features = ["derive"] }
 # Recursively traversing directories
 ignore = "0"
 # Allow user to type in sensitive information without showing it in the shell
@@ -39,6 +37,7 @@ same-file = "1"
 async-trait.workspace = true
 base16.workspace = true
 camino = { workspace = true, features = ["serde1"] }
+clap = { workspace = true, features = ["derive"] }
 debug-ignore.workspace = true
 ecow.workspace = true
 flate2.workspace = true
