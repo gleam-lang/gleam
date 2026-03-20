@@ -51,6 +51,10 @@
 
 ### Build tool
 
+- The `gleam hex owner add` command has been added, which allows adding
+  owners to the package.
+  ([Niklas Kirschall](https://github.com/nkxxll))
+
 - When publishing, the package manager now uses the full term instead of the
   shorthand "MFA" in the prompt and error message.
   ([Luka Ivanović](https://github.com/luka-hash))

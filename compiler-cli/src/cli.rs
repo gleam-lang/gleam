@@ -199,6 +199,14 @@ pub(crate) fn print_transferred_ownership() {
     print_colourful_prefix("Transferred", "ownership");
 }
 
+pub(crate) fn print_adding_owner() {
+    print_colourful_prefix("Adding", "owner");
+}
+
+pub(crate) fn print_added_owner() {
+    print_colourful_prefix("Added", "owner");
+}
+
 fn print_packages_downloaded(start: Instant, count: usize) {
     let elapsed = seconds(start.elapsed());
     let msg = match count {
