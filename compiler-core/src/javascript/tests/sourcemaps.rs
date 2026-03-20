@@ -24,6 +24,31 @@ pub fn wibble() {
 }
 
 #[test]
+fn sourcemap_function_definition_with_string_with_newline_escaped() {
+    assert_source_map!(
+        "
+/// my function
+pub fn wibble() {
+  let wibble = \"hello\\nworld\"
+  wibble <> \"!\"
+}"
+    )
+}
+
+#[test]
+fn sourcemap_function_definition_with_string_with_newline() {
+    assert_source_map!(
+        "
+/// my function
+pub fn wibble() {
+  let wibble = \"hello
+world\"
+  wibble <> \"!\"
+}"
+    )
+}
+
+#[test]
 fn sourcemap_custom_type_definition() {
     assert_source_map!(
         "
