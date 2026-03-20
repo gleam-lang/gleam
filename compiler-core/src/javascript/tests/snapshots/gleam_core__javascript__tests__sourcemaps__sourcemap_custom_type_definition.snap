@@ -3,51 +3,51 @@ source: compiler-core/src/javascript/tests/sourcemaps.rs
 expression: "\n/// my custom type\npub type Wibble {\n  /// Wibble\n  Wibble\n  /// Wobble\n  Wobble(field: Int)\n  /// Wabble\n  Wabble(Wibble)\n}"
 ---
 ----- SOURCE CODE
-0 | 
-1 | /// my custom type
-2 | pub type Wibble {
-3 |   /// Wibble
-4 |   Wibble
-5 |   /// Wobble
-6 |   Wobble(field: Int)
-7 |   /// Wabble
-8 |   Wabble(Wibble)
-9 | }
+0 |
+1 |/// my custom type
+2 |pub type Wibble {
+3 |  /// Wibble
+4 |  Wibble
+5 |  /// Wobble
+6 |  Wobble(field: Int)
+7 |  /// Wabble
+8 |  Wabble(Wibble)
+9 |}
 
 ----- COMPILED JAVASCRIPT
-0 | //# sourceMappingURL=mod.mjs.map
-1 | import { CustomType as $CustomType } from "../gleam.mjs";
-2 | 
-3 | export class Wibble extends $CustomType {}
-4 | export const Wibble$Wibble = () => new Wibble();
-5 | export const Wibble$isWibble = (value) => value instanceof Wibble;
-6 | 
-7 | /**
-8 |  * Wobble
-9 |  */
-10 | export class Wobble extends $CustomType {
-11 |   constructor(field) {
-12 |     super();
-13 |     this.field = field;
-14 |   }
-15 | }
-16 | export const Wibble$Wobble = (field) => new Wobble(field);
-17 | export const Wibble$isWobble = (value) => value instanceof Wobble;
-18 | export const Wibble$Wobble$field = (value) => value.field;
-19 | export const Wibble$Wobble$0 = (value) => value.field;
-20 | 
-21 | /**
-22 |  * Wabble
-23 |  */
-24 | export class Wabble extends $CustomType {
-25 |   constructor($0) {
-26 |     super();
-27 |     this[0] = $0;
-28 |   }
-29 | }
-30 | export const Wibble$Wabble = ($0) => new Wabble($0);
-31 | export const Wibble$isWabble = (value) => value instanceof Wabble;
-32 | export const Wibble$Wabble$0 = (value) => value[0];
+0 |//# sourceMappingURL=mod.mjs.map
+1 |import { CustomType as $CustomType } from "../gleam.mjs";
+2 |
+3 |export class Wibble extends $CustomType {}
+4 |export const Wibble$Wibble = () => new Wibble();
+5 |export const Wibble$isWibble = (value) => value instanceof Wibble;
+6 |
+7 |/**
+8 | * Wobble
+9 | */
+10 |export class Wobble extends $CustomType {
+11 |  constructor(field) {
+12 |    super();
+13 |    this.field = field;
+14 |  }
+15 |}
+16 |export const Wibble$Wobble = (field) => new Wobble(field);
+17 |export const Wibble$isWobble = (value) => value instanceof Wobble;
+18 |export const Wibble$Wobble$field = (value) => value.field;
+19 |export const Wibble$Wobble$0 = (value) => value.field;
+20 |
+21 |/**
+22 | * Wabble
+23 | */
+24 |export class Wabble extends $CustomType {
+25 |  constructor($0) {
+26 |    super();
+27 |    this[0] = $0;
+28 |  }
+29 |}
+30 |export const Wibble$Wabble = ($0) => new Wabble($0);
+31 |export const Wibble$isWabble = (value) => value instanceof Wabble;
+32 |export const Wibble$Wabble$0 = (value) => value[0];
 
 ----- SOURCE MAP
 Mappings Raw:

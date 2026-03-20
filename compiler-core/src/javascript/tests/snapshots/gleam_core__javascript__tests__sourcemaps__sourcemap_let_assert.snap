@@ -3,20 +3,20 @@ source: compiler-core/src/javascript/tests/sourcemaps.rs
 expression: "\npub fn go(x) {\n  let assert #(wibble, wobble) = x\n}\n"
 ---
 ----- SOURCE CODE
-0 | 
-1 | pub fn go(x) {
-2 |   let assert #(wibble, wobble) = x
-3 | }
+0 |
+1 |pub fn go(x) {
+2 |  let assert #(wibble, wobble) = x
+3 |}
 
 ----- COMPILED JAVASCRIPT
-0 | //# sourceMappingURL=mod.mjs.map
-1 | export function go(x) {
-2 |   let wibble;
-3 |   let wobble;
-4 |   wibble = x[0];
-5 |   wobble = x[1];
-6 |   return x;
-7 | }
+0 |//# sourceMappingURL=mod.mjs.map
+1 |export function go(x) {
+2 |  let wibble;
+3 |  let wobble;
+4 |  wibble = x[0];
+5 |  wobble = x[1];
+6 |  return x;
+7 |}
 
 ----- SOURCE MAP
 Mappings Raw:

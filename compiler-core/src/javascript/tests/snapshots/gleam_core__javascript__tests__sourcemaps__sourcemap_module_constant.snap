@@ -3,25 +3,25 @@ source: compiler-core/src/javascript/tests/sourcemaps.rs
 expression: "\n/// my constant\npub const wibble = 1\n/// wobble\nconst wobble = 2\n/// wabble\npub const wabble = 3"
 ---
 ----- SOURCE CODE
-0 | 
-1 | /// my constant
-2 | pub const wibble = 1
-3 | /// wobble
-4 | const wobble = 2
-5 | /// wabble
-6 | pub const wabble = 3
+0 |
+1 |/// my constant
+2 |pub const wibble = 1
+3 |/// wobble
+4 |const wobble = 2
+5 |/// wabble
+6 |pub const wabble = 3
 
 ----- COMPILED JAVASCRIPT
-0 | //# sourceMappingURL=mod.mjs.map
-1 | /**
-2 |  * my constant
-3 |  */
-4 | export const wibble = 1;
-5 | 
-6 | /**
-7 |  * wabble
-8 |  */
-9 | export const wabble = 3;
+0 |//# sourceMappingURL=mod.mjs.map
+1 |/**
+2 | * my constant
+3 | */
+4 |export const wibble = 1;
+5 |
+6 |/**
+7 | * wabble
+8 | */
+9 |export const wabble = 3;
 
 ----- SOURCE MAP
 Mappings Raw:

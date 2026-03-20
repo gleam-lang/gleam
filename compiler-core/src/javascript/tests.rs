@@ -261,7 +261,7 @@ pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
 pub fn append_line_numbers(src: &str) -> String {
     src.lines()
         .enumerate()
-        .map(|(line, content)| format!("{} | {}", line, content))
+        .map(|(line, content)| format!("{} |{}", line, content))
         .collect::<Vec<String>>()
         .join("\n")
 }
