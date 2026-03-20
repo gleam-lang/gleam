@@ -256,8 +256,7 @@ impl Warning {
                 text: wrap(
                     "Module names must begin with a lowercase letter and \
 contain only lowercase alphanumeric characters or underscores.",
-                )
-                .into(),
+                ),
                 level: diagnostic::Level::Warning,
                 location: None,
                 hint: Some(wrap_format!(
@@ -1365,7 +1364,7 @@ resulting in the value {truncated_into}."
 
                     Diagnostic {
                         title: "Truncated bit array segment".into(),
-                        text: text,
+                        text,
                         hint: None,
                         level: diagnostic::Level::Warning,
                         location: Some(Location {
