@@ -3307,7 +3307,12 @@ impl<'a> TypePrinter<'a> {
         }
     }
 
-    fn print_type_app(&self, module: &str, name: &str, arguments: &[Arc<Type>]) -> Document<'static> {
+    fn print_type_app(
+        &self,
+        module: &str,
+        name: &str,
+        arguments: &[Arc<Type>],
+    ) -> Document<'static> {
         let arguments = join(
             arguments.iter().map(|argument| self.print(argument)),
             ", ".to_doc(),

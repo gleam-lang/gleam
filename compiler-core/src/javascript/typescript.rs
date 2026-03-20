@@ -887,7 +887,11 @@ impl<'a> TypeScriptGenerator<'a> {
         eco_format!("${name}")
     }
 
-    fn do_print(&mut self, type_: &Type, generic_printing: GenericPrinting<'_>) -> Document<'static> {
+    fn do_print(
+        &mut self,
+        type_: &Type,
+        generic_printing: GenericPrinting<'_>,
+    ) -> Document<'static> {
         match type_ {
             Type::Var { type_ } => self.print_var(&type_.borrow(), generic_printing),
 
