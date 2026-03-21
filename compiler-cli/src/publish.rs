@@ -758,19 +758,19 @@ impl ReleaseMetadata<'_> {
     pub fn as_erlang(&self) -> String {
         fn link(link: &(&str, http::Uri)) -> String {
             format!(
-                "\n  {{<<\"{name}\">>, <<\"{url}\">>}}",
+                "\n  {{<<\"{name}\"/utf8>>, <<\"{url}\"/utf8>>}}",
                 name = link.0,
                 url = link.1
             )
         }
         fn file(name: impl AsRef<Utf8Path>) -> String {
-            format!("\n  <<\"{name}\">>", name = name.as_ref())
+            format!("\n  <<\"{name}\"/utf8>>", name = name.as_ref())
         }
 
         format!(
-            r#"{{<<"name">>, <<"{name}">>}}.
-{{<<"app">>, <<"{name}">>}}.
-{{<<"version">>, <<"{version}">>}}.
+            r#"{{<<"name">>, <<"{name}"/utf8>>}}.
+{{<<"app">>, <<"{name}"/utf8>>}}.
+{{<<"version">>, <<"{version}"/utf8>>}}.
 {{<<"description">>, <<"{description}"/utf8>>}}.
 {{<<"licenses">>, [{licenses}]}}.
 {{<<"build_tools">>, [{build_tools}]}}.
@@ -815,10 +815,10 @@ impl ReleaseRequirement<'_> {
     pub fn as_erlang(&self) -> String {
         format!(
             r#"
-  {{<<"{app}">>, [
-    {{<<"app">>, <<"{app}">>}},
+  {{<<"{app}"/utf8>>, [
+  {{<<"app">>, <<"{app}"/utf8>>}},
     {{<<"optional">>, false}},
-    {{<<"requirement">>, <<"{requirement}">>}}
+    {{<<"requirement">>, <<"{requirement}"/utf8>>}}
   ]}}"#,
             app = self.name,
             requirement = self.requirement,
@@ -871,35 +871,35 @@ fn release_metadata_as_erlang() {
     };
     assert_eq!(
         meta.as_erlang(),
-        r#"{<<"name">>, <<"myapp">>}.
-{<<"app">>, <<"myapp">>}.
-{<<"version">>, <<"1.2.3">>}.
+        r#"{<<"name">>, <<"myapp"/utf8>>}.
+{<<"app">>, <<"myapp"/utf8>>}.
+{<<"version">>, <<"1.2.3"/utf8>>}.
 {<<"description">>, <<"description goes here 🌈"/utf8>>}.
-{<<"licenses">>, [<<"MIT">>, <<"MPL-2.0">>]}.
-{<<"build_tools">>, [<<"gleam">>, <<"rebar3">>]}.
+{<<"licenses">>, [<<"MIT"/utf8>>, <<"MPL-2.0"/utf8>>]}.
+{<<"build_tools">>, [<<"gleam"/utf8>>, <<"rebar3"/utf8>>]}.
 {<<"links">>, [
-  {<<"homepage">>, <<"https://gleam.run/">>},
-  {<<"github">>, <<"https://github.com/lpil/myapp">>}
+  {<<"homepage"/utf8>>, <<"https://gleam.run/"/utf8>>},
+  {<<"github"/utf8>>, <<"https://github.com/lpil/myapp"/utf8>>}
 ]}.
 {<<"requirements">>, [
-  {<<"wibble">>, [
-    {<<"app">>, <<"wibble">>},
+  {<<"wibble"/utf8>>, [
+  {<<"app">>, <<"wibble"/utf8>>},
     {<<"optional">>, false},
-    {<<"requirement">>, <<"~> 1.2.3 or >= 5.0.0">>}
+    {<<"requirement">>, <<"~> 1.2.3 or >= 5.0.0"/utf8>>}
   ]},
-  {<<"wobble">>, [
-    {<<"app">>, <<"wobble">>},
+  {<<"wobble"/utf8>>, [
+  {<<"app">>, <<"wobble"/utf8>>},
     {<<"optional">>, false},
-    {<<"requirement">>, <<"~> 1.2">>}
+    {<<"requirement">>, <<"~> 1.2"/utf8>>}
   ]}
 ]}.
 {<<"files">>, [
-  <<"gleam.toml">>,
-  <<"src/myapp.app">>,
-  <<"src/thingy.erl">>,
-  <<"src/thingy.gleam">>,
-  <<"src/whatever.erl">>,
-  <<"src/whatever.gleam">>
+  <<"gleam.toml"/utf8>>,
+  <<"src/myapp.app"/utf8>>,
+  <<"src/thingy.erl"/utf8>>,
+  <<"src/thingy.gleam"/utf8>>,
+  <<"src/whatever.erl"/utf8>>,
+  <<"src/whatever.gleam"/utf8>>
 ]}.
 "#
         .to_string()
@@ -939,7 +939,7 @@ fn prevent_publish_git_dependency() {
 }
 
 fn quotes(x: &str) -> String {
-    format!(r#"<<"{x}">>"#)
+    format!(r#"<<"{x}"/utf8>>"#)
 }
 
 #[test]
