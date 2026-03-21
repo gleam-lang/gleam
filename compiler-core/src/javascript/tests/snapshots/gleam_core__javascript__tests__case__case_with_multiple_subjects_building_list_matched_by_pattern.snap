@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
+assertion_line: 804
 expression: "pub fn go(n, x) {\n   case n, x {\n     1, [] -> []\n     _, [a, b] -> [a, b]\n     3, [1, ..rest] -> [1, ..rest]\n     _, _ -> x\n   }\n}"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn go(n, x) {

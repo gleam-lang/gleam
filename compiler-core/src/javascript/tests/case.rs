@@ -943,3 +943,22 @@ pub fn go() {
 }"#
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/5467
+#[test]
+fn no_duplicate_let_after_directly_matching_case() {
+    assert_js!(
+        r#"
+pub fn go() {
+  let x =
+    case #(1, 2) {
+      #(1, b) -> b
+      #(_, b) -> b
+    }
+
+  let #(a, _b) = #(x, 3)
+
+  a
+}"#
+    )
+}

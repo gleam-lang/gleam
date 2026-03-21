@@ -391,7 +391,47 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             if let FallbackCheck::RuntimeCheck { check } = fallback_check {
                 self.variables.record_check_assignments(var, check);
             }
-            return self.inside_new_scope(|this| this.decision(fallback));
+
+            // We can't use `inside_new_scope` here: it resets the `$N`
+            // variable counter, but the code we generate for this path goes
+            // directly into the enclosing JavaScript scope (there's no
+            // wrapping `if-else` block). If we reset the counter, any `$N`
+            // variables introduced here could be redeclared later on,
+            // resulting in a duplicate `let` error at runtime.
+            // So we save and restore scope state by hand, making sure to
+            // keep the counter at the value it reached inside the fallback.
+            let old_scope = self
+                .variables
+                .expression_generator
+                .current_scope_vars
+                .clone();
+            let old_names = self.variables.scoped_variable_names.clone();
+            let old_segments = self.variables.segment_values.clone();
+            let old_segment_names = self.variables.scoped_segment_names.clone();
+
+            let result = self.decision(fallback);
+
+            // Grab the counter before we throw it away with the restore.
+            let assignment_var: EcoString = ASSIGNMENT_VAR.into();
+            let inner_counter = self
+                .variables
+                .expression_generator
+                .current_scope_vars
+                .get(&assignment_var)
+                .copied();
+            self.variables.expression_generator.current_scope_vars = old_scope;
+            if let Some(n) = inner_counter {
+                let _ = self
+                    .variables
+                    .expression_generator
+                    .current_scope_vars
+                    .insert(assignment_var, n);
+            }
+
+            self.variables.scoped_variable_names = old_names;
+            self.variables.segment_values = old_segments;
+            self.variables.scoped_segment_names = old_segment_names;
+            return result;
         }
 
         // Otherwise we'll have to generate a series of if-else to check which

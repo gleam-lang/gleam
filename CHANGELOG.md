@@ -110,6 +110,11 @@
   generated JavaScript code, leading to runtime errors in certain circumstances.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the JavaScript code generator could produce duplicate `let`
+  declarations for internal variables after a `case` expression whose subject
+  directly matches one of the branches.
+  ([Eyup Can Akman](https://github.com/eyupcanakman))
+
 ## v1.15.1 - 2026-03-17
 
 ### Bug fixes
