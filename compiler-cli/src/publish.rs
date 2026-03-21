@@ -29,7 +29,8 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
 
     let should_publish = check_for_gleam_prefix(&config)?
         && check_for_version_zero(&config)?
-        && check_repo_url(&config, i_am_sure)?;
+        && check_repo_url(&config, i_am_sure)?
+        && check_for_non_ascii_characters(&config)?;
 
     check_for_invalid_readme(&config, paths)?;
 
@@ -570,6 +571,45 @@ fn check_config_for_publishing(config: &PackageConfig) -> Result<()> {
     } else {
         Ok(())
     }
+}
+
+/// Check if a string contains non-ASCII characters
+fn contains_non_ascii(s: &str) -> bool {
+    s.chars().any(|c| c > '\u{7F}')
+}
+
+/// Warns if the package description or name contains non-ASCII characters.
+/// Hex.pm does not support Unicode in the title or description fields.
+fn check_for_non_ascii_characters(config: &PackageConfig) -> Result<bool, Error> {
+    let has_non_ascii_name = contains_non_ascii(&config.name);
+    let has_non_ascii_description = contains_non_ascii(&config.description);
+
+    if has_non_ascii_name || has_non_ascii_description {
+        println!(
+            "WARNING: Your package contains non-ASCII characters.\n\n\
+            Hex.pm does not support Unicode characters in the package name or \
+            description fields. Publishing may fail with a 500 Internal Server Error.\n"
+        );
+
+        if has_non_ascii_name {
+            println!("  Package name: {}", config.name);
+        }
+        if has_non_ascii_description {
+            let preview = if config.description.len() > 50 {
+                format!("{}...", &config.description[..50])
+            } else {
+                config.description.to_string()
+            };
+            println!("  Description preview: {}", preview);
+        }
+        println!();
+
+        let should_publish = cli::confirm("Do you wish to continue publishing?")?;
+        println!();
+        return Ok(should_publish);
+    }
+
+    Ok(true)
 }
 
 fn metadata_config<'a>(
