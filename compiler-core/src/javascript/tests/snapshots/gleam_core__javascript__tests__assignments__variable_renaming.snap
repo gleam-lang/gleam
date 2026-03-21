@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
+assertion_line: 37
 expression: "\n\npub fn go(x, wibble) {\n  let a = 1\n  wibble(a)\n  let a = 2\n  wibble(a)\n  let assert #(a, 3) = x\n  let b = a\n  wibble(b)\n  let c = {\n    let a = a\n    #(a, b)\n  }\n  wibble(a)\n  // make sure arguments are counted in initial state\n  let x = c\n  x\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -34,7 +36,7 @@ export function go(x, wibble) {
   wibble(a);
   let a$1 = 2;
   wibble(a$1);
-  let a$2;
+  let a$1;
   let $ = x[1];
   if ($ === 3) {
     a$2 = x[0];
@@ -49,15 +51,15 @@ export function go(x, wibble) {
       { value: x, start: 75, end: 97, pattern_start: 86, pattern_end: 93 }
     )
   }
-  let b = a$2;
+  let b = a$1;
   wibble(b);
   let _block;
   {
-    let a$3 = a$2;
-    _block = [a$3, b];
+    let a$2 = a$1;
+    _block = [a$2, b];
   }
   let c = _block;
-  wibble(a$2);
+  wibble(a$1);
   let x$1 = c;
   return x$1;
 }
