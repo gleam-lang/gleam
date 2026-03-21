@@ -297,17 +297,21 @@ pub fn source_map_to_string(src: &str, compiled: &str, source_map: SourceMap) ->
     for ((src_line, src_col), (dst_line, dst_col)) in merged_tokens {
         // get the index of this mapping in the source and compiled code
         let src_index = src_line_numbers.byte_index(Position::new(src_line, src_col)) as usize;
-        let compiled_index = compiled_line_numbers.byte_index(Position::new(dst_line, dst_col)) as usize;
+        let compiled_index =
+            compiled_line_numbers.byte_index(Position::new(dst_line, dst_col)) as usize;
 
         // print the source and compiled code for this mapping by getting the substring of the source and compiled code
         // from the previous mapping to the current mapping
         output.push_str(&format!("{}\n", &src[prev_src_index..src_index].trim()));
         output.push_str("⏷\n");
-        output.push_str(&format!("{}\n", &compiled[prev_compiled_index..compiled_index].trim()));
+        output.push_str(&format!(
+            "{}\n",
+            &compiled[prev_compiled_index..compiled_index].trim()
+        ));
         output.push_str("----- \n");
         prev_src_index = src_index;
         prev_compiled_index = compiled_index;
-    };
+    }
     // print the last mapping
     output.push_str(&format!("{}\n", &src[prev_src_index..].trim()));
     output.push_str("⏷\n");
