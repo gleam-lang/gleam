@@ -8,6 +8,7 @@ use crate::{
     warning::{TypeWarningEmitter, WarningEmitter},
 };
 use camino::{Utf8Path, Utf8PathBuf};
+use lsp_types::Position;
 
 mod assert;
 mod assignments;
@@ -31,6 +32,7 @@ mod prelude;
 mod records;
 mod recursion;
 mod results;
+mod sourcemaps;
 mod strings;
 mod todo;
 mod tuples;
@@ -82,6 +84,22 @@ macro_rules! assert_js {
         let output =
             $crate::javascript::tests::compile_js($src, vec![]);
         assert_eq!(($src, output), ($src, $js.to_string()));
+    }};
+}
+
+#[macro_export]
+macro_rules! assert_source_map {
+    ($src:expr $(,)?) => {{
+        let (compiled, source_map) =
+            $crate::javascript::tests::compile_js_with_source_map($src, vec![]);
+
+        let output = format!(
+            "----- SOURCE CODE\n{}\n\n----- COMPILED JAVASCRIPT\n{}\n\n----- SOURCE MAP\n{}",
+            $crate::javascript::tests::append_line_numbers($src),
+            $crate::javascript::tests::append_line_numbers(&compiled),
+            $crate::javascript::tests::source_map_to_string($src, &compiled, source_map)
+        );
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 }
 
@@ -195,11 +213,12 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
     let ast = compile(src, deps);
     let line_numbers = LineNumbers::new(src);
     let stdlib_package = StdlibPackage::Present;
-    let output = module(ModuleConfig {
+    let (output, _) = module(ModuleConfig {
         module: &ast,
         line_numbers: &line_numbers,
         src: &"".into(),
         typescript: TypeScriptDeclarations::None,
+        source_map: false,
         stdlib_package,
         path: Utf8Path::new("src/module.gleam"),
         project_root: "project/root".into(),
@@ -211,7 +230,92 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
     )
 }
 
+pub fn compile_js_with_source_map(src: &str, deps: Vec<(&str, &str, &str)>) -> (String, SourceMap) {
+    let ast = compile(src, deps);
+    let line_numbers = LineNumbers::new(src);
+    let stdlib_package = StdlibPackage::Present;
+    let (output, source_map) = module(ModuleConfig {
+        module: &ast,
+        line_numbers: &line_numbers,
+        src: &"".into(),
+        typescript: TypeScriptDeclarations::None,
+        source_map: true,
+        stdlib_package,
+        path: Utf8Path::new("src/module.gleam"),
+        project_root: "project/root".into(),
+    });
+    let source_map = source_map.expect("source map should always be present");
+
+    let output = output.replace(
+        std::include_str!("../../templates/echo.mjs"),
+        "// ...omitted code from `templates/echo.mjs`...",
+    );
+    (output, source_map)
+}
+
 pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
     let ast = compile(src, deps);
     ts_declaration(&ast)
+}
+
+// Append zero indexed line numbers to the code for easier reading of source maps.
+pub fn append_line_numbers(src: &str) -> String {
+    src.lines()
+        .enumerate()
+        .map(|(line, content)| format!("{} |{}", line, content))
+        .collect::<Vec<String>>()
+        .join("\n")
+}
+
+// Pretty-print a sourcemap to a string that might be readable by humans.
+pub fn source_map_to_string(src: &str, compiled: &str, source_map: SourceMap) -> String {
+    let mut output = String::new();
+    output.push_str("Mappings:\n");
+    output.push_str("----- \n");
+    let mut prev_src_index = 0;
+    let mut prev_compiled_index = 0;
+    let src_line_numbers = LineNumbers::new(&src);
+    let compiled_line_numbers = LineNumbers::new(&compiled);
+
+    // Since source maps can have multiple tokens for the same source index, we skip over the intermediate tokens and only keep tokens with a new source index.
+    let mut tokens = source_map.tokens().collect::<Vec<_>>();
+    tokens.sort_by_key(|token| token.get_src());
+    // construct a vector of tuples of (src_line, src_col, dst_line, dst_col)
+    let mut merged_tokens: Vec<((u32, u32), (u32, u32))> = Vec::new();
+    let mut prev_token_src = (0, 0);
+    for token in tokens {
+        if prev_token_src == token.get_src() {
+            // Same source index, so extend the current token
+            continue;
+        } else {
+            // Different source index, so add the previous token to the merged tokens
+            merged_tokens.push((token.get_src(), token.get_dst()));
+            prev_token_src = token.get_src();
+        };
+    }
+
+    for ((src_line, src_col), (dst_line, dst_col)) in merged_tokens {
+        // get the index of this mapping in the source and compiled code
+        let src_index = src_line_numbers.byte_index(Position::new(src_line, src_col)) as usize;
+        let compiled_index =
+            compiled_line_numbers.byte_index(Position::new(dst_line, dst_col)) as usize;
+
+        // print the source and compiled code for this mapping by getting the substring of the source and compiled code
+        // from the previous mapping to the current mapping
+        output.push_str(&format!("{}\n", &src[prev_src_index..src_index].trim()));
+        output.push_str("⏷\n");
+        output.push_str(&format!(
+            "{}\n",
+            &compiled[prev_compiled_index..compiled_index].trim()
+        ));
+        output.push_str("----- \n");
+        prev_src_index = src_index;
+        prev_compiled_index = compiled_index;
+    }
+    // print the last mapping
+    output.push_str(&format!("{}\n", &src[prev_src_index..].trim()));
+    output.push_str("⏷\n");
+    output.push_str(&format!("{}\n", &compiled[prev_compiled_index..].trim()));
+    output.push_str("----- \n");
+    output
 }
