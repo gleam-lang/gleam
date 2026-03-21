@@ -93,6 +93,12 @@
 
 ### Bug fixes
 
+- Fixed a bug where while generating the `metadata.config` file for hex-tarballs
+  user controlled data would not be suffixed with `/utf8` in the Erlang
+  representation if the metadata. This in turn led to an API error when using
+  Unicode characters in the `gleam.toml` file.
+  ([Niklas Kirschall](https://github.com/nkxxll))
+
 - Fixed a bug where the compiler would crash when trying to read the cache for
   modules containing large constants.
   ([Surya Rose](https://github.com/GearsDatapacks))
