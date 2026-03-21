@@ -19,8 +19,26 @@ expression: "\n/// my add function\npub fn add_2(x) {\n  x + 2\n}"
 6 |}
 
 ----- SOURCE MAP
-Mappings Raw:
-2:0 -> 4:0
-3:2 -> 5:2
-3:2 -> 5:9
-3:6 -> 5:13
+Mappings:
+----- 
+/// my add function
+⏷
+//# sourceMappingURL=mod.mjs.map
+/**
+ * my add function
+ */
+----- 
+pub fn add_2(x) {
+⏷
+export function add_2(x) {
+----- 
+x +
+⏷
+return x +
+----- 
+2
+}
+⏷
+2;
+}
+-----

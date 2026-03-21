@@ -24,6 +24,27 @@ expression: "\n/// my constant\npub const wibble = 1\n/// wobble\nconst wobble =
 9 |export const wabble = 3;
 
 ----- SOURCE MAP
-Mappings Raw:
-2:0 -> 4:0
-6:0 -> 9:0
+Mappings:
+----- 
+/// my constant
+⏷
+//# sourceMappingURL=mod.mjs.map
+/**
+ * my constant
+ */
+----- 
+pub const wibble = 1
+/// wobble
+const wobble = 2
+/// wabble
+⏷
+export const wibble = 1;
+
+/**
+ * wabble
+ */
+----- 
+pub const wabble = 3
+⏷
+export const wabble = 3;
+-----

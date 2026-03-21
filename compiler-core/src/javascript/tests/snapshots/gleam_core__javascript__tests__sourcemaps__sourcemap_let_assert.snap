@@ -19,7 +19,26 @@ expression: "\npub fn go(x) {\n  let assert #(wibble, wobble) = x\n}\n"
 7 |}
 
 ----- SOURCE MAP
-Mappings Raw:
-1:0 -> 1:0
-2:2 -> 2:2
-2:33 -> 4:2
+Mappings:
+----- 
+
+⏷
+//# sourceMappingURL=mod.mjs.map
+----- 
+pub fn go(x) {
+⏷
+export function go(x) {
+----- 
+let assert #(wibble, wobble) =
+⏷
+let wibble;
+  let wobble;
+----- 
+x
+}
+⏷
+wibble = x[0];
+  wobble = x[1];
+  return x;
+}
+-----
