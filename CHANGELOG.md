@@ -100,6 +100,10 @@
 
 ### Bug fixes
 
+- Fixed a bug that would result in not being able to publish a package if some
+  non-ASCII characters were used in field names other than `description`.
+  ([Niklas Kirschall](https://github.com/nkxxll))
+
 - Fixed a bug where the compiler would crash when trying to read the cache for
   modules containing large constants.
   ([Surya Rose](https://github.com/GearsDatapacks))
