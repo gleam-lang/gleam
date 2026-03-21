@@ -55,6 +55,10 @@
   shorthand "MFA" in the prompt and error message.
   ([Luka Ivanović](https://github.com/luka-hash))
 
+- The build tool now deletes `escript` file after compilation, which is
+  unnecessary once the build is completed.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The "extract variable" code action can now pick better names for variables in
