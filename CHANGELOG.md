@@ -29,6 +29,10 @@
   shorthand "MFA" in the prompt and error message.
   ([Luka Ivanović](https://github.com/luka-hash))
 
+- Erlang shipments now warn when run on a different OTP version than they were
+  built with.
+  ([Joris Hartog](https://github.com/nootr))
+
 ### Language server
 
 - The "extract variable" code action can now pick better names for variables in
