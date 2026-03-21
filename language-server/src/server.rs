@@ -41,6 +41,22 @@ pub struct LanguageServer<'a, IO> {
     outside_of_project_feedback: FeedbackBookKeeper,
     router: Router<IO, ConnectionProgressReporter<'a>>,
     changed_projects: HashSet<Utf8PathBuf>,
+
+    /// Tracks all files that have ever been opened and their current
+    /// open state.
+    ///
+    /// All files that have been opened are tracked so that upon
+    /// termination of a complilation engine, the server can send
+    /// back an empty list of diagnostics for each opened file for
+    /// a project. We keep track of the open state so we can determine
+    /// when all files in a project are closed.
+    ///
+    /// Files are removed from the map when a compilation engine is
+    /// terminated.
+    ///
+    /// This approach allows the editor to still display diagnostics
+    /// for files that have been closed.
+    opened_files: HashMap<Utf8PathBuf, bool>,
     io: FileSystemProxy<IO>,
 }
 
@@ -63,6 +79,7 @@ where
             connection: connection.into(),
             initialise_params,
             changed_projects: HashSet::new(),
+            opened_files: HashMap::new(),
             outside_of_project_feedback: FeedbackBookKeeper::default(),
             router,
             io,
@@ -132,16 +149,56 @@ where
             .expect("channel send LSP response")
     }
 
+    fn attempt_engine_cleanup(&mut self, path: &Utf8PathBuf, feedback: &mut Feedback) {
+        if let Some(project_path) = self.router.project_path(path) {
+            let all_files_closed = self
+                .opened_files
+                .iter()
+                .filter(|(path, _)| path.starts_with(&project_path))
+                .all(|(_, is_open)| !*is_open);
+
+            if all_files_closed {
+                self.router.delete_engine_for_path(&project_path);
+                _ = self.changed_projects.remove(&project_path);
+
+                for (path, _) in self
+                    .opened_files
+                    .extract_if(|path, _| path.starts_with(&project_path))
+                    .into_iter()
+                {
+                    feedback.unset_existing_diagnostics(path);
+                }
+            }
+        }
+    }
+
     fn handle_notification(&mut self, notification: Notification) {
         let feedback = match notification {
             Notification::CompilePlease => self.compile_please(),
-            Notification::SourceFileMatchesDisc { path } => self.discard_in_memory_cache(path),
+            Notification::SourceFileClosed { path } => self.handle_file_close(&path),
+            Notification::SourceFileSaved { path } => self.discard_in_memory_cache(&path),
             Notification::SourceFileChangedInMemory { path, text } => {
-                self.cache_file_in_memory(path, text)
+                self.cache_file_in_memory(&path, text)
             }
+            Notification::SourceFileOpened { path, text } => self.handle_file_open(path, text),
             Notification::ConfigFileChanged { path } => self.watched_files_changed(path),
         };
         self.publish_feedback(feedback);
+    }
+
+    fn handle_file_close(&mut self, path: &Utf8PathBuf) -> Feedback {
+        let mut feedback = self.discard_in_memory_cache(path);
+        if let Some(is_open) = self.opened_files.get_mut(path) {
+            *is_open = false;
+        }
+        self.attempt_engine_cleanup(path, &mut feedback);
+        feedback
+    }
+
+    fn handle_file_open(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
+        let feedback = self.cache_file_in_memory(&path, text);
+        let _ = self.opened_files.insert(path, true);
+        feedback
     }
 
     fn publish_feedback(&self, feedback: Feedback) {
@@ -437,17 +494,17 @@ where
         self.respond_with_engine(path, |engine| engine.find_references(params))
     }
 
-    fn cache_file_in_memory(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
-        self.project_changed(&path);
-        if let Err(error) = self.io.write_mem_cache(&path, &text) {
+    fn cache_file_in_memory(&mut self, path: &Utf8PathBuf, text: String) -> Feedback {
+        self.project_changed(path);
+        if let Err(error) = self.io.write_mem_cache(path, &text) {
             return self.outside_of_project_feedback.error(error);
         }
         Feedback::none()
     }
 
-    fn discard_in_memory_cache(&mut self, path: Utf8PathBuf) -> Feedback {
-        self.project_changed(&path);
-        if let Err(error) = self.io.delete_mem_cache(&path) {
+    fn discard_in_memory_cache(&mut self, path: &Utf8PathBuf) -> Feedback {
+        self.project_changed(path);
+        if let Err(error) = self.io.delete_mem_cache(path) {
             return self.outside_of_project_feedback.error(error);
         }
         Feedback::none()

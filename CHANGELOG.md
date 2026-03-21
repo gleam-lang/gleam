@@ -89,6 +89,10 @@
   record when writing a record update.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now cleans up compilation engines when all project
+  files are closed.
+  ([Nonso Chukwurah](https://github.com/TrippleCCC))
+
 ### Formatter
 
 ### Bug fixes
