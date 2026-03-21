@@ -391,7 +391,49 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             if let FallbackCheck::RuntimeCheck { check } = fallback_check {
                 self.variables.record_check_assignments(var, check);
             }
-            return self.inside_new_scope(|this| this.decision(fallback));
+
+            // We can't use `inside_new_scope` here without care: the
+            // code we generate goes directly into the enclosing scope
+            // (there's no wrapping if-else block), so the `$` variable
+            // counter must not be reset or later code could redeclare
+            // one of the `$N` variables introduced here.
+            let old_scope = match &self.kind {
+                DecisionKind::Case { .. } => {
+                    self.variables.expression_generator.current_scope_vars.clone()
+                }
+                DecisionKind::LetAssert { .. } => Default::default(),
+            };
+            let old_names = self.variables.scoped_variable_names.clone();
+            let old_segments = self.variables.segment_values.clone();
+            let old_segment_names = self.variables.scoped_segment_names.clone();
+
+            let result = self.decision(fallback);
+
+            match &self.kind {
+                DecisionKind::Case { .. } => {
+                    let assignment_var: EcoString = ASSIGNMENT_VAR.into();
+                    let counter = self
+                        .variables
+                        .expression_generator
+                        .current_scope_vars
+                        .get(&assignment_var)
+                        .copied();
+                    self.variables.expression_generator.current_scope_vars = old_scope;
+                    if let Some(n) = counter {
+                        let _ = self
+                            .variables
+                            .expression_generator
+                            .current_scope_vars
+                            .insert(assignment_var, n);
+                    }
+                }
+                DecisionKind::LetAssert { .. } => {}
+            }
+
+            self.variables.scoped_variable_names = old_names;
+            self.variables.segment_values = old_segments;
+            self.variables.scoped_segment_names = old_segment_names;
+            return result;
         }
 
         // Otherwise we'll have to generate a series of if-else to check which

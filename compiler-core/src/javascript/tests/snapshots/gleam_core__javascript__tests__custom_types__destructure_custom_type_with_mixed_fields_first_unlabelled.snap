@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 281
 expression: "\npub type Cat {\n  Cat(String, cuteness: Int)\n}\n\npub fn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(cuteness: y, ..) = cat\n  let Cat(x, cuteness: y) = cat\n  x\n}\n\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 

@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
+assertion_line: 37
 expression: "\n\npub fn go(x, wibble) {\n  let a = 1\n  wibble(a)\n  let a = 2\n  wibble(a)\n  let assert #(a, 3) = x\n  let b = a\n  wibble(b)\n  let c = {\n    let a = a\n    #(a, b)\n  }\n  wibble(a)\n  // make sure arguments are counted in initial state\n  let x = c\n  x\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 

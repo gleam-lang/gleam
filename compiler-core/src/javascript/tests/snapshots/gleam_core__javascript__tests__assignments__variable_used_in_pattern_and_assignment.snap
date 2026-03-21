@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
+assertion_line: 129
 expression: "pub fn main(x) {\n  let #(x) = #(x)\n  x\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn main(x) {
