@@ -547,17 +547,17 @@ pub fn api_publish_package_response(response: http::Response<Vec<u8>>) -> Result
         StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
         StatusCode::UNPROCESSABLE_ENTITY => {
-            let body = String::from_utf8_lossy(&body).to_string();
+            let body = String::from_utf8_lossy(&body);
             if body.contains("--replace") {
-                return Err(ApiError::NotReplacing);
+                Err(ApiError::NotReplacing)
+            } else if body.contains("can only modify a release up to one hour after publication") {
+                Err(ApiError::LateModification)
+            } else {
+                Err(ApiError::UnexpectedResponse(
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    body.to_string(),
+                ))
             }
-            if body.contains("can only modify a release up to one hour after publication") {
-                return Err(ApiError::LateModification);
-            }
-            Err(ApiError::UnexpectedResponse(
-                StatusCode::UNPROCESSABLE_ENTITY,
-                body,
-            ))
         }
         status => Err(ApiError::unexpected_response(status, body)),
     }
