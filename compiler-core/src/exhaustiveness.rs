@@ -153,14 +153,6 @@ impl Branch {
         }
     }
 
-    /// Removes and returns a `PatternCheck` on the given variable from this
-    /// branch.
-    ///
-    fn pop_check_on_var(&mut self, var: &Variable) -> Option<PatternCheck> {
-        let index = self.checks.iter().position(|check| check.var == *var)?;
-        Some(self.checks.remove(index))
-    }
-
     fn add_check(&mut self, check: PatternCheck) {
         self.checks.push(check);
     }
@@ -1485,6 +1477,33 @@ impl BitArrayTest {
                     Confidence::Uncertain
                 }
             }
+            (
+                BitArrayTest::CatchAllIsBytes {
+                    size_so_far: succeeding,
+                },
+                BitArrayTest::CatchAllIsBytes { size_so_far: test },
+            ) => {
+                // `(bits.bitSize - s1) % 8 === 0` is equivalent to
+                // `(bits.bitSize - s2) % 8 === 0` whenever `s1` and `s2`
+                // differ by a multiple of 8. In those cases one test implies
+                // the other and we can consider them equivalent.
+                if let (Some(succeeding_bits), Some(test_bits)) =
+                    (succeeding.constant_bits(), test.constant_bits())
+                {
+                    let diff = if succeeding_bits < test_bits {
+                        test_bits - succeeding_bits
+                    } else {
+                        succeeding_bits - test_bits
+                    };
+                    if diff % 8 == BigInt::ZERO {
+                        Confidence::Certain
+                    } else {
+                        Confidence::Uncertain
+                    }
+                } else {
+                    Confidence::Uncertain
+                }
+            }
             // The tests are not comparable, we can't deduce any new information.
             _ => Confidence::Uncertain,
         }
@@ -2103,6 +2122,65 @@ impl Decision {
             if_false: Box::new(if_false),
         }
     }
+
+    /// Simplifies the decision tree bottom-up by removing choices that lead
+    /// to the same decision as the fallback. If all choices are removed, the
+    /// switch is replaced by the fallback itself.
+    ///
+    /// This is particularly effective for bit-array patterns where nested
+    /// size/modulo checks can become redundant once their sub-trees are
+    /// simplified.
+    ///
+    fn simplify(self) -> Decision {
+        match self {
+            Decision::Switch {
+                var,
+                choices,
+                fallback,
+                fallback_check,
+            } => {
+                let fallback = Box::new(fallback.simplify());
+                let choices: Vec<_> = choices
+                    .into_iter()
+                    .map(|(check, decision)| (check, decision.simplify()))
+                    .collect();
+
+                let choices = if matches!(*fallback_check, FallbackCheck::InfiniteCatchAll) {
+                    let filtered: Vec<_> = choices
+                        .into_iter()
+                        .filter(|(_, decision)| decision != fallback.as_ref())
+                        .collect();
+
+                    if filtered.is_empty() {
+                        return *fallback;
+                    }
+
+                    filtered
+                } else {
+                    choices
+                };
+
+                Decision::Switch {
+                    var,
+                    choices,
+                    fallback,
+                    fallback_check,
+                }
+            }
+            // We only simplify `if_false`: `if_true` is a `Body`, not a `Decision`,
+            // so it cannot contain any switches to collapse.
+            Decision::Guard {
+                guard,
+                if_true,
+                if_false,
+            } => Decision::Guard {
+                guard,
+                if_true,
+                if_false: Box::new(if_false.simplify()),
+            },
+            other => other,
+        }
+    }
 }
 
 /// The `case` compiler itself (shocking, I know).
@@ -2443,7 +2521,39 @@ impl<'a> Compiler<'a> {
         branch_mode: &BranchMode,
     ) {
         for mut branch in branches {
-            let Some(pattern_check) = branch.pop_check_on_var(&pivot_var) else {
+            // Prefer to split on `CatchAllIsBytes` checks when matching against a
+            // bit array. This tends to produce simpler decision trees where the
+            // modulo-8 check is performed early, allowing later size-oriented
+            // checks to be eliminated when redundant.
+            let check_index = branch
+                .checks
+                .iter()
+                .enumerate()
+                .find_map(|(i, check)| {
+                    if check.var != pivot_var {
+                        return None;
+                    }
+                    let pattern = self.pattern(check.pattern);
+                    if let Pattern::BitArray { tests } = pattern {
+                        if tests
+                            .iter()
+                            .any(|test| matches!(test, BitArrayTest::CatchAllIsBytes { .. }))
+                        {
+                            return Some(i);
+                        }
+                    }
+                    None
+                })
+                // If we didn't find a catch-all check, fall back to the first
+                // check on this variable (existing behavior).
+                .or_else(|| {
+                    branch
+                        .checks
+                        .iter()
+                        .position(|check| check.var == pivot_var)
+                });
+
+            let Some(check_index) = check_index else {
                 // If the branch doesn't perform any check on the pivot variable, it means
                 // it could still match no matter what shape `pivot_var` has. So we must
                 // add it as a fallback branch, that is a branch that is still relevant
@@ -2451,6 +2561,8 @@ impl<'a> Compiler<'a> {
                 splitter.add_fallback_branch(branch);
                 continue;
             };
+
+            let pattern_check = branch.checks.remove(check_index);
 
             let checked_pattern = self.pattern(pattern_check.pattern);
 
@@ -2474,11 +2586,12 @@ impl<'a> Compiler<'a> {
     ///
     fn splitter_to_switch(&mut self, var: Variable, splitter: BranchSplitter) -> Decision {
         let choices = self.compile_all_choices(splitter.choices);
-        let last_choice = self.compile(splitter.fallback);
+        let fallback = self.compile(splitter.fallback);
+
         Decision::Switch {
             var,
             choices,
-            fallback: Box::new(last_choice),
+            fallback: Box::new(fallback),
             fallback_check: Box::new(FallbackCheck::InfiniteCatchAll),
         }
     }
@@ -3340,7 +3453,8 @@ impl CaseToCompile {
             compiler.split_and_compile_with_pivot_var(var, VecDeque::new())
         } else {
             compiler.compile(self.branches.into())
-        };
+        }
+        .simplify();
 
         CompileCaseResult {
             diagnostics: compiler.diagnostics,
@@ -3501,9 +3615,19 @@ impl CaseToCompile {
             let is_last_segment = i + 1 == segments_count;
             match &segment_size {
                 ReadSize::RemainingBits => (),
-                ReadSize::RemainingBytes => tests.push_back(BitArrayTest::CatchAllIsBytes {
-                    size_so_far: previous_end.clone(),
-                }),
+                ReadSize::RemainingBytes => {
+                    // Normalize the constant part of the offset modulo 8.
+                    // `(bitSize - c) % 8 === 0` is equivalent to
+                    // `(bitSize - (c % 8)) % 8 === 0` for any constant c,
+                    // because c ≡ c%8 (mod 8). This ensures structurally
+                    // identical CatchAllIsBytes tests for equivalent checks,
+                    // allowing the simplify pass to collapse redundant branches.
+                    let mut normalized = previous_end.clone();
+                    normalized.constant = &normalized.constant % 8;
+                    tests.push_back(BitArrayTest::CatchAllIsBytes {
+                        size_so_far: normalized,
+                    });
+                }
                 ReadSize::ConstantBits(_)
                 | ReadSize::VariableBits { .. }
                 | ReadSize::BinaryOperator { .. } => {

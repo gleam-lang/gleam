@@ -23,7 +23,7 @@ export function go(x) {
       return pi;
     } else if (
       bitArraySliceToFloat(x, 0, 64, true) === 1.1 &&
-      (x.bitSize - 64) % 8 === 0
+      x.bitSize % 8 === 0
     ) {
       let pi = 1.1;
       return pi;
@@ -33,7 +33,7 @@ export function go(x) {
   } else if (
     x.bitSize >= 64 &&
     bitArraySliceToFloat(x, 0, 64, true) === 1.1 &&
-    (x.bitSize - 64) % 8 === 0
+    x.bitSize % 8 === 0
   ) {
     let pi = 1.1;
     return pi;

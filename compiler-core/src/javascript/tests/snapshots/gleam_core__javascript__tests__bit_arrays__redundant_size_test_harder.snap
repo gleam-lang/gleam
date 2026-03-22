@@ -1,0 +1,49 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn go(bits) {\n  case bits {\n    <<_:16, _:32, _:bytes>> -> 1\n    <<_:24, _:16, _:bytes>> -> 1\n    <<_:8, _:8, _:8, _:bytes>> -> 1\n    <<_:bytes>> -> 1\n    _ -> 0\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(bits) {
+  case bits {
+    <<_:16, _:32, _:bytes>> -> 1
+    <<_:24, _:16, _:bytes>> -> 1
+    <<_:8, _:8, _:8, _:bytes>> -> 1
+    <<_:bytes>> -> 1
+    _ -> 0
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function go(bits) {
+  if (bits.bitSize >= 16) {
+    if (bits.bitSize >= 48) {
+      if (bits.bitSize % 8 === 0) {
+        return 1;
+      } else {
+        return 0;
+      }
+    } else if (bits.bitSize >= 24) {
+      if (bits.bitSize >= 40) {
+        if (bits.bitSize % 8 === 0) {
+          return 1;
+        } else {
+          return 0;
+        }
+      } else if (bits.bitSize % 8 === 0) {
+        return 1;
+      } else {
+        return 0;
+      }
+    } else if (bits.bitSize % 8 === 0) {
+      return 1;
+    } else {
+      return 0;
+    }
+  } else if (bits.bitSize % 8 === 0) {
+    return 1;
+  } else {
+    return 0;
+  }
+}

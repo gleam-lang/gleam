@@ -37,7 +37,7 @@ export function go(x) {
       x.byteAt(17) === 0 &&
       x.byteAt(18) === 0 &&
       x.byteAt(19) === 111 &&
-    (x.bitSize - 160) % 8 === 0
+    x.bitSize % 8 === 0
   )) {
     throw makeError(
       "let_assert",
