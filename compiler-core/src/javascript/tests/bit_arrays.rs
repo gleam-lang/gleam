@@ -2707,3 +2707,22 @@ pub fn go(bits) {
 "#,
     );
 }
+
+// Patterns with different bodies must NOT be merged by simplify().
+// <<_:16, _:bytes>> matches ≥16-bit byte-aligned arrays (returns 1),
+// <<_:bytes>> matches any byte-aligned array (returns 2 when size < 16).
+// The two branches are distinct and the decision tree must preserve both.
+#[test]
+fn different_bodies_not_simplified() {
+    assert_js!(
+        r#"
+pub fn go(bits) {
+  case bits {
+    <<_:16, _:bytes>> -> 1
+    <<_:bytes>> -> 2
+    _ -> 0
+  }
+}
+"#,
+    );
+}

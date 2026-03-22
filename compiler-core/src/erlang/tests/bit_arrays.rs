@@ -330,3 +330,23 @@ pub fn main() -> Nil {
 "#
     );
 }
+
+// Erlang uses native pattern matching (case ... of) and does not go through
+// the JavaScript decision tree compiler, so the CatchAllIsBytes simplify()
+// optimisation does not apply here. This test confirms Erlang output is
+// unaffected: byte-aligned patterns with different bodies generate separate
+// Erlang clauses unchanged.
+#[test]
+fn byte_aligned_patterns_with_different_bodies() {
+    assert_erl!(
+        r#"
+pub fn go(bits) {
+  case bits {
+    <<_:16, _:bytes>> -> 1
+    <<_:bytes>> -> 2
+    _ -> 0
+  }
+}
+"#
+    );
+}

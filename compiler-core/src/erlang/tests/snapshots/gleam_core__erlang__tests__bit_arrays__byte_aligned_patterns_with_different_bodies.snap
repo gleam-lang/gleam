@@ -1,0 +1,34 @@
+---
+source: compiler-core/src/erlang/tests/bit_arrays.rs
+expression: "\npub fn go(bits) {\n  case bits {\n    <<_:16, _:bytes>> -> 1\n    <<_:bytes>> -> 2\n    _ -> 0\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(bits) {
+  case bits {
+    <<_:16, _:bytes>> -> 1
+    <<_:bytes>> -> 2
+    _ -> 0
+  }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([go/1]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec go(bitstring()) -> integer().
+go(Bits) ->
+    case Bits of
+        <<_:16, _/binary>> ->
+            1;
+
+        <<_/binary>> ->
+            2;
+
+        _ ->
+            0
+    end.
