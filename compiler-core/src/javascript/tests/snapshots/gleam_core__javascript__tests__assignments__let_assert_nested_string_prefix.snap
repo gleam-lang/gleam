@@ -31,7 +31,7 @@ export function main() {
   let prefix;
   let rest;
   let $1 = $.wibble;
-  if ($1.startsWith("w")) {
+  if ($1.charCodeAt(0) === 119) {
     prefix = "w";
     rest = $1.slice(1);
   } else {

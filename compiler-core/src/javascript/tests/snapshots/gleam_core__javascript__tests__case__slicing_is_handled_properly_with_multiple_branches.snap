@@ -16,7 +16,7 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 export function main() {
   let $ = "12345";
-  if ($.startsWith("0")) {
+  if ($.charCodeAt(0) === 48) {
     let rest = $.slice(1);
     return rest;
   } else if ($.startsWith("123")) {

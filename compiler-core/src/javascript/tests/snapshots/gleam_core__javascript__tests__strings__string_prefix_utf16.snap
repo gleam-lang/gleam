@@ -31,7 +31,7 @@ pub fn go(x) {
 ----- COMPILED JAVASCRIPT
 export function go(x) {
   let $ = "Θ wibble wobble";
-  if ($.startsWith("Θ")) {
+  if ($.charCodeAt(0) === 920) {
     let rest = $.slice(1);
     rest
   } else {
@@ -52,14 +52,14 @@ export function go(x) {
     ""
   }
   let $3 = "\" is a an escaped quote";
-  if ($3.startsWith("\"")) {
+  if ($3.charCodeAt(0) === 34) {
     let rest = $3.slice(1);
     rest
   } else {
     ""
   }
   let $4 = "\\ is a an escaped backslash";
-  if ($4.startsWith("\\")) {
+  if ($4.charCodeAt(0) === 92) {
     let rest = $4.slice(1);
     return rest;
   } else {

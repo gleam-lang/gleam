@@ -61,3 +61,14 @@ pub fn match_escaped_newline_test() {
   }
   assert " is a newline that escaped" == string_2
 }
+
+pub fn multiple_single_character_matches() {
+  let string = "1234"
+  let string_2 = case string {
+    "0" <> _ -> panic
+    "1" <> rest -> rest
+    "2" <> _ -> panic
+    _ -> panic
+  }
+  assert "234" == string_2
+}

@@ -17,7 +17,7 @@ pub fn go(x) {
 import * as $gleam from "../gleam.mjs";
 
 export function go(x) {
-  if (x.startsWith("a")) {
+  if (x.charCodeAt(0) === 97) {
     return x;
   } else {
     return "";
