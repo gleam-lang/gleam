@@ -7,6 +7,7 @@ pub mod version;
 
 use crate::proto::{signed::Signed, versions::Versions};
 use bytes::buf::Buf;
+use clap::ValueEnum;
 use ecow::EcoString;
 use flate2::read::GzDecoder;
 use http::{Method, StatusCode};
@@ -596,7 +597,7 @@ pub fn api_revert_release_response(response: http::Response<Vec<u8>>) -> Result<
 }
 
 /// See: https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.owner.ex#L47
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 pub enum OwnerLevel {
     /// Has every package permission EXCEPT the ability to change who owns the package
     Maintainer,

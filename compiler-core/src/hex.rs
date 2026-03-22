@@ -66,6 +66,30 @@ pub async fn publish_package<Http: HttpClient>(
     })
 }
 
+pub async fn add_owner<Http: HttpClient>(
+    api_key: &WriteActionCredentials,
+    package_name: String,
+    new_owner_username_or_email: String,
+    level: hexpm::OwnerLevel,
+    config: &hexpm::Config,
+    http: &Http,
+) -> Result<()> {
+    tracing::info!(
+        "Adding {} as owner of `{}`",
+        new_owner_username_or_email,
+        package_name
+    );
+    let request = hexpm::api_add_owner_request(
+        &package_name,
+        &new_owner_username_or_email,
+        level,
+        api_key,
+        config,
+    );
+    let response = http.send(request).await?;
+    hexpm::api_add_owner_response(response).map_err(Error::hex)
+}
+
 pub async fn transfer_owner<Http: HttpClient>(
     api_key: &WriteActionCredentials,
     package_name: String,

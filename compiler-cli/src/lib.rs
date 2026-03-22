@@ -591,6 +591,25 @@ enum Hex {
 
 #[derive(Subcommand, Debug)]
 enum Owner {
+    /// Adds a new owner to the given package on Hex
+    ///
+    /// This command uses this environment variable:
+    ///
+    /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate against the Hex package manager.
+    ///
+    #[command(verbatim_doc_comment)]
+    Add {
+        package: String,
+
+        /// The username or email of the additional owner
+        #[arg(long = "user")]
+        username_or_email: String,
+
+        /// The ownership level
+        #[arg(long, default_value = "maintainer")]
+        level: hexpm::OwnerLevel,
+    },
+
     /// Transfers ownership of the given package to a new Hex user
     ///
     /// This command uses this environment variable:
@@ -816,6 +835,12 @@ fn parse_and_run_command() -> Result<(), Error> {
             let paths = find_project_paths()?;
             hex::revert(&paths, package, version)
         }
+
+        Command::Hex(Hex::Owner(Owner::Add {
+            package,
+            username_or_email,
+            level,
+        })) => owner::add(package, username_or_email, level),
 
         Command::Hex(Hex::Owner(Owner::Transfer {
             package,

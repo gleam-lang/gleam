@@ -28,6 +28,7 @@ http-auth-basic = "0.3"
 prost = "0.13.5"
 
 base16 = { workspace = true, features = ["alloc"] }
+clap = { workspace = true, features = ["derive"] }
 ecow = { workspace = true, features = ["serde"] }
 http.workspace = true
 pubgrub.workspace = true
