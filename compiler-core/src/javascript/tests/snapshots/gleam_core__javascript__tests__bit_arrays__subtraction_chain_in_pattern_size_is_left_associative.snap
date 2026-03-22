@@ -1,0 +1,40 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn main() {\n  let a = 10\n  let b = 3\n  let c = 2\n  let d = 1\n  let assert <<_:bytes-size(a - b - c - d)>> = <<>>\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let a = 10
+  let b = 3
+  let c = 2
+  let d = 1
+  let assert <<_:bytes-size(a - b - c - d)>> = <<>>
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, toBitArray } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function main() {
+  let a = 10;
+  let b = 3;
+  let c = 2;
+  let d = 1;
+  let $ = toBitArray([]);
+  if (!((((a - b) - c) - d) * 8 >= 0 && $.bitSize === (((a - b) - c) - d) * 8)) {
+    throw makeError(
+      "let_assert",
+      FILEPATH,
+      "my/mod",
+      7,
+      "main",
+      "Pattern match failed, no pattern matched the value.",
+      { value: $, start: 68, end: 117, pattern_start: 79, pattern_end: 110 }
+    )
+  }
+  return $;
+}

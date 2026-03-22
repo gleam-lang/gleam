@@ -2597,6 +2597,35 @@ pub fn main() {
 }
 
 #[test]
+fn subtraction_in_pattern_size_is_left_associative() {
+    assert_js!(
+        "
+pub fn main() {
+  let a = 10
+  let b = 3
+  let c = 2
+  let assert <<_:bytes-size(a - b - c)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn subtraction_chain_in_pattern_size_is_left_associative() {
+    assert_js!(
+        "
+pub fn main() {
+  let a = 10
+  let b = 3
+  let c = 2
+  let d = 1
+  let assert <<_:bytes-size(a - b - c - d)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
 fn block_in_pattern_size() {
     assert_js!(
         "
