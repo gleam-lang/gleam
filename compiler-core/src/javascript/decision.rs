@@ -408,6 +408,20 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             assignments.push(let_doc(name, value.to_doc()))
         };
 
+        // Variable storing the character code for the first character of a string.
+        // This is only declared if multiple patterns match on just the first
+        // character, as it allows us to avoid calling `.startsWith` multiple times
+        // and just call `.charCodeAt(0)` once, which is much faster.
+        let first_character_variable = if multiple_single_character_prefix_checks(choices) {
+            let name = self.variables.next_local_var(&ASSIGNMENT_VAR.into());
+            let string = self.variables.get_value(var);
+            let first_character = docvec![string, ".charCodeAt(0)"];
+            assignments.push(let_doc(name.clone(), first_character));
+            Some(name)
+        } else {
+            None
+        };
+
         let mut if_ = CaseBody::Statements(nil());
         for (i, (check, decision)) in choices.iter().enumerate() {
             self.variables.record_check_assignments(var, check);
@@ -419,7 +433,26 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             //   referenced by this check
             let (check_doc, body, mut segment_assignments) = self.inside_new_scope(|this| {
                 let segment_assignments = this.variables.bit_array_segment_assignments(check);
-                let check_doc = this.variables.runtime_check(var, check);
+
+                // If the pattern matches on a single character, use the character
+                // code instead of `.startsWith`.
+                let check_doc = if let Some(code) = single_character_prefix_code(check) {
+                    let first_character = if let Some(variable) = &first_character_variable {
+                        variable.to_doc()
+                    } else {
+                        // This is the only single-character match in this `case`
+                        // expression, so we don't bind it to a variable and just
+                        // call `.charCodeAt` inline. This is still faster than
+                        // `.startsWith`.
+                        let string = this.variables.get_value(var);
+                        docvec![string, ".charCodeAt(0)"]
+                    };
+
+                    docvec![first_character, " === ", code]
+                } else {
+                    this.variables.runtime_check(var, check)
+                };
+
                 let body = this.decision(decision);
                 (check_doc, body, segment_assignments)
             });
@@ -700,6 +733,50 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             ],
         )
     }
+}
+
+/// Returns the character code for the character being matched for patterns matching
+/// on single-character string prefixes.
+fn single_character_prefix_code(check: &RuntimeCheck) -> Option<u32> {
+    match check {
+        // On JavaScript, a single "character" is one that can be represented as
+        // a single UTF-16 codepoint.
+        RuntimeCheck::StringPrefix { prefix, rest } if utf16_no_escape_len(prefix) == 1 => {
+            convert_string_escape_chars(prefix)
+                .chars()
+                .next()
+                .map(|first| first as u32)
+        }
+        RuntimeCheck::Int { .. }
+        | RuntimeCheck::Float { .. }
+        | RuntimeCheck::String { .. }
+        | RuntimeCheck::StringPrefix { .. }
+        | RuntimeCheck::Tuple { .. }
+        | RuntimeCheck::BitArray { .. }
+        | RuntimeCheck::Variant { .. }
+        | RuntimeCheck::NonEmptyList { .. }
+        | RuntimeCheck::EmptyList => None,
+    }
+}
+
+/// Returns whether a `case` expression contains multiple patterns matching on
+/// the first character of a string.
+fn multiple_single_character_prefix_checks(choices: &[(RuntimeCheck, Decision)]) -> bool {
+    let mut encountered_check = false;
+
+    for (check, _) in choices.iter() {
+        if let RuntimeCheck::StringPrefix { prefix, .. } = check
+            && utf16_no_escape_len(prefix) == 1
+        {
+            if encountered_check {
+                return true;
+            } else {
+                encountered_check = true;
+            }
+        }
+    }
+
+    false
 }
 
 pub fn let_<'a>(

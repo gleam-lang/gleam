@@ -32,7 +32,7 @@ class Wibble extends $CustomType {
 export function main() {
   let tmp = new Wibble("wibble");
   let $ = tmp.wobble;
-  if ($.startsWith("w")) {
+  if ($.charCodeAt(0) === 119) {
     let wibble = "w";
     let rest = $.slice(1);
     return wibble + rest;

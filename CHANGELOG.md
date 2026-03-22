@@ -49,6 +49,22 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now emits more efficient code when matching on single-character
+  string prefixes on the JavaScript target. For example, the `glance` package
+  is now nearly 30% faster on the JavaScript target:
+
+  ```
+  # before:
+  min: 10.8ms, max: 365.82ms, median: 14.74ms, mean: 14.76ms
+  warmup: 100/1.5s, total post-warmup: 1000/14.76s
+
+  # after:
+  min: 8.96ms, max: 143.76ms, median: 10.72ms, mean: 11.06ms
+  warmup: 100/1.24s, total post-warmup: 1000/11.06s
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - When publishing, the package manager now uses the full term instead of the
