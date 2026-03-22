@@ -1170,6 +1170,97 @@ pub fn code_action_import_module(
     }
 }
 
+pub fn code_action_generate_type(
+    module: &Module,
+    line_numbers: &LineNumbers,
+    params: &CodeActionParams,
+    error: &Option<Error>,
+    actions: &mut Vec<CodeAction>,
+) {
+    let uri = &params.text_document.uri;
+    let Some(Error::Type { errors, .. }) = error else {
+        return;
+    };
+
+    for error in errors {
+        let type_::Error::UnknownType {
+            location,
+            name,
+            arity,
+            ..
+        } = error
+        else {
+            continue;
+        };
+
+        let range = src_span_to_lsp_range(*location, line_numbers);
+        if !within(params.range, range) {
+            continue;
+        }
+
+        // Insert the new type stub before the top-level definition that
+        // contains the error, so it appears close to where it is used.
+        let insert_at = definition_start_containing(&module.ast.definitions, location.start)
+            .unwrap_or(module.code.len() as u32);
+        let insert_range = src_span_to_lsp_range(
+            SrcSpan {
+                start: insert_at,
+                end: insert_at,
+            },
+            line_numbers,
+        );
+
+        let new_text = if *arity == 0 {
+            format!("type {name}\n\n")
+        } else {
+            let mut printer = Printer::new_without_type_variables(&module.ast.names);
+            let params_str = printer.fresh_generic_names(*arity).join(", ");
+            format!("type {name}({params_str})\n\n")
+        };
+
+        let edit = TextEdit {
+            range: insert_range,
+            new_text,
+        };
+
+        CodeActionBuilder::new("Generate type")
+            .kind(CodeActionKind::QUICKFIX)
+            .changes(uri.clone(), vec![edit])
+            .preferred(true)
+            .push_to(actions);
+    }
+}
+
+/// Returns the source offset of the top-level definition that contains `position`,
+/// so the caller can insert code before it.
+fn definition_start_containing(definitions: &TypedDefinitions, position: u32) -> Option<u32> {
+    definitions
+        .functions
+        .iter()
+        .map(|function| function.full_location())
+        .chain(
+            definitions
+                .custom_types
+                .iter()
+                .map(|custom_type| custom_type.full_location()),
+        )
+        .chain(
+            definitions
+                .type_aliases
+                .iter()
+                .map(|type_alias| type_alias.location),
+        )
+        .chain(
+            definitions
+                .constants
+                .iter()
+                .map(|constant| constant.location),
+        )
+        .filter(|span| span.start <= position && position <= span.end)
+        .map(|span| span.start)
+        .next()
+}
+
 fn suggest_imports(
     location: SrcSpan,
     importable_modules: &[ModuleSuggestion],

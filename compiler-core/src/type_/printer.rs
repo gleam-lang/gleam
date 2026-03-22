@@ -467,6 +467,10 @@ impl<'a> Printer<'a> {
         }
     }
 
+    pub fn fresh_generic_names(&mut self, n: usize) -> Vec<EcoString> {
+        (0..n).map(|_| self.next_letter()).collect()
+    }
+
     pub fn print_type_without_aliases(&mut self, type_: &Type) -> EcoString {
         let mut buffer = EcoString::new();
         self.print(type_, &mut buffer, PrintMode::ExpandAliases);
