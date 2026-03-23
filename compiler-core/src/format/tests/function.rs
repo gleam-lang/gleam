@@ -343,8 +343,8 @@ fn comment_in_tuple_return_type() {
 }
 "#,
         r#"pub fn main() -> #(
-  String,
   // This is a string
+  String,
   // This is an awesome string
 ) {
   todo
