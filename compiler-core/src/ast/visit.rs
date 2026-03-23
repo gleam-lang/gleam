@@ -1,6 +1,6 @@
 //! AST traversal routines, referenced from [`syn::visit`](https://docs.rs/syn/latest/syn/visit/index.html)
 //!
-//! Each method of the [`Visit`] trait can be overriden to customize the
+//! Each method of the [`Visit`] trait can be overridden to customize the
 //! behaviour when visiting the corresponding type of AST node. By default,
 //! every method recursively visits the substructure of the node by using the
 //! right visitor method.
