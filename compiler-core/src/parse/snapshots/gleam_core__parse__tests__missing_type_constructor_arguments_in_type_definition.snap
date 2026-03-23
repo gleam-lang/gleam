@@ -17,4 +17,5 @@ error: Syntax error
   │           ^^ I was expecting generic parameters here
 
 A generic type must have at least a generic parameter.
+
 Hint: If a type is not generic you should omit the `()`.

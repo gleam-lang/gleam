@@ -19,8 +19,8 @@ error: Lowercase bool pattern
 4 │     true -> 1
   │     ^^^^ This is not a bool
 
-See: https://tour.gleam.run/basics/bools/
 Hint: In Gleam bool literals are `True` and `False`.
+See: https://tour.gleam.run/basics/bools/
 
 error: Lowercase bool pattern
   ┌─ /src/one/two.gleam:5:5
@@ -28,5 +28,5 @@ error: Lowercase bool pattern
 5 │     false -> 2
   │     ^^^^^ This is not a bool
 
-See: https://tour.gleam.run/basics/bools/
 Hint: In Gleam bool literals are `True` and `False`.
+See: https://tour.gleam.run/basics/bools/

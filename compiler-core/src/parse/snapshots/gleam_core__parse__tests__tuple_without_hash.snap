@@ -20,4 +20,5 @@ error: Syntax error
 3 │     let triple = (1, 2.2, "three")
   │                  ^ This parenthesis cannot be understood here
 
-Hint: To group expressions in Gleam, use "{" and "}"; tuples are created with `#(` and `)`.
+Hint: To group expressions in Gleam, use "{" and "}"; tuples are created
+with `#(` and `)`.

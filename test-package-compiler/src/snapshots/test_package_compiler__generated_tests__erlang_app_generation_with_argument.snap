@@ -32,4 +32,5 @@ expression: "./cases/erlang_app_generation_with_argument"
 warning: Empty module
 
 Module 'main' contains no public definitions.
+
 Hint: You can safely remove this module.

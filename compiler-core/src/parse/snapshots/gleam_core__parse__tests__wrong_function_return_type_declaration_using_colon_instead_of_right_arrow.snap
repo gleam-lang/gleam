@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 2025
 expression: "\npub fn main(): Nil {}\n        "
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -18,4 +16,5 @@ error: Syntax error
 
 Found `:`, expected one of: 
 - `->`
+
 Hint: Return type annotations are written using `->`, not `:`

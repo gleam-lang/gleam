@@ -20,4 +20,5 @@ error: External type with constructors
 This type is annotated with the `@external` annotation, but it has
 constructors. The `@external` annotation is only for external types with no
 constructors.
+
 Hint: Remove the `@external` annotation

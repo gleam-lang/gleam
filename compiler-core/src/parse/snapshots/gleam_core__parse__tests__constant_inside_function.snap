@@ -19,4 +19,5 @@ error: Syntax error
 
 All variables are immutable in Gleam, so constants inside functions are not
 necessary.
+
 Hint: Either move this into the global scope or use `let` binding instead.

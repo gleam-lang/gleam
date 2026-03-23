@@ -389,7 +389,6 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "Lists are immutable and singly-linked, so to append items to them",
                     "all the elements of a list would need to be copied into a new list.",
                     "This would be slow, so there is no built-in syntax for it.",
-                    "",
                 ]
                 .join("\n"),
                 hint: Some(
@@ -509,19 +508,12 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     | Token::Use => token.to_string(),
                 };
 
-                let messages = std::iter::once(format!("Found {found}, expected one of: "))
+                let mut messages = std::iter::once(format!("Found {found}, expected one of: "))
                     .chain(expected.iter().map(|s| format!("- {s}")));
-
-                let messages = match hint {
-                    Some(hint_text) => messages
-                        .chain(std::iter::once(format!("Hint: {hint_text}")))
-                        .collect_vec(),
-                    _ => messages.collect(),
-                };
 
                 ParseErrorDetails {
                     text: messages.join("\n"),
-                    hint: None,
+                    hint: hint.as_ref().map(|hint| hint.to_string()),
                     label_text: "I was not expecting this".into(),
                     extra_labels: vec![],
                 }
@@ -592,13 +584,15 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
 
             ParseErrorType::InvalidModuleTypePattern => ParseErrorDetails {
                 text: [
-                    "I'm expecting a pattern here",
-                    "Hint: A pattern can be a constructor name, a literal value",
+                    "I'm expecting a pattern here,",
                     "or a variable to bind a value to, etc.",
-                    "See: https://tour.gleam.run/flow-control/case-expressions/",
                 ]
                 .join("\n"),
-                hint: None,
+                hint: Some(
+                    "A pattern can be a constructor name, a literal value
+See: https://tour.gleam.run/flow-control/case-expressions/"
+                        .into(),
+                ),
                 label_text: "Invalid pattern".into(),
                 extra_labels: vec![],
             },

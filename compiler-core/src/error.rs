@@ -2212,27 +2212,22 @@ to call a method on this value you may want to use the function syntax instead."
                         situation: Some(UnifyErrorSituation::Operator(op)),
                     } => {
                         let mut printer = Printer::new(names);
-                        let mut text = format!(
+                        let text = format!(
                             "The {op} operator expects arguments of this type:
 
     {expected}
 
 But this argument has this type:
 
-    {given}\n",
+    {given}",
                             op = op.name(),
                             expected = printer.print_type(expected),
                             given = printer.print_type(given),
                         );
-                        if let Some(hint) = hint_alternative_operator(op, given) {
-                            text.push('\n');
-                            text.push_str("Hint: ");
-                            text.push_str(&hint);
-                        }
                         Diagnostic {
                             title: "Type mismatch".into(),
                             text,
-                            hint: None,
+                            hint: hint_alternative_operator(op, given),
                             level: Level::Error,
                             location: Some(Location {
                                 label: Label {
@@ -3546,7 +3541,6 @@ The missing patterns are:\n",
                             text.push_str("\n    ");
                             text.push_str(missing);
                         }
-                        text.push('\n');
 
                         Diagnostic {
                             title: "Inexhaustive pattern".into(),
@@ -3621,7 +3615,7 @@ The missing patterns are:\n",
                     } => {
                         let text = wrap_format!(
                             "This value is not available as it is defined using externals, \
-and there is no implementation for the {} target.\n",
+and there is no implementation for the {} target.",
                             match current_target {
                                 Target::Erlang => "Erlang",
                                 Target::JavaScript => "JavaScript",
@@ -3927,10 +3921,10 @@ See: https://tour.gleam.run/advanced-features/use/"
                     } => {
                         let kind_str = kind.as_str();
                         let label = format!("This is not a valid {} name", kind_str.to_lowercase());
-                        let text = match kind {
+                        let hint = match kind {
                             Named::Type | Named::TypeAlias | Named::CustomTypeVariant => {
-                                wrap_format!(
-                                    "Hint: {} names start with an uppercase \
+                                format!(
+                                    "{} names start with an uppercase \
 letter and contain only lowercase letters, numbers, \
 and uppercase letters.
 Try: {}",
@@ -3943,15 +3937,15 @@ Try: {}",
                             | Named::Argument
                             | Named::Label
                             | Named::Constant
-                            | Named::Function => wrap_format!(
-                                "Hint: {} names start with a lowercase letter \
+                            | Named::Function => format!(
+                                "{} names start with a lowercase letter \
 and contain a-z, 0-9, or _.
 Try: {}",
                                 kind_str,
                                 to_snake_case(name)
                             ),
-                            Named::Discard => wrap_format!(
-                                "Hint: {} names start with _ and contain \
+                            Named::Discard => format!(
+                                "{} names start with _ and contain \
 a-z, 0-9, or _.
 Try: _{}",
                                 kind_str,
@@ -3961,8 +3955,8 @@ Try: _{}",
 
                         Diagnostic {
                             title: format!("Invalid {} name", kind_str.to_lowercase()),
-                            text,
-                            hint: None,
+                            text: "".into(),
+                            hint: Some(hint),
                             level: Level::Error,
                             location: Some(Location {
                                 label: Label {
@@ -4210,8 +4204,12 @@ with no constructors."
 
                     TypeError::LowercaseBoolPattern { location } => Diagnostic {
                         title: "Lowercase bool pattern".to_string(),
-                        text: "See: https://tour.gleam.run/basics/bools/".into(),
-                        hint: Some("In Gleam bool literals are `True` and `False`.".into()),
+                        text: "".into(),
+                        hint: Some(
+                            "In Gleam bool literals are `True` and `False`.
+See: https://tour.gleam.run/basics/bools/"
+                                .into(),
+                        ),
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -4718,8 +4716,7 @@ named `{name}`.
 
 By default Erlang includes a module with the same name so if we were \
 to compile and load your module it would overwrite the Erlang one, potentially \
-causing confusing errors and crashes.
-"
+causing confusing errors and crashes."
                     ),
                     level: Level::Error,
                     location: None,
@@ -4895,7 +4892,7 @@ fn hint_wrap_value_in_result(expected: &Arc<Type>, given: &Arc<Type>) -> Option<
 }
 
 fn hint_numeric_message(alt: &str, type_: &str) -> String {
-    format!("the {alt} operator can be used with {type_}s\n")
+    format!("The {alt} operator can be used with {type_}s\n")
 }
 
 fn hint_string_message() -> String {

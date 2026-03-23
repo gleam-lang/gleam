@@ -117,6 +117,9 @@
   generated JavaScript code, leading to runtime errors in certain circumstances.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed the formatting of some errors' hints to properly wrap.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.15.1 - 2026-03-17
 
 ### Bug fixes

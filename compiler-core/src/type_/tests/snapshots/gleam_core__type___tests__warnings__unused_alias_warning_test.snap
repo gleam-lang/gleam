@@ -32,4 +32,5 @@ warning: Shadowed Import
 
 Definition of one shadows an imported value.
 The imported value could not be used in this module anyway.
+
 Hint: Either rename the definition or remove the import.

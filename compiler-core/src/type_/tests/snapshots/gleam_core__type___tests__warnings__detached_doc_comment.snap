@@ -20,4 +20,5 @@ warning: Detached doc comment
 
 This doc comment is followed by a regular comment so it is not attached to
 any definition.
+
 Hint: Move the comment above the doc comment

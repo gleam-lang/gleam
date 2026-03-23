@@ -885,15 +885,15 @@ Run this command to add it to your dependencies:
                     let text = match reason {
                         UnreachablePatternReason::DuplicatePattern => wrap(
                             "This pattern cannot be reached as a previous \
-pattern matches the same values.\n",
+pattern matches the same values.",
                         ),
                         UnreachablePatternReason::ImpossibleVariant => wrap(
                             "This pattern cannot be reached as it matches on \
-a variant of a type which is never present.\n",
+a variant of a type which is never present.",
                         ),
                         UnreachablePatternReason::ImpossibleSegments(_) => wrap(
                             "This pattern cannot be reached as it contains \
-segments that will never match.\n",
+segments that will never match.",
                         ),
                     };
 
