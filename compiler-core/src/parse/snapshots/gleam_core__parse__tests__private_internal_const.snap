@@ -16,4 +16,5 @@ error: Syntax error
   │ ^^^^^^^^^ Redundant internal attribute
 
 Only a public definition can be annotated as internal.
+
 Hint: Remove the `@internal` annotation.

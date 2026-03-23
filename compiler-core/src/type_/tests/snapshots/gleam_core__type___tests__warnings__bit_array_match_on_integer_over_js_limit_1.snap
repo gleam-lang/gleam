@@ -21,4 +21,5 @@ warning: Truncated bit array segment
 
 This segment is a 53-bit long integer, but on the JavaScript target numbers
 have at most 52 bits. It would be truncated to its first 52 bits.
+
 Hint: Did you mean to use the `bytes` segment option?

@@ -18,4 +18,5 @@ error: Syntax error
 
 Found a name, expected one of: 
 - `(`
+
 Hint: Only module-level functions can be named.

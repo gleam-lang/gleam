@@ -16,6 +16,7 @@ warning: Todo found
 
 This code will crash if it is run. Be sure to finish it before
 running your program.
+
 Hint: I think its type is `fn(Int, Nil) -> a`.
 
 
@@ -27,6 +28,7 @@ warning: Todo used as a function
 
 `todo` is not a function and will crash before it can do anything with
 these arguments.
+
 Hint: if you want to display an error message you should write
 `todo as "my error message"`
 See: https://tour.gleam.run/advanced-features/todo/

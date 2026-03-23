@@ -84,6 +84,7 @@ main() ->
 warning: Empty module
 
 Module 'empty' contains no public definitions.
+
 Hint: You can safely remove this module.
 
 

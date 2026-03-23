@@ -29,7 +29,6 @@ But this argument has this type:
 
     math.Vector
 
-
 error: Type mismatch
   ┌─ /src/one/two.gleam:4:7
   │

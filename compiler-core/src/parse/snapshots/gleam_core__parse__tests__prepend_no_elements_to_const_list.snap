@@ -16,4 +16,5 @@ error: Syntax error
   │                ^^^^^^^^^^ This spread does nothing
 
 See: https://tour.gleam.run/basics/lists/
+
 Hint: Try prepending some elements [1, 2, ..list].

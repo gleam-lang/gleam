@@ -26,4 +26,5 @@ expression: "./cases/not_overwriting_erlang_module"
 warning: Empty module
 
 Module 'app/code' contains no public definitions.
+
 Hint: You can safely remove this module.

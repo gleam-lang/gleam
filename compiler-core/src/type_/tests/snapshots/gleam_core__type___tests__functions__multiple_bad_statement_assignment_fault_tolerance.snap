@@ -26,7 +26,7 @@ But this argument has this type:
 
     Float
 
-Hint: the +. operator can be used with Floats
+Hint: The +. operator can be used with Floats
 
 
 error: Type mismatch
@@ -43,4 +43,4 @@ But this argument has this type:
 
     Float
 
-Hint: the +. operator can be used with Floats
+Hint: The +. operator can be used with Floats

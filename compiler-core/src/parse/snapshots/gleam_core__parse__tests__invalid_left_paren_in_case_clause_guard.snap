@@ -18,4 +18,5 @@ error: Syntax error
 
 Found `(`, expected one of: 
 - `->`
+
 Hint: Did you mean to wrap a multi line clause in curly braces?

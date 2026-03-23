@@ -7,7 +7,7 @@ use codespan_reporting::{diagnostic::Label as CodespanLabel, files::SimpleFiles}
 use ecow::EcoString;
 use termcolor::Buffer;
 
-use crate::ast::SrcSpan;
+use crate::{ast::SrcSpan, error::wrap};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Level {
@@ -72,7 +72,13 @@ impl Diagnostic {
         }
 
         if let Some(hint) = &self.hint {
-            writeln!(buffer, "Hint: {hint}").expect("write hint");
+            // If there's some text before the hint we want to leave an empty
+            // line separating the two.
+            if !self.text.is_empty() {
+                writeln!(buffer).expect("write hint");
+            }
+            let message = wrap(&format!("Hint: {hint}"));
+            writeln!(buffer, "{message}").expect("write hint");
         }
     }
 
