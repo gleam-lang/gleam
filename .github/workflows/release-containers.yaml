@@ -36,6 +36,7 @@ jobs:
           sparse-checkout: |
             .github/actions
             containers
+          persist-credentials: false
 
       - name: "Build & Push Container"
         uses: "./.github/actions/build-container"
