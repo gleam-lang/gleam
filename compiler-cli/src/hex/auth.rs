@@ -188,10 +188,9 @@ It will be used to locally encrypt your Hex API tokens.
 
         match self.read_and_decrypt_and_refresh_stored_tokens() {
             Ok(Some(tokens)) => return Ok(tokens.as_credentials()),
-            Ok(None) => (),
+            Ok(None) => {}
             Err(Error::HexSessionRevoked) => {
-                println!("\nYour Hex session has been revoked or has expired.");
-                println!("Restarting the authentication flow to get a new token...\n");
+                // we get this error when refresh token can’t be used anymore
             }
             Err(e) => return Err(e),
         }
