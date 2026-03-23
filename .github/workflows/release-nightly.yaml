@@ -9,18 +9,14 @@ env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: "-D warnings"
 
-permissions:
-  contents: write
-  packages: write
-  id-token: write
-  attestations: write
-
 jobs:
   # Check if the actions already ran in the last 24 hours
   # * If yes: Don't run again
   # * If no: Clean out existing release assets
   prepare-nightly:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     name: Prepare Nightly Release
     outputs:
       should-run: ${{ steps.should-run.outputs.should-run }}
@@ -58,6 +54,10 @@ jobs:
   build-release:
     name: build-release
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     environment: release
     outputs:
       release-id: ${{ steps.release.outputs.id }}
@@ -143,6 +143,10 @@ jobs:
     name: build-container-images
     needs: [prepare-nightly, build-release]
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      id-token: write
+      attestations: write
     if: ${{ needs.prepare-nightly.outputs.should-run != 'false' }}
     strategy:
       matrix:
