@@ -85,18 +85,21 @@ runs:
       if: ${{ inputs.expected-binary-architecture }}
       shell: bash
       run: |
-        BINARY_PATH="target/${{ inputs.target }}/release/gleam"
-        if [[ "${{ inputs.target }}" == *"windows"* ]]; then
+        BINARY_PATH="target/${INPUTS_TARGET}/release/gleam"
+        if [[ "${INPUTS_TARGET}" == *"windows"* ]]; then
           BINARY_PATH="${BINARY_PATH}.exe"
         fi
 
-        if ! file -b "$BINARY_PATH" | grep -iq "${{ inputs.expected-binary-architecture }}"; then
+        if ! file -b "$BINARY_PATH" | grep -iq "${INPUTS_EXPECTED_BINARY_ARCHITECTURE}"; then
           echo "error: Architecture mismatch"
-          echo "Expected architecture: '${{ inputs.expected-binary-architecture }}'"
+          echo "Expected architecture: '${INPUTS_EXPECTED_BINARY_ARCHITECTURE}'"
           echo "Found binary type: '$(file -b "$BINARY_PATH")'"
           exit 1
         fi
         echo "ok: Architecture match"
+      env:
+        INPUTS_TARGET: ${{ inputs.target }}
+        INPUTS_EXPECTED_BINARY_ARCHITECTURE: ${{ inputs.expected-binary-architecture }}
 
     # We use Azure Trusted Signing to sign the Windows binaries.
     # This is done to ensure that the binaries are trusted and can be
