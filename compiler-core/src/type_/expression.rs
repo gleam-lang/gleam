@@ -3950,7 +3950,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     };
                 }
 
-                // Emit warning if all fields are being overriden
+                // Emit warning if all fields are being overridden
                 if implicit_labelled_arguments.is_empty() {
                     self.problems
                         .warning(Warning::AllFieldsRecordUpdate { location });

@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 use pretty_assertions::assert_eq;
 
 /// Take a sequence of values and their deps, and return the values in
-/// order so that deps come before the dependants.
+/// order so that deps come before the dependents.
 ///
 /// Any deps that are not nodes are ignored and presumed to be nodes
 /// that do not need processing.
