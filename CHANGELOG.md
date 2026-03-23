@@ -95,6 +95,9 @@
 
 ### Formatter
 
+- The formatter no longer moves comments out of type annotations.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - Fixed a bug where the compiler would crash when trying to read the cache for

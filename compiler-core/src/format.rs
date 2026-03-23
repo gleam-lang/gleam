@@ -770,8 +770,10 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn type_ast<'a>(&mut self, t: &'a TypeAst) -> Document<'a> {
-        match t {
+    fn type_ast<'a>(&mut self, type_: &'a TypeAst) -> Document<'a> {
+        let comments = self.pop_comments(type_.location().start);
+
+        let type_ = match type_ {
             TypeAst::Hole(TypeAstHole { name, .. }) => name.to_doc(),
 
             TypeAst::Constructor(TypeAstConstructor {
@@ -792,15 +794,21 @@ impl<'comments> Formatter<'comments> {
                 .append(self.type_arguments(arguments, location))
                 .group()
                 .append(" ->")
-                .append(break_("", " ").append(self.type_ast(return_)).nest(INDENT)),
+                .append(
+                    break_("", " ")
+                        .append(self.type_ast(return_))
+                        .group()
+                        .nest(INDENT),
+                ),
 
             TypeAst::Var(TypeAstVar { name, .. }) => name.to_doc(),
 
             TypeAst::Tuple(TypeAstTuple { elements, location }) => {
                 "#".to_doc().append(self.type_arguments(elements, location))
             }
-        }
-        .group()
+        };
+
+        commented(type_.group(), comments)
     }
 
     fn type_arguments<'a>(&mut self, arguments: &'a [TypeAst], location: &SrcSpan) -> Document<'a> {
