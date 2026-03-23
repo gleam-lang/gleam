@@ -28,6 +28,8 @@ jobs:
     # if: ${{ github.repository == 'gleam-lang/gleam' }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: print latest_commit
         run: echo ${{ github.sha }}
 
@@ -100,6 +102,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Update versions
         shell: bash
@@ -161,6 +165,7 @@ jobs:
           sparse-checkout: |
             .github/actions
             containers
+          persist-credentials: false
 
       - name: "Build & Push Container"
         uses: "./.github/actions/build-container"
