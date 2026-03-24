@@ -586,8 +586,8 @@ enum Hex {
         #[arg(long)]
         package: Option<String>,
 
-        #[arg(long)]
         /// The version to revert
+        #[arg(long)]
         version: Option<String>,
     },
 
