@@ -186,8 +186,13 @@ It will be used to locally encrypt your Hex API tokens.
             return Ok(key);
         }
 
-        if let Some(tokens) = self.read_and_decrypt_and_refresh_stored_tokens()? {
-            return Ok(tokens.as_credentials());
+        match self.read_and_decrypt_and_refresh_stored_tokens() {
+            Ok(Some(tokens)) => return Ok(tokens.as_credentials()),
+            Ok(None) => {}
+            Err(Error::HexSessionRevoked) => {
+                // we get this error when refresh token can’t be used anymore
+            }
+            Err(e) => return Err(e),
         }
 
         self.create_and_store_new_credentials_via_oauth()
