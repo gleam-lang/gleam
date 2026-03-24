@@ -181,7 +181,7 @@ enum Command {
     ///
     #[command(verbatim_doc_comment)]
     Publish {
-        /// Replace the latest release with this one.
+        /// Replace the latest release with this one
         #[arg(long)]
         replace: bool,
         /// Automatically accept all prompts
