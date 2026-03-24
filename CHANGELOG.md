@@ -59,6 +59,21 @@
   defaulting to "can only modify a release up to one hour after publication"
   ([David Matz](https://github.com/d-matz))
 
+- The `gleam publish` command now has documentation for its options.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The `gleam hex retire` command now accepts three flags `--package`,
+  `--version`, and `--reason` instead of positional arguments.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The `gleam hex unretire` command now accepts two flags `--package`, and
+  `--version` instead of positional arguments.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The `gleam hex owner transfer` command now accepts a flag `--package` instead
+  of a positional argument.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Language server
 
 - The "extract variable" code action can now pick better names for variables in

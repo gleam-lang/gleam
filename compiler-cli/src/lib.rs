@@ -181,8 +181,10 @@ enum Command {
     ///
     #[command(verbatim_doc_comment)]
     Publish {
+        /// Replace the latest release with this one.
         #[arg(long)]
         replace: bool,
+        /// Automatically accept all prompts.
         #[arg(short, long)]
         yes: bool,
     },
@@ -310,7 +312,6 @@ enum Command {
     /// This command runs the `main` function from the `<PROJECT_NAME>` module.
     #[command(trailing_var_arg = true)]
     Run {
-        #[arg(short, long, ignore_case = true, help = target_doc())]
         /// Which compilation target to use
         #[arg(short, long, ignore_case = true, help = target_doc())]
         target: Option<Target>,
@@ -334,7 +335,6 @@ enum Command {
     /// This command runs the `main` function from the `<PROJECT_NAME>_test` module.
     #[command(trailing_var_arg = true)]
     Test {
-        #[arg(short, long, ignore_case = true, help = target_doc())]
         /// Which compilation target to use
         #[arg(short, long, ignore_case = true, help = target_doc())]
         target: Option<Target>,
@@ -350,7 +350,6 @@ enum Command {
     /// This command runs the `main` function from the `<PROJECT_NAME>_dev` module.
     #[command(trailing_var_arg = true)]
     Dev {
-        #[arg(short, long, ignore_case = true, help = target_doc())]
         /// Which compilation target to use
         #[arg(short, long, ignore_case = true, help = target_doc())]
         target: Option<Target>,
@@ -488,7 +487,7 @@ pub struct NewOptions {
 #[derive(Args, Debug)]
 pub struct CompilePackage {
     /// The compilation target for the generated project
-    #[arg(long, ignore_case = true)]
+    #[arg(long, ignore_case = true, help = target_doc())]
     target: Target,
 
     /// The directory of the Gleam package
@@ -547,13 +546,15 @@ enum Hex {
     ///
     #[command(verbatim_doc_comment)]
     Retire {
+        /// The name of the package to retire
+        #[arg(long)]
         package: String,
-
+        /// The version to retire
+        #[arg(long)]
         version: String,
-
-        #[arg(value_parser = PossibleValuesParser::new(RetirementReason::VARIANTS).map(|s| RetirementReason::from_str(&s).unwrap()))]
+        /// The reason for the retirement
+        #[arg(long, value_parser = PossibleValuesParser::new(RetirementReason::VARIANTS).map(|s| RetirementReason::from_str(&s).unwrap()))]
         reason: RetirementReason,
-
         message: Option<String>,
     },
 
@@ -564,7 +565,14 @@ enum Hex {
     /// - HEXPM_API_KEY: (optional) A Hex API key to authenticate with the Hex package manager.
     ///
     #[command(verbatim_doc_comment)]
-    Unretire { package: String, version: String },
+    Unretire {
+        /// The name of the package to unretire
+        #[arg(long)]
+        package: String,
+        /// The version to unretire
+        #[arg(long)]
+        version: String,
+    },
 
     /// Revert a release from Hex
     ///
@@ -574,10 +582,12 @@ enum Hex {
     ///
     #[command(verbatim_doc_comment)]
     Revert {
+        /// The name of the package to revert
         #[arg(long)]
         package: Option<String>,
 
         #[arg(long)]
+        /// The version to revert
         version: Option<String>,
     },
 
@@ -599,6 +609,8 @@ enum Owner {
     ///
     #[command(verbatim_doc_comment)]
     Transfer {
+        /// The name of the package
+        #[arg(long)]
         package: String,
 
         /// The username or email of the new owner
