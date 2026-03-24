@@ -12,6 +12,9 @@
   in the body of a `use` expression
   ([Giovanni Maria Zanchetta](https://github.com/GioMaz))
 
+- Added `mts`, `cts`, `jsx`, `tsx` to native file extensions so you can use
+  external JavaScript code from files with these file extensions.
+  ([Niklas Kirschall](https://github.com/nkxxll))
 
 ## v1.16.0-rc1 - 2026-04-24
 
@@ -125,7 +128,7 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- Compiler can now emit source maps when targeting javascript. This can be enabled
+- Compiler can now emit source maps when targeting JavaScript. This can be enabled
   in the gleam.toml with the `source_maps` setting under the `javascript` section.
   ([Ameen Radwan](https://github.com/Acepie))
 
