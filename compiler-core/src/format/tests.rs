@@ -6875,3 +6875,20 @@ fn tuple_inside_tuple_is_broken_nicely() {
 "
     );
 }
+
+// Louis explicitly said this should be formatted like this!
+// https://github.com/gleam-lang/gleam/issues/4212#issuecomment-2628890917
+#[test]
+fn tuple_with_non_tuple_as_last_argument() {
+    assert_format!(
+        "pub fn main() {
+  #(value, fn(attr) {
+    attr
+    |> dynamic.int
+    |> result.map(Value)
+    |> result.map(AttributeChanged)
+  })
+}
+"
+    );
+}
