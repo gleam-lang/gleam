@@ -8,10 +8,10 @@ use gleam_core::{
         self, ArgNames, AssignName, AssignmentKind, BitArraySegmentTruncation, BoundVariable,
         BoundVariableName, CallArg, CustomType, FunctionLiteralKind, ImplicitCallArgOrigin, Import,
         InvalidExpression, PIPE_PRECEDENCE, Pattern, PatternUnusedArguments,
-        PipelineAssignmentKind, Publicity, RecordConstructor, SrcSpan, TodoKind, TypedArg,
-        TypedAssignment, TypedClauseGuard, TypedDefinitions, TypedExpr, TypedFunction,
-        TypedModuleConstant, TypedPattern, TypedPipelineAssignment, TypedRecordConstructor,
-        TypedStatement, TypedTailPattern, TypedUse, visit::Visit as _,
+        PipelineAssignmentKind, Publicity, RecordConstructor, SrcSpan, TodoKind,
+        TypeAstConstructorName, TypedArg, TypedAssignment, TypedClauseGuard, TypedDefinitions,
+        TypedExpr, TypedFunction, TypedModuleConstant, TypedPattern, TypedPipelineAssignment,
+        TypedRecordConstructor, TypedStatement, TypedTailPattern, TypedUse, visit::Visit as _,
     },
     build::{Located, Module},
     config::PackageConfig,
@@ -1747,15 +1747,14 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
     fn visit_type_ast_constructor(
         &mut self,
         location: &'ast SrcSpan,
-        name_location: &'ast SrcSpan,
-        module: &'ast Option<(EcoString, SrcSpan)>,
-        name: &'ast EcoString,
+        name: &'ast TypeAstConstructorName,
         arguments: &'ast [ast::TypeAst],
         arguments_types: Option<Vec<Arc<Type>>>,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
         if overlaps(self.params.range, range)
-            && let Some((module_alias, _)) = module
+            && let Some(module_alias) = name.module_name()
+            && let Some(name) = name.name()
             && let Some(import) = self.get_module_import(module_alias, name, ast::Layer::Type)
         {
             self.qualified_constructor = Some(QualifiedConstructor {
@@ -1765,15 +1764,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
                 layer: ast::Layer::Type,
             });
         }
-        ast::visit::visit_type_ast_constructor(
-            self,
-            location,
-            name_location,
-            module,
-            name,
-            arguments,
-            arguments_types,
-        );
+        ast::visit::visit_type_ast_constructor(self, location, name, arguments, arguments_types);
     }
 
     fn visit_typed_expr_module_select(
@@ -2000,13 +1991,13 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
     fn visit_type_ast_constructor(
         &mut self,
         location: &'ast SrcSpan,
-        name_location: &'ast SrcSpan,
-        module: &'ast Option<(EcoString, SrcSpan)>,
-        name: &'ast EcoString,
+        name: &'ast TypeAstConstructorName,
         arguments: &'ast [ast::TypeAst],
         arguments_types: Option<Vec<Arc<Type>>>,
     ) {
-        if let Some((module_name, _)) = module {
+        if let Some(module_name) = name.module_name()
+            && let Some(name) = name.name()
+        {
             let QualifiedConstructor {
                 used_name,
                 constructor,
@@ -2018,15 +2009,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
                 self.remove_module_qualifier(*location);
             }
         }
-        ast::visit::visit_type_ast_constructor(
-            self,
-            location,
-            name_location,
-            module,
-            name,
-            arguments,
-            arguments_types,
-        );
+        ast::visit::visit_type_ast_constructor(self, location, name, arguments, arguments_types);
     }
 
     fn visit_typed_expr_module_select(
@@ -2266,13 +2249,12 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
     fn visit_type_ast_constructor(
         &mut self,
         location: &'ast SrcSpan,
-        name_location: &'ast SrcSpan,
-        module: &'ast Option<(EcoString, SrcSpan)>,
-        name: &'ast EcoString,
+        name: &'ast TypeAstConstructorName,
         arguments: &'ast [ast::TypeAst],
         arguments_types: Option<Vec<Arc<Type>>>,
     ) {
-        if module.is_none()
+        if !name.is_qualified()
+            && let Some(name) = name.name()
             && overlaps(
                 self.params.range,
                 src_span_to_lsp_range(*location, self.line_numbers),
@@ -2281,15 +2263,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
             self.get_module_import_from_type_constructor(name);
         }
 
-        ast::visit::visit_type_ast_constructor(
-            self,
-            location,
-            name_location,
-            module,
-            name,
-            arguments,
-            arguments_types,
-        );
+        ast::visit::visit_type_ast_constructor(self, location, name, arguments, arguments_types);
     }
 
     fn visit_typed_expr_var(
@@ -2510,13 +2484,13 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
     fn visit_type_ast_constructor(
         &mut self,
         location: &'ast SrcSpan,
-        name_location: &'ast SrcSpan,
-        module: &'ast Option<(EcoString, SrcSpan)>,
-        name: &'ast EcoString,
+        name: &'ast TypeAstConstructorName,
         arguments: &'ast [ast::TypeAst],
         arguments_types: Option<Vec<Arc<Type>>>,
     ) {
-        if module.is_none() {
+        if !name.is_qualified()
+            && let Some(name) = name.name()
+        {
             let UnqualifiedConstructor {
                 constructor, layer, ..
             } = &self.unqualified_constructor;
@@ -2524,15 +2498,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
                 self.add_module_qualifier(*location);
             }
         }
-        ast::visit::visit_type_ast_constructor(
-            self,
-            location,
-            name_location,
-            module,
-            name,
-            arguments,
-            arguments_types,
-        );
+        ast::visit::visit_type_ast_constructor(self, location, name, arguments, arguments_types);
     }
 
     fn visit_typed_expr_var(

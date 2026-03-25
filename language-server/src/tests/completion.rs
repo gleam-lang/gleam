@@ -2424,3 +2424,68 @@ pub fn to_base_32() {}
         Position::new(1, 17)
     );
 }
+
+const OPTION_MODULE: &str = "
+pub type Option(a) { Some(a) None }
+pub fn all() {}
+";
+
+#[test]
+fn do_not_show_completions_for_module_values_when_typing_an_argument_type() {
+    assert_completion!(
+        TestProject::for_source(
+            "
+import option
+pub fn main(n: option.) {}
+"
+        )
+        .add_dep_module("option", OPTION_MODULE),
+        Position::new(2, 22)
+    );
+}
+
+#[test]
+fn do_not_show_completions_for_module_values_when_typing_a_return_type() {
+    assert_completion!(
+        TestProject::for_source(
+            "
+import option
+pub fn main() -> option. {}
+"
+        )
+        .add_dep_module("option", OPTION_MODULE),
+        Position::new(2, 24)
+    );
+}
+
+#[test]
+fn do_not_show_completions_for_module_values_when_typing_a_constructor_type() {
+    assert_completion!(
+        TestProject::for_source(
+            "
+import option
+pub type Wibble {
+  Wibble(option.)
+}
+"
+        )
+        .add_dep_module("option", OPTION_MODULE),
+        Position::new(3, 16)
+    );
+}
+
+#[test]
+fn do_not_show_completions_for_module_values_when_typing_an_annotation() {
+    assert_completion!(
+        TestProject::for_source(
+            "
+import option
+pub fn main() {
+  let a: option. = todo
+}
+"
+        )
+        .add_dep_module("option", OPTION_MODULE),
+        Position::new(3, 16)
+    );
+}

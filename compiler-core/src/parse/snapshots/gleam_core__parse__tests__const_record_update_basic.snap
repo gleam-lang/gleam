@@ -50,12 +50,13 @@ Parsed {
                                                     start: 30,
                                                     end: 36,
                                                 },
-                                                name_location: SrcSpan {
-                                                    start: 30,
-                                                    end: 36,
+                                                name: Unqualified {
+                                                    name: "String",
+                                                    location: SrcSpan {
+                                                        start: 30,
+                                                        end: 36,
+                                                    },
                                                 },
-                                                module: None,
-                                                name: "String",
                                                 arguments: [],
                                                 start_parentheses: None,
                                             },
@@ -83,12 +84,13 @@ Parsed {
                                                     start: 43,
                                                     end: 46,
                                                 },
-                                                name_location: SrcSpan {
-                                                    start: 43,
-                                                    end: 46,
+                                                name: Unqualified {
+                                                    name: "Int",
+                                                    location: SrcSpan {
+                                                        start: 43,
+                                                        end: 46,
+                                                    },
                                                 },
-                                                module: None,
-                                                name: "Int",
                                                 arguments: [],
                                                 start_parentheses: None,
                                             },

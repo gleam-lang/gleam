@@ -1,7 +1,10 @@
 use super::*;
 use crate::{
     analyse::name::check_name_case,
-    ast::{Layer, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar},
+    ast::{
+        Layer, TypeAst, TypeAstConstructor, TypeAstConstructorName, TypeAstFn, TypeAstHole,
+        TypeAstTuple, TypeAstVar,
+    },
     reference::ReferenceKind,
 };
 use std::sync::Arc;
@@ -114,8 +117,6 @@ impl Hydrator {
         match ast {
             TypeAst::Constructor(TypeAstConstructor {
                 location,
-                name_location,
-                module,
                 name,
                 arguments,
                 start_parentheses,
@@ -127,6 +128,36 @@ impl Hydrator {
                     argument_types.push((argument.location(), type_));
                 }
 
+                let module = match name {
+                    TypeAstConstructorName::Unqualified { .. } => None,
+                    TypeAstConstructorName::Qualified {
+                        module,
+                        module_location,
+                        ..
+                    } => Some((module.clone(), *module_location)),
+                };
+
+                // If the constructor has been typed incorrectly with no name,
+                // we can't figure out what type it's supposed to be, so it's
+                // going to be an error: `wibble.` <- the name is missing!
+                let (name, name_location) = match name {
+                    TypeAstConstructorName::Unqualified { name, location }
+                    | TypeAstConstructorName::Qualified {
+                        name: Some((name, location)),
+                        ..
+                    } => (name, location),
+                    TypeAstConstructorName::Qualified {
+                        name: None,
+                        module_location,
+                        dot_location,
+                        ..
+                    } => {
+                        return Err(Error::QualifiedTypeMissingName {
+                            location: SrcSpan::new(module_location.start, *dot_location),
+                        });
+                    }
+                };
+
                 // Look up the constructor
                 let TypeConstructor {
                     parameters,
@@ -134,10 +165,10 @@ impl Hydrator {
                     deprecation,
                     ..
                 } = environment
-                    .get_type_constructor(module, name)
-                    .map_err(|e| {
+                    .get_type_constructor(&module, name)
+                    .map_err(|error| {
                         convert_get_type_constructor_error(
-                            e,
+                            error,
                             location,
                             module.as_ref().map(|(_, location)| *location),
                         )

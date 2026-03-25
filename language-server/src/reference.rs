@@ -7,7 +7,8 @@ use gleam_core::{
     analyse,
     ast::{
         self, ArgNames, AssignName, BitArraySize, ClauseGuard, CustomType, Function,
-        ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
+        ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypeAstConstructorName, TypedExpr,
+        TypedModule, visit::Visit,
     },
     build::Located,
     type_::{
@@ -263,12 +264,13 @@ pub fn reference_for_ast_node(
             Some((module, name)) => {
                 let (target_kind, location) = match ast {
                     ast::TypeAst::Constructor(constructor) => {
-                        let kind = if constructor.module.is_some() {
+                        let kind = if constructor.name.is_qualified() {
                             RenameTarget::Qualified
                         } else {
                             RenameTarget::Unqualified
                         };
-                        (kind, constructor.name_location)
+                        let name_location = constructor.name.name_location()?;
+                        (kind, name_location)
                     }
                     ast::TypeAst::Fn(_)
                     | ast::TypeAst::Var(_)
@@ -917,13 +919,15 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
     fn visit_type_ast_constructor(
         &mut self,
         location: &'ast SrcSpan,
-        name_location: &'ast SrcSpan,
-        module: &'ast Option<(EcoString, SrcSpan)>,
-        name: &'ast EcoString,
+        name: &'ast TypeAstConstructorName,
         arguments: &'ast [ast::TypeAst],
         arguments_types: Option<Vec<std::sync::Arc<Type>>>,
     ) {
-        if let Some((module_alias, module_location)) = module
+        if let TypeAstConstructorName::Qualified {
+            module: module_alias,
+            module_location,
+            ..
+        } = name
             && module_alias == self.module_alias
         {
             self.references.push(ModuleNameReference {
@@ -932,15 +936,7 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
             })
         }
 
-        ast::visit::visit_type_ast_constructor(
-            self,
-            location,
-            name_location,
-            module,
-            name,
-            arguments,
-            arguments_types,
-        );
+        ast::visit::visit_type_ast_constructor(self, location, name, arguments, arguments_types);
     }
 
     fn visit_typed_constant_record(
