@@ -1361,8 +1361,8 @@ impl<'comments> Formatter<'comments> {
             expr,
             arguments,
             location,
-            |argument| &argument.value,
-            |self_, arg| self_.call_arg(arg, arity),
+            |argument| is_breakable_argument(&argument.value, arguments.len()),
+            |self_, argument| self_.call_arg(argument, arity),
         )
     }
 
@@ -1390,8 +1390,10 @@ impl<'comments> Formatter<'comments> {
             "#".to_doc(),
             elements,
             location,
-            |e| e,
-            |self_, e| self_.comma_separated_item(e, elements.len()),
+            |expression| {
+                !expression.is_tuple() && is_breakable_argument(expression, elements.len())
+            },
+            |self_, expression| self_.comma_separated_item(expression, elements.len()),
         )
     }
 
@@ -1400,23 +1402,23 @@ impl<'comments> Formatter<'comments> {
     // resulting document will try to first split that before splitting all the
     // other arguments.
     // This is used for function calls and tuples.
-    fn append_inlinable_wrapped_arguments<'a, 'b, T, ToExpr, ToDoc>(
+    fn append_inlinable_wrapped_arguments<'a, 'b, T, Predicate, ToDoc>(
         &mut self,
         doc: Document<'a>,
         values: &'b [T],
         location: &SrcSpan,
-        to_expr: ToExpr,
+        is_breakable_argument: Predicate,
         to_doc: ToDoc,
     ) -> Document<'a>
     where
         T: HasLocation,
         T: std::fmt::Debug,
-        ToExpr: Fn(&T) -> &UntypedExpr,
+        Predicate: Fn(&T) -> bool,
         ToDoc: Fn(&mut Self, &'b T) -> Document<'a>,
     {
         match init_and_last(values) {
             Some((initial_values, last_value))
-                if is_breakable_argument(to_expr(last_value), values.len())
+                if is_breakable_argument(last_value)
                     && !self.any_comments(last_value.location().start)
                     && !self.any_comment_between(last_value.location().end, location.end) =>
             {
@@ -1503,9 +1505,12 @@ impl<'comments> Formatter<'comments> {
             constructor_doc,
             &pieces,
             location,
-            |arg| match arg {
-                UntypedRecordUpdatePiece::Argument(arg) => &arg.value,
-                UntypedRecordUpdatePiece::Record(record) => record.base.as_ref(),
+            |argument| {
+                let expression = match argument {
+                    UntypedRecordUpdatePiece::Argument(argument) => &argument.value,
+                    UntypedRecordUpdatePiece::Record(record) => &record.base,
+                };
+                is_breakable_argument(expression, pieces.len())
             },
             |this, arg| match arg {
                 UntypedRecordUpdatePiece::Argument(arg) => this.record_update_arg(arg),
@@ -1780,8 +1785,8 @@ impl<'comments> Formatter<'comments> {
                     expr,
                     rest,
                     location,
-                    |arg| &arg.value,
-                    |self_, arg| self_.call_arg(arg, arity),
+                    |argument| is_breakable_argument(&argument.value, rest.len()),
+                    |self_, argument| self_.call_arg(argument, arity),
                 )
             }
 
@@ -1798,8 +1803,8 @@ impl<'comments> Formatter<'comments> {
                     expr,
                     arguments,
                     location,
-                    |arg| &arg.value,
-                    |self_, arg| self_.call_arg(arg, arity),
+                    |argument| is_breakable_argument(&argument.value, arguments.len()),
+                    |self_, argument| self_.call_arg(argument, arity),
                 )
             }
         }
