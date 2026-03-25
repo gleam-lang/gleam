@@ -2596,6 +2596,22 @@ a label or use a record constructor.",
                         }
                     },
 
+                    TypeError::QualifiedTypeMissingName { location } => Diagnostic {
+                        title: "Invalid type".into(),
+                        text: "".into(),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("This is not a valid type".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    },
+
                     TypeError::UnknownType {
                         location,
                         name,

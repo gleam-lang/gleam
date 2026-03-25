@@ -2159,3 +2159,18 @@ const wobble = [..wibble, 4, 5]
 "
     );
 }
+
+#[test]
+fn parse_error_for_greater_sign_after_invalid_qualified_type() {
+    assert_module_error!("pub fn main() -> wibble.<a> { todo }");
+}
+
+#[test]
+fn parse_error_for_type_list_after_invalid_qualified_type_1() {
+    assert_module_error!("pub fn main() -> wibble.() { todo }");
+}
+
+#[test]
+fn parse_error_for_type_list_after_invalid_qualified_type_2() {
+    assert_module_error!("pub fn main() -> wibble.(a, b) { todo }");
+}

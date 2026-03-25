@@ -41,8 +41,9 @@
 use crate::{
     analyse::Inferred,
     ast::{
-        BitArraySize, RecordBeingUpdated, TypedBitArraySize, TypedConstantBitArraySegment,
-        TypedDefinitions, TypedImport, TypedTailPattern, TypedTypeAlias, typed::InvalidExpression,
+        BitArraySize, RecordBeingUpdated, TypeAstConstructorName, TypedBitArraySize,
+        TypedConstantBitArraySegment, TypedDefinitions, TypedImport, TypedTailPattern,
+        TypedTypeAlias, typed::InvalidExpression,
     },
     exhaustiveness::CompiledCase,
     parse::LiteralFloatValue,
@@ -608,21 +609,11 @@ pub trait Visit<'ast> {
     fn visit_type_ast_constructor(
         &mut self,
         location: &'ast SrcSpan,
-        name_location: &'ast SrcSpan,
-        module: &'ast Option<(EcoString, SrcSpan)>,
-        name: &'ast EcoString,
+        name: &'ast TypeAstConstructorName,
         arguments: &'ast [TypeAst],
         inferred_arguments_types: Option<Vec<Arc<Type>>>,
     ) {
-        visit_type_ast_constructor(
-            self,
-            location,
-            name_location,
-            module,
-            name,
-            arguments,
-            inferred_arguments_types,
-        );
+        visit_type_ast_constructor(self, location, name, arguments, inferred_arguments_types);
     }
 
     fn visit_type_ast_fn(
@@ -984,16 +975,12 @@ where
     match node {
         TypeAst::Constructor(super::TypeAstConstructor {
             location,
-            name_location,
             arguments,
-            module,
             name,
             start_parentheses: _,
         }) => {
             v.visit_type_ast_constructor(
                 location,
-                name_location,
-                module,
                 name,
                 arguments,
                 type_.and_then(|type_| type_.constructor_types()),
@@ -1031,9 +1018,7 @@ where
 pub fn visit_type_ast_constructor<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
-    _name_location: &'a SrcSpan,
-    _module: &'a Option<(EcoString, SrcSpan)>,
-    _name: &'a EcoString,
+    _name: &'a TypeAstConstructorName,
     arguments: &'a [TypeAst],
     inferred_arguments_types: Option<Vec<Arc<Type>>>,
 ) where

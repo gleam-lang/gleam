@@ -2150,14 +2150,18 @@ fn get_type_dependencies(type_: &TypeAst) -> Vec<EcoString> {
         TypeAst::Var(TypeAstVar { .. }) => (),
         TypeAst::Hole(TypeAstHole { .. }) => (),
         TypeAst::Constructor(TypeAstConstructor {
-            name,
-            arguments,
-            module,
-            ..
+            name, arguments, ..
         }) => {
-            deps.push(match module {
-                Some((module, _)) => format!("{name}.{module}").into(),
-                None => name.clone(),
+            deps.push(match name {
+                ast::TypeAstConstructorName::Unqualified { name, .. } => name.clone(),
+                ast::TypeAstConstructorName::Qualified {
+                    module,
+                    name: Some((name, _)),
+                    ..
+                } => format!("{module}.{name}").into(),
+                ast::TypeAstConstructorName::Qualified {
+                    module, name: None, ..
+                } => format!("{module}.").into(),
             });
 
             for arg in arguments {

@@ -62,10 +62,11 @@ use crate::ast::{
     CustomType, Definition, Function, FunctionLiteralKind, HasLocation, Import, IntOperator,
     Module, ModuleConstant, Pattern, Publicity, RecordBeingUpdated, RecordConstructor,
     RecordConstructorArg, RecordUpdateArg, SrcSpan, Statement, TailPattern, TargetedDefinition,
-    TodoKind, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple,
-    TypeAstVar, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
-    UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern, UntypedRecordUpdateArg,
-    UntypedStatement, UntypedUseAssignment, Use, UseAssignment,
+    TodoKind, TypeAlias, TypeAst, TypeAstConstructor, TypeAstConstructorName, TypeAstFn,
+    TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport, UntypedArg, UntypedClause,
+    UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule,
+    UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, UntypedUseAssignment, Use,
+    UseAssignment,
 };
 use crate::build::Target;
 use crate::error::wrap;
@@ -2798,25 +2799,43 @@ where
             // Constructor function
             Some((start, Token::UpName { name }, end)) => {
                 self.advance();
-                self.parse_type_name_finish(start, start, None, name, end)
+                let name = TypeAstConstructorName::Unqualified {
+                    name,
+                    location: SrcSpan::new(start, end),
+                };
+                self.parse_type_name_finish(start, end, name)
             }
 
             // Constructor Module or type Variable
-            Some((start, Token::Name { name: mod_name }, end)) => {
+            Some((start, Token::Name { name: module }, end)) => {
                 self.advance();
-                if self.maybe_one(&Token::Dot).is_some() {
-                    let (name_start, upname, upname_e) = self.expect_upname()?;
-                    self.parse_type_name_finish(
-                        start,
-                        name_start,
-                        Some((mod_name, SrcSpan { start, end })),
-                        upname,
-                        upname_e,
-                    )
+
+                if let Some((_, dot_end)) = self.maybe_one(&Token::Dot) {
+                    let module_location = SrcSpan::new(start, end);
+                    match self.maybe_upname() {
+                        Some((name_start, name, name_end)) => {
+                            let name = TypeAstConstructorName::Qualified {
+                                module,
+                                module_location,
+                                dot_location: dot_end,
+                                name: Some((name, SrcSpan::new(name_start, name_end))),
+                            };
+                            self.parse_type_name_finish(start, name_end, name)
+                        }
+                        None => {
+                            let name = TypeAstConstructorName::Qualified {
+                                module,
+                                module_location,
+                                dot_location: dot_end,
+                                name: None,
+                            };
+                            self.parse_type_name_finish(start, dot_end, name)
+                        }
+                    }
                 } else {
                     Ok(Some(TypeAst::Var(TypeAstVar {
                         location: SrcSpan { start, end },
-                        name: mod_name,
+                        name: module,
                     })))
                 }
             }
@@ -2832,46 +2851,67 @@ where
     fn parse_type_name_finish(
         &mut self,
         start: u32,
-        name_start: u32,
-        module: Option<(EcoString, SrcSpan)>,
-        name: EcoString,
         end: u32,
+        name: TypeAstConstructorName,
     ) -> Result<Option<TypeAst>, ParseError> {
-        if let Some((par_s, _)) = self.maybe_one(&Token::LeftParen) {
+        if let Some((left_paren_start, left_paren_end)) = self.maybe_one(&Token::LeftParen) {
+            // In case the type is qualified and is missing a name, it doesn't
+            // make sense to parse a types list: we don't want to accept
+            // something like `wibble.(a, b)`.
+            // Instead we want to say that `(` is unexpected and we were
+            // expecting a type name instead:
+            if name.name().is_none() {
+                return Err(ParseError {
+                    error: ParseErrorType::ExpectedUpName,
+                    location: SrcSpan::new(left_paren_start, left_paren_end),
+                });
+            }
+
             let arguments = self.parse_types()?;
-            let (_, par_e) = self.expect_one(&Token::RightParen)?;
+            let (_, right_paren_end) = self.expect_one(&Token::RightParen)?;
             Ok(Some(TypeAst::Constructor(TypeAstConstructor {
-                location: SrcSpan { start, end: par_e },
-                name_location: SrcSpan {
-                    start: name_start,
-                    end,
-                },
-                module,
+                location: SrcSpan::new(start, right_paren_end),
                 name,
                 arguments,
-                start_parentheses: Some(par_s),
+                start_parentheses: Some(left_paren_start),
             })))
         } else if let Some((less_start, less_end)) = self.maybe_one(&Token::Less) {
+            let location = SrcSpan::new(less_start, less_end);
+            let (module, name) = match name {
+                TypeAstConstructorName::Qualified {
+                    module,
+                    name: Some((name, _)),
+                    ..
+                } => (Some(module), name),
+                TypeAstConstructorName::Unqualified { name, .. } => (None, name),
+
+                // If we're here it means someone has typed something truly
+                // wrong that looks like this: `wibble.<`.
+                // In this case the hint about angle brackets wouldn't make much
+                // sense, so we fallback to just reporting an invalid token
+                // error saying we were expecting an uppercase name
+                TypeAstConstructorName::Qualified { name: None, .. } => {
+                    return Err(ParseError {
+                        error: ParseErrorType::ExpectedUpName,
+                        location,
+                    });
+                }
+            };
+
+            // Otherwise we try and report a nicer error, suggesting one should
+            // use `(a, b)` instead of `<a, b>`.
             let arguments = self.parse_types()?;
             Err(ParseError {
+                location,
                 error: ParseErrorType::TypeUsageAngleGenerics {
                     name,
-                    module: module.map(|(module_name, _)| module_name),
+                    module,
                     arguments,
-                },
-                location: SrcSpan {
-                    start: less_start,
-                    end: less_end,
                 },
             })
         } else {
             Ok(Some(TypeAst::Constructor(TypeAstConstructor {
                 location: SrcSpan { start, end },
-                name_location: SrcSpan {
-                    start: name_start,
-                    end,
-                },
-                module,
                 name,
                 arguments: vec![],
                 start_parentheses: None,

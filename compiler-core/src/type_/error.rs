@@ -175,6 +175,12 @@ pub enum Error {
         hint: UnknownTypeHint,
     },
 
+    /// This happens when someone writes `module_name.` with no type name after
+    /// it.
+    QualifiedTypeMissingName {
+        location: SrcSpan,
+    },
+
     UnknownModule {
         location: SrcSpan,
         name: EcoString,
@@ -1364,6 +1370,7 @@ impl Error {
             | Error::SrcImportingDevDependency { location, .. }
             | Error::ExternalTypeWithConstructors { location, .. }
             | Error::RecordUpdateVariantWithNoFields { location }
+            | Error::QualifiedTypeMissingName { location }
             | Error::LowercaseBoolPattern { location } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
@@ -1558,11 +1565,11 @@ pub enum UnknownTypeConstructorError {
 }
 
 pub fn convert_get_type_constructor_error(
-    e: UnknownTypeConstructorError,
+    error: UnknownTypeConstructorError,
     location: &SrcSpan,
     module_location: Option<SrcSpan>,
 ) -> Error {
-    match e {
+    match error {
         UnknownTypeConstructorError::Type { name, hint } => Error::UnknownType {
             location: *location,
             name,

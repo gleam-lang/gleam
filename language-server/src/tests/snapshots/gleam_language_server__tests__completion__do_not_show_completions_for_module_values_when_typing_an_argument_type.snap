@@ -1,0 +1,15 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "\nimport option\npub fn main(n: option.) {}\n"
+---
+import option
+pub fn main(n: option.|) {}
+
+
+----- Completion content -----
+option.Option
+  kind:   Class
+  detail: Type
+  sort:   4_option.Option
+  edits:
+    [2:15-2:22]: "option.Option"

@@ -137,6 +137,10 @@
   record when writing a record update.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server no longer shows completions for values when editing a
+  qualified type.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 - The formatter no longer moves comments out of type annotations.

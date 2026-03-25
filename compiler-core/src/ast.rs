@@ -328,11 +328,112 @@ impl<T: PartialEq> RecordConstructorArg<T> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAstConstructor {
     pub location: SrcSpan,
-    pub name_location: SrcSpan,
-    pub module: Option<(EcoString, SrcSpan)>,
-    pub name: EcoString,
+    pub name: TypeAstConstructorName,
     pub arguments: Vec<TypeAst>,
     pub start_parentheses: Option<u32>,
+}
+
+/// This represents a type constructor name, that can either be qualified, or
+/// unqualified.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TypeAstConstructorName {
+    /// ```gleam
+    /// pub fn wibble() -> wibble.Wibble
+    /// //                 ^^^^^^ module
+    /// //                        ^^^^^^ name
+    /// ```
+    /// Notice how the name could be missing, this is an error! However, instead
+    /// of treating it like a syntax error we allow parsing it and report it
+    /// later. This way the language server can provide better help!
+    Qualified {
+        module: EcoString,
+        module_location: SrcSpan,
+        dot_location: u32,
+        name: Option<(EcoString, SrcSpan)>,
+    },
+
+    /// ```gleam
+    /// pub fn wibble() -> Wibble
+    /// //                 ^^^^^^ name
+    /// ```
+    Unqualified { name: EcoString, location: SrcSpan },
+}
+
+impl TypeAstConstructorName {
+    pub fn is_qualified(&self) -> bool {
+        match self {
+            TypeAstConstructorName::Qualified { .. } => true,
+            TypeAstConstructorName::Unqualified { .. } => false,
+        }
+    }
+
+    pub fn module_name(&self) -> Option<&EcoString> {
+        match self {
+            TypeAstConstructorName::Qualified { module, .. } => Some(module),
+            TypeAstConstructorName::Unqualified { .. } => None,
+        }
+    }
+
+    pub fn name(&self) -> Option<&EcoString> {
+        match self {
+            TypeAstConstructorName::Unqualified { name, .. }
+            | TypeAstConstructorName::Qualified {
+                name: Some((name, _)),
+                ..
+            } => Some(name),
+
+            TypeAstConstructorName::Qualified { name: None, .. } => None,
+        }
+    }
+
+    pub fn name_location(&self) -> Option<SrcSpan> {
+        match self {
+            TypeAstConstructorName::Unqualified { location, .. }
+            | TypeAstConstructorName::Qualified {
+                name: Some((_, location)),
+                ..
+            } => Some(*location),
+
+            TypeAstConstructorName::Qualified { name: None, .. } => None,
+        }
+    }
+
+    fn is_logically_equal(&self, other: &TypeAstConstructorName) -> bool {
+        match (self, other) {
+            (
+                TypeAstConstructorName::Qualified { module, name, .. },
+                TypeAstConstructorName::Qualified {
+                    module: other_module,
+                    name: other_name,
+                    ..
+                },
+            ) => {
+                module == other_module
+                    && match (name, other_name) {
+                        (Some((name, _)), Some((other_name, _))) => name == other_name,
+                        (None, Some(_)) | (Some(_), None) => false,
+                        (None, None) => true,
+                    }
+            }
+
+            (
+                TypeAstConstructorName::Unqualified { name, location: _ },
+                TypeAstConstructorName::Unqualified {
+                    name: other_name,
+                    location: _,
+                },
+            ) => name == other_name,
+
+            (
+                TypeAstConstructorName::Qualified { .. },
+                TypeAstConstructorName::Unqualified { .. },
+            )
+            | (
+                TypeAstConstructorName::Unqualified { .. },
+                TypeAstConstructorName::Qualified { .. },
+            ) => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -383,30 +484,23 @@ impl TypeAst {
     pub fn is_logically_equal(&self, other: &TypeAst) -> bool {
         match self {
             TypeAst::Constructor(TypeAstConstructor {
-                module,
                 name,
                 arguments,
                 location: _,
-                name_location: _,
                 start_parentheses: _,
             }) => match other {
                 TypeAst::Constructor(TypeAstConstructor {
-                    module: o_module,
-                    name: o_name,
-                    arguments: o_arguments,
+                    name: other_name,
+                    arguments: other_arguments,
                     location: _,
-                    name_location: _,
                     start_parentheses: _,
                 }) => {
-                    let module_name =
-                        |m: &Option<(EcoString, _)>| m.as_ref().map(|(m, _)| m.clone());
-                    module_name(module) == module_name(o_module)
-                        && name == o_name
-                        && arguments.len() == o_arguments.len()
+                    name.is_logically_equal(other_name)
+                        && arguments.len() == other_arguments.len()
                         && arguments
                             .iter()
-                            .zip(o_arguments)
-                            .all(|a| a.0.is_logically_equal(a.1))
+                            .zip(other_arguments)
+                            .all(|argument| argument.0.is_logically_equal(argument.1))
                 }
                 TypeAst::Fn(_) | TypeAst::Var(_) | TypeAst::Tuple(_) | TypeAst::Hole(_) => false,
             },
@@ -497,32 +591,39 @@ impl TypeAst {
                 })
                 .or(Some(Located::Annotation { ast: self, type_ })),
             TypeAst::Constructor(TypeAstConstructor {
-                arguments, module, ..
-            }) => type_
-                .named_type_information()
-                .and_then(|(module_name, _, arg_types)| {
-                    if let Some(arg) = arguments
-                        .iter()
-                        .zip(arg_types)
-                        .find_map(|(arg, arg_type)| arg.find_node(byte_index, arg_type.clone()))
-                    {
-                        return Some(arg);
-                    }
+                arguments, name, ..
+            }) => {
+                //
+                type_
+                    .named_type_information()
+                    .and_then(|(module_name, _, arg_types)| {
+                        if let Some(arg) = arguments
+                            .iter()
+                            .zip(arg_types)
+                            .find_map(|(arg, arg_type)| arg.find_node(byte_index, arg_type.clone()))
+                        {
+                            return Some(arg);
+                        }
 
-                    if let Some((module_alias, location)) = module
-                        && location.contains(byte_index)
-                    {
-                        return Some(Located::ModuleName {
-                            location: *location,
-                            module_name,
-                            module_alias: module_alias.clone(),
-                            layer: Layer::Type,
-                        });
-                    }
+                        if let TypeAstConstructorName::Qualified {
+                            module_location,
+                            module: module_alias,
+                            ..
+                        } = name
+                            && module_location.contains(byte_index)
+                        {
+                            return Some(Located::ModuleName {
+                                location: *module_location,
+                                module_name,
+                                module_alias: module_alias.clone(),
+                                layer: Layer::Type,
+                            });
+                        }
 
-                    None
-                })
-                .or(Some(Located::Annotation { ast: self, type_ })),
+                        None
+                    })
+                    .or(Some(Located::Annotation { ast: self, type_ }))
+            }
             TypeAst::Tuple(TypeAstTuple { elements, .. }) => type_
                 .tuple_types()
                 .and_then(|elem_types| {
@@ -569,11 +670,17 @@ impl TypeAst {
                 func.return_.print(buffer);
             }
             TypeAst::Constructor(constructor) => {
-                if let Some((module, _)) = &constructor.module {
-                    buffer.push_str(module);
-                    buffer.push('.');
-                }
-                buffer.push_str(&constructor.name);
+                match &constructor.name {
+                    TypeAstConstructorName::Unqualified { name, .. } => buffer.push_str(name),
+                    TypeAstConstructorName::Qualified { module, name, .. } => {
+                        buffer.push_str(module);
+                        buffer.push('.');
+                        if let Some((name, _name_location)) = name {
+                            buffer.push_str(name);
+                        }
+                    }
+                };
+
                 if !constructor.arguments.is_empty() {
                     buffer.push('(');
                     for (i, argument) in constructor.arguments.iter().enumerate() {
@@ -617,10 +724,13 @@ fn type_ast_print_fn() {
 fn type_ast_print_constructor() {
     let mut buffer = EcoString::new();
     let ast = TypeAst::Constructor(TypeAstConstructor {
-        name: "SomeType".into(),
-        module: Some(("some_module".into(), SrcSpan { start: 1, end: 1 })),
+        name: TypeAstConstructorName::Qualified {
+            module: "some_module".into(),
+            dot_location: 1,
+            module_location: SrcSpan { start: 1, end: 1 },
+            name: Some(("SomeType".into(), SrcSpan { start: 1, end: 1 })),
+        },
         location: SrcSpan { start: 1, end: 1 },
-        name_location: SrcSpan { start: 1, end: 1 },
         arguments: vec![
             TypeAst::Var(TypeAstVar {
                 location: SrcSpan { start: 1, end: 1 },
@@ -644,10 +754,13 @@ fn type_ast_print_tuple() {
         location: SrcSpan { start: 1, end: 1 },
         elements: vec![
             TypeAst::Constructor(TypeAstConstructor {
-                name: "SomeType".into(),
-                module: Some(("some_module".into(), SrcSpan { start: 1, end: 1 })),
+                name: TypeAstConstructorName::Qualified {
+                    module: "some_module".into(),
+                    module_location: SrcSpan { start: 1, end: 1 },
+                    dot_location: 1,
+                    name: Some(("SomeType".into(), SrcSpan { start: 1, end: 1 })),
+                },
                 location: SrcSpan { start: 1, end: 1 },
-                name_location: SrcSpan { start: 1, end: 1 },
                 arguments: vec![
                     TypeAst::Var(TypeAstVar {
                         location: SrcSpan { start: 1, end: 1 },

@@ -3575,3 +3575,8 @@ pub const wobble = Wibble(..wobble)
 "
     );
 }
+
+#[test]
+fn qualified_type_with_no_name_results_in_an_error() {
+    assert_module_error!("pub fn main() -> wibble. { todo }");
+}

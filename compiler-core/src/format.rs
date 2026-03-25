@@ -752,16 +752,19 @@ impl<'comments> Formatter<'comments> {
 
     fn type_ast_constructor<'a>(
         &mut self,
-        module: &'a Option<(EcoString, SrcSpan)>,
-        name: &'a str,
+        name: &'a TypeAstConstructorName,
         arguments: &'a [TypeAst],
         location: &SrcSpan,
-        _name_location: &SrcSpan,
     ) -> Document<'a> {
-        let head = module
-            .as_ref()
-            .map(|(qualifier, _)| qualifier.to_doc().append(".").append(name))
-            .unwrap_or_else(|| name.to_doc());
+        let head = match name {
+            TypeAstConstructorName::Unqualified { name, .. } => name.to_doc(),
+            TypeAstConstructorName::Qualified { module, name, .. } => {
+                module.to_doc().append(".").append(
+                    name.as_ref()
+                        .map_or(nil(), |(name, _name_location)| name.to_doc()),
+                )
+            }
+        };
 
         if arguments.is_empty() {
             head
@@ -779,11 +782,9 @@ impl<'comments> Formatter<'comments> {
             TypeAst::Constructor(TypeAstConstructor {
                 name,
                 arguments,
-                module,
                 location,
-                name_location,
                 start_parentheses: _,
-            }) => self.type_ast_constructor(module, name, arguments, location, name_location),
+            }) => self.type_ast_constructor(name, arguments, location),
 
             TypeAst::Fn(TypeAstFn {
                 arguments,
