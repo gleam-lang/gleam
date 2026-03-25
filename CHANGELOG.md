@@ -137,6 +137,27 @@
 - The formatter no longer moves comments out of type annotations.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The formatting of long nested tuples has been improved.
+  Previously the formatter would split only the last tuple:
+  ```gleam
+  #(#(wibble, wobble), #(some_long_tuple, passed_as_last_argument))
+  // after format:
+  #(#(wibble, wobble), #(
+    some_long_tuple,
+    passed_as_last_argument
+  ))
+  ```
+  But now it favours first splitting each element onto its own line:
+  ```gleam
+  #(#(wibble, wobble), #(some_long_tuple, passed_as_last_argument))
+  // after format:
+  #(
+    #(wibble, wobble),
+    #(some_long_tuple, passed_as_last_argument)
+  )
+  ```
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - Fixed a bug that would result in not being able to publish a package if some
