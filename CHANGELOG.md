@@ -136,3 +136,6 @@
 - Fixed a bug where the "Add missing type parameter" code action could be
   triggered on types that do not exist instead of type variables.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Clause guard with logical expression now compiles correctly in JS.
+  ([vyacheslavhere](https://github.com/vyacheslavhere))
