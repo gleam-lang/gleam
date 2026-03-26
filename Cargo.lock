@@ -1114,6 +1114,7 @@ dependencies = [
  "bincode",
  "bitvec",
  "camino",
+ "clap",
  "codespan-reporting",
  "debug-ignore",
  "dirs-next",
