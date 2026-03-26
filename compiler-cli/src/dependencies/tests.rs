@@ -16,9 +16,34 @@ use gleam_core::{
 
 use crate::dependencies::*;
 
+fn trim_line_endings(text: &str) -> String {
+    text.lines()
+        .map(str::trim_end)
+        .collect::<Vec<_>>()
+        .join("\n")
+        + "\n"
+}
+
 #[test]
 fn list_manifest_format() {
     let mut buffer = vec![];
+    let temp_dir = tempfile::tempdir().expect("Failed to create a temp directory");
+    let root_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+        .expect("Path should be valid UTF-8");
+    let paths = ProjectPaths::new(root_path.clone());
+    std::fs::create_dir_all(root_path.join("build/packages/root")).unwrap();
+    std::fs::create_dir_all(root_path.join("build/packages/aaa")).unwrap();
+    std::fs::write(
+        root_path.join("build/packages/root/gleam.toml"),
+        "name = \"root\"\nversion = \"1.0.0\"\nlicences = [\"MIT\"]\n",
+    )
+    .unwrap();
+    std::fs::write(
+        root_path.join("build/packages/aaa/gleam.toml"),
+        "name = \"aaa\"\nversion = \"0.4.2\"\nlicences = [\"Apache-2.0\", \"MIT\"]\n",
+    )
+    .unwrap();
+
     let manifest = Manifest {
         requirements: HashMap::new(),
         packages: vec![
@@ -54,15 +79,46 @@ fn list_manifest_format() {
             },
         ],
     };
-    list_manifest_packages(&mut buffer, manifest).unwrap();
+    list_manifest_packages(&mut buffer, &paths, manifest).unwrap();
+    let output = trim_line_endings(std::str::from_utf8(&buffer).unwrap());
+    assert!(output.contains("Package  Version  License"));
+    assert!(output.contains("root     1.0.0    MIT"));
+    assert!(output.contains("aaa      0.4.2    Apache-2.0, MIT"));
+    assert!(output.contains("zzz      0.4.0"));
+}
+
+#[test]
+fn list_manifest_format_without_downloaded_package_configs() {
+    let mut buffer = vec![];
+    let temp_dir = tempfile::tempdir().expect("Failed to create a temp directory");
+    let root_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+        .expect("Path should be valid UTF-8");
+    let paths = ProjectPaths::new(root_path);
+
+    let manifest = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![ManifestPackage {
+            name: "root".into(),
+            version: Version::parse("1.0.0").unwrap(),
+            build_tools: ["gleam".into()].into(),
+            otp_app: None,
+            requirements: vec![],
+            source: ManifestPackageSource::Hex {
+                outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
+            },
+        }],
+    };
+
+    list_manifest_packages(&mut buffer, &paths, manifest).unwrap();
+
     assert_eq!(
-        std::str::from_utf8(&buffer).unwrap(),
-        "Package  Version
--------  -------
+        trim_line_endings(std::str::from_utf8(&buffer).unwrap()),
+        trim_line_endings(
+            "Package  Version  License
+-------  -------  -------
 root     1.0.0
-aaa      0.4.2
-zzz      0.4.0
 "
+        )
     )
 }
 

@@ -67,7 +67,7 @@ pub enum CheckMajorVersions {
 
 pub fn list(paths: &ProjectPaths) -> Result<()> {
     let (_, manifest) = get_manifest_details(paths)?;
-    list_manifest_packages(std::io::stdout(), manifest)
+    list_manifest_packages(std::io::stdout(), paths, manifest)
 }
 
 pub fn tree(paths: &ProjectPaths, options: TreeOptions) -> Result<()> {
@@ -112,18 +112,47 @@ fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest
     Ok((config, manifest))
 }
 
-fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) -> Result<()> {
+fn list_manifest_packages<W: std::io::Write>(
+    mut buffer: W,
+    paths: &ProjectPaths,
+    manifest: Manifest,
+) -> Result<()> {
     let packages = manifest
         .packages
         .into_iter()
-        .map(|package| vec![package.name.to_string(), package.version.to_string()])
+        .map(|package| {
+            vec![
+                package.name.to_string(),
+                package.version.to_string(),
+                package_licence(paths, &package),
+            ]
+        })
         .collect_vec();
-    let out = space_table(&["Package", "Version"], packages);
+    let out = space_table(&["Package", "Version", "License"], packages);
 
     write!(buffer, "{out}").map_err(|e| Error::StandardIo {
         action: StandardIoAction::Write,
         err: Some(e.kind()),
     })
+}
+
+fn package_licence(paths: &ProjectPaths, package: &ManifestPackage) -> String {
+    let config_path = match &package.source {
+        ManifestPackageSource::Local { path } => paths.root().join(path).join("gleam.toml"),
+        ManifestPackageSource::Hex { .. } | ManifestPackageSource::Git { .. } => {
+            paths.build_packages_package_config(&package.name)
+        }
+    };
+
+    crate::config::read(config_path)
+        .map(|config| {
+            config
+                .licences
+                .into_iter()
+                .map(|licence| licence.to_string())
+                .join(", ")
+        })
+        .unwrap_or_default()
 }
 
 fn list_package_and_dependencies_tree<W: std::io::Write>(
