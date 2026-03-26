@@ -618,8 +618,14 @@ impl<'a> Generator<'a> {
                 .to_doc()
         }
 
-        let doc = if let Some((_, documentation)) = &constructor.documentation {
-            jsdoc_comment(documentation, publicity).append(line())
+        let doc = if let Some((start, documentation)) = &constructor.documentation {
+            docvec![
+                // 3 is the length of the "///" documentation marker
+                // start is the index of the actual content so we need to subtract the length of the marker.
+                self.source_map_tracker(*start - 3),
+                jsdoc_comment(documentation, publicity),
+                line()
+            ]
         } else {
             nil()
         };
@@ -641,7 +647,7 @@ impl<'a> Generator<'a> {
         ];
 
         if constructor.arguments.is_empty() {
-            return head.append("}");
+            return docvec![doc, head, "}"];
         };
 
         let parameters = join(
