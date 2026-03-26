@@ -43,13 +43,17 @@ expression: "\n/// my custom type\npub type Wibble {\n  /// Wibble\n  Wibble\n}\
 Mappings:
 ----- 
 
-/// my custom type
-pub type Wibble {
-  
+
 ⏷
 //# sourceMappingURL=mod.mjs.map
 import { CustomType as $CustomType } from "../gleam.mjs";
 
+
+----- 
+/// my custom type
+pub type Wibble {
+  
+⏷
 
 ----- 
 /// Wibble
@@ -73,11 +77,15 @@ type Unused {
   Unused
 }
 
-pub type Wobble {
-  
+
 ⏷
 
 
+
+----- 
+pub type Wobble {
+  
+⏷
 
 ----- 
 Wobble(Wibble)
