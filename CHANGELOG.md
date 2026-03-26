@@ -103,6 +103,14 @@
   respectively.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Now all options with declared variants have consistent representation of
+  possible values.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+- Documentation for `--target` and `--runtime` options has been improved to
+  include more details.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The "extract variable" code action can now pick better names for variables in
