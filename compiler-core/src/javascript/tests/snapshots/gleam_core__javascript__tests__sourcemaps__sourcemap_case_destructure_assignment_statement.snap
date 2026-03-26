@@ -41,12 +41,16 @@ expression: "\npub type Wibble {\n  Wibble(Int, Int)\n}\n\npub fn go(x) {\n  cas
 Mappings:
 ----- 
 
-pub type Wibble {
-  
+
 ⏷
 //# sourceMappingURL=mod.mjs.map
 import { CustomType as $CustomType } from "../gleam.mjs";
 
+
+----- 
+pub type Wibble {
+  
+⏷
 
 ----- 
 Wibble(Int, Int)
