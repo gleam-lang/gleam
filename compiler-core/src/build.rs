@@ -58,13 +58,14 @@ use vec1::Vec1;
 )]
 #[strum(serialize_all = "lowercase")]
 #[clap(rename_all = "lower")]
+#[serde(rename_all = "lowercase")]
 pub enum Target {
-    #[strum(serialize = "erlang", serialize = "erl")]
-    #[serde(rename = "erlang", alias = "erl")]
+    #[strum(serialize = "erl")]
+    #[serde(alias = "erl")]
     #[clap(alias = "erl")]
     Erlang,
-    #[strum(serialize = "javascript", serialize = "js")]
-    #[serde(rename = "javascript", alias = "js")]
+    #[strum(serialize = "js")]
+    #[serde(alias = "js")]
     #[clap(alias = "js")]
     JavaScript,
 }
@@ -142,16 +143,14 @@ impl Codegen {
     Eq,
 )]
 #[clap(rename_all = "lower")]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
 pub enum Runtime {
-    #[strum(serialize = "nodejs", serialize = "node")]
-    #[serde(rename = "nodejs", alias = "node")]
+    #[strum(serialize = "node")]
+    #[serde(alias = "node")]
     #[clap(alias = "node")]
     NodeJs,
-    #[strum(serialize = "deno")]
-    #[serde(rename = "deno")]
     Deno,
-    #[strum(serialize = "bun")]
-    #[serde(rename = "bun")]
     Bun,
 }
 
