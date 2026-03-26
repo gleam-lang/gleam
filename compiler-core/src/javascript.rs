@@ -436,7 +436,9 @@ impl<'a> Generator<'a> {
         // Add the end position source map tracker to the last definition in place
         // This is to prevent extra new lines from being added to the output
         // Since each definition is a separate statement in the output
-        let last_definition = definitions.pop().unwrap();
+        let last_definition = definitions
+            .pop()
+            .expect("Custom type must have at least one definition here");
         definitions.push(last_definition.append(self.source_map_tracker(custom_type.end_position)));
 
         Some(definitions)
