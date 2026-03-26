@@ -316,6 +316,7 @@ enum Command {
         #[arg(short, long, ignore_case = true, help = target_doc())]
         target: Option<Target>,
 
+        /// Which runtime to use
         #[arg(long, ignore_case = true, help = runtime_doc())]
         runtime: Option<Runtime>,
 
@@ -339,6 +340,7 @@ enum Command {
         #[arg(short, long, ignore_case = true, help = target_doc())]
         target: Option<Target>,
 
+        /// Which runtime to use
         #[arg(long, ignore_case = true, help = runtime_doc())]
         runtime: Option<Runtime>,
 
@@ -354,6 +356,7 @@ enum Command {
         #[arg(short, long, ignore_case = true, help = target_doc())]
         target: Option<Target>,
 
+        /// Which runtime to use
         #[arg(long, ignore_case = true, help = runtime_doc())]
         runtime: Option<Runtime>,
 
@@ -453,14 +456,14 @@ pub enum ExportTarget {
     TypescriptPrelude,
     /// Information on the modules, functions, and types in the project in JSON format
     PackageInterface {
-        #[arg(long = "out", required = true)]
         /// The path to write the JSON file to
+        #[arg(long = "out", required = true)]
         output: Utf8PathBuf,
     },
     /// Package information (gleam.toml) in JSON format
     PackageInformation {
-        #[arg(long = "out", required = true)]
         /// The path to write the JSON file to
+        #[arg(long = "out", required = true)]
         output: Utf8PathBuf,
     },
 }
@@ -648,6 +651,7 @@ enum Docs {
         #[arg(long)]
         open: bool,
 
+        /// Which compilation target to use
         #[arg(short, long, ignore_case = true, help = target_doc())]
         target: Option<Target>,
     },
