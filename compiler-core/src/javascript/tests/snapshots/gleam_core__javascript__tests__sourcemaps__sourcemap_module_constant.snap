@@ -27,10 +27,14 @@ expression: "\n/// my constant\npub const wibble = 1\n/// wobble\nconst wobble =
 Mappings:
 ----- 
 
-/// my constant
 
 ⏷
 //# sourceMappingURL=mod.mjs.map
+
+----- 
+/// my constant
+
+⏷
 /**
  * my constant
  */
@@ -39,11 +43,15 @@ Mappings:
 pub const wibble = 1
 /// wobble
 const wobble = 2
-/// wabble
 
 ⏷
 export const wibble = 1;
 
+
+----- 
+/// wabble
+
+⏷
 /**
  * wabble
  */
