@@ -546,7 +546,7 @@ fn expected_package_exfmt() -> Package {
 }
 
 #[test]
-fn get_package_request() {
+fn api_get_package_request() {
     let config = Config::new();
     let request = crate::repository_v2_get_package_request("exfmt", None, &config);
 
@@ -556,7 +556,7 @@ fn get_package_request() {
 }
 
 #[test]
-fn get_package_response_ok() {
+fn api_get_package_response_ok() {
     let response_body = std::include_bytes!("../test/package_exfmt");
     let response = make_response(200, response_body.to_vec());
 
@@ -844,6 +844,52 @@ fn unknown_error_422() {
         }
         result => panic!("expected Err(ApiError::UnexpectedResponse), got {result:?}"),
     }
+}
+
+#[test]
+fn api_package_request() {
+    let config = Config::new();
+    let request = crate::api_get_package_request("plug", None, &config);
+
+    assert_eq!(request.method(), http::Method::GET);
+    assert_eq!(request.uri().path(), "/api/packages/plug");
+    assert_eq!(request.headers().get("accept").unwrap(), "application/json");
+}
+
+#[test]
+fn api_package_response_ok() {
+    let resp_body = json!({
+        "meta": {
+            "licenses": ["Apache-2.0", "MIT"]
+        }
+    });
+    let response = make_json_response(200, resp_body);
+    let resp = crate::api_get_package_response(response).unwrap();
+
+    assert_eq!(
+        resp,
+        ApiPackage {
+            meta: PackageMeta {
+                licenses: vec!["Apache-2.0".into(), "MIT".into()],
+            },
+        }
+    )
+}
+
+#[test]
+fn api_package_response_without_licenses() {
+    let resp_body = json!({
+        "meta": {}
+    });
+    let response = make_json_response(200, resp_body);
+    let resp = crate::api_get_package_response(response).unwrap();
+
+    assert_eq!(
+        resp,
+        ApiPackage {
+            meta: PackageMeta { licenses: vec![] },
+        }
+    )
 }
 
 #[test]

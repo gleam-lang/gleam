@@ -884,6 +884,17 @@ pub struct Package {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
+pub struct ApiPackage {
+    pub meta: PackageMeta,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
+pub struct PackageMeta {
+    #[serde(default)]
+    pub licenses: Vec<String>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
 pub struct Release<Meta> {
     /// Release version
     pub version: Version,
@@ -1024,6 +1035,33 @@ fn verify_payload(mut signed: Signed, pem_public_key: &[u8]) -> Result<Vec<u8>, 
         Ok(payload)
     } else {
         Err(ApiError::IncorrectPayloadSignature)
+    }
+}
+
+pub fn api_get_package_request(
+    name: &str,
+    credentials: Option<&Credentials>,
+    config: &Config,
+) -> http::Request<Vec<u8>> {
+    let path = format!("packages/{name}");
+    config
+        .api_request(Method::GET, &path)
+        .read_credentials(credentials)
+        .header("accept", "application/json")
+        .body(vec![])
+        .expect("get_package request")
+}
+
+pub fn api_get_package_response(response: http::Response<Vec<u8>>) -> Result<ApiPackage, ApiError> {
+    let (parts, body) = response.into_parts();
+
+    match parts.status {
+        StatusCode::OK => Ok(serde_json::from_slice(&body)?),
+        StatusCode::NOT_FOUND => Err(ApiError::NotFound),
+        StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
+        StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
+        StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
+        status => Err(ApiError::unexpected_response(status, body)),
     }
 }
 

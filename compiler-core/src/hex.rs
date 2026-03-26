@@ -367,3 +367,14 @@ pub async fn get_package_release<Http: HttpClient>(
     let response = http.send(request).await?;
     hexpm::api_get_package_release_response(response).map_err(Error::hex)
 }
+
+pub async fn get_package<Http: HttpClient>(
+    name: &str,
+    config: &hexpm::Config,
+    http: &Http,
+) -> Result<hexpm::ApiPackage> {
+    tracing::info!(name = name, "looking_up_package");
+    let request = hexpm::api_get_package_request(name, None, config);
+    let response = http.send(request).await?;
+    hexpm::api_get_package_response(response).map_err(Error::hex)
+}
