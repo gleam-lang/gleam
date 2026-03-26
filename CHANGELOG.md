@@ -98,6 +98,10 @@
   dependencies every single time it is run.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The build tool will now suggest to create module in `dev` or `test` directory, if
+  that missing module is a dev module or a test module respectively
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The "extract variable" code action can now pick better names for variables in
