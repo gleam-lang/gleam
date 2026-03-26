@@ -184,7 +184,7 @@ enum Command {
         /// Replace the latest release with this one
         #[arg(long)]
         replace: bool,
-        /// Automatically accept all prompts
+        /// Automatically accept confirmation prompts
         #[arg(short, long)]
         yes: bool,
     },
