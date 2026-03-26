@@ -432,11 +432,13 @@ fn template_doc() -> &'static str {
 }
 
 fn target_doc() -> &'static str {
-    "The platform to target"
+    "The platform to target. On the JavaScript target you can also select \
+    the runtime with the `--runtime` option"
 }
 
 fn runtime_doc() -> &'static str {
-    "The runtime to target"
+    "The JavaScript runtime to target. This is only available on the \
+    JavaScript target"
 }
 
 #[derive(Subcommand, Debug, Clone)]
