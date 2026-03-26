@@ -193,3 +193,52 @@ fn case_in_call_is_not_broken_if_it_goes_over_the_limit_with_branches() {
 "#
     );
 }
+
+#[test]
+fn long_alternative_patterns_1() {
+    assert_format!(
+        r#"fn test_1() {
+  case a, b, c {
+    _ignored, _ignored, _ignored
+    | _ignored, _ignored, _ignored
+    | _ignored, _ignored, _ignored
+    -> True
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn long_alternative_patterns_2() {
+    assert_format!(
+        r#"fn test_2() {
+  case a, b, c {
+    _, _, _
+    | _, _, _
+    | this_is_long_and_is_going_to_split_on_multiple,
+      lines,
+      and_force_the_arrow_to_break
+    -> True
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn long_alternative_patterns_3() {
+    assert_format!(
+        r#"fn test_3() {
+  case a, b, c {
+    _, _, _
+    | this_is_long_and_is_going_to_split_on_multiple,
+      lines,
+      and_force_the_alternative_to_break
+    | _, _, _
+    -> True
+  }
+}
+"#
+    );
+}
