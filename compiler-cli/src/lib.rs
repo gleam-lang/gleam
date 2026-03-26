@@ -558,7 +558,7 @@ enum Hex {
         #[arg(long)]
         version: String,
         /// The reason for the retirement
-        #[arg(long, value_parser = PossibleValuesParser::new(RetirementReason::VARIANTS).map(|s| RetirementReason::from_str(&s).unwrap()))]
+        #[arg(long)]
         reason: RetirementReason,
         message: Option<String>,
     },
