@@ -51,8 +51,6 @@ import { CustomType as $CustomType } from "../gleam.mjs";
 ----- 
 Wibble(Int, Int)
 }
-
-
 ⏷
 export class Wibble extends $CustomType {
   constructor($0, $1) {
@@ -65,6 +63,12 @@ export const Wibble$Wibble = ($0, $1) => new Wibble($0, $1);
 export const Wibble$isWibble = (value) => value instanceof Wibble;
 export const Wibble$Wibble$0 = (value) => value[0];
 export const Wibble$Wibble$1 = (value) => value[1];
+----- 
+
+
+
+⏷
+
 
 
 ----- 
@@ -105,9 +109,13 @@ return wibble +
 wobble
   }
 }
-
 ⏷
 wobble;
 }
+----- 
+
+
+⏷
+
 
 -----

@@ -41,11 +41,15 @@ Mappings:
 
 ----- 
 pub const wibble = 1
+⏷
+export const wibble = 1;
+----- 
+
 /// wobble
 const wobble = 2
 
 ⏷
-export const wibble = 1;
+
 
 
 ----- 
@@ -60,5 +64,9 @@ export const wibble = 1;
 pub const wabble = 3
 ⏷
 export const wabble = 3;
+----- 
+
+⏷
+
 
 -----
