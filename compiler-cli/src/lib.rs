@@ -88,15 +88,13 @@ use gleam_core::{
     paths::ProjectPaths,
     version::COMPILER_VERSION,
 };
-use std::str::FromStr;
 
 use camino::Utf8PathBuf;
 
 use clap::{
     Args, Parser, Subcommand,
-    builder::{PossibleValuesParser, Styles, TypedValueParser, styling},
+    builder::{Styles, styling},
 };
-use strum::VariantNames;
 
 #[derive(Args, Debug, Clone)]
 struct UpdateOptions {
