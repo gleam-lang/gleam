@@ -32,6 +32,7 @@ use crate::{
     type_,
 };
 use camino::Utf8PathBuf;
+use clap::ValueEnum;
 use ecow::EcoString;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -46,6 +47,7 @@ use vec1::Vec1;
     Debug,
     Serialize,
     Deserialize,
+    ValueEnum,
     EnumString,
     EnumVariantNames,
     EnumIter,
@@ -125,7 +127,16 @@ impl Codegen {
 }
 
 #[derive(
-    Debug, Serialize, Deserialize, EnumString, EnumVariantNames, Clone, Copy, PartialEq, Eq,
+    Debug,
+    Serialize,
+    Deserialize,
+    EnumString,
+    EnumVariantNames,
+    ValueEnum,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
 )]
 pub enum Runtime {
     #[strum(serialize = "nodejs", serialize = "node")]
