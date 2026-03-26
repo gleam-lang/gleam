@@ -433,9 +433,21 @@ impl<'a> Generator<'a> {
         {
             definitions.push(self.shared_custom_type_fields(name, &accessors_map.shared_accessors));
         }
-        // Add the end position source map tracker to the last definition in place
+        // Add start and end position source map trackers to the first and last definition in place
         // This is to prevent extra new lines from being added to the output
         // Since each definition is a separate statement in the output
+        let start_location = custom_type
+            .documentation
+            .as_ref()
+            // 3 is the length of the "///" documentation marker
+            // start is the index of the actual content so we need to subtract the length of the marker.
+            .map_or(custom_type.location.start, |(start, _)| *start - 3);
+        let first_definition = definitions.remove(0);
+        definitions.insert(
+            0,
+            self.source_map_tracker(start_location)
+                .append(first_definition),
+        );
         let last_definition = definitions
             .pop()
             .expect("Custom type must have at least one definition here");
