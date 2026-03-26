@@ -855,8 +855,14 @@ impl<'a> Generator<'a> {
 
         let document = generator.constant_expression(Context::Constant, value);
 
-        let jsdoc = if let Some((_, documentation)) = documentation {
-            jsdoc_comment(documentation, *publicity).append(line())
+        let jsdoc = if let Some((start, documentation)) = documentation {
+            docvec![
+                // 3 is the length of the "///" documentation marker
+                // start is the index of the actual content so we need to subtract the length of the marker.
+                self.source_map_tracker(*start - 3),
+                jsdoc_comment(documentation, *publicity),
+                line()
+            ]
         } else {
             nil()
         };
@@ -908,6 +914,20 @@ impl<'a> Generator<'a> {
             .iter()
             .map(|arg| arg.names.get_variable_name())
             .collect();
+
+        let function_doc = match &function.documentation {
+            None => nil(),
+            Some((start, documentation)) => {
+                docvec![
+                    // 3 is the length of the "///" documentation marker
+                    // start is the index of the actual content so we need to subtract the length of the marker.
+                    self.source_map_tracker(*start - 3),
+                    jsdoc_comment(documentation, function.publicity),
+                    line()
+                ]
+            }
+        };
+
         let mut generator = expression::Generator::new(
             self.module.name.clone(),
             self.src_path.clone(),
@@ -918,13 +938,6 @@ impl<'a> Generator<'a> {
             self.module_scope.clone(),
             self.source_map_builder.clone(),
         );
-
-        let function_doc = match &function.documentation {
-            None => nil(),
-            Some((_, documentation)) => {
-                jsdoc_comment(documentation, function.publicity).append(line())
-            }
-        };
 
         let head = if function.publicity.is_private() {
             "function "
