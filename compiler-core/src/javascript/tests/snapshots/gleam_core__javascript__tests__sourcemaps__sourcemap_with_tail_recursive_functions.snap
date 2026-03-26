@@ -1,0 +1,107 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+expression: "\npub fn wibble(lon, acc) {\n  case lon {\n    [] -> 0\n    [n, ..rest] -> wibble(rest, acc + n)\n  }\n}\n"
+---
+----- SOURCE CODE
+0 |
+1 |pub fn wibble(lon, acc) {
+2 |  case lon {
+3 |    [] -> 0
+4 |    [n, ..rest] -> wibble(rest, acc + n)
+5 |  }
+6 |}
+
+----- COMPILED JAVASCRIPT
+0 |//# sourceMappingURL=mod.mjs.map
+1 |import { Empty as $Empty } from "../gleam.mjs";
+2 |
+3 |export function wibble(loop$lon, loop$acc) {
+4 |  while (true) {
+5 |    let lon = loop$lon;
+6 |    let acc = loop$acc;
+7 |    if (lon instanceof $Empty) {
+8 |      return 0;
+9 |    } else {
+10 |      let n = lon.head;
+11 |      let rest = lon.tail;
+12 |      loop$lon = rest;
+13 |      loop$acc = acc + n;
+14 |    }
+15 |  }
+16 |}
+
+----- SOURCE MAP
+Mappings:
+----- 
+
+
+⏷
+//# sourceMappingURL=mod.mjs.map
+import { Empty as $Empty } from "../gleam.mjs";
+
+
+----- 
+pub fn wibble(
+⏷
+export function wibble(loop$lon, loop$acc) {
+  while (true) {
+    
+----- 
+lon, 
+⏷
+let lon = loop$lon;
+    
+----- 
+acc) {
+  
+⏷
+let acc = loop$acc;
+    
+----- 
+case 
+⏷
+
+----- 
+lon {
+    [] -> 
+⏷
+if (lon instanceof $Empty) {
+      
+----- 
+0
+    
+⏷
+return 0;
+    } else {
+      
+----- 
+[n, ..rest] -> 
+⏷
+let n = lon.head;
+      let rest = lon.tail;
+      
+----- 
+wibble(
+⏷
+loop$lon = 
+----- 
+rest, 
+⏷
+rest;
+      loop$acc = 
+----- 
+acc + 
+⏷
+acc + 
+----- 
+n)
+  }
+}
+
+⏷
+n;
+    }
+  }
+}
+
+-----
