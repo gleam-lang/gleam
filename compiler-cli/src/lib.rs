@@ -431,12 +431,12 @@ fn template_doc() -> &'static str {
     "The template to use"
 }
 
-fn target_doc() -> String {
-    format!("The platform to target ({})", Target::VARIANTS.join("|"))
+fn target_doc() -> &'static str {
+    "The platform to target"
 }
 
-fn runtime_doc() -> String {
-    format!("The runtime to target ({})", Runtime::VARIANTS.join("|"))
+fn runtime_doc() -> &'static str {
+    "The runtime to target"
 }
 
 #[derive(Subcommand, Debug, Clone)]
