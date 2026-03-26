@@ -433,6 +433,11 @@ impl<'a> Generator<'a> {
         {
             definitions.push(self.shared_custom_type_fields(name, &accessors_map.shared_accessors));
         }
+        // Add the end position source map tracker to the last definition in place
+        // This is to prevent extra new lines from being added to the output
+        // Since each definition is a separate statement in the output
+        let last_definition = definitions.pop().unwrap();
+        definitions.push(last_definition.append(self.source_map_tracker(custom_type.end_position)));
 
         Some(definitions)
     }
@@ -636,11 +641,8 @@ impl<'a> Generator<'a> {
             "class "
         };
 
-        let sourcemap_cursor_position_observer =
-            self.source_map_tracker(constructor.location.start);
-
         let head = docvec![
-            sourcemap_cursor_position_observer,
+            self.source_map_tracker(constructor.location.start),
             head,
             &constructor.name,
             " extends $CustomType {"
@@ -875,6 +877,7 @@ impl<'a> Generator<'a> {
             " = ",
             document,
             ";",
+            self.source_map_tracker(value.location().end),
         ])
     }
 
@@ -957,6 +960,7 @@ impl<'a> Generator<'a> {
             docvec![line(), body].nest(INDENT).group(),
             line(),
             "}",
+            self.source_map_tracker(function.end_position),
         ])
     }
 

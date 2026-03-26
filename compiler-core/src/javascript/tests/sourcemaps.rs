@@ -12,6 +12,26 @@ pub fn add_2(x) {
 }
 
 #[test]
+fn sourcemap_function_definitions_with_unused() {
+    assert_source_map!(
+        "
+/// my add function
+pub fn add_2(x) {
+  x + 2
+}
+
+fn unused(x) {
+  x + 1
+}
+
+pub fn add_3(x) {
+  x + 3
+}
+"
+    )
+}
+
+#[test]
 fn sourcemap_function_definition_with_variable_assignment() {
     assert_source_map!(
         "
@@ -61,6 +81,27 @@ pub type Wibble {
   /// Wabble
   Wabble(Wibble)
 }"
+    )
+}
+
+#[test]
+fn sourcemap_custom_type_definition_with_unused() {
+    assert_source_map!(
+        "
+/// my custom type
+pub type Wibble {
+  /// Wibble
+  Wibble
+}
+
+type Unused {
+  Unused
+}
+
+pub type Wobble {
+  Wobble(Wibble)
+}
+"
     )
 }
 
