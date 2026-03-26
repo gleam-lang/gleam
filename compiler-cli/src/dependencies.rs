@@ -117,18 +117,15 @@ fn list_manifest_packages<W: std::io::Write>(
     paths: &ProjectPaths,
     manifest: Manifest,
 ) -> Result<()> {
-    let packages = manifest
-        .packages
-        .into_iter()
-        .map(|package| {
-            vec![
-                package.name.to_string(),
-                package.version.to_string(),
-                package_licence(paths, &package),
-            ]
-        })
-        .collect_vec();
-    let out = space_table(&["Package", "Version", "License"], packages);
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let config = hexpm::Config::new();
+    let http = HttpClient::new();
+    let out = list_manifest_packages_with(paths, manifest, |package_name| {
+        runtime
+            .block_on(hex::get_package(package_name, &config, &http))
+            .map(|package| package.meta.licenses.join(", "))
+            .unwrap_or_default()
+    })?;
 
     write!(buffer, "{out}").map_err(|e| Error::StandardIo {
         action: StandardIoAction::Write,
@@ -136,14 +133,48 @@ fn list_manifest_packages<W: std::io::Write>(
     })
 }
 
-fn package_licence(paths: &ProjectPaths, package: &ManifestPackage) -> String {
-    let config_path = match &package.source {
-        ManifestPackageSource::Local { path } => paths.root().join(path).join("gleam.toml"),
-        ManifestPackageSource::Hex { .. } | ManifestPackageSource::Git { .. } => {
-            paths.build_packages_package_config(&package.name)
-        }
-    };
+fn list_manifest_packages_with<GetHexPackageLicences>(
+    paths: &ProjectPaths,
+    manifest: Manifest,
+    mut get_hex_package_licences: GetHexPackageLicences,
+) -> Result<String>
+where
+    GetHexPackageLicences: FnMut(&str) -> String,
+{
+    let packages = manifest
+        .packages
+        .into_iter()
+        .map(|package| {
+            vec![
+                package.name.to_string(),
+                package.version.to_string(),
+                package_licence(paths, &package, &mut get_hex_package_licences),
+            ]
+        })
+        .collect_vec();
+    Ok(space_table(&["Package", "Version", "Licence"], packages).to_string())
+}
 
+fn package_licence<GetHexPackageLicences>(
+    paths: &ProjectPaths,
+    package: &ManifestPackage,
+    get_hex_package_licences: &mut GetHexPackageLicences,
+) -> String
+where
+    GetHexPackageLicences: FnMut(&str) -> String,
+{
+    match &package.source {
+        ManifestPackageSource::Hex { .. } => get_hex_package_licences(package.name.as_str()),
+        ManifestPackageSource::Local { path } => {
+            package_config_licence(paths.root().join(path).join("gleam.toml"))
+        }
+        ManifestPackageSource::Git { .. } => {
+            package_config_licence(paths.build_packages_package_config(&package.name))
+        }
+    }
+}
+
+fn package_config_licence(config_path: Utf8PathBuf) -> String {
     crate::config::read(config_path)
         .map(|config| {
             config

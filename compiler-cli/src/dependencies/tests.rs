@@ -26,21 +26,14 @@ fn trim_line_endings(text: &str) -> String {
 
 #[test]
 fn list_manifest_format() {
-    let mut buffer = vec![];
     let temp_dir = tempfile::tempdir().expect("Failed to create a temp directory");
     let root_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
         .expect("Path should be valid UTF-8");
     let paths = ProjectPaths::new(root_path.clone());
-    std::fs::create_dir_all(root_path.join("build/packages/root")).unwrap();
-    std::fs::create_dir_all(root_path.join("build/packages/aaa")).unwrap();
+    std::fs::create_dir_all(root_path.join("vendor/local_dep")).unwrap();
     std::fs::write(
-        root_path.join("build/packages/root/gleam.toml"),
-        "name = \"root\"\nversion = \"1.0.0\"\nlicences = [\"MIT\"]\n",
-    )
-    .unwrap();
-    std::fs::write(
-        root_path.join("build/packages/aaa/gleam.toml"),
-        "name = \"aaa\"\nversion = \"0.4.2\"\nlicences = [\"Apache-2.0\", \"MIT\"]\n",
+        root_path.join("vendor/local_dep/gleam.toml"),
+        "name = \"local_dep\"\nversion = \"1.0.0\"\nlicences = [\"MIT\"]\n",
     )
     .unwrap();
 
@@ -48,13 +41,13 @@ fn list_manifest_format() {
         requirements: HashMap::new(),
         packages: vec![
             ManifestPackage {
-                name: "root".into(),
+                name: "local_dep".into(),
                 version: Version::parse("1.0.0").unwrap(),
                 build_tools: ["gleam".into()].into(),
                 otp_app: None,
                 requirements: vec![],
-                source: ManifestPackageSource::Hex {
-                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
+                source: ManifestPackageSource::Local {
+                    path: Utf8PathBuf::from("vendor/local_dep"),
                 },
             },
             ManifestPackage {
@@ -79,17 +72,23 @@ fn list_manifest_format() {
             },
         ],
     };
-    list_manifest_packages(&mut buffer, &paths, manifest).unwrap();
-    let output = trim_line_endings(std::str::from_utf8(&buffer).unwrap());
-    assert!(output.contains("Package  Version  License"));
-    assert!(output.contains("root     1.0.0    MIT"));
-    assert!(output.contains("aaa      0.4.2    Apache-2.0, MIT"));
-    assert!(output.contains("zzz      0.4.0"));
+    let output = list_manifest_packages_with(&paths, manifest, |package_name| match package_name {
+        "aaa" => "Apache-2.0, MIT".to_string(),
+        _ => String::new(),
+    })
+    .unwrap();
+    let output = trim_line_endings(&output);
+    assert!(output.contains("Package    Version  Licence"));
+    assert!(output.contains("local_dep  1.0.0    MIT"));
+    assert!(output.contains("aaa"));
+    assert!(output.contains("0.4.2"));
+    assert!(output.contains("Apache-2.0, MIT"));
+    assert!(output.contains("zzz"));
+    assert!(output.contains("0.4.0"));
 }
 
 #[test]
 fn list_manifest_format_without_downloaded_package_configs() {
-    let mut buffer = vec![];
     let temp_dir = tempfile::tempdir().expect("Failed to create a temp directory");
     let root_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
         .expect("Path should be valid UTF-8");
@@ -109,17 +108,53 @@ fn list_manifest_format_without_downloaded_package_configs() {
         }],
     };
 
-    list_manifest_packages(&mut buffer, &paths, manifest).unwrap();
+    let output = list_manifest_packages_with(&paths, manifest, |_| String::new()).unwrap();
 
     assert_eq!(
-        trim_line_endings(std::str::from_utf8(&buffer).unwrap()),
+        trim_line_endings(&output),
         trim_line_endings(
-            "Package  Version  License
+            "Package  Version  Licence
 -------  -------  -------
 root     1.0.0
 "
         )
     )
+}
+
+#[test]
+fn list_manifest_format_for_git_package_config() {
+    let temp_dir = tempfile::tempdir().expect("Failed to create a temp directory");
+    let root_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+        .expect("Path should be valid UTF-8");
+    let paths = ProjectPaths::new(root_path.clone());
+    std::fs::create_dir_all(root_path.join("build/packages/git_dep")).unwrap();
+    std::fs::write(
+        root_path.join("build/packages/git_dep/gleam.toml"),
+        "name = \"git_dep\"\nversion = \"1.0.0\"\nlicences = [\"BSD-3-Clause\"]\n",
+    )
+    .unwrap();
+
+    let manifest = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![ManifestPackage {
+            name: "git_dep".into(),
+            version: Version::parse("1.0.0").unwrap(),
+            build_tools: ["gleam".into()].into(),
+            otp_app: None,
+            requirements: vec![],
+            source: ManifestPackageSource::Git {
+                repo: "https://example.com/git_dep.git".into(),
+                commit: "abc123".into(),
+            },
+        }],
+    };
+
+    let output = list_manifest_packages_with(&paths, manifest, |_| String::new()).unwrap();
+    let output = trim_line_endings(&output);
+
+    assert!(output.contains("git_dep"));
+    assert!(output.contains("1.0.0"));
+    assert!(output.contains("BSD-3-Clause"));
 }
 
 #[test]
