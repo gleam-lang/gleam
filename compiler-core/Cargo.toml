@@ -46,10 +46,10 @@ radix_trie = "0.3"
 stacker = "0.1.21"
 # Manipulating bit arrays
 bitvec = { version = "1", features = ["serde"] }
-
 async-trait.workspace = true
 base16.workspace = true
 camino = { workspace = true, features = ["serde1"] }
+clap = { workspace = true, features = ["derive"] }
 debug-ignore.workspace = true
 ecow = { workspace = true, features = ["serde"] }
 flate2.workspace = true
@@ -72,12 +72,12 @@ tracing.workspace = true
 indexmap = "2.12.1"
 vec1.workspace = true
 
-[build-dependencies]
-# Data (de)serialisation
-serde_derive = "1"
-
 [dev-dependencies]
 pretty_assertions.workspace = true
 insta.workspace = true
 # Random value generation
 rand = "0.9"
+
+[build-dependencies]
+# Data (de)serialisation
+serde_derive = "1"
