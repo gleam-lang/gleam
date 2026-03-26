@@ -22,10 +22,14 @@ expression: "\n/// my add function\npub fn add_2(x) {\n  x + 2\n}"
 Mappings:
 ----- 
 
-/// my add function
 
 ⏷
 //# sourceMappingURL=mod.mjs.map
+
+----- 
+/// my add function
+
+⏷
 /**
  * my add function
  */

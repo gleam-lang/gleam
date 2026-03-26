@@ -24,10 +24,14 @@ expression: "\n/// my function\npub fn wibble() {\n  let wibble = \"hello\\nworl
 Mappings:
 ----- 
 
-/// my function
 
 ⏷
 //# sourceMappingURL=mod.mjs.map
+
+----- 
+/// my function
+
+⏷
 /**
  * my function
  */
