@@ -1,8 +1,10 @@
 use camino::Utf8Path;
+use clap::ValueEnum;
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
 use futures::future;
 use hexpm::{ApiError, WriteActionCredentials, version::Version};
+use strum::{EnumString, VariantNames};
 use tar::Archive;
 
 use crate::{
@@ -112,7 +114,7 @@ pub async fn transfer_owner<Http: HttpClient>(
     hexpm::api_transfer_owner_response(response).map_err(Error::hex)
 }
 
-#[derive(Debug, strum::EnumString, strum::VariantNames, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, EnumString, VariantNames, ValueEnum, Clone, Copy, PartialEq, Eq)]
 #[strum(serialize_all = "lowercase")]
 pub enum RetirementReason {
     Other,
