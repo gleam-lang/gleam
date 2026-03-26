@@ -51,8 +51,16 @@ pub struct BuildOptions {
 pub fn build(paths: &ProjectPaths, options: BuildOptions) -> Result<()> {
     let config = crate::config::root_config(paths)?;
 
-    // Reset the build directory so we know the state of the project
-    crate::fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, config.target))?;
+    // Reset the build directory for the root package so that's recompiled and
+    // the docs can be up to date for all modules.
+    // Note how this doesn't delete the entire build directory, this way we can
+    // avoid recompiling all the dependencies every time we're building the
+    // documentation for our package.
+    crate::fs::delete_directory(&paths.build_directory_for_package(
+        Mode::Prod,
+        options.target.unwrap_or(Target::Erlang),
+        &config.name,
+    ))?;
 
     let out = paths.build_documentation_directory(&config.name);
 
@@ -80,7 +88,10 @@ pub fn build(paths: &ProjectPaths, options: BuildOptions) -> Result<()> {
         Options {
             mode: Mode::Prod,
             target: options.target,
-            codegen: Codegen::All,
+            // Code generation is not needed when building docs, this can speed
+            // up the docs building process quite drastically, especially on the
+            // Erlang target where we can avoid calling erlc.
+            codegen: Codegen::None,
             compile: Compile::All,
             warnings_as_errors: false,
             root_target_support: TargetSupport::Enforced,

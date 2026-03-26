@@ -94,6 +94,10 @@
   of a positional argument.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The `gleam docs build` command no longer recompiles all the project's
+  dependencies every single time it is run.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Language server
 
 - The "extract variable" code action can now pick better names for variables in
