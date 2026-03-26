@@ -342,13 +342,13 @@ pub enum TypeAstConstructorName {
     /// //                 ^^^^^^ module
     /// //                        ^^^^^^ name
     /// ```
-    /// Notice how the name could be missing, this is an error! However, instead
-    /// of treating it like a syntax error we allow parsing it and report it
-    /// later. This way the language server can provide better help!
     Qualified {
         module: EcoString,
         module_location: SrcSpan,
         dot_location: u32,
+        /// Notice how the name could be missing, this is an error! However, instead
+        /// of treating it like a syntax error we allow parsing it and report it
+        /// later. This way the language server can provide better help!
         name: Option<(EcoString, SrcSpan)>,
     },
 
