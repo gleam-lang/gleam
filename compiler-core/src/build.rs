@@ -57,12 +57,15 @@ use vec1::Vec1;
     Eq,
 )]
 #[strum(serialize_all = "lowercase")]
+#[clap(rename_all = "lower")]
 pub enum Target {
     #[strum(serialize = "erlang", serialize = "erl")]
     #[serde(rename = "erlang", alias = "erl")]
+    #[clap(alias = "erl")]
     Erlang,
     #[strum(serialize = "javascript", serialize = "js")]
     #[serde(rename = "javascript", alias = "js")]
+    #[clap(alias = "js")]
     JavaScript,
 }
 
@@ -138,9 +141,11 @@ impl Codegen {
     PartialEq,
     Eq,
 )]
+#[clap(rename_all = "lower")]
 pub enum Runtime {
     #[strum(serialize = "nodejs", serialize = "node")]
     #[serde(rename = "nodejs", alias = "node")]
+    #[clap(alias = "node")]
     NodeJs,
     #[strum(serialize = "deno")]
     #[serde(rename = "deno")]
