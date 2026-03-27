@@ -653,6 +653,11 @@ pub fn copy_dir(
     .map(|_| ())
 }
 
+/// Symlink directory.
+/// If it couldn't symlink directory on Windows because of error 1314, which
+/// occurs without Developer Mode enabled, it falls back to hardlinking each
+/// file in directory.
+///
 pub fn symlink_dir(
     src: impl AsRef<Utf8Path> + Debug,
     dest: impl AsRef<Utf8Path> + Debug,
