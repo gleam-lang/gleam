@@ -672,11 +672,11 @@ impl StandardIoAction {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum FileIoAction {
-    Link,
+    Link(Utf8PathBuf),
     Open,
-    Copy,
+    Copy(Utf8PathBuf),
     Read,
     Parse,
     Delete,
@@ -692,9 +692,9 @@ pub enum FileIoAction {
 impl FileIoAction {
     fn text(&self) -> &'static str {
         match self {
-            FileIoAction::Link => "link",
+            FileIoAction::Link(..) => "link",
             FileIoAction::Open => "open",
-            FileIoAction::Copy => "copy",
+            FileIoAction::Copy(..) => "copy",
             FileIoAction::Read => "read",
             FileIoAction::Parse => "parse",
             FileIoAction::Delete => "delete",
@@ -705,6 +705,18 @@ impl FileIoAction {
             FileIoAction::Canonicalise => "canonicalise",
             FileIoAction::UpdatePermissions => "update permissions of",
             FileIoAction::ReadMetadata => "read metadata of",
+        }
+    }
+
+    /// Returns a destination path of action, along with appropriate prefix.
+    /// Returns empty string action doesn't have a destination
+    fn destination(&self) -> String {
+        match self {
+            // We return a `[String]` here because of that `format!(..)`
+            FileIoAction::Link(destination) | FileIoAction::Copy(destination) => {
+                format!(" to {destination}")
+            }
+            _ => String::new(),
         }
     }
 }
@@ -1724,16 +1736,17 @@ Erlang modules must have unique names regardless of the subfolders where their
                     None => "".into(),
                 };
                 let mut text = format!(
-                    "An error occurred while trying to {} this {}:
+                    "An error occurred while trying to {} this {}{}:
 
     {}
 {}",
                     action.text(),
                     kind.text(),
                     path,
+                    action.destination(),
                     err,
                 );
-                if cfg!(target_family = "windows") && action == &FileIoAction::Link {
+                if cfg!(target_family = "windows") && matches!(action, &FileIoAction::Link(..)) {
                     text.push_str("
 
 Windows does not support symbolic links without developer mode
