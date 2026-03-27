@@ -92,8 +92,8 @@ where
         self.io.hardlink(from, to)
     }
 
-    fn hardlink_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
-        self.io.hardlink_dir(from, to)
+    fn hardlink_directory(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
+        self.io.hardlink_directory(from, to)
     }
 
     fn symlink_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {

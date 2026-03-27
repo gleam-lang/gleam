@@ -339,7 +339,7 @@ pub trait FileSystemWriter {
     fn copy(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
     fn copy_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
     fn hardlink(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
-    fn hardlink_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
+    fn hardlink_directory(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
     fn symlink_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
     fn delete_file(&self, path: &Utf8Path) -> Result<(), Error>;
     fn exists(&self, path: &Utf8Path) -> bool;
