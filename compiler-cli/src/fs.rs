@@ -705,10 +705,18 @@ pub fn copy_dir(path: impl AsRef<Utf8Path>, to: impl AsRef<Utf8Path>) -> Result<
     .map(|_| ())
 }
 
-pub fn symlink_dir(src: impl AsRef<Utf8Path>, dest: impl AsRef<Utf8Path>) -> Result<(), Error> {
+/// Symlink directory.
+/// If it couldn't symlink directory on Windows because of error 1314, which
+/// occurs without Developer Mode enabled, it falls back to hardlinking each
+/// file in directory.
+///
+pub fn symlink_dir(
+    src: impl AsRef<Utf8Path> + Debug,
+    dest: impl AsRef<Utf8Path> + Debug,
+) -> Result<(), Error> {
+    tracing::debug!(src=?src, dest=?dest, "symlinking");
     let src = src.as_ref();
     let dest = dest.as_ref();
-    tracing::debug!(src=?src, dest=?dest, "symlinking");
     let src = canonicalise(src)?;
 
     #[cfg(target_family = "windows")]
@@ -727,7 +735,7 @@ pub fn symlink_dir(src: impl AsRef<Utf8Path>, dest: impl AsRef<Utf8Path>) -> Res
         Err(err) => Err(Error::FileIo {
             action: FileIoAction::Link,
             kind: FileKind::File,
-            path: Utf8PathBuf::from(dest.as_ref()),
+            path: Utf8PathBuf::from(dest),
             err: Some(err.to_string()),
         }),
     }
