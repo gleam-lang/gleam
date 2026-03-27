@@ -691,7 +691,7 @@ pub fn symlink_dir(src: impl AsRef<Utf8Path>, dest: impl AsRef<Utf8Path>) -> Res
     result.map_err(|err| Error::FileIo {
         action: FileIoAction::Link(dest.to_path_buf()),
         kind: FileKind::File,
-        path: Utf8PathBuf::from(src),
+        path: src,
         err: Some(err.to_string()),
     })?;
     Ok(())
