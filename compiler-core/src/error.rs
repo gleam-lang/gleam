@@ -652,7 +652,7 @@ impl FileIoAction {
     }
 
     /// Returns the destination path of the action, along with the appropriate
-    /// prefix. Returns empty string action doesn't have a destination.
+    /// prefix. Returns empty string if the action doesn't have the destination.
     fn destination(&self) -> String {
         match self {
             // We return a `String` here because of that `format!(..)`
