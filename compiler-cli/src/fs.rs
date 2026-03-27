@@ -710,7 +710,8 @@ pub fn hardlink_directory(
     let src = src.as_ref();
     let dest = dest.as_ref();
 
-    // Recreate destination directory to avoid getting it in weird state.
+    // Recreate destination directory to avoid presence of old files,
+    // that don't exist in source directory already.
     delete_directory(dest)?;
     mkdir(dest)?;
 
