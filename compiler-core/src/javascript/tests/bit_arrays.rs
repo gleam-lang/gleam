@@ -2626,6 +2626,104 @@ pub fn main() {
 }
 
 #[test]
+fn division_in_pattern_size_is_left_associative() {
+    assert_js!(
+        "
+pub fn main() {
+  let a = 100
+  let b = 5
+  let c = 2
+  let assert <<_:bytes-size(a / b / c)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn multiplication_in_pattern_size_is_left_associative() {
+    assert_js!(
+        "
+pub fn main() {
+  let a = 2
+  let b = 3
+  let c = 4
+  let assert <<_:bytes-size(a * b * c)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn mixed_mul_div_in_pattern_size_is_left_associative() {
+    assert_js!(
+        "
+pub fn main() {
+  let a = 100
+  let b = 5
+  let c = 2
+  let assert <<_:bytes-size(a * b / c)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn mul_binds_tighter_than_add_in_pattern_size() {
+    assert_js!(
+        "
+pub fn main() {
+  let a = 10
+  let b = 3
+  let c = 2
+  let assert <<_:bytes-size(a + b * c)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn mul_binds_tighter_than_sub_in_pattern_size() {
+    assert_js!(
+        "
+pub fn main() {
+  let a = 10
+  let b = 3
+  let c = 2
+  let assert <<_:bytes-size(a * b + c)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn add_and_sub_chain_in_pattern_size_is_left_associative() {
+    assert_js!(
+        "
+pub fn main() {
+  let a = 10
+  let b = 3
+  let c = 2
+  let assert <<_:bytes-size(a + b - c)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn remainder_in_pattern_size_is_left_associative() {
+    assert_js!(
+        "
+pub fn main() {
+  let a = 10
+  let b = 3
+  let c = 2
+  let assert <<_:bytes-size(a % b % c)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
 fn block_in_pattern_size() {
     assert_js!(
         "

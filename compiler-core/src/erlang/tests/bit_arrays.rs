@@ -291,6 +291,34 @@ pub fn main() {
 }
 
 #[test]
+fn subtraction_in_pattern_size_is_left_associative() {
+    assert_erl!(
+        "
+pub fn main() {
+  let a = 10
+  let b = 3
+  let c = 2
+  let assert <<_:bytes-size(a - b - c)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
+fn multiplication_in_pattern_size_is_left_associative() {
+    assert_erl!(
+        "
+pub fn main() {
+  let a = 2
+  let b = 3
+  let c = 4
+  let assert <<_:bytes-size(a * b * c)>> = <<>>
+}
+"
+    );
+}
+
+#[test]
 fn block_in_pattern_size() {
     assert_erl!(
         "
