@@ -198,8 +198,8 @@ impl FileSystemWriter for ProjectIO {
         hardlink(from, to)
     }
 
-    fn hardlink_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error> {
-        hardlink_dir(from, to)
+    fn hardlink_directory(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error> {
+        hardlink_directory(from, to)
     }
 
     fn symlink_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error> {
@@ -723,7 +723,7 @@ pub fn symlink_dir(src: impl AsRef<Utf8Path>, dest: impl AsRef<Utf8Path>) -> Res
         // without Developer Mode enabled. We match on the raw OS code, since
         // this error has no specific error kind.
         #[cfg(target_family = "windows")]
-        Err(err) if err.raw_os_error() == Some(1314) => hardlink_dir(src, dest),
+        Err(err) if err.raw_os_error() == Some(1314) => hardlink_directory(src, dest),
         Err(err) => Err(Error::FileIo {
             action: FileIoAction::Link,
             kind: FileKind::File,
@@ -751,7 +751,7 @@ pub fn hardlink(from: impl AsRef<Utf8Path>, to: impl AsRef<Utf8Path>) -> Result<
 /// This is done by deleting destination directory if it exists and recursively
 /// creating directories and hardlinking files inside the directory.
 ///
-pub fn hardlink_dir(
+pub fn hardlink_directory(
     src: impl AsRef<Utf8Path> + Debug,
     dest: impl AsRef<Utf8Path> + Debug,
 ) -> Result<(), Error> {
@@ -782,7 +782,7 @@ pub fn hardlink_dir(
 
         if path.is_dir() {
             // Recursively hardlink directory.
-            hardlink_dir(path, destination)?;
+            hardlink_directory(path, destination)?;
         } else {
             hardlink(path, destination)?;
         }
