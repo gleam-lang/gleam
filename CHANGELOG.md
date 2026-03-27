@@ -90,6 +90,11 @@
   link or copy file or directory.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The build tool will now suggest to create a module in `dev` or `test`
+  directory, if that missing module is a dev module or a test module
+  respectively.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server can now help with completions when typing a list's tail:
