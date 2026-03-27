@@ -645,10 +645,9 @@ pub fn copy(path: impl AsRef<Utf8Path>, to: impl AsRef<Utf8Path>) -> Result<(), 
     let to = to.as_ref();
     tracing::debug!(from=?path, to=?to, "copying_file");
 
-    // TODO: include the destination in the error message
     std::fs::copy(path, to)
         .map_err(|err| Error::FileIo {
-            action: FileIoAction::Copy,
+            action: FileIoAction::Copy(Some(to.to_path_buf())),
             kind: FileKind::File,
             path: Utf8PathBuf::from(path),
             err: Some(err.to_string()),
@@ -661,7 +660,6 @@ pub fn copy_dir(path: impl AsRef<Utf8Path>, to: impl AsRef<Utf8Path>) -> Result<
     let to = to.as_ref();
     tracing::debug!(from=?path, to=?to, "copying_directory");
 
-    // TODO: include the destination in the error message
     fs_extra::dir::copy(
         path,
         to,
@@ -670,7 +668,7 @@ pub fn copy_dir(path: impl AsRef<Utf8Path>, to: impl AsRef<Utf8Path>) -> Result<
             .content_only(true),
     )
     .map_err(|err| Error::FileIo {
-        action: FileIoAction::Copy,
+        action: FileIoAction::Copy(Some(to.to_path_buf())),
         kind: FileKind::Directory,
         path: Utf8PathBuf::from(path),
         err: Some(err.to_string()),
@@ -683,6 +681,7 @@ pub fn symlink_dir(src: impl AsRef<Utf8Path>, dest: impl AsRef<Utf8Path>) -> Res
     let dest = dest.as_ref();
     tracing::debug!(src=?src, dest=?dest, "symlinking");
     let src = canonicalise(src)?;
+    let src = src.as_path();
 
     #[cfg(target_family = "windows")]
     let result = std::os::windows::fs::symlink_dir(src, dest);
@@ -690,9 +689,9 @@ pub fn symlink_dir(src: impl AsRef<Utf8Path>, dest: impl AsRef<Utf8Path>) -> Res
     let result = std::os::unix::fs::symlink(src, dest);
 
     result.map_err(|err| Error::FileIo {
-        action: FileIoAction::Link,
+        action: FileIoAction::Link(dest.to_path_buf()),
         kind: FileKind::File,
-        path: Utf8PathBuf::from(dest),
+        path: Utf8PathBuf::from(src),
         err: Some(err.to_string()),
     })?;
     Ok(())
@@ -704,7 +703,7 @@ pub fn hardlink(from: impl AsRef<Utf8Path>, to: impl AsRef<Utf8Path>) -> Result<
     tracing::debug!(from=?from, to=?to, "hardlinking");
     std::fs::hard_link(from, to)
         .map_err(|err| Error::FileIo {
-            action: FileIoAction::Link,
+            action: FileIoAction::Link(to.to_path_buf()),
             kind: FileKind::File,
             path: Utf8PathBuf::from(from),
             err: Some(err.to_string()),
@@ -859,7 +858,7 @@ impl<W: Write + io::Seek> ZipArchive<W> {
         })?;
         let _: u64 = io::copy(&mut file, &mut self.zip).map_err(|e| Error::FileIo {
             kind: FileKind::File,
-            action: FileIoAction::Copy,
+            action: FileIoAction::Copy(None),
             path: disc_path.to_path_buf(),
             err: Some(e.to_string()),
         })?;
