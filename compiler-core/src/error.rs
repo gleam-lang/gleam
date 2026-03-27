@@ -1751,8 +1751,8 @@ Erlang modules must have unique names regardless of the subfolders where their
 {}",
                     action.text(),
                     kind.text(),
-                    path,
                     action.destination(),
+                    path,
                     err,
                 );
                 if cfg!(target_family = "windows") && matches!(action, &FileIoAction::Link(..)) {
