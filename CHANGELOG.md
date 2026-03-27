@@ -44,6 +44,10 @@
 - More readable error message when trying to revert an old release.
   ([Moritz Böhme](https://github.com/MoritzBoehme))
 
+- The build tool now includes destination path in the error when it fails to
+  link or copy file or directory.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server now supports go-to-definition, find-references and rename
