@@ -651,11 +651,11 @@ impl FileIoAction {
         }
     }
 
-    /// Returns a destination path of action, along with appropriate prefix.
-    /// Returns empty string action doesn't have a destination
+    /// Returns the destination path of the action, along with the appropriate
+    /// prefix. Returns empty string action doesn't have a destination.
     fn destination(&self) -> String {
         match self {
-            // We return a `[String]` here because of that `format!(..)`
+            // We return a `String` here because of that `format!(..)`
             FileIoAction::Link(destination) | FileIoAction::Copy(destination) => {
                 format!(" to {destination}")
             }
