@@ -12,7 +12,7 @@ use gleam_core::{
 };
 use gleam_language_server::{DownloadDependencies, Locker, MakeLocker};
 use std::{
-    collections::HashSet,
+    collections::{HashSet, VecDeque},
     fmt::Debug,
     fs::{File, exists},
     io::{self, BufRead, BufReader, Write},
@@ -713,29 +713,33 @@ pub fn hardlink_directory(
     // Recreate destination directory to avoid presence of old files,
     // that don't exist in source directory already.
     delete_directory(dest)?;
-    mkdir(dest)?;
 
-    for entry in read_dir(src)? {
-        let entry = entry.map_err(|e| Error::FileIo {
-            action: FileIoAction::Read,
-            kind: FileKind::Directory,
-            path: src.to_path_buf(),
-            err: Some(e.to_string()),
-        })?;
+    let mut stack: VecDeque<(Utf8PathBuf, Utf8PathBuf)> = VecDeque::new();
+    stack.push_back((src.to_path_buf(), dest.to_path_buf()));
 
-        let path = entry.path();
+    while let Some((source_directory, destination_directory)) = stack.pop_front() {
+        mkdir(&destination_directory)?;
+        for entry in read_dir(source_directory)? {
+            let entry = entry.map_err(|e| Error::FileIo {
+                action: FileIoAction::Read,
+                kind: FileKind::Directory,
+                path: src.to_path_buf(),
+                err: Some(e.to_string()),
+            })?;
 
-        let file_name = path.file_name().ok_or_else(|| Error::NonUtf8Path {
-            path: path.to_path_buf().into(),
-        })?;
+            let path = entry.path().to_path_buf();
 
-        let destination = &dest.join(file_name);
+            let file_name = path.file_name().ok_or_else(|| Error::NonUtf8Path {
+                path: path.to_path_buf().into(),
+            })?;
 
-        if path.is_dir() {
-            // Recursively hardlink directory.
-            hardlink_directory(path, destination)?;
-        } else {
-            hardlink(path, destination)?;
+            let destination = destination_directory.join(file_name).to_path_buf();
+
+            if path.is_dir() {
+                stack.push_back((path, destination));
+            } else {
+                hardlink(path, destination)?;
+            }
         }
     }
 
