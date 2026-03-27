@@ -668,8 +668,9 @@ pub fn symlink_dir(
     match result {
         Ok(()) => Ok(()),
 
-        // Fallback to hardlinking if we can't symlink. This occurs on Windows without Developer Mode enabled.
-        // We match on the raw OS code, since this error has no specific error kind.
+        // Fallback to hardlinking if we can't symlink. This occurs on Windows
+        // without Developer Mode enabled. We match on the raw OS code, since
+        // this error has no specific error kind.
         #[cfg(target_family = "windows")]
         Err(err) if err.raw_os_error() == Some(1314) => hardlink_dir(src, dest),
         Err(err) => Err(Error::FileIo {
