@@ -28,6 +28,10 @@
   `package.hexdocs.pm` rather than `hexdocs.pm/package`.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The build tool now includes destination path in the error when it fails to
+  link or copy file or directory.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 ### Formatter
