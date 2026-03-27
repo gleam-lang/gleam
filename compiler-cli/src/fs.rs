@@ -601,10 +601,9 @@ pub fn copy(
 ) -> Result<(), Error> {
     tracing::debug!(from=?path, to=?to, "copying_file");
 
-    // TODO: include the destination in the error message
     std::fs::copy(path.as_ref(), to.as_ref())
         .map_err(|err| Error::FileIo {
-            action: FileIoAction::Copy,
+            action: FileIoAction::Copy(to.as_ref().to_path_buf()),
             kind: FileKind::File,
             path: Utf8PathBuf::from(path.as_ref()),
             err: Some(err.to_string()),
@@ -632,7 +631,6 @@ pub fn copy_dir(
 ) -> Result<(), Error> {
     tracing::debug!(from=?path, to=?to, "copying_directory");
 
-    // TODO: include the destination in the error message
     fs_extra::dir::copy(
         path.as_ref(),
         to.as_ref(),
@@ -641,7 +639,7 @@ pub fn copy_dir(
             .content_only(true),
     )
     .map_err(|err| Error::FileIo {
-        action: FileIoAction::Copy,
+        action: FileIoAction::Copy(to.as_ref().to_path_buf()),
         kind: FileKind::Directory,
         path: Utf8PathBuf::from(path.as_ref()),
         err: Some(err.to_string()),
@@ -657,14 +655,14 @@ pub fn symlink_dir(
     let src = canonicalise(src.as_ref())?;
 
     #[cfg(target_family = "windows")]
-    let result = std::os::windows::fs::symlink_dir(src, dest.as_ref());
+    let result = std::os::windows::fs::symlink_dir(&src, dest.as_ref());
     #[cfg(not(target_family = "windows"))]
-    let result = std::os::unix::fs::symlink(src, dest.as_ref());
+    let result = std::os::unix::fs::symlink(&src, dest.as_ref());
 
     result.map_err(|err| Error::FileIo {
-        action: FileIoAction::Link,
+        action: FileIoAction::Link(dest.as_ref().to_path_buf()),
         kind: FileKind::File,
-        path: Utf8PathBuf::from(dest.as_ref()),
+        path: Utf8PathBuf::from(src),
         err: Some(err.to_string()),
     })?;
     Ok(())
@@ -677,7 +675,7 @@ pub fn hardlink(
     tracing::debug!(from=?from, to=?to, "hardlinking");
     std::fs::hard_link(from.as_ref(), to.as_ref())
         .map_err(|err| Error::FileIo {
-            action: FileIoAction::Link,
+            action: FileIoAction::Link(to.as_ref().to_path_buf()),
             kind: FileKind::File,
             path: Utf8PathBuf::from(from.as_ref()),
             err: Some(err.to_string()),
