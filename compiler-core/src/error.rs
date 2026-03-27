@@ -659,7 +659,16 @@ impl FileIoAction {
             FileIoAction::Link(destination) | FileIoAction::Copy(destination) => {
                 format!(" to {destination}")
             }
-            _ => String::new(),
+            FileIoAction::Open
+            | FileIoAction::Read
+            | FileIoAction::Parse
+            | FileIoAction::Delete
+            | FileIoAction::Create
+            | FileIoAction::WriteTo
+            | FileIoAction::Canonicalise
+            | FileIoAction::UpdatePermissions
+            | FileIoAction::FindParent
+            | FileIoAction::ReadMetadata => String::new(),
         }
     }
 }

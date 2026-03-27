@@ -662,7 +662,7 @@ pub fn symlink_dir(
     result.map_err(|err| Error::FileIo {
         action: FileIoAction::Link(dest.as_ref().to_path_buf()),
         kind: FileKind::File,
-        path: Utf8PathBuf::from(src),
+        path: src,
         err: Some(err.to_string()),
     })?;
     Ok(())
