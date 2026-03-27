@@ -125,6 +125,10 @@
   details.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The build tool now includes destination path in the error when it fails to
+  link or copy file or directory.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The "extract variable" code action can now pick better names for variables in
