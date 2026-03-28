@@ -4,6 +4,11 @@
 
 ### Compiler
 
+- Fixed bit array pattern integer segments so that when the read size exceeds
+  the maximum width used for inference, the compiler reports
+  `ExceedsMaximumSize` instead of incorrectly reporting `Unrepresentable` first.
+  ([Wei Cui](https://github.com/cuiweixie))
+
 - The compiler now supports list prepending in constants. For example:
 
   ```gleam

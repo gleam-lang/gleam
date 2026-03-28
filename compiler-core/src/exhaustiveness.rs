@@ -3647,10 +3647,11 @@ fn int_to_bits(
         .to_u32()
         .ok_or(IntToBitsError::ExceedsMaximumSize)?;
 
+    if size > BitArrayMatchedValue::MAX_BITS_INTERFERENCE {
+        return Err(IntToBitsError::ExceedsMaximumSize);
+    }
     if !representable_with_bits(value, size, signed) {
         return Err(IntToBitsError::Unrepresentable { size });
-    } else if size > BitArrayMatchedValue::MAX_BITS_INTERFERENCE {
-        return Err(IntToBitsError::ExceedsMaximumSize);
     }
 
     // Pad negative numbers with 1s (true) and non-negative numbers with 0s (false)
