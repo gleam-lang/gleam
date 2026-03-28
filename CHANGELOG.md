@@ -125,6 +125,10 @@
   details.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- `gleam publish` will now better discover Git repository in monorepos. This
+  improves suggestions to push a tag, if it doesn't exists.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The "extract variable" code action can now pick better names for variables in
