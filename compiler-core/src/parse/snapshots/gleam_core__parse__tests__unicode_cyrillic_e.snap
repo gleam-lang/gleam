@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 2237
+expression: "pub fn main() { е }"
+snapshot_kind: text
+---
+----- SOURCE CODE
+pub fn main() { е }
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:17
+  │
+1 │ pub fn main() { е }
+  │                 ^ Unexpected character
+
+This looks like ascii latin letter e, but it is actually the unicode
+Cyrillic letter е.

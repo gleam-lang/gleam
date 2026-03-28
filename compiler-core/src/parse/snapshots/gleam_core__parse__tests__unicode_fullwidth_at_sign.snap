@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 2317
+expression: "＠deprecated(\"old\")\npub fn main() { Nil }"
+snapshot_kind: text
+---
+----- SOURCE CODE
+＠deprecated("old")
+pub fn main() { Nil }
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:1
+  │
+1 │ ＠deprecated("old")
+  │ ^^ Unexpected character
+
+This looks like ascii at sign, but it is actually the unicode fullwidth
+commercial at.

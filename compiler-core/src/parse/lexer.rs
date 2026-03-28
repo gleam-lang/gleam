@@ -20,7 +20,7 @@ pub struct Lexer<T: Iterator<Item = (u32, char)>> {
 pub type Spanned = (u32, Token, u32);
 pub type LexResult = Result<Spanned, LexicalError>;
 
-pub fn str_to_keyword(word: &str) -> Option<Token> {
+pub fn string_to_keyword(word: &str) -> Option<Token> {
     // Alphabetical keywords:
     match word {
         "as" => Some(Token::As),
@@ -454,6 +454,371 @@ where
                     self.emit((tok_start, Token::NewLine, tok_end));
                 }
             }
+            '\u{201A}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "low single comma quotation mark",
+                        correct: "comma",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{FF3B}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "fullwidth left square bracket",
+                        correct: "left square bracket",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{FF3D}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "fullwidth right square bracket",
+                        correct: "right square bracket",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{FF08}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "fullwidth left parenthesis",
+                        correct: "left parenthesis",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{FF09}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "fullwidth right parenthesis",
+                        correct: "right parenthesis",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{FF0E}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "fullwidth full stop",
+                        correct: "dot",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{3002}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "ideographic full stop",
+                        correct: "dot",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{FF1C}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "fullwidth less-than sign",
+                        correct: "less-than sign",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{FF1E}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "fullwidth greater-than sign",
+                        correct: "greater-than sign",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{FF5C}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "fullwidth vertical line",
+                        correct: "pipe",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{FF20}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "fullwidth commercial at",
+                        correct: "at sign",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{FF3E}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "fullwidth circumflex accent",
+                        correct: "caret",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{FF1A}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "fullwidth colon",
+                        correct: "colon",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            // Visually similar characters that are not valid Gleam source.
+            '\u{201C}' | '\u{201D}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "double quotation mark",
+                        correct: "double quote",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{2018}' | '\u{2019}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "single quotation mark",
+                        correct: "single quote",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{2013}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "en dash",
+                        correct: "minus sign",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{2014}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "em dash",
+                        correct: "minus sign",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{2217}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "asterisk operator",
+                        correct: "asterisk",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{2215}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "division slash",
+                        correct: "forward slash",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{00A0}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "non-breaking space",
+                        correct: "space",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{200B}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "zero-width space",
+                        correct: "space",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{0430}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "Cyrillic letter а",
+                        correct: "latin letter a",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{0435}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "Cyrillic letter е",
+                        correct: "latin letter e",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{043E}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "Cyrillic letter о",
+                        correct: "latin letter o",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{0440}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "Cyrillic letter р",
+                        correct: "latin letter p",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{1D35}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "modifier letter capital I",
+                        correct: "latin letter I",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{FF0C}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "fullwidth comma",
+                        correct: "comma",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
+            '\u{3001}' => {
+                let location = self.get_pos();
+                return Err(LexicalError {
+                    error: LexicalErrorType::VisuallySimilarInvalidCharacter {
+                        name: "ideographic comma",
+                        correct: "comma",
+                    },
+                    location: SrcSpan {
+                        start: location,
+                        end: location,
+                    },
+                });
+            }
             c => {
                 let location = self.get_pos();
                 return Err(LexicalError {
@@ -481,7 +846,7 @@ where
 
         let end_pos = self.get_pos();
 
-        match str_to_keyword(&name) {
+        match string_to_keyword(&name) {
             Some(tok) => Ok((start_pos, tok, end_pos)),
             _ => {
                 if name.starts_with('_') {
@@ -503,7 +868,7 @@ where
 
         let end_pos = self.get_pos();
 
-        match str_to_keyword(&name) {
+        match string_to_keyword(&name) {
             Some(tok) => Ok((start_pos, tok, end_pos)),
             _ => Ok((start_pos, Token::UpName { name: name.into() }, end_pos)),
         }

@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 2207
+expression: "pub fn main() { 1—2 }"
+snapshot_kind: text
+---
+----- SOURCE CODE
+pub fn main() { 1—2 }
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:18
+  │
+1 │ pub fn main() { 1—2 }
+  │                  ^ Unexpected character
+
+This looks like ascii minus sign, but it is actually the unicode em dash.

@@ -2174,3 +2174,158 @@ fn parse_error_for_type_list_after_invalid_qualified_type_1() {
 fn parse_error_for_type_list_after_invalid_qualified_type_2() {
     assert_module_error!("pub fn main() -> wibble.(a, b) { todo }");
 }
+
+#[test]
+fn unicode_left_double_quotation_mark() {
+    assert_module_error!("pub fn main() { \u{201C}hello\u{201D} }");
+}
+
+#[test]
+fn unicode_right_double_quotation_mark() {
+    assert_module_error!("pub fn main() { \u{201D}hello }");
+}
+
+#[test]
+fn unicode_left_single_quotation_mark() {
+    assert_module_error!("pub fn main() { \u{2018}hello\u{2019} }");
+}
+
+#[test]
+fn unicode_right_single_quotation_mark() {
+    assert_module_error!("pub fn main() { \u{2019}hello }");
+}
+
+#[test]
+fn unicode_en_dash() {
+    assert_module_error!("pub fn main() { 1\u{2013}2 }");
+}
+
+#[test]
+fn unicode_em_dash() {
+    assert_module_error!("pub fn main() { 1\u{2014}2 }");
+}
+
+#[test]
+fn unicode_asterisk_operator() {
+    assert_module_error!("pub fn main() { 1\u{2217}2 }");
+}
+
+#[test]
+fn unicode_division_slash() {
+    assert_module_error!("pub fn main() { 1\u{2215}2 }");
+}
+
+#[test]
+fn unicode_non_breaking_space() {
+    assert_module_error!("pub fn main() { let\u{00A0}x = 1\n  x }");
+}
+
+#[test]
+fn unicode_zero_width_space() {
+    assert_module_error!("pub fn main() { let\u{200B}x = 1\n  x }");
+}
+
+#[test]
+fn unicode_cyrillic_a() {
+    assert_module_error!("pub fn main() { \u{0430} }");
+}
+
+#[test]
+fn unicode_cyrillic_e() {
+    assert_module_error!("pub fn main() { \u{0435} }");
+}
+
+#[test]
+fn unicode_cyrillic_o() {
+    assert_module_error!("pub fn main() { \u{043E} }");
+}
+
+#[test]
+fn unicode_cyrillic_p() {
+    assert_module_error!("pub fn main() { \u{0440} }");
+}
+
+#[test]
+fn unicode_modifier_letter_capital_i() {
+    assert_module_error!("pub fn main() { \u{1D35} }");
+}
+
+#[test]
+fn unicode_low_single_comma_quotation_mark() {
+    assert_module_error!("pub fn main() { #(1\u{201A} 2) }");
+}
+
+#[test]
+fn unicode_fullwidth_comma() {
+    assert_module_error!("pub fn main() { #(1\u{FF0C} 2) }");
+}
+
+#[test]
+fn unicode_ideographic_comma() {
+    assert_module_error!("pub fn main() { #(1\u{3001} 2) }");
+}
+
+#[test]
+fn unicode_fullwidth_exclamation_mark() {
+    assert_module_error!("pub fn main() { \u{FF01}= True }");
+}
+
+#[test]
+fn unicode_fullwidth_left_square_bracket() {
+    assert_module_error!("pub fn main() { \u{FF3B}1, 2] }");
+}
+
+#[test]
+fn unicode_fullwidth_right_square_bracket() {
+    assert_module_error!("pub fn main() { [1, 2\u{FF3D} }");
+}
+
+#[test]
+fn unicode_fullwidth_left_parenthesis() {
+    assert_module_error!("pub fn main\u{FF08}) { Nil }");
+}
+
+#[test]
+fn unicode_fullwidth_right_parenthesis() {
+    assert_module_error!("pub fn main(\u{FF09} { Nil }");
+}
+
+#[test]
+fn unicode_fullwidth_full_stop() {
+    assert_module_error!("pub fn main() { io\u{FF0E}println(\"hi\") }");
+}
+
+#[test]
+fn unicode_ideographic_full_stop() {
+    assert_module_error!("pub fn main() { io\u{3002}println(\"hi\") }");
+}
+
+#[test]
+fn unicode_fullwidth_less_than_sign() {
+    assert_module_error!("pub fn main() { 1 \u{FF1C} 2 }");
+}
+
+#[test]
+fn unicode_fullwidth_greater_than_sign() {
+    assert_module_error!("pub fn main() { 1 \u{FF1E} 2 }");
+}
+
+#[test]
+fn unicode_fullwidth_vertical_line() {
+    assert_module_error!("pub fn main() { True \u{FF5C}\u{FF5C} False }");
+}
+
+#[test]
+fn unicode_fullwidth_at_sign() {
+    assert_module_error!("\u{FF20}deprecated(\"old\")\npub fn main() { Nil }");
+}
+
+#[test]
+fn unicode_fullwidth_caret() {
+    assert_module_error!("pub fn main() { 0b1 \u{FF3E} 0b1 }");
+}
+
+#[test]
+fn unicode_fullwidth_colon() {
+    assert_module_error!("pub fn wibble(x\u{FF1A} Int) { x }");
+}
