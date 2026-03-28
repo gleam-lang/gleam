@@ -17,7 +17,7 @@ use gleam_core::{
     config::PackageConfig,
     exhaustiveness::CompiledCase,
     line_numbers::LineNumbers,
-    parse::{extra::ModuleExtra, lexer::str_to_keyword},
+    parse::{extra::ModuleExtra, lexer::string_to_keyword},
     strings::to_snake_case,
     type_::{
         self, FieldMap, ModuleValueConstructor, Opaque, Type, TypeVar, TypedCallArg,
@@ -7021,7 +7021,7 @@ fn is_valid_lowercase_name(name: &str) -> bool {
         }
     }
 
-    str_to_keyword(name).is_none()
+    string_to_keyword(name).is_none()
 }
 
 #[must_use]

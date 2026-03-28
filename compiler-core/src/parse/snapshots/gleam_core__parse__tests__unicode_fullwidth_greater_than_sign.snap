@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 2307
+expression: "pub fn main() { 1 ＞ 2 }"
+snapshot_kind: text
+---
+----- SOURCE CODE
+pub fn main() { 1 ＞ 2 }
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:19
+  │
+1 │ pub fn main() { 1 ＞ 2 }
+  │                   ^^ Unexpected character
+
+This looks like ascii greater-than sign, but it is actually the unicode
+fullwidth greater-than sign.

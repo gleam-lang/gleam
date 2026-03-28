@@ -1743,7 +1743,7 @@ fn validate_module_name(name: &EcoString) -> Result<(), Error> {
         return Err(Error::ReservedModuleName { name: name.clone() });
     };
     for segment in name.split('/') {
-        if crate::parse::lexer::str_to_keyword(segment).is_some() {
+        if crate::parse::lexer::string_to_keyword(segment).is_some() {
             return Err(Error::KeywordInModuleName {
                 name: name.clone(),
                 keyword: segment.into(),

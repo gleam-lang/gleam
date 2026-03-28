@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 2252
+expression: "pub fn main() { ᴵ }"
+snapshot_kind: text
+---
+----- SOURCE CODE
+pub fn main() { ᴵ }
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:17
+  │
+1 │ pub fn main() { ᴵ }
+  │                 ^ Unexpected character
+
+This looks like ascii latin letter I, but it is actually the unicode
+modifier letter capital I.

@@ -13,23 +13,43 @@ pub struct LexicalError {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum InvalidUnicodeEscapeError {
-    MissingOpeningBrace,          // Expected '{'
-    ExpectedHexDigitOrCloseBrace, // Expected hex digit or '}'
-    InvalidNumberOfHexDigits,     // Expected between 1 and 6 hex digits
-    InvalidCodepoint,             // Invalid Unicode codepoint
+    /// Expected '{'
+    MissingOpeningBrace,
+    /// Expected hex digit or '}'
+    ExpectedHexDigitOrCloseBrace,
+    /// Expected between 1 and 6 hex digits
+    InvalidNumberOfHexDigits,
+    /// Invalid Unicode codepoint
+    InvalidCodepoint,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum LexicalErrorType {
-    BadStringEscape,                                 // string contains an unescaped slash
-    InvalidUnicodeEscape(InvalidUnicodeEscapeError), // \u{...} escape sequence is invalid
-    DigitOutOfRadix,                                 // 0x012 , 2 is out of radix
-    NumTrailingUnderscore,                           // 1_000_ is not allowed
-    RadixIntNoValue,                                 // 0x, 0b, 0o without a value
-    MissingExponent,     // 1.0e, for example, where there is no exponent
-    UnexpectedStringEnd, // Unterminated string literal
-    UnrecognizedToken { tok: char },
+    // String contains an unescaped slash
+    BadStringEscape,
+    // \u{...} escape sequence is invalid
+    InvalidUnicodeEscape(InvalidUnicodeEscapeError),
+    // 0x012 , 2 is out of radix
+    DigitOutOfRadix,
+    // 1_000_ is not allowed
+    NumTrailingUnderscore,
+    // 0x, 0b, 0o without a value
+    RadixIntNoValue,
+    //   // 1.0e, for example, where there is no exponent
+    MissingExponent,
+    // Unterminated string literal
+    UnexpectedStringEnd,
+    UnrecognizedToken {
+        tok: char,
+    },
     InvalidTripleEqual,
+    /// A character was encountered that visually looks like a correct
+    /// character, but in reality it's some other unicode characters.
+    /// For example, a non-breaking-space instead of a regular space.
+    VisuallySimilarInvalidCharacter {
+        name: &'static str,
+        correct: &'static str,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -848,6 +868,12 @@ impl LexicalError {
                     "Gleam uses `==` to check for equality between two values.".into(),
                     "See: https://tour.gleam.run/basics/equality".into(),
                 ],
+            ),
+            LexicalErrorType::VisuallySimilarInvalidCharacter { name, correct } => (
+                "Unexpected character",
+                vec![wrap(&format!(
+                    "This looks like ascii {correct}, but it is actually the unicode {name}."
+                ))],
             ),
         }
     }

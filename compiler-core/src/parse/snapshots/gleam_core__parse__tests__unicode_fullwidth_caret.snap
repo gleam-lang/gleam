@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 2322
+expression: "pub fn main() { 0b1 ＾ 0b1 }"
+snapshot_kind: text
+---
+----- SOURCE CODE
+pub fn main() { 0b1 ＾ 0b1 }
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:21
+  │
+1 │ pub fn main() { 0b1 ＾ 0b1 }
+  │                     ^^ Unexpected character
+
+This looks like ascii caret, but it is actually the unicode fullwidth
+circumflex accent.

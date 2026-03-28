@@ -345,7 +345,7 @@ fn validate_name(name: &str) -> Result<(), Error> {
             name: name.to_string(),
             reason: InvalidProjectNameReason::ErlangStandardLibraryModule,
         })
-    } else if parse::lexer::str_to_keyword(name).is_some() {
+    } else if parse::lexer::string_to_keyword(name).is_some() {
         Err(Error::InvalidProjectName {
             name: name.to_string(),
             reason: InvalidProjectNameReason::GleamReservedWord,
