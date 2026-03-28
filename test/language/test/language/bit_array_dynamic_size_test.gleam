@@ -32,7 +32,20 @@ pub fn size_sub_add_chain_is_left_associative_test() {
   let b = 3
   let c = 5
   // (a - b) + c = 12, but a - (b + c) = 2
-  let assert <<value:bytes-size(a - b + c)>> = <<1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12>>
+  let assert <<value:bytes-size(a - b + c)>> = <<
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+  >>
   assert value == <<1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12>>
 }
 

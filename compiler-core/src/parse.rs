@@ -3844,7 +3844,8 @@ where
             let Some((op_s, token, op_e)) = self.tok0.take() else {
                 break;
             };
-            let Some(prec) = token_to_bit_array_size_operator(&token).map(|op| op.precedence()) else {
+            let Some(prec) = token_to_bit_array_size_operator(&token).map(|op| op.precedence())
+            else {
                 self.tok0 = Some((op_s, token, op_e));
                 break;
             };
