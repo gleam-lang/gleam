@@ -651,6 +651,10 @@ impl FileIoAction {
         }
     }
 
+    fn is_link(&self) -> bool {
+        matches!(self, &FileIoAction::Link(..))
+    }
+
     /// Returns the destination path of the action, along with the appropriate
     /// prefix. Returns empty string if the action doesn't have the destination.
     fn destination(&self) -> String {
@@ -1636,7 +1640,7 @@ Erlang modules must have unique names regardless of the subfolders where their
                     path,
                     err,
                 );
-                if cfg!(target_family = "windows") && matches!(action, &FileIoAction::Link(..)) {
+                if cfg!(target_family = "windows") && action.is_link() {
                     text.push_str("
 
 Windows does not support symbolic links without developer mode
