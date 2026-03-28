@@ -3844,7 +3844,7 @@ where
             let Some((op_s, token, op_e)) = self.tok0.take() else {
                 break;
             };
-            let Some(prec) = tok_to_bit_array_size_op(&token).map(|op| op.precedence()) else {
+            let Some(prec) = token_to_bit_array_size_operator(&token).map(|op| op.precedence()) else {
                 self.tok0 = Some((op_s, token, op_e));
                 break;
             };
@@ -3854,14 +3854,14 @@ where
                 Some(((op_s, token, op_e), prec)),
                 &mut opstack,
                 &mut estack,
-                &do_reduce_bit_array_size,
+                &reduce_bit_array_size,
             );
 
             estack.push(self.parse_bit_array_size_unit()?);
         }
 
         Ok(
-            handle_op(None, &mut opstack, &mut estack, &do_reduce_bit_array_size)
+            handle_op(None, &mut opstack, &mut estack, &reduce_bit_array_size)
                 .expect("bit array size expression stack should not be empty"),
         )
     }
@@ -4733,7 +4733,7 @@ fn tok_to_binop(t: &Token) -> Option<BinOp> {
     }
 }
 
-fn tok_to_bit_array_size_op(t: &Token) -> Option<IntOperator> {
+fn token_to_bit_array_size_operator(t: &Token) -> Option<IntOperator> {
     match t {
         Token::Plus => Some(IntOperator::Add),
         Token::Minus => Some(IntOperator::Subtract),
@@ -4836,8 +4836,8 @@ fn do_reduce_clause_guard(op: Spanned, estack: &mut Vec<UntypedClauseGuard>) {
 }
 
 /// Simple-Precedence-Parser, perform reduction for bit array size expressions
-fn do_reduce_bit_array_size((_, token, _): Spanned, estack: &mut Vec<BitArraySize<()>>) {
-    let operator = tok_to_bit_array_size_op(&token)
+fn reduce_bit_array_size((_, token, _): Spanned, estack: &mut Vec<BitArraySize<()>>) {
+    let operator = token_to_bit_array_size_operator(&token)
         .expect("only operator tokens are pushed onto the bit array size opstack");
     match (estack.pop(), estack.pop()) {
         (Some(right), Some(left)) => {
