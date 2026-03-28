@@ -433,8 +433,7 @@ fn template_doc() -> &'static str {
 }
 
 fn target_doc() -> &'static str {
-    "The platform to target. On the JavaScript target you can also select \
-    the runtime with the `--runtime` option"
+    "The platform to target"
 }
 
 fn runtime_doc() -> &'static str {
