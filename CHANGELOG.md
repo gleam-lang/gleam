@@ -125,6 +125,10 @@
 - New packages are created requesting Erlang/OTP version 29 on GitHub actions.
   ([Louis Pilfold](https://github.com/lpil))
 
+- `gleam publish` will now better discover Git repository in monorepos. This
+  improves suggestions to push a tag, if it doesn't exists.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server can now help with completions when typing a list's tail:
