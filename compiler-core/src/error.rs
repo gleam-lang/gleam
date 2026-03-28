@@ -3818,7 +3818,7 @@ See: https://tour.gleam.run/advanced-features/use/",
                         let supplied_arguments_string = match supplied_arguments {
                             0 => "no arguments".into(),
                             1 => "1 argument".into(),
-                            _ => format!("{given} arguments"),
+                            _ => format!("{supplied_arguments} arguments"),
                         };
                         let label = format!("Expected {expected_string}, got {given}");
                         let mut text: String = format!(

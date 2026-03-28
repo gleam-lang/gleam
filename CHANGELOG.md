@@ -4,6 +4,10 @@
 
 ### Compiler
 
+- Fixed the `use` expression arity error message so it reports how many
+  arguments were supplied (excluding the callback) instead of the wrong count.
+  ([Wei Cui](https://github.com/cuiweixie))
+
 - The compiler now supports list prepending in constants. For example:
 
   ```gleam
