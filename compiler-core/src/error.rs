@@ -725,6 +725,10 @@ impl FileIoAction {
         }
     }
 
+    fn is_link(&self) -> bool {
+        matches!(self, &FileIoAction::Link(..))
+    }
+
     /// Returns a destination path of action, if any
     fn destination(&self) -> Option<&Utf8PathBuf> {
         match self {
@@ -1842,7 +1846,7 @@ Erlang modules must have unique names regardless of the subfolders where their
                     path,
                     err,
                 );
-                if cfg!(target_family = "windows") && matches!(action, &FileIoAction::Link(..)) {
+                if cfg!(target_family = "windows") && action.is_link() {
                     text.push_str("
 
 Windows does not support symbolic links without developer mode
