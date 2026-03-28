@@ -35,3 +35,39 @@ fn test_shell_program_not_found_error() {
         }
     }
 }
+
+#[test]
+fn io_link_file_error() {
+    let error = Error::FileIo {
+        kind: FileKind::File,
+        action: FileIoAction::Link("/dest".into()),
+        path: "/src".into(),
+        err: Some("Critical error!".to_owned()),
+    }
+    .pretty_string();
+    assert_snapshot!(error);
+}
+
+#[test]
+fn io_copy_directory_error() {
+    let error = Error::FileIo {
+        kind: FileKind::Directory,
+        action: FileIoAction::Copy("/dest".into()),
+        path: "/src".into(),
+        err: Some("Critical error!".to_owned()),
+    }
+    .pretty_string();
+    assert_snapshot!(error);
+}
+
+#[test]
+fn io_delete_file_error() {
+    let error = Error::FileIo {
+        kind: FileKind::File,
+        action: FileIoAction::Delete,
+        path: "/file".into(),
+        err: Some("Critical error!".to_owned()),
+    }
+    .pretty_string();
+    assert_snapshot!(error);
+}
