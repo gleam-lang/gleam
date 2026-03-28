@@ -121,8 +121,8 @@
   possible values.
   ([Andrey Kozhev](https://github.com/ankddev))
 
-- Documentation for `--target` and `--runtime` options has been improved to
-  include more details.
+- Documentation for `--target` option has been improved to include more
+  details.
   ([Andrey Kozhev](https://github.com/ankddev))
 
 ### Language server
