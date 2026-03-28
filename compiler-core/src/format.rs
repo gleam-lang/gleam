@@ -1259,7 +1259,7 @@ impl<'comments> Formatter<'comments> {
                 continue;
             }
 
-            if insert_underscores && i != 0 && ch != minus_ch && i < len && j % 3 == 0 {
+            if insert_underscores && j != 0 && ch != minus_ch && j % 3 == 0 {
                 new_value.push(underscore_ch);
             }
             new_value.push(ch);

@@ -4,6 +4,11 @@
 
 ### Compiler
 
+- Fixed the formatter so thousands separators in integer literals are inserted
+  based on digit position rather than character index in the reversed string,
+  which corrects grouping when the input already contains underscores.
+  ([Wei Cui](https://github.com/cuiweixie))
+
 - The compiler now supports list prepending in constants. For example:
 
   ```gleam
