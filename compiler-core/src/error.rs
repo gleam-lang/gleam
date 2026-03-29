@@ -1701,6 +1701,7 @@ The error from the encryption library was:
 
             Error::Type { failed_modules } => failed_modules
                 .iter()
+                .sorted_by_key(|failed_module| &failed_module.path)
                 .flat_map(failed_module_diagnostics)
                 .collect_vec(),
 
