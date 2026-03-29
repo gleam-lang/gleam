@@ -615,11 +615,11 @@ impl StandardIoAction {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum FileIoAction {
-    Link,
+    Link(Utf8PathBuf),
     Open,
-    Copy,
+    Copy(Utf8PathBuf),
     Read,
     Parse,
     Delete,
@@ -635,9 +635,9 @@ pub enum FileIoAction {
 impl FileIoAction {
     fn text(&self) -> &'static str {
         match self {
-            FileIoAction::Link => "link",
+            FileIoAction::Link(..) => "link",
             FileIoAction::Open => "open",
-            FileIoAction::Copy => "copy",
+            FileIoAction::Copy(..) => "copy",
             FileIoAction::Read => "read",
             FileIoAction::Parse => "parse",
             FileIoAction::Delete => "delete",
@@ -648,6 +648,31 @@ impl FileIoAction {
             FileIoAction::Canonicalise => "canonicalise",
             FileIoAction::UpdatePermissions => "update permissions of",
             FileIoAction::ReadMetadata => "read metadata of",
+        }
+    }
+
+    fn is_link(&self) -> bool {
+        matches!(self, &FileIoAction::Link(..))
+    }
+
+    /// Returns the destination path of the action, along with the appropriate
+    /// prefix. Returns empty string if the action doesn't have the destination.
+    fn destination(&self) -> String {
+        match self {
+            // We return a `String` here because of that `format!(..)`
+            FileIoAction::Link(destination) | FileIoAction::Copy(destination) => {
+                format!(" to {destination}")
+            }
+            FileIoAction::Open
+            | FileIoAction::Read
+            | FileIoAction::Parse
+            | FileIoAction::Delete
+            | FileIoAction::Create
+            | FileIoAction::WriteTo
+            | FileIoAction::Canonicalise
+            | FileIoAction::UpdatePermissions
+            | FileIoAction::FindParent
+            | FileIoAction::ReadMetadata => String::new(),
         }
     }
 }
@@ -1605,16 +1630,17 @@ Erlang modules must have unique names regardless of the subfolders where their
                     None => "".into(),
                 };
                 let mut text = format!(
-                    "An error occurred while trying to {} this {}:
+                    "An error occurred while trying to {} this {}{}:
 
     {}
 {}",
                     action.text(),
                     kind.text(),
+                    action.destination(),
                     path,
                     err,
                 );
-                if cfg!(target_family = "windows") && action == &FileIoAction::Link {
+                if cfg!(target_family = "windows") && action.is_link() {
                     text.push_str("
 
 Windows does not support symbolic links without developer mode

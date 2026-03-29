@@ -112,7 +112,7 @@
   dependencies every single time it is run.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The build tool will now suggest to create a module in dev` or `test`
+- The build tool will now suggest to create a module in `dev` or `test`
   directory, if that missing module is a dev module or a test module
   respectively.
   ([Andrey Kozhev](https://github.com/ankddev))
@@ -123,6 +123,10 @@
 
 - Documentation for `--target` option has been improved to include more
   details.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+- The build tool now includes destination path in the error when it fails to
+  link or copy file or directory.
   ([Andrey Kozhev](https://github.com/ankddev))
 
 ### Language server

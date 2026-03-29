@@ -34,7 +34,7 @@ fn run_and_produce_pretty_snapshot(
 
 --- gleam run output ----------------
 {output}
-"
+g"
     )
 }
 
