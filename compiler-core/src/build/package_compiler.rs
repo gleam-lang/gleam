@@ -4,7 +4,7 @@ mod tests;
 use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::build::package_loader::CacheFiles;
 
-use crate::error::DefinedModuleOrigin;
+use crate::error::{DefinedModuleOrigin, FailedModule};
 use crate::io::files_with_extension;
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
@@ -29,6 +29,7 @@ use crate::{
 use crate::{inline, metadata};
 use askama::Template;
 use ecow::EcoString;
+use itertools::Itertools;
 use std::collections::HashSet;
 use std::{collections::HashMap, fmt::write, time::SystemTime};
 use vec1::Vec1;
@@ -126,8 +127,8 @@ where
         let _enter = span.enter();
 
         // Ensure that the package is compatible with this version of Gleam
-        if let Err(e) = self.config.check_gleam_compatibility() {
-            return e.into();
+        if let Err(error) = self.config.check_gleam_compatibility() {
+            return error.into();
         }
 
         let artefact_directory = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
@@ -169,8 +170,8 @@ where
             // Emit any cached warnings.
             // Note that `self.cached_warnings` is set to `Ignore` (such as for
             // dependency packages) then this field will not be populated.
-            if let Err(e) = self.emit_warnings(warnings, &module) {
-                return e.into();
+            if let Err(error) = self.emit_warnings(warnings, &module) {
+                return error.into();
             }
 
             cached_module_names.push(module.name.clone());
@@ -205,16 +206,16 @@ where
 
         let mut modules = match outcome {
             Outcome::Ok(modules) => modules,
-            Outcome::PartialFailure(modules, error) => {
+            Outcome::PartialFailure(modules, errors) => {
                 return Outcome::PartialFailure(
                     Compiled {
                         modules,
                         cached_module_names,
                     },
-                    error,
+                    errors,
                 );
             }
-            Outcome::TotalFailure(error) => return Outcome::TotalFailure(error),
+            Outcome::TotalFailure(errors) => return Outcome::TotalFailure(errors),
         };
 
         tracing::debug!("performing_code_generation");
@@ -526,6 +527,8 @@ fn analyse(
     // place.
     let _ = module_types.insert(PRELUDE_MODULE_NAME.into(), type_::build_prelude(ids));
 
+    let mut failed_modules = HashMap::new();
+
     for UncompiledModule {
         name,
         code,
@@ -539,6 +542,16 @@ fn analyse(
     } in parsed_modules
     {
         tracing::debug!(module = ?name, "Type checking");
+
+        // We first need to check if the module can actually be compiled.
+        // If we weren't able to compile one of the modules it depends on, then
+        // we have to skip this one to avoid reporting false errors.
+        let depends_on_failed_module = dependencies
+            .iter()
+            .any(|(dependency, _)| failed_modules.contains_key(dependency));
+        if depends_on_failed_module {
+            continue;
+        }
 
         let line_numbers = LineNumbers::new(&code);
 
@@ -557,7 +570,8 @@ fn analyse(
 
         match analysis {
             Outcome::Ok(ast) => {
-                // Module has compiled successfully. Make sure it isn't marked as incomplete.
+                // Module has compiled successfully.
+                // Make sure it isn't marked as incomplete.
                 let _ = incomplete_modules.remove(&name.clone());
 
                 let mut module = Module {
@@ -596,47 +610,69 @@ fn analyse(
             }
 
             Outcome::PartialFailure(ast, errors) => {
-                let error = Error::Type {
-                    names: Box::new(ast.names.clone()),
-                    path: path.clone(),
-                    src: code.clone(),
-                    errors,
-                };
-                // Mark as incomplete so that this module isn't reloaded from cache.
+                // Mark as incomplete so that this module isn't reloaded from
+                // cache.
                 let _ = incomplete_modules.insert(name.clone());
-                // Register the partially type checked module data so that it can be
-                // used in the language server.
+                // Register the partially type checked module data so that it
+                // can be used in the language server.
+                let names = ast.names.clone();
                 let mut module = Module {
                     dependencies,
                     origin,
                     extra,
                     mtime,
                     name,
-                    code,
+                    code: code.clone(),
                     ast,
-                    input_path: path,
+                    input_path: path.clone(),
                 };
                 module.attach_doc_and_module_comments();
 
                 let _ = module_types.insert(module.ast.name.clone(), module.ast.type_info.clone());
-
+                let _ = failed_modules.insert(
+                    module.name.clone(),
+                    FailedModule {
+                        names: Box::new(names),
+                        path: path,
+                        src: code,
+                        errors,
+                    },
+                );
                 modules.push(module);
-                // WARNING: This cannot be used for code generation as the code has errors.
-                return Outcome::PartialFailure(modules, error);
+                // WARNING: This cannot be used for code generation as the code
+                // has errors.
+                //return Outcome::PartialFailure(modules, error);
             }
 
             Outcome::TotalFailure(errors) => {
-                return Outcome::TotalFailure(Error::Type {
-                    names: Default::default(),
-                    path: path.clone(),
-                    src: code.clone(),
-                    errors,
-                });
+                let _ = failed_modules.insert(
+                    name.clone(),
+                    FailedModule {
+                        names: Default::default(),
+                        path: path.clone(),
+                        src: code.clone(),
+                        errors,
+                    },
+                );
+                //return Outcome::TotalFailure(error);
             }
         };
     }
 
-    Outcome::Ok(modules)
+    // Now we need to check if any module has failed and return the appropriate
+    // outcome.
+    let errors = Vec1::try_from_vec(failed_modules.into_values().collect_vec());
+    match errors {
+        Err(_) => Outcome::Ok(modules),
+        Ok(failed_modules) => {
+            let error = Error::Type { failed_modules };
+            if modules.is_empty() {
+                Outcome::TotalFailure(error)
+            } else {
+                Outcome::PartialFailure(modules, error)
+            }
+        }
+    }
 }
 
 #[derive(Debug)]

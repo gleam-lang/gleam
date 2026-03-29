@@ -32,7 +32,10 @@ use lsp_types::{
 };
 use std::{collections::HashSet, sync::Arc};
 
-use crate::{code_action::ReplaceUnderscoreWithType, rename::rename_module_alias};
+use crate::{
+    code_action::{ReplaceUnderscoreWithType, type_errors_for_module},
+    rename::rename_module_alias,
+};
 
 use super::{
     DownloadDependencies, MakeLocker,
@@ -418,7 +421,7 @@ where
                 &params,
                 &mut actions,
             );
-            code_action_fix_names(&lines, &params, &this.error, &mut actions);
+            code_action_fix_names(module, &lines, &params, &this.error, &mut actions);
             code_action_import_module(module, &lines, &params, &this.error, &mut actions);
             code_action_add_missing_patterns(module, &lines, &params, &this.error, &mut actions);
             actions
@@ -1831,13 +1834,14 @@ struct NameCorrection {
 }
 
 fn code_action_fix_names(
+    module: &Module,
     line_numbers: &LineNumbers,
     params: &lsp::CodeActionParams,
     error: &Option<Error>,
     actions: &mut Vec<CodeAction>,
 ) {
     let uri = &params.text_document.uri;
-    let Some(Error::Type { errors, .. }) = error else {
+    let Some(errors) = type_errors_for_module(error, module) else {
         return;
     };
     let name_corrections = errors
