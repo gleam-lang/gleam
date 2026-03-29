@@ -1665,8 +1665,18 @@ impl CallArg<TypedExpr> {
                 }
                 Some(located) => Some(located),
                 None => {
-                    if self.location.contains(byte_index) && self.label.is_some() {
-                        Some(Located::Label(self.location, self.value.type_()))
+                    if self.location.contains(byte_index) && let Some(label) = &self.label {
+                        let fn_type = called_function.type_();
+                        let container_type = fn_type.return_type().unwrap_or(fn_type);
+                        let container = container_type
+                            .custom_type_inferred_variant()
+                            .map(|v| (container_type, v));
+                        Some(Located::Label {
+                            location: self.location,
+                            type_: self.value.type_(),
+                            label: label.clone(),
+                            container,
+                        })
                     } else {
                         None
                     }
@@ -1717,12 +1727,24 @@ impl CallArg<TypedExpr> {
 }
 
 impl CallArg<TypedPattern> {
-    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+    pub fn find_node(
+        &self,
+        byte_index: u32,
+        container_type: &Arc<Type>,
+        variant: Option<u16>,
+    ) -> Option<Located<'_>> {
         match self.value.find_node(byte_index) {
             Some(located) => Some(located),
             _ => {
-                if self.location.contains(byte_index) && self.label.is_some() {
-                    Some(Located::Label(self.location, self.value.type_()))
+                if self.location.contains(byte_index)
+                    && let Some(label) = &self.label
+                {
+                    Some(Located::Label {
+                        location: self.location,
+                        type_: self.value.type_(),
+                        label: label.clone(),
+                        container: variant.map(|v| (container_type.clone(), v)),
+                    })
                 } else {
                     None
                 }
@@ -1732,12 +1754,24 @@ impl CallArg<TypedPattern> {
 }
 
 impl CallArg<TypedConstant> {
-    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+    pub fn find_node(
+        &self,
+        byte_index: u32,
+        container_type: &Arc<Type>,
+        variant: Option<u16>,
+    ) -> Option<Located<'_>> {
         match self.value.find_node(byte_index) {
             Some(located) => Some(located),
             _ => {
-                if self.location.contains(byte_index) && self.label.is_some() {
-                    Some(Located::Label(self.location, self.value.type_()))
+                if self.location.contains(byte_index)
+                    && let Some(label) = &self.label
+                {
+                    Some(Located::Label {
+                        location: self.location,
+                        type_: self.value.type_(),
+                        label: label.clone(),
+                        container: variant.map(|v| (container_type.clone(), v)),
+                    })
                 } else {
                     None
                 }
@@ -3253,6 +3287,7 @@ impl TypedPattern {
                 spread,
                 arguments,
                 constructor,
+                type_,
                 ..
             } => {
                 if let Some((module_alias, module_location)) = module
@@ -3273,9 +3308,13 @@ impl TypedPattern {
                         pattern: self,
                     })
                 } else {
+                    let variant = match constructor {
+                        Inferred::Known(c) => Some(c.constructor_index),
+                        Inferred::Unknown => None,
+                    };
                     arguments
                         .iter()
-                        .find_map(|argument| argument.find_node(byte_index))
+                        .find_map(|argument| argument.find_node(byte_index, type_, variant))
                 }
             }
 

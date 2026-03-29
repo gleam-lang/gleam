@@ -1096,11 +1096,21 @@ pub struct TypeValueConstructor {
     pub documentation: Option<EcoString>,
 }
 
+impl TypeValueConstructor {
+    /// Find a field in this constructor by label name.
+    pub fn field_by_label(&self, label: &str) -> Option<&TypeValueConstructorField> {
+        self.parameters
+            .iter()
+            .find(|f| f.label.as_deref() == Some(label))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct TypeValueConstructorField {
     /// This type of this parameter
     pub type_: Arc<Type>,
     pub label: Option<EcoString>,
+    pub label_location: Option<SrcSpan>,
     pub documentation: Option<EcoString>,
 }
 

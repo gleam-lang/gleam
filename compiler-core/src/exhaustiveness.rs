@@ -3173,6 +3173,7 @@ impl ConstructorSpecialiser {
             .map(|p| TypeValueConstructorField {
                 type_: self.specialise_type(p.type_.as_ref()),
                 label: p.label.clone(),
+                label_location: p.label_location,
                 documentation: p.documentation.clone(),
             })
             .collect_vec();

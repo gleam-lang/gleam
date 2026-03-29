@@ -1218,6 +1218,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 fields.push(TypeValueConstructorField {
                     type_: t.clone(),
                     label: label.as_ref().map(|(_location, label)| label.clone()),
+                    label_location: label.as_ref().map(|(location, _label)| *location),
                     documentation: doc.as_ref().map(|(_, documentation)| documentation.clone()),
                 });
 

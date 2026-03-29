@@ -460,7 +460,15 @@ pub enum Located<'a> {
         type_: std::sync::Arc<Type>,
     },
     UnqualifiedImport(UnqualifiedImport<'a>),
-    Label(SrcSpan, std::sync::Arc<Type>),
+    Label {
+        location: SrcSpan,
+        /// The type of the labelled argument value (used for hover).
+        type_: std::sync::Arc<Type>,
+        label: EcoString,
+        /// The type being constructed/matched and which variant it is.
+        /// Used for go-to-definition.
+        container: Option<(std::sync::Arc<Type>, u16)>,
+    },
     ModuleName {
         location: SrcSpan,
         module_name: EcoString,
@@ -491,6 +499,33 @@ impl<'a> Located<'a> {
         })
     }
 
+    /// Looks up the definition location of a record field label.
+    fn field_definition_location(
+        &self,
+        importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
+        record_type: &Arc<Type>,
+        label: &EcoString,
+        variant: Option<u16>,
+    ) -> Option<DefinitionLocation> {
+        let (module_name, type_name) = record_type.named_type_name()?;
+        let module = importable_modules.get(&module_name)?;
+        let type_constructors = module.types_value_constructors.get(&type_name)?;
+        let field = match variant {
+            Some(index) => type_constructors
+                .variants
+                .get(index as usize)?
+                .field_by_label(label)?,
+            None => type_constructors
+                .variants
+                .iter()
+                .find_map(|v| v.field_by_label(label))?,
+        };
+        Some(DefinitionLocation {
+            module: Some(module_name),
+            span: field.label_location?,
+        })
+    }
+
     pub fn definition_location(
         &self,
         importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
@@ -504,6 +539,14 @@ impl<'a> Located<'a> {
             }),
             Self::Statement(statement) => statement.definition_location(),
             Self::FunctionBody(statement) => None,
+            Self::Expression {
+                expression: TypedExpr::RecordAccess { record, label, .. },
+                ..
+            } => {
+                let record_type = record.type_();
+                let variant = record_type.custom_type_inferred_variant();
+                self.field_definition_location(importable_modules, &record_type, label, variant)
+            }
             Self::Expression { expression, .. } => expression.definition_location(),
 
             Self::ModuleImport(import) => Some(DefinitionLocation {
@@ -551,7 +594,17 @@ impl<'a> Located<'a> {
             }),
             Self::Arg(_) => None,
             Self::Annotation { type_, .. } => self.type_location(importable_modules, type_.clone()),
-            Self::Label(_, _) => None,
+            Self::Label {
+                container: Some((container_type, variant)),
+                label,
+                ..
+            } => self.field_definition_location(
+                importable_modules,
+                container_type,
+                label,
+                Some(*variant),
+            ),
+            Self::Label { .. } => None,
             Self::ModuleName { module_name, .. } => Some(DefinitionLocation {
                 module: Some(module_name.clone()),
                 span: SrcSpan::new(0, 0),
@@ -568,7 +621,7 @@ impl<'a> Located<'a> {
             Located::Statement(statement) => Some(statement.type_()),
             Located::Expression { expression, .. } => Some(expression.type_()),
             Located::Arg(arg) => Some(arg.type_.clone()),
-            Located::Label(_, type_) | Located::Annotation { type_, .. } => Some(type_.clone()),
+            Located::Label { type_, .. } | Located::Annotation { type_, .. } => Some(type_.clone()),
             Located::Constant(constant) => Some(constant.type_()),
             Located::ClauseGuard(guard) => Some(guard.type_()),
 

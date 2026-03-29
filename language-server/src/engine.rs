@@ -373,7 +373,7 @@ where
 
                 Located::Annotation { .. } => Some(completer.completion_types()),
 
-                Located::Label(_, _) => None,
+                Located::Label { .. } => None,
 
                 Located::ModuleName {
                     layer: ast::Layer::Type,
@@ -1113,9 +1113,9 @@ Unused labelled fields:
                         module,
                     ))
                 }
-                Located::Label(location, type_) => {
-                    Some(hover_for_label(location, type_, lines, module))
-                }
+                Located::Label {
+                    location, type_, ..
+                } => Some(hover_for_label(location, type_, lines, module)),
                 Located::ModuleName {
                     location,
                     module_name,

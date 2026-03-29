@@ -368,7 +368,7 @@ pub fn reference_for_ast_node(
         | Located::Expression { .. }
         | Located::FunctionBody(_)
         | Located::UnqualifiedImport(_)
-        | Located::Label(..)
+        | Located::Label { .. }
         | Located::Constant(_)
         | Located::ModuleFunction(_)
         | Located::ModuleTypeAlias(_) => None,
