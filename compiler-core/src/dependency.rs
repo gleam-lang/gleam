@@ -28,10 +28,13 @@ where
     let root_version = Version::new(0, 0, 0);
     let requirements = root_dependencies(dependencies, locked)?;
 
-    // Creating a map of all the required packages that have exact versions specified
+    // Creating a map of all the required packages that have exact versions
+    // specified
     let exact_deps = &requirements
         .iter()
-        .filter_map(|(name, dep)| parse_exact_version(dep.requirement.as_str()).map(|v| (name, v)))
+        .filter_map(|(name, dependency)| {
+            parse_exact_version(dependency.requirement.as_str()).map(|version| (name, version))
+        })
         .map(|(name, version)| (name.clone(), version))
         .collect();
 
@@ -105,8 +108,8 @@ fn resolve_versions_diffs(
         .collect()
 }
 
-/// Check for major version updates for direct dependencies that are being blocked by some version
-/// constraints.
+/// Check for major version updates for direct dependencies that are being
+/// blocked by some version constraints.
 pub fn check_for_major_version_updates(
     manifest: &manifest::Manifest,
     package_fetcher: &impl PackageFetcher,
@@ -118,16 +121,21 @@ pub fn check_for_major_version_updates(
             manifest
                 .requirements
                 .iter()
-                .any(|(required_pkg, _)| manifest_package.name == *required_pkg)
+                .any(|(required_package, _)| manifest_package.name == *required_package)
         })
-        .map(|manifest_pkg| (manifest_pkg.name.to_string(), manifest_pkg.version.clone()))
+        .map(|manifest_package| {
+            (
+                manifest_package.name.to_string(),
+                manifest_package.version.clone(),
+            )
+        })
         .collect();
 
     resolve_versions_diffs(package_fetcher, versions, true)
 }
 
-/// Check for version updates for direct and transitive dependencies that are being blocked by some version
-/// constraints.
+/// Check for version updates for direct and transitive dependencies that are
+/// being blocked by some version constraints.
 pub fn check_for_version_updates(
     manifest: &manifest::Manifest,
     package_fetcher: &impl PackageFetcher,
@@ -141,7 +149,12 @@ pub fn check_for_version_updates(
                 manifest::ManifestPackageSource::Hex { .. }
             )
         })
-        .map(|manifest_pkg| (manifest_pkg.name.to_string(), manifest_pkg.version.clone()))
+        .map(|manifest_package| {
+            (
+                manifest_package.name.to_string(),
+                manifest_package.version.clone(),
+            )
+        })
         .collect();
 
     resolve_versions_diffs(package_fetcher, versions, false)
@@ -226,7 +239,7 @@ pub trait PackageFetcher {
 
 #[derive(Debug, Error)]
 pub enum PackageFetchError {
-    #[error("The package {0} was not found in the package repository")]
+    #[error("the package {0} was not found in the package repository")]
     NotFoundError(String),
     #[error("{0}")]
     ApiError(hexpm::ApiError),
@@ -271,8 +284,10 @@ pub struct DependencyProvider<'a, T: PackageFetcher> {
     remote: &'a T,
     locked: &'a HashMap<EcoString, Version>,
     // Map of packages where an exact version was requested
-    // We need this because by default pubgrub checks exact version by checking if a version is between the exact
-    // and the version 1 bump ahead. That default breaks on prerelease builds since a bump includes the whole patch
+    // We need this because by default pubgrub checks exact version by checking
+    // if a version is between the exact and the version 1 bump ahead.
+    // That default breaks on prerelease builds since a bump includes the whole
+    // patch.
     exact_only: &'a HashMap<String, Version>,
     optional_dependencies: RefCell<HashMap<EcoString, pubgrub::Range<Version>>>,
 }
@@ -322,7 +337,7 @@ where
             let (pre, mut norm): (_, Vec<_>) = package
                 .releases
                 .into_iter()
-                .partition(|r| r.version.is_pre());
+                .partition(|release| release.version.is_pre());
             norm.extend(pre);
             package.releases = norm;
             let _ = packages.insert(name.into(), package);
@@ -348,8 +363,8 @@ where
         let release = match packages
             .get(package.as_str())
             .into_iter()
-            .flat_map(|p| p.releases.iter())
-            .find(|r| &r.version == version)
+            .flat_map(|package| package.releases.iter())
+            .find(|release| &release.version == version)
         {
             Some(release) => release,
             None => {
@@ -367,11 +382,11 @@ where
         }
 
         let mut deps: Map<PackageName, PubgrubRange> = Default::default();
-        for (name, d) in &release.requirements {
-            let mut range = d.requirement.to_pubgrub().clone();
+        for (name, dependency) in &release.requirements {
+            let mut range = dependency.requirement.to_pubgrub().clone();
             let mut opt_deps = self.optional_dependencies.borrow_mut();
             // if it's optional and it was not provided yet, store and skip
-            if d.optional && !packages.contains_key(name.as_str()) {
+            if dependency.optional && !packages.contains_key(name.as_str()) {
                 let _ = opt_deps
                     .entry(name.into())
                     .and_modify(|stored_range| {
@@ -403,10 +418,11 @@ where
                 .get(package.as_str())
                 .cloned()
                 .into_iter()
-                .flat_map(|p| {
-                    p.releases
+                .flat_map(|package| {
+                    package
+                        .releases
                         .into_iter()
-                        .filter(|r| range.contains(&r.version))
+                        .filter(|release| range.contains(&release.version))
                 })
                 .count(),
         )
@@ -426,19 +442,25 @@ where
             .get(package.as_str())
             .cloned()
             .into_iter()
-            .flat_map(move |p| {
-                p.releases
+            .flat_map(move |package| {
+                package
+                    .releases
                     .into_iter()
-                    // if an exact version of a package is specified then we only want to allow that version as available
+                    // if an exact version of a package is specified then we
+                    // only want to allow that version as available.
                     .filter_map(move |release| match exact_package {
-                        Some(ver) => (ver == &release.version).then_some(release.version),
+                        Some(version) => (version == &release.version).then_some(release.version),
                         _ => Some(release.version),
                     })
             })
-            .filter(|v| range.contains(v));
-        match potential_versions.clone().filter(|v| !v.is_pre()).max() {
+            .filter(|version| range.contains(version));
+        match potential_versions
+            .clone()
+            .filter(|version| !version.is_pre())
+            .max()
+        {
             // Don't resolve to a pre-releaase package unless we *have* to
-            Some(v) => Ok(Some(v)),
+            Some(version) => Ok(Some(version)),
             None => Ok(potential_versions.max()),
         }
     }
@@ -864,7 +886,8 @@ mod tests {
         match err {
             Error::DependencyResolutionError(error) => assert_eq!(
                 error,
-                "An error occurred while choosing the version of unknown: The package unknown was not found in the package repository"
+                "An error occurred while choosing the version of unknown: \
+the package unknown was not found in the package repository"
             ),
             _ => panic!("wrong error: {err}"),
         }
@@ -902,7 +925,8 @@ mod tests {
         match err {
             Error::IncompatibleLockedVersion { error } => assert_eq!(
                 error,
-                "gleam_stdlib is specified with the requirement `~> 0.1.0`, but it is locked to 0.2.0, which is incompatible."
+                "gleam_stdlib is specified with the requirement `~> 0.1.0`, \
+but it is locked to 0.2.0, which is incompatible."
             ),
             _ => panic!("wrong error: {err}"),
         }
