@@ -26,6 +26,11 @@
 
 ### Compiler
 
+- The compiler now reports all errors and warnings it can find in modules that
+  do not depend on each other, while previously it would always stop at the
+  first module with an error.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler now supports list prepending in constants. For example:
 
   ```gleam
