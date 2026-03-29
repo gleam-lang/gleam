@@ -478,7 +478,6 @@ mod tests {
     use hexpm::RetirementStatus;
 
     use crate::{
-        derivation_tree::DerivationTreePrinter,
         manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource},
         requirement,
     };
@@ -1174,14 +1173,54 @@ but it is locked to 0.2.0, which is incompatible."
             &vec![].into_iter().collect(),
         );
 
-        if let Err(Error::DependencyResolutionNoSolution {
-            root_package_name,
-            derivation_tree,
-        }) = result
-        {
-            let message = crate::error::wrap(
-                &DerivationTreePrinter::new(root_package_name, derivation_tree.0).print(),
-            );
+        if let Err(error @ Error::DependencyResolutionNoSolution { .. }) = result {
+            let message = error.pretty_string();
+            insta::assert_snapshot!(message)
+        } else {
+            panic!("expected a resolution error message")
+        }
+    }
+
+    #[test]
+    fn adding_package_version_that_does_not_exist() {
+        let remote = remote(vec![(
+            "wibble",
+            vec![release("1.2.0", vec![]), release("1.3.0", vec![])],
+        )]);
+
+        let result = resolve_versions(
+            &remote,
+            HashMap::new(),
+            "app".into(),
+            vec![("wibble".into(), Range::new("1.0.0".into()).unwrap())].into_iter(),
+            &vec![].into_iter().collect(),
+        );
+
+        if let Err(error @ Error::DependencyResolutionNoSolution { .. }) = result {
+            let message = error.pretty_string();
+            insta::assert_snapshot!(message)
+        } else {
+            panic!("expected a resolution error message")
+        }
+    }
+
+    #[test]
+    fn adding_package_version_that_does_not_exist_2() {
+        let remote = remote(vec![(
+            "wibble",
+            vec![release("1.2.0", vec![]), release("1.3.0", vec![])],
+        )]);
+
+        let result = resolve_versions(
+            &remote,
+            HashMap::new(),
+            "app".into(),
+            vec![("wibble".into(), Range::new("> 2.0.0".into()).unwrap())].into_iter(),
+            &vec![].into_iter().collect(),
+        );
+
+        if let Err(error @ Error::DependencyResolutionNoSolution { .. }) = result {
+            let message = error.pretty_string();
             insta::assert_snapshot!(message)
         } else {
             panic!("expected a resolution error message")
