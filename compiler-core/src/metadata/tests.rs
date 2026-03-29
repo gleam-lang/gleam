@@ -2021,6 +2021,7 @@ fn module_with_references() {
                 ],
             )]
             .into(),
+            label_references: HashMap::new(),
         },
         inline_functions: HashMap::new(),
     };

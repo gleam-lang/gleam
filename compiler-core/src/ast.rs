@@ -1668,14 +1668,16 @@ impl CallArg<TypedExpr> {
                     if self.location.contains(byte_index) && let Some(label) = &self.label {
                         let fn_type = called_function.type_();
                         let container_type = fn_type.return_type().unwrap_or(fn_type);
-                        let container = container_type
-                            .custom_type_inferred_variant()
-                            .map(|v| (container_type, v));
+                        let constructor = match called_function {
+                            TypedExpr::Var { name, .. } => Some(name.clone()),
+                            TypedExpr::ModuleSelect { label, .. } => Some(label.clone()),
+                            _ => None,
+                        };
                         Some(Located::Label {
                             location: self.location,
                             type_: self.value.type_(),
                             label: label.clone(),
-                            container,
+                            container: constructor.map(|c| (container_type, c)),
                         })
                     } else {
                         None
@@ -1731,7 +1733,7 @@ impl CallArg<TypedPattern> {
         &self,
         byte_index: u32,
         container_type: &Arc<Type>,
-        variant: Option<u16>,
+        constructor: Option<&EcoString>,
     ) -> Option<Located<'_>> {
         match self.value.find_node(byte_index) {
             Some(located) => Some(located),
@@ -1743,7 +1745,7 @@ impl CallArg<TypedPattern> {
                         location: self.location,
                         type_: self.value.type_(),
                         label: label.clone(),
-                        container: variant.map(|v| (container_type.clone(), v)),
+                        container: constructor.map(|c| (container_type.clone(), c.clone())),
                     })
                 } else {
                     None
@@ -1758,7 +1760,7 @@ impl CallArg<TypedConstant> {
         &self,
         byte_index: u32,
         container_type: &Arc<Type>,
-        variant: Option<u16>,
+        constructor: Option<&EcoString>,
     ) -> Option<Located<'_>> {
         match self.value.find_node(byte_index) {
             Some(located) => Some(located),
@@ -1770,7 +1772,7 @@ impl CallArg<TypedConstant> {
                         location: self.location,
                         type_: self.value.type_(),
                         label: label.clone(),
-                        container: variant.map(|v| (container_type.clone(), v)),
+                        container: constructor.map(|c| (container_type.clone(), c.clone())),
                     })
                 } else {
                     None
@@ -3288,6 +3290,7 @@ impl TypedPattern {
                 arguments,
                 constructor,
                 type_,
+                name,
                 ..
             } => {
                 if let Some((module_alias, module_location)) = module
@@ -3308,13 +3311,9 @@ impl TypedPattern {
                         pattern: self,
                     })
                 } else {
-                    let variant = match constructor {
-                        Inferred::Known(c) => Some(c.constructor_index),
-                        Inferred::Unknown => None,
-                    };
                     arguments
                         .iter()
-                        .find_map(|argument| argument.find_node(byte_index, type_, variant))
+                        .find_map(|argument| argument.find_node(byte_index, type_, Some(name)))
                 }
             }
 

@@ -21,6 +21,7 @@ use crate::ast::{
     TypedConstant, TypedCustomType, TypedDefinitions, TypedExpr, TypedFunction, TypedImport,
     TypedModuleConstant, TypedPattern, TypedRecordConstructor, TypedStatement, TypedTypeAlias,
 };
+use crate::reference;
 use crate::type_::{Type, TypedCallArg};
 use crate::{
     ast::{Definition, SrcSpan, TypedModule},
@@ -465,9 +466,9 @@ pub enum Located<'a> {
         /// The type of the labelled argument value (used for hover).
         type_: std::sync::Arc<Type>,
         label: EcoString,
-        /// The type being constructed/matched and which variant it is.
+        /// The type being constructed/matched and the constructor name.
         /// Used for go-to-definition.
-        container: Option<(std::sync::Arc<Type>, u16)>,
+        container: Option<(std::sync::Arc<Type>, EcoString)>,
     },
     ModuleName {
         location: SrcSpan,
@@ -499,30 +500,29 @@ impl<'a> Located<'a> {
         })
     }
 
-    /// Looks up the definition location of a record field label.
-    fn field_definition_location(
+    /// Looks up the definition location of a record field label using
+    /// the pre-computed label reference map.
+    fn label_definition_location(
         &self,
         importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
         record_type: &Arc<Type>,
         label: &EcoString,
-        variant: Option<u16>,
+        constructor: Option<&EcoString>,
     ) -> Option<DefinitionLocation> {
         let (module_name, type_name) = record_type.named_type_name()?;
         let module = importable_modules.get(&module_name)?;
-        let type_constructors = module.types_value_constructors.get(&type_name)?;
-        let field = match variant {
-            Some(index) => type_constructors
-                .variants
-                .get(index as usize)?
-                .field_by_label(label)?,
-            None => type_constructors
-                .variants
-                .iter()
-                .find_map(|v| v.field_by_label(label))?,
-        };
+        let key = (module_name.clone(), type_name, label.clone());
+        let references = module.references.label_references.get(&key)?;
+        let definition = references.iter().find(|r| {
+            r.kind == reference::ReferenceKind::Definition
+                && match (&r.constructor, constructor) {
+                    (Some(a), Some(b)) => a == b,
+                    _ => true,
+                }
+        })?;
         Some(DefinitionLocation {
             module: Some(module_name),
-            span: field.label_location?,
+            span: definition.location,
         })
     }
 
@@ -542,11 +542,7 @@ impl<'a> Located<'a> {
             Self::Expression {
                 expression: TypedExpr::RecordAccess { record, label, .. },
                 ..
-            } => {
-                let record_type = record.type_();
-                let variant = record_type.custom_type_inferred_variant();
-                self.field_definition_location(importable_modules, &record_type, label, variant)
-            }
+            } => self.label_definition_location(importable_modules, &record.type_(), label, None),
             Self::Expression { expression, .. } => expression.definition_location(),
 
             Self::ModuleImport(import) => Some(DefinitionLocation {
@@ -595,14 +591,14 @@ impl<'a> Located<'a> {
             Self::Arg(_) => None,
             Self::Annotation { type_, .. } => self.type_location(importable_modules, type_.clone()),
             Self::Label {
-                container: Some((container_type, variant)),
+                container: Some((container_type, constructor)),
                 label,
                 ..
-            } => self.field_definition_location(
+            } => self.label_definition_location(
                 importable_modules,
                 container_type,
                 label,
-                Some(*variant),
+                Some(constructor),
             ),
             Self::Label { .. } => None,
             Self::ModuleName { module_name, .. } => Some(DefinitionLocation {

@@ -32,7 +32,7 @@ use crate::{
     build::{Origin, Target},
     inline::InlinableFunction,
     line_numbers::LineNumbers,
-    reference::ReferenceMap,
+    reference::{LabelReferenceMap, ReferenceMap},
     type_::expression::Implementations,
 };
 use error::*;
@@ -1026,6 +1026,7 @@ pub struct References {
     pub imported_modules: HashSet<EcoString>,
     pub value_references: ReferenceMap,
     pub type_references: ReferenceMap,
+    pub label_references: LabelReferenceMap,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -1094,15 +1095,6 @@ pub struct TypeValueConstructor {
     pub name: EcoString,
     pub parameters: Vec<TypeValueConstructorField>,
     pub documentation: Option<EcoString>,
-}
-
-impl TypeValueConstructor {
-    /// Find a field in this constructor by label name.
-    pub fn field_by_label(&self, label: &str) -> Option<&TypeValueConstructorField> {
-        self.parameters
-            .iter()
-            .find(|f| f.label.as_deref() == Some(label))
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

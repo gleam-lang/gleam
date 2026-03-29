@@ -1203,6 +1203,33 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         self.purity = self.purity.merge(fun.called_function_purity());
 
+        // Register field label references for record constructor calls.
+        if fun.is_record_constructor_function()
+            && let Some((type_module, type_name)) = type_.named_type_name()
+        {
+            let constructor_name = match &fun {
+                TypedExpr::Var { name, .. } => Some(name.clone()),
+                TypedExpr::ModuleSelect { label, .. } => Some(label.clone()),
+                _ => None,
+            };
+            for arg in &arguments {
+                if let Some(label) = &arg.label {
+                    let label_span = SrcSpan {
+                        start: arg.location.start,
+                        end: arg.location.start + label.len() as u32,
+                    };
+                    self.environment.references.register_label_reference(
+                        type_module.clone(),
+                        type_name.clone(),
+                        label.clone(),
+                        label_span,
+                        ReferenceKind::Unqualified,
+                        constructor_name.clone(),
+                    );
+                }
+            }
+        }
+
         TypedExpr::Call {
             location,
             type_,
@@ -2861,12 +2888,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             type_,
             documentation,
         } = self.infer_known_record_access(
-            record_type,
+            record_type.clone(),
             record.location(),
             usage,
             label_location,
             label,
         )?;
+        if let Some((type_module, type_name)) = record_type.named_type_name() {
+            self.environment.references.register_label_reference(
+                type_module,
+                type_name,
+                label.clone(),
+                label_location,
+                ReferenceKind::Unqualified,
+                None,
+            );
+        }
         Ok(TypedExpr::RecordAccess {
             record,
             label,
@@ -3131,6 +3168,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     self.problems.error(convert_unify_error(error, *location));
                 };
 
+                if let Some((type_module, type_name)) = return_type.named_type_name() {
+                    let label_span = SrcSpan {
+                        start: location.start,
+                        end: location.start + label.len() as u32,
+                    };
+                    self.environment.references.register_label_reference(
+                        type_module,
+                        type_name,
+                        label.clone(),
+                        label_span,
+                        ReferenceKind::Unqualified,
+                        Some(variant.constructor_name.clone()),
+                    );
+                }
+
                 explicit_arguments.push((
                     index,
                     CallArg {
@@ -3393,6 +3445,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 arguments: arguments_types,
                 return_type,
                 field_map,
+                constructor_name: name.clone(),
             });
         }
 
@@ -3404,6 +3457,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 arguments: arguments_types,
                 return_type,
                 field_map,
+                constructor_name: name.clone(),
             });
         }
 
@@ -3938,6 +3992,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         return self.new_invalid_constant(location);
                     }
 
+                    if let Some((type_module, type_name)) = expected_type.named_type_name() {
+                        let label_span = SrcSpan {
+                            start: argument.location.start,
+                            end: argument.location.start + label.len() as u32,
+                        };
+                        self.environment.references.register_label_reference(
+                            type_module,
+                            type_name,
+                            label.clone(),
+                            label_span,
+                            ReferenceKind::Unqualified,
+                            Some(tag.clone()),
+                        );
+                    }
+
                     let _ = update_argument_indices.insert(index as usize);
 
                     *final_arguments
@@ -4233,6 +4302,25 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         }
                     })
                     .collect_vec();
+
+                if let Some((type_module, type_name)) = return_type.named_type_name() {
+                    for arg in &arguments {
+                        if let Some(label) = &arg.label {
+                            let label_span = SrcSpan {
+                                start: arg.location.start,
+                                end: arg.location.start + label.len() as u32,
+                            };
+                            self.environment.references.register_label_reference(
+                                type_module.clone(),
+                                type_name.clone(),
+                                label.clone(),
+                                label_span,
+                                ReferenceKind::Unqualified,
+                                Some(name.clone()),
+                            );
+                        }
+                    }
+                }
 
                 Constant::Record {
                     module,
@@ -5690,6 +5778,7 @@ struct RecordUpdateVariant<'a> {
     arguments: Vec<Arc<Type>>,
     return_type: Arc<Type>,
     field_map: &'a FieldMap,
+    constructor_name: EcoString,
 }
 
 impl RecordUpdateVariant<'_> {

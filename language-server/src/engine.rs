@@ -55,8 +55,8 @@ use super::{
     files::FileSystemProxy,
     progress::ProgressReporter,
     reference::{
-        FindVariableReferences, Referenced, VariableReferenceKind, find_module_references,
-        reference_for_ast_node,
+        FindVariableReferences, Referenced, VariableReferenceKind, find_label_references,
+        find_module_references, reference_for_ast_node,
     },
     rename::{RenameOutcome, RenameTarget, Renamed, rename_local_variable, rename_module_entity},
     signature_help, src_span_to_lsp_range,
@@ -868,6 +868,9 @@ where
                 }) => rename_module_alias(module, &lines, &params, &module_name, &module_alias)
                     .into_result(),
 
+                // TODO: label rename not yet implemented
+                Some(Referenced::Label { .. }) => RenameOutcome::NoRenames.into_result(),
+
                 None => RenameOutcome::NoRenames.into_result(),
             })
         })
@@ -953,6 +956,18 @@ where
                     this.compiler.project_compiler.get_importable_modules(),
                     &this.compiler.sources,
                     ast::Layer::Type,
+                )),
+                Some(Referenced::Label {
+                    type_module,
+                    type_name,
+                    label,
+                    location,
+                }) if location.contains(byte_index) => Some(find_label_references(
+                    type_module,
+                    type_name,
+                    label,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
                 )),
                 _ => None,
             })

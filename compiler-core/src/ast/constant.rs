@@ -149,13 +149,13 @@ impl TypedConstant {
                 .or_else(|| tail.as_deref().and_then(|tail| tail.find_node(byte_index)))
                 .unwrap_or(Located::Constant(self)),
             Constant::Record {
-                arguments, type_, ..
-            } => {
-                let variant = type_.custom_type_inferred_variant();
-                arguments
-                    .iter()
-                    .find_map(|argument| argument.find_node(byte_index, type_, variant))
-            }
+                arguments,
+                type_,
+                name,
+                ..
+            } => arguments
+                .iter()
+                .find_map(|argument| argument.find_node(byte_index, type_, Some(name)))
                 .unwrap_or(Located::Constant(self)),
             Constant::RecordUpdate {
                 record, arguments, ..
