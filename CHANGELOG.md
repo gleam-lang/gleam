@@ -114,6 +114,18 @@
   dependencies every single time it is run.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The build tool now produces a nicer error message when trying to add a
+  package's version that doesn't exist. For example, running `gleam add wisp@11`
+  will now produce:
+
+  ```txt
+  error: Dependency resolution failed
+
+  The package `wisp` has no versions in the range >= 11.0.0 and < 12.0.0.
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The build tool will now suggest to create a module in the `dev` or `test`
   directory, if that missing module is a dev module or a test module
   respectively.
