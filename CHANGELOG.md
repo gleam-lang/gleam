@@ -265,3 +265,7 @@
 - Fixed a bug where the "Add missing patterns" code action could end up deleting
   comments inside an incomplete case expression.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where some functions could be formatted to be longer than 80
+  characters.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

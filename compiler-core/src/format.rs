@@ -918,30 +918,28 @@ impl<'comments> Formatter<'comments> {
         let signature = match &return_annotation {
             Some(anno) => signature.append(" -> ").append(self.type_ast(anno)),
             None => signature,
-        }
-        .group();
+        };
 
         if body.is_empty() {
-            return attributes.append(signature);
+            return docvec![attributes, signature.group()];
         }
 
-        let head = attributes.append(signature);
-
-        // Format body
-
+        // Format body and add any trailing comments
         let body = self.statements(body);
-
-        // Add any trailing comments
         let body = match printed_comments(self.pop_comments(*end_position), false) {
             Some(comments) => body.append(line()).append(comments),
             None => body,
         };
 
         // Stick it all together
-        head.append(" {")
+        let function = signature
+            .append(" {")
+            .group()
             .append(line().append(body).nest(INDENT).group())
             .append(line())
-            .append("}")
+            .append("}");
+
+        docvec![attributes, function]
     }
 
     fn expr_fn<'a>(
