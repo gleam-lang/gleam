@@ -71,15 +71,42 @@ impl DerivationTreePrinter {
     }
 
     pub fn print(&self) -> String {
-        self.pretty_explanation()
+        self.explanation_for_missing_version()
+            .or_else(|| self.explanation_for_complex_failure())
             .unwrap_or_else(|| self.fallback_explanation())
+    }
+
+    /// This catches the case in which we try adding a dependency's version that
+    /// doesn't exist. That produces a very simple decision tree with just two
+    /// nodes and can have an ad hoc explanation, telling the user the version
+    /// they tried adding doesn't exist!
+    ///
+    fn explanation_for_missing_version(&self) -> Option<String> {
+        if let DerivationTree::External(External::FromDependencyOf(
+            base,
+            _,
+            package,
+            package_ranges,
+        )) = &self.derivation_tree
+            && *base == self.root_package_name
+        {
+            let pretty_range = pretty_range(package_ranges);
+            let message = if is_single_version(package_ranges) {
+                format!("The package `{package}` doesn't have a version {pretty_range}.")
+            } else {
+                format!("The package `{package}` has no versions in the range {pretty_range}.",)
+            };
+            Some(message)
+        } else {
+            None
+        }
     }
 
     /// Tries and print a pretty explanation for the given resolution tree.
     /// If for some reason our heuristic to produce a nice error message fails
     /// we return `None` so we can still produce a good enough error message!
     ///
-    fn pretty_explanation(&self) -> Option<String> {
+    fn explanation_for_complex_failure(&self) -> Option<String> {
         let root_package_index = self.nodes.get(self.root_package_name.as_str())?;
         let unresolvable_nodes = self.find_unresolvable_nodes();
         if unresolvable_nodes.is_empty() {
@@ -356,4 +383,23 @@ fn pretty_range(range: &Ranges<Version>) -> String {
             (Unbounded, Unbounded) => "".into(),
         })
         .join(" or ")
+}
+
+fn is_single_version(range: &Ranges<Version>) -> bool {
+    // Note: at the time of writing this, `Ranges` has a method called
+    // `as_singleton` which, according to its doc, should do the same thing.
+    // However, it strangely seems to consider as a single version ranges like
+    // this one `> 11.0.0 and <= 12.0.0`. To me this doesn't read as a single
+    // version!
+
+    // The range needs to have exactly one segment that includes exactly one
+    // version number.
+    let mut segments = range.iter();
+    if let Some((Included(lower), Included(upper))) = segments.next()
+        && segments.next().is_none()
+    {
+        lower == upper
+    } else {
+        false
+    }
 }

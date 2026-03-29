@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/dependency.rs
-assertion_line: 1091
 expression: message
-snapshot_kind: text
 ---
+error: Dependency resolution failed
+
 There's no compatible version of `woo`:
   - You require woo >= 2.0.0 and < 3.0.0
   - You require wibble >= 1.0.0 and < 2.0.0

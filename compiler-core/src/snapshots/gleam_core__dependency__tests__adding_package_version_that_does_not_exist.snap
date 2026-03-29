@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/dependency.rs
+expression: message
+---
+error: Dependency resolution failed
+
+The package `wibble` doesn't have a version 1.0.0.
