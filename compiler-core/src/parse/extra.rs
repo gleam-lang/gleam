@@ -40,7 +40,7 @@ impl ModuleExtra {
         self.first_comment_between(start, end).is_some()
     }
 
-    pub fn first_comment_between(&self, start: u32, end: u32) -> Option<SrcSpan> {
+    fn index_of_first_comment_between(&self, start: u32, end: u32) -> Option<usize> {
         self.comments
             .binary_search_by(|comment| {
                 if comment.end < start {
@@ -52,7 +52,37 @@ impl ModuleExtra {
                 }
             })
             .ok()
+    }
+
+    pub fn first_comment_between(&self, start: u32, end: u32) -> Option<SrcSpan> {
+        self.index_of_first_comment_between(start, end)
             .and_then(|index| self.comments.get(index).copied())
+    }
+
+    pub fn last_comment_between(&self, start: u32, end: u32) -> Option<SrcSpan> {
+        // We start from the first comment that we can find in between the given
+        // start and end, this is really fast as we can find such index through
+        // binary search.
+        let mut index_of_last_comment = self.index_of_first_comment_between(start, end)?;
+
+        // Then we go over all the comments we can find from that one that are
+        // still in between the given indices.
+        loop {
+            let next_comment = self.comments.get(index_of_last_comment + 1);
+            if let Some(next_comment) = next_comment
+                && start <= next_comment.start
+                && next_comment.end <= end
+            {
+                // The next comment is still in between the two indices, we keep
+                // going.
+                index_of_last_comment += 1;
+            } else {
+                // The next comment is outside of the given range, that means
+                // the current one is the last comment we were looking for.
+                // We can return it!
+                return self.comments.get(index_of_last_comment).cloned();
+            }
+        }
     }
 }
 

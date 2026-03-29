@@ -49,7 +49,8 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The compiler now emits a helpful error message when source code contains an invalid unicode character that looks similar to a correct character.
+- The compiler now emits a helpful error message when source code contains an
+  invalid unicode character that looks similar to a correct character.
 
   ```
   error: Syntax error
@@ -61,6 +62,7 @@
   This looks like ascii comma, but it is actually the unicode low single
   comma quotation mark.
   ```
+
   ([Louis Pilfold](https://github.com/lpil))
 
 - The compiler now emits more efficient code when matching on single-character
@@ -112,7 +114,7 @@
   dependencies every single time it is run.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The build tool will now suggest to create a module in dev` or `test`
+- The build tool will now suggest to create a module in dev`or`test`
   directory, if that missing module is a dev module or a test module
   respectively.
   ([Andrey Kozhev](https://github.com/ankddev))
@@ -226,4 +228,8 @@
 
 - Fixed a bug where the "Add missing type parameter" code action could be
   triggered on types that do not exist instead of type variables.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the "Add missing patterns" code action could end up deleting
+  comments inside an incomplete case expression.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
