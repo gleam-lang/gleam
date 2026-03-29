@@ -387,3 +387,21 @@ fn comments_between_function_params() {
 "#
     );
 }
+
+#[test]
+fn long_function_slightly_over_80_chars_gets_broken() {
+    assert_format_rewrite!(
+        "
+fn do_menu_items(acc: Queue(MenuItem), from tasks: List(Task)) -> List(MenuItem) {
+  todo
+}
+",
+        "fn do_menu_items(
+  acc: Queue(MenuItem),
+  from tasks: List(Task),
+) -> List(MenuItem) {
+  todo
+}
+"
+    );
+}
