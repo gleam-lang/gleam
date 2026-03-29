@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main(bool: Bool) {\n  case bool {\n    // Here is some comment that should not be deleted\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main(bool: Bool) {
+  case bool {
+  ▔▔▔▔▔↑     
+    // Here is some comment that should not be deleted
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn main(bool: Bool) {
+  case bool {
+    // Here is some comment that should not be deleted
+    True -> todo
+    False -> todo
+  }
+}

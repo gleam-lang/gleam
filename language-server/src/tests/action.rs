@@ -2759,6 +2759,44 @@ pub fn main(bool: Bool) {
 }
 
 #[test]
+fn add_missing_patterns_does_not_remove_comment() {
+    assert_code_action!(
+        ADD_MISSING_PATTERNS,
+        "
+pub fn main(bool: Bool) {
+  case bool {
+    // Here is some comment that should not be deleted
+  }
+}
+",
+        find_position_of("case").select_until(find_position_of("bool {"))
+    );
+}
+
+#[test]
+fn add_missing_patterns_does_not_remove_comment_2() {
+    assert_code_action!(
+        ADD_MISSING_PATTERNS,
+        "
+pub fn main(bool: Bool) {
+  case bool {
+    // Here is some comment that should not be deleted
+
+    // Here is some other separate comment!
+    // And loads of white space that has to be deleted.
+
+
+
+
+
+  }
+}
+",
+        find_position_of("case").select_until(find_position_of("bool {"))
+    );
+}
+
+#[test]
 fn add_missing_patterns_custom_type() {
     assert_code_action!(
         ADD_MISSING_PATTERNS,

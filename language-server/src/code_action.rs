@@ -1298,8 +1298,17 @@ pub fn code_action_add_missing_patterns(
                 }
             }
 
-            // Remove any blank spaces/lines between the start brace and end brace
-            edits.delete(SrcSpan::new(start_brace_location, insert_at));
+            // We remove any blank spaces/lines between the end of the last
+            // comment inside the case expression and the insertion point.
+            // If there's no comments we remove all empty space in between the
+            // two braces
+            let deletion_start = module
+                .extra
+                .last_comment_between(start_brace_location, insert_at)
+                .map(|src_span| src_span.end)
+                .unwrap_or(start_brace_location);
+
+            edits.delete(SrcSpan::new(deletion_start, insert_at));
             edits.insert(insert_at, format!("\n{indent}"));
         }
 
