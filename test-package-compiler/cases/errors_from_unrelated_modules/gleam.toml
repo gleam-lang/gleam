@@ -1,0 +1,3 @@
+name = "errors_from_unrelated_modules"
+version = "0.1.0"
+target = "erlang"

@@ -644,9 +644,6 @@ fn analyse(
                     },
                 );
                 modules.push(module);
-                // WARNING: This cannot be used for code generation as the code
-                // has errors.
-                //return Outcome::PartialFailure(modules, error);
             }
 
             Outcome::TotalFailure(errors) => {
@@ -659,7 +656,6 @@ fn analyse(
                         errors,
                     },
                 );
-                //return Outcome::TotalFailure(error);
             }
         };
     }
