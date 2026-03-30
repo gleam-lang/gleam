@@ -182,6 +182,7 @@ const PATTERN_MATCH_ON_ARGUMENT: &str = "Pattern match on argument";
 const PATTERN_MATCH_ON_VARIABLE: &str = "Pattern match on variable";
 const PATTERN_MATCH_ON_VALUE: &str = "Pattern match on value";
 const GENERATE_FUNCTION: &str = "Generate function";
+const GENERATE_TYPE: &str = "Generate type";
 const CONVERT_TO_FUNCTION_CALL: &str = "Convert to function call";
 const INLINE_VARIABLE: &str = "Inline variable";
 const CONVERT_TO_PIPE: &str = "Convert to pipe";
@@ -8767,6 +8768,89 @@ pub fn main() -> Bool {
 }
 ",
         find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn generate_type_works_for_unknown_type() {
+    assert_code_action!(
+        GENERATE_TYPE,
+        "
+pub fn main() {
+  let x: Wobble = todo
+}
+",
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn generate_type_works_for_unknown_type_with_parameters() {
+    assert_code_action!(
+        GENERATE_TYPE,
+        "
+type Wibble {
+  Wibble(Wobble(Int, String))
+}
+",
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn generate_type_works_for_unknown_type_in_argument_annotation() {
+    assert_code_action!(
+        GENERATE_TYPE,
+        "
+pub fn wibble(argument: Wibble(some, generics)) { todo }
+",
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+#[test]
+fn generate_type_works_for_unknown_type_in_private_function() {
+    assert_code_action!(
+        GENERATE_TYPE,
+        "
+fn wibble(argument: Wobble) { todo }
+",
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn generate_type_generates_non_colliding_parameter_names() {
+    assert_code_action!(
+        GENERATE_TYPE,
+        "
+pub fn wibble(argument: Wibble(b, Int)) { todo }
+",
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+#[test]
+fn generate_type_generates_names_for_more_than_26_parameters() {
+    assert_code_action!(
+        GENERATE_TYPE,
+        "
+pub fn wibble(argument: Wibble(Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int)) { todo }
+",
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+#[test]
+fn generate_type_not_offered_when_cursor_is_elsewhere() {
+    assert_no_code_actions!(
+        GENERATE_TYPE,
+        "
+pub fn main() {
+  let x: Wobble = todo
+}
+",
+        find_position_of("main").to_selection()
     );
 }
 
