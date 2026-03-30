@@ -31,6 +31,8 @@ use itertools::Itertools;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Url};
 use vec1::{Vec1, vec1};
 
+use crate::engine::{completely_within, position_within};
+
 use super::{
     TextEdits,
     compiler::LspProjectCompiler,
@@ -9707,9 +9709,13 @@ pub struct ExtractFunction<'a> {
     /// a statement is the last in a block or function, we need to track that
     /// manually.
     last_statement_location: Option<SrcSpan>,
+    /// When visiting a pipeline step, this will hold the type of the value
+    /// returned by the previous step (if any!)
+    previous_pipeline_assignment_type: Option<Arc<Type>>,
 }
 
 /// Information about a section of code we are extracting as a function.
+#[derive(Debug)]
 struct ExtractedFunction<'a> {
     /// A list of parameters which need to be passed to the extracted function.
     /// These are any variables used in the extracted code, which are defined
@@ -9736,7 +9742,31 @@ impl<'a> ExtractedFunction<'a> {
     fn location(&self) -> SrcSpan {
         match &self.value {
             ExtractedValue::Expression(expression) => expression.location(),
-            ExtractedValue::Statements { location, .. } => *location,
+            ExtractedValue::Statements { location, .. }
+            | ExtractedValue::PipelineSteps { location, .. } => *location,
+        }
+    }
+
+    /// If the extracted function is a series of pipeline steps, this adds to it
+    /// the given pipeline step, otherwise leaving it unchanged.
+    /// If the extracted function was indeed a pipeline, this will return `true`,
+    /// otherwise it returns `false`.
+    ///
+    fn try_add_pipeline_step(&mut self, step_type: Arc<Type>, step_location: SrcSpan) {
+        if let ExtractedFunction {
+            value:
+                ExtractedValue::PipelineSteps {
+                    location,
+                    before_first: _,
+                    return_type,
+                },
+            ..
+        } = self
+        {
+            // If we're extracting this pipeline and the final step is included
+            // in the selection we want to add it to the extracted steps
+            *return_type = step_type;
+            *location = location.merge(&step_location);
         }
     }
 }
@@ -9748,6 +9778,26 @@ enum ExtractedValue<'a> {
         location: SrcSpan,
         position: StatementPosition,
     },
+    PipelineSteps {
+        location: SrcSpan,
+        /// The type of the value produced by the pipeline steps that will be
+        /// piped into the extracted function. Could be none if the steps we're
+        /// extracting include the first step, in that case there would be
+        /// nothing that is fed into it.
+        before_first: Option<Arc<Type>>,
+        /// The type returned by the extracted steps.
+        return_type: Arc<Type>,
+    },
+}
+
+impl ExtractedValue<'_> {
+    fn location(&self) -> SrcSpan {
+        match self {
+            ExtractedValue::Expression(typed_expr) => typed_expr.location(),
+            ExtractedValue::Statements { location, .. }
+            | ExtractedValue::PipelineSteps { location, .. } => *location,
+        }
+    }
 }
 
 /// When we are extracting multiple statements, there are two possible cases:
@@ -9810,6 +9860,7 @@ impl<'a> ExtractFunction<'a> {
             function: None,
             function_end_position: None,
             last_statement_location: None,
+            previous_pipeline_assignment_type: None,
         }
     }
 
@@ -9832,10 +9883,10 @@ impl<'a> ExtractFunction<'a> {
         };
 
         match extracted.value {
-            // If we extract a block, it isn't very helpful to have the body of the
-            // extracted function just be a single block expression, so instead we
-            // extract the statements inside the block. For example, the following
-            // code:
+            // If we extract a block, it isn't very helpful to have the body of
+            // the extracted function just be a single block expression, so
+            // instead we extract the statements inside the block. For example,
+            // the following code:
             //
             // ```gleam
             // pub fn main() {
@@ -9964,6 +10015,17 @@ impl<'a> ExtractFunction<'a> {
                 type_,
                 extracted.parameters,
                 end,
+            ),
+            ExtractedValue::PipelineSteps {
+                location,
+                before_first,
+                return_type,
+            } => self.extract_pipeline_steps(
+                location,
+                end,
+                extracted.parameters,
+                before_first,
+                return_type,
             ),
         }
 
@@ -10337,6 +10399,91 @@ impl<'a> ExtractFunction<'a> {
         self.edits.insert(function_end, function);
     }
 
+    fn extract_pipeline_steps(
+        &mut self,
+        location: SrcSpan,
+        function_end: u32,
+        parameters: Vec<(EcoString, Arc<Type>)>,
+        before_first: Option<Arc<Type>>,
+        return_type: Arc<Type>,
+    ) {
+        let name = self.function_name();
+        let code = code_at(self.module, location);
+        let arguments = parameters.iter().map(|(name, _)| name.clone()).join(", ");
+        let replacement = match before_first {
+            Some(_) if parameters.is_empty() => format!("{name}"),
+            Some(_) | None => format!("{name}({arguments})"),
+        };
+        self.edits.replace(location, replacement);
+
+        // When extracting something out of the middle of a pipeline the
+        // function we produce will produce a single value as output but could
+        // take multiple values as input:
+        //
+        // ```gleam
+        // wibble
+        // |> wobble(a)   // extracting this
+        // |> woo(b)      //
+        // |> something
+        // ```
+        //
+        // It will take the type returned by `wibble`, `a`, and `b` as input,
+        // and produce the value returned by `woo` as output:
+        //
+        // ```gleam
+        // wibble
+        // |> function(a, b)
+        // |> something
+        // ```
+        //
+        // If the steps extracted are at the beginning of the pipeline, then it
+        // won't take that additional argument!
+        //
+        // ```gleam
+        // wibble         // extracting these
+        // |> wobble(a)   //
+        // |> woo(b)      //
+        // |> something
+        // ```
+        //
+        // Becomes:
+        //
+        // ```gleam
+        // function(a, b)
+        // |> something
+        // ```
+
+        let mut type_printer = Printer::new(&self.module.ast.names);
+        let return_type = type_printer.print_type(&return_type);
+        let first_argument = before_first.map(|type_of_first_argument| {
+            let mut generator = NameGenerator::new();
+            for (name, _) in parameters.iter() {
+                generator.add_used_name(name.clone());
+            }
+            let first_argument_name = generator.generate_name_from_type(&type_of_first_argument);
+            (first_argument_name, type_of_first_argument.clone())
+        });
+        let parameters = first_argument
+            .clone()
+            .into_iter()
+            .chain(parameters)
+            .map(|(name, type_)| eco_format!("{name}: {}", type_printer.print_type(&type_)))
+            .join(", ");
+
+        let code = if let Some((first_argument_name, _)) = first_argument {
+            format!("{first_argument_name}\n  |> {code}")
+        } else {
+            format!("{}", code.trim_start_matches("|>"))
+        };
+        let function = format!(
+            "\n\nfn {name}({parameters}) -> {return_type} {{
+  {code}
+}}"
+        );
+
+        self.edits.insert(function_end, function);
+    }
+
     /// When a variable is referenced, we need to decide if we need to do anything
     /// to ensure that the reference is still valid after extracting a function.
     /// If the variable is defined outside the extracted function, but used inside
@@ -10387,8 +10534,8 @@ impl<'a> ExtractFunction<'a> {
         variables.push((name.clone(), type_.clone()));
     }
 
-    fn can_extract(&self, location: SrcSpan) -> bool {
-        let expression_range = self.edits.src_span_to_lsp_range(location);
+    fn can_extract_expression(&self, expression: &TypedExpr) -> bool {
+        let expression_range = self.edits.src_span_to_lsp_range(expression.location());
         let selected_range = self.params.range;
 
         // If the selected range doesn't touch the expression at all, then there
@@ -10397,37 +10544,87 @@ impl<'a> ExtractFunction<'a> {
             return false;
         }
 
-        // Determine whether the selected range falls completely within the
-        // expression. For example:
-        // ```gleam
-        // pub fn main() {
-        //   let something = {
-        //     let a = 1
-        //     let b = 2
-        //     let c = a + b
-        //   //^ The user has selected from here
-        //     let d = a * b
-        //     c / d
-        //     //  ^ Until here
-        //   }
-        // }
-        // ```
-        //
-        // Here, the selected range does overlap with the `let something`
-        // statement; but we don't want to extract that whole statement! The
-        // user only wanted to extract the statements inside the block. So if
-        // the selected range falls completely within the expression, we ignore
-        // it and traverse the tree further until we find exactly what the user
-        // selected.
-        //
-        let selected_within_expression = selected_range.start > expression_range.start
-            && selected_range.start < expression_range.end
-            && selected_range.end > expression_range.start
-            && selected_range.end < expression_range.end;
+        match expression {
+            TypedExpr::Pipeline {
+                first_value,
+                finally,
+                ..
+            } => {
+                // We can extract a pipeline as a whole only if the selection
+                // spans all of its steps!
+                let first_step = self.edits.src_span_to_lsp_range(first_value.location);
+                let last_step = self.edits.src_span_to_lsp_range(finally.location());
+                position_within(selected_range.start, first_step)
+                    && position_within(selected_range.end, last_step)
+            }
 
-        // If the selected range is completely within the expression, we don't
-        // want to extract it.
-        !selected_within_expression
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => !completely_within(selected_range, expression_range),
+        }
+    }
+
+    fn can_extract_statement(&self, statement: &TypedStatement) -> bool {
+        match statement {
+            ast::Statement::Expression(expression) => self.can_extract_expression(expression),
+
+            // Determine whether the selected range falls completely within the
+            // expression. For example:
+            // ```gleam
+            // pub fn main() {
+            //   let something = {
+            //     let a = 1
+            //     let b = 2
+            //     let c = a + b
+            //   //^ The user has selected from here
+            //     let d = a * b
+            //     c / d
+            //     //  ^ Until here
+            //   }
+            // }
+            // ```
+            //
+            // Here, the selected range does overlap with the `let something`
+            // statement; but we don't want to extract that whole statement! The
+            // user only wanted to extract the statements inside the block. So if
+            // the selected range falls completely within the expression, we ignore
+            // it and traverse the tree further until we find exactly what the user
+            // selected.
+            //
+            // If the selected range is completely within the expression, we don't
+            // want to extract it.
+            ast::Statement::Assignment(_) | ast::Statement::Use(_) | ast::Statement::Assert(_) => {
+                let statement_range = self.edits.src_span_to_lsp_range(statement.location());
+                let selected_range = self.params.range;
+
+                // If the selected range doesn't touch the statement at all, then there
+                // is no reason to extract it.
+                if !overlaps(statement_range, selected_range) {
+                    return false;
+                }
+                !completely_within(selected_range, statement_range)
+            }
+        }
     }
 }
 
@@ -10464,7 +10661,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
         // not desired.
         if self.function.is_none() {
             // If this expression is fully selected, we mark it as being extracted.
-            if self.can_extract(expression.location()) {
+            if self.can_extract_expression(expression) {
                 self.function = Some(ExtractedFunction::new(ExtractedValue::Expression(
                     expression,
                 )));
@@ -10476,7 +10673,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
     fn visit_typed_statement(&mut self, statement: &'ast TypedStatement) {
         let statement_location = statement.location();
 
-        if self.can_extract(statement_location) {
+        if self.can_extract_statement(statement) {
             let is_in_tail_position =
                 self.last_statement_location
                     .is_some_and(|last_statement_location| {
@@ -10496,11 +10693,20 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
 
             match &mut self.function {
                 None => {
-                    self.function = Some(ExtractedFunction::new(ExtractedValue::Statements {
-                        location: statement_location,
-                        position,
-                    }));
+                    self.function = match statement {
+                        TypedStatement::Expression(TypedExpr::Pipeline { .. }) => None,
+                        TypedStatement::Assert(_)
+                        | TypedStatement::Assignment(_)
+                        | TypedStatement::Expression(_)
+                        | TypedStatement::Use(_) => {
+                            Some(ExtractedFunction::new(ExtractedValue::Statements {
+                                location: statement_location,
+                                position,
+                            }))
+                        }
+                    }
                 }
+
                 // If we have already chosen an expression to extract, that means
                 // that this statement is within the already extracted expression,
                 // so we don't want to extract this instead.
@@ -10509,8 +10715,8 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
                     ..
                 }) => {}
                 // If we are selecting multiple statements, this statement should
-                // be included within list, so we merge the spans to ensure it
-                // is included.
+                // be included within that list, so we merge the spans to ensure
+                // it is included.
                 Some(ExtractedFunction {
                     value:
                         ExtractedValue::Statements {
@@ -10522,9 +10728,74 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
                     *location = location.merge(&statement_location);
                     *extracted_position = position;
                 }
+                Some(ExtractedFunction {
+                    value: value @ ExtractedValue::PipelineSteps { .. },
+                    ..
+                }) => {
+                    // If we were extracting a pipeline, but end up selecting
+                    // some statement that is not part of it, then we go back to
+                    // selecting a batch of statements.
+                    *value = ExtractedValue::Statements {
+                        location: value.location(),
+                        position,
+                    }
+                }
             }
         }
         ast::visit::visit_typed_statement(self, statement);
+    }
+
+    fn visit_typed_expr_pipeline(
+        &mut self,
+        _location: &'ast SrcSpan,
+        first_value: &'ast TypedPipelineAssignment,
+        assignments: &'ast [(TypedPipelineAssignment, PipelineAssignmentKind)],
+        finally: &'ast TypedExpr,
+        _finally_kind: &'ast PipelineAssignmentKind,
+    ) {
+        self.previous_pipeline_assignment_type = None;
+        self.visit_typed_pipeline_assignment(first_value);
+
+        self.previous_pipeline_assignment_type = Some(first_value.type_());
+        for (assignment, _kind) in assignments {
+            self.visit_typed_pipeline_assignment(assignment);
+            self.previous_pipeline_assignment_type = Some(assignment.type_());
+        }
+
+        // If we're selecting a pipeline and the selection ends on its final step
+        // we want to include that as well into the extracted bit.
+        let final_step_range = self.edits.src_span_to_lsp_range(finally.location());
+        if let Some(extracted_function) = &mut self.function
+            && position_within(self.params.range.end, final_step_range)
+        {
+            extracted_function.try_add_pipeline_step(finally.type_(), finally.location());
+        };
+
+        self.visit_typed_expr(finally);
+        self.previous_pipeline_assignment_type = None;
+    }
+
+    fn visit_typed_pipeline_assignment(&mut self, assignment: &'ast TypedPipelineAssignment) {
+        // In order to be extracted, a pipeline step must be overlapping with
+        // the cursor selection!
+        let assignment_range = self.edits.src_span_to_lsp_range(assignment.location);
+        if !overlaps(self.params.range, assignment_range) {
+            return;
+        }
+
+        match &mut self.function {
+            None => {
+                self.function = Some(ExtractedFunction::new(ExtractedValue::PipelineSteps {
+                    location: assignment.location,
+                    before_first: self.previous_pipeline_assignment_type.clone(),
+                    return_type: assignment.type_(),
+                }));
+            }
+            Some(extracted_function) => {
+                extracted_function.try_add_pipeline_step(assignment.type_(), assignment.location)
+            }
+        }
+        ast::visit::visit_typed_pipeline_assignment(self, assignment);
     }
 
     fn visit_typed_expr_var(

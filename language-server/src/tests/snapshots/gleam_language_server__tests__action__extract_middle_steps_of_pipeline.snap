@@ -1,0 +1,37 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  True\n  |> wibble\n  |> wobble\n  |> woo\n}\n\nfn wibble(_) { 1 }\nfn wobble(_) { 1.0 }\nfn woo(_) { [] }\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  True
+  |> wibble
+     ▔▔▔▔▔▔
+  |> wobble
+▔▔▔▔▔↑     
+  |> woo
+}
+
+fn wibble(_) { 1 }
+fn wobble(_) { 1.0 }
+fn woo(_) { [] }
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  True
+  |> function
+  |> woo
+}
+
+fn function(bool: Bool) -> Float {
+  bool
+  |> wibble
+  |> wobble
+}
+
+fn wibble(_) { 1 }
+fn wobble(_) { 1.0 }
+fn woo(_) { [] }

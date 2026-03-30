@@ -11468,6 +11468,202 @@ pub fn main() {
 }
 
 #[test]
+fn extract_entire_pipeline() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  True
+  |> wibble
+  |> wobble
+}
+
+fn wibble(_) { 1 }
+fn wobble(_) { 1.0 }
+"#,
+        find_position_of("True").select_until(find_position_of("wobble"))
+    );
+}
+
+#[test]
+fn extract_starting_steps_of_pipeline() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  True
+  |> wibble
+  |> wobble
+}
+
+fn wibble(_) { 1 }
+fn wobble(_) { 1.0 }
+"#,
+        find_position_of("True").select_until(find_position_of("wibble"))
+    );
+}
+
+#[test]
+fn extract_starting_steps_of_pipeline_with_argument() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  let something = 1
+
+  True
+  |> wibble(something)
+  |> wobble
+}
+
+fn wibble(_, _) { 1 }
+fn wobble(_) { 1.0 }
+"#,
+        find_position_of("True").select_until(find_position_of("wibble"))
+    );
+}
+
+#[test]
+fn extract_final_steps_of_pipeline() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  True
+  |> wibble
+  |> wobble
+}
+
+fn wibble(_) { 1 }
+fn wobble(_) { 1.0 }
+"#,
+        find_position_of("wibble").select_until(find_position_of("wobble"))
+    );
+}
+
+#[test]
+fn extract_final_steps_of_pipeline_with_arguments() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  let something = 1
+
+  True
+  |> wibble
+  |> wobble(something)
+}
+
+fn wibble(_) { 1 }
+fn wobble(_, _) { 1.0 }
+"#,
+        find_position_of("wibble").select_until(find_position_of("wobble"))
+    );
+}
+
+#[test]
+fn extract_middle_steps_of_pipeline() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  True
+  |> wibble
+  |> wobble
+  |> woo
+}
+
+fn wibble(_) { 1 }
+fn wobble(_) { 1.0 }
+fn woo(_) { [] }
+"#,
+        find_position_of("wibble").select_until(find_position_of("wobble"))
+    );
+}
+
+#[test]
+fn extract_middle_steps_of_pipeline_with_arguments() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  let something = 1
+
+  True
+  |> wibble(1)
+  |> wobble(something)
+  |> woo
+}
+
+fn wibble(_, _) { 1 }
+fn wobble(_, _) { 1.0 }
+fn woo(_) { [] }
+"#,
+        find_position_of("wibble").select_until(find_position_of("wobble"))
+    );
+}
+
+#[test]
+fn cannot_extract_a_single_starting_step_as_function() {
+    assert_no_code_actions!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  True
+  |> wibble
+  |> wobble
+  |> woo
+}
+
+fn wibble(_, _) { 1 }
+fn wobble(_, _) { 1.0 }
+fn woo(_) { [] }
+"#,
+        find_position_of("True").to_selection()
+    );
+}
+
+#[test]
+fn cannot_extract_a_single_middle_step_as_function() {
+    assert_no_code_actions!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  True
+  |> wibble
+  |> wobble
+  |> woo
+}
+
+fn wibble(_, _) { 1 }
+fn wobble(_, _) { 1.0 }
+fn woo(_) { [] }
+"#,
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn cannot_extract_a_single_final_step_as_function() {
+    assert_no_code_actions!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  True
+  |> wibble
+  |> wobble
+  |> woo
+}
+
+fn wibble(_, _) { 1 }
+fn wobble(_, _) { 1.0 }
+fn woo(_) { [] }
+"#,
+        find_position_of("woo").to_selection()
+    );
+}
+
+#[test]
 fn no_code_action_to_extract_function_when_expression_is_not_fully_selected() {
     assert_no_code_actions!(
         EXTRACT_FUNCTION,

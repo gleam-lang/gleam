@@ -1,0 +1,32 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  True\n  |> wibble\n  |> wobble\n}\n\nfn wibble(_) { 1 }\nfn wobble(_) { 1.0 }\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  True
+  ▔▔▔▔
+  |> wibble
+▔▔▔▔▔↑     
+  |> wobble
+}
+
+fn wibble(_) { 1 }
+fn wobble(_) { 1.0 }
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  function()
+  |> wobble
+}
+
+fn function() -> Int {
+  True
+  |> wibble
+}
+
+fn wibble(_) { 1 }
+fn wobble(_) { 1.0 }
