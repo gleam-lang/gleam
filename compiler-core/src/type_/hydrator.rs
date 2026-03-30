@@ -171,6 +171,7 @@ impl Hydrator {
                             error,
                             location,
                             module.as_ref().map(|(_, location)| *location),
+                            parameter_names,
                         )
                     })?
                     .clone();
@@ -314,6 +315,7 @@ impl Hydrator {
                             name: name.clone(),
                             location: *location,
                             hint,
+                            parameter_names: vec![],
                         })
                     }
                 }

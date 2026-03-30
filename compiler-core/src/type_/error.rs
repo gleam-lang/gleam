@@ -173,6 +173,7 @@ pub enum Error {
         location: SrcSpan,
         name: EcoString,
         hint: UnknownTypeHint,
+        parameter_names: Vec<EcoString>,
     },
 
     /// This happens when someone writes `module_name.` with no type name after
@@ -1568,12 +1569,14 @@ pub fn convert_get_type_constructor_error(
     error: UnknownTypeConstructorError,
     location: &SrcSpan,
     module_location: Option<SrcSpan>,
+    parameter_names: Vec<EcoString>,
 ) -> Error {
     match error {
         UnknownTypeConstructorError::Type { name, hint } => Error::UnknownType {
             location: *location,
             name,
             hint,
+            parameter_names,
         },
 
         UnknownTypeConstructorError::Module { name, suggestions } => Error::UnknownModule {
