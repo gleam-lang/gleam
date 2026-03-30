@@ -129,6 +129,38 @@
 
 ### Language server
 
+- The "extract function" code action can now be used in pipelines to extract a
+  part of one into a function. For example, triggering it here:
+
+  ```gleam
+  pub fn words() {
+    string
+    |> string.lowercase
+    // ^^^
+    |> string.replace(each: "jak", with: "lucy")
+    // ^^^ selecting these two steps of the pipeline
+    |> string.split(on: " ")
+  }
+  ```
+
+  Would result in the following code:
+
+  ```gleam
+  pub fn words() {
+    string
+    |> function
+    |> string.split(on: " ")
+  }
+
+  fn function(string: String) -> String {
+    string
+    |> string.lowercase
+    |> string.replace(each: "jak", with: "lucy")
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The "extract variable" code action can now pick better names for variables in
   case branches and blocks, ignoring unrelated names of variables in other
   branches.
