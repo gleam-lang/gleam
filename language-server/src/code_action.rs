@@ -10482,7 +10482,7 @@ impl<'a> ExtractFunction<'a> {
         let code = if let Some((first_argument_name, _)) = first_argument {
             format!("{first_argument_name}\n  |> {code}")
         } else {
-            format!("{}", code.trim_start_matches("|>"))
+            code.trim_start_matches("|>").to_string()
         };
         let function = format!(
             "\n\nfn {name}({parameters}) -> {return_type} {{
