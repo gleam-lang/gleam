@@ -1,0 +1,15 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn wibble(argument: Wibble(Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int)) { todo }\n"
+---
+----- BEFORE ACTION
+
+pub fn wibble(argument: Wibble(Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int)) { todo }
+                        ↑                                                                                                                                                                     
+
+
+----- AFTER ACTION
+
+pub type Wibble(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, aa, ab, ac, ad)
+
+pub fn wibble(argument: Wibble(Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int)) { todo }
