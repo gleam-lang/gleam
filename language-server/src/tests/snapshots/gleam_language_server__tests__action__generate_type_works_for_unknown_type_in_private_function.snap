@@ -1,0 +1,16 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\nfn wibble(arg: Wobble) { todo }\n"
+snapshot_kind: text
+---
+----- BEFORE ACTION
+
+fn wibble(arg: Wobble) { todo }
+               ↑               
+
+
+----- AFTER ACTION
+
+type Wobble
+
+fn wibble(arg: Wobble) { todo }

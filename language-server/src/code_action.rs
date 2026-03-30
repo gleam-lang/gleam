@@ -1170,6 +1170,100 @@ pub fn code_action_import_module(
     }
 }
 
+pub fn code_action_generate_type(
+    module: &Module,
+    line_numbers: &LineNumbers,
+    params: &CodeActionParams,
+    error: &Option<Error>,
+    actions: &mut Vec<CodeAction>,
+) {
+    let uri = &params.text_document.uri;
+    let Some(Error::Type { errors, .. }) = error else {
+        return;
+    };
+
+    for error in errors {
+        let type_::Error::UnknownType {
+            location,
+            name,
+            parameter_names,
+            ..
+        } = error
+        else {
+            continue;
+        };
+
+        let range = src_span_to_lsp_range(*location, line_numbers);
+        if !within(params.range, range) {
+            continue;
+        }
+
+        // Insert the new type stub before the top-level definition that
+        // contains the error, so it appears close to where it is used.
+        let (insert_at, is_public) =
+            definition_start_and_publicity_containing(&module.ast.definitions, location.start)
+                .unwrap_or((module.code.len() as u32, false));
+        let insert_range = src_span_to_lsp_range(
+            SrcSpan {
+                start: insert_at,
+                end: insert_at,
+            },
+            line_numbers,
+        );
+
+        let pub_prefix = if is_public { "pub " } else { "" };
+        let new_text = if parameter_names.is_empty() {
+            format!("{pub_prefix}type {name}\n\n")
+        } else {
+            let params_str = parameter_names.join(", ");
+            format!("{pub_prefix}type {name}({params_str})\n\n")
+        };
+
+        let edit = TextEdit {
+            range: insert_range,
+            new_text,
+        };
+
+        CodeActionBuilder::new("Generate type")
+            .kind(CodeActionKind::QUICKFIX)
+            .changes(uri.clone(), vec![edit])
+            .preferred(true)
+            .push_to(actions);
+    }
+}
+
+/// Returns the source offset and publicity of the top-level definition that
+/// contains `position`, so the caller can insert code before it.
+fn definition_start_and_publicity_containing(
+    definitions: &TypedDefinitions,
+    position: u32,
+) -> Option<(u32, bool)> {
+    let functions = definitions
+        .functions
+        .iter()
+        .map(|f| (f.full_location(), f.publicity.is_public()));
+    let custom_types = definitions
+        .custom_types
+        .iter()
+        .map(|t| (t.full_location(), t.publicity.is_public()));
+    let type_aliases = definitions
+        .type_aliases
+        .iter()
+        .map(|t| (t.location, t.publicity.is_public()));
+    let constants = definitions
+        .constants
+        .iter()
+        .map(|c| (c.location, c.publicity.is_public()));
+
+    functions
+        .chain(custom_types)
+        .chain(type_aliases)
+        .chain(constants)
+        .filter(|(span, _)| span.start <= position && position <= span.end)
+        .map(|(span, is_public)| (span.start, is_public))
+        .next()
+}
+
 fn suggest_imports(
     location: SrcSpan,
     importable_modules: &[ModuleSuggestion],

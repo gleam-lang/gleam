@@ -1,0 +1,20 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  let x: Wobble = todo\n}\n"
+snapshot_kind: text
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let x: Wobble = todo
+         ↑            
+}
+
+
+----- AFTER ACTION
+
+pub type Wobble
+
+pub fn main() {
+  let x: Wobble = todo
+}

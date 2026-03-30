@@ -127,6 +127,24 @@
 
 ### Language server
 
+- The language server now offers a code action to generate a missing type
+  definition when an unknown type is referenced. For example, if `Wibble`
+  is not defined:
+
+  ```gleam
+  pub fn wibble(arg: Wibble) { todo }
+  ```
+
+  The code action will generate:
+
+  ```gleam
+  type Wibble
+
+  pub fn wibble(arg: Wibble) { todo }
+  ```
+
+  ([Daniele Scaratti](https://github.com/lupodevelop))
+
 - The "extract variable" code action can now pick better names for variables in
   case branches and blocks, ignoring unrelated names of variables in other
   branches.
