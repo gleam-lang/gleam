@@ -135,7 +135,9 @@ where
     fn handle_notification(&mut self, notification: Notification) {
         let feedback = match notification {
             Notification::CompilePlease => self.compile_please(),
-            Notification::SourceFileMatchesDisc { path } => self.discard_in_memory_cache(path),
+            Notification::SourceFileOpened { path, text } => self.source_file_opened(path, text),
+            Notification::SourceFileClosed { path } => self.source_file_closed(path),
+            Notification::SourceFileSaved { path } => self.discard_in_memory_cache(path),
             Notification::SourceFileChangedInMemory { path, text } => {
                 self.cache_file_in_memory(path, text)
             }
@@ -473,6 +475,22 @@ where
         if let Some(project_path) = project_path {
             _ = self.changed_projects.insert(project_path);
         }
+    }
+
+    fn source_file_opened(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
+        let mut feedback = self.cache_file_in_memory(path.clone(), text);
+        if let Ok(Some(project)) = self.router.project_for_path(path.clone()) {
+            feedback.append_feedback(project.feedback.open_file(path));
+        };
+        feedback
+    }
+
+    fn source_file_closed(&mut self, path: Utf8PathBuf) -> Feedback {
+        let mut feedback = self.discard_in_memory_cache(path.clone());
+        if let Ok(Some(project)) = self.router.project_for_path(path.clone()) {
+            feedback.append_feedback(project.feedback.close_file(&path));
+        };
+        feedback
     }
 }
 

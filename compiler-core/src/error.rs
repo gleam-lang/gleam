@@ -1,4 +1,5 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+use crate::ast::{self, SrcSpan};
 use crate::bit_array::UnsupportedOption;
 use crate::build::{Origin, Outcome, Runtime, Target};
 use crate::dependency::{PackageFetcher, ResolutionError};
@@ -48,7 +49,7 @@ macro_rules! wrap_format {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct UnknownImportDetails {
     pub module: Name,
-    pub location: crate::ast::SrcSpan,
+    pub location: SrcSpan,
     pub path: Utf8PathBuf,
     pub src: EcoString,
     pub modules: Vec<EcoString>,
@@ -56,7 +57,7 @@ pub struct UnknownImportDetails {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ImportCycleLocationDetails {
-    pub location: crate::ast::SrcSpan,
+    pub location: SrcSpan,
     pub path: Utf8PathBuf,
     pub src: EcoString,
 }
@@ -81,6 +82,45 @@ pub struct FailedModule {
 }
 
 #[derive(Debug, Eq, PartialEq, Error, Clone)]
+#[error("module couldn't be analysed")]
+pub struct SkippedModule {
+    pub path: Utf8PathBuf,
+    pub code: EcoString,
+    pub name: EcoString,
+    /// The location where the module is importing a dependency that (directly
+    /// or indirectly) was skipped.
+    pub location: SrcSpan,
+    pub reason: SkipReason,
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum SkipReason {
+    /// The imported module has an error.
+    DependencyHasError { name: EcoString },
+    /// The imported module was skipped too, because it ultimately depends on
+    /// some module with an error.
+    DependencyWasSkipped {
+        name: EcoString,
+        /// The name of the module that does have an error, making it so this
+        /// one cannot be compiled.
+        erroring_module: EcoString,
+    },
+}
+
+impl SkipReason {
+    /// Returns the name of the module whose errors made it so the skipped
+    /// module couldn't be compiled.
+    pub fn erroring_module(&self) -> EcoString {
+        match self {
+            SkipReason::DependencyHasError { name } => name.clone(),
+            SkipReason::DependencyWasSkipped {
+                erroring_module, ..
+            } => erroring_module.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Error, Clone)]
 pub enum Error {
     #[error("failed to parse Gleam source code")]
     Parse {
@@ -91,7 +131,11 @@ pub enum Error {
 
     #[error("type checking failed")]
     Type {
-        /// A map from module's name to failed module information.
+        /// All the modules that were skipped because they depend (directly or
+        /// indirectly) on some other module that has an error.
+        skipped_modules: Vec<SkippedModule>,
+        /// All the modules that were analysed and had an error.
+        /// This maps from module name to information about the module.
         failed_modules: HashMap<EcoString, FailedModule>,
     },
 
@@ -838,7 +882,7 @@ fn did_you_mean(name: &str, options: &[EcoString]) -> Option<String> {
     // Filter and sort options based on edit distance.
     options
         .iter()
-        .filter(|&option| option != crate::ast::CAPTURE_VARIABLE)
+        .filter(|&option| option != ast::CAPTURE_VARIABLE)
         .sorted()
         .filter_map(|option| {
             edit_distance_with_substrings(option, name, threshold)
@@ -871,6 +915,58 @@ impl Error {
             diagnostic.write(buffer);
             writeln!(buffer).expect("write new line after diagnostic");
         }
+    }
+
+    pub fn skipped_files_diagnostics(&self) -> HashMap<Utf8PathBuf, Diagnostic> {
+        let Error::Type {
+            skipped_modules, ..
+        } = self
+        else {
+            return HashMap::new();
+        };
+
+        skipped_modules
+            .iter()
+            .map(|skipped_module| {
+                let text = match &skipped_module.reason {
+                    SkipReason::DependencyHasError { .. } => {
+                        format!(
+                            "The current module cannot be analysed because this \
+imported module has errors.",
+                        )
+                    }
+                    SkipReason::DependencyWasSkipped {
+                        erroring_module, ..
+                    } => {
+                        format!(
+                            "The current module cannot be analysed because this \
+imported module depends on the `{erroring_module}` module, which has errors."
+                        )
+                    }
+                };
+
+                let diagnostic = Diagnostic {
+                    title: "Imported module with errors".into(),
+                    text: wrap(&text),
+                    level: Level::Error,
+                    location: Some(Location {
+                        src: skipped_module.code.clone(),
+                        path: skipped_module.path.clone(),
+                        label: Label {
+                            text: None,
+                            span: skipped_module.location,
+                        },
+                        extra_labels: vec![],
+                    }),
+                    hint: Some(format!(
+                        "fix the errors in the `{}` module first.",
+                        skipped_module.reason.erroring_module()
+                    )),
+                };
+
+                (skipped_module.path.clone(), diagnostic)
+            })
+            .collect()
     }
 
     pub fn to_diagnostics(&self) -> Vec<Diagnostic> {
@@ -1701,7 +1797,10 @@ The error from the encryption library was:
                 }]
             }
 
-            Error::Type { failed_modules } => failed_modules
+            Error::Type {
+                skipped_modules: _,
+                failed_modules,
+            } => failed_modules
                 .values()
                 .sorted_by_key(|failed_module| &failed_module.path)
                 .flat_map(failed_module_diagnostics)
@@ -1709,7 +1808,7 @@ The error from the encryption library was:
 
             Error::Parse { path, src, error } => {
                 let location = if error.error == ParseErrorType::UnexpectedEof {
-                    crate::ast::SrcSpan {
+                    SrcSpan {
                         start: (src.len() - 1) as u32,
                         end: (src.len() - 1) as u32,
                     }

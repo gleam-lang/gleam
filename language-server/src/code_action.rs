@@ -610,7 +610,11 @@ pub(crate) fn type_errors_for_module<'a>(
     error: &'a Option<Error>,
     module: &Module,
 ) -> Option<&'a Vec1<type_::Error>> {
-    let Some(Error::Type { failed_modules }) = error else {
+    let Some(Error::Type {
+        skipped_modules: _,
+        failed_modules,
+    }) = error
+    else {
         return None;
     };
     Some(&failed_modules.get(&module.name)?.errors)
