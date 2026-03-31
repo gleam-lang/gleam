@@ -1,0 +1,17 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+expression: "./cases/errors_from_related_skipped_modules"
+---
+error: Type mismatch
+  ┌─ src/one.gleam:2:7
+  │
+2 │   1 + True
+  │       ^
+
+The + operator expects arguments of this type:
+
+    Int
+
+But this argument has this type:
+
+    Bool
