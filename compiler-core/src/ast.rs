@@ -1001,32 +1001,44 @@ impl TypedImport {
             return None;
         }
 
-        if let Some(unqualified) = self
+        if let Some(UnqualifiedImport {
+            location,
+            imported_name_location,
+            name,
+            as_name: _,
+        }) = self
             .unqualified_values
             .iter()
             .find(|unqualified_value| unqualified_value.location.contains(byte_index))
         {
             return Some(Located::UnqualifiedImport(
                 crate::build::UnqualifiedImport {
-                    name: &unqualified.name,
+                    name,
                     module: &self.module,
                     is_type: false,
-                    location: &unqualified.location,
+                    location,
+                    imported_name_location,
                 },
             ));
         }
 
-        if let Some(unqualified) = self
+        if let Some(UnqualifiedImport {
+            location,
+            imported_name_location,
+            name,
+            as_name: _,
+        }) = self
             .unqualified_types
             .iter()
             .find(|unqualified_value| unqualified_value.location.contains(byte_index))
         {
             return Some(Located::UnqualifiedImport(
                 crate::build::UnqualifiedImport {
-                    name: &unqualified.name,
+                    name,
                     module: &self.module,
                     is_type: true,
-                    location: &unqualified.location,
+                    location,
+                    imported_name_location,
                 },
             ));
         }
@@ -1310,7 +1322,8 @@ impl<A, B, C> Definition<A, B, C> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnqualifiedImport {
     pub location: SrcSpan,
-    /// The location excluding the potential `as ...` clause, or the `type` keyword
+    /// The location excluding the potential `as ...` clause, or the `type` keyword.
+    /// For example, in `type Wibble as Wobble`, it covers `Wibble`.
     pub imported_name_location: SrcSpan,
     pub name: EcoString,
     pub as_name: Option<EcoString>,
