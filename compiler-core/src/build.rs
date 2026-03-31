@@ -25,6 +25,7 @@ use crate::ast::{
     TypedModuleConstant, TypedPattern, TypedRecordConstructor, TypedStatement, TypedTypeAlias,
 };
 use crate::reference;
+use crate::type_::error::Named;
 use crate::type_::{Type, TypedCallArg};
 use crate::{
     ast::{Definition, SrcSpan, TypedModule},
@@ -425,6 +426,24 @@ pub struct UnqualifiedImport<'a> {
     pub module: &'a EcoString,
     pub is_type: bool,
     pub location: &'a SrcSpan,
+    /// The location excluding the potential `as ...` clause, or the `type` keyword.
+    /// For example, in `type Wibble as Wobble`, it covers `Wibble`.
+    pub imported_name_location: &'a SrcSpan,
+}
+
+impl<'a> UnqualifiedImport<'a> {
+    pub fn name_kind(&self) -> Named {
+        let is_upname = match self.name.chars().next() {
+            Some(c) => c.is_uppercase(),
+            None => false,
+        };
+
+        if is_upname {
+            Named::CustomTypeVariant
+        } else {
+            Named::Function
+        }
+    }
 }
 
 /// The position of a located expression. Used to determine extra context,

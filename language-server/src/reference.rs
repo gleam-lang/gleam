@@ -12,7 +12,7 @@ use gleam_core::{
         self, ArgNames, AssignName, BitArraySize, ClauseGuard, CustomType, Function,
         ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
     },
-    build::Located,
+    build::{Located, UnqualifiedImport},
     reference::RecordLabel,
     type_::{
         ModuleInterface, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant,
@@ -379,6 +379,33 @@ pub fn reference_for_ast_node(
             target_kind: RenameTarget::Qualified,
         }),
 
+        Located::UnqualifiedImport(
+            import @ UnqualifiedImport {
+                name,
+                module,
+                is_type,
+                location: _,
+                imported_name_location,
+            },
+        ) => {
+            if is_type {
+                Some(Referenced::ModuleType {
+                    module: module.clone(),
+                    name: name.clone(),
+                    location: *imported_name_location,
+                    target_kind: RenameTarget::Unqualified,
+                })
+            } else {
+                Some(Referenced::ModuleValue {
+                    module: module.clone(),
+                    name: name.clone(),
+                    location: *imported_name_location,
+                    name_kind: import.name_kind(),
+                    target_kind: RenameTarget::Unqualified,
+                })
+            }
+        }
+
         Located::RecordLabelUsage {
             record_type,
             label,
@@ -419,7 +446,6 @@ pub fn reference_for_ast_node(
         | Located::Statement(_)
         | Located::Expression { .. }
         | Located::FunctionBody(_)
-        | Located::UnqualifiedImport(_)
         | Located::Label { .. }
         | Located::Constant(_)
         | Located::ModuleFunction(_)
