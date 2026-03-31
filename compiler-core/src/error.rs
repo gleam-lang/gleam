@@ -930,17 +930,17 @@ impl Error {
             .map(|skipped_module| {
                 let text = match &skipped_module.reason {
                     SkipReason::DependencyHasError { .. } => {
-                        format!(
-                            "The current module cannot be analysed because this \
-imported module has errors.",
-                        )
+                        "The current module cannot be analysed because this \
+imported module has errors."
+                            .to_string()
                     }
                     SkipReason::DependencyWasSkipped {
                         erroring_module, ..
                     } => {
                         format!(
-                            "The current module cannot be analysed because this \
-imported module depends on the `{erroring_module}` module, which has errors."
+                            "The current module cannot be analysed because \
+this imported module depends on the `{erroring_module}` module, which has \
+errors."
                         )
                     }
                 };
