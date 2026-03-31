@@ -4,7 +4,7 @@ mod tests;
 use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::build::package_loader::CacheFiles;
 
-use crate::error::{DefinedModuleOrigin, FailedModule};
+use crate::error::{DefinedModuleOrigin, FailedModule, SkipReason, SkippedModule};
 use crate::io::files_with_extension;
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
@@ -532,8 +532,8 @@ fn analyse(
     // place.
     let _ = module_types.insert(PRELUDE_MODULE_NAME.into(), type_::build_prelude(ids));
 
+    let mut skipped_modules: HashMap<EcoString, SkippedModule> = HashMap::new();
     let mut failed_modules = HashMap::new();
-    let mut skipped_modules = HashSet::new();
 
     for UncompiledModule {
         name,
@@ -552,12 +552,38 @@ fn analyse(
         // We first need to check if the module can actually be compiled.
         // If we weren't able to compile one of the modules it depends on, then
         // we have to skip this one to avoid reporting false errors.
-        let depends_on_failed_or_skipped_module = dependencies.iter().any(|(dependency, _)| {
-            failed_modules.contains_key(dependency) || skipped_modules.contains(dependency)
+        let skipped_dependency = dependencies.iter().find_map(|(dependency, location)| {
+            if let Some(failed_module) = failed_modules.get(dependency) {
+                // This module imports a module with an error.
+                let reason = SkipReason::DependencyHasError {
+                    name: dependency.clone(),
+                };
+                Some((*location, reason))
+            } else if let Some(skipped_module) = skipped_modules.get(dependency) {
+                // This module imports a module that has been skipped too.
+                let reason = SkipReason::DependencyWasSkipped {
+                    name: dependency.clone(),
+                    erroring_module: skipped_module.reason.erroring_module(),
+                };
+                Some((*location, reason))
+            } else {
+                None
+            }
         });
-        if depends_on_failed_or_skipped_module {
-            // We need to keep track of all the modules we're skipping!
-            let _ = skipped_modules.insert(name);
+
+        // The module does depend on some other module that had to be skipped,
+        // so we have to skip this one as well.
+        if let Some((location, reason)) = skipped_dependency {
+            let _ = skipped_modules.insert(
+                name.clone(),
+                SkippedModule {
+                    path,
+                    name,
+                    code: code.clone(),
+                    location,
+                    reason,
+                },
+            );
             continue;
         }
 
@@ -665,13 +691,21 @@ fn analyse(
 
     // Now we need to check if any module has failed and return the appropriate
     // outcome.
+    let skipped_modules = skipped_modules.into_values().collect();
+
     if failed_modules.is_empty() {
         Outcome::Ok(modules)
     } else if modules.is_empty() {
-        let error = Error::Type { failed_modules };
+        let error = Error::Type {
+            skipped_modules,
+            failed_modules,
+        };
         Outcome::TotalFailure(error)
     } else {
-        let error = Error::Type { failed_modules };
+        let error = Error::Type {
+            skipped_modules,
+            failed_modules,
+        };
         Outcome::PartialFailure(modules, error)
     }
 }
