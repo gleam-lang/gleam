@@ -496,13 +496,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location,
                 fun,
                 arguments,
-                argument_parentheses,
+                open_parenthesis,
                 ..
             } => Ok(self.infer_call(
                 *fun,
                 arguments,
                 location,
-                Some(argument_parentheses),
+                Some(open_parenthesis),
                 CallKind::Function,
             )),
 
@@ -1158,7 +1158,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         fun: UntypedExpr,
         arguments: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
-        argument_parentheses: Option<SrcSpan>,
+        open_parenthesis: Option<u32>,
         kind: CallKind,
     ) -> TypedExpr {
         let (fun, arguments, type_) = self.do_infer_call(fun, arguments, location, kind);
@@ -1216,7 +1216,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             location,
             type_,
             arguments,
-            argument_parentheses,
+            open_parenthesis,
             fun: Box::new(fun),
         }
     }

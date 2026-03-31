@@ -943,7 +943,7 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
-        argument_parentheses: &'ast Option<SrcSpan>,
+        open_parenthesis: &'ast Option<u32>,
     ) {
         let call_range = self.edits.src_span_to_lsp_range(*location);
         if !within(self.params.range, call_range) {
@@ -968,14 +968,7 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         // we're inside a nested call.
         let previous = self.use_right_hand_side_location;
         self.use_right_hand_side_location = None;
-        ast::visit::visit_typed_expr_call(
-            self,
-            location,
-            type_,
-            fun,
-            arguments,
-            argument_parentheses,
-        );
+        ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments, open_parenthesis);
         self.use_right_hand_side_location = previous;
     }
 
@@ -6430,7 +6423,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
         type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
-        argument_parentheses: &'ast Option<SrcSpan>,
+        argument_parentheses: &'ast Option<u32>,
     ) {
         // If the function being called is invalid we need to generate a
         // function that has the proper labels.
@@ -6809,7 +6802,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
         type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
-        argument_parentheses: &'ast Option<SrcSpan>,
+        open_parenthesis: &'ast Option<u32>,
     ) {
         // If the function being called is invalid we need to generate a
         // function that has the proper labels.
@@ -6829,7 +6822,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
                 type_,
                 fun,
                 arguments,
-                argument_parentheses,
+                open_parenthesis,
             );
         }
     }
@@ -7610,7 +7603,7 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToPipe<'ast> {
         _type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
-        _argument_parentheses: &'ast Option<SrcSpan>,
+        _open_parenthesis: &'ast Option<u32>,
     ) {
         if arguments.iter().any(|arg| arg.is_capture_hole()) {
             return;
@@ -9676,7 +9669,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddOmittedLabels<'ast> {
         type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
-        argument_parentheses: &'ast Option<SrcSpan>,
+        open_parenthesis: &'ast Option<u32>,
     ) {
         let called_function_range = self.edits.src_span_to_lsp_range(fun.location());
         if !within(self.params.range, called_function_range) {
@@ -9686,7 +9679,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddOmittedLabels<'ast> {
                 type_,
                 fun,
                 arguments,
-                argument_parentheses,
+                open_parenthesis,
             );
             return;
         }
@@ -9698,7 +9691,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddOmittedLabels<'ast> {
                 type_,
                 fun,
                 arguments,
-                argument_parentheses,
+                open_parenthesis,
             );
             return;
         };
@@ -11510,7 +11503,7 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
         _type: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
-        _argument_parentheses: &'ast Option<SrcSpan>,
+        _argument_parentheses: &'ast Option<u32>,
     ) {
         // We only need to do this interception for explicit calls, so if any
         // of our arguments are explicit we re-enter the visitor as usual.
@@ -11652,11 +11645,7 @@ impl<'a> UnwrapAnonymousFunction<'a> {
             TypedStatement::Expression(TypedExpr::Call {
                 location: call_location,
                 arguments: call_arguments,
-                argument_parentheses:
-                    Some(SrcSpan {
-                        start: arguments_start,
-                        ..
-                    }),
+                open_parenthesis: Some(arguments_start),
                 ..
             }),
         ] = body.as_slice()

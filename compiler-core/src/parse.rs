@@ -992,12 +992,7 @@ where
                                 // Call
                                 let arguments = self.parse_fn_arguments()?;
                                 let (_, end) = self.expect_one(&Token::RightParen)?;
-                                let argument_parentheses = SrcSpan {
-                                    start: left_paren,
-                                    end,
-                                };
-                                expr =
-                                    make_call(expr, arguments, start, end, argument_parentheses)?;
+                                expr = make_call(expr, arguments, start, end, left_paren)?;
                             }
                         }
                     } else {
@@ -5034,7 +5029,7 @@ pub fn make_call(
     arguments: Vec<ParserArg>,
     start: u32,
     end: u32,
-    argument_parentheses: SrcSpan,
+    open_parenthesis: u32,
 ) -> Result<UntypedExpr, ParseError> {
     let mut hole_location = None;
 
@@ -5081,7 +5076,7 @@ pub fn make_call(
         location: SrcSpan { start, end },
         fun: Box::new(fun),
         arguments,
-        argument_parentheses,
+        open_parenthesis,
     };
 
     match hole_location {

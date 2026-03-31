@@ -13002,6 +13002,7 @@ pub fn wibble() -> Result(a, _) {
     );
 }
 
+#[test]
 fn wrap_uncalled_constructor_in_anonymous_function() {
     assert_code_action!(
         WRAP_IN_ANONYMOUS_FUNCTION,
@@ -13030,6 +13031,7 @@ pub fn wibble() -> Result(Result(_, Nil), Int) {
     );
 }
 
+#[test]
 fn wrap_call_arg_in_anonymous_function() {
     assert_code_action!(
         WRAP_IN_ANONYMOUS_FUNCTION,
