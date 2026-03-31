@@ -997,32 +997,48 @@ impl TypedImport {
             return None;
         }
 
-        if let Some(unqualified) = self
+        if let Some(UnqualifiedImport {
+            location,
+            imported_name_location,
+            name,
+            as_name: _,
+            is_upname,
+        }) = self
             .unqualified_values
             .iter()
             .find(|unqualified_value| unqualified_value.location.contains(byte_index))
         {
             return Some(Located::UnqualifiedImport(
                 crate::build::UnqualifiedImport {
-                    name: &unqualified.name,
+                    name,
                     module: &self.module,
                     is_type: false,
-                    location: &unqualified.location,
+                    is_upname: *is_upname,
+                    location,
+                    imported_name_location,
                 },
             ));
         }
 
-        if let Some(unqualified) = self
+        if let Some(UnqualifiedImport {
+            location,
+            imported_name_location,
+            name,
+            as_name: _,
+            is_upname,
+        }) = self
             .unqualified_types
             .iter()
             .find(|unqualified_value| unqualified_value.location.contains(byte_index))
         {
             return Some(Located::UnqualifiedImport(
                 crate::build::UnqualifiedImport {
-                    name: &unqualified.name,
+                    name,
                     module: &self.module,
                     is_type: true,
-                    location: &unqualified.location,
+                    is_upname: *is_upname,
+                    location,
+                    imported_name_location,
                 },
             ));
         }
@@ -1279,6 +1295,7 @@ pub struct UnqualifiedImport {
     pub imported_name_location: SrcSpan,
     pub name: EcoString,
     pub as_name: Option<EcoString>,
+    pub is_upname: bool,
 }
 
 impl UnqualifiedImport {
