@@ -10,7 +10,7 @@ use gleam_core::{
         ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypeAstConstructorName, TypedExpr,
         TypedModule, visit::Visit,
     },
-    build::Located,
+    build::{Located, UnqualifiedImport},
     type_::{
         ModuleInterface, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant,
         error::{Named, VariableOrigin},
@@ -361,13 +361,43 @@ pub fn reference_for_ast_node(
             target_kind: RenameTarget::Qualified,
         }),
 
+        Located::UnqualifiedImport(UnqualifiedImport {
+            name,
+            module,
+            is_type,
+            is_upname,
+            location: _,
+            imported_name_location,
+        }) => {
+            if is_type {
+                Some(Referenced::ModuleType {
+                    module: module.clone(),
+                    name: name.clone(),
+                    location: *imported_name_location,
+                    target_kind: RenameTarget::Unqualified,
+                })
+            } else {
+                Some(Referenced::ModuleValue {
+                    module: module.clone(),
+                    name: name.clone(),
+                    location: *imported_name_location,
+                    name_kind: if is_upname {
+                        Named::CustomTypeVariant
+                    } else {
+                        // QUESTION: is this okay? it seems to be done above (eg lines 172 and 188).
+                        Named::Function
+                    },
+                    target_kind: RenameTarget::Unqualified,
+                })
+            }
+        }
+
         Located::Pattern(_)
         | Located::ClauseGuard(_)
         | Located::PatternSpread { .. }
         | Located::Statement(_)
         | Located::Expression { .. }
         | Located::FunctionBody(_)
-        | Located::UnqualifiedImport(_)
         | Located::Label(..)
         | Located::Constant(_)
         | Located::ModuleFunction(_)

@@ -3057,6 +3057,7 @@ where
                         location,
                         imported_name_location: location,
                         as_name: None,
+                        is_upname: false,
                     };
                     if self.maybe_one(&Token::As).is_some() {
                         let (_, as_name, end) = self.expect_name()?;
@@ -3074,6 +3075,7 @@ where
                         location,
                         imported_name_location: location,
                         as_name: None,
+                        is_upname: true,
                     };
                     if self.maybe_one(&Token::As).is_some() {
                         let (_, as_name, end) = self.expect_upname()?;
@@ -3092,6 +3094,7 @@ where
                         location,
                         imported_name_location: SrcSpan::new(name_start, end),
                         as_name: None,
+                        is_upname: true,
                     };
                     if self.maybe_one(&Token::As).is_some() {
                         let (_, as_name, end) = self.expect_upname()?;
