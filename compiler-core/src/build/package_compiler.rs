@@ -528,6 +528,7 @@ fn analyse(
     let _ = module_types.insert(PRELUDE_MODULE_NAME.into(), type_::build_prelude(ids));
 
     let mut failed_modules = HashMap::new();
+    let mut skipped_modules = HashSet::new();
 
     for UncompiledModule {
         name,
@@ -546,10 +547,12 @@ fn analyse(
         // We first need to check if the module can actually be compiled.
         // If we weren't able to compile one of the modules it depends on, then
         // we have to skip this one to avoid reporting false errors.
-        let depends_on_failed_module = dependencies
-            .iter()
-            .any(|(dependency, _)| failed_modules.contains_key(dependency));
-        if depends_on_failed_module {
+        let depends_on_failed_or_skipped_module = dependencies.iter().any(|(dependency, _)| {
+            failed_modules.contains_key(dependency) || skipped_modules.contains(dependency)
+        });
+        if depends_on_failed_or_skipped_module {
+            // We need to keep track of all the modules we're skipping!
+            let _ = skipped_modules.insert(name);
             continue;
         }
 

@@ -168,6 +168,39 @@ fn erlang_nested_qualified_constant() {
 
 #[rustfmt::skip]
 #[test]
+fn errors_from_related_modules() {
+    let output = crate::prepare("./cases/errors_from_related_modules");
+    insta::assert_snapshot!(
+        "errors_from_related_modules",
+        output,
+        "./cases/errors_from_related_modules",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
+fn errors_from_related_skipped_modules() {
+    let output = crate::prepare("./cases/errors_from_related_skipped_modules");
+    insta::assert_snapshot!(
+        "errors_from_related_skipped_modules",
+        output,
+        "./cases/errors_from_related_skipped_modules",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
+fn errors_from_unrelated_modules() {
+    let output = crate::prepare("./cases/errors_from_unrelated_modules");
+    insta::assert_snapshot!(
+        "errors_from_unrelated_modules",
+        output,
+        "./cases/errors_from_unrelated_modules",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
 fn hello_joe() {
     let output = crate::prepare("./cases/hello_joe");
     insta::assert_snapshot!(
