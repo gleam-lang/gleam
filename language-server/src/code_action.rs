@@ -613,13 +613,7 @@ pub(crate) fn type_errors_for_module<'a>(
     let Some(Error::Type { failed_modules }) = error else {
         return None;
     };
-    failed_modules.iter().find_map(|failed_module| {
-        if failed_module.path == module.input_path {
-            Some(&failed_module.errors)
-        } else {
-            None
-        }
-    })
+    Some(&failed_modules.get(&module.name)?.errors)
 }
 
 struct CaseClause<'a> {
