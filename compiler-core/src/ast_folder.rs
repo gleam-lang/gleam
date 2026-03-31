@@ -297,8 +297,8 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 location,
                 fun,
                 arguments,
-                argument_parentheses,
-            } => self.fold_call(location, fun, arguments, argument_parentheses),
+                open_parenthesis,
+            } => self.fold_call(location, fun, arguments, open_parenthesis),
 
             UntypedExpr::BinOp {
                 location,
@@ -451,7 +451,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 location,
                 fun,
                 arguments,
-                argument_parentheses,
+                open_parenthesis,
             } => {
                 let fun = Box::new(self.fold_expr(*fun));
                 let arguments = arguments
@@ -465,7 +465,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                     location,
                     fun,
                     arguments,
-                    argument_parentheses,
+                    open_parenthesis,
                 }
             }
 
@@ -787,13 +787,13 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         location: SrcSpan,
         fun: Box<UntypedExpr>,
         arguments: Vec<CallArg<UntypedExpr>>,
-        argument_parentheses: SrcSpan,
+        open_parenthesis: u32,
     ) -> UntypedExpr {
         UntypedExpr::Call {
             location,
             fun,
             arguments,
-            argument_parentheses,
+            open_parenthesis,
         }
     }
 

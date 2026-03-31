@@ -1,6 +1,8 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 1370
 expression: "\ntype Wibble {\n    Wibble(wibble: String)\n}\n\nfn wobble() {\n  Wibble(\"a\").\n}\n"
+snapshot_kind: text
 ---
 Parsed {
     module: Module {
@@ -146,10 +148,7 @@ Parsed {
                                                 implicit: None,
                                             },
                                         ],
-                                        argument_parentheses: SrcSpan {
-                                            start: 67,
-                                            end: 72,
-                                        },
+                                        open_parenthesis: 67,
                                     },
                                 },
                             ),
