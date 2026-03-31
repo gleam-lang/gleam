@@ -80,8 +80,6 @@ pub struct FailedModule {
     pub names: Box<Names>,
 }
 
-/// TODO)) Maybe it's best to wrap the parse, type, unknown import errors into a
-/// variant since it's only those the ones that can happen multiple times now
 #[derive(Debug, Eq, PartialEq, Error, Clone)]
 pub enum Error {
     #[error("failed to parse Gleam source code")]
