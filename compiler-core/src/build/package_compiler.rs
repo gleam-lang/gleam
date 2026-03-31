@@ -662,17 +662,14 @@ fn analyse(
 
     // Now we need to check if any module has failed and return the appropriate
     // outcome.
-    let errors = Vec1::try_from_vec(failed_modules.into_values().collect_vec());
-    match errors {
-        Err(_) => Outcome::Ok(modules),
-        Ok(failed_modules) => {
-            let error = Error::Type { failed_modules };
-            if modules.is_empty() {
-                Outcome::TotalFailure(error)
-            } else {
-                Outcome::PartialFailure(modules, error)
-            }
-        }
+    if failed_modules.is_empty() {
+        Outcome::Ok(modules)
+    } else if modules.is_empty() {
+        let error = Error::Type { failed_modules };
+        Outcome::TotalFailure(error)
+    } else {
+        let error = Error::Type { failed_modules };
+        Outcome::PartialFailure(modules, error)
     }
 }
 

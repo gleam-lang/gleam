@@ -162,12 +162,15 @@ macro_rules! assert_error {
         let (error, names) = $crate::type_::tests::compile_statement_sequence($src)
             .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
-            failed_modules: vec1::Vec1::new($crate::error::FailedModule {
-                names: Box::new(names),
-                src: $src.into(),
-                path: camino::Utf8PathBuf::from("/src/one/two.gleam"),
-                errors: error,
-            }),
+            failed_modules: std::collections::HashMap::from([(
+                ecow::EcoString::from("one/two"),
+                $crate::error::FailedModule {
+                    names: Box::new(names),
+                    src: $src.into(),
+                    path: camino::Utf8PathBuf::from("/src/one/two.gleam"),
+                    errors: error,
+                },
+            )]),
         };
         let error_string = error.pretty_string();
         let output = format!(
@@ -568,12 +571,15 @@ pub fn module_error_with_target(
     };
 
     let error = Error::Type {
-        failed_modules: Vec1::new(FailedModule {
-            names: Box::new(names),
-            src: src.into(),
-            path: Utf8PathBuf::from("/src/one/two.gleam"),
-            errors: Vec1::try_from_vec(error).expect("should have at least one error"),
-        }),
+        failed_modules: HashMap::from([(
+            EcoString::from("one/two"),
+            FailedModule {
+                names: Box::new(names),
+                src: src.into(),
+                path: Utf8PathBuf::from("/src/one/two.gleam"),
+                errors: Vec1::try_from_vec(error).expect("should have at least one error"),
+            },
+        )]),
     };
     error.pretty_string()
 }
@@ -604,12 +610,15 @@ pub fn internal_module_error_with_target(
     };
 
     let error = Error::Type {
-        failed_modules: Vec1::new(FailedModule {
-            names: Box::new(names),
-            src: src.into(),
-            path: Utf8PathBuf::from("/src/one/two.gleam"),
-            errors: Vec1::try_from_vec(error).expect("should have at least one error"),
-        }),
+        failed_modules: HashMap::from([(
+            EcoString::from("one/two"),
+            FailedModule {
+                names: Box::new(names),
+                src: src.into(),
+                path: Utf8PathBuf::from("/src/one/two.gleam"),
+                errors: Vec1::try_from_vec(error).expect("should have at least one error"),
+            },
+        )]),
     };
     error.pretty_string()
 }

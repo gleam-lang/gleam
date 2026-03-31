@@ -21,6 +21,7 @@ use ecow::EcoString;
 use hexpm::version::Version;
 use itertools::Itertools;
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::io::Write;
 use std::path::PathBuf;
@@ -91,7 +92,10 @@ pub enum Error {
     },
 
     #[error("type checking failed")]
-    Type { failed_modules: Vec1<FailedModule> },
+    Type {
+        /// A map from module's name to failed module information.
+        failed_modules: HashMap<EcoString, FailedModule>,
+    },
 
     #[error("unknown import {import}")]
     UnknownImport {
@@ -1700,7 +1704,7 @@ The error from the encryption library was:
             }
 
             Error::Type { failed_modules } => failed_modules
-                .iter()
+                .values()
                 .sorted_by_key(|failed_module| &failed_module.path)
                 .flat_map(failed_module_diagnostics)
                 .collect_vec(),
