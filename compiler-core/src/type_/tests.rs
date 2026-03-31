@@ -162,6 +162,7 @@ macro_rules! assert_error {
         let (error, names) = $crate::type_::tests::compile_statement_sequence($src)
             .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
+            skipped_modules: vec![],
             failed_modules: std::collections::HashMap::from([(
                 ecow::EcoString::from("one/two"),
                 $crate::error::FailedModule {
@@ -571,6 +572,7 @@ pub fn module_error_with_target(
     };
 
     let error = Error::Type {
+        skipped_modules: vec![],
         failed_modules: HashMap::from([(
             EcoString::from("one/two"),
             FailedModule {
@@ -610,6 +612,7 @@ pub fn internal_module_error_with_target(
     };
 
     let error = Error::Type {
+        skipped_modules: vec![],
         failed_modules: HashMap::from([(
             EcoString::from("one/two"),
             FailedModule {
