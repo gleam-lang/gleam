@@ -398,9 +398,11 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             // counter must not be reset or later code could redeclare
             // one of the `$N` variables introduced here.
             let old_scope = match &self.kind {
-                DecisionKind::Case { .. } => {
-                    self.variables.expression_generator.current_scope_vars.clone()
-                }
+                DecisionKind::Case { .. } => self
+                    .variables
+                    .expression_generator
+                    .current_scope_vars
+                    .clone(),
                 DecisionKind::LetAssert { .. } => Default::default(),
             };
             let old_names = self.variables.scoped_variable_names.clone();
