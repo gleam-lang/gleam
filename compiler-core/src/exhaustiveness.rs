@@ -3501,9 +3501,17 @@ impl CaseToCompile {
             let is_last_segment = i + 1 == segments_count;
             match &segment_size {
                 ReadSize::RemainingBits => (),
-                ReadSize::RemainingBytes => tests.push_back(BitArrayTest::CatchAllIsBytes {
-                    size_so_far: previous_end.clone(),
-                }),
+                ReadSize::RemainingBytes => {
+                    // `(bitSize - c) % 8 === 0` is equivalent to
+                    // `(bitSize - (c % 8)) % 8 === 0` for any constant c,
+                    // because c ≡ c%8 (mod 8). This ensures structurally
+                    // identical JS checks regardless of the accumulated offset.
+                    let mut normalized = previous_end.clone();
+                    normalized.constant = &normalized.constant % 8;
+                    tests.push_back(BitArrayTest::CatchAllIsBytes {
+                        size_so_far: normalized,
+                    });
+                }
                 ReadSize::ConstantBits(_)
                 | ReadSize::VariableBits { .. }
                 | ReadSize::BinaryOperator { .. } => {
