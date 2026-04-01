@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
 expression: "\npub fn go(x) {\n  let assert <<_, b:bytes>> = <<1,2,3>>\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -17,7 +18,7 @@ const FILEPATH = "src/module.gleam";
 export function go(x) {
   let $ = toBitArray([1, 2, 3]);
   let b;
-  if ($.bitSize >= 8 && ($.bitSize - 8) % 8 === 0) {
+  if ($.bitSize >= 8 && $.bitSize % 8 === 0) {
     b = bitArraySlice($, 8);
   } else {
     throw makeError(
