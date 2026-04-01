@@ -121,7 +121,9 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             import.name.clone(),
             imported_name,
             import.imported_name_location,
-            ReferenceKind::Import,
+            ReferenceKind::Import {
+                as_name_location: import.as_name_location,
+            },
         );
 
         if let Err(e) = self
@@ -199,7 +201,9 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     import_name.clone(),
                     used_name,
                     import.imported_name_location,
-                    ReferenceKind::Import,
+                    ReferenceKind::Import {
+                        as_name_location: import.as_name_location,
+                    },
                 );
             }
             ValueConstructorVariant::ModuleConstant { module, .. }
@@ -217,7 +221,9 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     import_name.clone(),
                     used_name,
                     import.imported_name_location,
-                    ReferenceKind::Import,
+                    ReferenceKind::Import {
+                        as_name_location: import.as_name_location,
+                    },
                 );
             }
             ValueConstructorVariant::LocalVariable { .. } => {}
