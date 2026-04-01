@@ -220,7 +220,7 @@ fn rename_references_in_module(
             ReferenceKind::Alias => {}
             ReferenceKind::Qualified
             | ReferenceKind::Unqualified
-            | ReferenceKind::Import
+            | ReferenceKind::Import { .. }
             | ReferenceKind::Definition => edits.replace(reference.location, new_name.clone()),
         }
     }
@@ -259,8 +259,15 @@ fn alias_references_in_module(
             ReferenceKind::Unqualified | ReferenceKind::Alias => {
                 edits.replace(reference.location, params.new_name.clone())
             }
-            ReferenceKind::Import => {
-                edits.insert(reference.location.end, format!(" as {}", params.new_name));
+            ReferenceKind::Import { as_name_location } => {
+                match as_name_location {
+                    Some(as_name_location) => {
+                        edits.replace(as_name_location, params.new_name.clone())
+                    }
+                    None => {
+                        edits.insert(reference.location.end, format!(" as {}", params.new_name))
+                    }
+                }
                 found_import = true;
             }
             ReferenceKind::Definition => {}

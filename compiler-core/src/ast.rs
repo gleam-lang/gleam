@@ -1000,6 +1000,7 @@ impl TypedImport {
         if let Some(UnqualifiedImport {
             location,
             imported_name_location,
+            as_name_location: _,
             name,
             as_name,
             is_upname,
@@ -1024,6 +1025,7 @@ impl TypedImport {
         if let Some(UnqualifiedImport {
             location,
             imported_name_location,
+            as_name_location: _,
             name,
             as_name,
             is_upname,
@@ -1295,6 +1297,7 @@ pub struct UnqualifiedImport {
     pub location: SrcSpan,
     /// The location excluding the potential `as ...` clause, or the `type` keyword
     pub imported_name_location: SrcSpan,
+    pub as_name_location: Option<SrcSpan>,
     pub name: EcoString,
     pub as_name: Option<EcoString>,
     pub is_upname: bool,
