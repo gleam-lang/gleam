@@ -361,7 +361,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Ensure no merge commits
-        uses: NexusPHP/no-merge-commits@v2.2.1
+        uses: NexusPHP/no-merge-commits@v2.4.0
         if: github.event_name == 'pull_request'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
