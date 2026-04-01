@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
 expression: "\npub fn go(x) {\n case x {\n    <<\"Hello\" as message>>\n    | <<\"Jak\" as message, _:bytes>> -> message\n    _ -> \"wibble\"\n }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -27,7 +28,7 @@ export function go(x) {
       return message;
     } else if (
       x.byteAt(0) === 74 && x.byteAt(1) === 97 && x.byteAt(2) === 107 &&
-      (x.bitSize - 24) % 8 === 0
+      x.bitSize % 8 === 0
     ) {
       let message = "Jak";
       return message;
@@ -37,7 +38,7 @@ export function go(x) {
   } else if (
     x.bitSize >= 24 &&
     x.byteAt(0) === 74 && x.byteAt(1) === 97 && x.byteAt(2) === 107 &&
-    (x.bitSize - 24) % 8 === 0
+    x.bitSize % 8 === 0
   ) {
     let message = "Jak";
     return message;
