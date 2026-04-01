@@ -1001,7 +1001,7 @@ impl TypedImport {
             location,
             imported_name_location,
             name,
-            as_name: _,
+            as_name,
             is_upname,
         }) = self
             .unqualified_values
@@ -1011,6 +1011,7 @@ impl TypedImport {
             return Some(Located::UnqualifiedImport(
                 crate::build::UnqualifiedImport {
                     name,
+                    as_name,
                     module: &self.module,
                     is_type: false,
                     is_upname: *is_upname,
@@ -1024,7 +1025,7 @@ impl TypedImport {
             location,
             imported_name_location,
             name,
-            as_name: _,
+            as_name,
             is_upname,
         }) = self
             .unqualified_types
@@ -1034,6 +1035,7 @@ impl TypedImport {
             return Some(Located::UnqualifiedImport(
                 crate::build::UnqualifiedImport {
                     name,
+                    as_name,
                     module: &self.module,
                     is_type: true,
                     is_upname: *is_upname,

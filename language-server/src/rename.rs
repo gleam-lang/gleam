@@ -110,10 +110,11 @@ pub fn rename_local_variable(
 #[derive(Debug)]
 pub enum RenameTarget {
     Qualified,
-    Unqualified,
+    Unqualified { as_name: EcoString },
     Definition,
 }
 
+#[derive(Debug)]
 pub struct Renamed<'a> {
     pub module_name: &'a EcoString,
     pub name: &'a EcoString,
@@ -147,7 +148,7 @@ pub fn rename_module_entity(
         // value, we simply want to alias it in the current module.
         // It's an unqualified import if we are referencing it using unqualified
         // syntax, and it is from a different module.
-        RenameTarget::Unqualified if renamed.module_name != &current_module.name => {
+        RenameTarget::Unqualified { as_name } if renamed.module_name != &current_module.name => {
             return alias_references_in_module(
                 params,
                 current_module,
@@ -156,7 +157,7 @@ pub fn rename_module_entity(
                 renamed.layer,
             );
         }
-        RenameTarget::Unqualified | RenameTarget::Qualified | RenameTarget::Definition => {}
+        RenameTarget::Unqualified { .. } | RenameTarget::Qualified | RenameTarget::Definition => {}
     }
 
     let mut workspace_edit = WorkspaceEdit {

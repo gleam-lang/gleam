@@ -760,7 +760,7 @@ where
                     // We can't rename types or values from other packages if we are not aliasing an unqualified import.
                     let rename_allowed = match target_kind {
                         RenameTarget::Qualified => this.is_same_package(current_module, &module),
-                        RenameTarget::Unqualified | RenameTarget::Definition => true,
+                        RenameTarget::Unqualified { .. } | RenameTarget::Definition => true,
                     };
                     if rename_allowed {
                         success_response(location)
@@ -1021,6 +1021,7 @@ where
                 }
                 Located::UnqualifiedImport(UnqualifiedImport {
                     name,
+                    as_name: _,
                     module: module_name,
                     is_type,
                     is_upname: _,
