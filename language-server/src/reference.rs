@@ -287,6 +287,7 @@ pub fn reference_for_ast_node(
                     | ast::TypeAst::Var(_)
                     | ast::TypeAst::Tuple(_)
                     | ast::TypeAst::Hole(_) => (
+                        // QUESTION: when would this ever be run
                         RenameTarget::Unqualified { as_name: todo!() },
                         ast.location(),
                     ),
