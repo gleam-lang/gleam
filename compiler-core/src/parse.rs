@@ -3121,13 +3121,15 @@ where
                         name,
                         location,
                         imported_name_location: location,
+                        as_name_location: None,
                         as_name: None,
                         is_upname: false,
                     };
                     if self.maybe_one(&Token::As).is_some() {
-                        let (_, as_name, end) =
+                        let (start, as_name, end) =
                             self.expect_name(IncorrectNamePosition::AsPattern)?;
                         import.as_name = Some(as_name);
+                        import.as_name_location = Some(SrcSpan { start, end });
                         import.location.end = end;
                     }
                     imports.values.push(import)
@@ -3140,12 +3142,14 @@ where
                         name,
                         location,
                         imported_name_location: location,
+                        as_name_location: None,
                         as_name: None,
                         is_upname: true,
                     };
                     if self.maybe_one(&Token::As).is_some() {
-                        let (_, as_name, end) = self.expect_upname()?;
+                        let (start, as_name, end) = self.expect_upname()?;
                         import.as_name = Some(as_name);
+                        import.as_name_location = Some(SrcSpan { start, end });
                         import.location.end = end;
                     }
                     imports.values.push(import)
@@ -3159,12 +3163,14 @@ where
                         name,
                         location,
                         imported_name_location: SrcSpan::new(name_start, end),
+                        as_name_location: None,
                         as_name: None,
                         is_upname: true,
                     };
                     if self.maybe_one(&Token::As).is_some() {
-                        let (_, as_name, end) = self.expect_upname()?;
+                        let (start, as_name, end) = self.expect_upname()?;
                         import.as_name = Some(as_name);
+                        import.as_name_location = Some(SrcSpan { start, end });
                         import.location.end = end;
                     }
                     imports.types.push(import)
