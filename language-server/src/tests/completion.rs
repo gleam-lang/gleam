@@ -2537,6 +2537,35 @@ pub type Wibble {
 }
 
 #[test]
+fn do_not_show_completions_for_deprecated_values_in_dep_import() {
+    let code = "import dep.{}";
+    let dep = r#"
+@deprecated("Reason")
+pub fn wibble() {
+    todo
+}
+
+pub fn wobble() {
+    todo
+}
+
+@deprecated("Reason")
+pub type Wibble {
+    Wibble
+}
+
+pub type Wobble {
+    Wobble
+}
+"#;
+
+    assert_completion!(
+        TestProject::for_source(code).add_module("dep", dep),
+        Position::new(0, 12)
+    );
+}
+
+#[test]
 fn do_not_show_completions_for_deprecated_values() {
     let code = r#"
 @deprecated("Reason")
