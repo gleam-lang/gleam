@@ -44,6 +44,13 @@
   raised in.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now normalizes remaining-bytes bit-array checks for the JavaScript
+  backend so `(bitSize - c) % 8 === 0` becomes `bitSize % 8 === 0` when the
+  constant offset `c` is congruent modulo 8. This produces more uniform
+  generated code for byte-aligned patterns.
+
+  ([Daniele Scaratti](https://github.com/lupodevelop))
+
 ### Build tool
 
 - The `gleam dev` command now accepts the `--no-print-progress` flag. When this
