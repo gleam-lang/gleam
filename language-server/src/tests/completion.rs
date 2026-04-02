@@ -2489,3 +2489,38 @@ pub fn main() {
         Position::new(3, 16)
     );
 }
+
+#[test]
+fn do_not_show_completions_for_deprecated_values_in_dep() {
+    let code = "import dep";
+    let dep = r#"
+@deprecated("Reason")
+pub fn wibble() {
+    todo
+}
+
+@deprecated("Reason")
+pub type Wibble {
+    Wibble
+}
+"#;
+
+    assert_completion!(TestProject::for_source(code).add_module("dep", dep));
+}
+
+#[test]
+fn do_not_show_completions_for_deprecated_values() {
+    let code = r#"
+@deprecated("Reason")
+fn wibble() {
+    todo
+}
+
+@deprecated("Reason")
+type Wibble {
+    Wibble
+}
+"#;
+
+    assert_completion!(TestProject::for_source(code));
+}
