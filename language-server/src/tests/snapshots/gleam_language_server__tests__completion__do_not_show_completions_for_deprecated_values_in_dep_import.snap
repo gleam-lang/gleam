@@ -1,8 +1,6 @@
 ---
 source: language-server/src/tests/completion.rs
-assertion_line: 2534
 expression: "import dep.{}"
-snapshot_kind: text
 ---
 import dep.{|}
 
