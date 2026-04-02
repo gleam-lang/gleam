@@ -2527,9 +2527,17 @@ pub fn wibble() {
     todo
 }
 
+pub fn wobble() {
+    todo
+}
+
 @deprecated("Reason")
 pub type Wibble {
     Wibble
+}
+
+pub type Wobble {
+    Wobble
 }
 "#;
 
@@ -2566,7 +2574,7 @@ pub type Wobble {
 }
 
 #[test]
-fn do_not_show_completions_for_deprecated_values() {
+fn show_completions_for_local_deprecated_values() {
     let code = r#"
 @deprecated("Reason")
 fn wibble() {
