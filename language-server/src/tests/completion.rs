@@ -332,11 +332,9 @@ pub fn wobble() {
 }
 ";
 
-    assert_completion!(
-        TestProject::for_source(code)
-            .add_module("dep", dep)
-            .add_module("dep2", dep2)
-    );
+    assert_completion!(TestProject::for_source(code)
+        .add_module("dep", dep)
+        .add_module("dep2", dep2));
 }
 
 #[test]
@@ -395,11 +393,9 @@ fn importable_adds_extra_new_line_if_import_exists_below_other_definitions() {
     let dep = "pub fn wobble() {\nNil\n}";
     let code = "\nimport dep2\n"; // "code" goes after "fn typing_in_here() {}".
 
-    assert_completion!(
-        TestProject::for_source(code)
-            .add_module("dep", dep)
-            .add_module("dep2", "")
-    );
+    assert_completion!(TestProject::for_source(code)
+        .add_module("dep", dep)
+        .add_module("dep2", ""));
 }
 
 #[test]
@@ -2520,4 +2516,39 @@ pub fn main() {
         ),
         Position::new(5, 12)
     );
+}
+
+#[test]
+fn do_not_show_completions_for_deprecated_values_in_dep() {
+    let code = "import dep";
+    let dep = r#"
+@deprecated("Reason")
+pub fn wibble() {
+    todo
+}
+
+@deprecated("Reason")
+pub type Wibble {
+    Wibble
+}
+"#;
+
+    assert_completion!(TestProject::for_source(code).add_module("dep", dep));
+}
+
+#[test]
+fn do_not_show_completions_for_deprecated_values() {
+    let code = r#"
+@deprecated("Reason")
+fn wibble() {
+    todo
+}
+
+@deprecated("Reason")
+type Wibble {
+    Wibble
+}
+"#;
+
+    assert_completion!(TestProject::for_source(code));
 }
