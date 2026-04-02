@@ -26,17 +26,3 @@ True
   kind:   EnumMember
   detail: gleam
   sort:   5_True
-dep.Wibble
-  kind:   EnumMember
-  detail: Wibble
-  sort:   4_dep.Wibble
-  desc:   app
-  edits:
-    [1:0-1:0]: "dep.Wibble"
-dep.wibble
-  kind:   Function
-  detail: fn() -> a
-  sort:   4_dep.wibble
-  desc:   app
-  edits:
-    [1:0-1:0]: "dep.wibble"
