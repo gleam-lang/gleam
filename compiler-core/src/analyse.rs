@@ -406,6 +406,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         .collect(),
                     value_references: env.references.value_references,
                     type_references: env.references.type_references,
+                    label_references: env.references.label_references,
                 },
                 inline_functions: self.inline_functions,
             },
@@ -1218,6 +1219,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 fields.push(TypeValueConstructorField {
                     type_: t.clone(),
                     label: label.as_ref().map(|(_location, label)| label.clone()),
+                    label_location: label.as_ref().map(|(location, _label)| *location),
                     documentation: doc.as_ref().map(|(_, documentation)| documentation.clone()),
                 });
 
@@ -1228,6 +1230,17 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     Some((location, label)) => (*location, Some(label)),
                     None => (*location, None),
                 };
+
+                if let Some(label) = label {
+                    environment.references.register_label_reference(
+                        environment.current_module.clone(),
+                        name.clone(),
+                        label.clone(),
+                        label_location,
+                        ReferenceKind::Definition,
+                        Some(constructor.name.clone()),
+                    );
+                }
 
                 // Register the label for this parameter
                 if let Err(error) = field_map_builder.add(label, label_location) {

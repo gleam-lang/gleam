@@ -838,6 +838,7 @@ fn infer_module_type_retention_test() {
                                 parameters: vec![TypeValueConstructorField {
                                     type_: generic_var(1),
                                     label: None,
+                                    label_location: None,
                                     documentation: None,
                                 }],
                                 documentation: None,
@@ -847,6 +848,7 @@ fn infer_module_type_retention_test() {
                                 parameters: vec![TypeValueConstructorField {
                                     type_: generic_var(2),
                                     label: None,
+                                    label_location: None,
                                     documentation: None,
                                 }],
                                 documentation: None,

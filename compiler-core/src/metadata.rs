@@ -179,10 +179,12 @@ impl RemapIds {
                 |TypeValueConstructorField {
                      type_,
                      label,
+                     label_location,
                      documentation,
                  }| TypeValueConstructorField {
                     type_: self.type_(type_),
                     label,
+                    label_location,
                     documentation,
                 },
             )
