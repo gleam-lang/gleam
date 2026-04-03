@@ -1,0 +1,6 @@
+rules:
+  # dtolnay/rust-toolchain handles component installation, target addition, and
+  # override configuration beyond what a bare `rustup` invocation provides.
+  # See: https://github.com/zizmorcore/zizmor/issues/1817
+  superfluous-actions:
+    disable: true
