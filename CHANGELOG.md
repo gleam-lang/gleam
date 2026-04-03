@@ -121,6 +121,10 @@
 
   ([Cory Forsstrom](https://github.com/tarkah))
 
+- The language server now supports finding references when triggered on an
+  aliased import (i.e. something that was imported and aliased via `as`).
+  ([Gavin Morrow](https://github.com/gavinmorrow))
+
 ### Formatter
 
 ### Bug fixes

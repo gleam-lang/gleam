@@ -1,0 +1,25 @@
+---
+source: language-server/src/tests/reference.rs
+expression: "\nimport mod.{wibble as wobble}\n\npub fn main() {\n  let value = wobble()\n  mod.wibble()\n  value\n}\n"
+---
+-- mod.gleam
+
+pub fn wibble() {
+       ▔▔▔▔▔▔    
+  wibble()
+  ▔▔▔▔▔▔  
+}
+
+
+-- app.gleam
+
+import mod.{wibble as wobble}
+            ▔▔▔▔▔▔           
+
+pub fn main() {
+  let value = wobble()
+              ↑▔▔▔▔▔  
+  mod.wibble()
+      ▔▔▔▔▔▔  
+  value
+}
