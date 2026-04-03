@@ -107,6 +107,10 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Added `mts`, `cts`, `jsx`, `tsx` to native file extensions so you can use
+  external JavaScript code from files with these file extensions.
+  ([Niklas Kirschall](https://github.com/nkxxll))
+
 ### Build tool
 
 - The `gleam hex owner add` command has been added, which allows adding
