@@ -216,7 +216,7 @@ impl ParseErrorType {
             },
 
             ParseErrorType::ExpectedDeprecationMessage => ParseErrorDetails {
-                text: "".into(),
+                text: "See: https://tour.gleam.run/functions/deprecations/".into(),
                 hint: None,
                 label_text: "A deprecation attribute must have a string message.".into(),
                 extra_labels: vec![],

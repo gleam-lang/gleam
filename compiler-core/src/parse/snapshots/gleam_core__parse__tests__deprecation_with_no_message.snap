@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/parse/tests.rs
-expression: "\n@deprecated()\npub fn main() -> Nil {\n  Nil\n}\n"
+expression: "\n@deprecated\npub fn main() -> Nil {\n  Nil\n}\n"
 ---
 ----- SOURCE CODE
 
-@deprecated()
+@deprecated
 pub fn main() -> Nil {
   Nil
 }
@@ -14,7 +14,7 @@ pub fn main() -> Nil {
 error: Syntax error
   ┌─ /src/parse/error.gleam:2:1
   │
-2 │ @deprecated()
+2 │ @deprecated
   │ ^^^^^^^^^^^ A deprecation attribute must have a string message.
 
 See: https://tour.gleam.run/functions/deprecations/

@@ -771,6 +771,32 @@ pub fn main() -> Nil {
 }
 
 #[test]
+fn deprecation_with_no_message() {
+    assert_module_error!(
+        r#"
+@deprecated
+pub fn main() -> Nil {
+  Nil
+}
+"#
+    );
+}
+
+#[test]
+fn deprecation_with_no_message_on_constructor() {
+    assert_module_error!(
+        r#"
+pub type HashAlgorithm {
+  @deprecated
+  Md5
+  Sha224
+  Sha512
+}
+"#
+    );
+}
+
+#[test]
 fn deprecation_without_message() {
     assert_module_error!(
         r#"

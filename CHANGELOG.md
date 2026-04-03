@@ -23,6 +23,32 @@
   update syntax with variants that have no labelled fields.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The error message for invalid deprecated attributes with no deprecation
+  message has been improved. For example, the following code:
+
+  ```gleam
+  pub type HashAlgorithm {
+    @deprecated
+    Md5
+    Sha224
+    Sha512
+  }
+  ```
+
+  Will raise the following error:
+
+  ```txt
+  error: Syntax error
+    ┌─ /src/parse/error.gleam:3:3
+    │
+  3 │   @deprecated
+    │   ^^^^^^^^^^^ A deprecation attribute must have a string message.
+
+  See: https://tour.gleam.run/functions/deprecations/
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler now raises a warning on the JavaScript target when defining an
   integer segment with a size higher than 52 bits. For example, this code:
 
