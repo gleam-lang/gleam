@@ -136,11 +136,10 @@ pub fn reference_for_ast_node(
                     constructor:
                         ValueConstructor {
                             variant:
-                                ValueConstructorVariant::ModuleConstant { module, .. }
-                                | ValueConstructorVariant::ModuleFn { module, .. },
+                                ValueConstructorVariant::ModuleConstant { module, name, .. }
+                                | ValueConstructorVariant::ModuleFn { module, name, .. },
                             ..
                         },
-                    name,
                     location,
                     ..
                 },

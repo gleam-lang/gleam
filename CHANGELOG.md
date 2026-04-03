@@ -234,6 +234,10 @@
   qualified type.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now supports finding references when triggered on an
+  aliased import (i.e. something that was imported and aliased via `as`).
+  ([Gavin Morrow](https://github.com/gavinmorrow))
+
 ### Formatter
 
 - The formatter no longer moves comments out of type annotations.
