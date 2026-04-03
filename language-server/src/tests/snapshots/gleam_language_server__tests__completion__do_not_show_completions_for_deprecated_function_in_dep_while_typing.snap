@@ -1,0 +1,12 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "\nimport dep\n\npub fn wobble() {\n    dep.wibb\n}\n"
+---
+import dep
+
+pub fn wobble() {
+    dep.wibb|
+}
+
+
+----- Completion content -----
