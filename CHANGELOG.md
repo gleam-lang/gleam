@@ -338,6 +338,10 @@
   characters.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the "Extract function" could generate invalid code when
+  triggered on a use statement inside a block.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a bug where the JavaScript code generator could produce duplicate `let`
   declarations for internal variables after a `case` expression whose subject
   directly matches one of the branches.
