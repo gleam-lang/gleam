@@ -235,7 +235,18 @@
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - The language server now supports finding references when triggered on an
-  aliased import (i.e. something that was imported and aliased via `as`).
+  aliased import. For example, in the following snippet, moving the cursor
+  over `log` and triggering "find references" will show all references of
+  `io.println()`.
+
+  ```gleam
+  import gleam/io.{println as log}
+  fn main() {
+    log("Hello, world!")
+  //^^^ trigger here
+  }
+  ```
+
   ([Gavin Morrow](https://github.com/gavinmorrow))
 
 ### Formatter
