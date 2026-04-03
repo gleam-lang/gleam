@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub type HashAlgorithm {\n  @deprecated\n  Md5\n  Sha224\n  Sha512\n}\n"
+---
+----- SOURCE CODE
+
+pub type HashAlgorithm {
+  @deprecated
+  Md5
+  Sha224
+  Sha512
+}
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:3
+  │
+3 │   @deprecated
+  │   ^^^^^^^^^^^ A deprecation attribute must have a string message.
+
+See: https://tour.gleam.run/functions/deprecations/

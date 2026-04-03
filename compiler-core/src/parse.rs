@@ -4488,10 +4488,7 @@ functions are declared separately from types.";
                 self.parse_external_attribute(start, end, attributes)
             }
             "target" => self.parse_target_attribute(start, end, attributes),
-            "deprecated" => {
-                let _ = self.expect_one(&Token::LeftParen)?;
-                self.parse_deprecated_attribute(start, end, attributes)
-            }
+            "deprecated" => self.parse_deprecated_attribute(start, end, attributes),
             "internal" => self.parse_internal_attribute(start, end, attributes),
             _ => parse_error(ParseErrorType::UnknownAttribute, SrcSpan { start, end }),
         }?;
@@ -4553,6 +4550,10 @@ functions are declared separately from types.";
         end: u32,
         attributes: &mut Attributes,
     ) -> Result<u32, ParseError> {
+        let _ = self.expect_one(&Token::LeftParen).map_err(|_| ParseError {
+            error: ParseErrorType::ExpectedDeprecationMessage,
+            location: SrcSpan { start, end },
+        })?;
         if attributes.deprecated.is_deprecated() {
             return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan::new(start, end));
         }
