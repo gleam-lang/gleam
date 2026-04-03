@@ -11549,7 +11549,7 @@ fn extract_use_inside_block() {
     assert_code_action!(
         EXTRACT_FUNCTION,
         r#"
-fn wibble(f) { todo }
+fn wibble(f) -> Int { todo }
 
 pub fn main() {
   let wobble = {

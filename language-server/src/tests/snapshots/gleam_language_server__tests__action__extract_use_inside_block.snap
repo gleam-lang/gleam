@@ -1,0 +1,36 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\nfn wibble(f) -> Int { todo }\n\npub fn main() {\n  let wobble = {\n    use a <- wibble()\n    Ok(Nil)\n  }\n\n  wobble\n}\n"
+---
+----- BEFORE ACTION
+
+fn wibble(f) -> Int { todo }
+
+pub fn main() {
+  let wobble = {
+    use a <- wibble()
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    Ok(Nil)
+▔▔▔▔▔▔▔↑   
+  }
+
+  wobble
+}
+
+
+----- AFTER ACTION
+
+fn wibble(f) -> Int { todo }
+
+pub fn main() {
+  let wobble = {
+    function()
+  }
+
+  wobble
+}
+
+fn function() -> Int {
+  use a <- wibble()
+    Ok(Nil)
+}
