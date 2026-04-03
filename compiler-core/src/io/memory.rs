@@ -179,6 +179,10 @@ impl FileSystemWriter for InMemoryFileSystem {
         panic!("unimplemented") // TODO
     }
 
+    fn hardlink_directory(&self, _: &Utf8Path, _: &Utf8Path) -> Result<(), Error> {
+        panic!("unimplemented") // TODO
+    }
+
     fn symlink_dir(&self, _: &Utf8Path, _: &Utf8Path) -> Result<(), Error> {
         panic!("unimplemented") // TODO
     }
