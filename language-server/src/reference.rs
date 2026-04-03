@@ -10,7 +10,7 @@ use gleam_core::{
         ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypeAstConstructorName, TypedExpr,
         TypedModule, visit::Visit,
     },
-    build::Located,
+    build::{Located, UnqualifiedImport},
     type_::{
         ModuleInterface, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant,
         error::{Named, VariableOrigin},
@@ -136,11 +136,11 @@ pub fn reference_for_ast_node(
                     constructor:
                         ValueConstructor {
                             variant:
-                                ValueConstructorVariant::ModuleConstant { module, .. }
-                                | ValueConstructorVariant::ModuleFn { module, .. },
+                                ValueConstructorVariant::ModuleConstant { module, name, .. }
+                                | ValueConstructorVariant::ModuleFn { module, name, .. },
                             ..
                         },
-                    name,
+                    name: as_name,
                     location,
                     ..
                 },
@@ -150,7 +150,9 @@ pub fn reference_for_ast_node(
             name: name.clone(),
             location: *location,
             name_kind: Named::Function,
-            target_kind: RenameTarget::Unqualified,
+            target_kind: RenameTarget::Unqualified {
+                as_name: as_name.clone(),
+            },
         }),
 
         Located::Expression {
@@ -197,6 +199,7 @@ pub fn reference_for_ast_node(
                             ..
                         },
                     location,
+                    name: as_name,
                     ..
                 },
             ..
@@ -205,7 +208,9 @@ pub fn reference_for_ast_node(
             name: name.clone(),
             location: *location,
             name_kind: Named::CustomTypeVariant,
-            target_kind: RenameTarget::Unqualified,
+            target_kind: RenameTarget::Unqualified {
+                as_name: as_name.clone(),
+            },
         }),
         Located::Expression {
             expression:
@@ -240,6 +245,7 @@ pub fn reference_for_ast_node(
             constructor: analyse::Inferred::Known(constructor),
             module: module_select,
             name_location: location,
+            name: as_name,
             ..
         }) => Some(Referenced::ModuleValue {
             module: constructor.module.clone(),
@@ -249,7 +255,9 @@ pub fn reference_for_ast_node(
             target_kind: if module_select.is_some() {
                 RenameTarget::Qualified
             } else {
-                RenameTarget::Unqualified
+                RenameTarget::Unqualified {
+                    as_name: as_name.clone(),
+                }
             },
         }),
         Located::StringPrefixPatternVariable { location, name, .. } => {
@@ -264,10 +272,13 @@ pub fn reference_for_ast_node(
             Some((module, name)) => {
                 let (target_kind, location) = match ast {
                     ast::TypeAst::Constructor(constructor) => {
-                        let kind = if constructor.name.is_qualified() {
-                            RenameTarget::Qualified
-                        } else {
-                            RenameTarget::Unqualified
+                        let kind = match &constructor.name {
+                            TypeAstConstructorName::Qualified { .. } => RenameTarget::Qualified,
+                            TypeAstConstructorName::Unqualified { name, .. } => {
+                                RenameTarget::Unqualified {
+                                    as_name: name.clone(),
+                                }
+                            }
                         };
                         let name_location = constructor.name.name_location()?;
                         (kind, name_location)
@@ -275,7 +286,11 @@ pub fn reference_for_ast_node(
                     ast::TypeAst::Fn(_)
                     | ast::TypeAst::Var(_)
                     | ast::TypeAst::Tuple(_)
-                    | ast::TypeAst::Hole(_) => (RenameTarget::Unqualified, ast.location()),
+                    | ast::TypeAst::Hole(_) => (
+                        // QUESTION: when would this ever be run
+                        RenameTarget::Unqualified { as_name: todo!() },
+                        ast.location(),
+                    ),
                 };
                 Some(Referenced::ModuleType {
                     module,
@@ -361,13 +376,48 @@ pub fn reference_for_ast_node(
             target_kind: RenameTarget::Qualified,
         }),
 
+        Located::UnqualifiedImport(UnqualifiedImport {
+            name,
+            as_name,
+            module,
+            is_type,
+            is_upname,
+            location: _,
+            imported_name_location,
+        }) => {
+            if is_type {
+                Some(Referenced::ModuleType {
+                    module: module.clone(),
+                    name: name.clone(),
+                    location: *imported_name_location,
+                    target_kind: RenameTarget::Unqualified {
+                        as_name: as_name.clone().unwrap_or(name.clone()),
+                    },
+                })
+            } else {
+                Some(Referenced::ModuleValue {
+                    module: module.clone(),
+                    name: name.clone(),
+                    location: *imported_name_location,
+                    name_kind: if is_upname {
+                        Named::CustomTypeVariant
+                    } else {
+                        // QUESTION: is this okay? it seems to be done above (eg lines 172 and 188).
+                        Named::Function
+                    },
+                    target_kind: RenameTarget::Unqualified {
+                        as_name: as_name.clone().unwrap_or(name.clone()),
+                    },
+                })
+            }
+        }
+
         Located::Pattern(_)
         | Located::ClauseGuard(_)
         | Located::PatternSpread { .. }
         | Located::Statement(_)
         | Located::Expression { .. }
         | Located::FunctionBody(_)
-        | Located::UnqualifiedImport(_)
         | Located::Label(..)
         | Located::Constant(_)
         | Located::ModuleFunction(_)

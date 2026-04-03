@@ -12,7 +12,7 @@ use petgraph::{
 pub enum ReferenceKind {
     Qualified,
     Unqualified,
-    Import,
+    Import { as_name_location: Option<SrcSpan> },
     Definition,
     Alias,
 }
@@ -358,7 +358,8 @@ impl ReferenceTracker {
         kind: ReferenceKind,
     ) {
         match kind {
-            ReferenceKind::Qualified | ReferenceKind::Import | ReferenceKind::Definition => {}
+            ReferenceKind::Qualified | ReferenceKind::Import { .. } | ReferenceKind::Definition => {
+            }
             ReferenceKind::Alias | ReferenceKind::Unqualified => {
                 let target = self.get_or_create_node(referenced_name.clone(), EntityLayer::Value);
                 _ = self.graph.add_edge(self.current_node, target, ());
@@ -380,7 +381,8 @@ impl ReferenceTracker {
         kind: ReferenceKind,
     ) {
         match kind {
-            ReferenceKind::Qualified | ReferenceKind::Import | ReferenceKind::Definition => {}
+            ReferenceKind::Qualified | ReferenceKind::Import { .. } | ReferenceKind::Definition => {
+            }
             ReferenceKind::Alias | ReferenceKind::Unqualified => {
                 self.register_type_reference_in_call_graph(referenced_name.clone())
             }
