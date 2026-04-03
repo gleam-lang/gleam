@@ -1,0 +1,55 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+expression: "\npub fn go(x) {\n  #(1, 2, 3)\n}\n"
+---
+----- SOURCE CODE
+0 |
+1 |pub fn go(x) {
+2 |  #(1, 2, 3)
+3 |}
+
+----- COMPILED JAVASCRIPT
+0 |//# sourceMappingURL=mod.mjs.map
+1 |export function go(x) {
+2 |  return [1, 2, 3];
+3 |}
+
+----- SOURCE MAP
+Mappings:
+----- 
+
+
+⏷
+//# sourceMappingURL=mod.mjs.map
+
+----- 
+pub fn go(x) {
+  
+⏷
+export function go(x) {
+  
+----- 
+#(
+⏷
+return [
+----- 
+1, 
+⏷
+1, 
+----- 
+2, 
+⏷
+2, 
+----- 
+3)
+}
+⏷
+3];
+}
+----- 
+
+
+⏷
+
+
+-----

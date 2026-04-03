@@ -5,14 +5,20 @@ mod import;
 mod tests;
 mod typescript;
 
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
+use debug_ignore::DebugIgnore;
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
+use sourcemap::SourceMap;
 
 use crate::build::Target;
 use crate::build::package_compiler::StdlibPackage;
 use crate::codegen::TypeScriptDeclarations;
+use crate::line_numbers::LineColumn;
+use crate::pretty::CursorPositionObserver;
 use crate::type_::{PRELUDE_MODULE_NAME, RecordAccessor};
 use crate::{
     ast::{Import, *},
@@ -38,6 +44,57 @@ pub enum JavaScriptCodegenTarget {
     TypeScriptDeclarations,
 }
 
+/// A cursor position observer that does nothing.
+/// Mainly used to allow us to create a cursor position observer that does
+/// nothing without having to check if the source map builder is present.
+#[derive(Debug, Clone, Copy)]
+pub struct NullCursorPositionObserver;
+
+impl CursorPositionObserver for NullCursorPositionObserver {
+    fn observe_cursor_position(&mut self, _line: isize, _width: isize) {
+        // Do nothing
+    }
+}
+
+/// A cursor position observer that observes the cursor position and adds it
+/// to the source map builder. When notified it will take the destination
+/// location and map it to the initial source location given when
+/// creating the observer.
+#[derive(Debug)]
+pub struct SourceMapCursorPositionObserver {
+    source_start_location: LineColumn,
+    source_map_builder: Rc<RefCell<DebugIgnore<sourcemap::SourceMapBuilder>>>,
+}
+
+impl SourceMapCursorPositionObserver {
+    pub fn new(
+        source_start_location: LineColumn,
+        source_map_builder: Rc<RefCell<DebugIgnore<sourcemap::SourceMapBuilder>>>,
+    ) -> Self {
+        Self {
+            source_start_location,
+            source_map_builder,
+        }
+    }
+}
+
+impl CursorPositionObserver for SourceMapCursorPositionObserver {
+    fn observe_cursor_position(&mut self, line: isize, column: isize) {
+        let _ = self.source_map_builder.borrow_mut().add_raw(
+            line as u32,
+            column as u32,
+            // SourceMapBuilder expects 0-based line and column numbers and we use 1-based ones
+            self.source_start_location.line - 1,
+            self.source_start_location.column - 1,
+            // Since we have a 1-1 mapping between source and destination locations
+            // We always use 0 for the source index.
+            Some(0),
+            None,
+            false,
+        );
+    }
+}
+
 #[derive(Debug)]
 pub struct Generator<'a> {
     line_numbers: &'a LineNumbers,
@@ -46,6 +103,8 @@ pub struct Generator<'a> {
     module_scope: im::HashMap<EcoString, usize>,
     current_module_name_segments_count: usize,
     typescript: TypeScriptDeclarations,
+    // Debug ignored since SourceMapBuilder doesn't implement debug
+    source_map_builder: Option<Rc<RefCell<DebugIgnore<sourcemap::SourceMapBuilder>>>>,
     stdlib_package: StdlibPackage,
     /// Relative path to the module, surrounded in `"`s to make it a string, and with `\`s escaped
     /// to `\\`.
@@ -56,11 +115,12 @@ impl<'a> Generator<'a> {
     pub fn new(config: ModuleConfig<'a>) -> Self {
         let ModuleConfig {
             typescript,
+            source_map,
             stdlib_package,
             module,
             line_numbers,
             src: _,
-            path: _,
+            path,
             project_root,
         } = config;
         let current_module_name_segments_count = module.name.split('/').count();
@@ -71,7 +131,6 @@ impl<'a> Generator<'a> {
             .unwrap_or(src_path)
             .as_str();
         let src_path = eco_format!("\"{src_path}\"").replace("\\", "\\\\");
-
         Self {
             current_module_name_segments_count,
             line_numbers,
@@ -80,6 +139,19 @@ impl<'a> Generator<'a> {
             tracker: UsageTracker::default(),
             module_scope: Default::default(),
             typescript,
+            source_map_builder: if source_map {
+                let module_name = module.name.clone();
+                // Need the absolute path to the module to be able to map the
+                // destination location back to the source location.
+                let src_path_str = path.as_str();
+                let output_path = format!("{module_name}.mjs");
+                let mut source_map_builder =
+                    sourcemap::SourceMapBuilder::new(Some(&output_path.clone()));
+                let _ = source_map_builder.add_source(src_path_str);
+                Some(Rc::new(RefCell::new(DebugIgnore(source_map_builder))))
+            } else {
+                None
+            },
             stdlib_package,
         }
     }
@@ -99,6 +171,24 @@ impl<'a> Generator<'a> {
             .expect("JavaScript generator could not identify imported module name.");
 
         docvec!["/// <reference types=\"./", module, ".d.mts\" />", line()]
+    }
+
+    fn sourcemap_reference(&self) -> Document<'a> {
+        match self.source_map_builder {
+            None => "".to_doc(),
+            Some(_) => {
+                // Get the name of the module relative the directory (similar to basename)
+                let module = self
+                    .module
+                    .name
+                    .as_str()
+                    .split('/')
+                    .next_back()
+                    .expect("JavaScript generator could not identify imported module name.");
+
+                docvec!["//# sourceMappingURL=", module, ".mjs.map", line()]
+            }
+        }
     }
 
     pub fn compile(&mut self) -> Document<'a> {
@@ -215,6 +305,7 @@ impl<'a> Generator<'a> {
         }
 
         let echo_definition = self.echo_definition(&mut imports);
+        let sourcemap_reference = self.sourcemap_reference();
         let type_reference = self.type_reference();
         let filepath_definition = self.filepath_definition();
 
@@ -222,6 +313,7 @@ impl<'a> Generator<'a> {
 
         if imports.is_empty() && statements.is_empty() {
             docvec![
+                sourcemap_reference,
                 type_reference,
                 filepath_definition,
                 "export {}",
@@ -231,6 +323,7 @@ impl<'a> Generator<'a> {
         } else if imports.is_empty() {
             statements.push(line());
             docvec![
+                sourcemap_reference,
                 type_reference,
                 filepath_definition,
                 statements,
@@ -238,6 +331,7 @@ impl<'a> Generator<'a> {
             ]
         } else if statements.is_empty() {
             docvec![
+                sourcemap_reference,
                 type_reference,
                 imports.into_doc(JavaScriptCodegenTarget::JavaScript),
                 filepath_definition,
@@ -245,6 +339,7 @@ impl<'a> Generator<'a> {
             ]
         } else {
             docvec![
+                sourcemap_reference,
                 type_reference,
                 imports.into_doc(JavaScriptCodegenTarget::JavaScript),
                 line(),
@@ -338,6 +433,25 @@ impl<'a> Generator<'a> {
         {
             definitions.push(self.shared_custom_type_fields(name, &accessors_map.shared_accessors));
         }
+        // Add start and end position source map trackers to the first and last definition in place
+        // This is to prevent extra new lines from being added to the output
+        // Since each definition is a separate statement in the output
+        let start_location = custom_type
+            .documentation
+            .as_ref()
+            // 3 is the length of the "///" documentation marker
+            // start is the index of the actual content so we need to subtract the length of the marker.
+            .map_or(custom_type.location.start, |(start, _)| *start - 3);
+        let first_definition = definitions.remove(0);
+        definitions.insert(
+            0,
+            self.source_map_tracker(start_location)
+                .append(first_definition),
+        );
+        let last_definition = definitions
+            .pop()
+            .expect("Custom type must have at least one definition here");
+        definitions.push(last_definition.append(self.source_map_tracker(custom_type.end_position)));
 
         Some(definitions)
     }
@@ -396,6 +510,7 @@ impl<'a> Generator<'a> {
         .group();
 
         docvec![
+            self.source_map_tracker(constructor.location.start),
             "export const ",
             type_name,
             "$",
@@ -421,6 +536,7 @@ impl<'a> Generator<'a> {
         .group();
 
         docvec![
+            self.source_map_tracker(constructor.location.start),
             "export const ",
             type_name,
             "$is",
@@ -464,6 +580,7 @@ impl<'a> Generator<'a> {
 
                 functions.push(docvec![
                     line(),
+                    self.source_map_tracker(constructor.location.start),
                     "export const ",
                     function_name,
                     " = (value) =>",
@@ -475,6 +592,7 @@ impl<'a> Generator<'a> {
 
             functions.push(docvec![
                 line(),
+                self.source_map_tracker(constructor.location.start),
                 "export const ",
                 function_name,
                 " = (value) =>",
@@ -519,8 +637,14 @@ impl<'a> Generator<'a> {
                 .to_doc()
         }
 
-        let doc = if let Some((_, documentation)) = &constructor.documentation {
-            jsdoc_comment(documentation, publicity).append(line())
+        let doc = if let Some((start, documentation)) = &constructor.documentation {
+            docvec![
+                // 3 is the length of the "///" documentation marker
+                // start is the index of the actual content so we need to subtract the length of the marker.
+                self.source_map_tracker(*start - 3),
+                jsdoc_comment(documentation, publicity),
+                line()
+            ]
         } else {
             nil()
         };
@@ -530,10 +654,16 @@ impl<'a> Generator<'a> {
         } else {
             "class "
         };
-        let head = docvec![head, &constructor.name, " extends $CustomType {"];
+
+        let head = docvec![
+            self.source_map_tracker(constructor.location.start),
+            head,
+            &constructor.name,
+            " extends $CustomType {"
+        ];
 
         if constructor.arguments.is_empty() {
-            return head.append("}");
+            return docvec![doc, head, "}"];
         };
 
         let parameters = join(
@@ -736,23 +866,32 @@ impl<'a> Generator<'a> {
             vec![],
             &mut self.tracker,
             self.module_scope.clone(),
+            self.source_map_builder.clone(),
         );
 
         let document = generator.constant_expression(Context::Constant, value);
 
-        let jsdoc = if let Some((_, documentation)) = documentation {
-            jsdoc_comment(documentation, *publicity).append(line())
+        let jsdoc = if let Some((start, documentation)) = documentation {
+            docvec![
+                // 3 is the length of the "///" documentation marker
+                // start is the index of the actual content so we need to subtract the length of the marker.
+                self.source_map_tracker(*start - 3),
+                jsdoc_comment(documentation, *publicity),
+                line()
+            ]
         } else {
             nil()
         };
 
         Some(docvec![
             jsdoc,
+            self.source_map_tracker(location.start),
             head,
             maybe_escape_identifier(name),
             " = ",
             document,
             ";",
+            self.source_map_tracker(value.location().end),
         ])
     }
 
@@ -781,6 +920,7 @@ impl<'a> Generator<'a> {
         if !function.implementations.supports(Target::JavaScript) {
             return None;
         }
+        let function_source_mapping = self.source_map_tracker(function.location.start);
 
         let (_, name) = function
             .name
@@ -791,6 +931,20 @@ impl<'a> Generator<'a> {
             .iter()
             .map(|arg| arg.names.get_variable_name())
             .collect();
+
+        let function_doc = match &function.documentation {
+            None => nil(),
+            Some((start, documentation)) => {
+                docvec![
+                    // 3 is the length of the "///" documentation marker
+                    // start is the index of the actual content so we need to subtract the length of the marker.
+                    self.source_map_tracker(*start - 3),
+                    jsdoc_comment(documentation, function.publicity),
+                    line()
+                ]
+            }
+        };
+
         let mut generator = expression::Generator::new(
             self.module.name.clone(),
             self.src_path.clone(),
@@ -799,14 +953,8 @@ impl<'a> Generator<'a> {
             argument_names,
             &mut self.tracker,
             self.module_scope.clone(),
+            self.source_map_builder.clone(),
         );
-
-        let function_doc = match &function.documentation {
-            None => nil(),
-            Some((_, documentation)) => {
-                jsdoc_comment(documentation, function.publicity).append(line())
-            }
-        };
 
         let head = if function.publicity.is_private() {
             "function "
@@ -818,6 +966,7 @@ impl<'a> Generator<'a> {
 
         Some(docvec![
             function_doc,
+            function_source_mapping,
             head,
             maybe_escape_identifier(name.as_str()),
             fun_arguments(function.arguments.as_slice(), generator.tail_recursion_used),
@@ -825,6 +974,7 @@ impl<'a> Generator<'a> {
             docvec![line(), body].nest(INDENT).group(),
             line(),
             "}",
+            self.source_map_tracker(function.end_position),
         ])
     }
 
@@ -853,6 +1003,10 @@ impl<'a> Generator<'a> {
 
         docvec!["const FILEPATH = ", self.src_path.clone(), ';', lines(2)]
     }
+
+    fn source_map_tracker(&self, start_index: u32) -> Document<'a> {
+        create_cursor_position_observer(&self.source_map_builder, self.line_numbers, start_index)
+    }
 }
 
 fn jsdoc_comment(documentation: &EcoString, publicity: Publicity) -> Document<'_> {
@@ -880,19 +1034,50 @@ pub struct ModuleConfig<'a> {
     pub line_numbers: &'a LineNumbers,
     pub src: &'a EcoString,
     pub typescript: TypeScriptDeclarations,
+    pub source_map: bool,
     pub stdlib_package: StdlibPackage,
     pub path: &'a Utf8Path,
     pub project_root: &'a Utf8Path,
 }
 
-pub fn module(config: ModuleConfig<'_>) -> String {
-    let document = Generator::new(config).compile();
-    document.to_pretty_string(80)
+pub fn module(config: ModuleConfig<'_>) -> (String, Option<SourceMap>) {
+    let (output, sourcemap_builder) = {
+        let mut generator = Generator::new(config);
+        let document = generator.compile();
+        let builder = generator.source_map_builder;
+        (document.to_pretty_string(80), builder)
+    };
+    let source_map = sourcemap_builder.map(|builder| {
+        // We have completed the generation of the module, so we can now take ownership of the builder.
+        Rc::try_unwrap(builder)
+            .unwrap_or_else(|_| panic!("Failed to take ownership of sourcemap builder"))
+            .into_inner()
+            .0
+            .into_sourcemap()
+    });
+    (output, source_map)
 }
 
 pub fn ts_declaration(module: &TypedModule) -> String {
     let document = typescript::TypeScriptGenerator::new(module).compile();
     document.to_pretty_string(80)
+}
+
+fn create_cursor_position_observer<'a>(
+    builder: &Option<Rc<RefCell<DebugIgnore<sourcemap::SourceMapBuilder>>>>,
+    line_numbers: &LineNumbers,
+    start_index: u32,
+) -> Document<'a> {
+    let start_location = line_numbers.line_and_column_number(start_index);
+    Document::CursorPositionObserver {
+        observer: match builder {
+            None => Rc::new(RefCell::new(NullCursorPositionObserver)),
+            Some(builder) => Rc::new(RefCell::new(SourceMapCursorPositionObserver::new(
+                start_location,
+                builder.clone(),
+            ))),
+        },
+    }
 }
 
 fn fun_arguments(arguments: &'_ [TypedArg], tail_recursion_used: bool) -> Document<'_> {
@@ -1089,7 +1274,7 @@ pub(crate) struct UsageTracker {
     pub echo_used: bool,
 }
 
-fn bool(bool: bool) -> Document<'static> {
+fn bool<'a>(bool: bool) -> Document<'a> {
     match bool {
         true => "true".to_doc(),
         false => "false".to_doc(),

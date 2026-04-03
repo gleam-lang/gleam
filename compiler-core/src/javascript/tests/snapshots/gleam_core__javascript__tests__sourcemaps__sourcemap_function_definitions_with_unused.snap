@@ -1,0 +1,99 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+expression: "\n/// my add function\npub fn add_2(x) {\n  x + 2\n}\n\nfn unused(x) {\n  x + 1\n}\n\npub fn add_3(x) {\n  x + 3\n}\n"
+---
+----- SOURCE CODE
+0 |
+1 |/// my add function
+2 |pub fn add_2(x) {
+3 |  x + 2
+4 |}
+5 |
+6 |fn unused(x) {
+7 |  x + 1
+8 |}
+9 |
+10 |pub fn add_3(x) {
+11 |  x + 3
+12 |}
+
+----- COMPILED JAVASCRIPT
+0 |//# sourceMappingURL=mod.mjs.map
+1 |/**
+2 | * my add function
+3 | */
+4 |export function add_2(x) {
+5 |  return x + 2;
+6 |}
+7 |
+8 |export function add_3(x) {
+9 |  return x + 3;
+10 |}
+
+----- SOURCE MAP
+Mappings:
+----- 
+
+
+⏷
+//# sourceMappingURL=mod.mjs.map
+
+----- 
+/// my add function
+
+⏷
+/**
+ * my add function
+ */
+
+----- 
+pub fn add_2(x) {
+  
+⏷
+export function add_2(x) {
+  
+----- 
+x + 
+⏷
+return x + 
+----- 
+2
+}
+⏷
+2;
+}
+----- 
+
+
+fn unused(x) {
+  x + 1
+}
+
+
+⏷
+
+
+
+----- 
+pub fn add_3(x) {
+  
+⏷
+export function add_3(x) {
+  
+----- 
+x + 
+⏷
+return x + 
+----- 
+3
+}
+⏷
+3;
+}
+----- 
+
+
+⏷
+
+
+-----

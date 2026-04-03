@@ -1,0 +1,101 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+expression: "\npub fn main() {\n  let x = True\n  assert x\n}\n"
+---
+----- SOURCE CODE
+0 |
+1 |pub fn main() {
+2 |  let x = True
+3 |  assert x
+4 |}
+
+----- COMPILED JAVASCRIPT
+0 |//# sourceMappingURL=mod.mjs.map
+1 |import { makeError } from "../gleam.mjs";
+2 |
+3 |const FILEPATH = "src/module.gleam";
+4 |
+5 |export function main() {
+6 |  let x = true;
+7 |  if (!x) {
+8 |    throw makeError(
+9 |      "assert",
+10 |      FILEPATH,
+11 |      "my/mod",
+12 |      4,
+13 |      "main",
+14 |      "Assertion failed.",
+15 |      {
+16 |        kind: "expression",
+17 |        expression: { kind: "expression", value: false, start: 41, end: 42 },
+18 |        start: 34,
+19 |        end: 42,
+20 |        expression_start: 41
+21 |      }
+22 |    )
+23 |  }
+24 |  return undefined;
+25 |}
+
+----- SOURCE MAP
+Mappings:
+----- 
+
+
+⏷
+//# sourceMappingURL=mod.mjs.map
+import { makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+
+----- 
+pub fn main() {
+  
+⏷
+export function main() {
+  
+----- 
+let x = 
+⏷
+let x = 
+----- 
+True
+  
+⏷
+true;
+  
+----- 
+assert 
+⏷
+if (!
+----- 
+x
+}
+⏷
+x) {
+    throw makeError(
+      "assert",
+      FILEPATH,
+      "my/mod",
+      4,
+      "main",
+      "Assertion failed.",
+      {
+        kind: "expression",
+        expression: { kind: "expression", value: false, start: 41, end: 42 },
+        start: 34,
+        end: 42,
+        expression_start: 41
+      }
+    )
+  }
+  return undefined;
+}
+----- 
+
+
+⏷
+
+
+-----

@@ -1,0 +1,109 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+expression: "\n/// my custom type\npub type Wibble {\n  /// Wibble\n  Wibble\n}\n\ntype Unused {\n  Unused\n}\n\npub type Wobble {\n  Wobble(Wibble)\n}\n"
+---
+----- SOURCE CODE
+0 |
+1 |/// my custom type
+2 |pub type Wibble {
+3 |  /// Wibble
+4 |  Wibble
+5 |}
+6 |
+7 |type Unused {
+8 |  Unused
+9 |}
+10 |
+11 |pub type Wobble {
+12 |  Wobble(Wibble)
+13 |}
+
+----- COMPILED JAVASCRIPT
+0 |//# sourceMappingURL=mod.mjs.map
+1 |import { CustomType as $CustomType } from "../gleam.mjs";
+2 |
+3 |/**
+4 | * Wibble
+5 | */
+6 |export class Wibble extends $CustomType {}
+7 |export const Wibble$Wibble = () => new Wibble();
+8 |export const Wibble$isWibble = (value) => value instanceof Wibble;
+9 |
+10 |export class Wobble extends $CustomType {
+11 |  constructor($0) {
+12 |    super();
+13 |    this[0] = $0;
+14 |  }
+15 |}
+16 |export const Wobble$Wobble = ($0) => new Wobble($0);
+17 |export const Wobble$isWobble = (value) => value instanceof Wobble;
+18 |export const Wobble$Wobble$0 = (value) => value[0];
+
+----- SOURCE MAP
+Mappings:
+----- 
+
+
+⏷
+//# sourceMappingURL=mod.mjs.map
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+
+----- 
+/// my custom type
+pub type Wibble {
+  
+⏷
+
+----- 
+/// Wibble
+  
+⏷
+/**
+ * Wibble
+ */
+
+----- 
+Wibble
+}
+⏷
+export class Wibble extends $CustomType {}
+export const Wibble$Wibble = () => new Wibble();
+export const Wibble$isWibble = (value) => value instanceof Wibble;
+----- 
+
+
+type Unused {
+  Unused
+}
+
+
+⏷
+
+
+
+----- 
+pub type Wobble {
+  
+⏷
+
+----- 
+Wobble(Wibble)
+}
+⏷
+export class Wobble extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+export const Wobble$Wobble = ($0) => new Wobble($0);
+export const Wobble$isWobble = (value) => value instanceof Wobble;
+export const Wobble$Wobble$0 = (value) => value[0];
+----- 
+
+
+⏷
+
+
+-----

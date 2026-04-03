@@ -1,0 +1,70 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+expression: "\n/// my function\npub fn wibble() {\n  let wibble = 1\n  wibble + 2\n}"
+---
+----- SOURCE CODE
+0 |
+1 |/// my function
+2 |pub fn wibble() {
+3 |  let wibble = 1
+4 |  wibble + 2
+5 |}
+
+----- COMPILED JAVASCRIPT
+0 |//# sourceMappingURL=mod.mjs.map
+1 |/**
+2 | * my function
+3 | */
+4 |export function wibble() {
+5 |  let wibble$1 = 1;
+6 |  return wibble$1 + 2;
+7 |}
+
+----- SOURCE MAP
+Mappings:
+----- 
+
+
+⏷
+//# sourceMappingURL=mod.mjs.map
+
+----- 
+/// my function
+
+⏷
+/**
+ * my function
+ */
+
+----- 
+pub fn wibble() {
+  
+⏷
+export function wibble() {
+  
+----- 
+let wibble = 
+⏷
+let wibble$1 = 
+----- 
+1
+  
+⏷
+1;
+  
+----- 
+wibble + 
+⏷
+return wibble$1 + 
+----- 
+2
+}
+⏷
+2;
+}
+----- 
+
+⏷
+
+
+-----
