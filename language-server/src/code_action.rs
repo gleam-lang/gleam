@@ -10665,6 +10665,15 @@ impl<'a> ExtractFunction<'a> {
     }
 
     fn can_extract_statement(&self, statement: &TypedStatement) -> bool {
+        let statement_range = self.edits.src_span_to_lsp_range(statement.location());
+        let selected_range = self.params.range;
+
+        // If the selected range doesn't touch the statement at all, then there
+        // is no reason to extract it.
+        if !overlaps(statement_range, selected_range) {
+            return false;
+        }
+
         match statement {
             ast::Statement::Expression(expression) => self.can_extract_expression(expression),
 
@@ -10693,16 +10702,21 @@ impl<'a> ExtractFunction<'a> {
             //
             // If the selected range is completely within the expression, we don't
             // want to extract it.
-            ast::Statement::Assignment(_) | ast::Statement::Use(_) | ast::Statement::Assert(_) => {
-                let statement_range = self.edits.src_span_to_lsp_range(statement.location());
-                let selected_range = self.params.range;
-
-                // If the selected range doesn't touch the statement at all, then there
-                // is no reason to extract it.
-                if !overlaps(statement_range, selected_range) {
-                    return false;
-                }
+            ast::Statement::Use(_) | ast::Statement::Assert(_) => {
                 !completely_within(selected_range, statement_range)
+            }
+
+            // We can only extract a whole let statement if the assignment
+            // part itself is selected. If the only part being selected is the
+            // expression then the right call is not extracting the whole
+            // statement but just the expression.
+            ast::Statement::Assignment(assignment) => {
+                let value_range = self
+                    .edits
+                    .src_span_to_lsp_range(assignment.value.location());
+
+                !within(selected_range, value_range)
+                    && !completely_within(selected_range, statement_range)
             }
         }
     }
