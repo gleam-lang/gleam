@@ -387,7 +387,7 @@ impl<'comments> Formatter<'comments> {
 
             Definition::TypeAlias(alias) => self.type_alias(alias),
 
-            Definition::CustomType(ct) => self.custom_type(ct),
+            Definition::CustomType(custom_type) => self.custom_type(custom_type),
 
             Definition::Import(Import {
                 module,
@@ -462,7 +462,7 @@ impl<'comments> Formatter<'comments> {
                     .append(name.as_str());
                 let head = match annotation {
                     None => head,
-                    Some(t) => head.append(": ").append(self.type_ast(t)),
+                    Some(type_) => head.append(": ").append(self.type_ast(type_)),
                 };
                 head.append(" = ").append(self.const_expr(value).group())
             }
@@ -517,9 +517,9 @@ impl<'comments> Formatter<'comments> {
             Constant::Record {
                 name,
                 arguments,
-                module: Some((m, _)),
+                module: Some((module, _)),
                 ..
-            } if arguments.is_empty() => m.to_doc().append(".").append(name.as_str()),
+            } if arguments.is_empty() => module.to_doc().append(".").append(name.as_str()),
 
             Constant::Record {
                 name,
@@ -540,7 +540,7 @@ impl<'comments> Formatter<'comments> {
             Constant::Record {
                 name,
                 arguments,
-                module: Some((m, _)),
+                module: Some((module, _)),
                 location,
                 ..
             } => {
@@ -548,7 +548,8 @@ impl<'comments> Formatter<'comments> {
                     .iter()
                     .map(|argument| self.constant_call_arg(argument))
                     .collect_vec();
-                m.to_doc()
+                module
+                    .to_doc()
                     .append(".")
                     .append(name.as_str())
                     .append(self.wrap_arguments(arguments, location.end))
@@ -729,9 +730,9 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn documented_definition<'a>(&mut self, s: &'a UntypedDefinition) -> Document<'a> {
-        let comments = self.doc_comments(s.location().start);
-        comments.append(self.definition(s).group()).group()
+    fn documented_definition<'a>(&mut self, definition: &'a UntypedDefinition) -> Document<'a> {
+        let comments = self.doc_comments(definition.location().start);
+        comments.append(self.definition(definition).group()).group()
     }
 
     fn doc_comments<'a>(&mut self, limit: u32) -> Document<'a> {
@@ -739,8 +740,8 @@ impl<'comments> Formatter<'comments> {
         match comments.peek() {
             None => nil(),
             Some(_) => join(
-                comments.map(|c| match c {
-                    Some(c) => "///".to_doc().append(EcoString::from(c)),
+                comments.map(|comment| match comment {
+                    Some(comment) => "///".to_doc().append(EcoString::from(comment)),
                     None => unreachable!("empty lines dropped by pop_doc_comments"),
                 }),
                 line(),
@@ -854,11 +855,11 @@ impl<'comments> Formatter<'comments> {
         let comments = self.pop_comments(argument.location.start);
         let doc = match &argument.annotation {
             None => argument.names.to_doc(),
-            Some(a) => argument
+            Some(type_) => argument
                 .names
                 .to_doc()
                 .append(": ")
-                .append(self.type_ast(a)),
+                .append(self.type_ast(type_)),
         }
         .group();
         commented(doc, comments)
@@ -916,7 +917,7 @@ impl<'comments> Formatter<'comments> {
 
         // Add return annotation
         let signature = match &return_annotation {
-            Some(anno) => signature.append(" -> ").append(self.type_ast(anno)),
+            Some(annotation) => signature.append(" -> ").append(self.type_ast(annotation)),
             None => signature,
         };
 
@@ -978,7 +979,9 @@ impl<'comments> Formatter<'comments> {
 
         let header = match return_annotation {
             None => header,
-            Some(t) => header.append(" -> ").append(self.type_ast(t)),
+            Some(return_annotation) => header
+                .append(" -> ")
+                .append(self.type_ast(return_annotation)),
         };
 
         let statements = self.statements(body.as_vec());
@@ -1044,7 +1047,7 @@ impl<'comments> Formatter<'comments> {
 
         let annotation = annotation
             .as_ref()
-            .map(|a| ": ".to_doc().append(self.type_ast(a)));
+            .map(|annotation| ": ".to_doc().append(self.type_ast(annotation)));
 
         let doc = keyword
             .to_doc()
@@ -1206,31 +1209,30 @@ impl<'comments> Formatter<'comments> {
         // Create parts
         let mut parts = value.split('.');
         let integer_part = parts.next().unwrap_or_default();
-        // floating point part
-        let fp_part = parts.next().unwrap_or_default();
+        let floating_part = parts.next().unwrap_or_default();
         let integer_doc = self.underscore_integer_string(integer_part);
         let dot_doc = ".".to_doc();
 
         // Split fp_part into a regular fractional and maybe a scientific part
-        let (fp_part_fractional, fp_part_scientific) = fp_part.split_at(
-            fp_part
+        let (fractional_part, scientific_part) = floating_part.split_at(
+            floating_part
                 .chars()
-                .position(|ch| ch == 'e')
-                .unwrap_or(fp_part.len()),
+                .position(|character| character == 'e')
+                .unwrap_or(floating_part.len()),
         );
 
         // Trim right any consequtive '0's
-        let mut fp_part_fractional = fp_part_fractional.trim_end_matches('0').to_string();
+        let mut fractional_part = fractional_part.trim_end_matches('0').to_string();
         // If there is no fractional part left, add a '0', thus that 1. becomes 1.0 etc.
-        if fp_part_fractional.is_empty() {
-            fp_part_fractional.push('0');
+        if fractional_part.is_empty() {
+            fractional_part.push('0');
         }
-        let fp_doc = fp_part_fractional.chars().collect::<EcoString>();
+        let float_doc = fractional_part.chars().collect::<EcoString>();
 
         integer_doc
             .append(dot_doc)
-            .append(fp_doc)
-            .append(fp_part_scientific)
+            .append(float_doc)
+            .append(scientific_part)
     }
 
     fn int<'a>(&self, value: &'a str) -> Document<'a> {
@@ -1242,25 +1244,25 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn underscore_integer_string<'a>(&self, value: &'a str) -> Document<'a> {
-        let underscore_ch = '_';
-        let minus_ch = '-';
+        let underscore = '_';
+        let minus = '-';
 
         let len = value.len();
-        let underscore_ch_cnt = value.matches(underscore_ch).count();
-        let reformat_watershed = if value.starts_with(minus_ch) { 6 } else { 5 };
+        let underscore_ch_cnt = value.matches(underscore).count();
+        let reformat_watershed = if value.starts_with(minus) { 6 } else { 5 };
         let insert_underscores = (len - underscore_ch_cnt) >= reformat_watershed;
 
         let mut new_value = String::new();
         let mut j = 0;
-        for (i, ch) in value.chars().rev().enumerate() {
-            if ch == '_' {
+        for (i, character) in value.chars().rev().enumerate() {
+            if character == underscore {
                 continue;
             }
 
-            if insert_underscores && i != 0 && ch != minus_ch && i < len && j % 3 == 0 {
-                new_value.push(underscore_ch);
+            if insert_underscores && i != 0 && character != minus && i < len && j % 3 == 0 {
+                new_value.push(underscore);
             }
-            new_value.push(ch);
+            new_value.push(character);
 
             j += 1;
         }
@@ -1293,7 +1295,7 @@ impl<'comments> Formatter<'comments> {
         }
 
         let name = match module {
-            Some((m, _)) => m.to_doc().append(".").append(name),
+            Some((module, _)) => module.to_doc().append(".").append(name),
             None => name.to_doc(),
         };
 
@@ -1330,12 +1332,12 @@ impl<'comments> Formatter<'comments> {
 
     fn call<'a>(
         &mut self,
-        fun: &'a UntypedExpr,
+        function: &'a UntypedExpr,
         arguments: &'a [CallArg<UntypedExpr>],
         location: &SrcSpan,
     ) -> Document<'a> {
-        let expression = match fun {
-            UntypedExpr::PipeLine { .. } => break_block(self.expr(fun)),
+        let expression = match function {
+            UntypedExpr::PipeLine { .. } => break_block(self.expr(function)),
 
             UntypedExpr::BinOp { .. }
             | UntypedExpr::Int { .. }
@@ -1356,7 +1358,7 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::BitArray { .. }
             | UntypedExpr::RecordUpdate { .. }
             | UntypedExpr::NegateBool { .. }
-            | UntypedExpr::NegateInt { .. } => self.expr(fun),
+            | UntypedExpr::NegateInt { .. } => self.expr(function),
         };
 
         let arity = arguments.len();
@@ -1457,7 +1459,7 @@ impl<'comments> Formatter<'comments> {
     ) -> Document<'a> {
         let subjects_doc = break_("case", "case ")
             .append(join(
-                subjects.iter().map(|s| self.expr(s).group()),
+                subjects.iter().map(|subject| self.expr(subject).group()),
                 break_(",", ", "),
             ))
             .nest(INDENT)
@@ -1470,7 +1472,7 @@ impl<'comments> Formatter<'comments> {
             clauses
                 .iter()
                 .enumerate()
-                .map(|(i, c)| self.clause(c, i as u32).group()),
+                .map(|(i, clause)| self.clause(clause, i as u32).group()),
         );
 
         // We get all remaining comments that come before the case's closing
@@ -1847,7 +1849,9 @@ impl<'comments> Formatter<'comments> {
                      }| {
                         let arg_comments = self.pop_comments(location.start);
                         let argument = match label {
-                            Some((_, l)) => l.to_doc().append(": ").append(self.type_ast(ast)),
+                            Some((_, label)) => {
+                                label.to_doc().append(": ").append(self.type_ast(ast))
+                            }
                             None => self.type_ast(ast),
                         };
 
@@ -2130,11 +2134,9 @@ impl<'comments> Formatter<'comments> {
             " ".to_doc()
         };
 
-        let clause_doc = clause_doc
-            .append(arrow_break)
+        let clause_doc = docvec![clause_doc, arrow_break, "->"]
             .group()
-            .append("->")
-            .append(self.case_clause_value(&clause.then).group())
+            .append(self.case_clause_value(&clause.then))
             .group();
 
         let clause_doc = match printed_comments(comments, false) {
@@ -2178,7 +2180,7 @@ impl<'comments> Formatter<'comments> {
         let alternative_patterns = std::iter::once(&clause.pattern)
             .chain(&clause.alternative_patterns)
             .enumerate()
-            .map(|(alternative_index, p)| {
+            .map(|(alternative_index, patterns)| {
                 // Here `p` is a single pattern that can be comprised of
                 // multiple subjects.
                 // ```gleam
@@ -2189,7 +2191,7 @@ impl<'comments> Formatter<'comments> {
                 // }
                 // ```
                 let is_first_alternative = alternative_index == 0;
-                let subject_docs = p.iter().enumerate().map(|(subject_index, subject)| {
+                let pattern_docs = patterns.iter().enumerate().map(|(pattern_index, pattern)| {
                     // There's a small catch in turning each subject into a document.
                     // Sadly we can't simply call `self.pattern` on each subject and
                     // then nest each one in case it gets broken.
@@ -2197,23 +2199,21 @@ impl<'comments> Formatter<'comments> {
                     // the first subject of the first alternative) must not be nested
                     // further; otherwise, when broken, it would have 2 extra spaces
                     // of indentation: https://github.com/gleam-lang/gleam/issues/2940.
-                    let is_first_subject = subject_index == 0;
-                    let is_first_pattern_of_clause = is_first_subject && is_first_alternative;
-                    let subject_doc = self.pattern(subject);
+                    let is_first_pattern = pattern_index == 0;
+                    let is_first_pattern_of_clause = is_first_pattern && is_first_alternative;
+                    let pattern_doc = self.pattern(pattern);
                     if is_first_pattern_of_clause {
-                        subject_doc
+                        pattern_doc
                     } else {
-                        subject_doc.nest(INDENT)
+                        pattern_doc.nest(INDENT)
                     }
                 });
                 // We join all subjects with a breakable comma (that's also
                 // going to be nested) and make the subjects into a group to
                 // make sure the formatter tries to keep them on a single line.
-                join(subject_docs, break_(",", ", ").nest(INDENT)).group()
+                join(pattern_docs, break_(",", ", ").nest(INDENT)).group()
             });
-        // Last, we make sure that the formatter tries to keep each
-        // alternative on a single line by making it a group!
-        join(alternative_patterns, alternatives_separator).group()
+        join(alternative_patterns, alternatives_separator)
     }
 
     fn list<'a>(
@@ -2780,7 +2780,7 @@ impl<'comments> Formatter<'comments> {
                 let annotation = use_assignment
                     .annotation
                     .as_ref()
-                    .map(|a| ": ".to_doc().append(self.type_ast(a)));
+                    .map(|annotation| ": ".to_doc().append(self.type_ast(annotation)));
 
                 pattern.append(annotation).group()
             });
@@ -3066,8 +3066,8 @@ impl<'comments> Formatter<'comments> {
         let _ = comments.peek()?;
 
         let mut doc = Vec::new();
-        while let Some(c) = comments.next() {
-            let (is_doc_commented, c) = match c {
+        while let Some(comment) = comments.next() {
+            let (is_doc_commented, comment) = match comment {
                 (comment_start, Some(c)) => {
                     let doc_comment = self.doc_comments(comment_start);
                     let is_doc_commented = !doc_comment.is_empty();
@@ -3076,7 +3076,7 @@ impl<'comments> Formatter<'comments> {
                 }
                 (_, None) => continue,
             };
-            doc.push("//".to_doc().append(EcoString::from(c)));
+            doc.push("//".to_doc().append(EcoString::from(comment)));
             match comments.peek() {
                 // Next line is a comment
                 Some((_, Some(_))) => doc.push(line()),
@@ -3499,17 +3499,17 @@ pub fn comments_before<'a>(
 ) {
     let end_comments = comments
         .iter()
-        .position(|c| c.start > limit)
+        .position(|comment| comment.start > limit)
         .unwrap_or(comments.len());
     let end_empty_lines = empty_lines
         .iter()
-        .position(|l| *l > limit)
+        .position(|empty_line| *empty_line > limit)
         .unwrap_or(empty_lines.len());
     let popped_comments = comments
         .get(0..end_comments)
         .expect("0..end_comments is guaranteed to be in bounds")
         .iter()
-        .map(|c| (c.start, Some(c.content)));
+        .map(|comment| (comment.start, Some(comment.content)));
     let popped_empty_lines = if retain_empty_lines { empty_lines } else { &[] }
         .get(0..end_empty_lines)
         .unwrap_or(&[])
