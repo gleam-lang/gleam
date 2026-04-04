@@ -358,3 +358,62 @@ pub fn main() -> Nil {
 "#
     );
 }
+
+#[test]
+fn size_8_literal_test() {
+    assert_erl!(
+        "pub fn size_8_literal_test() {
+  <<257:size(8)>>
+}"
+    );
+}
+
+#[test]
+fn size_8_variable_test() {
+    assert_erl!(
+        "pub fn size_8_variable_test() {
+  let i = 257
+  <<i:size(8)>>
+}"
+    );
+}
+
+#[test]
+fn size_16_literal_test() {
+    assert_erl!(
+        "pub fn size_16_literal_test() {
+  <<257:size(16)>>
+}"
+    );
+}
+
+#[test]
+fn size_16_variable_test() {
+    assert_erl!(
+        "pub fn size_16_variable_test() {
+  let i = 257
+  <<i:size(16)>>
+}"
+    );
+}
+
+#[test]
+fn size_unit_test() {
+    assert_erl!(
+        "pub fn size_16_variable_test() {
+  let i = 257
+  <<i:size(4)-unit(16)>>
+}"
+    );
+}
+
+#[test]
+fn negative_size_test() {
+    assert_erl!(
+        "pub fn size_16_variable_test() {
+  let i = 257
+  <<i:size(-1)>>
+}"
+    );
+}
+
