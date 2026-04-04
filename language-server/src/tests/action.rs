@@ -11362,6 +11362,58 @@ pub fn do_things(a, b) {
 }
 
 #[test]
+fn extract_function_with_selected_expression_in_statement() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn do_things(a, b) {
+  let result = call(a, [])
+  result + 3
+}
+",
+        find_position_of("call").select_until(find_position_of("[]"))
+    );
+}
+
+#[test]
+fn extract_function_with_selected_pipeline_expression_in_statement() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn do_things(a, b) {
+  let result =
+    wibble
+    |> wobble
+    |> woo
+
+  result + 3
+}
+",
+        find_position_of("wibble").select_until(find_position_of("woo"))
+    );
+}
+
+#[test]
+fn extract_function_with_assignment_expression_and_multiple_assignments() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        "
+pub fn do_things(a, b) {
+  let result =
+    wibble
+    |> wobble
+    |> woo
+
+  let a = result + 2
+
+  a + 3
+}
+",
+        find_position_of("wibble").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
 fn extract_function_from_statements() {
     assert_code_action!(
         EXTRACT_FUNCTION,
