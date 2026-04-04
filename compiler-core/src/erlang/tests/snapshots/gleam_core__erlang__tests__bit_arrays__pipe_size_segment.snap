@@ -27,7 +27,7 @@ identity(X) ->
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> bitstring().
 main() ->
-    <<16#AE:(lists:max([(begin
+    <<16#AE:(erlang:max(0, begin
             _pipe = 5,
             identity(_pipe)
-        end), 0]))>>.
+        end))>>.

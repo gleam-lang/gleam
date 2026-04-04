@@ -19,5 +19,5 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> bitstring().
 main() ->
-    A = <<10:(lists:max([(8), 0]))>>,
+    A = <<10:(erlang:max(0, 8))>>,
     A.
