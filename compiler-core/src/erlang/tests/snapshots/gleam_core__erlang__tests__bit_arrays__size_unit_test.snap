@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/erlang/tests/bit_arrays.rs
+expression: "pub fn size_16_variable_test() {\n  let i = 257\n  <<i:size(4)-unit(16)>>\n}"
+---
+----- SOURCE CODE
+pub fn size_16_variable_test() {
+  let i = 257
+  <<i:size(4)-unit(16)>>
+}
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([size_16_variable_test/0]).
+
+-file("project/test/my/mod.gleam", 1).
+-spec size_16_variable_test() -> bitstring().
+size_16_variable_test() ->
+    I = 257,
+    <<I:4/unit:16>>.
