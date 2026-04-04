@@ -190,7 +190,8 @@
   }
   ```
 
-  while the other action would reverse the change. ([Eli Treuherz](http.github.com/treuherz))
+  while the other action would reverse the change.
+  ([Eli Treuherz](http.github.com/treuherz))
 
 - The "extract function" code action can now be used in pipelines to extract a
   part of one into a function. For example, triggering it here:
@@ -219,6 +220,40 @@
     string
     |> string.lowercase
     |> string.replace(each: "jak", with: "lucy")
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The "extract function" code action can now be used to extract the right hand
+  side of an assignment into its own function. For example, triggering it here:
+
+  ```gleam
+  pub fn personal_blog() {
+    let introduction =
+      html.main([], [
+        html.h1([], [html.text("Hello, world!")]),
+        html.p([], [html.text("Gleam is cool")])
+      ])
+    //^^^ Triggering "extract function" on this expression
+
+    html.body([introduction, blog_posts()])
+  }
+  ```
+
+  Would result in the following code:
+
+  ```gleam
+  pub fn personal_blog() {
+    let introduction = function()
+    html.body([introduction, blog_posts()])
+  }
+
+  pub fn function() {
+    html.main([], [
+      html.h1([], [html.text("Hello, world!")]),
+      html.p([], [html.text("Gleam is cool")])
+    ])
   }
   ```
 
