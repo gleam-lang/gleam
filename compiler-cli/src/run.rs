@@ -259,7 +259,8 @@ fn write_javascript_entrypoint(
 main();
 "#,
     );
-    crate::fs::write(&path, &module)?;
+    dbg!(path.canonicalize());
+    crate::fs::write(dbg!(&path), dbg!(&module))?;
     Ok(path)
 }
 

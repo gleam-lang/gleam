@@ -63,8 +63,8 @@ fn run_and_capture_output(
     )
     .expect("run setup");
 
-    let mut process = std::process::Command::new(&program)
-        .args(args)
+    let mut process = std::process::Command::new(dbg!(&program))
+        .args(dbg!(args))
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
