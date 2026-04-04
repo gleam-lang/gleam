@@ -24,10 +24,12 @@ use crate::{
 use camino::Utf8Path;
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
+use num_bigint::BigInt;
+use num_traits::Signed;
 use regex::{Captures, Regex};
 use std::collections::HashSet;
 use std::sync::OnceLock;
-use std::{collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 use vec1::Vec1;
 
 const INDENT: isize = 4;
@@ -928,76 +930,241 @@ fn statement<'a>(
     }
 }
 
-fn expr_segment<'a>(
-    value: &'a TypedExpr,
+enum ExpressionSegmentStringEncoding {
+    Utf8,
+    Utf16 { endiannes: Endianness },
+    Utf32 { endiannes: Endianness },
+}
+
+fn expression_segment_string_encoding<'a>(
+    segment: &'a TypedExprBitArraySegment,
+) -> Option<ExpressionSegmentStringEncoding> {
+    let endiannes = segment.endianness();
+    segment.options.iter().find_map(|option| match option {
+        BitArrayOption::Utf8 { .. } => Some(ExpressionSegmentStringEncoding::Utf8),
+        BitArrayOption::Utf16 { .. } => Some(ExpressionSegmentStringEncoding::Utf16 { endiannes }),
+        BitArrayOption::Utf32 { .. } => Some(ExpressionSegmentStringEncoding::Utf32 { endiannes }),
+        _ => None,
+    })
+}
+
+/// This is used to print segments of a bit array expression.
+/// Those are different enough from the constant and pattern ones that it would
+/// no longer make sense to try and adapt the `bit_array_segment` generic
+/// function to work with the three of them.
+/// So you should use this one for printing expression segments, and the generic
+/// `bit_array_segment` function for constant and pattern segments instead.
+///
+fn bit_array_expression_segment<'a>(
+    segment: &'a TypedExprBitArraySegment,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    // Literal strings can have the `utf8`, `utf16`, or `utf32` options just
+    // fine, and that would be no issue on the Erlang side:
+    //
+    // ```erl
+    // <<"wibble"/utf8>>
+    // <<"wibble"/utf16>>
+    // <<"wibble"/utf32>>
+    // ```
+    //
+    // However there's issues when we try and use those options with _variables_
+    // with the string type. That will result in errors on the Erlang target:
+    //
+    // ```erl
+    // % These are all runtime errors!!
+    // <<SomeString/utf8>>
+    // <<SomeString/utf16>>
+    // <<SomeString/utf32>>
+    // ```
+    //
+    // In Gleam we support those options for all string values, not just
+    // literals. So we need to do something about them:
+    //
+    // - `utf8`: strings are already `utf8` binaries in Gleam, so if we have a
+    //   string value with that option we can put it in the bit array like any
+    //   other binary value:
+    //   ```gleam
+    //   <<some_string:utf8>>
+    //   // becomes <<SomeString/binary>>
+    //   ```
+    // - `utf16` and `utf32`: these are a bit tricker since they will require
+    //   some conversion (which is what we also do on the JavaScript target!).
+    //   So in this case we need to use the `unicode:characters_to_binary`
+    //   function that will return a binary value we can then put in the bit
+    //   array:
+    //   ```gleam
+    //   <<some_string:utf16-little>>
+    //   // becomes
+    //   // <<(unicode:characters_to_binary(
+    //   //     SomeString,
+    //   //     utf8,               the current encoding
+    //   //     {utf16, little})    the encoding we want
+    //   //  )/binary>>
+    //   ```
+    //
+    if segment.type_.is_string()
+        && !segment.value.is_literal_string()
+        && let Some(encoding) = expression_segment_string_encoding(segment)
+    {
+        match encoding {
+            // Gleam strings are utf8 encoded binaries, so we just need to add
+            // the binary option
+            ExpressionSegmentStringEncoding::Utf8 => {
+                docvec![
+                    bit_array_expression_segment_value(&segment.value, env),
+                    "/binary"
+                ]
+            }
+
+            // For utf16 and utf32 we need an explicit conversion using erlang's
+            // `unicode:characters_to_binary`
+            ExpressionSegmentStringEncoding::Utf16 { endiannes } => {
+                let value = maybe_block_expr(&segment.value, env);
+                let encoding = match endiannes {
+                    Endianness::Big => "{utf16, big}",
+                    Endianness::Little => "{utf16, little}",
+                };
+                docvec![
+                    "(unicode:characters_to_binary",
+                    wrap_arguments([value, "utf8".to_doc(), encoding.to_doc()]),
+                    ")/binary"
+                ]
+            }
+            ExpressionSegmentStringEncoding::Utf32 { endiannes } => {
+                let value = maybe_block_expr(&segment.value, env);
+                let encoding = match endiannes {
+                    Endianness::Big => "{utf32, big}",
+                    Endianness::Little => "{utf32, little}",
+                };
+
+                docvec![
+                    "(unicode:characters_to_binary",
+                    wrap_arguments([value, "utf8".to_doc(), encoding.to_doc()]),
+                    ")/binary"
+                ]
+            }
+        }
+    } else {
+        // If the bit array segment doesn't need any special handling we use the
+        // regular printing functions to format its value and options.
+        docvec![
+            bit_array_expression_segment_value(&segment.value, env),
+            bit_array_expression_options(&segment.options, env)
+        ]
+    }
+}
+
+fn bit_array_expression_options<'a>(
     options: &'a [BitArrayOption<TypedExpr>],
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let value_is_a_string_literal = matches!(value, TypedExpr::String { .. });
+    // The size and unit options are a bit special: if present size must come
+    // first, and the unit must come last. So we keep them separate from all the
+    // other options.
+    //
+    // ```erl
+    // <<Segment:Size/Option1-Option2-unit:UnitValue>>
+    // %        ^^^^^ Size is first immediately after `:`
+    // %             ^^^^^^^^^^^^^^^^ All other options come after `/`
+    // %                             ^^^^^ And unit is always the last one of
+    // %                                   those written like this: `unit:Value`
+    // ```
+    let mut size: Option<Document<'a>> = None;
+    let mut unit: Option<Document<'a>> = None;
+    let mut others = Vec::new();
 
-    let create_document = |env: &mut Env<'a>| {
-        match value {
-            // Skip the normal <<value/utf8>> surrounds and set the string literal flag
-            TypedExpr::String { value, .. } => string_inner(value).surround("\"", "\""),
-
-            // As normal
-            TypedExpr::Int { .. }
-            | TypedExpr::Float { .. }
-            | TypedExpr::Var { .. }
-            | TypedExpr::BitArray { .. } => expr(value, env),
-
-            // Wrap anything else in parentheses
-            TypedExpr::Block { .. }
-            | TypedExpr::Pipeline { .. }
-            | TypedExpr::Fn { .. }
-            | TypedExpr::List { .. }
-            | TypedExpr::Call { .. }
-            | TypedExpr::BinOp { .. }
-            | TypedExpr::Case { .. }
-            | TypedExpr::RecordAccess { .. }
-            | TypedExpr::PositionalAccess { .. }
-            | TypedExpr::ModuleSelect { .. }
-            | TypedExpr::Tuple { .. }
-            | TypedExpr::TupleIndex { .. }
-            | TypedExpr::Todo { .. }
-            | TypedExpr::Panic { .. }
-            | TypedExpr::Echo { .. }
-            | TypedExpr::RecordUpdate { .. }
-            | TypedExpr::NegateBool { .. }
-            | TypedExpr::NegateInt { .. }
-            | TypedExpr::Invalid { .. } => expr(value, env).surround("(", ")"),
+    for option in options {
+        match option {
+            BitArrayOption::Utf8 { .. } => others.push("utf8".to_doc()),
+            BitArrayOption::Utf16 { .. } => others.push("utf16".to_doc()),
+            BitArrayOption::Utf32 { .. } => others.push("utf32".to_doc()),
+            BitArrayOption::Int { .. } => others.push("integer".to_doc()),
+            BitArrayOption::Float { .. } => others.push("float".to_doc()),
+            BitArrayOption::Bytes { .. } => others.push("binary".to_doc()),
+            BitArrayOption::Bits { .. } => others.push("bitstring".to_doc()),
+            BitArrayOption::Utf8Codepoint { .. } => others.push("utf8".to_doc()),
+            BitArrayOption::Utf16Codepoint { .. } => others.push("utf16".to_doc()),
+            BitArrayOption::Utf32Codepoint { .. } => others.push("utf32".to_doc()),
+            BitArrayOption::Signed { .. } => others.push("signed".to_doc()),
+            BitArrayOption::Unsigned { .. } => others.push("unsigned".to_doc()),
+            BitArrayOption::Big { .. } => others.push("big".to_doc()),
+            BitArrayOption::Little { .. } => others.push("little".to_doc()),
+            BitArrayOption::Native { .. } => others.push("native".to_doc()),
+            BitArrayOption::Unit { value, .. } => unit = Some(eco_format!("unit:{value}").to_doc()),
+            BitArrayOption::Size { value, .. } => {
+                // Sizes need some care: in Erlang, having a negative segment size
+                // results in a runtime error. We can't do that in Gleam! So any
+                // negative value must be turned to zero instead:
+                size = Some(if let TypedExpr::Int { int_value, .. } = value.as_ref() {
+                    // For literals we can easily replace negative values with
+                    // the literal zero.
+                    let value = if int_value.is_negative() {
+                        &BigInt::ZERO
+                    } else {
+                        int_value
+                    };
+                    docvec![":", value.clone()]
+                } else {
+                    // For any other non constant expression we need to use
+                    // `erlang:max(0, <Value>)` to ensure the value is never
+                    // zero at runtime!
+                    docvec![":(erlang:max(0, ", maybe_block_expr(value, env), "))"]
+                });
+            }
         }
+    }
+
+    // The unit must always be the last option, if present.
+    if let Some(unit) = unit {
+        others.push(unit)
+    }
+
+    let options = if !others.is_empty() {
+        docvec!["/", join(others, "-".to_doc())]
+    } else {
+        nil()
     };
 
-    let size = |expression: &'a TypedExpr, env: &mut Env<'a>| {
-        if let TypedExpr::Int { value, .. } = expression {
-            let v = value.replace("_", "");
-            let v = u64::from_str(&v).unwrap_or(0);
-            Some(eco_format!(":{v}").to_doc())
-        } else {
-            let inner_expr = maybe_block_expr(expression, env).surround("(", ")");
-            // The value of size must be a non-negative integer, we use lists:max here to ensure
-            // it is at least 0;
-            let value_guard = ":(lists:max(["
-                .to_doc()
-                .append(inner_expr)
-                .append(", 0]))")
-                .group();
-            Some(value_guard)
-        }
-    };
+    // Size comes before all the other options.
+    docvec![size, options]
+}
 
-    let unit = |value: &'a u8| Some(eco_format!("unit:{value}").to_doc());
+/// The document for the value of a bit array segment expression.
+/// Segment values can't be produced using a simple `expr` call but need special
+/// handling in some cases which this function takes care of!
+fn bit_array_expression_segment_value<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
+    match value {
+        // Skip the normal <<value/utf8>> surrounds
+        TypedExpr::String { value, .. } => string_inner(value).surround("\"", "\""),
 
-    bit_array_segment(
-        create_document,
-        options,
-        size,
-        unit,
-        value_is_a_string_literal,
-        false,
-        env,
-    )
+        // As normal
+        TypedExpr::Int { .. }
+        | TypedExpr::Float { .. }
+        | TypedExpr::Var { .. }
+        | TypedExpr::BitArray { .. } => expr(value, env),
+
+        // Anything else needs to be wrapped in parentheses
+        TypedExpr::Block { .. }
+        | TypedExpr::Pipeline { .. }
+        | TypedExpr::Fn { .. }
+        | TypedExpr::List { .. }
+        | TypedExpr::Call { .. }
+        | TypedExpr::BinOp { .. }
+        | TypedExpr::Case { .. }
+        | TypedExpr::RecordAccess { .. }
+        | TypedExpr::PositionalAccess { .. }
+        | TypedExpr::ModuleSelect { .. }
+        | TypedExpr::Tuple { .. }
+        | TypedExpr::TupleIndex { .. }
+        | TypedExpr::Todo { .. }
+        | TypedExpr::Panic { .. }
+        | TypedExpr::Echo { .. }
+        | TypedExpr::RecordUpdate { .. }
+        | TypedExpr::NegateBool { .. }
+        | TypedExpr::NegateInt { .. }
+        | TypedExpr::Invalid { .. } => expr(value, env).surround("(", ")"),
+    }
 }
 
 fn bit_array_segment<'a, Value: 'a, CreateDoc, SizeToDoc, UnitToDoc, State>(
@@ -2375,7 +2542,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::BitArray { segments, .. } => bit_array(
             segments
                 .iter()
-                .map(|s| expr_segment(&s.value, &s.options, env)),
+                .map(|segment| bit_array_expression_segment(segment, env)),
         ),
 
         TypedExpr::Invalid { .. } => panic!("invalid expressions should not reach code generation"),

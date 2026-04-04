@@ -25,13 +25,13 @@ pub fn main() {
 -spec main() -> bitstring().
 main() ->
     Fifteen = 15,
-    X = <<5:(lists:max([(16), 0]))>>,
+    X = <<5:(erlang:max(0, 16))>>,
     case X of
         <<5:16>> ->
-            <<5:(lists:max([(16), 0]))>>;
+            <<5:(erlang:max(0, 16))>>;
 
         <<6:Fifteen>> ->
-            <<5:(lists:max([(Fifteen), 0]))>>;
+            <<5:(erlang:max(0, Fifteen))>>;
 
         _ ->
             <<>>
