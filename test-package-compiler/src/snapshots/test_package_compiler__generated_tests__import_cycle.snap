@@ -13,5 +13,5 @@ The import statements for these modules form a cycle:
     ┌─────┐
     │     one
     └─────┘
-Gleam doesn't support dependency cycles like these, please break the
-cycle to continue.
+Gleam doesn't support dependency cycles like these, please break the cycle
+to continue.

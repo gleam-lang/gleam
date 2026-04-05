@@ -508,9 +508,10 @@ pub fn code_action_inexhaustive_let_to_case(
     error: &Option<Error>,
     actions: &mut Vec<CodeAction>,
 ) {
-    let Some(Error::Type { errors, .. }) = error else {
+    let Some(errors) = type_errors_for_module(error, module) else {
         return;
     };
+
     let inexhaustive_assignments = errors
         .iter()
         .filter_map(|error| {
@@ -603,6 +604,20 @@ pub fn code_action_inexhaustive_let_to_case(
             .preferred(true)
             .push_to(actions);
     }
+}
+
+pub(crate) fn type_errors_for_module<'a>(
+    error: &'a Option<Error>,
+    module: &Module,
+) -> Option<&'a Vec1<type_::Error>> {
+    let Some(Error::Type {
+        skipped_modules: _,
+        failed_modules,
+    }) = error
+    else {
+        return None;
+    };
+    Some(&failed_modules.get(&module.name)?.errors)
 }
 
 struct CaseClause<'a> {
@@ -1131,18 +1146,18 @@ pub fn code_action_import_module(
     actions: &mut Vec<CodeAction>,
 ) {
     let uri = &params.text_document.uri;
-    let Some(Error::Type { errors, .. }) = error else {
+    let Some(errors) = type_errors_for_module(error, module) else {
         return;
     };
 
     let missing_imports = errors
         .into_iter()
-        .filter_map(|e| {
+        .filter_map(|error| {
             if let type_::Error::UnknownModule {
                 location,
                 suggestions,
                 ..
-            } = e
+            } = error
             {
                 suggest_imports(*location, suggestions)
             } else {
@@ -1234,7 +1249,7 @@ pub fn code_action_add_missing_patterns(
     actions: &mut Vec<CodeAction>,
 ) {
     let uri = &params.text_document.uri;
-    let Some(Error::Type { errors, .. }) = error else {
+    let Some(errors) = type_errors_for_module(error, module) else {
         return;
     };
     let missing_patterns = errors
