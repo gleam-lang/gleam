@@ -1,4 +1,4 @@
-use crate::assert_format;
+use crate::{assert_format, assert_format_rewrite};
 
 #[test]
 fn case_with_two_long_subjects() {
@@ -237,6 +237,25 @@ fn long_alternative_patterns_3() {
       and_force_the_alternative_to_break
     | _, _, _
     -> True
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn case_arrow_slightly_over_the_limit_gets_broken() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  case box {
+    StackBox(width:, height:, children_width:, children_height:, child:, ..) -> todo
+  }
+}
+"#,
+        r#"pub fn main() {
+  case box {
+    StackBox(width:, height:, children_width:, children_height:, child:, ..) ->
+      todo
   }
 }
 "#

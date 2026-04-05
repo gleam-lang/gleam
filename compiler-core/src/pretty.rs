@@ -764,7 +764,23 @@ impl<'a> Document<'a> {
     /// outermost group is broken, any sub-groups might be rendered broken
     /// or unbroken, depending on whether they fit on a single line.
     pub fn group(self) -> Self {
-        Self::Group(Box::new(self))
+        match self {
+            // Grouping a group doesn't change how it will be formatted so we
+            // can avoid boxing it.
+            Document::Group(_)
+            // Grouping a literal string will never change how it's formatted,
+            // we can avoid boxing it.
+            | Document::Str { .. }
+            | Document::EcoString { .. }
+            | Document::ZeroWidthString { .. } => self,
+
+            Document::Line(_)
+            | Document::ForceBroken(_)
+            | Document::NextBreakFits(..)
+            | Document::Break { .. }
+            | Document::Vec(_)
+            | Document::Nest(..) => Self::Group(Box::new(self)),
+        }
     }
 
     /// Sets the indentation level of a document.
