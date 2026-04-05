@@ -19,11 +19,15 @@ fn run_and_produce_pretty_snapshot(
 ) -> String {
     let project_root = fs::get_project_root(project_directory).expect("project root");
     let paths = match (cfg!(windows), target, runtime) {
-        (true, Some(Target::JavaScript), Some(Runtime::NodeJs)) =>
-            ProjectPaths::new(project_root.to_string().strip_prefix(r"\\?\").unwrap().into()),
+        (true, Some(Target::JavaScript), Some(Runtime::NodeJs)) => ProjectPaths::new(
+            project_root
+                .to_string()
+                .strip_prefix(r"\\?\")
+                .unwrap()
+                .into(),
+        ),
 
-        _ =>
-            ProjectPaths::new(project_root)
+        _ => ProjectPaths::new(project_root),
     };
 
     let output = run_and_capture_output(&paths, "main", target, runtime)
