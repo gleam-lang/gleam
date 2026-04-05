@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn do_things(a, b) {\n  let result = call(a, [])\n  result + 3\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn do_things(a, b) {
+  let result = call(a, [])
+               ▔▔▔▔▔▔▔▔↑  
+  result + 3
+}
+
+
+----- AFTER ACTION
+
+pub fn do_things(a, b) {
+  let result = function(a)
+  result + 3
+}
+
+fn function(a: a) -> Int {
+  call(a, [])
+}

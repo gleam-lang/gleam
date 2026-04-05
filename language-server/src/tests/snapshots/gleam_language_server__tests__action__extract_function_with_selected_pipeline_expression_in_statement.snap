@@ -1,0 +1,33 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn do_things(a, b) {\n  let result =\n    wibble\n    |> wobble\n    |> woo\n\n  result + 3\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn do_things(a, b) {
+  let result =
+    wibble
+    ▔▔▔▔▔▔
+    |> wobble
+▔▔▔▔▔▔▔▔▔▔▔▔▔
+    |> woo
+▔▔▔▔▔▔▔↑  
+
+  result + 3
+}
+
+
+----- AFTER ACTION
+
+pub fn do_things(a, b) {
+  let result =
+    function()
+
+  result + 3
+}
+
+fn function() -> Int {
+  wibble
+    |> wobble
+    |> woo
+}
