@@ -317,6 +317,10 @@
 - Fixed the formatting of some errors' hints to properly wrap.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where box drawing characters would not use the same monospace font
+  as all other characters inside code blocks in the generated documentation.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a bug where the JavaScript code generator could produce duplicate `let`
   declarations for internal variables after a `case` expression whose subject
   directly matches one of the branches.
