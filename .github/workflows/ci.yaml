@@ -310,6 +310,7 @@ jobs:
           ls build/dev/docs/lib_project/fonts/ubuntu-mono-v15-regular-greek.woff2
           ls build/dev/docs/lib_project/fonts/ubuntu-mono-v15-regular-latin-ext.woff2
           ls build/dev/docs/lib_project/fonts/ubuntu-mono-v15-regular-latin.woff2
+          ls build/dev/docs/lib_project/fonts/ubuntu-mono-v15-regular-box.woff2
         if: ${{ matrix.run-integration-tests }}
 
   test-wasm:

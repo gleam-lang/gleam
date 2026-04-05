@@ -415,6 +415,13 @@ pub fn generate_html<IO: FileSystemReader>(
         ),
     });
 
+    files.push(OutputFile {
+        path: Utf8PathBuf::from("fonts/ubuntu-mono-v15-regular-box.woff2"),
+        content: Content::Binary(
+            include_bytes!("../templates/docs-fonts/ubuntu-mono-v15-regular-box.woff2").to_vec(),
+        ),
+    });
+
     files
 }
 
