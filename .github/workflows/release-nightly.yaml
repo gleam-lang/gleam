@@ -9,25 +9,23 @@ env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: "-D warnings"
 
-permissions:
-  contents: write
-  packages: write
-  id-token: write
-  attestations: write
-
 jobs:
   # Check if the actions already ran in the last 24 hours
   # * If yes: Don't run again
   # * If no: Clean out existing release assets
   prepare-nightly:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     name: Prepare Nightly Release
     outputs:
       should-run: ${{ steps.should-run.outputs.should-run }}
     # TODO: Re-add
     # if: ${{ github.repository == 'gleam-lang/gleam' }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: print latest_commit
         run: echo ${{ github.sha }}
 
@@ -38,7 +36,7 @@ jobs:
         run: test -z $(git rev-list --after="24 hours" ${{ github.sha }}) && echo "should-run=false" >> $GITHUB_OUTPUT
 
       - name: Delete old release assets
-        uses: mknejp/delete-release-assets@v1
+        uses: mknejp/delete-release-assets@6075939b519d4403c7fe1e20146faa9cd1370730 # v1
         if: ${{ steps.should-run != 'false' }}
         with:
           token: ${{ github.token }}
@@ -56,6 +54,10 @@ jobs:
   build-release:
     name: build-release
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     environment: release
     outputs:
       release-id: ${{ steps.release.outputs.id }}
@@ -99,7 +101,9 @@ jobs:
             cargo-tool: wasm-pack
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Update versions
         shell: bash
@@ -122,7 +126,7 @@ jobs:
 
       - name: Upload release archive
         id: release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
         with:
           draft: false
           prerelease: true
@@ -139,6 +143,10 @@ jobs:
     name: build-container-images
     needs: [prepare-nightly, build-release]
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      id-token: write
+      attestations: write
     if: ${{ needs.prepare-nightly.outputs.should-run != 'false' }}
     strategy:
       matrix:
@@ -156,11 +164,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           sparse-checkout: |
             .github/actions
             containers
+          persist-credentials: false
 
       - name: "Build & Push Container"
         uses: "./.github/actions/build-container"

@@ -12,7 +12,7 @@ runs:
   using: composite
   steps:
   - name: Download Gleam release assets
-    uses: robinraju/release-downloader@v1
+    uses: robinraju/release-downloader@daf26c55d821e836577a15f77d86ddc078948b05 # v1.12
     with:
       releaseId: "${{ inputs.release-id }}"
       fileName: "gleam-${{ inputs.version }}-{x86_64-unknown-linux-musl,aarch64-unknown-linux-musl}.*"
@@ -45,14 +45,14 @@ runs:
       VERSION: "${{ inputs.version }}"
 
   - name: Authenticate with GitHub container registry
-    uses: docker/login-action@v3
+    uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
     with:
       registry: ghcr.io
       username: ${{ github.actor }}
       password: ${{ github.token }}
 
   - name: Set up Docker Buildx
-    uses: docker/setup-buildx-action@v3
+    uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
   - name: Build version and tags
     shell: bash
@@ -73,7 +73,7 @@ runs:
       VERSION: "${{ inputs.version }}"
 
   - name: Build and push
-    uses: docker/build-push-action@v6
+    uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
     with:
       context: .
       platforms: linux/amd64,linux/arm64
