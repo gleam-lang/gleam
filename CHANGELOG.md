@@ -314,6 +314,11 @@
   generated JavaScript code, leading to runtime errors in certain circumstances.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the compiler would not generate the correct code on the
+  Erlang target for bit array string segments with the `utf16` and `utf32`
+  option.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed the formatting of some errors' hints to properly wrap.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
