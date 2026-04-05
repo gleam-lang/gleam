@@ -11529,6 +11529,80 @@ pub fn main() {
 }
 
 #[test]
+fn extract_use_inside_function() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+fn wibble(f) { todo }
+
+pub fn main() {
+  use a <- wibble()
+  Ok(Nil)
+}
+"#,
+        find_position_of("use").select_until(find_position_of("<-"))
+    );
+}
+
+#[test]
+fn extract_use_inside_block() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+fn wibble(f) -> Int { todo }
+
+pub fn main() {
+  let wobble = {
+    use a <- wibble()
+    Ok(Nil)
+  }
+
+  wobble
+}
+"#,
+        find_position_of("use").select_until(find_position_of("Nil)"))
+    );
+}
+
+#[test]
+fn extract_use_with_some_statements_before() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+fn wibble(f) { todo }
+
+pub fn main() {
+  let a = wibble(todo)
+  use a <- wibble()
+  Ok(Nil)
+}
+"#,
+        find_position_of("let").select_until(find_position_of("use"))
+    );
+}
+
+#[test]
+fn extract_use_including_some_statements_after() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+fn wibble(f) { todo }
+
+pub fn main() {
+  let wobble = {
+    use a <- wibble()
+    Ok(Nil)
+  }
+  wibble(panic)
+
+  wobble
+}
+"#,
+        find_position_of("let").select_until(find_position_of("panic)"))
+    );
+}
+
+#[test]
 fn extract_entire_pipeline() {
     assert_code_action!(
         EXTRACT_FUNCTION,
