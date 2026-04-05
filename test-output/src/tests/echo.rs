@@ -18,13 +18,17 @@ fn run_and_produce_pretty_snapshot(
     project_directory: Utf8PathBuf,
 ) -> String {
     let project_root = fs::get_project_root(project_directory).expect("project root");
-    let paths = match (cfg!(windows), target, runtime) {
-        (true, Some(Target::JavaScript), Some(Runtime::NodeJs)) =>
-            ProjectPaths::new(project_root.to_string().strip_prefix(r"\\?\").unwrap().into()),
 
-        _ =>
-            ProjectPaths::new(project_root)
-    };
+    // Node has a bug with paths on Windows at the moment, so we have to
+    // edit the path to work around it.
+    // https://github.com/nodejs/node/issues/60435
+    #[cfg(windows)]
+    let project_root = project_root
+        .to_string()
+        .strip_prefix(r"\\?\")
+        .map(Utf8PathBuf::from)
+        .unwrap_or(project_root);
+    let paths = ProjectPaths::new(project_root);
 
     let output = run_and_capture_output(&paths, "main", target, runtime)
         // Since the echo output's contains a path we will replace the `\` with a `/`
