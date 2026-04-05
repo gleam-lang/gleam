@@ -936,15 +936,29 @@ enum ExpressionSegmentStringEncoding {
     Utf32 { endiannes: Endianness },
 }
 
-fn expression_segment_string_encoding<'a>(
-    segment: &'a TypedExprBitArraySegment,
+fn expression_segment_string_encoding(
+    segment: &TypedExprBitArraySegment,
 ) -> Option<ExpressionSegmentStringEncoding> {
     let endiannes = segment.endianness();
     segment.options.iter().find_map(|option| match option {
         BitArrayOption::Utf8 { .. } => Some(ExpressionSegmentStringEncoding::Utf8),
         BitArrayOption::Utf16 { .. } => Some(ExpressionSegmentStringEncoding::Utf16 { endiannes }),
         BitArrayOption::Utf32 { .. } => Some(ExpressionSegmentStringEncoding::Utf32 { endiannes }),
-        _ => None,
+
+        BitArrayOption::Bytes { .. }
+        | BitArrayOption::Int { .. }
+        | BitArrayOption::Float { .. }
+        | BitArrayOption::Bits { .. }
+        | BitArrayOption::Utf8Codepoint { .. }
+        | BitArrayOption::Utf16Codepoint { .. }
+        | BitArrayOption::Utf32Codepoint { .. }
+        | BitArrayOption::Signed { .. }
+        | BitArrayOption::Unsigned { .. }
+        | BitArrayOption::Big { .. }
+        | BitArrayOption::Little { .. }
+        | BitArrayOption::Native { .. }
+        | BitArrayOption::Size { .. }
+        | BitArrayOption::Unit { .. } => None,
     })
 }
 
