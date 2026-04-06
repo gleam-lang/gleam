@@ -1021,39 +1021,6 @@ variable, or delete the expression entirely if it's not needed.",
                     }),
                 },
 
-                type_::Warning::InternalTypeLeak { location, leaked } => {
-                    let mut printer = Printer::new();
-
-                    // TODO: be more precise.
-                    // - is being returned by this public function
-                    // - is taken as an argument by this public function
-                    // - is taken as an argument by this public enum constructor
-                    // etc
-                    let text = wrap_format!(
-                        "The following type is internal, but is being used by this public export.
-
-{}
-
-Internal types should not be used in a public facing function since they are \
-hidden from the package's documentation.",
-                        printer.pretty_print(leaked, 4),
-                    );
-                    Diagnostic {
-                        title: "Internal type used in public interface".into(),
-                        text,
-                        hint: None,
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            label: diagnostic::Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
                 type_::Warning::RedundantAssertAssignment { location } => Diagnostic {
                     title: "Redundant assertion".into(),
                     text: wrap(
