@@ -10,7 +10,6 @@ use crate::{
     type_::{Type, expression::ComparisonOutcome},
 };
 
-use camino::Utf8PathBuf;
 use ecow::EcoString;
 use hexpm::version::Version;
 use num_bigint::BigInt;
@@ -1387,14 +1386,6 @@ impl Error {
 }
 
 impl Warning {
-    pub fn into_warning(self, path: Utf8PathBuf, src: EcoString) -> crate::Warning {
-        crate::Warning::Type {
-            path,
-            src,
-            warning: self,
-        }
-    }
-
     pub(crate) fn location(&self) -> SrcSpan {
         match self {
             Warning::Todo { location, .. }
