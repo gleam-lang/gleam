@@ -70,7 +70,11 @@ let _pipe = x;
 add_2
 }
 ⏷
-return add_2(_pipe);
+return add_2(
+----- 
+x |> 
+⏷
+_pipe);
 }
 ----- 
 
