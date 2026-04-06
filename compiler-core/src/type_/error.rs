@@ -7,7 +7,7 @@ use crate::{
     build::Target,
     exhaustiveness::ImpossibleBitArraySegmentPattern,
     parse::LiteralFloatValue,
-    type_::{Type, expression::ComparisonOutcome},
+    type_::{Type, expression::ComparisonOutcome, printer::Names},
 };
 
 use ecow::EcoString;
@@ -861,6 +861,7 @@ pub enum Warning {
         kind: TodoKind,
         location: SrcSpan,
         type_: Arc<Type>,
+        names: Names,
     },
 
     ImplicitlyDiscardedResult {

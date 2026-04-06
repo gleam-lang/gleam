@@ -11,7 +11,7 @@ use crate::{
 /// This class keeps track of what names are used for modules in the current
 /// scope, so they can be printed in errors, etc.
 ///
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct Names {
     /// Types that exist in the current module, either defined or imported in an
     /// unqualified fashion.

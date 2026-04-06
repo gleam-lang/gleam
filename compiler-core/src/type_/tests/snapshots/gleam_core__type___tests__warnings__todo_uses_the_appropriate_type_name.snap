@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn curry(_f: fn(a, b) -> c) -> fn(a) -> fn(b) -> c {\n  fn(_a: a) {\n    todo\n  }\n}"
+---
+----- SOURCE CODE
+
+pub fn curry(_f: fn(a, b) -> c) -> fn(a) -> fn(b) -> c {
+  fn(_a: a) {
+    todo
+  }
+}
+
+----- WARNING
+warning: Todo found
+  ┌─ /src/warning/wrn.gleam:4:5
+  │
+4 │     todo
+  │     ^^^^ This code is incomplete
+
+This code will crash if it is run. Be sure to finish it before
+running your program.
+
+Hint: I think its type is `fn(b) -> c`.
