@@ -11,7 +11,7 @@ use crate::{
             TodoOrPanic, UnreachablePatternReason,
         },
         expression::ComparisonOutcome,
-        pretty::Printer,
+        printer::Printer,
     },
 };
 use camino::Utf8PathBuf;
@@ -435,6 +435,7 @@ comment so it is not attached to any definition.",
                     kind,
                     location,
                     type_,
+                    names,
                 } => {
                     let mut text = String::new();
                     text.push_str(
@@ -465,7 +466,7 @@ A use expression must always be followed by at least one expression.",
                     let hint = if !type_.is_variable() {
                         Some(format!(
                             "I think its type is `{}`.\n",
-                            Printer::new().pretty_print(type_, 0)
+                            Printer::new(&names).print_type(type_)
                         ))
                     } else {
                         None
