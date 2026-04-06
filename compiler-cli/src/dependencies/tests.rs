@@ -1495,10 +1495,7 @@ fn test_pretty_print_outdated_versions_no_updates() {
 
     let output = pretty_print_outdated_versions(12, versions);
 
-    assert_eq!(
-        output,
-        "0 of 12 packages have newer versions available.\n"
-    );
+    assert_eq!(output, "0 of 12 packages have newer versions available.\n");
 }
 
 #[test]
