@@ -799,7 +799,8 @@ impl<'a> Document<'a> {
             // we can avoid boxing it.
             | Document::Str { .. }
             | Document::EcoString { .. }
-            | Document::ZeroWidthString { .. } => self,
+            | Document::ZeroWidthString { .. }
+            | Document::CursorPositionObserver { .. } => self,
 
             Document::Line(_)
             | Document::ForceBroken(_)
