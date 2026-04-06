@@ -233,7 +233,10 @@ pub fn outdated(paths: &ProjectPaths) -> Result<()> {
 
     let version_updates = dependency::check_for_version_updates(&manifest, &package_fetcher);
 
-    print!("{}", pretty_print_outdated_versions(total_packages, version_updates));
+    print!(
+        "{}",
+        pretty_print_outdated_versions(total_packages, version_updates)
+    );
 
     Ok(())
 }
@@ -444,14 +447,15 @@ fn pretty_print_outdated_versions(
     total_packages: usize,
     versions: dependency::PackageVersionDiffs,
 ) -> EcoString {
+    let summary = eco_format!(
+        "{} out of {} packages have newer versions available.",
+        versions.len(),
+        total_packages
+    );
+
     if versions.is_empty() {
-        EcoString::new()
+        eco_format!("{}\n", summary)
     } else {
-        let summary = eco_format!(
-            "{} out of {} packages are out of date.",
-            versions.len(),
-            total_packages
-        );
         eco_format!("{}\n\n{}", summary, pretty_print_version_updates(versions))
     }
 }
