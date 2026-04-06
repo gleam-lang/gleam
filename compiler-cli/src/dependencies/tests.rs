@@ -1485,7 +1485,7 @@ fn test_pretty_print_outdated_versions() {
 
     assert_eq!(
         output,
-        "3 out of 12 packages have newer versions available.\n\nPackage                 Current   Latest\n-------                 -------   ------\ngleam_stdlib            0.45.0    0.46.0\nvery_long_package_name  12.12.12  120.12.12\nwisp                    2.1.0     2.1.1\n"
+        "3 of 12 packages have newer versions available.\n\nPackage                 Current   Latest\n-------                 -------   ------\ngleam_stdlib            0.45.0    0.46.0\nvery_long_package_name  12.12.12  120.12.12\nwisp                    2.1.0     2.1.1\n"
     );
 }
 
@@ -1497,7 +1497,7 @@ fn test_pretty_print_outdated_versions_no_updates() {
 
     assert_eq!(
         output,
-        "0 out of 12 packages have newer versions available.\n"
+        "0 of 12 packages have newer versions available.\n"
     );
 }
 

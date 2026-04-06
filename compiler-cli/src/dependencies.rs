@@ -448,7 +448,7 @@ fn pretty_print_outdated_versions(
     versions: dependency::PackageVersionDiffs,
 ) -> EcoString {
     let summary = eco_format!(
-        "{} out of {} packages have newer versions available.",
+        "{} of {} packages have newer versions available.",
         versions.len(),
         total_packages
     );
