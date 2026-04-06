@@ -36,20 +36,12 @@ jobs:
         run: test -z $(git rev-list --after="24 hours" ${{ github.sha }}) && echo "should-run=false" >> $GITHUB_OUTPUT
 
       - name: Delete old release assets
-        uses: mknejp/delete-release-assets@6075939b519d4403c7fe1e20146faa9cd1370730 # v1
-        if: ${{ steps.should-run != 'false' }}
-        with:
-          token: ${{ github.token }}
-          tag: nightly
-          fail-if-no-assets: false
-          fail-if-no-release: false
-          assets: |
-            *.zip
-            *.tar.gz
-            *.sha256
-            *.sha512
-            *.sigstore
-            *.sbom.*.json
+        if: ${{ steps.should-run.outputs.should-run != 'false' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view nightly --json assets --jq '.assets[].name' | \
+            xargs -r -I {} gh release delete-asset nightly {} --yes
 
   build-release:
     name: build-release
