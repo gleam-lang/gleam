@@ -74,7 +74,11 @@ x
 }
 ⏷
 x) {
-    throw makeError(
+    
+----- 
+assert 
+⏷
+throw makeError(
       "assert",
       FILEPATH,
       "my/mod",

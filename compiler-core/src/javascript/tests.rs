@@ -272,48 +272,81 @@ pub fn source_map_to_string(src: &str, compiled: &str, source_map: SourceMap) ->
     let mut output = String::new();
     output.push_str("Mappings:\n");
     output.push_str("----- \n");
-    let mut prev_src_index = 0;
-    let mut prev_compiled_index = 0;
     let src_line_numbers = LineNumbers::new(&src);
     let compiled_line_numbers = LineNumbers::new(&compiled);
 
     // Since source maps can have multiple tokens for the same source index, we skip over the intermediate tokens and only keep tokens with a new source index.
-    let mut tokens = source_map.tokens().collect::<Vec<_>>();
-    tokens.sort_by_key(|token| token.get_src());
     // construct a vector of tuples of (src_line, src_col, dst_line, dst_col)
     let mut merged_tokens: Vec<((u32, u32), (u32, u32))> = Vec::new();
+    // Push a sentinel token at 0, 0
+    merged_tokens.push(((0, 0), (0, 0)));
     let mut prev_token_src = (0, 0);
-    for token in tokens {
+    for token in source_map.tokens() {
         if prev_token_src == token.get_src() {
             // Same source index, so extend the current token
+            // This is for making the source map more readable
             continue;
         } else {
-            // Different source index, so add the previous token to the merged tokens
+            // Different source index, so add the current token to the merged tokens
             merged_tokens.push((token.get_src(), token.get_dst()));
             prev_token_src = token.get_src();
         };
     }
+    let sorted_src_tokens = merged_tokens
+        .iter()
+        .sorted_by_key(|(src, _)| src)
+        .map(|(src, _)| *src)
+        .collect::<Vec<_>>();
+    let by_dst = merged_tokens
+        .iter()
+        .sorted_by_key(|(_, dst)| dst)
+        .collect::<Vec<_>>();
 
-    for ((src_line, src_col), (dst_line, dst_col)) in merged_tokens {
-        // get the index of this mapping in the source and compiled code
-        let src_index = src_line_numbers.byte_index(Position::new(src_line, src_col)) as usize;
+    let mut prev_compiled_index = 0;
+    // iterate over all but the last mapping
+    for i in 0..by_dst.len() - 1 {
+        let ((src_line, src_col), (dst_line, dst_col)) = by_dst[i];
+        let ((_, _), (next_dst_line, next_dst_col)) = by_dst[i + 1];
+        let (next_src_line, next_src_col) = sorted_src_tokens
+            .iter()
+            .find(|src| **src > (*src_line, *src_col))
+            .expect("next src token must exist");
+
+        let src_index = src_line_numbers.byte_index(Position::new(*src_line, *src_col)) as usize;
         let compiled_index =
-            compiled_line_numbers.byte_index(Position::new(dst_line, dst_col)) as usize;
-
-        // print the source and compiled code for this mapping by getting the substring of the source and compiled code
-        // from the previous mapping to the current mapping
-        output.push_str(&format!("{}\n", &src[prev_src_index..src_index]));
+            compiled_line_numbers.byte_index(Position::new(*dst_line, *dst_col)) as usize;
+        let next_src_index =
+            src_line_numbers.byte_index(Position::new(*next_src_line, *next_src_col)) as usize;
+        let next_compiled_index =
+            compiled_line_numbers.byte_index(Position::new(*next_dst_line, *next_dst_col)) as usize;
+        output.push_str(&format!("{}\n", &src[src_index..next_src_index]));
         output.push_str("⏷\n");
         output.push_str(&format!(
             "{}\n",
-            &compiled[prev_compiled_index..compiled_index]
+            &compiled[compiled_index..next_compiled_index]
         ));
         output.push_str("----- \n");
-        prev_src_index = src_index;
-        prev_compiled_index = compiled_index;
+        prev_compiled_index = next_compiled_index;
     }
-    // print the last mapping
-    output.push_str(&format!("{}\n", &src[prev_src_index..]));
+    // print the last mapping. this needs to be done separately because the last mapping will likely extend
+    // to the rest of the source code.
+    let (src_token, _) = by_dst.last().expect("last mapping must exist");
+    let src_index: usize =
+        src_line_numbers.byte_index(Position::new(src_token.0, src_token.1)) as usize;
+    // find the next src token after the last mapping if one exists
+    let next_src_token = sorted_src_tokens.iter().find(|src| **src > *src_token);
+    match next_src_token {
+        Some(next_src_token) => {
+            let next_src_index = src_line_numbers
+                .byte_index(Position::new(next_src_token.0, next_src_token.1))
+                as usize;
+            output.push_str(&format!("{}\n", &src[src_index..next_src_index]));
+        }
+        None => {
+            // if there is no next src token, print the rest of the source and compiled code
+            output.push_str(&format!("{}\n", &src[src_index..]));
+        }
+    }
     output.push_str("⏷\n");
     output.push_str(&format!("{}\n", &compiled[prev_compiled_index..]));
     output.push_str("----- \n");
