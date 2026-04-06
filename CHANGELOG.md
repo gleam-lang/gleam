@@ -75,6 +75,37 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now prints correctly qualified or aliased type names when
+  printing warnings. For example:
+
+  ```gleam
+  import user
+
+  pub fn main() {
+    user.to_string(todo)
+    |> io.println
+  }
+  ```
+
+  Will produce the following warning:
+
+  ```
+  warning: Todo found
+    ┌─ /src/warning/wrn.gleam:4:19
+    │
+  4 │     user.to_string(todo)
+    │                    ^^^^ This code is incomplete
+
+  This code will crash if it is run. Be sure to finish it before
+  running your program.
+
+  Hint: I think its type is `user.User`.
+  ```
+
+  Notice how the type hint is correctly qualified for the module the warning is
+  raised in.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler now emits a helpful error message when source code contains an
   invalid unicode character that looks similar to a correct character.
 
