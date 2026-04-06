@@ -331,8 +331,11 @@ impl<'module, 'a> Generator<'module, 'a> {
 
             TypedExpr::Call { fun, arguments, .. } => self.call(fun, arguments),
             TypedExpr::Fn {
-                arguments, body, ..
-            } => self.fn_(arguments, body),
+                arguments,
+                body,
+                kind,
+                ..
+            } => self.fn_(arguments, body, kind),
 
             TypedExpr::RecordAccess { record, label, .. } => self.record_access(record, label),
 
@@ -1542,7 +1545,12 @@ impl<'module, 'a> Generator<'module, 'a> {
         }
     }
 
-    fn fn_(&mut self, arguments: &'a [TypedArg], body: &'a [TypedStatement]) -> Document<'a> {
+    fn fn_(
+        &mut self,
+        arguments: &'a [TypedArg],
+        body: &'a [TypedStatement],
+        kind: &FunctionLiteralKind,
+    ) -> Document<'a> {
         // New function, this is now the tail position
         let function_position = std::mem::replace(&mut self.function_position, Position::Tail);
         let scope_position = std::mem::replace(&mut self.scope_position, Position::Tail);
@@ -1567,18 +1575,19 @@ impl<'module, 'a> Generator<'module, 'a> {
         self.current_scope_vars = scope;
         std::mem::swap(&mut self.current_function, &mut current_function);
 
-        docvec![
-            docvec![
-                fun_arguments(arguments, false),
-                " => {",
-                break_("", " "),
-                result
-            ]
-            .nest(INDENT)
-            .append(break_("", " "))
-            .group(),
-            "}",
-        ]
+        let mut docs = docvec![];
+
+        // If the function is a use then we need to add a source map tracker
+        // before the result to denote that the function is created by the use
+        if let FunctionLiteralKind::Use { location } = kind {
+            docs = docs.append(self.source_map_tracker(location.start));
+        }
+        docs = docs.append(fun_arguments(arguments, false));
+        docs = docs.append(" => {".to_doc());
+        docs = docs.append(break_("", " "));
+        docs = docs.append(result);
+
+        docvec![docs.nest(INDENT).append(break_("", " ")).group(), "}",]
     }
 
     fn record_access(&mut self, record: &'a TypedExpr, label: &'a str) -> Document<'a> {
