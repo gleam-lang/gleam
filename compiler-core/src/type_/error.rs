@@ -1018,23 +1018,6 @@ pub enum Warning {
         location: SrcSpan,
     },
 
-    /// This happens when an internal type is accidentally exposed in the public
-    /// API. Since internal types are excluded from documentation, completions
-    /// and the package interface, this would lead to poor developer experience.
-    ///
-    /// ```gleam
-    /// @internal type Wibble
-    ///
-    /// pub fn wibble(thing: Wibble) { todo }
-    /// //            ^^^^^^^^^^^^^ There would be no documentation
-    /// //                          explaining what `Wibble` is in the
-    /// //                          package's doc site.
-    /// ```
-    InternalTypeLeak {
-        location: SrcSpan,
-        leaked: Type,
-    },
-
     RedundantAssertAssignment {
         location: SrcSpan,
     },
@@ -1437,7 +1420,6 @@ impl Warning {
             | Warning::CaseMatchOnLiteralCollection { location, .. }
             | Warning::CaseMatchOnLiteralValue { location, .. }
             | Warning::OpaqueExternalType { location, .. }
-            | Warning::InternalTypeLeak { location, .. }
             | Warning::RedundantAssertAssignment { location, .. }
             | Warning::AssertAssignmentOnImpossiblePattern { location, .. }
             | Warning::TodoOrPanicUsedAsFunction { location, .. }
