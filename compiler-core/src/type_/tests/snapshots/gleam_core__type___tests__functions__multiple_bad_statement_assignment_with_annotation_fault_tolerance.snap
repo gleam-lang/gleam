@@ -39,19 +39,3 @@ Expected type:
 Found type:
 
     Int
-
-error: Type mismatch
-  ┌─ /src/one/two.gleam:5:11
-  │
-5 │   let c = a + 2
-  │           ^
-
-The + operator expects arguments of this type:
-
-    Int
-
-But this argument has this type:
-
-    String
-
-Hint: Strings can be joined using the `<>` operator.
