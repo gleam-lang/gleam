@@ -1,4 +1,5 @@
 use super::*;
+use insta::assert_debug_snapshot;
 use insta::assert_snapshot;
 
 #[test]
@@ -39,7 +40,7 @@ fn test_shell_program_not_found_error() {
 #[test]
 fn hex_session_revoked() {
     let err = Error::HexSessionRevoked.to_diagnostics();
-    assert_snapshot!("hex_session_revoked", err[0].text);
+    assert_debug_snapshot!(err[0]);
 }
 
 #[test]
