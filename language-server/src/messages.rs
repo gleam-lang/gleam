@@ -97,8 +97,12 @@ impl Request {
 pub enum Notification {
     /// A Gleam file has been modified in memory, and the new text is provided.
     SourceFileChangedInMemory { path: Utf8PathBuf, text: String },
-    /// A Gleam file has been saved or closed in the editor.
-    SourceFileMatchesDisc { path: Utf8PathBuf },
+    /// A Gleam file has been opened in the editor.
+    SourceFileOpened { path: Utf8PathBuf, text: String },
+    /// A Gleam file has been closed in the editor.
+    SourceFileClosed { path: Utf8PathBuf },
+    /// A gleam file has been save to disk
+    SourceFileSaved { path: Utf8PathBuf },
     /// gleam.toml has changed.
     ConfigFileChanged { path: Utf8PathBuf },
     /// It's time to compile all open projects.
@@ -110,7 +114,7 @@ impl Notification {
         match notification.method.as_str() {
             "textDocument/didOpen" => {
                 let params = cast_notification::<DidOpenTextDocument>(notification);
-                let notification = Notification::SourceFileChangedInMemory {
+                let notification = Notification::SourceFileOpened {
                     path: super::path(&params.text_document.uri),
                     text: params.text_document.text,
                 };
@@ -127,14 +131,14 @@ impl Notification {
 
             "textDocument/didSave" => {
                 let params = cast_notification::<DidSaveTextDocument>(notification);
-                let notification = Notification::SourceFileMatchesDisc {
+                let notification = Notification::SourceFileSaved {
                     path: super::path(&params.text_document.uri),
                 };
                 Some(Message::Notification(notification))
             }
             "textDocument/didClose" => {
                 let params = cast_notification::<DidCloseTextDocument>(notification);
-                let notification = Notification::SourceFileMatchesDisc {
+                let notification = Notification::SourceFileClosed {
                     path: super::path(&params.text_document.uri),
                 };
                 Some(Message::Notification(notification))
