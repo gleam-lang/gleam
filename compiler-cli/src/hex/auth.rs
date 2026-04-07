@@ -190,7 +190,12 @@ It will be used to locally encrypt your Hex API tokens.
             Ok(Some(tokens)) => return Ok(tokens.as_credentials()),
             Ok(None) => {}
             Err(Error::HexSessionRevoked) => {
-                // we get this error when refresh token can’t be used anymore
+                // This error occurs when the refresh token is no longer valid, typically
+                // because the user manually revoked the session in the Hex console.
+                // This is a recoverable error so instead of erroring out with a
+                // non-actionable message, we catch this and proceed to the OAuth flow
+                // to create a fresh set of credentials.
+                // Since the old token is already invalid, there is no need to revoke it.
             }
             Err(e) => return Err(e),
         }
