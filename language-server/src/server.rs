@@ -12,6 +12,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
 use gleam_core::{
     Result,
+    ast::SrcSpan,
     diagnostic::{Diagnostic, ExtraLabel, Label, Level, Location},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
@@ -446,15 +447,9 @@ where
             return self.outside_of_project_feedback.error(error);
         }
         // Validate the module filename and emit a diagnostic if invalid.
-        // If now valid, explicitly unset any previous file-name diagnostics for this file.
         let mut feedback = Feedback::none();
-        match self.validate_module_filename(&path, &text) {
-            Some(diagnostic) => {
-                feedback.append_diagnostic(path.clone(), diagnostic);
-            }
-            None => {
-                feedback.unset_existing_diagnostics(path);
-            }
+        if let Some(diagnostic) = self.validate_module_filename(&path, &text) {
+            feedback.append_diagnostic(path.clone(), diagnostic);
         }
         feedback
     }
@@ -464,10 +459,7 @@ where
         if let Err(error) = self.io.delete_mem_cache(&path) {
             return self.outside_of_project_feedback.error(error);
         }
-        // File closed or saved to disk. Unset any inline diagnostics for this file.
-        let mut feedback = Feedback::none();
-        feedback.unset_existing_diagnostics(path);
-        feedback
+        Feedback::none()
     }
 
     fn watched_files_changed(&mut self, path: Utf8PathBuf) -> Feedback {
@@ -510,35 +502,36 @@ where
 
     fn validate_module_filename(&self, path: &Utf8Path, src: &str) -> Option<Diagnostic> {
         // Only validate .gleam files
-        if path.extension().map(|e| e != "gleam").unwrap_or(true) {
+        if path.extension() != Some("gleam") {
             return None;
         }
 
-        // Only validate inside a Gleam project. Outside projects the LS may only provide formatting.
+        // Only validate inside a Gleam project.
+        // Outside projects the LS may only provide formatting.
         let project_root = self.router.project_path(path)?;
 
-        let rel = match path.strip_prefix(&project_root) {
-            Ok(p) => p,
+        let relative = match path.strip_prefix(&project_root) {
+            Ok(path) => path,
             Err(_) => return None,
         };
-        let rel_str = rel.as_str();
+        let relative_path = relative.as_str();
         // Trim the leading project area (src/test/dev)
-        let module_rel = if let Some(rest) = rel_str.strip_prefix("src/") {
+        let module_relative = if let Some(rest) = relative_path.strip_prefix("src/") {
             rest
-        } else if let Some(rest) = rel_str.strip_prefix("test/") {
+        } else if let Some(rest) = relative_path.strip_prefix("test/") {
             rest
-        } else if let Some(rest) = rel_str.strip_prefix("dev/") {
+        } else if let Some(rest) = relative_path.strip_prefix("dev/") {
             rest
         } else {
             return None;
         };
-        let module_name = module_rel.strip_suffix(".gleam")?;
+        let module_name = module_relative.strip_suffix(".gleam")?;
 
         // Check if the module name is valid
         let is_valid_format = is_gleam_module(module_name);
 
         // "gleam" is a reserved module name for the standard library
-        let is_reserved = module_name == "gleam" || module_name.starts_with("gleam/");
+        let is_reserved = module_name == "gleam";
 
         if is_valid_format && !is_reserved {
             return None;
@@ -547,12 +540,13 @@ where
         // Determine the error message based on what's wrong
         let error_message = if is_reserved {
             format!(
-                "The module name \"{module_name}\" is reserved for the Gleam standard library. \
-                 Please choose a different name."
+                "The module name \"{module_name}\" is reserved for the \
+                 Gleam standard library. Please choose a different name."
             )
         } else {
-            "Module names must be snake_case, starting with a lowercase letter \
-             and containing only lowercase letters, numbers, and underscores."
+            "Module names must be snake_case, starting with a lowercase \
+             letter and containing only lowercase letters, numbers, and \
+             underscores."
                 .to_string()
         };
 
@@ -568,7 +562,7 @@ where
                 path: path.to_path_buf(),
                 label: Label {
                     text: None,
-                    span: crate::ast::SrcSpan::new(0, span_end),
+                    span: SrcSpan::new(0, span_end),
                 },
                 extra_labels: vec![],
             }),
