@@ -174,6 +174,10 @@
 
 ### Language server
 
+- The language server can now find references for module names across project
+  modules.
+  ([Asish Kumar](https://github.com/officialasishkumar))
+
 - The language server now offers code actions to wrap a function reference in an
   anonymous function, or to remove a trivial anonymous function, leaving its
   contents. For example:
