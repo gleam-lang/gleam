@@ -1,8 +1,21 @@
+use std::{
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
+
+use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
 
 use crate::{
-    analyse::TargetSupport, assert_module_error, build::Target, type_::expression::Implementations,
+    analyse::TargetSupport,
+    assert_module_error,
+    build::{Origin, Target},
+    config::PackageConfig,
+    line_numbers::LineNumbers,
+    type_::{build_prelude, expression::Implementations, prelude::PRELUDE_MODULE_NAME},
+    uid::UniqueIdGenerator,
+    warning::{TypeWarningEmitter, VectorWarningEmitterIO, WarningEmitter, WarningEmitterIO},
 };
 
 use super::compile_module_with_opts;
@@ -28,6 +41,78 @@ pub fn implementations(src: &str) -> Vec<(EcoString, Implementations)> {
         TargetSupport::NotEnforced,
         None,
     )
+    .expect("compile src")
+    .type_info
+    .values
+    .into_iter()
+    .map(|(name, value)| (name, value.variant.implementations()))
+    .sorted()
+    .collect_vec()
+}
+
+fn dependency_implementations(
+    module_name: &str,
+    src: &str,
+    dep: Vec<(&str, &str, &str)>,
+) -> Vec<(EcoString, Implementations)> {
+    let ids = UniqueIdGenerator::new();
+    let warnings: Rc<dyn WarningEmitterIO> = Rc::new(VectorWarningEmitterIO::default());
+    let emitter = WarningEmitter::new(warnings);
+    let mut modules = im::HashMap::new();
+
+    let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
+    let mut direct_dependencies = HashMap::new();
+
+    for (package, name, module_src) in dep {
+        let parsed =
+            crate::parse::parse_module(Utf8PathBuf::from("test/path"), module_src, &emitter)
+                .expect("syntax error");
+        let mut ast = parsed.module;
+        ast.name = name.into();
+        let line_numbers = LineNumbers::new(module_src);
+        let mut config = PackageConfig::default();
+        config.name = package.into();
+
+        let module = crate::analyse::ModuleAnalyzerConstructor::<()> {
+            target: Target::Erlang,
+            ids: &ids,
+            origin: Origin::Src,
+            importable_modules: &modules,
+            warnings: &TypeWarningEmitter::null(),
+            direct_dependencies: &HashMap::new(),
+            dev_dependencies: &HashSet::new(),
+            target_support: TargetSupport::NotEnforced,
+            package_config: &config,
+        }
+        .infer_module(ast, line_numbers, "".into())
+        .expect("should successfully infer");
+
+        let _ = modules.insert(name.into(), module.type_info);
+
+        if package != "non-dependency-package" {
+            let _ = direct_dependencies.insert(package.into(), ());
+        }
+    }
+
+    let parsed = crate::parse::parse_module(Utf8PathBuf::from("test/path"), src, &emitter)
+        .expect("syntax error");
+    let mut ast = parsed.module;
+    ast.name = module_name.into();
+    let mut config = PackageConfig::default();
+    config.name = "thepackage".into();
+
+    crate::analyse::ModuleAnalyzerConstructor::<()> {
+        target: Target::Erlang,
+        ids: &ids,
+        origin: Origin::Src,
+        importable_modules: &modules,
+        warnings: &TypeWarningEmitter::null(),
+        direct_dependencies: &direct_dependencies,
+        dev_dependencies: &HashSet::new(),
+        target_support: TargetSupport::NotEnforced,
+        package_config: &config,
+    }
+    .infer_module(ast, LineNumbers::new(src), "".into())
     .expect("compile src")
     .type_info
     .values
@@ -136,6 +221,67 @@ pub fn all_externals_2() { all_externals_1() * 2 }
             )
         ],
     );
+}
+
+#[test]
+pub fn imported_module_select_does_not_create_false_cycle() {
+    let result = dependency_implementations(
+        "test_module",
+        r#"
+import option
+
+@external(javascript, "../gleam_stdlib/gleam/function.mjs", "identity")
+pub fn id(a: a) -> a
+
+fn wibble() -> option.Option(Int) {
+  option.Some(id(42))
+}
+
+pub fn option() -> option.Option(Int) {
+  wibble()
+}
+"#,
+        vec![(
+            "thepackage",
+            "option",
+            "pub type Option(a) { Some(a) None }",
+        )],
+    );
+
+    let expected = vec![
+        (
+            "id".into(),
+            Implementations {
+                gleam: false,
+                uses_erlang_externals: false,
+                uses_javascript_externals: true,
+                can_run_on_erlang: false,
+                can_run_on_javascript: true,
+            },
+        ),
+        (
+            "option".into(),
+            Implementations {
+                gleam: false,
+                uses_erlang_externals: false,
+                uses_javascript_externals: true,
+                can_run_on_erlang: false,
+                can_run_on_javascript: true,
+            },
+        ),
+        (
+            "wibble".into(),
+            Implementations {
+                gleam: false,
+                uses_erlang_externals: false,
+                uses_javascript_externals: true,
+                can_run_on_erlang: false,
+                can_run_on_javascript: true,
+            },
+        ),
+    ];
+
+    assert_eq!(expected, result);
 }
 
 #[test]

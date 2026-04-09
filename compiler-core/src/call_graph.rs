@@ -13,13 +13,16 @@ use crate::{
     },
     type_::Error,
 };
+use ecow::EcoString;
 use itertools::Itertools;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::{Directed, stable_graph::StableGraph};
+use std::collections::HashSet;
 
 #[derive(Debug, Default)]
 struct CallGraphBuilder<'a> {
     names: im::HashMap<&'a str, Option<(NodeIndex, SrcSpan)>>,
+    imported_module_names: HashSet<EcoString>,
     graph: StableGraph<(), (), Directed>,
     current_function: NodeIndex,
 }
@@ -134,6 +137,12 @@ impl<'a> CallGraphBuilder<'a> {
         let Some((target, _)) = target else { return };
 
         _ = self.graph.add_edge(self.current_function, *target, ());
+    }
+
+    fn is_imported_module_name(&self, name: &str) -> bool {
+        self.imported_module_names
+            .iter()
+            .any(|module_name| module_name.as_str() == name)
     }
 
     fn statements(&mut self, statements: &'a [UntypedStatement]) {
@@ -263,9 +272,10 @@ impl<'a> CallGraphBuilder<'a> {
             | UntypedExpr::FieldAccess {
                 container: expression,
                 ..
-            } => {
-                self.expression(expression);
-            }
+            } => match expression.as_ref() {
+                UntypedExpr::Var { name, .. } if self.is_imported_module_name(name) => (),
+                _ => self.expression(expression),
+            },
 
             UntypedExpr::BitArray { segments, .. } => {
                 for segment in segments {
@@ -444,9 +454,16 @@ impl<'a> CallGraphBuilder<'a> {
 
             ClauseGuard::TupleIndex { tuple, .. } => self.guard(tuple),
 
-            ClauseGuard::FieldAccess { container, .. } => self.guard(container),
+            ClauseGuard::FieldAccess { container, .. } => match container.as_ref() {
+                ClauseGuard::Var { name, .. } if self.is_imported_module_name(name) => (),
+                _ => self.guard(container),
+            },
 
-            ClauseGuard::ModuleSelect { module_name, .. } => self.referenced(module_name),
+            ClauseGuard::ModuleSelect { module_name, .. } => {
+                if !self.is_imported_module_name(module_name) {
+                    self.referenced(module_name)
+                }
+            }
 
             ClauseGuard::Constant(constant) => self.constant(constant),
         }
@@ -511,8 +528,12 @@ impl<'a> CallGraphBuilder<'a> {
 pub fn into_dependency_order(
     functions: Vec<UntypedFunction>,
     constants: Vec<UntypedModuleConstant>,
+    imported_module_names: Vec<EcoString>,
 ) -> Result<Vec<Vec<CallGraphNode>>, Error> {
-    let mut grapher = CallGraphBuilder::default();
+    let mut grapher = CallGraphBuilder {
+        imported_module_names: imported_module_names.into_iter().collect(),
+        ..Default::default()
+    };
 
     for function in &functions {
         grapher.register_module_function_existence(function)?;
