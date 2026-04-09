@@ -109,6 +109,10 @@
 
 ### Build tool
 
+- File IO errors for copy and link operations now include both the source and
+  destination paths.
+  ([cijiugechu](https://github.com/cijiugechu))
+
 - The `gleam hex owner add` command has been added, which allows adding
   owners to the package.
   ([Niklas Kirschall](https://github.com/nkxxll))
