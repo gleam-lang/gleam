@@ -10,7 +10,7 @@ use gleam_core::{
         ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypeAstConstructorName, TypedExpr,
         TypedModule, visit::Visit,
     },
-    build::Located,
+    build::{Located, Module},
     type_::{
         ModuleInterface, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant,
         error::{Named, VariableOrigin},
@@ -398,6 +398,63 @@ pub fn find_module_references(
                 &mut reference_locations,
                 layer,
             );
+        }
+    }
+
+    reference_locations
+}
+
+pub fn find_module_name_references(
+    module_name: &EcoString,
+    modules: &HashMap<EcoString, Module>,
+    sources: &HashMap<EcoString, ModuleSourceInformation>,
+) -> Vec<Location> {
+    let mut reference_locations = Vec::new();
+
+    for module in modules.values() {
+        let Some(source_information) = sources.get(&module.name) else {
+            continue;
+        };
+
+        let Some(uri) = url_from_path(source_information.path.as_str()) else {
+            continue;
+        };
+
+        for import in module
+            .ast
+            .definitions
+            .imports
+            .iter()
+            .filter(|import| import.module == *module_name)
+        {
+            let module_alias = match import.as_name.as_ref() {
+                Some((AssignName::Variable(alias) | AssignName::Discard(alias), _)) => {
+                    alias.clone()
+                }
+                None => import
+                    .module
+                    .split('/')
+                    .next_back()
+                    .map(EcoString::from)
+                    .unwrap_or_else(|| import.module.clone()),
+            };
+
+            let mut finder = FindModuleNameReferences {
+                references: Vec::new(),
+                module_name,
+                module_alias: &module_alias,
+            };
+            finder.visit_typed_module(&module.ast);
+
+            for reference in finder.references {
+                reference_locations.push(Location {
+                    uri: uri.clone(),
+                    range: src_span_to_lsp_range(
+                        reference.location,
+                        &source_information.line_numbers,
+                    ),
+                });
+            }
         }
     }
 
@@ -832,7 +889,7 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
             None => {
                 if import.module == *self.module_name {
                     self.references.push(ModuleNameReference {
-                        location: import.location,
+                        location: import.module_location,
                         kind: ModuleNameReferenceKind::Import,
                     })
                 }

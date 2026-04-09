@@ -55,8 +55,8 @@ use super::{
     files::FileSystemProxy,
     progress::ProgressReporter,
     reference::{
-        FindVariableReferences, Referenced, VariableReferenceKind, find_module_references,
-        reference_for_ast_node,
+        FindVariableReferences, Referenced, VariableReferenceKind, find_module_name_references,
+        find_module_references, reference_for_ast_node,
     },
     rename::{RenameOutcome, RenameTarget, Renamed, rename_local_variable, rename_module_entity},
     signature_help, src_span_to_lsp_range,
@@ -955,6 +955,15 @@ where
                     this.compiler.project_compiler.get_importable_modules(),
                     &this.compiler.sources,
                     ast::Layer::Type,
+                )),
+                Some(Referenced::ModuleName {
+                    module_name,
+                    location,
+                    ..
+                }) if location.contains(byte_index) => Some(find_module_name_references(
+                    &module_name,
+                    &this.compiler.modules,
+                    &this.compiler.sources,
                 )),
                 _ => None,
             })

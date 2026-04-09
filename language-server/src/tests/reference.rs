@@ -736,6 +736,60 @@ pub fn main() -> Wibble {
 }
 
 #[test]
+fn references_for_module_name() {
+    assert_references!(
+        (
+            "maths",
+            "
+pub fn pi() -> Float {
+  3.14
+}
+"
+        ),
+        "
+import maths
+
+pub fn main() {
+  maths.pi()
+}
+",
+        find_position_of("maths"),
+    );
+}
+
+#[test]
+fn references_for_module_name_across_modules() {
+    assert_references!(
+        TestProject::for_source(
+            "
+import mod
+
+pub fn main() {
+  let _: mod.Foo = mod.Bar
+}
+"
+        )
+        .add_module(
+            "mod",
+            "
+pub type Foo { Bar }
+",
+        )
+        .add_module(
+            "mod2",
+            "
+import mod
+
+pub fn fob() {
+  mod.Bar
+}
+",
+        ),
+        find_position_of("mod"),
+    );
+}
+
+#[test]
 fn references_for_type_from_let_annotation() {
     assert_references!(
         (

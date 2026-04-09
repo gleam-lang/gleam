@@ -1,0 +1,20 @@
+---
+source: language-server/src/tests/reference.rs
+expression: "\nimport maths\n\npub fn main() {\n  maths.pi()\n}\n"
+---
+-- maths.gleam
+
+pub fn pi() -> Float {
+  3.14
+}
+
+
+-- app.gleam
+
+import maths
+       ↑▔▔▔▔
+
+pub fn main() {
+  maths.pi()
+  ▔▔▔▔▔     
+}

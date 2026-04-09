@@ -1,0 +1,29 @@
+---
+source: language-server/src/tests/reference.rs
+expression: "\nimport mod\n\npub fn main() {\n  let _: mod.Foo = mod.Bar\n}\n"
+---
+-- mod.gleam
+
+pub type Foo { Bar }
+
+
+-- mod2.gleam
+
+import mod
+       ▔▔▔
+
+pub fn fob() {
+  mod.Bar
+  ▔▔▔    
+}
+
+
+-- app.gleam
+
+import mod
+       ↑▔▔
+
+pub fn main() {
+  let _: mod.Foo = mod.Bar
+         ▔▔▔       ▔▔▔    
+}
