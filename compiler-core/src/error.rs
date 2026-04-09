@@ -133,6 +133,15 @@ pub enum Error {
         err: Option<String>,
     },
 
+    #[error("{action:?} {path:?} -> {destination:?} failed: {err:?}")]
+    FileIoWithDestination {
+        kind: FileKind,
+        action: FileIoAction,
+        path: Utf8PathBuf,
+        destination: Utf8PathBuf,
+        err: Option<String>,
+    },
+
     #[error("Non Utf-8 Path: {path}")]
     NonUtf8Path { path: PathBuf },
 
@@ -861,6 +870,55 @@ impl Error {
         for diagnostic in self.to_diagnostics() {
             diagnostic.write(buffer);
             writeln!(buffer).expect("write new line after diagnostic");
+        }
+    }
+
+    fn file_io_diagnostic(
+        action: &FileIoAction,
+        kind: &FileKind,
+        path: &Utf8Path,
+        destination: Option<&Utf8Path>,
+        err: &Option<String>,
+    ) -> Diagnostic {
+        let err = match err {
+            Some(e) => {
+                format!("\nThe error message from the file IO library was:\n\n    {e}\n")
+            }
+            None => "".into(),
+        };
+        let mut text = match destination {
+            Some(destination) => format!(
+                "An error occurred while trying to {} this {}:\n\n    from: {}\n    to:   {}\n{}",
+                action.text(),
+                kind.text(),
+                path,
+                destination,
+                err,
+            ),
+            None => format!(
+                "An error occurred while trying to {} this {}:\n\n    {}\n{}",
+                action.text(),
+                kind.text(),
+                path,
+                err,
+            ),
+        };
+        if cfg!(target_family = "windows") && action == &FileIoAction::Link {
+            text.push_str(
+                "
+
+Windows does not support symbolic links without developer mode
+or admin privileges. Please enable developer mode and try again.
+
+https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development#activate-developer-mode",
+            );
+        }
+        Diagnostic {
+            title: "File IO failure".into(),
+            text,
+            hint: None,
+            level: Level::Error,
+            location: None,
         }
     }
 
@@ -1597,39 +1655,21 @@ Erlang modules must have unique names regardless of the subfolders where their
                 action,
                 path,
                 err,
-            } => {
-                let err = match err {
-                    Some(e) => {
-                        format!("\nThe error message from the file IO library was:\n\n    {e}\n")
-                    }
-                    None => "".into(),
-                };
-                let mut text = format!(
-                    "An error occurred while trying to {} this {}:
+            } => vec![Self::file_io_diagnostic(action, kind, path, None, err)],
 
-    {}
-{}",
-                    action.text(),
-                    kind.text(),
-                    path,
-                    err,
-                );
-                if cfg!(target_family = "windows") && action == &FileIoAction::Link {
-                    text.push_str("
-
-Windows does not support symbolic links without developer mode
-or admin privileges. Please enable developer mode and try again.
-
-https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development#activate-developer-mode");
-                }
-                vec![Diagnostic {
-                    title: "File IO failure".into(),
-                    text,
-                    hint: None,
-                    level: Level::Error,
-                    location: None,
-                }]
-            }
+            Error::FileIoWithDestination {
+                kind,
+                action,
+                path,
+                destination,
+                err,
+            } => vec![Self::file_io_diagnostic(
+                action,
+                kind,
+                path,
+                Some(destination),
+                err,
+            )],
 
             Error::FailedToEncryptLocalHexApiKey { detail } => {
                 let text = wrap_format!(

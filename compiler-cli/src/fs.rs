@@ -601,12 +601,12 @@ pub fn copy(
 ) -> Result<(), Error> {
     tracing::debug!(from=?path, to=?to, "copying_file");
 
-    // TODO: include the destination in the error message
     std::fs::copy(path.as_ref(), to.as_ref())
-        .map_err(|err| Error::FileIo {
+        .map_err(|err| Error::FileIoWithDestination {
             action: FileIoAction::Copy,
             kind: FileKind::File,
             path: Utf8PathBuf::from(path.as_ref()),
+            destination: Utf8PathBuf::from(to.as_ref()),
             err: Some(err.to_string()),
         })
         .map(|_| ())
@@ -632,7 +632,6 @@ pub fn copy_dir(
 ) -> Result<(), Error> {
     tracing::debug!(from=?path, to=?to, "copying_directory");
 
-    // TODO: include the destination in the error message
     fs_extra::dir::copy(
         path.as_ref(),
         to.as_ref(),
@@ -640,10 +639,11 @@ pub fn copy_dir(
             .copy_inside(false)
             .content_only(true),
     )
-    .map_err(|err| Error::FileIo {
+    .map_err(|err| Error::FileIoWithDestination {
         action: FileIoAction::Copy,
         kind: FileKind::Directory,
         path: Utf8PathBuf::from(path.as_ref()),
+        destination: Utf8PathBuf::from(to.as_ref()),
         err: Some(err.to_string()),
     })
     .map(|_| ())
@@ -657,14 +657,15 @@ pub fn symlink_dir(
     let src = canonicalise(src.as_ref())?;
 
     #[cfg(target_family = "windows")]
-    let result = std::os::windows::fs::symlink_dir(src, dest.as_ref());
+    let result = std::os::windows::fs::symlink_dir(&src, dest.as_ref());
     #[cfg(not(target_family = "windows"))]
-    let result = std::os::unix::fs::symlink(src, dest.as_ref());
+    let result = std::os::unix::fs::symlink(&src, dest.as_ref());
 
-    result.map_err(|err| Error::FileIo {
+    result.map_err(|err| Error::FileIoWithDestination {
         action: FileIoAction::Link,
-        kind: FileKind::File,
-        path: Utf8PathBuf::from(dest.as_ref()),
+        kind: FileKind::Directory,
+        path: src,
+        destination: Utf8PathBuf::from(dest.as_ref()),
         err: Some(err.to_string()),
     })?;
     Ok(())
@@ -676,10 +677,11 @@ pub fn hardlink(
 ) -> Result<(), Error> {
     tracing::debug!(from=?from, to=?to, "hardlinking");
     std::fs::hard_link(from.as_ref(), to.as_ref())
-        .map_err(|err| Error::FileIo {
+        .map_err(|err| Error::FileIoWithDestination {
             action: FileIoAction::Link,
             kind: FileKind::File,
             path: Utf8PathBuf::from(from.as_ref()),
+            destination: Utf8PathBuf::from(to.as_ref()),
             err: Some(err.to_string()),
         })
         .map(|_| ())

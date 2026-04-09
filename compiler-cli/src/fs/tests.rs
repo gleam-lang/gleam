@@ -1,4 +1,5 @@
 use camino::Utf8Path;
+use gleam_core::error::{Error, FileIoAction, FileKind};
 use itertools::Itertools;
 
 #[test]
@@ -186,4 +187,50 @@ HOME_URL=\"https://www.ubuntu.com/\"
         super::extract_distro_id("\nID=\"id first\"\nID=another_id".to_string()),
         "id first"
     );
+}
+
+#[test]
+fn copy_error_includes_destination_path() {
+    let tmp_dir = tempfile::tempdir().unwrap();
+    let path = Utf8Path::from_path(tmp_dir.path()).expect("Non Utf-8 Path");
+    let source = path.join("source.txt");
+    let destination = path.join("missing/out.txt");
+    super::write(&source, "hello").unwrap();
+
+    let error = super::copy(&source, &destination).unwrap_err();
+
+    assert!(matches!(
+        error,
+        Error::FileIoWithDestination {
+            action: FileIoAction::Copy,
+            kind: FileKind::File,
+            path,
+            destination: error_destination,
+            ..
+        } if path == source && error_destination == destination
+    ));
+}
+
+#[test]
+fn copy_dir_error_includes_destination_path() {
+    let tmp_dir = tempfile::tempdir().unwrap();
+    let path = Utf8Path::from_path(tmp_dir.path()).expect("Non Utf-8 Path");
+    let source = path.join("source");
+    let destination = path.join("destination");
+    super::mkdir(&source).unwrap();
+    super::write(&source.join("one.txt"), "hello").unwrap();
+    super::write(&destination, "not a directory").unwrap();
+
+    let error = super::copy_dir(&source, &destination).unwrap_err();
+
+    assert!(matches!(
+        error,
+        Error::FileIoWithDestination {
+            action: FileIoAction::Copy,
+            kind: FileKind::Directory,
+            path,
+            destination: error_destination,
+            ..
+        } if path == source && error_destination == destination
+    ));
 }
