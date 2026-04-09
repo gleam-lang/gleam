@@ -275,8 +275,11 @@ pub fn source_map_to_string(src: &str, compiled: &str, source_map: SourceMap) ->
     let src_line_numbers = LineNumbers::new(&src);
     let compiled_line_numbers = LineNumbers::new(&compiled);
 
-    // Since source maps can have multiple tokens for the same source index, we skip over the intermediate tokens and only keep tokens with a new source index.
-    // construct a vector of tuples of (src_line, src_col, dst_line, dst_col)
+    // Since source maps can have multiple tokens for the same source index, we skip over the
+    // intermediate tokens and only keep tokens with a new source index.
+    //
+    // Construct a vector of tuples of (src_line, src_col, dst_line, dst_col)
+    //
     let mut merged_tokens: Vec<((u32, u32), (u32, u32))> = Vec::new();
     // Push a sentinel token at 0, 0
     merged_tokens.push(((0, 0), (0, 0)));
@@ -328,8 +331,8 @@ pub fn source_map_to_string(src: &str, compiled: &str, source_map: SourceMap) ->
         output.push_str("----- \n");
         prev_compiled_index = next_compiled_index;
     }
-    // print the last mapping. this needs to be done separately because the last mapping will likely extend
-    // to the rest of the source code.
+    // Print the last mapping. this needs to be done separately because the last mapping
+    // will likely extend to the rest of the source code.
     let (src_token, _) = by_dst.last().expect("last mapping must exist");
     let src_index: usize =
         src_line_numbers.byte_index(Position::new(src_token.0, src_token.1)) as usize;
@@ -343,7 +346,7 @@ pub fn source_map_to_string(src: &str, compiled: &str, source_map: SourceMap) ->
             output.push_str(&format!("{}\n", &src[src_index..next_src_index]));
         }
         None => {
-            // if there is no next src token, print the rest of the source and compiled code
+            // If there is no next src token, print the rest of the source and compiled code
             output.push_str(&format!("{}\n", &src[src_index..]));
         }
     }
