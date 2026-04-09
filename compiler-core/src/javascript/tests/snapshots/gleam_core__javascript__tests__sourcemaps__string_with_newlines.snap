@@ -1,0 +1,85 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+assertion_line: 257
+expression: "\npub fn wibble(lon, acc) {\n  let one = \"one\"\n  let two = \"one\n\ntwo\n\nthree\n\"\n    let three = \"three\"\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+0 |
+1 |pub fn wibble(lon, acc) {
+2 |  let one = "one"
+3 |  let two = "one
+4 |
+5 |two
+6 |
+7 |three
+8 |"
+9 |    let three = "three"
+10 |}
+
+----- COMPILED JAVASCRIPT
+0 |//# sourceMappingURL=mod.mjs.map
+1 |export function wibble(lon, acc) {
+2 |  let one = "one";
+3 |  let two = "one\n\ntwo\n\nthree\n";
+4 |  let three = "three";
+5 |  return three;
+6 |}
+
+----- SOURCE MAP
+Mappings:
+----- 
+
+
+⏷
+//# sourceMappingURL=mod.mjs.map
+
+----- 
+pub fn wibble(lon, acc) {
+  
+⏷
+export function wibble(lon, acc) {
+  
+----- 
+let one = 
+⏷
+let one = 
+----- 
+"one"
+  
+⏷
+"one";
+  
+----- 
+let two = 
+⏷
+let two = 
+----- 
+"one
+
+two
+
+three
+"
+    
+⏷
+"one\n\ntwo\n\nthree\n";
+  
+----- 
+let three = 
+⏷
+let three = 
+----- 
+"three"
+}
+⏷
+"three";
+  return three;
+}
+----- 
+
+
+⏷
+
+
+-----

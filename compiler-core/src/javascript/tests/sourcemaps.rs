@@ -251,3 +251,21 @@ pub fn wibble(lon, acc) {
 "
     )
 }
+
+#[test]
+fn string_with_newlines() {
+    assert_source_map!(
+        r#"
+pub fn wibble(lon, acc) {
+  let one = "one"
+  let two = "one
+
+two
+
+three
+"
+    let three = "three"
+}
+"#
+    )
+}
