@@ -27,12 +27,12 @@ test: ## Run the compiler unit tests
 	cd test/running_modules && make test
 	cd test/subdir_ffi && make
 
-.PHONY: insta-check-unused
-insta-check-unused: ## Check for unused cargo insta snapshots
+.PHONY: snapshots-check-unused
+snapshots-check-unused: ## Check for unused cargo insta snapshots
 	cargo insta test --unreferenced=warn
 
-.PHONY: insta-fix-unused
-insta-fix-unused: ## Remove unused cargo insta snapshots
+.PHONY: snapshots-fix-unused
+snapshots-fix-unused: ## Remove unused cargo insta snapshots
 	cargo insta test --unreferenced=delete
 
 .PHONY: language-test
