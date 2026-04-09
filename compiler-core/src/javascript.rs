@@ -433,14 +433,15 @@ impl<'a> Generator<'a> {
         {
             definitions.push(self.shared_custom_type_fields(name, &accessors_map.shared_accessors));
         }
-        // Add start and end position source map trackers to the first and last definition in place
-        // This is to prevent extra new lines from being added to the output
-        // Since each definition is a separate statement in the output
+        // Add start and end position source map trackers to the first and last
+        // definition in place. This is to prevent extra new lines from being added
+        // to the output Since each definition is a separate statement in the output.
         let start_location = custom_type
             .documentation
             .as_ref()
-            // 3 is the length of the "///" documentation marker
-            // start is the index of the actual content so we need to subtract the length of the marker.
+            // 3 is the length of the "///" documentation marker.
+            // Start is the index of the actual content, so we need to subtract
+            // the length of the marker.
             .map_or(custom_type.location.start, |(start, _)| *start - 3);
         let first_definition = definitions.remove(0);
         definitions.insert(
@@ -639,8 +640,9 @@ impl<'a> Generator<'a> {
 
         let doc = if let Some((start, documentation)) = &constructor.documentation {
             docvec![
-                // 3 is the length of the "///" documentation marker
-                // start is the index of the actual content so we need to subtract the length of the marker.
+                // 3 is the length of the "///" documentation marker.
+                // Start is the index of the actual content, so we need to subtract
+                // the length of the marker.
                 self.source_map_tracker(*start - 3),
                 jsdoc_comment(documentation, publicity),
                 line()
@@ -873,8 +875,9 @@ impl<'a> Generator<'a> {
 
         let jsdoc = if let Some((start, documentation)) = documentation {
             docvec![
-                // 3 is the length of the "///" documentation marker
-                // start is the index of the actual content so we need to subtract the length of the marker.
+                // 3 is the length of the "///" documentation marker.
+                // Start is the index of the actual content, so we need to subtract
+                // the length of the marker.
                 self.source_map_tracker(*start - 3),
                 jsdoc_comment(documentation, *publicity),
                 line()
@@ -936,8 +939,9 @@ impl<'a> Generator<'a> {
             None => nil(),
             Some((start, documentation)) => {
                 docvec![
-                    // 3 is the length of the "///" documentation marker
-                    // start is the index of the actual content so we need to subtract the length of the marker.
+                    // 3 is the length of the "///" documentation marker.
+                    // Start is the index of the actual content, so we need to subtract
+                    // the length of the marker.
                     self.source_map_tracker(*start - 3),
                     jsdoc_comment(documentation, function.publicity),
                     line()
@@ -1048,9 +1052,10 @@ pub fn module(config: ModuleConfig<'_>) -> (String, Option<SourceMap>) {
         (document.to_pretty_string(80), builder)
     };
     let source_map = sourcemap_builder.map(|builder| {
-        // We have completed the generation of the module, so we can now take ownership of the builder.
+        // We have completed the generation of the module, so we can now take ownership
+        // of the builder.
         Rc::try_unwrap(builder)
-            .unwrap_or_else(|_| panic!("Failed to take ownership of sourcemap builder"))
+            .expect("Failed to take ownership of sourcemap builder")
             .into_inner()
             .0
             .into_sourcemap()
@@ -1274,7 +1279,7 @@ pub(crate) struct UsageTracker {
     pub echo_used: bool,
 }
 
-fn bool<'a>(bool: bool) -> Document<'a> {
+fn bool(bool: bool) -> Document<'static> {
     match bool {
         true => "true".to_doc(),
         false => "false".to_doc(),

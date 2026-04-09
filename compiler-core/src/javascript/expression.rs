@@ -2567,7 +2567,7 @@ pub fn float(value: &str) -> Document<'_> {
     out.to_doc()
 }
 
-pub fn float_from_value<'a>(value: f64) -> Document<'a> {
+pub fn float_from_value(value: f64) -> Document<'static> {
     if value.is_infinite() {
         if value.is_sign_positive() {
             "Infinity".to_doc()
