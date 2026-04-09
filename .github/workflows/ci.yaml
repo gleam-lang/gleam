@@ -84,7 +84,7 @@ jobs:
           persist-credentials: false
 
       - name: Install musl-tools incl. musl-gcc
-        uses: awalsh128/cache-apt-pkgs-action@2c09a5e66da6c8016428a2172bd76e5e4f14bb17 # v1.5.3
+        uses: awalsh128/cache-apt-pkgs-action@acb598e5ddbc6f68a970c5da0688d2f3a9f04d05 # v1.6.0
         with:
           # musl-tools provide `musl-gcc` which is required for `ring` which is required for `rustls` et al.
           packages: musl-tools
@@ -98,7 +98,7 @@ jobs:
           target: ${{ matrix.target }}
 
       - name: Install Erlang
-        uses: erlef/setup-beam@ee09b1e59bb240681c382eb1f0abc6a04af72764 # v1.23.0
+        uses: erlef/setup-beam@fc68ffb90438ef2936bbb3251622353b3dcb2f93 # v1.24.0
         with:
           otp-version: "28.0.1"
           elixir-version: "1.18"
@@ -125,7 +125,7 @@ jobs:
           key: v1-${{ matrix.target }}
 
       - name: Install Gleam
-        uses: clechasseur/rs-cargo@2a8aa939121c79dd2b4305ed6bf83bc400ce1036 # v4.0.2
+        uses: clechasseur/rs-cargo@34806c2f3a52f2f236510fb17044cbcc62f04eba # v5.0.3
         with:
           command: install
           args: "--path gleam-bin --target ${{ matrix.target }} --debug --locked --force"
@@ -150,7 +150,7 @@ jobs:
         if: ${{ matrix.run-integration-tests }}
 
       - name: Run tests
-        uses: clechasseur/rs-cargo@2a8aa939121c79dd2b4305ed6bf83bc400ce1036 # v4.0.2
+        uses: clechasseur/rs-cargo@34806c2f3a52f2f236510fb17044cbcc62f04eba # v5.0.3
         with:
           command: test
           # We only want to run the `test-output` when running integration tests.
@@ -442,7 +442,7 @@ jobs:
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
 
       - name: Install Erlang
-        uses: erlef/setup-beam@ee09b1e59bb240681c382eb1f0abc6a04af72764 # v1.23.0
+        uses: erlef/setup-beam@fc68ffb90438ef2936bbb3251622353b3dcb2f93 # v1.24.0
         with:
           otp-version: "26.1"
           elixir-version: "1.16.1"
