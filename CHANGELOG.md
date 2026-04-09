@@ -39,6 +39,17 @@
   deprecated.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The compiler now gives a better error message when an `@external`
+  attribute is incomplete. For example:
+
+  ```gleam
+  @external
+  pub fn wibble()
+  ```
+
+  now points to the attribute itself and explains that it is incomplete.
+  ([Asish Kumar](https://github.com/officialasishkumar))
+
 ### Build tool
 
 - The build tool now generates Hexdocs URLs using the new format of
