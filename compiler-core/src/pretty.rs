@@ -532,12 +532,11 @@ fn format(
         match document {
             // When we run into a line we print the given number of newlines and
             // add the indentation required by the given document.
-            Document::Line(i) => {
-                for _ in 0..*i {
+            Document::Line(count) => {
+                for _ in 0..*count {
                     writer.str_write("\n")?;
                 }
-                // i will always be positive, so we can safely cast it to isize
-                line += *i as isize;
+                line += *count as isize;
                 for _ in 0..indent {
                     writer.str_write(" ")?;
                 }
