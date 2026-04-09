@@ -49,6 +49,17 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now gives a better error message when an `@external`
+  attribute is incomplete. For example:
+
+  ```gleam
+  @external
+  pub fn wibble()
+  ```
+
+  now points to the attribute itself and explains that it is incomplete.
+  ([Asish Kumar](https://github.com/officialasishkumar))
+
 - The compiler now raises a warning on the JavaScript target when defining an
   integer segment with a size higher than 52 bits. For example, this code:
 

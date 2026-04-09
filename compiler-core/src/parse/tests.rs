@@ -718,6 +718,17 @@ pub fn one(x: Int) -> Int {
 }
 
 #[test]
+fn external_with_no_arguments() {
+    assert_module_error!(
+        r#"
+@external
+pub fn one(x: Int) -> Int {
+  todo
+}"#
+    );
+}
+
+#[test]
 fn unknown_target() {
     assert_module_error!(
         r#"
