@@ -4904,3 +4904,20 @@ pub fn go(x: BitArray) {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5599
+#[test]
+fn bit_array_size_constant() {
+    assert_no_warnings!(
+        r#"
+const some_size = 2
+
+pub fn run(data) {
+  case data {
+    <<x:bytes-size(some_size), _:bits>> -> x
+    _ -> data
+  }
+}
+        "#
+    );
+}

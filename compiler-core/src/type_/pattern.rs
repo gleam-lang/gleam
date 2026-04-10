@@ -1383,6 +1383,31 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     },
                 };
 
+                match &constructor.variant {
+                    ValueConstructorVariant::LocalVariable { .. } => (),
+                    ValueConstructorVariant::ModuleConstant {
+                        name: canonical,
+                        module,
+                        ..
+                    }
+                    | ValueConstructorVariant::ModuleFn {
+                        name: canonical,
+                        module,
+                        ..
+                    }
+                    | ValueConstructorVariant::Record {
+                        name: canonical,
+                        module,
+                        ..
+                    } => self.environment.references.register_value_reference(
+                        module.clone(),
+                        canonical.clone(),
+                        &name,
+                        location,
+                        ReferenceKind::Unqualified,
+                    ),
+                };
+
                 self.environment.increment_usage(&name);
                 let type_ = self.environment.instantiate(
                     constructor.type_.clone(),

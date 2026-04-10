@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 2809
+expression: "\nconst some_size = 2\n\npub fn run(data) {\n  case data {\n    <<x:bytes-size(some_size), _:bits>> -> x\n    _ -> data\n  }\n}\n        "
+---
+----- SOURCE CODE
+
+const some_size = 2
+
+pub fn run(data) {
+  case data {
+    <<x:bytes-size(some_size), _:bits>> -> x
+    _ -> data
+  }
+}
+        
+
+----- COMPILED JAVASCRIPT
+import { bitArraySlice } from "../gleam.mjs";
+
+const some_size = 2;
+
+export function run(data) {
+  if (some_size * 8 >= 0 && data.bitSize >= some_size * 8) {
+    let x = bitArraySlice(data, 0, some_size * 8);
+    return x;
+  } else {
+    return data;
+  }
+}

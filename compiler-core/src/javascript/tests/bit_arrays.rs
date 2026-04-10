@@ -2802,3 +2802,20 @@ pub fn main(x) {
         "#
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/5600
+#[test]
+fn bit_array_size_constant() {
+    assert_js!(
+        r#"
+const some_size = 2
+
+pub fn run(data) {
+  case data {
+    <<x:bytes-size(some_size), _:bits>> -> x
+    _ -> data
+  }
+}
+        "#
+    );
+}
