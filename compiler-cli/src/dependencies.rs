@@ -897,9 +897,7 @@ fn git_repo_dir_name(repo: &str, ref_: &str) -> String {
     let sanitized = repo
         .trim_end_matches(".git")
         .replace("://", "-")
-        .replace('/', "-")
-        .replace(':', "-")
-        .replace('@', "-");
+        .replace(['/', ':', '@'], "-");
     let sanitized = sanitized.trim_matches('-');
     let hash = xxhash_rust::xxh3::xxh3_64(format!("{repo}\0{ref_}").as_bytes());
     format!("{sanitized}-{hash:016x}")
