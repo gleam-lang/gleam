@@ -163,9 +163,18 @@ pub struct PackageConfig {
     pub description: EcoString,
     #[serde(default, alias = "docs")]
     pub documentation: Docs,
-    #[serde(default, serialize_with = "ordered_map")]
+    #[serde(
+        default,
+        serialize_with = "ordered_map",
+        deserialize_with = "dependencies_map::deserialize"
+    )]
     pub dependencies: Dependencies,
-    #[serde(default, alias = "dev-dependencies", serialize_with = "ordered_map")]
+    #[serde(
+        default,
+        alias = "dev-dependencies",
+        serialize_with = "ordered_map",
+        deserialize_with = "dependencies_map::deserialize"
+    )]
     pub dev_dependencies: Dependencies,
     #[serde(default)]
     pub repository: Option<Repository>,
@@ -359,6 +368,34 @@ aide_generator = { git = "git@github.com:crowdhailer/aide.git", ref = "f559c5bc"
     let error = deserialise_config("gleam.toml", toml.into())
         .expect_err("should fail to deserialise because of additional path");
 
+    insta::assert_snapshot!(insta::internals::AutoName, error.pretty_string());
+}
+
+#[test]
+fn invalid_dependency_name() {
+    let toml = r#"
+name = "wibble"
+version = "1.0.0"
+
+[dependencies]
+Hello = "> 1.0.0"
+"#;
+    let error = deserialise_config("gleam.toml", toml.into())
+        .expect_err("should fail to deserialise because invalid name");
+    insta::assert_snapshot!(insta::internals::AutoName, error.pretty_string());
+}
+
+#[test]
+fn invalid_dev_dependency_name() {
+    let toml = r#"
+name = "wibble"
+version = "1.0.0"
+
+[dev_dependencies]
+"yes." = "> 1.0.0"
+"#;
+    let error = deserialise_config("gleam.toml", toml.into())
+        .expect_err("should fail to deserialise because invalid name");
     insta::assert_snapshot!(insta::internals::AutoName, error.pretty_string());
 }
 
@@ -1067,11 +1104,8 @@ mod uri_serde_default_https {
 
 mod package_name {
     use ecow::EcoString;
-    use regex::Regex;
     use serde::Deserializer;
-    use std::{fmt, sync::OnceLock};
-
-    static PACKAGE_NAME_PATTERN: OnceLock<Regex> = OnceLock::new();
+    use std::fmt;
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<EcoString, D::Error>
     where
@@ -1093,10 +1127,7 @@ mod package_name {
         where
             E: serde::de::Error,
         {
-            if PACKAGE_NAME_PATTERN
-                .get_or_init(|| Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex"))
-                .is_match(value)
-            {
+            if super::is_valid_package_name(value) {
                 Ok(value.into())
             } else {
                 let error =
@@ -1105,6 +1136,53 @@ mod package_name {
             }
         }
     }
+}
+
+mod dependencies_map {
+    use ecow::EcoString;
+    use serde::{Deserialize, Deserializer, de};
+    use std::collections::HashMap;
+
+    pub fn deserialize<'de, D, V>(deserializer: D) -> Result<HashMap<EcoString, V>, D::Error>
+    where
+        D: Deserializer<'de>,
+        V: Deserialize<'de>,
+    {
+        struct DependenciesVisitor<V>(std::marker::PhantomData<V>);
+
+        impl<'de, V: Deserialize<'de>> de::Visitor<'de> for DependenciesVisitor<V> {
+            type Value = HashMap<EcoString, V>;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "a map with valid package name keys")
+            }
+
+            fn visit_map<A: de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+                let mut dependencies = HashMap::new();
+                while let Some(key) = map.next_key::<EcoString>()? {
+                    if !super::is_valid_package_name(&key) {
+                        return Err(de::Error::invalid_value(
+                            de::Unexpected::Str(&key),
+                            &"a package name containing only lowercase letter, numbers, and underscores",
+                        ));
+                    }
+                    let _: Option<_> = dependencies.insert(key, map.next_value()?);
+                }
+                Ok(dependencies)
+            }
+        }
+
+        deserializer.deserialize_map(DependenciesVisitor(std::marker::PhantomData))
+    }
+}
+
+fn is_valid_package_name(name: &str) -> bool {
+    use regex::Regex;
+    use std::sync::OnceLock;
+    static PACKAGE_NAME_PATTERN: OnceLock<Regex> = OnceLock::new();
+    PACKAGE_NAME_PATTERN
+        .get_or_init(|| Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex"))
+        .is_match(name)
 }
 
 #[test]

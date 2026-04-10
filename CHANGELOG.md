@@ -173,6 +173,10 @@
 - New Gleam packages are generated requiring >= 0.70.0 of `gleam_stdlib`.
   ([Louis Pilfold](https://github.com/lpil))
 
+- `gleam.toml` files with invalid dependency names now raise an error
+  immediately when the file is parsed.
+  ([Louis Pilfold](https://github.com/lpil))
+
 - Documentation for `--target` option has been improved to include more
   details.
   ([Andrey Kozhev](https://github.com/ankddev))

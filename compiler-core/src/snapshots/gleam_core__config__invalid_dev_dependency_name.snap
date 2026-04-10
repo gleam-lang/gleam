@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/config.rs
+assertion_line: 399
+expression: error.pretty_string()
+---
+error: File IO failure
+
+An error occurred while trying to parse this file:
+
+    gleam.toml
+
+The error message from the file IO library was:
+
+    TOML parse error at line 5, column 1
+  |
+5 | [dev_dependencies]
+  | ^^^^^^^^^^^^^^^^^^
+invalid value: string "yes.", expected a package name containing only lowercase letter, numbers, and underscores
