@@ -813,22 +813,26 @@ fn provided_git_to_manifest() {
 
 #[test]
 fn validate_git_dependency_path_accepts_subdir() {
-    assert!(validate_git_dependency_path(
-        "package",
-        Utf8Path::new("subdir"),
-        "https://github.com/gleam-lang/gleam.git"
-    )
-    .is_ok());
+    assert!(
+        validate_git_dependency_path(
+            "package",
+            Utf8Path::new("subdir"),
+            "https://github.com/gleam-lang/gleam.git"
+        )
+        .is_ok()
+    );
 }
 
 #[test]
 fn validate_git_dependency_path_accepts_nested_subdir() {
-    assert!(validate_git_dependency_path(
-        "package",
-        Utf8Path::new("packages/subdir"),
-        "https://github.com/gleam-lang/gleam.git"
-    )
-    .is_ok());
+    assert!(
+        validate_git_dependency_path(
+            "package",
+            Utf8Path::new("packages/subdir"),
+            "https://github.com/gleam-lang/gleam.git"
+        )
+        .is_ok()
+    );
 }
 
 #[test]
