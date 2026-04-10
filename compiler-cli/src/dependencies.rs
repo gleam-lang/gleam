@@ -907,7 +907,7 @@ fn git_repo_dir_name(repo: &str, ref_: &str) -> String {
 /// paths so that typos like `path = "../oops"` fail early with a clear error
 /// instead of silently linking the wrong directory.
 fn validate_git_dependency_path(package_name: &str, path: &Utf8Path, repo: &str) -> Result<()> {
-    if path.is_absolute() {
+    if path.is_absolute() || path.as_str().starts_with('/') {
         return Err(Error::GitDependencyPathNotFound {
             package: package_name.into(),
             path: path.to_string(),
