@@ -27,6 +27,8 @@ pub enum Requirement {
         git: EcoString,
         #[serde(rename = "ref")]
         ref_: EcoString,
+        #[serde(default)]
+        path: Option<Utf8PathBuf>,
     },
 }
 
@@ -48,6 +50,15 @@ impl Requirement {
         Requirement::Git {
             git: url.into(),
             ref_: ref_.into(),
+            path: None,
+        }
+    }
+
+    pub fn git_with_path(url: &str, ref_: &str, path: &str) -> Requirement {
+        Requirement::Git {
+            git: url.into(),
+            ref_: ref_.into(),
+            path: Some(path.into()),
         }
     }
 
@@ -62,9 +73,16 @@ impl Requirement {
                     make_relative(root_path, path).as_str().replace('\\', "/")
                 )
             }
-            Requirement::Git { git: url, ref_ } => {
-                format!(r#"{{ git = "{url}", ref = "{ref_}" }}"#)
-            }
+            Requirement::Git {
+                git: url,
+                ref_,
+                path,
+            } => match path {
+                Some(path) => {
+                    format!(r#"{{ git = "{url}", ref = "{ref_}", path = "{path}" }}"#)
+                }
+                None => format!(r#"{{ git = "{url}", ref = "{ref_}" }}"#),
+            },
         }
     }
 }
@@ -80,9 +98,16 @@ impl Serialize for Requirement {
         match self {
             Requirement::Hex { version: range } => map.serialize_entry("version", range)?,
             Requirement::Path { path } => map.serialize_entry("path", path)?,
-            Requirement::Git { git: url, ref_ } => {
+            Requirement::Git {
+                git: url,
+                ref_,
+                path,
+            } => {
                 map.serialize_entry("git", url)?;
                 map.serialize_entry("ref", ref_)?;
+                if let Some(path) = path {
+                    map.serialize_entry("path", path)?;
+                }
             }
         }
         map.end()

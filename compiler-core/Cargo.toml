@@ -25,7 +25,7 @@ bincode = { version = "2", features = ["alloc", "serde"] }
 # cross platform single glob and glob set matching
 globset = { version = "0", features = ["serde1"] }
 # Checksums
-xxhash-rust = { version = "0", features = ["xxh3"] }
+xxhash-rust.workspace = true
 # Pubgrub dependency resolution algorithm
 pubgrub = "0.3"
 # Used for converting absolute path to relative path

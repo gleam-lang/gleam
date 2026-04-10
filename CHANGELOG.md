@@ -113,6 +113,17 @@
 
 ### Build tool
 
+- Git dependencies now support an optional `path` field to specify a
+  subdirectory within the repository. This is useful for monorepos that
+  contain multiple Gleam packages. For example:
+
+  ```toml
+  [dependencies]
+  my_package = { git = "https://github.com/example/monorepo", ref = "main", path = "packages/my_package" }
+  ```
+
+  ([John Downey](https://github.com/jtdowney))
+
 - The `gleam hex owner add` command has been added, which allows adding
   owners to the package.
   ([Niklas Kirschall](https://github.com/nkxxll))

@@ -685,6 +685,69 @@ pub fn hardlink(
         .map(|_| ())
 }
 
+pub fn hardlink_dir(
+    from: impl AsRef<Utf8Path> + Debug,
+    to: impl AsRef<Utf8Path> + Debug,
+) -> Result<(), Error> {
+    tracing::debug!(from=?from, to=?to, "hardlinking_directory");
+    hardlink_dir_recursive(from.as_ref(), from.as_ref(), to.as_ref())
+}
+
+fn hardlink_dir_recursive(
+    base: &Utf8Path,
+    current: &Utf8Path,
+    dest_base: &Utf8Path,
+) -> Result<(), Error> {
+    let entries = std::fs::read_dir(current).map_err(|err| Error::FileIo {
+        action: FileIoAction::Read,
+        kind: FileKind::Directory,
+        path: current.to_path_buf(),
+        err: Some(err.to_string()),
+    })?;
+
+    for entry in entries {
+        let entry = entry.map_err(|err| Error::FileIo {
+            action: FileIoAction::Read,
+            kind: FileKind::Directory,
+            path: current.to_path_buf(),
+            err: Some(err.to_string()),
+        })?;
+
+        let source_path =
+            Utf8PathBuf::from_path_buf(entry.path()).expect("Non-UTF8 path in hardlink_dir");
+
+        // Skip .git directory
+        if source_path.file_name() == Some(".git") {
+            continue;
+        }
+        let relative = source_path
+            .strip_prefix(base)
+            .expect("Source path should be under base");
+        let dest_path = dest_base.join(relative);
+
+        let file_type = entry.file_type().map_err(|err| Error::FileIo {
+            action: FileIoAction::Read,
+            kind: FileKind::File,
+            path: source_path.clone(),
+            err: Some(err.to_string()),
+        })?;
+
+        // Skip symlinks to prevent path traversal outside the source tree
+        if file_type.is_symlink() {
+            continue;
+        }
+
+        if file_type.is_dir() {
+            mkdir(&dest_path)?;
+            hardlink_dir_recursive(base, &source_path, dest_base)?;
+        } else {
+            hardlink(&source_path, &dest_path)?;
+        }
+    }
+
+    Ok(())
+}
+
 /// Check if the given path is inside a git work tree.
 /// This is done by running `git rev-parse --is-inside-work-tree --quiet` in the
 /// given path. If git is not installed then we assume we're not in a git work
