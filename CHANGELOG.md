@@ -12,6 +12,14 @@
 
 ### Bug fixes
 
+## v1.15.3 - 2026-04-11
+
+### Bug fixes
+
+- `gleam.toml` files with invalid dependency names now raise an error
+  immediately when the file is parsed.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ## v1.15.2 - 2026-03-19
 
 ### Bug fixes
