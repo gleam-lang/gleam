@@ -342,11 +342,11 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+### Bug fixes
+
 - Fixed a bug where some functions could be formatted to be longer than 80
   characters.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-### Bug fixes
 
 - Fixed a bug that would result in not being able to publish a package if some
   non-ASCII characters were used in field names other than `description`.
@@ -397,6 +397,10 @@
 - Fixed a bug where the "Extract function" could generate invalid code when
   triggered on a use statement inside a block.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where constants referenced in a bit-array pattern's size option
+  would report as unused.
+  ([Louis Pilfold](https://github.com/lpil))
 
 - Fixed a bug where the JavaScript code generator could produce duplicate `let`
   declarations for internal variables after a `case` expression whose subject
