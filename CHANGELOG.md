@@ -179,6 +179,10 @@
 
 ### Language server
 
+- The language server will now show a diagnostic if you have a file open that
+  could not be analysed due to its dependencies failing to compile.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server now offers code actions to wrap a function reference in an
   anonymous function, or to remove a trivial anonymous function, leaving its
   contents. For example:
