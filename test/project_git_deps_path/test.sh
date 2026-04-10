@@ -47,7 +47,7 @@ GLEAM
 cd "$REPO_DIR"
 git init -q
 git add .
-git commit -q -m "Initial commit"
+git -c user.name="Test" -c user.email="test@example.com" commit -q -m "Initial commit"
 REF=$(git rev-parse HEAD)
 cd "$OLDPWD"
 
