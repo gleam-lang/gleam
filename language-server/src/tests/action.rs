@@ -13605,3 +13605,38 @@ fn op(i: Int) -> Int {
         find_position_of("fn(int)").to_selection()
     );
 }
+
+#[test]
+fn dont_wrap_use_in_anonymous_function() {
+    assert_no_code_actions!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "fn apply(x, k) {
+  k(x)
+}
+
+pub fn main() {
+  use a <- apply(5)
+  a * 1
+}
+",
+        find_position_of("a * 1").to_selection()
+    );
+}
+
+#[test]
+fn dont_wrap_uses_in_anonymous_function() {
+    assert_no_code_actions!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  use a <- apply(1)
+  use b <- apply(2)
+  use c <- apply(3)
+  a * b * c
+}
+
+fn apply(x, k) {
+  k(x)
+}",
+        find_position_of("a * b * c").to_selection()
+    );
+}

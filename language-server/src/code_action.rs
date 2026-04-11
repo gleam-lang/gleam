@@ -11537,11 +11537,8 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
             return;
         }
 
-        let is_excluded = if let TypedExpr::Fn { kind, .. } = expression {
-            kind.is_anonymous() || kind.is_capture()
-        } else {
-            false
-        };
+        // Exclude if the expression is already a function literal
+        let is_excluded = matches!(expression, TypedExpr::Fn { .. });
 
         if let Type::Fn { arguments, .. } = &*expression.type_()
             && !is_excluded
@@ -11551,7 +11548,7 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
                 arguments: arguments.clone(),
                 variables_names: VariablesNames::from_expression(expression),
             });
-        };
+        }
 
         ast::visit::visit_typed_expr(self, expression);
     }
