@@ -407,6 +407,10 @@
   directly matches one of the branches.
   ([Eyup Can Akman](https://github.com/eyupcanakman))
 
+- Fixed a bug where the "Wrap in anonymous function" code action could be used
+  in the body of a `use` expression
+  ([Giovanni Maria Zanchetta](https://github.com/GioMaz))
+
 ## v1.15.1 - 2026-03-17
 
 ### Bug fixes
