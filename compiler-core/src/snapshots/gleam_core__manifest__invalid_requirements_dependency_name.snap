@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/manifest.rs
+expression: error.to_string()
+---
+TOML parse error at line 8, column 1
+  |
+8 | [requirements]
+  | ^^^^^^^^^^^^^^
+invalid value: string "wibble/wobble", expected a package name containing only lowercase letter, numbers, and underscores

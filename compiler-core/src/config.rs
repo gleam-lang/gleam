@@ -1102,7 +1102,7 @@ mod uri_serde_default_https {
     }
 }
 
-mod package_name {
+pub(crate) mod package_name {
     use ecow::EcoString;
     use serde::Deserializer;
     use std::fmt;
@@ -1136,9 +1136,40 @@ mod package_name {
             }
         }
     }
+
+    pub fn optional_deserialize<'de, D>(deserializer: D) -> Result<Option<EcoString>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_option(OptionVisitor)
+    }
+
+    struct OptionVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for OptionVisitor {
+        type Value = Option<EcoString>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("an optional package name")
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            deserialize(deserializer).map(Some)
+        }
+    }
 }
 
-mod dependencies_map {
+pub(crate) mod dependencies_map {
     use ecow::EcoString;
     use serde::{Deserialize, Deserializer, de};
     use std::collections::HashMap;

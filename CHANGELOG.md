@@ -1,6 +1,12 @@
 # Changelog
 
-## v1.16.0-rc1 - 2026-0424
+## Unreleased
+
+- `manifest.toml` files with invalid packge names now raise an error
+  immediately when the file is parsed.
+  ([Louis Pilfold](https://github.com/lpil))
+
+## v1.16.0-rc1 - 2026-04-24
 
 ### Compiler
 
