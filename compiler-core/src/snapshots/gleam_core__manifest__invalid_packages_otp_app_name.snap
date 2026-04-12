@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/manifest.rs
+expression: error.to_string()
+---
+TOML parse error at line 5, column 102
+  |
+5 |   { name = "gleam_stdlib", version = "0.58.0", build_tools = ["gleam"], requirements = [], otp_app = "wibble/wobble", source = "hex", outer_checksum = "091F2D2C4A3A4E2047986C47E2C2C9D728A4E068ABB31FDA17B0D347E6248467" },
+  |                                                                                                      ^^^^^^^^^^^^^^^
+Package names may only contain lowercase letters, numbers, and underscores

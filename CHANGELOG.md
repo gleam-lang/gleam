@@ -12,6 +12,14 @@
 
 ### Bug fixes
 
+## v1.15.4 - 2026-04-12
+
+### Bug fixes
+
+- `manifest.toml` files with invalid packge names now raise an error
+  immediately when the file is parsed.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ## v1.15.3 - 2026-04-11
 
 ### Bug fixes
