@@ -1355,7 +1355,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 ..
             } => {
                 let (constructor, reference_kind) = match &module {
-                    // look up Qualified name in the imported module
+                    // Look up qualified name in the imported module
                     Some((module_name, module_location)) => {
                         let (_, imported_module) = self
                             .environment
