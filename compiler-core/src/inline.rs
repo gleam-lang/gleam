@@ -446,11 +446,13 @@ impl Inliner<'_> {
             BitArraySize::Int { .. } => size,
             BitArraySize::Variable {
                 location,
+                module,
                 name,
                 constructor,
                 type_,
             } => BitArraySize::Variable {
                 location,
+                module,
                 name: self.variable_name(name),
                 constructor,
                 type_,

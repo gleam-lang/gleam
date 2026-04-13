@@ -2731,6 +2731,7 @@ pub enum BitArraySize<Type> {
 
     Variable {
         location: SrcSpan,
+        module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
         constructor: Option<Box<ValueConstructor>>,
         type_: Type,
