@@ -374,3 +374,7 @@
 - Fixed a bug that would result in `gleam build` being slower than necessary
   when finding the Gleam files of a package.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The formatter now properly formats binary operations in bit array size
+  segments.
+  ([Andrey Kozhev](https://github.com/ankddev))
