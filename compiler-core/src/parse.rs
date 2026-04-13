@@ -3870,7 +3870,7 @@ where
     fn parse_bit_array_size_unit(&mut self) -> Result<BitArraySize<()>, ParseError> {
         match self.next_tok() {
             Some((start, Token::Name { name }, name_end)) => {
-                // Check if it has a qualified name ex:module.name
+                // Check if it has a qualified name like module.name
                 if let Some((_, Token::Dot, _)) = self.tok0 {
                     self.advance();
                     match self.next_tok() {
