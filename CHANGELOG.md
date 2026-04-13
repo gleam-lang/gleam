@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+## Bug fixes
+
+- The formatter now properly formats binary operations in bit array size
+  segments.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## v1.16.0-rc1 - 2026-0424
 
 ### Compiler
