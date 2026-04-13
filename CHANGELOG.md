@@ -61,3 +61,7 @@
   ```
 
   [Gavin Morrow](https://github.com/gavinmorrow)
+
+- The formatter now properly formats binary operations in bit array size
+  segments.
+  ([Andrey Kozhev](https://github.com/ankddev))
