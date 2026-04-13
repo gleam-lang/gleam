@@ -3420,7 +3420,10 @@ impl<'a, 'doc> Formatter<'a> {
         expression: &'a UntypedExpr,
     ) -> Document<'a, 'doc> {
         match expression {
-            UntypedExpr::BinOp { .. } => wrap_block(arena, self.expr(arena, expression)),
+            UntypedExpr::BinOp { .. } => EMPTY_BREAK_DOCUMENT
+                .append(arena, self.expr(arena, expression))
+                .nest_if_broken(arena, INDENT)
+                .append(arena, EMPTY_BREAK_DOCUMENT),
 
             UntypedExpr::Int { .. }
             | UntypedExpr::Float { .. }
