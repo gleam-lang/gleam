@@ -2896,8 +2896,7 @@ impl<'comments> Formatter<'comments> {
                 .nest(INDENT)
                 .group()
                 .append(break_("", ""))
-                .append(break_("}", ""))
-                .group(),
+                .append(break_("}", "")),
 
             UntypedExpr::Int { .. }
             | UntypedExpr::Float { .. }
