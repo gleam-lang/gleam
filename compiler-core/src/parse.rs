@@ -3869,12 +3869,32 @@ where
 
     fn parse_bit_array_size_unit(&mut self) -> Result<BitArraySize<()>, ParseError> {
         match self.next_tok() {
-            Some((start, Token::Name { name }, end)) => Ok(BitArraySize::Variable {
-                location: SrcSpan { start, end },
-                name,
-                constructor: None,
-                type_: (),
-            }),
+            Some((start, Token::Name { name }, name_end)) => {
+                // Check if it has a qualified name ex:module.name
+                if let Some((_, Token::Dot, _)) = self.tok0 {
+                    self.advance();
+                    match self.next_tok() {
+                        Some((_, Token::Name { name: var_name }, end)) => {
+                            Ok(BitArraySize::Variable {
+                                location: SrcSpan { start, end },
+                                module: Some((name, SrcSpan::new(start, name_end))),
+                                name: var_name,
+                                constructor: None,
+                                type_: (),
+                            })
+                        }
+                        _ => self.next_tok_unexpected(vec!["A name".into()]),
+                    }
+                } else {
+                    Ok(BitArraySize::Variable {
+                        location: SrcSpan { start, end: name_end },
+                        module: None,
+                        name,
+                        constructor: None,
+                        type_: (),
+                    })
+                }
+            }
             Some((start, Token::Int { value, int_value }, end)) => Ok(BitArraySize::Int {
                 location: SrcSpan { start, end },
                 value,

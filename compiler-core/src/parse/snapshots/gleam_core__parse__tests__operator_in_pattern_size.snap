@@ -81,6 +81,7 @@ expression: "let assert <<size, payload:size(size - 1)>> = <<>>"
                                                 start: 32,
                                                 end: 36,
                                             },
+                                            module: None,
                                             name: "size",
                                             constructor: None,
                                             type_: (),
