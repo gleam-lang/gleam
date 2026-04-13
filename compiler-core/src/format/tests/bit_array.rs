@@ -513,7 +513,24 @@ fn simple_single_line_bit_array_with_no_trailing_comma_is_split_one_item_per_lin
 fn dont_wrap_expression_size_segments_if_line_is_short() {
     assert_format!(
         "pub fn main() {
-  let slice = <<bits:bits-size({ count * marshal_zone_size })-unit(8)>>
+  let wubble = <<bits:bits-size(wibble * wobble)-unit(8)>>
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5606
+#[test]
+fn dont_wrap_expression_size_segments_if_line_is_quite_short() {
+    assert_format_rewrite!(
+        "pub fn main() {
+  let some_long_variable_name = <<bits:bits-size(some_other_variable * wibbling_wobbling)-unit(8)>>
+}
+",
+        "pub fn main() {
+  let some_long_variable_name = <<
+    bits:bits-size(some_other_variable * wibbling_wobbling)-unit(8),
+  >>
 }
 "
     );
@@ -524,14 +541,14 @@ fn dont_wrap_expression_size_segments_if_line_is_short() {
 fn wrap_expression_size_segments_if_line_is_long() {
     assert_format_rewrite!(
         "pub fn main() {
-  let some_long_variable_name = <<bits:bits-size(count * marshal_zone_size)-unit(8)>>
+  let some_long_variable_name = <<bits:bits-size(some_other_long_variable_name * and_some_other_long_variable_name)-unit(8)>>
 }
 ",
         "pub fn main() {
   let some_long_variable_name = <<
     bits:bits-size({
-      count
-      * marshal_zone_size
+      some_other_long_variable_name
+      * and_some_other_long_variable_name
     })-unit(8),
   >>
 }
