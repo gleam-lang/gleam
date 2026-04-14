@@ -1431,20 +1431,20 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     ValueConstructorVariant::LocalVariable { .. } => (),
                     ValueConstructorVariant::ModuleConstant {
                         name: canonical,
-                        module: constructor_module,
+                        module,
                         ..
                     }
                     | ValueConstructorVariant::ModuleFn {
                         name: canonical,
-                        module: constructor_module,
+                        module,
                         ..
                     }
                     | ValueConstructorVariant::Record {
                         name: canonical,
-                        module: constructor_module,
+                        module,
                         ..
                     } => self.environment.references.register_value_reference(
-                        constructor_module.clone(),
+                        module.clone(),
                         canonical.clone(),
                         &name,
                         location,
