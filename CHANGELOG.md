@@ -2,9 +2,16 @@
 
 ## Unreleased
 
+### Bug fixes
+
 - `manifest.toml` files with invalid packge names now raise an error
   immediately when the file is parsed.
   ([Louis Pilfold](https://github.com/lpil))
+
+- Fixed a bug where the "Wrap in anonymous function" code action could be used
+  in the body of a `use` expression
+  ([Giovanni Maria Zanchetta](https://github.com/GioMaz))
+
 
 ## v1.16.0-rc1 - 2026-04-24
 
@@ -412,10 +419,6 @@
   declarations for internal variables after a `case` expression whose subject
   directly matches one of the branches.
   ([Eyup Can Akman](https://github.com/eyupcanakman))
-
-- Fixed a bug where the "Wrap in anonymous function" code action could be used
-  in the body of a `use` expression
-  ([Giovanni Maria Zanchetta](https://github.com/GioMaz))
 
 ## v1.15.1 - 2026-03-17
 
