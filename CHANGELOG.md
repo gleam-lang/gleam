@@ -421,3 +421,5 @@
   offset 0 instead of the slice's actual byte offset, causing sliced bit arrays
   to read from the wrong position in the underlying buffer on JavaScript.
   ([John Downey](https://github.com/jtdowney))
+
+- Fix the bug where qualified constants cannot be referenced inside a bit array size segment pattern. ([Leo Oliveira](https://github.com/13dev))
