@@ -69,6 +69,7 @@ pub enum ParseErrorType {
     ExpectedValue,              // no value after "="
     ExpectedDefinition,         // after attributes
     ExpectedDeprecationMessage, // after "deprecated"
+    ExpectedExternalArguments,  // after "@external"
     ExpectedFunctionDefinition, // after function-only attributes
     ExpectedTargetName,         // after "@target("
     ExprLparStart,              // it seems "(" was used to start an expression
@@ -219,6 +220,13 @@ impl ParseErrorType {
                 text: "See: https://tour.gleam.run/functions/deprecations/".into(),
                 hint: None,
                 label_text: "A deprecation attribute must have a string message.".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ExpectedExternalArguments => ParseErrorDetails {
+                text: "".into(),
+                hint: Some("See https://tour.gleam.run/advanced-features/externals/".into()),
+                label_text: "This attribute is incomplete".into(),
                 extra_labels: vec![],
             },
 

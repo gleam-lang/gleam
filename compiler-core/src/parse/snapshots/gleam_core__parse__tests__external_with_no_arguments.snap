@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\n@external\npub fn one(x: Int) -> Int {\n  todo\n}"
+---
+----- SOURCE CODE
+
+@external
+pub fn one(x: Int) -> Int {
+  todo
+}
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:1
+  │
+2 │ @external
+  │ ^^^^^^^^^ This attribute is incomplete
+
+Hint: See https://tour.gleam.run/advanced-features/externals/
