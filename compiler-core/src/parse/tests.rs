@@ -1959,6 +1959,16 @@ fn correct_precedence_in_pattern_size() {
 }
 
 #[test]
+fn qualified_name_in_pattern_size() {
+    assert_parse!("let assert <<value:size(sizes.byte_size)>> = data");
+}
+
+#[test]
+fn qualified_name_in_pattern_size_expression() {
+    assert_parse!("let assert <<value:size(sizes.multiplier * local_size)>> = data");
+}
+
+#[test]
 fn private_opaque_type_is_parsed() {
     assert_parse_module!("opaque type Wibble { Wobble }");
 }
