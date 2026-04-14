@@ -1065,7 +1065,7 @@ dependencies = [
 
 [[package]]
 name = "gleam"
-version = "1.16.0-rc1"
+version = "1.16.0-rc2"
 dependencies = [
  "gleam-cli",
  "static_vcruntime",
@@ -1073,7 +1073,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-cli"
-version = "1.16.0-rc1"
+version = "1.16.0-rc2"
 dependencies = [
  "async-trait",
  "base16",
@@ -1122,7 +1122,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-core"
-version = "1.16.0-rc1"
+version = "1.16.0-rc2"
 dependencies = [
  "age",
  "askama",
@@ -1178,7 +1178,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-language-server"
-version = "1.16.0-rc1"
+version = "1.16.0-rc2"
 dependencies = [
  "camino",
  "debug-ignore",
@@ -1200,7 +1200,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-wasm"
-version = "1.16.0-rc1"
+version = "1.16.0-rc2"
 dependencies = [
  "camino",
  "console_error_panic_hook",
@@ -1267,7 +1267,7 @@ checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 
 [[package]]
 name = "hexpm"
-version = "1.16.0-rc1"
+version = "1.16.0-rc2"
 dependencies = [
  "base16",
  "bytes",
@@ -3206,7 +3206,7 @@ dependencies = [
 
 [[package]]
 name = "test-output"
-version = "1.16.0-rc1"
+version = "1.16.0-rc2"
 dependencies = [
  "camino",
  "gleam-cli",
@@ -3217,7 +3217,7 @@ dependencies = [
 
 [[package]]
 name = "test-package-compiler"
-version = "1.16.0-rc1"
+version = "1.16.0-rc2"
 dependencies = [
  "camino",
  "gleam-core",
@@ -3231,7 +3231,7 @@ dependencies = [
 
 [[package]]
 name = "test-project-compiler"
-version = "1.16.0-rc1"
+version = "1.16.0-rc2"
 dependencies = [
  "camino",
  "gleam-core",

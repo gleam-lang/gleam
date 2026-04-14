@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.16.0-rc2 - 2026-04-14
 
 ### Bug fixes
 
@@ -16,7 +16,7 @@
   external JavaScript code from files with these file extensions.
   ([Niklas Kirschall](https://github.com/nkxxll))
 
-## v1.16.0-rc1 - 2026-04-24
+## v1.16.0-rc1 - 2026-04-10
 
 ### Compiler
 
