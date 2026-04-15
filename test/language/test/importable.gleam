@@ -40,6 +40,8 @@ pub fn get_bit_array() {
 
 pub const language = "gleam"
 
+pub const byte_size = 8
+
 pub type Movie {
   Movie(title: String)
 }

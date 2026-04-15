@@ -139,3 +139,9 @@ pub fn multiple_variable_segments_test() {
   let assert <<a, b:size(a), c:size(b)>> = <<2, 3:2, 7:3>>
   assert a + b + c == 12
 }
+
+// Test qualified constant in bit array pattern size
+pub fn qualified_constant_in_pattern_size_test() {
+  let assert <<value:size(importable.byte_size)>> = <<42>>
+  assert value == 42
+}

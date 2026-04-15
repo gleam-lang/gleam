@@ -2,6 +2,7 @@
 source: compiler-core/src/javascript/tests/bit_arrays.rs
 assertion_line: 2840
 expression: "\nimport sizes\n\nconst local_size = 4\n\npub fn go(data) {\n  let assert <<value:size(sizes.multiplier * local_size)>> = data\n  value\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 -- sizes.gleam
@@ -29,8 +30,11 @@ const local_size = 4;
 
 export function go(data) {
   let value;
-  if (multiplier * local_size >= 0 && data.bitSize === multiplier * local_size) {
-    value = bitArraySliceToInt(data, 0, multiplier * local_size, true, false);
+  if (
+    $sizes.multiplier * local_size >= 0 &&
+    data.bitSize === $sizes.multiplier * local_size
+  ) {
+    value = bitArraySliceToInt(data, 0, $sizes.multiplier * local_size, true, false);
   } else {
     throw makeError(
       "let_assert",
