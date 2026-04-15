@@ -1829,7 +1829,7 @@ impl Offset {
                 VariableUsage::PatternSegment(segment_name, read_action) => {
                     references.push((segment_name, read_action));
                 }
-                VariableUsage::OutsideVariable(..) => {}
+                VariableUsage::OutsideVariable { .. } => {}
             }
         }
 
@@ -1927,7 +1927,7 @@ impl ReadSize {
                 VariableUsage::PatternSegment(segment_value, read_action) => {
                     references.push((segment_value, read_action));
                 }
-                VariableUsage::OutsideVariable(..) => (),
+                VariableUsage::OutsideVariable { .. } => (),
             },
 
             ReadSize::BinaryOperator { left, right, .. } => {
@@ -1944,7 +1944,7 @@ impl ReadSize {
             ReadSize::ConstantBits(value) => *value < BigInt::ZERO,
             ReadSize::VariableBits { variable, .. } => match variable.as_ref() {
                 VariableUsage::PatternSegment(_, read_action) => read_action.signed,
-                VariableUsage::OutsideVariable(_) => true,
+                VariableUsage::OutsideVariable { .. } => true,
             },
             ReadSize::BinaryOperator {
                 left,
@@ -1965,14 +1965,19 @@ pub enum VariableUsage {
     /// A bit array named segment that was brought into scope in the bit array
     /// pattern itself and might be referenced by later segments.
     PatternSegment(EcoString, ReadAction),
-    /// A variable defined somewhere else
-    OutsideVariable(EcoString),
+    /// A variable defined somewhere else. The optional module is the name of
+    /// the module the variable is defined in if it is a qualified reference.
+    OutsideVariable {
+        module: Option<EcoString>,
+        name: EcoString,
+    },
 }
 
 impl VariableUsage {
     pub fn name(&self) -> &EcoString {
         match self {
-            VariableUsage::PatternSegment(name, _) | VariableUsage::OutsideVariable(name) => name,
+            VariableUsage::PatternSegment(name, _)
+            | VariableUsage::OutsideVariable { name, .. } => name,
         }
     }
 }
@@ -3791,12 +3796,15 @@ fn bit_array_size(
 ) -> ReadSize {
     match size {
         BitArraySize::Int { int_value, .. } => ReadSize::ConstantBits(int_value * unit),
-        BitArraySize::Variable { name, .. } => {
+        BitArraySize::Variable { name, module, .. } => {
             let variable = match pattern_variables.get(name) {
                 Some(read_action) => {
                     VariableUsage::PatternSegment(name.clone(), read_action.clone())
                 }
-                None => VariableUsage::OutsideVariable(name.clone()),
+                None => VariableUsage::OutsideVariable {
+                    module: module.as_ref().map(|(m, _)| m.clone()),
+                    name: name.clone(),
+                },
             };
             ReadSize::VariableBits {
                 variable: Box::new(variable),
