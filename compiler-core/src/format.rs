@@ -2555,7 +2555,7 @@ impl<'comments> Formatter<'comments> {
         match size {
             BitArraySize::Int { value, .. } => self.int(value),
             BitArraySize::Variable { module, name, .. } => match module {
-                Some((module_name, _)) => module_name.to_doc().append(".").append(name.as_str()),
+                Some((module_name, _)) => module_name.to_doc().append(".").append(name),
                 None => name.to_doc(),
             },
             BitArraySize::BinaryOperator {
