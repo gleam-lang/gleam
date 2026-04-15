@@ -13,7 +13,7 @@ use crate::{
     format::break_block,
     javascript::{
         expression::{eco_string_int, string},
-        maybe_escape_property,
+        maybe_escape_identifier, maybe_escape_property,
     },
     pretty::{Document, Documentable, break_, concat, join, line, nil},
     strings::{convert_string_escape_chars, length_utf16},
@@ -1433,7 +1433,10 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 VariableUsage::PatternSegment(segment_name, _) => self
                     .get_segment_value(segment_name)
                     .expect("segment referenced in a check before being created"),
-                VariableUsage::OutsideVariable(name) => self.local_var(name).to_doc(),
+                VariableUsage::OutsideVariable { module, name } => match module {
+                    Some(module) => docvec!["$", module, ".", maybe_escape_identifier(name)],
+                    None => self.local_var(name).to_doc(),
+                },
             };
             if *times != 1 {
                 variable = variable.append(" * ").append(*times)
@@ -1473,9 +1476,15 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         match size {
             ReadSize::ConstantBits(value) => Some(value.clone().to_doc()),
             ReadSize::VariableBits { variable, unit } => {
-                let variable = self.local_var(variable.name());
+                let variable = match variable.as_ref() {
+                    VariableUsage::PatternSegment(name, _) => self.local_var(name).to_doc(),
+                    VariableUsage::OutsideVariable { module, name } => match module {
+                        Some(module) => docvec!["$", module, ".", maybe_escape_identifier(name)],
+                        None => self.local_var(name).to_doc(),
+                    },
+                };
                 Some(if *unit == 1 {
-                    variable.to_doc()
+                    variable
                 } else {
                     docvec![variable, " * ", *unit as i64]
                 })

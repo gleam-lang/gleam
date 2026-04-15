@@ -2,6 +2,7 @@
 source: compiler-core/src/javascript/tests/bit_arrays.rs
 assertion_line: 2825
 expression: "\nimport sizes\n\npub fn go(data) {\n  let assert <<value:size(sizes.byte_size)>> = data\n  value\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 -- sizes.gleam
@@ -25,8 +26,8 @@ const FILEPATH = "src/module.gleam";
 
 export function go(data) {
   let value;
-  if (byte_size >= 0 && data.bitSize === byte_size) {
-    value = bitArraySliceToInt(data, 0, byte_size, true, false);
+  if ($sizes.byte_size >= 0 && data.bitSize === $sizes.byte_size) {
+    value = bitArraySliceToInt(data, 0, $sizes.byte_size, true, false);
   } else {
     throw makeError(
       "let_assert",

@@ -1364,26 +1364,28 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             .ok_or_else(|| Error::UnknownModule {
                                 location: *module_location,
                                 name: module_name.clone(),
-                                suggestions: self.environment.suggest_modules(
-                                    module_name,
-                                    Imported::Value(name.clone()),
-                                ),
+                                suggestions: self
+                                    .environment
+                                    .suggest_modules(module_name, Imported::Value(name.clone())),
                             })?;
 
                         self.environment
                             .references
                             .register_module_reference(module_name.clone());
 
-                        let constructor = imported_module.values.get(&name).cloned().ok_or_else(
-                            || Error::UnknownModuleValue {
-                                location,
-                                module_name: module_name.clone(),
-                                name: name.clone(),
-                                value_constructors: imported_module.public_value_names(),
-                                type_with_same_name: imported_module.get_public_type(&name).is_some(),
-                                context: ModuleValueUsageContext::ModuleAccess,
-                            },
-                        )?;
+                        let constructor =
+                            imported_module.values.get(&name).cloned().ok_or_else(|| {
+                                Error::UnknownModuleValue {
+                                    location,
+                                    module_name: module_name.clone(),
+                                    name: name.clone(),
+                                    value_constructors: imported_module.public_value_names(),
+                                    type_with_same_name: imported_module
+                                        .get_public_type(&name)
+                                        .is_some(),
+                                    context: ModuleValueUsageContext::ModuleAccess,
+                                }
+                            })?;
 
                         (constructor, ReferenceKind::Qualified)
                     }
