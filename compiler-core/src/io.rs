@@ -432,7 +432,7 @@ pub trait TarUnpacker {
 pub fn is_native_file_extension(extension: &str) -> bool {
     matches!(
         extension,
-        "erl" | "hrl" | "ex" | "js" | "mjs" | "cjs" | "ts"
+        "erl" | "hrl" | "ex" | "js" | "mjs" | "cjs" | "jsx" | "ts" | "mts" | "cts" | "tsx"
     )
 }
 
