@@ -6,6 +6,10 @@
   immediately when the file is parsed.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Fix the bug where qualified constants cannot be referenced inside a bit array
+  size segment pattern.
+  ([Leo Oliveira](https://github.com/13dev))
+
 ## v1.16.0-rc1 - 2026-04-24
 
 ### Compiler
@@ -422,6 +426,3 @@
   to read from the wrong position in the underlying buffer on JavaScript.
   ([John Downey](https://github.com/jtdowney))
 
-- Fix the bug where qualified constants cannot be referenced inside a bit array
-  size segment pattern.
-  ([Leo Oliveira](https://github.com/13dev))
