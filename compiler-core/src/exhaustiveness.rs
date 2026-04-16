@@ -1966,7 +1966,7 @@ pub enum VariableUsage {
     /// pattern itself and might be referenced by later segments.
     PatternSegment(EcoString, ReadAction),
     /// A variable defined somewhere else. The optional module is the name of
-    /// the module the variable is defined in if it is a qualified reference.
+    /// the module the variable is defined in, if it is a qualified reference.
     OutsideVariable {
         module: Option<EcoString>,
         name: EcoString,
