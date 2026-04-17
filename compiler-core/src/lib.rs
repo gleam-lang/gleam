@@ -99,6 +99,9 @@ pub(crate) mod graph;
 pub(crate) mod inline;
 pub mod reference;
 
+#[cfg(test)]
+mod tests;
+
 pub use error::{Error, Result};
 pub use warning::Warning;
 
