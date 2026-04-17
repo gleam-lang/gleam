@@ -1000,3 +1000,16 @@ pub fn go(x: List(Int), y: List(Int)) {
 }"#
     )
 }
+
+fn no_duplicate_let_after_case_with_same_named_variable() {
+    assert_js!(
+        r#"
+pub fn go() {
+  let x = case #(1, 2) {
+    #(_, x) -> x
+  }
+
+  x
+}"#
+    )
+}
