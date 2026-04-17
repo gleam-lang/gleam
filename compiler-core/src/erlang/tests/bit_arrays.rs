@@ -526,3 +526,35 @@ pub fn go(wibble: String) {
 "#
     )
 }
+
+#[test]
+fn qualified_constant_in_pattern_size() {
+    assert_erl!(
+        ("thepackage", "sizes", "pub const byte_size = 8"),
+        "
+import sizes
+
+pub fn go(data) {
+  let assert <<value:size(sizes.byte_size)>> = data
+  value
+}
+"
+    );
+}
+
+#[test]
+fn qualified_constant_in_pattern_size_expression() {
+    assert_erl!(
+        ("thepackage", "sizes", "pub const multiplier = 2"),
+        "
+import sizes
+
+const local_size = 4
+
+pub fn go(data) {
+  let assert <<value:size(sizes.multiplier * local_size)>> = data
+  value
+}
+"
+    );
+}

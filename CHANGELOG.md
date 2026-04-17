@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Fix the bug where qualified constants cannot be referenced inside a bit array
+  size segment pattern.
+  ([Leo Oliveira](https://github.com/13dev))
+
 ## v1.16.0-rc2 - 2026-04-14
 
 ### Bug fixes

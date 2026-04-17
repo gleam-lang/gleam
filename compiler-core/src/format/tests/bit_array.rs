@@ -507,3 +507,25 @@ fn simple_single_line_bit_array_with_no_trailing_comma_is_split_one_item_per_lin
 "#
     );
 }
+
+#[test]
+fn simple_qualified_constant_in_pattern_size() {
+    assert_format!(
+        "pub fn main() {
+  let assert <<value:size(sizes.byte_size)>> = data
+  value
+}
+"
+    );
+}
+
+#[test]
+fn simple_qualified_constant_in_pattern_size_expression() {
+    assert_format!(
+        "pub fn main() {
+  let assert <<value:size(sizes.multiplier * local_size)>> = data
+  value
+}
+"
+    );
+}

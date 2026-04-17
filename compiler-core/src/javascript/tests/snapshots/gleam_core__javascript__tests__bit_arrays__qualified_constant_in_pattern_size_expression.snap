@@ -1,0 +1,50 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 2840
+expression: "\nimport sizes\n\nconst local_size = 4\n\npub fn go(data) {\n  let assert <<value:size(sizes.multiplier * local_size)>> = data\n  value\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+-- sizes.gleam
+pub const multiplier = 2
+
+-- main.gleam
+
+import sizes
+
+const local_size = 4
+
+pub fn go(data) {
+  let assert <<value:size(sizes.multiplier * local_size)>> = data
+  value
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, bitArraySliceToInt } from "../gleam.mjs";
+import * as $sizes from "../sizes.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+const local_size = 4;
+
+export function go(data) {
+  let value;
+  if (
+    $sizes.multiplier * local_size >= 0 &&
+    data.bitSize === $sizes.multiplier * local_size
+  ) {
+    value = bitArraySliceToInt(data, 0, $sizes.multiplier * local_size, true, false);
+  } else {
+    throw makeError(
+      "let_assert",
+      FILEPATH,
+      "my/mod",
+      7,
+      "go",
+      "Pattern match failed, no pattern matched the value.",
+      { value: data, start: 57, end: 120, pattern_start: 68, pattern_end: 113 }
+    )
+  }
+  return value;
+}

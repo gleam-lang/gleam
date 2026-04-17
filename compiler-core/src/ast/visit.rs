@@ -2049,6 +2049,7 @@ where
             name,
             constructor,
             type_,
+            ..
         } => v.visit_typed_bit_array_size_variable(location, name, constructor, type_),
         BitArraySize::BinaryOperator { left, right, .. } => {
             v.visit_typed_pattern_bit_array_size(left);

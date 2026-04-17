@@ -2554,7 +2554,10 @@ impl<'comments> Formatter<'comments> {
     fn bit_array_size<'a>(&mut self, size: &'a BitArraySize<()>) -> Document<'a> {
         match size {
             BitArraySize::Int { value, .. } => self.int(value),
-            BitArraySize::Variable { name, .. } => name.to_doc(),
+            BitArraySize::Variable { module, name, .. } => match module {
+                Some((module_name, _)) => module_name.to_doc().append(".").append(name),
+                None => name.to_doc(),
+            },
             BitArraySize::BinaryOperator {
                 left,
                 right,
