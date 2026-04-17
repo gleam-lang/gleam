@@ -1005,6 +1005,7 @@ fn no_duplicate_let_after_case_with_same_named_variable() {
     assert_js!(
         r#"
 pub fn go() {
+  let x = 0
   let x = case #(1, 2) {
     #(_, x) -> x
   }

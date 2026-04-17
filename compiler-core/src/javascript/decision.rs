@@ -444,7 +444,11 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
                         .current_scope_vars
                         .get(&assignment_var)
                         .copied();
-                    self.variables.expression_generator.current_scope_vars = old_scope;
+                    // Extend with variables from old scope
+                    self.variables
+                        .expression_generator
+                        .current_scope_vars
+                        .extend(old_scope);
                     if let Some(n) = counter {
                         let _ = self
                             .variables
