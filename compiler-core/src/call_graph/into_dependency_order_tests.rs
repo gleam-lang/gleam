@@ -15,6 +15,14 @@ fn parse_and_order(
     functions: &[FuncInput],
     constants: &[ConstInput],
 ) -> Result<Vec<Vec<EcoString>>, Error> {
+    parse_and_order_with_imports(functions, constants, &[])
+}
+
+fn parse_and_order_with_imports(
+    functions: &[FuncInput],
+    constants: &[ConstInput],
+    imported_module_names: &[&str],
+) -> Result<Vec<Vec<EcoString>>, Error> {
     let functions = functions
         .iter()
         .map(|(name, arguments, src)| Function {
@@ -79,18 +87,26 @@ fn parse_and_order(
         })
         .collect_vec();
 
-    Ok(into_dependency_order(functions, constants)?
-        .into_iter()
-        .map(|level| {
-            level
-                .into_iter()
-                .map(|function| match function {
-                    CallGraphNode::Function(f) => f.name.map(|(_, name)| name).unwrap(),
-                    CallGraphNode::ModuleConstant(c) => c.name,
-                })
-                .collect_vec()
-        })
-        .collect())
+    Ok(into_dependency_order(
+        functions,
+        constants,
+        imported_module_names
+            .iter()
+            .copied()
+            .map(EcoString::from)
+            .collect_vec(),
+    )?
+    .into_iter()
+    .map(|level| {
+        level
+            .into_iter()
+            .map(|function| match function {
+                CallGraphNode::Function(f) => f.name.map(|(_, name)| name).unwrap(),
+                CallGraphNode::ModuleConstant(c) => c.name,
+            })
+            .collect_vec()
+    })
+    .collect())
 }
 
 #[test]
@@ -205,6 +221,19 @@ fn pipeline() {
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b"], vec!["c"], vec!["a"]]
+    );
+}
+
+#[test]
+fn imported_module_names_do_not_create_false_edges() {
+    let functions = [
+        ("wibble", [].as_slice(), r#"option.Some(1)"#),
+        ("option", [].as_slice(), r#"wibble()"#),
+    ];
+
+    assert_eq!(
+        parse_and_order_with_imports(functions.as_slice(), [].as_slice(), &["option"]).unwrap(),
+        vec![vec!["wibble"], vec!["option"]]
     );
 }
 

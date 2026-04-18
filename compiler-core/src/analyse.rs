@@ -261,6 +261,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         // Infer the types of each statement in the module
+        let imported_module_names = definitions
+            .imports
+            .iter()
+            .filter_map(|import| import.used_name())
+            .collect_vec();
+
         let typed_imports = definitions
             .imports
             .into_iter()
@@ -284,11 +290,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // first, then ones that depend on those, etc.
         let mut typed_functions = Vec::with_capacity(definitions.functions.len());
         let mut typed_constants = Vec::with_capacity(definitions.constants.len());
-        let definition_groups =
-            match into_dependency_order(definitions.functions, definitions.constants) {
-                Ok(definition_groups) => definition_groups,
-                Err(error) => return self.all_errors(error),
-            };
+        let definition_groups = match into_dependency_order(
+            definitions.functions,
+            definitions.constants,
+            imported_module_names,
+        ) {
+            Ok(definition_groups) => definition_groups,
+            Err(error) => return self.all_errors(error),
+        };
 
         let mut working_constants = vec![];
         let mut working_functions = vec![];

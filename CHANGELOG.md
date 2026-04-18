@@ -47,6 +47,11 @@
   finds.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler no longer treats module-select expressions as dependencies on
+  same-named local functions, which avoids false target-support ordering in
+  dependency packages.
+  ([Asish Kumar](https://github.com/officialasishkumar))
+
 - The compiler now shows a better error message when trying to use the record
   update syntax with variants that have no labelled fields.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
