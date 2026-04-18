@@ -1,10 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Build tool
+
+- New Gleam packages are now generated requiring `>= 1.0.0` of `gleam_stdlib`.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.16.0-rc2 - 2026-04-14
 
 ### Bug fixes
 
-- `manifest.toml` files with invalid packge names now raise an error
+- `manifest.toml` files with invalid package names now raise an error
   immediately when the file is parsed.
   ([Louis Pilfold](https://github.com/lpil))
 
