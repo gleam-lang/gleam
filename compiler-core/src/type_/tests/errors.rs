@@ -3580,3 +3580,32 @@ pub const wobble = Wibble(..wobble)
 fn qualified_type_with_no_name_results_in_an_error() {
     assert_module_error!("pub fn main() -> wibble. { todo }");
 }
+
+#[test]
+fn todo_in_a_constant_produces_an_error() {
+    assert_module_error!("pub const wibble = todo");
+}
+
+#[test]
+fn todo_constant_does_not_stop_analysis() {
+    assert_module_error!(
+        "pub const wibble = [todo, todo]
+
+pub fn main() -> List(Int) {
+  // This is not an error!!
+  wibble
+}"
+    );
+}
+
+#[test]
+fn todo_constant_does_not_stop_analysis_2() {
+    assert_module_error!(
+        "pub const wibble = [todo, todo]
+
+pub fn main() -> Int {
+  // This is an error!!
+  wibble
+}"
+    );
+}
