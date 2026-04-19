@@ -1,0 +1,47 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "pub const wibble = [todo, todo]\n\npub fn main() -> Int {\n  // This is an error!!\n  wibble\n}"
+---
+----- SOURCE CODE
+pub const wibble = [todo, todo]
+
+pub fn main() -> Int {
+  // This is an error!!
+  wibble
+}
+
+----- ERROR
+error: Constant todo found
+  ┌─ /src/one/two.gleam:1:21
+  │
+1 │ pub const wibble = [todo, todo]
+  │                     ^^^^ This code is incomplete
+
+This code will crash if it is run. Be sure to finish it before running your
+program.
+
+error: Constant todo found
+  ┌─ /src/one/two.gleam:1:27
+  │
+1 │ pub const wibble = [todo, todo]
+  │                           ^^^^ This code is incomplete
+
+This code will crash if it is run. Be sure to finish it before running your
+program.
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:5:3
+  │
+5 │   wibble
+  │   ^^^^^^
+
+The type of this returned value doesn't match the return type
+annotation of this function.
+
+Expected type:
+
+    Int
+
+Found type:
+
+    List(a)

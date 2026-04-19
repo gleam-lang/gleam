@@ -1,0 +1,13 @@
+---
+source: language-server/src/tests/hover.rs
+expression: "\nconst wibble = <<todo:utf8>>\n"
+---
+
+const wibble = <<todo:utf8>>
+                 ↑▔▔▔       
+
+
+----- Hover content (markdown) -----
+```gleam
+String
+```
