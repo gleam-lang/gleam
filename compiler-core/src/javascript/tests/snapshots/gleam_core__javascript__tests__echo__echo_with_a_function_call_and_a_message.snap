@@ -25,12 +25,12 @@ import {
   UtfCodepoint as $UtfCodepoint,
 } from "../gleam.mjs";
 
-function wibble(n, m) {
-  return n + m;
-}
-
 function message() {
   return "Hello!";
+}
+
+function wibble(n, m) {
+  return n + m;
 }
 
 export function main() {

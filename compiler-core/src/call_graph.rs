@@ -14,8 +14,7 @@ use crate::{
     type_::Error,
 };
 use itertools::Itertools;
-use petgraph::stable_graph::NodeIndex;
-use petgraph::{Directed, stable_graph::StableGraph};
+use petgraph::{Directed, stable_graph::NodeIndex, stable_graph::StableGraph};
 
 #[derive(Debug, Default)]
 struct CallGraphBuilder<'a> {
@@ -462,7 +461,16 @@ impl<'a> CallGraphBuilder<'a> {
                 module: Some(_), ..
             } => (),
 
-            Constant::List { elements, .. } | Constant::Tuple { elements, .. } => {
+            Constant::List { elements, tail, .. } => {
+                for element in elements {
+                    self.constant(element);
+                }
+                if let Some(tail) = tail {
+                    self.constant(tail);
+                }
+            }
+
+            Constant::Tuple { elements, .. } => {
                 for element in elements {
                     self.constant(element);
                 }
@@ -536,7 +544,7 @@ pub fn into_dependency_order(
 
     // Determine the order in which the functions should be compiled by looking
     // at which other functions they depend on.
-    let indices = crate::graph::into_dependency_order(graph);
+    let indices = petgraph::algo::tarjan_scc(&graph);
 
     // We got node indices back, so we need to map them back to the functions
     // they represent.
