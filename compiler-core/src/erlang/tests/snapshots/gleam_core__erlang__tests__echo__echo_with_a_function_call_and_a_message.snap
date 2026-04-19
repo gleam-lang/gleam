@@ -18,15 +18,15 @@ fn message() { "Hello!" }
 -define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
 
--file("project/test/my/mod.gleam", 6).
--spec wibble(integer(), integer()) -> integer().
-wibble(N, M) ->
-    N + M.
-
 -file("project/test/my/mod.gleam", 7).
 -spec message() -> binary().
 message() ->
     <<"Hello!"/utf8>>.
+
+-file("project/test/my/mod.gleam", 6).
+-spec wibble(integer(), integer()) -> integer().
+wibble(N, M) ->
+    N + M.
 
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().

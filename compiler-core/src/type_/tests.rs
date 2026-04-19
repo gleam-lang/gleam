@@ -3522,6 +3522,64 @@ pub fn main() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/5618
+#[test]
+fn correct_type_check_for_multiple_mutually_recursive_functions2() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  let _ = step(Leaf, Leaf)
+  Nil
+}
+
+type Tree {
+  Leaf
+  Node(List(Tree))
+}
+
+fn step(left: Tree, right: Tree) -> Int {
+  sum(diff(left, right, []))
+}
+
+fn sum(xs: List(Int)) -> Int {
+  case xs {
+    [] -> 0
+    [first, ..rest] -> first + sum(rest)
+  }
+}
+
+fn diff(left, right, effect) {
+  case left, right {
+    Node(olds), Node(news) -> diff_batch(olds, news, effect)
+    _, _ -> start(right, effect)
+  }
+}
+
+fn diff_batch(left, right, effect) {
+  case left, right {
+    [old, ..left], [new, ..right] ->
+      diff_batch(left, right, diff(old, new, effect))
+    _, _ -> effect
+  }
+}
+
+fn start(node, effect) {
+  case node {
+    Leaf -> "wat"
+    Node(children) -> start_batch(children, effect)
+  }
+}
+
+fn start_batch(children, effect) {
+  case children {
+    [] -> effect
+    [child, ..rest] -> start_batch(rest, start(child, effect))
+  }
+}
+"#
+    );
+}
+
 #[test]
 fn prepend_constant_list() {
     assert_module_infer!(
