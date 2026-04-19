@@ -4870,6 +4870,25 @@ See: https://tour.gleam.run/basics/bools/"
                 extra_labels: vec![],
             }),
         },
+
+        TypeError::TodoConstant { location } => Diagnostic {
+            title: "Constant todo found".to_string(),
+            text: wrap(
+                "This code will crash if it is run. \
+Be sure to finish it before running your program.",
+            ),
+            hint: None,
+            level: Level::Error,
+            location: Some(Location {
+                label: Label {
+                    text: Some("This code is incomplete".into()),
+                    span: *location,
+                },
+                path: path.clone(),
+                src: src.clone(),
+                extra_labels: vec![],
+            }),
+        },
     })
 }
 

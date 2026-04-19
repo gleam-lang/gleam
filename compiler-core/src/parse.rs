@@ -3193,6 +3193,14 @@ where
 
     fn parse_const_value_unit(&mut self) -> Result<Option<UntypedConstant>, ParseError> {
         match self.tok0.take() {
+            Some((start, Token::Todo, end)) => {
+                self.advance();
+                Ok(Some(Constant::Todo {
+                    location: SrcSpan { start, end },
+                    type_: (),
+                }))
+            }
+
             Some((start, Token::String { value }, end)) => {
                 self.advance();
                 Ok(Some(Constant::String {

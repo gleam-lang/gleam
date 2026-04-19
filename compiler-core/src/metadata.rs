@@ -445,6 +445,10 @@ impl RemapIds {
                 type_: self.type_(type_),
                 extra_information,
             },
+            Constant::Todo { location, type_ } => Constant::Todo {
+                location,
+                type_: self.type_(type_),
+            },
         }
     }
 

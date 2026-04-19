@@ -90,6 +90,11 @@ pub enum Constant<T, RecordTag> {
         /// states.
         extra_information: Option<InvalidExpression>,
     },
+
+    Todo {
+        location: SrcSpan,
+        type_: T,
+    },
 }
 
 impl TypedConstant {
@@ -105,6 +110,7 @@ impl TypedConstant {
             | Constant::Record { type_, .. }
             | Constant::RecordUpdate { type_, .. }
             | Constant::Var { type_, .. }
+            | Constant::Todo { type_, .. }
             | Constant::Invalid { type_, .. } => type_.clone(),
         }
     }
@@ -117,7 +123,8 @@ impl TypedConstant {
             Constant::Int { .. }
             | Constant::Float { .. }
             | Constant::String { .. }
-            | Constant::Invalid { .. } => Located::Constant(self),
+            | Constant::Invalid { .. }
+            | Constant::Todo { .. } => Located::Constant(self),
             Constant::Var {
                 module: Some((module_alias, location)),
                 constructor: Some(constructor),
@@ -182,6 +189,7 @@ impl TypedConstant {
             | Constant::Tuple { .. }
             | Constant::List { .. }
             | Constant::BitArray { .. }
+            | Constant::Todo { .. }
             | Constant::StringConcatenation { .. }
             | Constant::Invalid { .. } => None,
             Constant::Record {
@@ -203,6 +211,7 @@ impl TypedConstant {
             Constant::Var { name, .. } => im::hashset![name],
 
             Constant::Invalid { .. }
+            | Constant::Todo { .. }
             | Constant::Int { .. }
             | Constant::Float { .. }
             | Constant::String { .. } => im::hashset![],
@@ -245,6 +254,9 @@ impl TypedConstant {
 
     pub(crate) fn syntactically_eq(&self, other: &Self) -> bool {
         match (self, other) {
+            (Constant::Todo { .. }, Constant::Todo { .. }) => true,
+            (Constant::Todo { .. }, _) => false,
+
             (Constant::Int { int_value: n, .. }, Constant::Int { int_value: m, .. }) => n == m,
             (Constant::Int { .. }, _) => false,
 
@@ -416,6 +428,7 @@ impl TypedConstant {
             | Constant::BitArray { .. }
             | Constant::StringConcatenation { .. }
             | Constant::Var { .. }
+            | Constant::Todo { .. }
             | Constant::Invalid { .. } => None,
         }
     }
@@ -440,6 +453,7 @@ impl<A, B> Constant<A, B> {
             | Constant::BitArray { location, .. }
             | Constant::Var { location, .. }
             | Constant::Invalid { location, .. }
+            | Constant::Todo { location, .. }
             | Constant::StringConcatenation { location, .. } => *location,
         }
     }
@@ -450,6 +464,7 @@ impl<A, B> Constant<A, B> {
             Constant::Int { .. }
             | Constant::Float { .. }
             | Constant::String { .. }
+            | Constant::Todo { .. }
             | Constant::Var { .. } => true,
 
             Constant::Tuple { .. }
