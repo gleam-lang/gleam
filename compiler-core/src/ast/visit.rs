@@ -661,6 +661,10 @@ pub trait Visit<'ast> {
         visit_typed_constant(self, constant);
     }
 
+    fn visit_typed_constant_todo(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
+        visit_typed_constant_todo(self, location, type_);
+    }
+
     fn visit_typed_constant_int(
         &mut self,
         location: &'ast SrcSpan,
@@ -918,6 +922,14 @@ fn visit_typed_constant_int<'a, V: Visit<'a> + ?Sized>(
     // No further traversal needed for constant ints
 }
 
+pub fn visit_typed_constant_todo<'a, V: Visit<'a> + ?Sized>(
+    _v: &mut V,
+    _location: &'a SrcSpan,
+    _type_: &'a Arc<Type>,
+) {
+    // No further traversal needed for constant todos
+}
+
 pub fn visit_typed_module<'a, V>(v: &mut V, module: &'a TypedModule)
 where
     V: Visit<'a> + ?Sized,
@@ -1102,6 +1114,7 @@ where
 
 pub fn visit_typed_constant<'a, V: Visit<'a> + ?Sized>(v: &mut V, constant: &'a TypedConstant) {
     match constant {
+        super::Constant::Todo { location, type_ } => v.visit_typed_constant_todo(location, type_),
         super::Constant::Int {
             location,
             value,

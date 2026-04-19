@@ -782,6 +782,7 @@ fn const_string_concatenate_argument<'a>(
         | Constant::RecordUpdate { .. }
         | Constant::BitArray { .. }
         | Constant::Var { .. }
+        | Constant::Todo { .. }
         | Constant::Invalid { .. } => const_inline(value, env),
     }
 }
@@ -884,6 +885,7 @@ fn const_segment<'a>(
             | Constant::RecordUpdate { .. }
             | Constant::Var { .. }
             | Constant::StringConcatenation { .. }
+            | Constant::Todo { .. }
             | Constant::Invalid { .. } => const_inline(value, env).surround("(", ")"),
         }
     };
@@ -1785,6 +1787,7 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
         }
 
         Constant::RecordUpdate { .. } => panic!("record updates should not reach code generation"),
+        Constant::Todo { .. } => panic!("todo constants should not reach code generation"),
         Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
     }
 }
@@ -2022,6 +2025,7 @@ fn clause_guard_string_concatenate_argument<'a>(
             | Constant::RecordUpdate { .. }
             | Constant::BitArray { .. }
             | Constant::Var { .. }
+            | Constant::Todo { .. }
             | Constant::Invalid { .. } => docvec!["(", const_inline(literal, env), ")/binary"],
         },
 
@@ -3545,6 +3549,7 @@ fn find_referenced_private_functions(
     already_found: &mut im::HashSet<EcoString>,
 ) {
     match constant {
+        Constant::Todo { .. } => panic!("todo constants should not reach code generation"),
         Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
         Constant::RecordUpdate { .. } => {
             panic!("record updates should not reach code generation")

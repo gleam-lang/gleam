@@ -457,6 +457,7 @@ impl<'a> CallGraphBuilder<'a> {
             | Constant::Float { .. }
             | Constant::String { .. }
             | Constant::Invalid { .. }
+            | Constant::Todo { .. }
             | Constant::Var {
                 module: Some(_), ..
             } => (),

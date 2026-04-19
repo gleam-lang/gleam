@@ -702,6 +702,12 @@ pub enum Error {
     RecordUpdateVariantWithNoFields {
         location: SrcSpan,
     },
+    /// When a constant contains a todo.
+    /// Unlike todo _expressions_, todo constants are a compile time error: we
+    /// want the developer to take care of them before they can run their code.
+    TodoConstant {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1371,6 +1377,7 @@ impl Error {
             | Error::ExternalTypeWithConstructors { location, .. }
             | Error::RecordUpdateVariantWithNoFields { location }
             | Error::QualifiedTypeMissingName { location }
+            | Error::TodoConstant { location }
             | Error::LowercaseBoolPattern { location } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
