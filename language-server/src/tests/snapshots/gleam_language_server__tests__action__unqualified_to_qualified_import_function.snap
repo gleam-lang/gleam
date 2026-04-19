@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport list.{map}\n\npub fn main() {\n    let identity = map([1, 2, 3], fn(x) { x })\n    let double = map([1, 2, 3], fn(x) { x * 2 })\n}\n"
 ---
 ----- BEFORE ACTION

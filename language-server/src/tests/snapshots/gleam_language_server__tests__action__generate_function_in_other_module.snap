@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport wibble\n\npub fn main() {\n  wibble.wibble()\n  wibble.wobble()\n}\n"
 ---
 ----- BEFORE ACTION

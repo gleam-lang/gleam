@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\npub fn main(x: Int) {\n  let x = [1, 2]\n\n}\n"
 ---
+
 pub fn main(x: Int) {
   let x = [1, 2]
 |

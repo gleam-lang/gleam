@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport wobble\n\npub fn identity(x: wobble.Wobble) -> wobble.Wobble {\n    x\n}\n"
 ---
 ----- BEFORE ACTION

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "pub fn go(n: Int) {\n  case n {\n    1 -> todo\n    2 -> todo\n    _ -> todo\n  }\n  }"
 ---
 ----- BEFORE ACTION

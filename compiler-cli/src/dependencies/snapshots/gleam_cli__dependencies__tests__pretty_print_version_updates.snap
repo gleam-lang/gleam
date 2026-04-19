@@ -1,8 +1,6 @@
 ---
 source: compiler-cli/src/dependencies/tests.rs
-assertion_line: 1373
 expression: output
-snapshot_kind: text
 ---
 Package                 Current   Latest
 -------                 -------   ------

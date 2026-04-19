@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\nimport example_module.{my_fn} as renamed_module\nfn main() {\n    my_fn\n}\n"
 ---
+
 import example_module.{my_fn} as renamed_module
 fn main() {
     my_fn

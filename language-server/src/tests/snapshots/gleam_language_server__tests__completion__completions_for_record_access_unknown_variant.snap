@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\ntype Wibble {\n  Wibble(a: Int, b: Int, c: Int, d: Int)\n  Wobble(a: Int, z: Bool)\n}\n\nfn fun(some_wibble: Wibble) {\n  some_wibble.a\n}\n"
 ---
+
 type Wibble {
   Wibble(a: Int, b: Int, c: Int, d: Int)
   Wobble(a: Int, z: Bool)

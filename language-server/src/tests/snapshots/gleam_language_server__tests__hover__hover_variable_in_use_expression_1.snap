@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\nfn b(fun: fn(Int) -> String) {\n  fun(42)\n}\n\nfn do_stuff() {\n  let c = \"done\"\n\n  use a <- b\n  c\n}\n"
 ---
+
 fn b(fun: fn(Int) -> String) {
   fun(42)
 }

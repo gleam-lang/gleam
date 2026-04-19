@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub type Wibble { Wibble(arg: Int, arg2: Float) }\npub fn main() {\n  let assert Wibble(arg2:, ..) = Wibble(arg: 1, arg2: 1.0)\n}\n"
 ---
 ----- BEFORE ACTION

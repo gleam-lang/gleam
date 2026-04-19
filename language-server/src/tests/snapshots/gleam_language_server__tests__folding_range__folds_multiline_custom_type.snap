@@ -1,7 +1,6 @@
 ---
 source: language-server/src/tests/folding_range.rs
 expression: "pub type W {\n  W(Int)\n}"
-snapshot_kind: text
 ---
 ----- Code -----
 pub type W {

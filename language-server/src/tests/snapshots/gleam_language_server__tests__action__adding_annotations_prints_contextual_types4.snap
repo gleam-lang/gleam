@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport wibble as wobble\n\npub fn main() {\n  let value = wobble.Wibble\n}\n"
 ---
 ----- BEFORE ACTION

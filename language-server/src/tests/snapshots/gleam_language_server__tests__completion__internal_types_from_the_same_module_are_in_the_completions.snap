@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\n@internal pub type Alias = Result(Int, String)\n@internal pub type AnotherType {\n  Wibble\n}\n"
 ---
+
 @internal pub type Alias = Result(Int, String)
 @internal pub type AnotherType {
 |  Wibble

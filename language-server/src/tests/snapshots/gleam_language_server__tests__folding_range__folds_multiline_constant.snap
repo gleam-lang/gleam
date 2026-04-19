@@ -1,7 +1,6 @@
 ---
 source: language-server/src/tests/folding_range.rs
 expression: "pub const xs = [\n  1,\n  2,\n]"
-snapshot_kind: text
 ---
 ----- Code -----
 pub const xs = [

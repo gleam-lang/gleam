@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport option.{type    Option, Some}\n\npub fn maybe_increment(x: Option(Int)) -> Option(Int) {\n    case x {\n        Some(value) -> Some(value + 1)\n        _ -> x\n    }\n}\n"
 ---
 ----- BEFORE ACTION

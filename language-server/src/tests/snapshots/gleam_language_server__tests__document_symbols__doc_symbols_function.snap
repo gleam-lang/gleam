@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/document_symbols.rs
+source: language-server/src/tests/document_symbols.rs
 expression: "doc_symbols(TestProject::for_source(code))"
 ---
 [

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 1874
 expression: "\npub fn go(x) {\n  let n = 1\n  case x {\n    <<_:size(n), _, _:bytes>> -> 1\n    _ -> 2\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

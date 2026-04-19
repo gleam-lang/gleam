@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 2312
 expression: "pub fn main() { True ｜｜ False }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn main() { True ｜｜ False }

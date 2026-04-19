@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 983
 expression: "\npub type Wibble(value, error) {\n  Wibble(\n    wibble: value,\n    wobble: Result(value, error),\n    wubble: error,\n  )\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

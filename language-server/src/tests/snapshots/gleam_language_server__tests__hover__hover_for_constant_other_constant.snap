@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\nconst constant1 = 10\nconst constant2 = constant1\n"
 ---
+
 const constant1 = 10
 const constant2 = constant1
                   ▔▔▔↑▔▔▔▔▔

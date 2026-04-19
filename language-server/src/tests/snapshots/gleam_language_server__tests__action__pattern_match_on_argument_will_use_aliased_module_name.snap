@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport wibble as i_want_to_see_this_name\n\npub fn main(arg: i_want_to_see_this_name.Wibble) {\n  todo\n}\n"
 ---
 ----- BEFORE ACTION

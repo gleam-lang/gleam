@@ -1,9 +1,8 @@
 ---
 source: compiler-cli/src/dependencies/tests.rs
-assertion_line: 1349
 expression: output
-snapshot_kind: text
 ---
+
 The following dependencies have new major versions available:
 
 Package                 Current    Latest

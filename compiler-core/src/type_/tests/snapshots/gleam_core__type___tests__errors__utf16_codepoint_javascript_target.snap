@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 3282
 expression: "\npub fn main() {\n  let assert <<a:utf16_codepoint>> = <<10>>\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

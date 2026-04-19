@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/todo.rs
-assertion_line: 64
 expression: "\npub fn unimplemented(message) {\n  panic as case message {\n    Ok(message) -> message\n    Error(_) -> \"No message provided\"\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

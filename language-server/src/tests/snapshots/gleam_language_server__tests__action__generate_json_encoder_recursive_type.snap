@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport gleam/option.{Some}\n\npub type LinkedList {\n  LinkedList(value: Int, next: option.Option(LinkedList))\n}\n"
 ---
 ----- BEFORE ACTION

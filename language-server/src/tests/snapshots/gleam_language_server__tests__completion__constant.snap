@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\nconst hello = 10\nconst world = he\n"
 ---
+
 const hello = 10
 const world = he|
 

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/records.rs
-assertion_line: 47
 expression: "\npub type Person {\n    Teacher(name: Nil, age: Int)\n    Student(name: String, age: Int)\n}\npub fn get_age(person: Person) { person.age }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

@@ -1,6 +1,6 @@
 ---
 source: language-server/src/tests/action.rs
-expression: "pub fn main() {\n    let op = op_factory(1, 2, 3)\n}\n\nfn op_factory(a: Int, b: Int, c: Int) -> fn(Int) -> Int {\n    todo\n}\n"
+expression: "pub fn main() {\n  let op = op_factory(1, 2, 3)\n}\n\nfn op_factory(a: Int, b: Int, c: Int) -> fn(Int) -> Int {\n  todo\n}\n"
 ---
 ----- BEFORE ACTION
 pub fn main() {

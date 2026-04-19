@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\npub fn main() {\n  [1, 2, 3]\n  |> map(wibble)\n  |> filter(fn(value) { value })\n}\n\nfn map(list: List(a), fun: fn(a) -> b) -> List(b) {}\nfn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) {}\n"
 ---
+
 pub fn main() {
   [1, 2, 3]
   ↑▔▔▔▔▔▔▔▔

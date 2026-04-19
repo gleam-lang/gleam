@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assert.rs
-assertion_line: 51
 expression: "\npub fn assert_answer(x) {\n  assert x == 42\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

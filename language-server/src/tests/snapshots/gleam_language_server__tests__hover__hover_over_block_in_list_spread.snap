@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\npub fn main() {\n  [1, 2, ..{\n    let x = 1\n    [x]\n  }]\n}\n"
 ---
+
 pub fn main() {
   [1, 2, ..{
     let x = 1

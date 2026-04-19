@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  case 1 {\n    _ -> {\n      use <- wibble\n      123\n    }\n    _ -> todo\n  }\n}\n\nfn wibble(f: fn() -> Float) -> Float { f() }\n"
 ---
 ----- BEFORE ACTION

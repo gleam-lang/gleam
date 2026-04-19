@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport option\n\npub fn main() {\n    case [option.Some(1), option.None] {\n        [option.None, ..] -> todo\n        [option.Some(_), ..] -> todo\n        _ -> todo\n    }\n    case option.Some(1), option.Some(2) {\n        option.None, option.Some(_) -> todo\n        option.Some(_), option.Some(val) -> todo\n        _ -> todo\n    }\n}\n"
 ---
 ----- BEFORE ACTION

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/modules.rs
-assertion_line: 59
 expression: "\nimport rocket_ship.{ x as y }\npub const z = y\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 -- rocket_ship.gleam

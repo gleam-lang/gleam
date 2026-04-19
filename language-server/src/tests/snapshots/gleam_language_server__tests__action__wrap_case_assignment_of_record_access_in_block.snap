@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub type Record {\n  R(left: Int, right: Int)\n}\n\npub fn main() {\n  let r = R(1, 2)\n  let l = r.left\n  l\n}\n"
 ---
 ----- BEFORE ACTION

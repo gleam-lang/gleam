@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 154
 expression: "\npub fn go() {\n  <<-80_000:16>>\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

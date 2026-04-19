@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 1221
 expression: "\npub fn go(x) {\n  case x {\n    <<a:float-big, b:int>> -> #(a, b)\n    _ -> #(1.1, 1)\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

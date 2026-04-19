@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/let_assert.rs
 expression: "\nfn split_once(x: String, y: String) -> Result(#(String, String), String) {\n    Ok(#(x, y))\n}\n\npub fn main() {\n    let string = \"Hello, world!\"\n    let assert Ok(#(prefix, string)) = split_once(string, \"\\n\")\n    as { \"Failed to split: \" <> string }\n}\n        "
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

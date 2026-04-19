@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "pub fn main() {\n  let assert [var1, var2, _var3, var4] = [1, 2, 3, 4]\n}"
 ---
 ----- BEFORE ACTION

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n    let x = 1\n    Ok(x)\n    Ok(x)\n    Nil\n}\n"
 ---
 ----- BEFORE ACTION

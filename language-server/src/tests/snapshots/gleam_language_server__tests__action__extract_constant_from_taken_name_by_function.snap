@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "fn floats() {\n    [1.0, 2.0]\n}\n\npub fn main() {\n  [0.25, 0.75]\n}"
 ---
 ----- BEFORE ACTION

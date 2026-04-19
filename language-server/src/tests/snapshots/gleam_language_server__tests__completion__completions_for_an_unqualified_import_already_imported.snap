@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\nimport dep.{wibble,wabble,type Wibble}\n\npub fn main() {\n  0\n}"
 ---
+
 import dep.{|wibble,wabble,type Wibble}
 
 pub fn main() {

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn map_result(input, function) {\n  case input {\n    Ok(value) -> Ok(function(value))\n    Error(error) -> Error(error)\n  }\n}\n"
 ---
 ----- BEFORE ACTION

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1882
 expression: tuple().0.1
-snapshot_kind: text
 ---
 [
     Expression(

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\n// ä\nfn wibble() {\n  case True {}\n}\n"
 ---
 ----- BEFORE ACTION

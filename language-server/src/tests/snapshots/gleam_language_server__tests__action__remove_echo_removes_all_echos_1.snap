@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "pub fn main() {\n  echo 1 |> echo |> echo |> wibble |> echo\n  echo wibble(echo 1, echo 2)\n  echo 1\n}"
 ---
 ----- BEFORE ACTION

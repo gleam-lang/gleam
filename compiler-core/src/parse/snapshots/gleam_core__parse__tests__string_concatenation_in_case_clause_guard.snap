@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1476
 expression: "\nlet my_string = \"hello \"\ncase my_string {\n    _ if my_string <> \"world\" == \"hello world\" -> io.debug(\"ok\")\n}"
-snapshot_kind: text
 ---
 [
     Assignment(

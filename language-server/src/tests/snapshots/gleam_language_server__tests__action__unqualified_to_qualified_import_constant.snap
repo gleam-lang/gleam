@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport mymath.{pi}\n\npub fn circle_area(radius: Float) -> Float {\n    pi *. radius *. radius\n}\n\npub fn circle_circumference(radius: Float) -> Float {\n    2. *. pi *. radius\n}\n"
 ---
 ----- BEFORE ACTION

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main(a: Bool) {\n  let b = 1\n  case a, b {\n\n  }\n}\n"
 ---
 ----- BEFORE ACTION

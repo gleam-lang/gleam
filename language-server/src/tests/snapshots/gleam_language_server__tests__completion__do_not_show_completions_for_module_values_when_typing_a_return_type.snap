@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\nimport option\npub fn main() -> option. {}\n"
 ---
+
 import option
 pub fn main() -> option.| {}
 

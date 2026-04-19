@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
-assertion_line: 251
 expression: "\npub fn b() {\n  let x = 1\n  {\n    let x = x\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

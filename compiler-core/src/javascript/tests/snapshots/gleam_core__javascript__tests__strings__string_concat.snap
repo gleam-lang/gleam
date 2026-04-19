@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-assertion_line: 100
 expression: "\npub fn go() {\n  \"Hello, \" <> \"Joe\"\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/reference.rs
+source: language-server/src/tests/reference.rs
 expression: "\npub type Wibble { Wibble }\n\npub fn main() {\n  Wibble\n}\n"
 ---
 -- mod.gleam

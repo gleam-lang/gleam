@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub type CannotBeDestructured {\n  One(one: String)\n  Two(two: Int)\n}\n\npub fn main(arg: CannotBeDestructured) {\n  todo\n}\n"
 ---
 ----- BEFORE ACTION

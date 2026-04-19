@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/lists.rs
-assertion_line: 106
 expression: "\npub fn go(func) {\n  let huuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuge_variable = []\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

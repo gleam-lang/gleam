@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  internal.some_internal_function()\n}\n"
 ---
 ----- BEFORE ACTION

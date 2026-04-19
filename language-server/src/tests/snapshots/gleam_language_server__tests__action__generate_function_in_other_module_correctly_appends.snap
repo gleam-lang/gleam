@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "import module_breaker/another\n\npub fn main() -> Nil {\n  another.function()\n}\n"
 ---
 ----- BEFORE ACTION

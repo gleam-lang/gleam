@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\nimport gleam/list\n\npub fn new() {\n  list.fer\n//      ^ cursor right after the 'f'\n}\n"
 ---
+
 import gleam/list
 
 pub fn new() {

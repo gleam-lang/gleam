@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\nimport option\npub type Wibble {\n  Wibble(option.)\n}\n"
 ---
+
 import option
 pub type Wibble {
   Wibble(option.|)

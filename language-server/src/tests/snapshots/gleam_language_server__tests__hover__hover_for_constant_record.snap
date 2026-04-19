@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\ntype Wibble {\n  Wibble(Int)\n}\n\nconst w = Wibble(10)\n"
 ---
+
 type Wibble {
   Wibble(Int)
 }
