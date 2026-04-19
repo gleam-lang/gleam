@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "pub const wibble = [todo, todo]\n\npub fn main() -> List(Int) {\n  // This is not an error!!\n  wibble\n}"
+---
+----- SOURCE CODE
+pub const wibble = [todo, todo]
+
+pub fn main() -> List(Int) {
+  // This is not an error!!
+  wibble
+}
+
+----- ERROR
+error: Constant todo found
+  ┌─ /src/one/two.gleam:1:21
+  │
+1 │ pub const wibble = [todo, todo]
+  │                     ^^^^ This code is incomplete
+
+This code will crash if it is run. Be sure to finish it before running your
+program.
+
+error: Constant todo found
+  ┌─ /src/one/two.gleam:1:27
+  │
+1 │ pub const wibble = [todo, todo]
+  │                           ^^^^ This code is incomplete
+
+This code will crash if it is run. Be sure to finish it before running your
+program.
