@@ -472,6 +472,8 @@ impl<'comments> Formatter<'comments> {
     fn const_expr<'a, A, B>(&mut self, value: &'a Constant<A, B>) -> Document<'a> {
         let comments = self.pop_comments(value.location().start);
         let document = match value {
+            Constant::Todo { .. } => "todo".to_doc(),
+
             Constant::Int { value, .. } => self.int(value),
 
             Constant::Float { value, .. } => self.float(value),
