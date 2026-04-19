@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\npub type Model {\n  Model(\n    Int,\n    Float,\n    label1: Int,\n    label2: String,\n  )\n}\n\npub fn main() {\n  case todo {\n    Model(_, _, _, ..) -> todo\n  }\n}\n"
 ---
+
 pub type Model {
   Model(
     Int,

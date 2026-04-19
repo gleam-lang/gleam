@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assert.rs
-assertion_line: 28
 expression: "\npub fn main() {\n  let x = True\n  assert x || False\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
-assertion_line: 54
 expression: "\npub fn add1(a) {\n  a + 1\n}\npub fn go() {\n  let x = {\n    1\n    {\n      2\n      3 |> add1\n    } |> add1\n  }\n  x\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

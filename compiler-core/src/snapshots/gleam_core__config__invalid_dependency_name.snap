@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/config.rs
-assertion_line: 385
 expression: error.pretty_string()
 ---
 error: File IO failure

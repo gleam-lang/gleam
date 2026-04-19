@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  wibble(1.0 >=. 0.0, waa)\n}\n"
 ---
 ----- BEFORE ACTION

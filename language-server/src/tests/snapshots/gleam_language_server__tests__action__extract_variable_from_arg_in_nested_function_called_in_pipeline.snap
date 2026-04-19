@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  let result =\n    [1, 2, 3]\n    |> map(add(_, 1))\n    |> map(subtract(_, 9))\n\n  result\n}\npub fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }\npub fn add(a: Int, b: Int) -> Int { todo }\npub fn subtract(a: Int, b: Int) -> Int { todo }\n"
 ---
 ----- BEFORE ACTION

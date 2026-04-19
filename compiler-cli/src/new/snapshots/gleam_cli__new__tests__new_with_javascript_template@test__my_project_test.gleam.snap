@@ -1,8 +1,6 @@
 ---
 source: compiler-cli/src/new/tests.rs
-assertion_line: 86
 expression: "crate::fs::read(Utf8PathBuf::from_path_buf(file_path.to_path_buf()).expect(\"Non Utf8 Path\"),).unwrap()"
-snapshot_kind: text
 ---
 import gleeunit
 

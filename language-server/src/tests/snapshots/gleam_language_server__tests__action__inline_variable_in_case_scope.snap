@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport gleam/io\n\npub fn main(x) {\n  case x {\n    True -> {\n      let message = \"Hello!\"\n      io.println(message)\n    }\n    False -> Nil\n  }\n}\n"
 ---
 ----- BEFORE ACTION

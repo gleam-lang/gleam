@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn create_user(name: String) -> User {\n    User(name: name, id: 1)\n}\n\nimport user.{type User, User}\n\npub fn user_list(users: List(User)) -> List(String) {\n    [User(name: \"John\", id: 1),\n    User(name: \"Jane\", id: 2)]\n}\n\n"
 ---
 ----- BEFORE ACTION

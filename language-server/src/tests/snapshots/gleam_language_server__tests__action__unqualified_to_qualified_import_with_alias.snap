@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport list.{map as transform}\n\npub fn double_list(items: List(Int)) -> List(Int) {\n    transform(items, fn(x) { x * 2 })\n}\n"
 ---
 ----- BEFORE ACTION

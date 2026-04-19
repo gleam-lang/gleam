@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "const something = \"something\"\n\npub fn main() {\n  let c = #(0.333334, something)\n}"
 ---
 ----- BEFORE ACTION

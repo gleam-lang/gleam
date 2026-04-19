@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 2809
 expression: "\nconst some_size = 2\n\npub fn run(data) {\n  case data {\n    <<x:bytes-size(some_size), _:bits>> -> x\n    _ -> data\n  }\n}\n        "
 ---
 ----- SOURCE CODE

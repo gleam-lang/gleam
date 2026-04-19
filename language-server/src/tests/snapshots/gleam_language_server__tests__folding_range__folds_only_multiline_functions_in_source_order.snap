@@ -1,7 +1,6 @@
 ---
 source: language-server/src/tests/folding_range.rs
 expression: "pub fn one() {\n  1\n}\n\npub fn two() { 2 }\n\npub fn three() {\n  3\n}"
-snapshot_kind: text
 ---
 ----- Code -----
 pub fn one() {

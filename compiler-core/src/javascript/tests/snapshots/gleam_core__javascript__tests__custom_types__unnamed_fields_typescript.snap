@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 179
 expression: "\npub type Ip{\n    Ip(String)\n}\n\npub const local = Ip(\"0.0.0.0\")\n\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

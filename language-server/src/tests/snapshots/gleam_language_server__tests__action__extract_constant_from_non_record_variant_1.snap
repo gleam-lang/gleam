@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "pub type Auth {\n  Verified\n  Unverified\n}\n\npub fn main() {\n  let a = Unverified\n  let a = verify(something, a)\n\n  a\n}\n"
 ---
 ----- BEFORE ACTION

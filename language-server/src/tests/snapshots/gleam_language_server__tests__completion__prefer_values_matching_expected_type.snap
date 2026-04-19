@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\npub fn main() -> Bool {\n  let wibble = 123\n  let wubble = True\n  let Wobble = 1.5\n  w\n}\n"
 ---
+
 pub fn main() -> Bool {
   let wibble = 123
   let wubble = True

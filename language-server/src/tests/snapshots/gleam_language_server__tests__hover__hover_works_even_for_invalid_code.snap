@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\nfn invalid() { 1 + Nil }\nfn valid() { Nil }\n"
 ---
+
 fn invalid() { 1 + Nil }
 fn valid() { Nil }
 ▔▔▔↑▔▔▔▔▔▔        

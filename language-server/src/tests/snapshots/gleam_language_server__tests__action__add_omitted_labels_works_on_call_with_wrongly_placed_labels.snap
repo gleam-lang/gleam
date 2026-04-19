@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  labelled(3, b: 2, 1)\n}\n\npub fn labelled(a a, b b, c c) { todo }\n    "
 ---
 ----- BEFORE ACTION

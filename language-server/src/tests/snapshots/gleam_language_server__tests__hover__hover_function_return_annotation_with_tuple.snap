@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\n/// Exciting documentation\n/// Maybe even multiple lines\nfn append(x: String, y: String) -> #(String, String) {\n  #(x, y)\n}\n"
 ---
+
 /// Exciting documentation
 /// Maybe even multiple lines
 fn append(x: String, y: String) -> #(String, String) {

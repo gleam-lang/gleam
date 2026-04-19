@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/tuples.rs
-assertion_line: 53
 expression: "\npub fn go() {\n  #(\n    \"1\",\n    {\n      \"2\"\n      \"3\"\n    },\n  )\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

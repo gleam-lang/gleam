@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/rename.rs
+source: language-server/src/tests/rename.rs
 expression: "\npub fn main(x) {\n  case x {\n    #(wibble, [wobble]) | #(wobble, [wibble, _]) | #(_, [wibble, wobble, ..]) ->\n      wibble + wobble\n    _ -> 0\n  }\n}\n"
 ---
 ----- BEFORE RENAME

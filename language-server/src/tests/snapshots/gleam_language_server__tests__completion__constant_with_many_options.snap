@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\nimport wibble.{Wobble}\n\ntype Wibble {\n  Wibble\n}\n\nconst pi = 3.14159\n\nfn some_function() {\n  todo\n}\n\nconst my_constant = a\n"
 ---
+
 import wibble.{Wobble}
 
 type Wibble {

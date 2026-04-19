@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn do_things(a, b) {\n  let x = a + b\n  echo x\n  a\n}\n"
 ---
 ----- BEFORE ACTION

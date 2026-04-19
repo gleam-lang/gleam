@@ -1,5 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-expression: "record_definition(\"PetCat\",\n&[(\"name\",\nArc::new(Type::Named\n{\n    publicity: Publicity::Public, package: \"package\".into(), module:\n    module_name, name: \"my_type\".into(), args: vec![], inferred_variant: None,\n}))])"
+expression: "record_definition(\"PetCat\",\n&[(\"name\",\nArc::new(Type::Named\n{\n    publicity: Publicity::Public, package: \"package\".into(), module:\n    module_name, name: \"my_type\".into(), arguments: vec![], inferred_variant:\n    None,\n}))])"
 ---
 -record(pet_cat, {name :: name:my_type()}).

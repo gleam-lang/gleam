@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nfn wibble(a: a, b: b, c: c) -> d { todo }\n\nfn many_args(a, b, c, d: d, e: a, f, g) {\n  todo\n}\n"
 ---
 ----- BEFORE ACTION

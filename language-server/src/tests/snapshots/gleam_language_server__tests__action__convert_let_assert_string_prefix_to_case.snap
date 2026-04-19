@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "pub fn main() {\n  let assert \"_\" <> thing = \"_Hello\"\n}"
 ---
 ----- BEFORE ACTION

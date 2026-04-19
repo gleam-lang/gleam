@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 959
 expression: "\npub fn main() -> Nil {\n  let xs = [1, 2, 3]\n  let ys = [5, 6, 7]\n  [1, ..xs, ..ys]\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

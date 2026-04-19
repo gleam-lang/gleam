@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn expect(value, message) {\n  let assert Ok(inner) = value as message\n  inner\n}\n"
 ---
 ----- BEFORE ACTION

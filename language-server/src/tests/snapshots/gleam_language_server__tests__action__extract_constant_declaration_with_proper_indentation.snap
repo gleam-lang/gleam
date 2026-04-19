@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  let fahrenheit = {\n    let degrees = 64\n    degrees\n  }\n  fahrenheit\n}\n"
 ---
 ----- BEFORE ACTION

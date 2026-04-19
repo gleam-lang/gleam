@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/sourcemaps.rs
-assertion_line: 257
 expression: "\npub fn wibble(lon, acc) {\n  let one = \"one\"\n  let two = \"one\n\ntwo\n\nthree\n\"\n    let three = \"three\"\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 0 |

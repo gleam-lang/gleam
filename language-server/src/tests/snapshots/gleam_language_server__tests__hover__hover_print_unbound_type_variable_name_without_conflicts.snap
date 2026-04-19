@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\nfn make_ok(value: a) {\n  let result = Ok(value)\n  result\n}\n"
 ---
+
 fn make_ok(value: a) {
   let result = Ok(value)
       ▔▔↑▔▔▔            

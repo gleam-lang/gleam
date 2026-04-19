@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\nimport wibble\n"
 ---
+
 import wibble
 ▔▔▔▔▔▔▔↑▔▔▔▔▔
 

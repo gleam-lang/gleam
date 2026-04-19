@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\npub fn main() {\n  case todo {\n    something -> s\n    something_else -> Nil\n  }\n  s\n}\n"
 ---
+
 pub fn main() {
   case todo {
     something -> s|

@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\nfn wibble() {\n    let wobble: Int = 7\n    wobble\n}\n"
 ---
+
 fn wibble() {
     let wobble: Int = 7
                 ▔▔↑    

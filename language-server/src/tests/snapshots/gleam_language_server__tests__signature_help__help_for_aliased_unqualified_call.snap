@@ -1,7 +1,8 @@
 ---
-source: compiler-core/src/language_server/tests/signature_help.rs
+source: language-server/src/tests/signature_help.rs
 expression: "\nimport example.{example_fn as wibble}\npub fn main() {\n  wibble()\n}\n"
 ---
+
 import example.{example_fn as wibble}
 pub fn main() {
   wibble()

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/modules.rs
-assertion_line: 70
 expression: "\nimport x as y\npub const z = y.v\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 -- x.gleam

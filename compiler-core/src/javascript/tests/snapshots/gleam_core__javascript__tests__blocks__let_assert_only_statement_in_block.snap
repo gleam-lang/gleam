@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
-assertion_line: 284
 expression: "\npub fn main() {\n  {\n    let assert Ok(1) = Error(Nil)\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

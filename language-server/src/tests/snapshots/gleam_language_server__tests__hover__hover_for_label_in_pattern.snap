@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\ntype Wibble {\n  Wibble(wibble: Int, wobble: Int)\n}\n\npub fn main() {\n  let Wibble(wibble: _, wobble: _) = todo\n  todo\n}\n"
 ---
+
 type Wibble {
   Wibble(wibble: Int, wobble: Int)
 }

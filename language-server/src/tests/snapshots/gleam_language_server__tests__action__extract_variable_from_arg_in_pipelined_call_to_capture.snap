@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  let adder = add\n  let x = adder |> reduce([1, 2, 3], _)\n  x\n}\npub fn reduce(list: List(a), fun: fn(a, a) -> a) -> Result(a, Nil) { todo }\npub fn add(a: Int, b: Int) -> Int { todo }\n"
 ---
 ----- BEFORE ACTION

@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\npub fn main() -> Result(Int, Nil) {\n  let result = Ok(12)\n  let result2 = Error(True)\n  r\n}\n"
 ---
+
 pub fn main() -> Result(Int, Nil) {
   let result = Ok(12)
   let result2 = Error(True)

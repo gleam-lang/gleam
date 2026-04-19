@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  [1, 2, 3]\n  |> map(todo)\n  |> filter(todo)\n}\n\nfn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }\nfn filter(list: List(a), fun: fn(a) -> Bool) -> List(b) { todo }\n"
 ---
 ----- BEFORE ACTION

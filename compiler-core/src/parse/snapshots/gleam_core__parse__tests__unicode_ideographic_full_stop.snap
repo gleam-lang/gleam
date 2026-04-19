@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 2297
 expression: "pub fn main() { io。println(\"hi\") }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn main() { io。println("hi") }

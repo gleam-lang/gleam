@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\nfn wibble() {\n  let assert #([d, e] as f, g) = #([0, 1], 2)\n\n}\n"
 ---
+
 fn wibble() {
   let assert #([d, e] as f, g) = #([0, 1], 2)
 |

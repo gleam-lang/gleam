@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-assertion_line: 950
 expression: "\npub fn go() {\n  let x =\n    case #(1, 2) {\n      #(1, b) -> b\n      #(_, b) -> b\n    }\n\n  let #(a, _b) = #(x, 3)\n\n  a\n}"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

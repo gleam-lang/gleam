@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 2317
 expression: "＠deprecated(\"old\")\npub fn main() { Nil }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 ＠deprecated("old")

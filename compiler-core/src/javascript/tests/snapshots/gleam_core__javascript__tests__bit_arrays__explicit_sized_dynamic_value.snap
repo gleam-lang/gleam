@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 231
 expression: "\npub fn go(i: Int) {\n  <<i:size(32)>>\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

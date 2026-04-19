@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport other\n\npub fn main() -> other.Wibble {\n  let assert Wobble = new()\n}\n\npub fn new() -> other.Wibble { todo }\n"
 ---
 ----- BEFORE ACTION

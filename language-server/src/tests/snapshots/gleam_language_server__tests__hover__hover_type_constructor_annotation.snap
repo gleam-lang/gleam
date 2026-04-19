@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\ntype Wibble {\n    Wibble(arg: String)\n}\n"
 ---
+
 type Wibble {
     Wibble(arg: String)
                 ▔▔▔▔↑▔ 

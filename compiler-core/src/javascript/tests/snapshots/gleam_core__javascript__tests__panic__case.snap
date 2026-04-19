@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/panic.rs
-assertion_line: 74
 expression: "\npub fn go(x) {\n  case x {\n    _ -> panic\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub type Wibble {\n  Wibble(integer: Int, float: Float)\n  Wobble(string: String, bool: Bool)\n}\n\npub fn main(w: Wibble) {\n  case w {}\n}\n"
 ---
 ----- BEFORE ACTION

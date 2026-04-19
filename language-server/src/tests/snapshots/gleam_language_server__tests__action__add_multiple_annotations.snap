@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub const my_constant = 20\n\npub fn add_my_constant(value) {\n  let result = value + my_constant\n  result\n}\n"
 ---
 ----- BEFORE ACTION

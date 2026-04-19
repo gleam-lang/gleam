@@ -1,7 +1,8 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\nimport list\npub fn main(x: Int) {\n  list.list.filter([1, 2, 3], todo)\n}\n"
 ---
+
 import list
 pub fn main(x: Int) {
   list.|list.filter([1, 2, 3], todo)

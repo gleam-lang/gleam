@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 2103
 expression: "﻿\nconst local_const = other.Record(..other.base, field: value)\n"
-snapshot_kind: text
 ---
 Parsed {
     module: Module {

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport option.{Some}\n\npub fn main() {\n    let list = [Some(1), option.None]\n    let tuple = #(Some(2), option.None)\n}\n"
 ---
 ----- BEFORE ACTION

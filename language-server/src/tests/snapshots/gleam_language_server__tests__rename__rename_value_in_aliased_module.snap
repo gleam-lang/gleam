@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/rename.rs
+source: language-server/src/tests/rename.rs
 expression: "\nimport mod as the_module\n\npub fn main() {\n  the_module.wibble()\n}\n"
 ---
 ----- BEFORE RENAME

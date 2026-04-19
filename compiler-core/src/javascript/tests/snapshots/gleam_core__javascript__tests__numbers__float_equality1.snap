@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 193
 expression: "\npub fn go(y) {\n  let x = 1.0\n  x == y\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

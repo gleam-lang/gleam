@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "pub fn main(x) {\n  case x {\n    [first, ..rest] if False || True ->\n      case first {\n        1 if False && True -> 1.1\n        _ if True || False -> 0.0 *. 10.0\n        _ -> 0.0\n      }\n\n    [] -> 1.1\n  }\n}\n"
 ---
 ----- BEFORE ACTION

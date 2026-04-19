@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 1781
 expression: "\npub fn main() {\n  let size = 3\n  <<1:size(size)-unit(2)>>\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

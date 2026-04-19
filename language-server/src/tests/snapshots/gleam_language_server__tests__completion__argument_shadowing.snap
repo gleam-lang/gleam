@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\npub fn main(x: Int) {\n  fn(x: Float) {\n\n  }\n}\n"
 ---
+
 pub fn main(x: Int) {
   fn(x: Float) {
 |

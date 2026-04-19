@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
 expression: "\npub fn main() {\n  let a = 10\n  let b = 3\n  let c = 2\n  let d = 1\n  let assert <<_:bytes-size(a - b - c - d)>> = <<>>\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
