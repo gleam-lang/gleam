@@ -88,58 +88,65 @@ pub(crate) struct Guard(
     #[allow(dead_code)] fslock::LockFile,
 );
 
-#[test]
-fn locking_global() {
-    let paths = crate::project_paths_at_current_directory_without_toml();
-    let lock = BuildLock::new_packages(&paths).expect("make lock");
-    let _guard1: Guard = lock.lock(&gleam_core::build::NullTelemetry).unwrap();
-    println!("Locked!")
-}
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
 
-#[test]
-fn locking_dev_erlang() {
-    let paths = crate::project_paths_at_current_directory_without_toml();
-    let lock = BuildLock::new_target(&paths, Mode::Dev, Target::Erlang).expect("make lock");
-    let _guard1: Guard = lock.lock(&gleam_core::build::NullTelemetry).unwrap();
-    println!("Locked!")
-}
+    #[test]
+    fn locking_global() {
+        let paths = crate::project_paths_at_current_directory_without_toml();
+        let lock = BuildLock::new_packages(&paths).expect("make lock");
+        let _guard1: Guard = lock.lock(&gleam_core::build::NullTelemetry).unwrap();
+        println!("Locked!")
+    }
 
-#[test]
-fn locking_prod_erlang() {
-    let paths = crate::project_paths_at_current_directory_without_toml();
-    let lock = BuildLock::new_target(&paths, Mode::Prod, Target::Erlang).expect("make lock");
-    let _guard1: Guard = lock.lock(&gleam_core::build::NullTelemetry).unwrap();
-    println!("Locked!")
-}
+    #[test]
+    fn locking_dev_erlang() {
+        let paths = crate::project_paths_at_current_directory_without_toml();
+        let lock = BuildLock::new_target(&paths, Mode::Dev, Target::Erlang).expect("make lock");
+        let _guard1: Guard = lock.lock(&gleam_core::build::NullTelemetry).unwrap();
+        println!("Locked!")
+    }
 
-#[test]
-fn locking_lsp_erlang() {
-    let paths = crate::project_paths_at_current_directory_without_toml();
-    let lock = BuildLock::new_target(&paths, Mode::Lsp, Target::Erlang).expect("make lock");
-    let _guard1: Guard = lock.lock(&gleam_core::build::NullTelemetry).unwrap();
-    println!("Locked!")
-}
+    #[test]
+    fn locking_prod_erlang() {
+        let paths = crate::project_paths_at_current_directory_without_toml();
+        let lock = BuildLock::new_target(&paths, Mode::Prod, Target::Erlang).expect("make lock");
+        let _guard1: Guard = lock.lock(&gleam_core::build::NullTelemetry).unwrap();
+        println!("Locked!")
+    }
 
-#[test]
-fn locking_dev_javascript() {
-    let paths = crate::project_paths_at_current_directory_without_toml();
-    let lock = BuildLock::new_target(&paths, Mode::Dev, Target::JavaScript).expect("make lock");
-    let _guard1: Guard = lock.lock(&gleam_core::build::NullTelemetry).unwrap();
-    println!("Locked!")
-}
+    #[test]
+    fn locking_lsp_erlang() {
+        let paths = crate::project_paths_at_current_directory_without_toml();
+        let lock = BuildLock::new_target(&paths, Mode::Lsp, Target::Erlang).expect("make lock");
+        let _guard1: Guard = lock.lock(&gleam_core::build::NullTelemetry).unwrap();
+        println!("Locked!")
+    }
 
-#[test]
-fn locking_prod_javascript() {
-    let paths = crate::project_paths_at_current_directory_without_toml();
-    let lock = BuildLock::new_target(&paths, Mode::Prod, Target::JavaScript).expect("make lock");
-    let _guard1: Guard = lock.lock(&gleam_core::build::NullTelemetry).unwrap();
-    println!("Locked!")
-}
+    #[test]
+    fn locking_dev_javascript() {
+        let paths = crate::project_paths_at_current_directory_without_toml();
+        let lock = BuildLock::new_target(&paths, Mode::Dev, Target::JavaScript).expect("make lock");
+        let _guard1: Guard = lock.lock(&gleam_core::build::NullTelemetry).unwrap();
+        println!("Locked!")
+    }
 
-#[test]
-fn locking_lsp_javascript() {
-    let paths = crate::project_paths_at_current_directory_without_toml();
-    let lock = BuildLock::new_target(&paths, Mode::Lsp, Target::JavaScript).expect("make lock");
-    let _guard1: Guard = lock.lock(&gleam_core::build::NullTelemetry).unwrap();
-    println!("Locked!")
+    #[test]
+    fn locking_prod_javascript() {
+        let paths = crate::project_paths_at_current_directory_without_toml();
+        let lock =
+            BuildLock::new_target(&paths, Mode::Prod, Target::JavaScript).expect("make lock");
+        let _guard1: Guard = lock.lock(&gleam_core::build::NullTelemetry).unwrap();
+        println!("Locked!")
+    }
+
+    #[test]
+    fn locking_lsp_javascript() {
+        let paths = crate::project_paths_at_current_directory_without_toml();
+        let lock = BuildLock::new_target(&paths, Mode::Lsp, Target::JavaScript).expect("make lock");
+        let _guard1: Guard = lock.lock(&gleam_core::build::NullTelemetry).unwrap();
+        println!("Locked!")
+    }
 }

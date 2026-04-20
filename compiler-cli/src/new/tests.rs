@@ -33,6 +33,7 @@ fn new() {
     assert!(toml.contains("name = \"my_project\""));
 }
 
+#[allow(clippy::disallowed_methods)]
 #[test]
 fn new_with_default_template() {
     let tmp = tempfile::tempdir().unwrap();
@@ -63,6 +64,7 @@ fn new_with_default_template() {
     });
 }
 
+#[allow(clippy::disallowed_methods)]
 #[test]
 fn new_with_javascript_template() {
     let tmp = tempfile::tempdir().unwrap();
