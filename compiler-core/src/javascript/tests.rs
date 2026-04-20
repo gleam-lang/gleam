@@ -270,7 +270,14 @@ pub fn append_line_numbers(src: &str) -> String {
 // Pretty-print a sourcemap to a string that might be readable by humans.
 pub fn source_map_to_string(src: &str, compiled: &str, source_map: SourceMap) -> String {
     let mut output = String::new();
-    output.push_str("Mappings:\n");
+    output.push_str("File: ");
+    output.push_str(source_map.get_file().unwrap_or_default());
+    output.push_str("\nSources:");
+    for source in source_map.sources() {
+        output.push(' ');
+        output.push_str(source);
+    }
+    output.push_str("\nMappings:\n");
     output.push_str("----- \n");
     let src_line_numbers = LineNumbers::new(&src);
     let compiled_line_numbers = LineNumbers::new(&compiled);

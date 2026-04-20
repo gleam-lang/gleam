@@ -53,6 +53,8 @@ expression: "\n/// my custom type\npub type Wibble {\n  /// Wibble\n  Wibble\n  
 35 |export const Wibble$Wabble$0 = (value) => value[0];
 
 ----- SOURCE MAP
+File: my/mod.mjs
+Sources: mod.gleam
 Mappings:
 ----- 
 

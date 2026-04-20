@@ -120,7 +120,7 @@ impl<'a> Generator<'a> {
             module,
             line_numbers,
             src: _,
-            path,
+            path: _,
             project_root,
         } = config;
         let current_module_name_segments_count = module.name.split('/').count();
@@ -141,13 +141,12 @@ impl<'a> Generator<'a> {
             typescript,
             source_map_builder: if source_map {
                 let module_name = module.name.clone();
-                // Need the absolute path to the module to be able to map the
-                // destination location back to the source location.
-                let src_path_str = path.as_str();
                 let output_path = format!("{module_name}.mjs");
+                let module_alias = module_name.split('/').next_back().unwrap_or(&module_name);
+                let input_path = format!("{module_alias}.gleam",);
                 let mut source_map_builder =
                     sourcemap::SourceMapBuilder::new(Some(&output_path.clone()));
-                let _ = source_map_builder.add_source(src_path_str);
+                let _ = source_map_builder.add_source(&input_path);
                 Some(Rc::new(RefCell::new(DebugIgnore(source_map_builder))))
             } else {
                 None

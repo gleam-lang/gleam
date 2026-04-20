@@ -19,6 +19,8 @@ expression: "\npub fn go(x) {\n  let assert #(wibble, wobble) = x\n}\n"
 7 |}
 
 ----- SOURCE MAP
+File: my/mod.mjs
+Sources: mod.gleam
 Mappings:
 ----- 
 

@@ -25,6 +25,8 @@ expression: "\npub fn wibble(lon, acc) {\n  let one = \"one\"\n  let two = \"one
 6 |}
 
 ----- SOURCE MAP
+File: my/mod.mjs
+Sources: mod.gleam
 Mappings:
 ----- 
 
