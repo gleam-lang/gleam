@@ -159,7 +159,7 @@ macro_rules! assert_error {
     };
 
     ($src:expr) => {
-        let (error, names) = $crate::type_::tests::compile_statement_sequence($src)
+        let (error, names) = *$crate::type_::tests::compile_statement_sequence($src)
             .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
             skipped_modules: vec![],
@@ -221,7 +221,7 @@ fn print_warnings(warnings: Vec<crate::warning::Warning>) -> String {
 #[macro_export]
 macro_rules! assert_warning {
     ($src:expr) => {
-        let warning = $crate::type_::tests::get_printed_warnings($src, vec![], crate::build::Target::Erlang, None);
+        let warning = $crate::type_::tests::get_printed_warnings($src, vec![], $crate::build::Target::Erlang, None);
         assert!(!warning.is_empty());
         let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
@@ -233,7 +233,7 @@ macro_rules! assert_warning {
             vec![
                 $(("thepackage", $name, $module_src)),*
             ],
-            crate::build::Target::Erlang,
+            $crate::build::Target::Erlang,
             None
         );
         assert!(!warning.is_empty());
@@ -250,7 +250,7 @@ macro_rules! assert_warning {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![$(($package, $name, $module_src)),*],
-            crate::build::Target::Erlang,
+            $crate::build::Target::Erlang,
             None
         );
         assert!(!warning.is_empty());
@@ -270,7 +270,7 @@ macro_rules! assert_js_warning {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![],
-            crate::build::Target::JavaScript,
+            $crate::build::Target::JavaScript,
             None,
         );
         assert!(!warning.is_empty());
@@ -285,7 +285,7 @@ macro_rules! assert_js_no_warnings {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![],
-            crate::build::Target::JavaScript,
+            $crate::build::Target::JavaScript,
             None,
         );
         assert!(warning.is_empty());
@@ -298,7 +298,7 @@ macro_rules! assert_warnings_with_gleam_version {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![],
-            crate::build::Target::Erlang,
+            $crate::build::Target::Erlang,
             Some($gleam_version),
         );
         assert!(!warning.is_empty());
@@ -313,7 +313,7 @@ macro_rules! assert_js_warnings_with_gleam_version {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![],
-            crate::build::Target::JavaScript,
+            $crate::build::Target::JavaScript,
             Some($gleam_version),
         );
         assert!(!warning.is_empty());
@@ -328,7 +328,7 @@ macro_rules! assert_js_no_warnings_with_gleam_version {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![],
-            crate::build::Target::JavaScript,
+            $crate::build::Target::JavaScript,
             Some($gleam_version),
         );
         assert!(warning.is_empty());
@@ -338,14 +338,14 @@ macro_rules! assert_js_no_warnings_with_gleam_version {
 #[macro_export]
 macro_rules! assert_no_warnings {
     ($src:expr $(,)?) => {
-        let warnings = $crate::type_::tests::get_warnings($src, vec![], crate::build::Target::Erlang, None);
+        let warnings = $crate::type_::tests::get_warnings($src, vec![], $crate::build::Target::Erlang, None);
         assert_eq!(warnings, vec![]);
     };
     ($(($name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings(
             $src,
             vec![$(("thepackage", $name, $module_src)),*],
-            crate::build::Target::Erlang,
+            $crate::build::Target::Erlang,
             None,
         );
         assert_eq!(warnings, vec![]);
@@ -354,7 +354,7 @@ macro_rules! assert_no_warnings {
         let warnings = $crate::type_::tests::get_warnings(
             $src,
             vec![$(($package, $name, $module_src)),*],
-            crate::build::Target::Erlang,
+            $crate::build::Target::Erlang,
             None,
         );
         assert_eq!(warnings, vec![]);
@@ -363,7 +363,7 @@ macro_rules! assert_no_warnings {
 
 fn compile_statement_sequence(
     src: &str,
-) -> Result<Vec1<TypedStatement>, (Vec1<crate::type_::Error>, Names)> {
+) -> Result<Vec1<TypedStatement>, Box<(Vec1<crate::type_::Error>, Names)>> {
     let ast = crate::parse::parse_statement_sequence(src).expect("syntax error");
     let mut modules = im::HashMap::new();
     let ids = UniqueIdGenerator::new();
@@ -398,7 +398,7 @@ fn compile_statement_sequence(
     .infer_statements(ast);
     match Vec1::try_from_vec(problems.take_errors()) {
         Err(_) => Ok(res),
-        Ok(errors) => Err((errors, environment.names)),
+        Ok(errors) => Err(Box::new((errors, environment.names))),
     }
 }
 
@@ -501,8 +501,10 @@ pub fn compile_module_with_opts(
         let mut ast = parsed.module;
         ast.name = name.into();
         let line_numbers = LineNumbers::new(module_src);
-        let mut config = PackageConfig::default();
-        config.name = package.into();
+        let config = PackageConfig {
+            name: package.into(),
+            ..PackageConfig::default()
+        };
         let module = crate::analyse::ModuleAnalyzerConstructor::<()> {
             target,
             ids: &ids,
@@ -527,9 +529,11 @@ pub fn compile_module_with_opts(
         .expect("syntax error");
     let mut ast = parsed.module;
     ast.name = module_name.into();
-    let mut config = PackageConfig::default();
-    config.name = "thepackage".into();
-    config.gleam_version = gleam_version.map(GleamVersion::from_pubgrub);
+    let config = PackageConfig {
+        name: "thepackage".into(),
+        gleam_version: gleam_version.map(GleamVersion::from_pubgrub),
+        ..PackageConfig::default()
+    };
 
     let warnings = TypeWarningEmitter::new("/src/warning/wrn.gleam".into(), src.into(), emitter);
     crate::analyse::ModuleAnalyzerConstructor::<()> {
@@ -792,8 +796,10 @@ fn infer_module_type_retention_test() {
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
-    let mut config = PackageConfig::default();
-    config.name = "thepackage".into();
+    let config = PackageConfig {
+        name: "thepackage".into(),
+        ..PackageConfig::default()
+    };
 
     let module = crate::analyse::ModuleAnalyzerConstructor::<()> {
         target: Target::Erlang,

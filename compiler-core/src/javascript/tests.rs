@@ -154,8 +154,10 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
     let mut direct_dependencies = HashMap::from_iter(vec![]);
 
     deps.iter().for_each(|(dep_package, dep_name, dep_src)| {
-        let mut dep_config = PackageConfig::default();
-        dep_config.name = (*dep_package).into();
+        let dep_config = PackageConfig {
+            name: (*dep_package).into(),
+            ..PackageConfig::default()
+        };
         let parsed = crate::parse::parse_module(
             Utf8PathBuf::from("test/path"),
             dep_src,
@@ -189,8 +191,10 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
     let mut ast = parsed.module;
     ast.name = "my/mod".into();
     let line_numbers = LineNumbers::new(src);
-    let mut config = PackageConfig::default();
-    config.name = "thepackage".into();
+    let config = PackageConfig {
+        name: "thepackage".into(),
+        ..PackageConfig::default()
+    };
 
     let module = crate::analyse::ModuleAnalyzerConstructor::<()> {
         target: Target::JavaScript,
@@ -273,8 +277,8 @@ pub fn source_map_to_string(src: &str, compiled: &str, source_map: SourceMap) ->
     let mut output = String::new();
     output.push_str("Mappings:\n");
     output.push_str("----- \n");
-    let src_line_numbers = LineNumbers::new(&src);
-    let compiled_line_numbers = LineNumbers::new(&compiled);
+    let src_line_numbers = LineNumbers::new(src);
+    let compiled_line_numbers = LineNumbers::new(compiled);
 
     // Since source maps can have multiple tokens for the same source index, we skip over the
     // intermediate tokens and only keep tokens with a new source index.
@@ -290,11 +294,10 @@ pub fn source_map_to_string(src: &str, compiled: &str, source_map: SourceMap) ->
             // Same source index, so extend the current token
             // This is for making the source map more readable
             continue;
-        } else {
-            // Different source index, so add the current token to the merged tokens
-            merged_tokens.push((token.get_src(), token.get_dst()));
-            prev_token_src = token.get_src();
-        };
+        }
+        // Different source index, so add the current token to the merged tokens
+        merged_tokens.push((token.get_src(), token.get_dst()));
+        prev_token_src = token.get_src();
     }
     let sorted_src_tokens = merged_tokens
         .iter()
