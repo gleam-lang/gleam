@@ -204,6 +204,10 @@
   details.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- `gleam remove` now cleans build caches after removing dependencies, which
+  ensures that dependencies are actually deleted.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server will now show a diagnostic if you have a file open that
