@@ -779,7 +779,7 @@ impl SourceFingerprint {
 ///
 #[derive(Debug)]
 pub enum Outcome<T, E> {
-    /// The operation was totally succesful.
+    /// The operation was totally successful.
     Ok(T),
 
     /// The operation was partially successful but there were problems.

@@ -1420,7 +1420,7 @@ impl BitArrayMatchedValue {
 }
 
 impl BitArrayTest {
-    /// Wether two bit array tests are equivalent, that is they are checking
+    /// Whether two bit array tests are equivalent, that is they are checking
     /// for the same thing.
     ///
     fn equivalent_to(&self, other: &Self) -> bool {

@@ -93,7 +93,7 @@ pub struct Environment<'a> {
     /// IDs and register the original names for them.
     pub deferred_type_variable_aliases: Vec<(u64, Arc<Type>)>,
 
-    /// Wether we ran into an `echo` or not while analysing the current module.
+    /// Whether we ran into an `echo` or not while analysing the current module.
     pub echo_found: bool,
 
     pub references: ReferenceTracker,

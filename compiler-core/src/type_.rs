@@ -1008,7 +1008,7 @@ pub struct ModuleInterface {
     pub minimum_required_version: Version,
     pub type_aliases: HashMap<EcoString, TypeAliasConstructor>,
     pub documentation: Vec<EcoString>,
-    /// Wether there's any echo in the module.
+    /// Whether there's any echo in the module.
     pub contains_echo: bool,
     pub references: References,
     /// Functions which can be inlined
