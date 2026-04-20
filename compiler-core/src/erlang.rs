@@ -4,6 +4,7 @@
 
 mod pattern;
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests;
 
 use crate::build::{Target, module_erlang_name};

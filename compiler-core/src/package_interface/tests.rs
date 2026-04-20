@@ -144,6 +144,7 @@ pub fn compile_package(
     .expect("to json")
 }
 
+#[allow(clippy::unwrap_used)]
 fn package_from_module(module: Module) -> Package {
     Package {
         config: PackageConfig {

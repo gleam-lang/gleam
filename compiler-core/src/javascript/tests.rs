@@ -268,6 +268,7 @@ pub fn append_line_numbers(src: &str) -> String {
 }
 
 // Pretty-print a sourcemap to a string that might be readable by humans.
+#[allow(clippy::indexing_slicing)]
 pub fn source_map_to_string(src: &str, compiled: &str, source_map: SourceMap) -> String {
     let mut output = String::new();
     output.push_str("Mappings:\n");

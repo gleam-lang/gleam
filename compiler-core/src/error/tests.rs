@@ -2,6 +2,7 @@ use super::*;
 use insta::assert_snapshot;
 
 #[test]
+#[allow(clippy::indexing_slicing)]
 fn test_shell_program_not_found_error() {
     let cmds = vec!["erlc", "rebar3", "deno", "elixir", "node", "bun", "git"];
     let oses = vec!["macos", "linux"];

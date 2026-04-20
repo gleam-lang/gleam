@@ -76,6 +76,7 @@ impl InMemoryFileSystem {
     }
 
     #[cfg(test)]
+    #[allow(clippy::unwrap_used)]
     /// Set the modification time of a file.
     ///
     /// Panics if the file does not exist.
