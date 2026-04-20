@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.16.0-rc3 - 2026-04-20
 
 ### Build tool
 
