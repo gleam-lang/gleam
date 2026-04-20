@@ -79,7 +79,7 @@ pub fn setup(
     };
 
     // Get the config for the module that is being run to check the target.
-    // Also get the kind of the package the module belongs to: wether the module
+    // Also get the kind of the package the module belongs to: whether the module
     // belongs to a dependency or to the root package.
     let (mod_config, package_kind) = match &module {
         Some(mod_path) => {

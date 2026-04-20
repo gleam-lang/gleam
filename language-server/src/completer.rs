@@ -354,7 +354,7 @@ impl<'a, IO> Completer<'a, IO> {
     }
 
     // Gets the current range around the cursor to place a completion
-    // and any part of the phrase preceeding a dot if a module is being selected from.
+    // and any part of the phrase preceding a dot if a module is being selected from.
     // A continuous phrase in this case is a name or typename that may have a dot in it.
     // This is used to match the exact location to fill in the completion.
     fn get_phrase_surrounding_completion(&'a self) -> CursorSurroundings {

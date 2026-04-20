@@ -6535,7 +6535,7 @@ struct VariantToGenerate<'a> {
     end_position: u32,
     arguments_types: Vec<Arc<Type>>,
 
-    /// Wether the type we're adding the variant to is written with braces or
+    /// Whether the type we're adding the variant to is written with braces or
     /// not. We need this information to add braces when missing.
     ///
     type_braces: TypeBraces,

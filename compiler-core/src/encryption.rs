@@ -14,7 +14,7 @@ pub fn encrypt_with_passphrase(
 
 // the function `decrypt_with_passphrase` has two possible failure cases:
 // - when decryption fails
-// - when the data was decrypted succesfully but the result is not UTF-8 valid
+// - when the data was decrypted successfully but the result is not UTF-8 valid
 #[derive(Error, Debug)]
 pub enum DecryptError {
     #[error("unable to decrypt message: {0}")]
