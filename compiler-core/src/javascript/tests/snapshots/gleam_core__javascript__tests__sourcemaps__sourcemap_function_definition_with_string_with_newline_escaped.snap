@@ -21,6 +21,8 @@ expression: "\n/// my function\npub fn wibble() {\n  let wibble = \"hello\\nworl
 7 |}
 
 ----- SOURCE MAP
+File: my/mod.mjs
+Sources: mod.gleam
 Mappings:
 ----- 
 

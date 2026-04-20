@@ -42,6 +42,8 @@ expression: "\npub fn go(one, other) {\n  case one, other {\n    Ok(1), Error(_)
 25 |}
 
 ----- SOURCE MAP
+File: my/mod.mjs
+Sources: mod.gleam
 Mappings:
 ----- 
 

@@ -31,6 +31,8 @@ expression: "\npub fn wibble(lon, acc) {\n  case lon {\n    [] -> 0\n    [n, ..r
 16 |}
 
 ----- SOURCE MAP
+File: my/mod.mjs
+Sources: mod.gleam
 Mappings:
 ----- 
 

@@ -38,6 +38,8 @@ expression: "\npub type Wibble {\n  Wibble(Int, Int)\n}\n\npub fn go(x) {\n  cas
 20 |}
 
 ----- SOURCE MAP
+File: my/mod.mjs
+Sources: mod.gleam
 Mappings:
 ----- 
 

@@ -19,6 +19,8 @@ expression: "\n/// my add function\npub fn add_2(x) {\n  x + 2\n}"
 6 |}
 
 ----- SOURCE MAP
+File: my/mod.mjs
+Sources: mod.gleam
 Mappings:
 ----- 
 

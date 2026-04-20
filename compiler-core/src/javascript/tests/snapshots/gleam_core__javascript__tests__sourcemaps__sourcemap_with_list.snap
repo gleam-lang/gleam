@@ -17,6 +17,8 @@ expression: "\npub fn go(x) {\n  [1, 2, 3]\n}\n"
 5 |}
 
 ----- SOURCE MAP
+File: my/mod.mjs
+Sources: mod.gleam
 Mappings:
 ----- 
 

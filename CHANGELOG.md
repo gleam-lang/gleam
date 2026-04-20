@@ -2,6 +2,15 @@
 
 ## v1.16.0-rc3 - 2026-04-20
 
+### Bug fixes
+
+- The `sources` property of source map files now uses a relative URL to the
+  source file. Previously it was using a filesystem path, which would not work
+  in all JavaScript environments.
+  ([Louis Pilfold](https://github.com/lpil))
+
+## v1.16.0-rc3 - 2026-04-20
+
 ### Build tool
 
 - New Gleam packages are now generated requiring `>= 1.0.0` of `gleam_stdlib`.
