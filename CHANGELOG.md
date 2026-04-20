@@ -204,6 +204,10 @@
   details.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The build tool now deletes `escript` file after compilation, which is
+  unnecessary once the build is completed.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server will now show a diagnostic if you have a file open that
