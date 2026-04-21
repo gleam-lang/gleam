@@ -120,4 +120,8 @@ impl FileSystemReader for WasmFileSystem {
     fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, Error> {
         self.imfs.canonicalise(path)
     }
+
+    fn is_same_file(&self, _left: &Utf8Path, _right: &Utf8Path) -> Result<bool, Error> {
+        unreachable!("is_same_file unimplemented")
+    }
 }

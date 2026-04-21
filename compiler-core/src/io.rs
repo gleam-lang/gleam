@@ -269,6 +269,7 @@ pub trait FileSystemReader {
     fn read_bytes(&self, path: &Utf8Path) -> Result<Vec<u8>, Error>;
     fn reader(&self, path: &Utf8Path) -> Result<WrappedReader, Error>;
     fn is_file(&self, path: &Utf8Path) -> bool;
+    fn is_same_file(&self, left: &Utf8Path, right: &Utf8Path) -> Result<bool, Error>;
     fn is_directory(&self, path: &Utf8Path) -> bool;
     fn modification_time(&self, path: &Utf8Path) -> Result<SystemTime, Error>;
     fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, Error>;

@@ -183,6 +183,10 @@ impl FileSystemReader for LanguageServerTestIO {
     fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, gleam_core::Error> {
         self.io.canonicalise(path)
     }
+
+    fn is_same_file(&self, _left: &Utf8Path, _right: &Utf8Path) -> Result<bool, gleam_core::Error> {
+        unreachable!("is_same_file unimplemented")
+    }
 }
 
 impl FileSystemWriter for LanguageServerTestIO {
