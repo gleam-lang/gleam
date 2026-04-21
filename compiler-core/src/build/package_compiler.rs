@@ -424,7 +424,7 @@ where
         &mut self,
         modules: &[Module],
         typescript: bool,
-        sourcemap: bool,
+        sourcemaps: bool,
         prelude_location: &Utf8Path,
     ) -> Result<(), Error> {
         let mut written = HashSet::new();
@@ -436,7 +436,7 @@ where
         JavaScript::new(
             &self.out,
             typescript,
-            sourcemap,
+            sourcemaps,
             prelude_location,
             &self.root,
         )
@@ -448,7 +448,42 @@ where
             tracing::debug!("skipping_native_file_copying");
         }
 
+        // Source maps files include a reference to the source Gleam file, so if
+        // we are generating source maps we need to make the source file available
+        // in the build directory next to the JavaScript file and the source map.
+        if sourcemaps {
+            for module in modules {
+                self.link_module_source_file_to_out(module)?;
+            }
+        }
+
         Ok(())
+    }
+
+    /// Link the module source .gleam directory to the output directory.
+    /// This is done if we are generating source maps.
+    ///
+    fn link_module_source_file_to_out(&mut self, module: &Module) -> Result<(), Error> {
+        let source = module.input_path.as_path();
+        let destination = self.out.join(module.name.as_str()).with_extension("gleam");
+        let file_at_destination = self.io.exists(&destination);
+
+        // If the file does not exist then linking is needed.
+        if !file_at_destination {
+            return self.io.hardlink(&source, &destination);
+        }
+
+        // If file is already there then there is nothing to do.
+        //
+        // If there is already a file there but it is not a link that means
+        // it is a link to the source file for a previous module that had
+        // the same name.
+        if self.io.is_same_file(&source, &destination)? {
+            return Ok(());
+        }
+
+        self.io.delete_file(&destination)?;
+        self.io.hardlink(&source, &destination)
     }
 
     fn render_erlang_entrypoint_module(

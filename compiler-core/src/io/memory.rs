@@ -175,8 +175,18 @@ impl FileSystemWriter for InMemoryFileSystem {
         Ok(())
     }
 
-    fn hardlink(&self, _: &Utf8Path, _: &Utf8Path) -> Result<(), Error> {
-        panic!("unimplemented") // TODO
+    fn hardlink(&self, left: &Utf8Path, right: &Utf8Path) -> Result<(), Error> {
+        let mut files = self.files.deref().borrow_mut();
+        let Some(file) = files.get(left).cloned() else {
+            return Err(Error::FileIo {
+                kind: FileKind::File,
+                action: FileIoAction::ReadMetadata,
+                path: left.to_path_buf(),
+                err: None,
+            });
+        };
+        let _ = files.insert(right.into(), file);
+        Ok(())
     }
 
     fn symlink_dir(&self, _: &Utf8Path, _: &Utf8Path) -> Result<(), Error> {
@@ -282,7 +292,6 @@ impl FileSystemReader for InMemoryFileSystem {
     }
 
     fn reader(&self, _path: &Utf8Path) -> Result<WrappedReader, Error> {
-        // TODO
         unreachable!("Memory reader unimplemented")
     }
 
@@ -310,6 +319,10 @@ impl FileSystemReader for InMemoryFileSystem {
             err: None,
         })?;
         Ok(file.modification_time)
+    }
+
+    fn is_same_file(&self, _left: &Utf8Path, _right: &Utf8Path) -> Result<bool, Error> {
+        unreachable!("is_same_file unimplemented")
     }
 }
 

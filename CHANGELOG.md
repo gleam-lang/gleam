@@ -1,6 +1,13 @@
 # Changelog
 
-## v1.16.0-rc3 - 2026-04-20
+## Unreleased
+
+### Build tool
+
+- Enabling JavaScript source map generation will now copy the source Gleam
+  files to the output directory. This means that source maps will work in
+  browsers without any further processing before being served.
+  ([Louis Pilfold](https://github.com/lpil))
 
 ### Bug fixes
 

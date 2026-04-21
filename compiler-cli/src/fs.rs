@@ -134,6 +134,19 @@ impl FileSystemReader for ProjectIO {
     fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, Error> {
         canonicalise(path)
     }
+
+    fn is_same_file(&self, left: &Utf8Path, right: &Utf8Path) -> Result<bool, Error> {
+        is_same_file(left, right)
+    }
+}
+
+fn is_same_file(left: &Utf8Path, right: &Utf8Path) -> Result<bool, Error> {
+    same_file::is_same_file(left, right).map_err(|e| Error::FileIo {
+        action: FileIoAction::ReadMetadata,
+        kind: FileKind::File,
+        path: left.to_path_buf(),
+        err: Some(e.to_string()),
+    })
 }
 
 pub fn modification_time(path: &Utf8Path) -> std::result::Result<SystemTime, Error> {
