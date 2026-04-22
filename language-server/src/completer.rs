@@ -20,9 +20,9 @@ use gleam_core::{
     line_numbers::LineNumbers,
     parse::{LiteralFloatValue, parse_int_value},
     type_::{
-        self, FieldMap, ModuleInterface, PRELUDE_MODULE_NAME, PreludeType, RecordAccessor, Type,
-        TypeConstructor, ValueConstructorVariant, collapse_links, error::VariableOrigin,
-        pretty::Printer,
+        self, Deprecation, FieldMap, ModuleInterface, PRELUDE_MODULE_NAME, PreludeType,
+        RecordAccessor, Type, TypeConstructor, ValueConstructorVariant, collapse_links,
+        error::VariableOrigin, pretty::Printer,
     },
 };
 
@@ -458,6 +458,7 @@ impl<'a, IO> Completer<'a, IO> {
             // Skip types that should not be suggested
             if !self.is_suggestable_import(
                 &type_.publicity,
+                &type_.deprecation,
                 module_being_imported_from.package.as_str(),
             ) {
                 continue;
@@ -487,6 +488,7 @@ impl<'a, IO> Completer<'a, IO> {
             // Skip values that should not be suggested
             if !self.is_suggestable_import(
                 &value.publicity,
+                &value.deprecation,
                 module_being_imported_from.package.as_str(),
             ) {
                 continue;
@@ -642,7 +644,11 @@ impl<'a, IO> Completer<'a, IO> {
             };
 
             for (name, type_) in &module.types {
-                if !self.is_suggestable_import(&type_.publicity, module.package.as_str()) {
+                if !self.is_suggestable_import(
+                    &type_.publicity,
+                    &type_.deprecation,
+                    module.package.as_str(),
+                ) {
                     continue;
                 }
 
@@ -720,7 +726,11 @@ impl<'a, IO> Completer<'a, IO> {
 
             // Qualified types
             for (name, type_) in &module.types {
-                if !self.is_suggestable_import(&type_.publicity, module.package.as_str()) {
+                if !self.is_suggestable_import(
+                    &type_.publicity,
+                    &type_.deprecation,
+                    module.package.as_str(),
+                ) {
                     continue;
                 }
 
@@ -895,7 +905,11 @@ impl<'a, IO> Completer<'a, IO> {
 
             // Qualified values
             for (name, value) in &module.values {
-                if !self.is_suggestable_import(&value.publicity, module.package.as_str()) {
+                if !self.is_suggestable_import(
+                    &value.publicity,
+                    &value.deprecation,
+                    module.package.as_str(),
+                ) {
                     continue;
                 }
 
@@ -969,7 +983,11 @@ impl<'a, IO> Completer<'a, IO> {
 
             // Qualified values
             for (name, value) in &module.values {
-                if !self.is_suggestable_import(&value.publicity, module.package.as_str()) {
+                if !self.is_suggestable_import(
+                    &value.publicity,
+                    &value.deprecation,
+                    module.package.as_str(),
+                ) {
                     continue;
                 }
 
@@ -1142,8 +1160,19 @@ impl<'a, IO> Completer<'a, IO> {
         self.compiler.project_compiler.config.name.as_str()
     }
 
-    // checks based on the publicity if something should be suggested for import from root package
-    fn is_suggestable_import(&self, publicity: &Publicity, package: &str) -> bool {
+    // Checks based on the publicity and deprecation if something should be
+    // suggested for import from root package
+    fn is_suggestable_import(
+        &self,
+        publicity: &Publicity,
+        deprecation: &Deprecation,
+        package: &str,
+    ) -> bool {
+        // We always skip deprecated values
+        if deprecation.is_deprecated() {
+            return false;
+        }
+
         match publicity {
             // We skip private types as we never want those to appear in
             // completions.

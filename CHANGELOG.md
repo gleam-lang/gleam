@@ -357,6 +357,10 @@
   qualified type.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server no longer shows completions for deprecated values from
+  dependencies.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Formatter
 
 - The formatter no longer moves comments out of type annotations.
