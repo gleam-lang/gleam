@@ -1,4 +1,4 @@
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 use itertools::Itertools;
 
 #[test]
@@ -186,4 +186,86 @@ HOME_URL=\"https://www.ubuntu.com/\"
         super::extract_distro_id("\nID=\"id first\"\nID=another_id".to_string()),
         "id first"
     );
+}
+
+#[test]
+fn hardlink_dir_copies_files_and_directories() {
+    let tmp = tempfile::tempdir().unwrap();
+    let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
+    let src = base.join("src");
+    let dest = base.join("dest");
+
+    super::mkdir(&src).unwrap();
+    super::mkdir(&src.join("sub")).unwrap();
+    super::write(&src.join("a.txt"), "hello").unwrap();
+    super::write(&src.join("sub").join("b.txt"), "world").unwrap();
+
+    super::mkdir(&dest).unwrap();
+    super::hardlink_dir(&src, &dest).unwrap();
+
+    assert_eq!(
+        std::fs::read_to_string(dest.join("a.txt")).unwrap(),
+        "hello"
+    );
+    assert_eq!(
+        std::fs::read_to_string(dest.join("sub").join("b.txt")).unwrap(),
+        "world"
+    );
+}
+
+#[test]
+fn hardlink_dir_skips_git_directory() {
+    let tmp = tempfile::tempdir().unwrap();
+    let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
+    let src = base.join("src");
+    let dest = base.join("dest");
+
+    super::mkdir(&src).unwrap();
+    super::mkdir(&src.join(".git")).unwrap();
+    super::write(&src.join("a.txt"), "content").unwrap();
+    super::write(&src.join(".git").join("config"), "gitdata").unwrap();
+
+    super::mkdir(&dest).unwrap();
+    super::hardlink_dir(&src, &dest).unwrap();
+
+    assert!(dest.join("a.txt").exists());
+    assert!(!dest.join(".git").exists());
+}
+
+#[test]
+fn hardlink_dir_empty_source() {
+    let tmp = tempfile::tempdir().unwrap();
+    let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
+    let src = base.join("src");
+    let dest = base.join("dest");
+
+    super::mkdir(&src).unwrap();
+    super::mkdir(&dest).unwrap();
+    super::hardlink_dir(&src, &dest).unwrap();
+
+    assert!(dest.exists());
+    assert_eq!(std::fs::read_dir(&dest).unwrap().count(), 0);
+}
+
+#[cfg(unix)]
+#[test]
+fn hardlink_dir_skips_symlinks() {
+    let tmp = tempfile::tempdir().unwrap();
+    let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
+    let src = base.join("src");
+    let dest = base.join("dest");
+    let outside = base.join("outside");
+
+    super::mkdir(&src).unwrap();
+    super::mkdir(&dest).unwrap();
+    super::mkdir(&outside).unwrap();
+    super::write(&src.join("real.txt"), "kept").unwrap();
+    super::write(&outside.join("secret.txt"), "stolen").unwrap();
+
+    std::os::unix::fs::symlink(outside.as_std_path(), src.join("escape").as_std_path()).unwrap();
+
+    super::hardlink_dir(&src, &dest).unwrap();
+
+    assert!(dest.join("real.txt").exists());
+    assert!(!dest.join("escape").exists());
 }
