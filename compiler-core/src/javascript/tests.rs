@@ -271,7 +271,7 @@ pub fn append_line_numbers(src: &str) -> String {
 pub fn source_map_to_string(src: &str, compiled: &str, source_map: SourceMap) -> String {
     let mut output = String::new();
     output.push_str("File: ");
-    output.push_str(source_map.get_file().unwrap_or_default());
+    output.push_str(source_map.get_file().expect("source map file"));
     output.push_str("\nSources:");
     for source in source_map.sources() {
         output.push(' ');

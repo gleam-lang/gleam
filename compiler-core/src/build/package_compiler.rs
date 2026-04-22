@@ -460,15 +460,18 @@ where
         Ok(())
     }
 
-    /// Link the module source .gleam directory to the output directory.
-    /// This is done if we are generating source maps.
+    /// Link the module source .gleam file to the output directory.
+    /// This is done if we are generating source maps because source
+    /// maps include a reference to the source file, so the source
+    /// file needs to be accessible to the user of the source file.
     ///
     fn link_module_source_file_to_out(&mut self, module: &Module) -> Result<(), Error> {
         let source = module.input_path.as_path();
         let destination = self.out.join(module.name.as_str()).with_extension("gleam");
         let file_at_destination = self.io.exists(&destination);
 
-        // If the file does not exist then linking is needed.
+        // If the file does not exist then linking is needed. It could already
+        // exist due to having been linked by a previous compilation run.
         if !file_at_destination {
             return self.io.hardlink(&source, &destination);
         }
