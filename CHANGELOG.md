@@ -226,6 +226,10 @@
   details.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- `gleam publish` will now better discover Git repository in monorepos. This
+  improves suggestions to push a tag, if it doesn't exists.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server will now show a diagnostic if you have a file open that

@@ -18,7 +18,11 @@ use gleam_core::{
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
-use std::{collections::HashMap, io::Write, path::PathBuf};
+use std::{
+    collections::HashMap,
+    io::Write,
+    process::{Command, Stdio},
+};
 
 use crate::{build, cli, docs, fs, http::HttpClient, new::default_readme};
 
@@ -116,19 +120,40 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
 
     // Prompt the user to make a git tag if they have not.
     let has_repo = config.repository.is_some();
-    let git = PathBuf::from(".git");
-    let tag_name = config.tag_for_version(&config.version);
-    let git_tag = git.join("refs").join("tags").join(&tag_name);
-    if has_repo && git.exists() && !git_tag.exists() {
-        println!(
-            "
-Please push a git tag for this release so source code links in the
-HTML documentation will work:
+    let is_repository = Command::new("git")
+        .arg("rev-parse")
+        .arg("--is-inside-work-tree")
+        // We don't need Git's output, since it will exit with code 0 if we are
+        // inside work tree
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
 
-    git tag {tag_name}
-    git push origin {tag_name}
-"
-        )
+    if has_repo && is_repository {
+        let tag_name = config.tag_for_version(&config.version);
+        let tag_exists = Command::new("git")
+            .args(["rev-parse", "--verify", &tag_name])
+            // We don't need Git's output, since it will exit with code 0 if the
+            // tag exists
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+
+        if !tag_exists {
+            println!(
+                "
+    Please push a git tag for this release so source code links in the
+    HTML documentation will work:
+
+        git tag {tag_name}
+        git push origin {tag_name}
+    "
+            )
+        }
     }
     Ok(())
 }
