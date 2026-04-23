@@ -226,6 +226,10 @@
   details.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The build tool now falls back to recursively hardlinking directories on
+  Windows when it fails to symlink one due to disabled "Developer mode".
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server will now show a diagnostic if you have a file open that
