@@ -1,4 +1,4 @@
-# Gleam public threat model
+# Public threat model
 
 Last updated: 2026-04-23
 
