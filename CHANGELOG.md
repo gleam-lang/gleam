@@ -452,6 +452,18 @@
   directly matches one of the branches.
   ([Eyup Can Akman](https://github.com/eyupcanakman))
 
+- The compiler no longer reports false type mismatch errors when type-checking
+  mutually recursive function definitions such as these:
+
+  ```gleam
+  type Test(a) { Test(a) }
+
+  fn it(value: Test(a)) { it2(value) }
+  fn it2(value: Test(a)) -> Test(a) { it(value) }
+  ```
+
+  ([Adi Salimgereyev](https://github.com/abs0luty))
+
 ## v1.15.1 - 2026-03-17
 
 ### Bug fixes
