@@ -120,6 +120,7 @@ mod tests {
             source: ManifestPackageSource::Git {
                 repo: "repo".into(),
                 commit: "commit".into(),
+                path: None,
             },
         };
         assert_eq!(

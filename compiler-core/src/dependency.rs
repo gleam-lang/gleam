@@ -1064,6 +1064,7 @@ but it is locked to 0.2.0, which is incompatible."
                 requirement::Requirement::Git {
                     git: "git".into(),
                     ref_: "ref".into(),
+                    path: None,
                 },
             )]
             .into_iter()
@@ -1077,6 +1078,7 @@ but it is locked to 0.2.0, which is incompatible."
                 source: ManifestPackageSource::Git {
                     repo: "repo".into(),
                     commit: "commit".into(),
+                    path: None,
                 },
             }],
         };
