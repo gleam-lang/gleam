@@ -511,3 +511,7 @@
   would not be offered when the cursor was on an inexhaustive `case` expression
   if another inexhaustive `case` appeared earlier in the same module.
   ([John Downey](https://github.com/jtdowney))
+
+- Restrict custom documentation page `path` and `source` values so `gleam docs
+  build` cannot escape the docs output directory or project root.
+  ([evipepota](https://github.com/evipepota))
