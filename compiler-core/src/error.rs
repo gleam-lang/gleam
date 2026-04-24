@@ -326,6 +326,13 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
         source_2: String,
     },
 
+    #[error("The path {path} does not exist in the git repository {repo} for package {package}")]
+    GitDependencyPathNotFound {
+        package: String,
+        path: String,
+        repo: String,
+    },
+
     #[error("The package was missing required fields for publishing")]
     MissingHexPublishFields {
         description_missing: bool,
@@ -2121,6 +2128,25 @@ manifest.toml and a version range specified in gleam.toml:
 
                 vec![Diagnostic {
                     title: "Conflicting provided dependencies".into(),
+                    text,
+                    hint: None,
+                    location: None,
+                    level: Level::Error,
+                }]
+            }
+
+            Error::GitDependencyPathNotFound {
+                package,
+                path,
+                repo,
+            } => {
+                let text = format!(
+                    "The path `{path}` does not exist in the git repository `{repo}` \
+for package `{package}`."
+                );
+
+                vec![Diagnostic {
+                    title: "Git dependency path not found".into(),
                     text,
                     hint: None,
                     location: None,

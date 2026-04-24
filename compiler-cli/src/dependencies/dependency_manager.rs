@@ -256,7 +256,7 @@ where
                     &mut provided_packages,
                     &mut vec![],
                 )?,
-                Requirement::Git { git, ref_ } => {
+                Requirement::Git { git, ref_, path } => {
                     // If this package is locked and we already resolved a commit
                     // hash for it, we want to use that hash rather than pulling
                     // the latest commit.
@@ -279,6 +279,7 @@ where
                         name.clone(),
                         &git,
                         ref_to_use,
+                        path,
                         project_paths,
                         &mut provided_packages,
                         &mut Vec::new(),

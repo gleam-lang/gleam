@@ -88,12 +88,17 @@ impl Manifest {
                     buffer.push_str(&outer_checksum.to_string());
                     buffer.push('"');
                 }
-                ManifestPackageSource::Git { repo, commit } => {
+                ManifestPackageSource::Git { repo, commit, path } => {
                     buffer.push_str(r#", source = "git", repo = ""#);
                     buffer.push_str(repo);
                     buffer.push_str(r#"", commit = ""#);
                     buffer.push_str(commit);
                     buffer.push('"');
+                    if let Some(path) = path {
+                        buffer.push_str(r#", path = ""#);
+                        buffer.push_str(path.as_str());
+                        buffer.push('"');
+                    }
                 }
                 ManifestPackageSource::Local { path } => {
                     buffer.push_str(r#", source = "local", path = ""#);
@@ -233,7 +238,12 @@ pub enum ManifestPackageSource {
     #[serde(rename = "hex")]
     Hex { outer_checksum: Base16Checksum },
     #[serde(rename = "git")]
-    Git { repo: EcoString, commit: EcoString },
+    Git {
+        repo: EcoString,
+        commit: EcoString,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        path: Option<Utf8PathBuf>,
+    },
     #[serde(rename = "local")]
     Local { path: Utf8PathBuf }, // should be the canonical path
 }
@@ -343,6 +353,7 @@ mod tests {
                     source: ManifestPackageSource::Git {
                         repo: "https://github.com/gleam-lang/gleam.git".into(),
                         commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+                        path: None,
                     },
                 },
                 ManifestPackage {
@@ -453,6 +464,7 @@ zzz = { version = "> 0.0.0" }
                     source: ManifestPackageSource::Git {
                         repo: "https://github.com/gleam-lang/gleam.git".into(),
                         commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+                        path: None,
                     },
                 },
                 ManifestPackage {

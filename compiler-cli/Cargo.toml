@@ -59,6 +59,7 @@ termcolor.workspace = true
 toml.workspace = true
 tracing.workspace = true
 pubgrub.workspace = true
+xxhash-rust.workspace = true
 
 [dev-dependencies]
 # Creation of temporary directories

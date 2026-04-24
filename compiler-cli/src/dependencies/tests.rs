@@ -680,6 +680,7 @@ fn provided_git_to_hex() {
         source: ProvidedPackageSource::Git {
             repo: "https://github.com/gleam-lang/gleam.git".into(),
             commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+            path: None,
         },
         requirements: [
             (
@@ -776,6 +777,7 @@ fn provided_git_to_manifest() {
         source: ProvidedPackageSource::Git {
             repo: "https://github.com/gleam-lang/gleam.git".into(),
             commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+            path: None,
         },
         requirements: [
             (
@@ -799,12 +801,96 @@ fn provided_git_to_manifest() {
         source: ManifestPackageSource::Git {
             repo: "https://github.com/gleam-lang/gleam.git".into(),
             commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+            path: None,
         },
     };
 
     assert_eq!(
         provided_package.to_manifest_package("package"),
         manifest_package
+    );
+}
+
+#[test]
+fn validate_git_dependency_path_accepts_subdir() {
+    assert!(
+        validate_git_dependency_path(
+            "package",
+            Utf8Path::new("subdir"),
+            "https://github.com/gleam-lang/gleam.git"
+        )
+        .is_ok()
+    );
+}
+
+#[test]
+fn validate_git_dependency_path_accepts_nested_subdir() {
+    assert!(
+        validate_git_dependency_path(
+            "package",
+            Utf8Path::new("packages/subdir"),
+            "https://github.com/gleam-lang/gleam.git"
+        )
+        .is_ok()
+    );
+}
+
+#[test]
+fn validate_git_dependency_path_rejects_parent_traversal() {
+    let result = validate_git_dependency_path(
+        "package",
+        Utf8Path::new("../escape"),
+        "https://github.com/gleam-lang/gleam.git",
+    );
+    assert!(matches!(
+        result,
+        Err(Error::GitDependencyPathNotFound { .. })
+    ));
+}
+
+#[test]
+fn validate_git_dependency_path_rejects_nested_parent_traversal() {
+    let result = validate_git_dependency_path(
+        "package",
+        Utf8Path::new("packages/../../escape"),
+        "https://github.com/gleam-lang/gleam.git",
+    );
+    assert!(matches!(
+        result,
+        Err(Error::GitDependencyPathNotFound { .. })
+    ));
+}
+
+#[test]
+fn validate_git_dependency_path_rejects_absolute_path() {
+    let result = validate_git_dependency_path(
+        "package",
+        Utf8Path::new("/etc/passwd"),
+        "https://github.com/gleam-lang/gleam.git",
+    );
+    assert!(matches!(
+        result,
+        Err(Error::GitDependencyPathNotFound { .. })
+    ));
+}
+
+#[test]
+fn git_repo_dir_name_produces_expected_name() {
+    assert_eq!(
+        git_repo_dir_name("https://github.com/gleam-lang/gleam.git", "main"),
+        "https-github.com-gleam-lang-gleam-edfec3bb6bbeb6c1"
+    );
+}
+
+#[test]
+fn git_repo_dir_name_different_refs_produce_different_names() {
+    assert_eq!(
+        git_repo_dir_name("https://github.com/gleam-lang/gleam.git", "main"),
+        "https-github.com-gleam-lang-gleam-edfec3bb6bbeb6c1"
+    );
+    assert_eq!(
+        git_repo_dir_name("https://github.com/gleam-lang/gleam.git", "v1.0.0"),
+        "https-github.com-gleam-lang-gleam-90203c669cc91eee"
     );
 }
 
