@@ -72,3 +72,5 @@ vec1 = "1"
 pubgrub = "0.3"
 # Open the user's web browser
 opener = "0"
+# Checksums
+xxhash-rust = { version = "0", features = ["xxh3"] }

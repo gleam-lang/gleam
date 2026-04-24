@@ -335,9 +335,11 @@ fn add_package_from_manifest<B>(
             ManifestPackageSource::Git {
                 ref repo,
                 ref commit,
+                ..
             } => Requirement::Git {
                 git: repo.clone(),
                 ref_: commit.clone(),
+                path: None,
             },
         },
     );
@@ -360,9 +362,11 @@ fn add_dev_package_from_manifest<B>(
             ManifestPackageSource::Git {
                 ref repo,
                 ref commit,
+                ..
             } => Requirement::Git {
                 git: repo.clone(),
                 ref_: commit.clone(),
+                path: None,
             },
         },
     );

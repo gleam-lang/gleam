@@ -270,6 +270,13 @@ jobs:
         working-directory: ./test/project_git_deps
         if: ${{ matrix.run-integration-tests }}
 
+      - name: test/project_git_deps_path
+        run: ./test.sh
+        working-directory: ./test/project_git_deps_path
+        if: ${{ matrix.run-integration-tests }}
+        env:
+          GLEAM_COMMAND: gleam
+
       - name: Test project generation
         run: |
           gleam new lib_project
