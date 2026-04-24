@@ -7,10 +7,9 @@ use crate::{
     build::Target,
     exhaustiveness::ImpossibleBitArraySegmentPattern,
     parse::LiteralFloatValue,
-    type_::{Type, expression::ComparisonOutcome},
+    type_::{Type, expression::ComparisonOutcome, printer::Names},
 };
 
-use camino::Utf8PathBuf;
 use ecow::EcoString;
 use hexpm::version::Version;
 use num_bigint::BigInt;
@@ -862,6 +861,7 @@ pub enum Warning {
         kind: TodoKind,
         location: SrcSpan,
         type_: Arc<Type>,
+        names: Names,
     },
 
     ImplicitlyDiscardedResult {
@@ -1010,23 +1010,6 @@ pub enum Warning {
     ///
     OpaqueExternalType {
         location: SrcSpan,
-    },
-
-    /// This happens when an internal type is accidentally exposed in the public
-    /// API. Since internal types are excluded from documentation, completions
-    /// and the package interface, this would lead to poor developer experience.
-    ///
-    /// ```gleam
-    /// @internal type Wibble
-    ///
-    /// pub fn wibble(thing: Wibble) { todo }
-    /// //            ^^^^^^^^^^^^^ There would be no documentation
-    /// //                          explaining what `Wibble` is in the
-    /// //                          package's doc site.
-    /// ```
-    InternalTypeLeak {
-        location: SrcSpan,
-        leaked: Type,
     },
 
     RedundantAssertAssignment {
@@ -1394,14 +1377,6 @@ impl Error {
 }
 
 impl Warning {
-    pub fn into_warning(self, path: Utf8PathBuf, src: EcoString) -> crate::Warning {
-        crate::Warning::Type {
-            path,
-            src,
-            warning: self,
-        }
-    }
-
     pub(crate) fn location(&self) -> SrcSpan {
         match self {
             Warning::Todo { location, .. }
@@ -1427,7 +1402,6 @@ impl Warning {
             | Warning::CaseMatchOnLiteralCollection { location, .. }
             | Warning::CaseMatchOnLiteralValue { location, .. }
             | Warning::OpaqueExternalType { location, .. }
-            | Warning::InternalTypeLeak { location, .. }
             | Warning::RedundantAssertAssignment { location, .. }
             | Warning::AssertAssignmentOnImpossiblePattern { location, .. }
             | Warning::TodoOrPanicUsedAsFunction { location, .. }

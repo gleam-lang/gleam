@@ -8739,7 +8739,6 @@ impl<'a> RemoveUnusedImports<'a> {
                 | type_::Warning::CaseMatchOnLiteralCollection { .. }
                 | type_::Warning::CaseMatchOnLiteralValue { .. }
                 | type_::Warning::OpaqueExternalType { .. }
-                | type_::Warning::InternalTypeLeak { .. }
                 | type_::Warning::RedundantAssertAssignment { .. }
                 | type_::Warning::AssertAssignmentOnImpossiblePattern { .. }
                 | type_::Warning::TodoOrPanicUsedAsFunction { .. }

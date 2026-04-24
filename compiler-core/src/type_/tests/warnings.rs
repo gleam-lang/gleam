@@ -19,6 +19,37 @@ fn todo_warning_test() {
     assert_warning!("pub fn main() { 1 == todo }");
 }
 
+// https://github.com/gleam-lang/gleam/issues/4164
+#[test]
+fn todo_uses_the_appropriate_type_name() {
+    assert_warning!(
+        "
+pub fn curry(_f: fn(a, b) -> c) -> fn(a) -> fn(b) -> c {
+  fn(_a: a) {
+    todo
+  }
+}"
+    );
+}
+
+#[test]
+fn todo_uses_the_appropriate_type_name_2() {
+    assert_warning!(
+        (
+            "wibble",
+            "
+            pub type Wibble
+            pub fn consume(wibble: Wibble) -> Nil { todo }
+        "
+        ),
+        "
+import wibble
+pub fn main() {
+  wibble.consume(todo)
+}"
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/1669
 #[test]
 fn todo_warning_correct_location() {
