@@ -407,6 +407,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Cannot add a package with the same name as a dependency")]
     CannotAddSelfAsDependency { name: EcoString },
 
+    #[error("Hex session revoked")]
+    HexSessionRevoked,
+
     #[error("Incorrect Hex one-time-password")]
     IncorrectHexOneTimePassword,
 }
@@ -525,8 +528,9 @@ impl Error {
             | hexpm::ApiError::LateModification
             | hexpm::ApiError::OAuthTimeout
             | hexpm::ApiError::OAuthAccessDenied
-            | hexpm::ApiError::ExpiredToken
-            | hexpm::ApiError::OAuthRefreshTokenRejected => Self::Hex(error.to_string()),
+            | hexpm::ApiError::ExpiredToken => Self::Hex(error.to_string()),
+
+            hexpm::ApiError::OAuthRefreshTokenRejected => Self::HexSessionRevoked,
 
             hexpm::ApiError::IncorrectOneTimePassword => Self::IncorrectHexOneTimePassword,
         }
@@ -971,6 +975,17 @@ errors."
 
     pub fn to_diagnostics(&self) -> Vec<Diagnostic> {
         match self {
+            Error::HexSessionRevoked => vec![Diagnostic {
+                title: "Hex session revoked".into(),
+                text: "Your Hex session has been revoked or has expired.
+
+You'll need to re-authenticate to continue using Hex."
+                    .into(),
+                hint: Some("Run 'gleam hex authenticate' to log in again.".into()),
+                level: Level::Error,
+                location: None,
+            }],
+
             Error::IncorrectHexOneTimePassword => {
                 let text =
                     "That two-factor authentication code was rejected by Hex, please try again.

@@ -163,6 +163,10 @@
 
 ### Build tool
 
+- The package manager now has a specific error and automatic re-authentication
+  flow for when a Hex session has been revoked or has expired.
+  ([Sahil Upasane](https://github.com/404salad))
+
 - The `gleam hex owner add` command has been added, which allows adding
   owners to the package.
   ([Niklas Kirschall](https://github.com/nkxxll))
