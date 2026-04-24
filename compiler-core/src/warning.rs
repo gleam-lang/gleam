@@ -1383,7 +1383,7 @@ resulting in the value {truncated_into}."
 
                 type_::Warning::JavaScriptBitArrayUnsafeInt { location, size } => {
                     let text = wrap_format!(
-                        "This segment is a {size}-bit long integer, but on the \
+                        "This segment is a {size}-bit long int, but on the \
 JavaScript target numbers have at most 52 bits. It would be truncated to its \
 first 52 bits."
                     );
