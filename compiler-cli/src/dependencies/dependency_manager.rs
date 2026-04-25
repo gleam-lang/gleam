@@ -207,8 +207,9 @@ where
         self.telemetry
             .resolved_package_versions(&resolved.package_changes);
 
-        // If requested to do so, check if there are major upgrades that could be performed with
-        // more relaxed version requirements, and inform the user if so.
+        // If requested to do so, check if there are major upgrades that could
+        // be performed with more relaxed version requirements, and inform the
+        // user if so.
         if let CheckMajorVersions::Yes = self.check_major_versions {
             let major_versions_available = dependency::check_for_major_version_updates(
                 &resolved.manifest,

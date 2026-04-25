@@ -118,10 +118,14 @@ pub fn check_for_major_version_updates(
         .packages
         .iter()
         .filter(|manifest_package| {
-            manifest
-                .requirements
-                .iter()
-                .any(|(required_package, _)| manifest_package.name == *required_package)
+            // It makes sense to check for major version upgrades only for
+            // packages that are actually published.
+            // git and path dependencies are skipped.
+            manifest_package.is_hex()
+                && manifest
+                    .requirements
+                    .iter()
+                    .any(|(required_package, _)| manifest_package.name == *required_package)
         })
         .map(|manifest_package| {
             (
@@ -143,12 +147,7 @@ pub fn check_for_version_updates(
     let versions = manifest
         .packages
         .iter()
-        .filter(|manifest_package| {
-            matches!(
-                manifest_package.source,
-                manifest::ManifestPackageSource::Hex { .. }
-            )
-        })
+        .filter(|manifest_package| manifest_package.is_hex())
         .map(|manifest_package| {
             (
                 manifest_package.name.to_string(),
@@ -1051,6 +1050,68 @@ but it is locked to 0.2.0, which is incompatible."
             .into_iter()
             .collect()
         );
+    }
+
+    #[test]
+    fn git_deps_are_not_checked_on_hex_for_major_version_updates() {
+        let manifest = manifest::Manifest {
+            requirements: vec![(
+                EcoString::from("wibble"),
+                requirement::Requirement::Git {
+                    git: "git".into(),
+                    ref_: "ref".into(),
+                },
+            )]
+            .into_iter()
+            .collect(),
+            packages: vec![ManifestPackage {
+                name: "wibble".into(),
+                version: Version::parse("0.1.0").unwrap(),
+                build_tools: ["gleam".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Git {
+                    repo: "repo".into(),
+                    commit: "commit".into(),
+                },
+            }],
+        };
+
+        // There's a package on hex with the same name of the git dependency
+        // and a new major version. Those are not the same package though!!
+        let remote = remote(vec![("wibble", vec![release("2.0.0", vec![])])]);
+        let result = check_for_major_version_updates(&manifest, &remote);
+        assert_eq!(result, HashMap::new());
+    }
+
+    #[test]
+    fn local_deps_are_not_checked_on_hex_for_major_version_updates() {
+        let manifest = manifest::Manifest {
+            requirements: vec![(
+                EcoString::from("wibble"),
+                requirement::Requirement::Path {
+                    path: "path".into(),
+                },
+            )]
+            .into_iter()
+            .collect(),
+            packages: vec![ManifestPackage {
+                name: "wibble".into(),
+                version: Version::parse("0.1.0").unwrap(),
+                build_tools: ["gleam".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Local {
+                    path: "path".into(),
+                },
+            }],
+        };
+
+        // There's a package on hex with the same name of the local dependency
+        // and a new major version. Those are not the same package though!!
+        let remote = remote(vec![("wibble", vec![release("2.0.0", vec![])])]);
+        let result = check_for_major_version_updates(&manifest, &remote);
+        assert_eq!(result, HashMap::new());
     }
 
     fn retired_release(
