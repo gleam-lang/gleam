@@ -19,3 +19,7 @@
 - Fixed a bug where the build tool would check for new major versions of a local
   or git dependency on Hex when running `gleam update`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server wouldn't let one extract record
+  constructors as variables.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
