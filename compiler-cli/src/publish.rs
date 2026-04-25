@@ -826,52 +826,61 @@ impl ReleaseRequirement<'_> {
     }
 }
 
-#[test]
-fn release_metadata_as_erlang() {
-    let licences = vec![
-        SpdxLicense {
-            licence: "MIT".into(),
-        },
-        SpdxLicense {
-            licence: "MPL-2.0".into(),
-        },
-    ];
-    let version = "1.2.3".try_into().unwrap();
-    let homepage = "https://gleam.run".parse().unwrap();
-    let github = "https://github.com/lpil/myapp".parse().unwrap();
-    let req1 = Range::new("~> 1.2.3 or >= 5.0.0".into()).unwrap();
-    let req2 = Range::new("~> 1.2".into()).unwrap();
-    let meta = ReleaseMetadata {
-        name: "myapp",
-        version: &version,
-        description: "description goes here 🌈",
-        source_files: &[
-            Utf8PathBuf::from("gleam.toml"),
-            Utf8PathBuf::from("src/thingy.gleam"),
-            Utf8PathBuf::from("src/whatever.gleam"),
-        ],
-        generated_files: &[
-            (Utf8PathBuf::from("src/myapp.app"), "".into()),
-            (Utf8PathBuf::from("src/thingy.erl"), "".into()),
-            (Utf8PathBuf::from("src/whatever.erl"), "".into()),
-        ],
-        licenses: &licences,
-        links: vec![("homepage", homepage), ("github", github)],
-        requirements: vec![
-            ReleaseRequirement {
-                name: "wibble",
-                requirement: &req1,
+fn quotes(x: &str) -> String {
+    format!(r#"<<"{x}"/utf8>>"#)
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn release_metadata_as_erlang() {
+        let licences = vec![
+            SpdxLicense {
+                licence: "MIT".into(),
             },
-            ReleaseRequirement {
-                name: "wobble",
-                requirement: &req2,
+            SpdxLicense {
+                licence: "MPL-2.0".into(),
             },
-        ],
-        build_tools: vec!["gleam", "rebar3"],
-    };
-    assert_eq!(
-        meta.as_erlang(),
-        r#"{<<"name">>, <<"myapp"/utf8>>}.
+        ];
+        let version = "1.2.3".try_into().unwrap();
+        let homepage = "https://gleam.run".parse().unwrap();
+        let github = "https://github.com/lpil/myapp".parse().unwrap();
+        let req1 = Range::new("~> 1.2.3 or >= 5.0.0".into()).unwrap();
+        let req2 = Range::new("~> 1.2".into()).unwrap();
+        let meta = ReleaseMetadata {
+            name: "myapp",
+            version: &version,
+            description: "description goes here 🌈",
+            source_files: &[
+                Utf8PathBuf::from("gleam.toml"),
+                Utf8PathBuf::from("src/thingy.gleam"),
+                Utf8PathBuf::from("src/whatever.gleam"),
+            ],
+            generated_files: &[
+                (Utf8PathBuf::from("src/myapp.app"), "".into()),
+                (Utf8PathBuf::from("src/thingy.erl"), "".into()),
+                (Utf8PathBuf::from("src/whatever.erl"), "".into()),
+            ],
+            licenses: &licences,
+            links: vec![("homepage", homepage), ("github", github)],
+            requirements: vec![
+                ReleaseRequirement {
+                    name: "wibble",
+                    requirement: &req1,
+                },
+                ReleaseRequirement {
+                    name: "wobble",
+                    requirement: &req2,
+                },
+            ],
+            build_tools: vec!["gleam", "rebar3"],
+        };
+        assert_eq!(
+            meta.as_erlang(),
+            r#"{<<"name">>, <<"myapp"/utf8>>}.
 {<<"app">>, <<"myapp"/utf8>>}.
 {<<"version">>, <<"1.2.3"/utf8>>}.
 {<<"description">>, <<"description goes here 🌈"/utf8>>}.
@@ -902,172 +911,170 @@ fn release_metadata_as_erlang() {
   <<"src/whatever.gleam"/utf8>>
 ]}.
 "#
-        .to_string()
-    );
-}
-
-#[test]
-fn prevent_publish_local_dependency() {
-    let config = PackageConfig {
-        dependencies: [("provided".into(), Requirement::path("./path/to/package"))].into(),
-        ..Default::default()
-    };
-    assert_eq!(
-        metadata_config(&config, &[], &[]),
-        Err(Error::PublishNonHexDependencies {
-            package: "provided".into()
-        })
-    );
-}
-
-#[test]
-fn prevent_publish_git_dependency() {
-    let config = PackageConfig {
-        dependencies: [(
-            "provided".into(),
-            Requirement::git("https://github.com/gleam-lang/gleam.git", "da6e917"),
-        )]
-        .into(),
-        ..Default::default()
-    };
-    assert_eq!(
-        metadata_config(&config, &[], &[]),
-        Err(Error::PublishNonHexDependencies {
-            package: "provided".into()
-        })
-    );
-}
-
-fn quotes(x: &str) -> String {
-    format!(r#"<<"{x}"/utf8>>"#)
-}
-
-#[test]
-fn exported_project_files_test() {
-    let tmp = tempfile::tempdir().unwrap();
-    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
-
-    let exported_project_files = &[
-        "LICENCE",
-        "LICENCE.md",
-        "LICENCE.txt",
-        "LICENSE",
-        "LICENSE.md",
-        "LICENSE.txt",
-        "NOTICE",
-        "NOTICE.md",
-        "NOTICE.txt",
-        "README",
-        "README.md",
-        "README.txt",
-        "gleam.toml",
-        "priv/ignored",
-        "priv/wibble",
-        "priv/wobble.js",
-        "src/.hidden/hidden_ffi.erl",
-        "src/.hidden/hidden_ffi.mjs",
-        "src/.hidden_ffi.erl",
-        "src/.hidden_ffi.mjs",
-        "src/exported.gleam",
-        "src/exported_ffi.erl",
-        "src/exported_ffi.ex",
-        "src/exported_ffi.hrl",
-        "src/exported_ffi.js",
-        "src/exported_ffi.mjs",
-        "src/exported_ffi.ts",
-        "src/ignored.gleam",
-        "src/ignored_ffi.erl",
-        "src/ignored_ffi.mjs",
-        "src/nested/exported.gleam",
-        "src/nested/exported_ffi.erl",
-        "src/nested/exported_ffi.ex",
-        "src/nested/exported_ffi.hrl",
-        "src/nested/exported_ffi.js",
-        "src/nested/exported_ffi.mjs",
-        "src/nested/exported_ffi.ts",
-        "src/nested/ignored.gleam",
-        "src/nested/ignored_ffi.erl",
-        "src/nested/ignored_ffi.mjs",
-    ];
-
-    let unexported_project_files = &[
-        ".git/",
-        ".github/workflows/test.yml",
-        ".gitignore",
-        "build/",
-        "ignored.txt",
-        "src/.hidden/hidden.gleam", // Not a valid Gleam module path
-        "src/.hidden.gleam",        // Not a valid Gleam module name
-        "src/also-ignored.gleam",   // Not a valid Gleam module name
-        "test/exported_test.gleam",
-        "test/exported_test_ffi.erl",
-        "test/exported_test_ffi.ex",
-        "test/exported_test_ffi.hrl",
-        "test/exported_test_ffi.js",
-        "test/exported_test_ffi.mjs",
-        "test/exported_test_ffi.ts",
-        "test/ignored_test.gleam",
-        "test/ignored_test_ffi.erl",
-        "test/ignored_test_ffi.mjs",
-        "test/nested/exported_test.gleam",
-        "test/nested/exported_test_ffi.erl",
-        "test/nested/exported_test_ffi.ex",
-        "test/nested/exported_test_ffi.hrl",
-        "test/nested/exported_test_ffi.js",
-        "test/nested/exported_test_ffi.mjs",
-        "test/nested/exported_test_ffi.ts",
-        "test/nested/ignored.gleam",
-        "test/nested/ignored_test_ffi.erl",
-        "test/nested/ignored_test_ffi.mjs",
-        "dev/exported_test_ffi.erl",
-        "dev/exported_test_ffi.ex",
-        "dev/exported_test_ffi.hrl",
-        "dev/exported_test_ffi.js",
-        "dev/exported_test_ffi.mjs",
-        "dev/exported_test_ffi.ts",
-        "dev/ignored_test.gleam",
-        "dev/ignored_test_ffi.erl",
-        "dev/ignored_test_ffi.mjs",
-        "dev/nested/exported_test.gleam",
-        "dev/nested/exported_test_ffi.erl",
-        "dev/nested/exported_test_ffi.ex",
-        "dev/nested/exported_test_ffi.hrl",
-        "dev/nested/exported_test_ffi.js",
-        "dev/nested/exported_test_ffi.mjs",
-        "dev/nested/exported_test_ffi.ts",
-        "dev/nested/ignored.gleam",
-        "dev/nested/ignored_test_ffi.erl",
-        "dev/nested/ignored_test_ffi.mjs",
-        "unrelated-file.txt",
-    ];
-
-    let gitignore = "ignored*
-src/also-ignored.gleam";
-
-    for &file in exported_project_files
-        .iter()
-        .chain(unexported_project_files)
-    {
-        if file.ends_with("/") {
-            fs::mkdir(path.join(file)).unwrap();
-            continue;
-        }
-
-        let contents = match file {
-            ".gitignore" => gitignore,
-            _ => "",
-        };
-
-        fs::write(&path.join(file), contents).unwrap();
+            .to_string()
+        );
     }
 
-    let mut chosen_exported_files = project_files(&path).unwrap();
-    chosen_exported_files.sort_unstable();
+    #[test]
+    fn prevent_publish_local_dependency() {
+        let config = PackageConfig {
+            dependencies: [("provided".into(), Requirement::path("./path/to/package"))].into(),
+            ..Default::default()
+        };
+        assert_eq!(
+            metadata_config(&config, &[], &[]),
+            Err(Error::PublishNonHexDependencies {
+                package: "provided".into()
+            })
+        );
+    }
 
-    let expected_exported_files = exported_project_files
-        .iter()
-        .map(|s| path.join(s))
-        .collect_vec();
+    #[test]
+    fn prevent_publish_git_dependency() {
+        let config = PackageConfig {
+            dependencies: [(
+                "provided".into(),
+                Requirement::git("https://github.com/gleam-lang/gleam.git", "da6e917"),
+            )]
+            .into(),
+            ..Default::default()
+        };
+        assert_eq!(
+            metadata_config(&config, &[], &[]),
+            Err(Error::PublishNonHexDependencies {
+                package: "provided".into()
+            })
+        );
+    }
 
-    assert_eq!(expected_exported_files, chosen_exported_files);
+    #[test]
+    fn exported_project_files_test() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path =
+            Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
+
+        let exported_project_files = &[
+            "LICENCE",
+            "LICENCE.md",
+            "LICENCE.txt",
+            "LICENSE",
+            "LICENSE.md",
+            "LICENSE.txt",
+            "NOTICE",
+            "NOTICE.md",
+            "NOTICE.txt",
+            "README",
+            "README.md",
+            "README.txt",
+            "gleam.toml",
+            "priv/ignored",
+            "priv/wibble",
+            "priv/wobble.js",
+            "src/.hidden/hidden_ffi.erl",
+            "src/.hidden/hidden_ffi.mjs",
+            "src/.hidden_ffi.erl",
+            "src/.hidden_ffi.mjs",
+            "src/exported.gleam",
+            "src/exported_ffi.erl",
+            "src/exported_ffi.ex",
+            "src/exported_ffi.hrl",
+            "src/exported_ffi.js",
+            "src/exported_ffi.mjs",
+            "src/exported_ffi.ts",
+            "src/ignored.gleam",
+            "src/ignored_ffi.erl",
+            "src/ignored_ffi.mjs",
+            "src/nested/exported.gleam",
+            "src/nested/exported_ffi.erl",
+            "src/nested/exported_ffi.ex",
+            "src/nested/exported_ffi.hrl",
+            "src/nested/exported_ffi.js",
+            "src/nested/exported_ffi.mjs",
+            "src/nested/exported_ffi.ts",
+            "src/nested/ignored.gleam",
+            "src/nested/ignored_ffi.erl",
+            "src/nested/ignored_ffi.mjs",
+        ];
+
+        let unexported_project_files = &[
+            ".git/",
+            ".github/workflows/test.yml",
+            ".gitignore",
+            "build/",
+            "ignored.txt",
+            "src/.hidden/hidden.gleam", // Not a valid Gleam module path
+            "src/.hidden.gleam",        // Not a valid Gleam module name
+            "src/also-ignored.gleam",   // Not a valid Gleam module name
+            "test/exported_test.gleam",
+            "test/exported_test_ffi.erl",
+            "test/exported_test_ffi.ex",
+            "test/exported_test_ffi.hrl",
+            "test/exported_test_ffi.js",
+            "test/exported_test_ffi.mjs",
+            "test/exported_test_ffi.ts",
+            "test/ignored_test.gleam",
+            "test/ignored_test_ffi.erl",
+            "test/ignored_test_ffi.mjs",
+            "test/nested/exported_test.gleam",
+            "test/nested/exported_test_ffi.erl",
+            "test/nested/exported_test_ffi.ex",
+            "test/nested/exported_test_ffi.hrl",
+            "test/nested/exported_test_ffi.js",
+            "test/nested/exported_test_ffi.mjs",
+            "test/nested/exported_test_ffi.ts",
+            "test/nested/ignored.gleam",
+            "test/nested/ignored_test_ffi.erl",
+            "test/nested/ignored_test_ffi.mjs",
+            "dev/exported_test_ffi.erl",
+            "dev/exported_test_ffi.ex",
+            "dev/exported_test_ffi.hrl",
+            "dev/exported_test_ffi.js",
+            "dev/exported_test_ffi.mjs",
+            "dev/exported_test_ffi.ts",
+            "dev/ignored_test.gleam",
+            "dev/ignored_test_ffi.erl",
+            "dev/ignored_test_ffi.mjs",
+            "dev/nested/exported_test.gleam",
+            "dev/nested/exported_test_ffi.erl",
+            "dev/nested/exported_test_ffi.ex",
+            "dev/nested/exported_test_ffi.hrl",
+            "dev/nested/exported_test_ffi.js",
+            "dev/nested/exported_test_ffi.mjs",
+            "dev/nested/exported_test_ffi.ts",
+            "dev/nested/ignored.gleam",
+            "dev/nested/ignored_test_ffi.erl",
+            "dev/nested/ignored_test_ffi.mjs",
+            "unrelated-file.txt",
+        ];
+
+        let gitignore = "ignored*
+src/also-ignored.gleam";
+
+        for &file in exported_project_files
+            .iter()
+            .chain(unexported_project_files)
+        {
+            if file.ends_with("/") {
+                fs::mkdir(path.join(file)).unwrap();
+                continue;
+            }
+
+            let contents = match file {
+                ".gitignore" => gitignore,
+                _ => "",
+            };
+
+            fs::write(&path.join(file), contents).unwrap();
+        }
+
+        let mut chosen_exported_files = project_files(&path).unwrap();
+        chosen_exported_files.sort_unstable();
+
+        let expected_exported_files = exported_project_files
+            .iter()
+            .map(|s| path.join(s))
+            .collect_vec();
+
+        assert_eq!(expected_exported_files, chosen_exported_files);
+    }
 }

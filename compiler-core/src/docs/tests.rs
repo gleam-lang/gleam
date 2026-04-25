@@ -4,8 +4,8 @@ use std::{
 };
 
 use super::{
-    Dependency, DependencyKind, DocumentationConfig, SearchData, SearchItem, SearchItemType,
-    SearchProgrammingLanguage,
+    Dependency, DependencyKind, DocumentationConfig, PackageInformation, SearchData, SearchItem,
+    SearchItemType, SearchProgrammingLanguage, package_information_as_json,
     printer::{PrintOptions, Printer},
     source_links::SourceLinker,
 };
@@ -151,8 +151,10 @@ fn compile_documentation(
     let module = type_::tests::compile_module(module_name, module_src, None, modules.clone())
         .expect("Module should compile successfully");
 
-    let mut config = PackageConfig::default();
-    config.name = "thepackage".into();
+    let config = PackageConfig {
+        name: "thepackage".into(),
+        ..PackageConfig::default()
+    };
     let paths = ProjectPaths::new("/".into());
     let build_module = build::Module {
         name: "main".into(),
@@ -340,8 +342,10 @@ macro_rules! assert_documentation {
 
 #[test]
 fn hello_docs() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        ..PackageConfig::default()
+    };
     let modules = vec![(
         "app.gleam",
         r#"
@@ -356,8 +360,10 @@ pub fn one() {
 
 #[test]
 fn ignored_argument_is_called_arg() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        ..PackageConfig::default()
+    };
     let modules = vec![("app.gleam", "pub fn one(_) { 1 }")];
     insta::assert_snapshot!(compile(config, modules));
 }
@@ -365,8 +371,10 @@ fn ignored_argument_is_called_arg() {
 // https://github.com/gleam-lang/gleam/issues/2347
 #[test]
 fn tables() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        ..PackageConfig::default()
+    };
     let modules = vec![(
         "app.gleam",
         r#"
@@ -386,8 +394,10 @@ pub fn one() {
 // https://github.com/gleam-lang/gleam/issues/2202
 #[test]
 fn long_function_wrapping() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        ..PackageConfig::default()
+    };
     let modules = vec![(
         "app.gleam",
         r#"
@@ -413,8 +423,10 @@ pub fn lazy_or(first: Option(a), second: fn() -> Option(a)) -> Option(a) {
 
 #[test]
 fn internal_definitions_are_not_included() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        ..PackageConfig::default()
+    };
     let modules = vec![(
         "app.gleam",
         r#"
@@ -437,8 +449,10 @@ pub fn one() { 1 }
 // https://github.com/gleam-lang/gleam/issues/2561
 #[test]
 fn discarded_arguments_are_not_shown() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        ..PackageConfig::default()
+    };
     let modules = vec![("app.gleam", "pub fn discard(_discarded: a) -> Int { 1 }")];
     insta::assert_snapshot!(compile(config, modules));
 }
@@ -446,8 +460,10 @@ fn discarded_arguments_are_not_shown() {
 // https://github.com/gleam-lang/gleam/issues/2631
 #[test]
 fn docs_of_a_type_constructor_are_not_used_by_the_following_function() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        ..PackageConfig::default()
+    };
     let modules = vec![(
         "app.gleam",
         r#"
@@ -466,8 +482,10 @@ pub fn main() { todo }
 
 #[test]
 fn markdown_code_from_standalone_pages_is_not_trimmed() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        ..PackageConfig::default()
+    };
     let pages = vec![(
         "one",
         "
@@ -488,8 +506,10 @@ pub fn indentation_test() {
 
 #[test]
 fn markdown_code_from_function_comment_is_trimmed() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        ..PackageConfig::default()
+    };
     let modules = vec![(
         "app.gleam",
         "
@@ -509,8 +529,10 @@ pub fn indentation_test() {
 
 #[test]
 fn markdown_code_from_module_comment_is_trimmed() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        ..PackageConfig::default()
+    };
     let modules = vec![(
         "app.gleam",
         "
@@ -527,8 +549,10 @@ fn markdown_code_from_module_comment_is_trimmed() {
 
 #[test]
 fn doc_for_commented_definitions_is_not_included_in_next_constant() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        ..PackageConfig::default()
+    };
     let modules = vec![(
         "app.gleam",
         "
@@ -544,8 +568,10 @@ pub const wobble = 1
 
 #[test]
 fn doc_for_commented_definitions_is_not_included_in_next_type() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        ..PackageConfig::default()
+    };
     let modules = vec![(
         "app.gleam",
         "
@@ -564,8 +590,10 @@ pub type Wibble {
 
 #[test]
 fn doc_for_commented_definitions_is_not_included_in_next_function() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        ..PackageConfig::default()
+    };
     let modules = vec![(
         "app.gleam",
         "
@@ -581,8 +609,10 @@ pub fn wobble(arg) {}
 
 #[test]
 fn doc_for_commented_definitions_is_not_included_in_next_type_alias() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        ..PackageConfig::default()
+    };
     let modules = vec![(
         "app.gleam",
         "
@@ -598,14 +628,16 @@ pub type Wibble = Int
 
 #[test]
 fn source_link_for_github_repository() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
-    config.repository = Some(Repository::GitHub {
-        user: "wibble".to_string(),
-        repo: "wobble".to_string(),
-        path: None,
-        tag_prefix: None,
-    });
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        repository: Some(Repository::GitHub {
+            user: "wibble".to_string(),
+            repo: "wobble".to_string(),
+            path: None,
+            tag_prefix: None,
+        }),
+        ..PackageConfig::default()
+    };
 
     let modules = vec![("app.gleam", "pub type Wibble = Int")];
     assert!(
@@ -616,14 +648,16 @@ fn source_link_for_github_repository() {
 
 #[test]
 fn source_link_for_github_repository_with_path_and_tag_prefix() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
-    config.repository = Some(Repository::GitHub {
-        user: "wibble".to_string(),
-        repo: "wobble".to_string(),
-        path: Some("path/to/package".to_string()),
-        tag_prefix: Some("subdir-".into()),
-    });
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        repository: Some(Repository::GitHub {
+            user: "wibble".to_string(),
+            repo: "wobble".to_string(),
+            path: Some("path/to/package".to_string()),
+            tag_prefix: Some("subdir-".into()),
+        }),
+        ..PackageConfig::default()
+    };
 
     let modules = vec![("app.gleam", "pub type Wibble = Int")];
     assert!(compile(config, modules).contains(
@@ -633,8 +667,10 @@ fn source_link_for_github_repository_with_path_and_tag_prefix() {
 
 #[test]
 fn canonical_link() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        ..PackageConfig::default()
+    };
     let modules = vec![
         (
             "app.gleam",
@@ -672,8 +708,10 @@ pub fn one() {
 
 #[test]
 fn no_hex_publish() {
-    let mut config = PackageConfig::default();
-    config.name = EcoString::from("test_project_name");
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        ..PackageConfig::default()
+    };
     let modules = vec![
         (
             "app.gleam",
@@ -1238,7 +1276,6 @@ pub fn aaaaaaaaaaaaaaaaaaaaaaaaaaaa() -> aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa {
 
 #[test]
 fn forgejo_single_line_definition() {
-    let mut config = PackageConfig::default();
     let repo = Repository::Forgejo {
         host: "https://code.example.org/".parse::<Uri>().unwrap(),
         user: "wibble".into(),
@@ -1247,8 +1284,11 @@ fn forgejo_single_line_definition() {
         tag_prefix: None,
     };
 
-    config.name = EcoString::from("test_project_name");
-    config.repository = Some(repo);
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        repository: Some(repo),
+        ..PackageConfig::default()
+    };
 
     let modules = vec![("app.gleam", "pub type Wibble = Int")];
     let html = compile(config, modules);
@@ -1260,7 +1300,6 @@ fn forgejo_single_line_definition() {
 
 #[test]
 fn forgejo_multiple_line_definition() {
-    let mut config = PackageConfig::default();
     let repo = Repository::Forgejo {
         host: "https://code.example.org/".parse::<Uri>().unwrap(),
         user: "wibble".into(),
@@ -1269,8 +1308,11 @@ fn forgejo_multiple_line_definition() {
         tag_prefix: None,
     };
 
-    config.name = EcoString::from("test_project_name");
-    config.repository = Some(repo);
+    let config = PackageConfig {
+        name: EcoString::from("test_project_name"),
+        repository: Some(repo),
+        ..PackageConfig::default()
+    };
 
     let modules = vec![("app.gleam", "pub type Wibble \n\n= Int")];
     let html = compile(config, modules);
@@ -1284,8 +1326,10 @@ fn generate_search_data(module_name: &str, module_src: &str) -> EcoString {
     let module = type_::tests::compile_module(module_name, module_src, None, Vec::new())
         .expect("Module should compile successfully");
 
-    let mut config = PackageConfig::default();
-    config.name = "thepackage".into();
+    let config = PackageConfig {
+        name: "thepackage".into(),
+        ..PackageConfig::default()
+    };
     let paths = ProjectPaths::new("/".into());
     let build_module = build::Module {
         name: "main".into(),
@@ -1432,5 +1476,70 @@ pub fn reverse(list: List(a), out: List(a)) -> List(a) {
 }
 ",
     );
+    insta::assert_snapshot!(output);
+}
+
+#[test]
+fn package_config_to_json() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
+licences = ["Apache-2.0", "MIT"]
+description = "Pretty complex config"
+target = "erlang"
+repository = { type = "github", user = "example", repo = "my_dep" }
+links = [{ title = "Home page", href = "https://example.com" }]
+internal_modules = ["my_app/internal"]
+gleam = ">= 0.30.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.18.0 and < 2.0.0"
+my_other_project = { path = "../my_other_project" }
+
+[dev_dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"
+
+[documentation]
+pages = [{ title = "My Page", path = "my-page.html", source = "./path/to/my-page.md" }]
+
+[erlang]
+application_start_module = "my_app/application"
+extra_applications = ["inets", "ssl"]
+
+[javascript]
+typescript_declarations = true
+source_maps = true
+runtime = "node"
+
+[javascript.deno]
+allow_all = false
+allow_ffi = true
+allow_env = ["DATABASE_URL"]
+allow_net = ["example.com:443"]
+allow_read = ["./database.sqlite"]
+"#;
+
+    let config = toml::from_str::<PackageConfig>(input).unwrap();
+    let info = PackageInformation {
+        package_config: config.clone(),
+    };
+    let json = package_information_as_json(config);
+    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
+    insta::assert_snapshot!(output);
+
+    let roundtrip: PackageInformation = serde_json::from_str(&json).unwrap();
+    assert_eq!(info, roundtrip);
+}
+
+#[test]
+fn barebones_package_config_to_json() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
+"#;
+
+    let config = toml::from_str::<PackageConfig>(input).unwrap();
+    let json = package_information_as_json(config);
+    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
     insta::assert_snapshot!(output);
 }

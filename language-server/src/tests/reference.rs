@@ -31,7 +31,7 @@ fn find_references(
         let module_name = tester
             .module_name_from_url(&location.uri)
             .expect("Valid uri");
-        _ = references
+        references
             .entry(module_name)
             .or_default()
             .push(location.range);

@@ -9,6 +9,7 @@ mod project_compiler;
 mod telemetry;
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests;
 
 pub use self::package_compiler::PackageCompiler;

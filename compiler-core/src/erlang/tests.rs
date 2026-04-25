@@ -58,8 +58,10 @@ pub fn compile_test_project(
     );
     let mut direct_dependencies = std::collections::HashMap::from_iter(vec![]);
     for (dep_package, dep_name, dep_src) in dependencies {
-        let mut dep_config = PackageConfig::default();
-        dep_config.name = dep_package.into();
+        let dep_config = PackageConfig {
+            name: dep_package.into(),
+            ..PackageConfig::default()
+        };
         let parsed = crate::parse::parse_module(
             Utf8PathBuf::from("test/path"),
             dep_src,
@@ -89,8 +91,10 @@ pub fn compile_test_project(
     let path = Utf8PathBuf::from(src_path);
     let parsed = crate::parse::parse_module(path.clone(), src, &WarningEmitter::null())
         .expect("syntax error");
-    let mut config = PackageConfig::default();
-    config.name = "thepackage".into();
+    let config = PackageConfig {
+        name: "thepackage".into(),
+        ..PackageConfig::default()
+    };
     let mut ast = parsed.module;
     ast.name = "my/mod".into();
     let line_numbers = LineNumbers::new(src);

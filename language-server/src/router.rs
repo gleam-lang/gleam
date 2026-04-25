@@ -199,6 +199,7 @@ pub(crate) struct Project<A, B> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod find_gleam_project_parent_tests {
     use super::*;
     use gleam_core::io::{FileSystemWriter, memory::InMemoryFileSystem};

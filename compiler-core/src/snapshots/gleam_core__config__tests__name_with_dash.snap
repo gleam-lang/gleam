@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/config.rs
+assertion_line: 738
 expression: "toml::from_str::<PackageConfig>(input).unwrap_err().to_string()"
 ---
 TOML parse error at line 2, column 8

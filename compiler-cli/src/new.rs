@@ -11,6 +11,7 @@ use std::{env, io::Write};
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator, VariantNames};
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests;
 
 use crate::{NewOptions, fs::get_current_directory};

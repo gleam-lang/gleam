@@ -404,8 +404,10 @@ fn add_path_dep<B>(engine: &mut LanguageServerEngine<LanguageServerTestIO, B>, n
 fn setup_engine(
     io: &LanguageServerTestIO,
 ) -> LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO> {
-    let mut config = PackageConfig::default();
-    config.name = LSP_TEST_ROOT_PACKAGE_NAME.into();
+    let config = PackageConfig {
+        name: LSP_TEST_ROOT_PACKAGE_NAME.into(),
+        ..PackageConfig::default()
+    };
     LanguageServerEngine::new(
         config,
         io.clone(),
@@ -808,6 +810,7 @@ impl PositionFinder {
         }
     }
 
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_selection(self) -> RangeSelector {
         RangeSelector {
             from: self.clone(),

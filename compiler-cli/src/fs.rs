@@ -25,6 +25,7 @@ use camino::{ReadDirUtf8, Utf8Path, Utf8PathBuf};
 use crate::{dependencies, lsp::LspLocker};
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests;
 
 /// Return the current directory as a UTF-8 Path

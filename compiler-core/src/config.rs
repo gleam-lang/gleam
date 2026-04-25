@@ -399,327 +399,472 @@ version = "1.0.0"
     insta::assert_snapshot!(insta::internals::AutoName, error.pretty_string());
 }
 
-#[test]
-fn locked_no_manifest() {
-    let mut config = PackageConfig::default();
-    config.dependencies = [
-        ("prod1".into(), Requirement::hex("~> 1.0").unwrap()),
-        ("prod2".into(), Requirement::hex("~> 2.0").unwrap()),
-    ]
-    .into();
-    config.dev_dependencies = [
-        ("dev1".into(), Requirement::hex("~> 1.0").unwrap()),
-        ("dev2".into(), Requirement::hex("~> 2.0").unwrap()),
-    ]
-    .into();
-    assert_eq!(config.locked(None).unwrap(), [].into());
-}
-
-#[test]
-fn locked_no_changes() {
-    let mut config = PackageConfig::default();
-    config.dependencies = [
-        ("prod1".into(), Requirement::hex("~> 1.0").unwrap()),
-        ("prod2".into(), Requirement::hex("~> 2.0").unwrap()),
-    ]
-    .into();
-    config.dev_dependencies = [
-        ("dev1".into(), Requirement::hex("~> 1.0").unwrap()),
-        ("dev2".into(), Requirement::hex("~> 2.0").unwrap()),
-    ]
-    .into();
-    let manifest = Manifest {
-        requirements: config.all_direct_dependencies().unwrap(),
-        packages: vec![
-            manifest_package("prod1", "1.1.0", &[]),
-            manifest_package("prod2", "1.2.0", &[]),
-            manifest_package("dev1", "1.1.0", &[]),
-            manifest_package("dev2", "1.2.0", &[]),
-        ],
-    };
-    assert_eq!(
-        config.locked(Some(&manifest)).unwrap(),
-        [
-            locked_version("prod1", "1.1.0"),
-            locked_version("prod2", "1.2.0"),
-            locked_version("dev1", "1.1.0"),
-            locked_version("dev2", "1.2.0"),
-        ]
-        .into()
-    );
-}
-
-#[test]
-fn locked_some_removed() {
-    let mut config = PackageConfig::default();
-    config.dependencies = [("prod1".into(), Requirement::hex("~> 1.0").unwrap())].into();
-    config.dev_dependencies = [("dev2".into(), Requirement::hex("~> 2.0").unwrap())].into();
-    let manifest = Manifest {
-        requirements: config.all_direct_dependencies().unwrap(),
-        packages: vec![
-            manifest_package("prod1", "1.1.0", &[]),
-            manifest_package("prod2", "1.2.0", &[]), // Not in config
-            manifest_package("dev1", "1.1.0", &[]),  // Not in config
-            manifest_package("dev2", "1.2.0", &[]),
-        ],
-    };
-    assert_eq!(
-        config.locked(Some(&manifest)).unwrap(),
-        [
-            // prod2 removed
-            // dev1 removed
-            locked_version("prod1", "1.1.0"),
-            locked_version("dev2", "1.2.0"),
-        ]
-        .into()
-    );
-}
-
-#[test]
-fn locked_some_changed() {
-    let mut config = PackageConfig::default();
-    config.dependencies = [
-        ("prod1".into(), Requirement::hex("~> 3.0").unwrap()), // Does not match manifest
-        ("prod2".into(), Requirement::hex("~> 2.0").unwrap()),
-    ]
-    .into();
-    config.dev_dependencies = [
-        ("dev1".into(), Requirement::hex("~> 3.0").unwrap()), // Does not match manifest
-        ("dev2".into(), Requirement::hex("~> 2.0").unwrap()),
-    ]
-    .into();
-    let manifest = Manifest {
-        requirements: [
-            ("prod1".into(), Requirement::hex("~> 1.0").unwrap()),
-            ("prod2".into(), Requirement::hex("~> 2.0").unwrap()),
-            ("dev1".into(), Requirement::hex("~> 1.0").unwrap()),
-            ("dev2".into(), Requirement::hex("~> 2.0").unwrap()),
-        ]
-        .into(),
-        packages: vec![
-            manifest_package("prod1", "1.1.0", &[]),
-            manifest_package("prod2", "1.2.0", &[]),
-            manifest_package("dev1", "1.1.0", &[]),
-            manifest_package("dev2", "1.2.0", &[]),
-        ],
-    };
-    assert_eq!(
-        config.locked(Some(&manifest)).unwrap(),
-        [
-            // prod1 removed
-            // dev1 removed
-            locked_version("prod2", "1.2.0"),
-            locked_version("dev2", "1.2.0"),
-        ]
-        .into()
-    );
-}
-
-#[test]
-fn locked_nested_are_removed_too() {
-    let mut config = PackageConfig::default();
-    config.dependencies = [
-        ("1".into(), Requirement::hex("~> 2.0").unwrap()), // Does not match manifest
-        ("2".into(), Requirement::hex("~> 1.0").unwrap()),
-    ]
-    .into();
-    config.dev_dependencies = [].into();
-    let manifest = Manifest {
-        requirements: [
-            ("1".into(), Requirement::hex("~> 1.0").unwrap()),
-            ("2".into(), Requirement::hex("~> 1.0").unwrap()),
-        ]
-        .into(),
-        packages: vec![
-            manifest_package("1", "1.1.0", &["1.1", "1.2"]),
-            manifest_package("1.1", "1.1.0", &["1.1.1", "1.1.2"]),
-            manifest_package("1.1.1", "1.1.0", &["shared"]),
-            manifest_package("1.1.2", "1.1.0", &[]),
-            manifest_package("1.2", "1.1.0", &["1.2.1", "1.2.2"]),
-            manifest_package("1.2.1", "1.1.0", &[]),
-            manifest_package("1.2.2", "1.1.0", &[]),
-            manifest_package("2", "2.1.0", &["2.1", "2.2"]),
-            manifest_package("2.1", "2.1.0", &["2.1.1", "2.1.2"]),
-            manifest_package("2.1.1", "2.1.0", &[]),
-            manifest_package("2.1.2", "2.1.0", &[]),
-            manifest_package("2.2", "2.1.0", &["2.2.1", "2.2.2", "shared"]),
-            manifest_package("2.2.1", "2.1.0", &[]),
-            manifest_package("2.2.2", "2.1.0", &[]),
-            manifest_package("shared", "2.1.0", &[]),
-        ],
-    };
-    assert_eq!(
-        config.locked(Some(&manifest)).unwrap(),
-        [
-            // 1* removed
-            locked_version("2", "2.1.0"),
-            locked_version("2.1", "2.1.0"),
-            locked_version("2.1.1", "2.1.0"),
-            locked_version("2.1.2", "2.1.0"),
-            locked_version("2.2", "2.1.0"),
-            locked_version("2.2.1", "2.1.0"),
-            locked_version("2.2.2", "2.1.0"),
-            locked_version("shared", "2.1.0"),
-        ]
-        .into()
-    );
-}
-
-// https://github.com/gleam-lang/gleam/issues/1754
-#[test]
-fn locked_unlock_new() {
-    let mut config = PackageConfig::default();
-    config.dependencies = [
-        ("1".into(), Requirement::hex("~> 1.0").unwrap()),
-        ("2".into(), Requirement::hex("~> 1.0").unwrap()),
-        ("3".into(), Requirement::hex("~> 3.0").unwrap()), // Does not match manifest
-    ]
-    .into();
-    config.dev_dependencies = [].into();
-    let manifest = Manifest {
-        requirements: [
-            ("1".into(), Requirement::hex("~> 1.0").unwrap()),
-            ("2".into(), Requirement::hex("~> 1.0").unwrap()),
-        ]
-        .into(),
-        packages: vec![
-            manifest_package("1", "1.1.0", &["3"]),
-            manifest_package("2", "1.1.0", &["3"]),
-            manifest_package("3", "1.1.0", &[]),
-        ],
-    };
-    assert_eq!(
-        config.locked(Some(&manifest)).unwrap(),
-        [locked_version("1", "1.1.0"), locked_version("2", "1.1.0"),].into()
-    )
-}
-
-#[test]
-fn default_internal_modules() {
-    // When no internal modules are specified then we default to
-    // `["$package/internal", "$package/internal/*"]`
-    let mut config = PackageConfig::default();
-    config.name = "my_package".into();
-    config.internal_modules = None;
-
-    assert!(config.is_internal_module("my_package/internal"));
-    assert!(config.is_internal_module("my_package/internal/wibble"));
-    assert!(config.is_internal_module("my_package/internal/wibble/wobble"));
-    assert!(!config.is_internal_module("my_package/internallll"));
-    assert!(!config.is_internal_module("my_package/other"));
-    assert!(!config.is_internal_module("my_package/other/wibble"));
-    assert!(!config.is_internal_module("other/internal"));
-}
-
-#[test]
-fn no_internal_modules() {
-    // When no internal modules are specified then we default to
-    // `["$package/internal", "$package/internal/*"]`
-    let mut config = PackageConfig::default();
-    config.name = "my_package".into();
-    config.internal_modules = Some(vec![]);
-
-    assert!(!config.is_internal_module("my_package/internal"));
-    assert!(!config.is_internal_module("my_package/internal/wibble"));
-    assert!(!config.is_internal_module("my_package/internal/wibble/wobble"));
-    assert!(!config.is_internal_module("my_package/internallll"));
-    assert!(!config.is_internal_module("my_package/other"));
-    assert!(!config.is_internal_module("my_package/other/wibble"));
-    assert!(!config.is_internal_module("other/internal"));
-}
-
-#[test]
-fn hidden_a_directory_from_docs() {
-    let mut config = PackageConfig::default();
-    config.internal_modules = Some(vec![Glob::new("package/internal/*").expect("")]);
-
-    let mod1 = "package/internal";
-    let mod2 = "package/internal/module";
-
-    assert_eq!(config.is_internal_module(mod1), false);
-    assert_eq!(config.is_internal_module(mod2), true);
-}
-
-#[test]
-fn hidden_two_directories_from_docs() {
-    let mut config = PackageConfig::default();
-    config.internal_modules = Some(vec![
-        Glob::new("package/internal1/*").expect(""),
-        Glob::new("package/internal2/*").expect(""),
-    ]);
-
-    let mod1 = "package/internal1";
-    let mod2 = "package/internal1/module";
-    let mod3 = "package/internal2";
-    let mod4 = "package/internal2/module";
-
-    assert_eq!(config.is_internal_module(mod1), false);
-    assert_eq!(config.is_internal_module(mod2), true);
-    assert_eq!(config.is_internal_module(mod3), false);
-    assert_eq!(config.is_internal_module(mod4), true);
-}
-
-#[test]
-fn hidden_a_directory_and_a_file_from_docs() {
-    let mut config = PackageConfig::default();
-    config.internal_modules = Some(vec![
-        Glob::new("package/internal1/*").expect(""),
-        Glob::new("package/module").expect(""),
-    ]);
-
-    let mod1 = "package/internal1";
-    let mod2 = "package/internal1/module";
-    let mod3 = "package/module";
-    let mod4 = "package/module/inner";
-
-    assert_eq!(config.is_internal_module(mod1), false);
-    assert_eq!(config.is_internal_module(mod2), true);
-    assert_eq!(config.is_internal_module(mod3), true);
-    assert_eq!(config.is_internal_module(mod4), false);
-}
-
-#[test]
-fn hidden_a_file_in_all_directories_from_docs() {
-    let mut config = PackageConfig::default();
-    config.internal_modules = Some(vec![Glob::new("package/*/module1").expect("")]);
-
-    let mod1 = "package/internal1/module1";
-    let mod2 = "package/internal2/module1";
-    let mod3 = "package/internal2/module2";
-    let mod4 = "package/module";
-
-    assert_eq!(config.is_internal_module(mod1), true);
-    assert_eq!(config.is_internal_module(mod2), true);
-    assert_eq!(config.is_internal_module(mod3), false);
-    assert_eq!(config.is_internal_module(mod4), false);
-}
-
 #[cfg(test)]
-fn manifest_package(
-    name: &'static str,
-    version: &'static str,
-    requirements: &'static [&'static str],
-) -> ManifestPackage {
-    use crate::manifest::Base16Checksum;
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
 
-    ManifestPackage {
-        name: name.into(),
-        version: Version::parse(version).unwrap(),
-        build_tools: vec![],
-        otp_app: None,
-        requirements: requirements
-            .iter()
-            .map(|requirement| (*requirement).into())
-            .collect(),
-        source: crate::manifest::ManifestPackageSource::Hex {
-            outer_checksum: Base16Checksum(vec![]),
-        },
+    #[test]
+    fn locked_no_manifest() {
+        let config = PackageConfig {
+            dependencies: [
+                ("prod1".into(), Requirement::hex("~> 1.0").unwrap()),
+                ("prod2".into(), Requirement::hex("~> 2.0").unwrap()),
+            ]
+            .into(),
+            dev_dependencies: [
+                ("dev1".into(), Requirement::hex("~> 1.0").unwrap()),
+                ("dev2".into(), Requirement::hex("~> 2.0").unwrap()),
+            ]
+            .into(),
+            ..PackageConfig::default()
+        };
+
+        assert_eq!(config.locked(None).unwrap(), [].into());
     }
-}
 
-#[cfg(test)]
-fn locked_version(name: &'static str, version: &'static str) -> (EcoString, Version) {
-    (name.into(), Version::parse(version).unwrap())
+    #[test]
+    fn locked_no_changes() {
+        let config = PackageConfig {
+            dependencies: [
+                ("prod1".into(), Requirement::hex("~> 1.0").unwrap()),
+                ("prod2".into(), Requirement::hex("~> 2.0").unwrap()),
+            ]
+            .into(),
+            dev_dependencies: [
+                ("dev1".into(), Requirement::hex("~> 1.0").unwrap()),
+                ("dev2".into(), Requirement::hex("~> 2.0").unwrap()),
+            ]
+            .into(),
+            ..PackageConfig::default()
+        };
+
+        let manifest = Manifest {
+            requirements: config.all_direct_dependencies().unwrap(),
+            packages: vec![
+                manifest_package("prod1", "1.1.0", &[]),
+                manifest_package("prod2", "1.2.0", &[]),
+                manifest_package("dev1", "1.1.0", &[]),
+                manifest_package("dev2", "1.2.0", &[]),
+            ],
+        };
+        assert_eq!(
+            config.locked(Some(&manifest)).unwrap(),
+            [
+                locked_version("prod1", "1.1.0"),
+                locked_version("prod2", "1.2.0"),
+                locked_version("dev1", "1.1.0"),
+                locked_version("dev2", "1.2.0"),
+            ]
+            .into()
+        );
+    }
+
+    #[test]
+    fn locked_some_removed() {
+        let config = PackageConfig {
+            dependencies: [("prod1".into(), Requirement::hex("~> 1.0").unwrap())].into(),
+            dev_dependencies: [("dev2".into(), Requirement::hex("~> 2.0").unwrap())].into(),
+            ..PackageConfig::default()
+        };
+
+        let manifest = Manifest {
+            requirements: config.all_direct_dependencies().unwrap(),
+            packages: vec![
+                manifest_package("prod1", "1.1.0", &[]),
+                manifest_package("prod2", "1.2.0", &[]), // Not in config
+                manifest_package("dev1", "1.1.0", &[]),  // Not in config
+                manifest_package("dev2", "1.2.0", &[]),
+            ],
+        };
+        assert_eq!(
+            config.locked(Some(&manifest)).unwrap(),
+            [
+                // prod2 removed
+                // dev1 removed
+                locked_version("prod1", "1.1.0"),
+                locked_version("dev2", "1.2.0"),
+            ]
+            .into()
+        );
+    }
+
+    #[test]
+    fn locked_some_changed() {
+        let config = PackageConfig {
+            dependencies: [
+                ("prod1".into(), Requirement::hex("~> 3.0").unwrap()), // Does not match manifest
+                ("prod2".into(), Requirement::hex("~> 2.0").unwrap()),
+            ]
+            .into(),
+            dev_dependencies: [
+                ("dev1".into(), Requirement::hex("~> 3.0").unwrap()), // Does not match manifest
+                ("dev2".into(), Requirement::hex("~> 2.0").unwrap()),
+            ]
+            .into(),
+            ..PackageConfig::default()
+        };
+
+        let manifest = Manifest {
+            requirements: [
+                ("prod1".into(), Requirement::hex("~> 1.0").unwrap()),
+                ("prod2".into(), Requirement::hex("~> 2.0").unwrap()),
+                ("dev1".into(), Requirement::hex("~> 1.0").unwrap()),
+                ("dev2".into(), Requirement::hex("~> 2.0").unwrap()),
+            ]
+            .into(),
+            packages: vec![
+                manifest_package("prod1", "1.1.0", &[]),
+                manifest_package("prod2", "1.2.0", &[]),
+                manifest_package("dev1", "1.1.0", &[]),
+                manifest_package("dev2", "1.2.0", &[]),
+            ],
+        };
+        assert_eq!(
+            config.locked(Some(&manifest)).unwrap(),
+            [
+                // prod1 removed
+                // dev1 removed
+                locked_version("prod2", "1.2.0"),
+                locked_version("dev2", "1.2.0"),
+            ]
+            .into()
+        );
+    }
+
+    #[test]
+    fn locked_nested_are_removed_too() {
+        let config = PackageConfig {
+            dependencies: [
+                ("1".into(), Requirement::hex("~> 2.0").unwrap()), // Does not match manifest
+                ("2".into(), Requirement::hex("~> 1.0").unwrap()),
+            ]
+            .into(),
+            dev_dependencies: [].into(),
+            ..PackageConfig::default()
+        };
+
+        let manifest = Manifest {
+            requirements: [
+                ("1".into(), Requirement::hex("~> 1.0").unwrap()),
+                ("2".into(), Requirement::hex("~> 1.0").unwrap()),
+            ]
+            .into(),
+            packages: vec![
+                manifest_package("1", "1.1.0", &["1.1", "1.2"]),
+                manifest_package("1.1", "1.1.0", &["1.1.1", "1.1.2"]),
+                manifest_package("1.1.1", "1.1.0", &["shared"]),
+                manifest_package("1.1.2", "1.1.0", &[]),
+                manifest_package("1.2", "1.1.0", &["1.2.1", "1.2.2"]),
+                manifest_package("1.2.1", "1.1.0", &[]),
+                manifest_package("1.2.2", "1.1.0", &[]),
+                manifest_package("2", "2.1.0", &["2.1", "2.2"]),
+                manifest_package("2.1", "2.1.0", &["2.1.1", "2.1.2"]),
+                manifest_package("2.1.1", "2.1.0", &[]),
+                manifest_package("2.1.2", "2.1.0", &[]),
+                manifest_package("2.2", "2.1.0", &["2.2.1", "2.2.2", "shared"]),
+                manifest_package("2.2.1", "2.1.0", &[]),
+                manifest_package("2.2.2", "2.1.0", &[]),
+                manifest_package("shared", "2.1.0", &[]),
+            ],
+        };
+        assert_eq!(
+            config.locked(Some(&manifest)).unwrap(),
+            [
+                // 1* removed
+                locked_version("2", "2.1.0"),
+                locked_version("2.1", "2.1.0"),
+                locked_version("2.1.1", "2.1.0"),
+                locked_version("2.1.2", "2.1.0"),
+                locked_version("2.2", "2.1.0"),
+                locked_version("2.2.1", "2.1.0"),
+                locked_version("2.2.2", "2.1.0"),
+                locked_version("shared", "2.1.0"),
+            ]
+            .into()
+        );
+    }
+
+    // https://github.com/gleam-lang/gleam/issues/1754
+    #[test]
+    fn locked_unlock_new() {
+        let config = PackageConfig {
+            dependencies: [
+                ("1".into(), Requirement::hex("~> 1.0").unwrap()),
+                ("2".into(), Requirement::hex("~> 1.0").unwrap()),
+                ("3".into(), Requirement::hex("~> 3.0").unwrap()), // Does not match manifest
+            ]
+            .into(),
+            dev_dependencies: [].into(),
+            ..PackageConfig::default()
+        };
+
+        let manifest = Manifest {
+            requirements: [
+                ("1".into(), Requirement::hex("~> 1.0").unwrap()),
+                ("2".into(), Requirement::hex("~> 1.0").unwrap()),
+            ]
+            .into(),
+            packages: vec![
+                manifest_package("1", "1.1.0", &["3"]),
+                manifest_package("2", "1.1.0", &["3"]),
+                manifest_package("3", "1.1.0", &[]),
+            ],
+        };
+        assert_eq!(
+            config.locked(Some(&manifest)).unwrap(),
+            [locked_version("1", "1.1.0"), locked_version("2", "1.1.0"),].into()
+        )
+    }
+
+    #[test]
+    fn default_internal_modules() {
+        // When no internal modules are specified then we default to
+        // `["$package/internal", "$package/internal/*"]`
+        let config = PackageConfig {
+            name: "my_package".into(),
+            internal_modules: None,
+            ..PackageConfig::default()
+        };
+
+        assert!(config.is_internal_module("my_package/internal"));
+        assert!(config.is_internal_module("my_package/internal/wibble"));
+        assert!(config.is_internal_module("my_package/internal/wibble/wobble"));
+        assert!(!config.is_internal_module("my_package/internallll"));
+        assert!(!config.is_internal_module("my_package/other"));
+        assert!(!config.is_internal_module("my_package/other/wibble"));
+        assert!(!config.is_internal_module("other/internal"));
+    }
+
+    #[test]
+    fn no_internal_modules() {
+        // When no internal modules are specified then we default to
+        // `["$package/internal", "$package/internal/*"]`
+        let config = PackageConfig {
+            name: "my_package".into(),
+            internal_modules: Some(vec![]),
+            ..PackageConfig::default()
+        };
+
+        assert!(!config.is_internal_module("my_package/internal"));
+        assert!(!config.is_internal_module("my_package/internal/wibble"));
+        assert!(!config.is_internal_module("my_package/internal/wibble/wobble"));
+        assert!(!config.is_internal_module("my_package/internallll"));
+        assert!(!config.is_internal_module("my_package/other"));
+        assert!(!config.is_internal_module("my_package/other/wibble"));
+        assert!(!config.is_internal_module("other/internal"));
+    }
+
+    #[test]
+    fn hidden_a_directory_from_docs() {
+        let config = PackageConfig {
+            internal_modules: Some(vec![Glob::new("package/internal/*").expect("")]),
+            ..PackageConfig::default()
+        };
+
+        let mod1 = "package/internal";
+        let mod2 = "package/internal/module";
+
+        assert_eq!(config.is_internal_module(mod1), false);
+        assert_eq!(config.is_internal_module(mod2), true);
+    }
+
+    #[test]
+    fn hidden_two_directories_from_docs() {
+        let config = PackageConfig {
+            internal_modules: Some(vec![
+                Glob::new("package/internal1/*").expect(""),
+                Glob::new("package/internal2/*").expect(""),
+            ]),
+            ..PackageConfig::default()
+        };
+
+        let mod1 = "package/internal1";
+        let mod2 = "package/internal1/module";
+        let mod3 = "package/internal2";
+        let mod4 = "package/internal2/module";
+
+        assert_eq!(config.is_internal_module(mod1), false);
+        assert_eq!(config.is_internal_module(mod2), true);
+        assert_eq!(config.is_internal_module(mod3), false);
+        assert_eq!(config.is_internal_module(mod4), true);
+    }
+
+    #[test]
+    fn hidden_a_directory_and_a_file_from_docs() {
+        let config = PackageConfig {
+            internal_modules: Some(vec![
+                Glob::new("package/internal1/*").expect(""),
+                Glob::new("package/module").expect(""),
+            ]),
+            ..PackageConfig::default()
+        };
+
+        let mod1 = "package/internal1";
+        let mod2 = "package/internal1/module";
+        let mod3 = "package/module";
+        let mod4 = "package/module/inner";
+
+        assert_eq!(config.is_internal_module(mod1), false);
+        assert_eq!(config.is_internal_module(mod2), true);
+        assert_eq!(config.is_internal_module(mod3), true);
+        assert_eq!(config.is_internal_module(mod4), false);
+    }
+
+    #[test]
+    fn hidden_a_file_in_all_directories_from_docs() {
+        let config = PackageConfig {
+            internal_modules: Some(vec![Glob::new("package/*/module1").expect("")]),
+            ..PackageConfig::default()
+        };
+
+        let mod1 = "package/internal1/module1";
+        let mod2 = "package/internal2/module1";
+        let mod3 = "package/internal2/module2";
+        let mod4 = "package/module";
+
+        assert_eq!(config.is_internal_module(mod1), true);
+        assert_eq!(config.is_internal_module(mod2), true);
+        assert_eq!(config.is_internal_module(mod3), false);
+        assert_eq!(config.is_internal_module(mod4), false);
+    }
+
+    #[test]
+    fn name_with_dash() {
+        let input = r#"
+name = "one-two"
+"#;
+
+        insta::assert_snapshot!(
+            insta::internals::AutoName,
+            toml::from_str::<PackageConfig>(input)
+                .unwrap_err()
+                .to_string()
+        );
+    }
+
+    #[test]
+    fn name_with_number_start() {
+        let input = r#"
+name = "1"
+"#;
+        insta::assert_snapshot!(
+            insta::internals::AutoName,
+            toml::from_str::<PackageConfig>(input)
+                .unwrap_err()
+                .to_string(),
+        )
+    }
+
+    #[test]
+    fn package_config_to_json() {
+        let input = r#"
+name = "my_project"
+version = "1.0.0"
+licences = ["Apache-2.0", "MIT"]
+description = "Pretty complex config"
+target = "erlang"
+repository = { type = "github", user = "example", repo = "my_dep" }
+links = [{ title = "Home page", href = "https://example.com" }]
+internal_modules = ["my_app/internal"]
+gleam = ">= 0.30.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.18.0 and < 2.0.0"
+my_other_project = { path = "../my_other_project" }
+
+[dev_dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"
+
+[documentation]
+pages = [{ title = "My Page", path = "my-page.html", source = "./path/to/my-page.md" }]
+
+[erlang]
+application_start_module = "my_app/application"
+extra_applications = ["inets", "ssl"]
+
+[javascript]
+typescript_declarations = true
+source_maps = true
+runtime = "node"
+
+[javascript.deno]
+allow_all = false
+allow_ffi = true
+allow_env = ["DATABASE_URL"]
+allow_net = ["example.com:443"]
+allow_read = ["./database.sqlite"]
+"#;
+
+        let config = toml::from_str::<PackageConfig>(input).unwrap();
+        let json = serde_json::to_string_pretty(&config).unwrap();
+        let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
+        insta::assert_snapshot!(output);
+
+        let roundtrip = serde_json::from_str::<PackageConfig>(&json).unwrap();
+        assert_eq!(config, roundtrip);
+    }
+
+    #[test]
+    fn barebones_package_config_to_json() {
+        let input = r#"
+name = "my_project"
+version = "1.0.0"
+"#;
+
+        let config = toml::from_str::<PackageConfig>(input).unwrap();
+        let json = serde_json::to_string_pretty(&config).unwrap();
+        let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
+        insta::assert_snapshot!(output);
+    }
+
+    #[test]
+    fn dev_deps_field_name() {
+        let toml = r#"
+name = "wibble"
+version = "1.0.0"
+
+[dev_dependencies]
+wibble = ">= 1.0.0 and < 2.0.0"
+"#;
+        let hyphen_alternative =
+            deserialise_config("gleam.toml", toml.into()).expect("valid config");
+        let toml = r#"
+name = "wibble"
+version = "1.0.0"
+
+[dev_dependencies]
+wibble = ">= 1.0.0 and < 2.0.0"
+"#;
+        let canonical = deserialise_config("gleam.toml", toml.into()).expect("valid config");
+        assert_eq!(canonical, hyphen_alternative)
+    }
+
+    fn manifest_package(
+        name: &'static str,
+        version: &'static str,
+        requirements: &'static [&'static str],
+    ) -> ManifestPackage {
+        use crate::manifest::Base16Checksum;
+
+        ManifestPackage {
+            name: name.into(),
+            version: Version::parse(version).unwrap(),
+            build_tools: vec![],
+            otp_app: None,
+            requirements: requirements
+                .iter()
+                .map(|requirement| (*requirement).into())
+                .collect(),
+            source: crate::manifest::ManifestPackageSource::Hex {
+                outer_checksum: Base16Checksum(vec![]),
+            },
+        }
+    }
+
+    fn locked_version(name: &'static str, version: &'static str) -> (EcoString, Version) {
+        (name.into(), Version::parse(version).unwrap())
+    }
 }
 
 impl Default for PackageConfig {
@@ -1214,114 +1359,4 @@ fn is_valid_package_name(name: &str) -> bool {
     PACKAGE_NAME_PATTERN
         .get_or_init(|| Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex"))
         .is_match(name)
-}
-
-#[test]
-fn name_with_dash() {
-    let input = r#"
-name = "one-two"
-"#;
-
-    insta::assert_snapshot!(
-        insta::internals::AutoName,
-        toml::from_str::<PackageConfig>(input)
-            .unwrap_err()
-            .to_string()
-    );
-}
-
-#[test]
-fn name_with_number_start() {
-    let input = r#"
-name = "1"
-"#;
-    insta::assert_snapshot!(
-        insta::internals::AutoName,
-        toml::from_str::<PackageConfig>(input)
-            .unwrap_err()
-            .to_string(),
-    )
-}
-
-#[test]
-fn package_config_to_json() {
-    let input = r#"
-name = "my_project"
-version = "1.0.0"
-licences = ["Apache-2.0", "MIT"]
-description = "Pretty complex config"
-target = "erlang"
-repository = { type = "github", user = "example", repo = "my_dep" }
-links = [{ title = "Home page", href = "https://example.com" }]
-internal_modules = ["my_app/internal"]
-gleam = ">= 0.30.0"
-
-[dependencies]
-gleam_stdlib = ">= 0.18.0 and < 2.0.0"
-my_other_project = { path = "../my_other_project" }
-
-[dev_dependencies]
-gleeunit = ">= 1.0.0 and < 2.0.0"
-
-[documentation]
-pages = [{ title = "My Page", path = "my-page.html", source = "./path/to/my-page.md" }]
-
-[erlang]
-application_start_module = "my_app/application"
-extra_applications = ["inets", "ssl"]
-
-[javascript]
-typescript_declarations = true
-source_maps = true
-runtime = "node"
-
-[javascript.deno]
-allow_all = false
-allow_ffi = true
-allow_env = ["DATABASE_URL"]
-allow_net = ["example.com:443"]
-allow_read = ["./database.sqlite"]
-"#;
-
-    let config = toml::from_str::<PackageConfig>(input).unwrap();
-    let json = serde_json::to_string_pretty(&config).unwrap();
-    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
-    insta::assert_snapshot!(output);
-
-    let roundtrip = serde_json::from_str::<PackageConfig>(&json).unwrap();
-    assert_eq!(config, roundtrip);
-}
-
-#[test]
-fn barebones_package_config_to_json() {
-    let input = r#"
-name = "my_project"
-version = "1.0.0"
-"#;
-
-    let config = toml::from_str::<PackageConfig>(input).unwrap();
-    let json = serde_json::to_string_pretty(&config).unwrap();
-    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
-    insta::assert_snapshot!(output);
-}
-
-#[test]
-fn dev_deps_field_name() {
-    let toml = r#"
-name = "wibble"
-version = "1.0.0"
-
-[dev_dependencies]
-wibble = ">= 1.0.0 and < 2.0.0"
-"#;
-    let hyphen_alternative = deserialise_config("gleam.toml", toml.into()).expect("valid config");
-    let toml = r#"
-name = "wibble"
-version = "1.0.0"
-
-[dev_dependencies]
-wibble = ">= 1.0.0 and < 2.0.0"
-"#;
-    let canonical = deserialise_config("gleam.toml", toml.into()).expect("valid config");
-    assert_eq!(canonical, hyphen_alternative)
 }

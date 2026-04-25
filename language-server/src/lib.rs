@@ -66,6 +66,7 @@ mod server;
 mod signature_help;
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests;
 
 pub use server::LanguageServer;

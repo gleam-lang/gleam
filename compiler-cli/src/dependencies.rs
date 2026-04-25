@@ -32,6 +32,7 @@ use strum::IntoEnumIterator;
 pub use dependency_manager::DependencyManagerConfig;
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests;
 
 use crate::{

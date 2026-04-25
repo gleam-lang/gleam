@@ -74,10 +74,7 @@ pub enum Token<'input> {
 impl<'input> Token<'input> {
     /// Check if the current token is a whitespace token.
     pub fn is_whitespace(&self) -> bool {
-        match *self {
-            Whitespace(..) => true,
-            _ => false,
-        }
+        matches!(*self, Whitespace(..))
     }
 }
 
