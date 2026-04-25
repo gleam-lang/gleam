@@ -5696,6 +5696,28 @@ fn extract_variable() {
 }
 
 #[test]
+fn extract_can_extract_number_used_as_call_argument() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  wibble(label: 1)
+}"#,
+        find_position_of("1").to_selection()
+    );
+}
+
+#[test]
+fn extract_can_extract_bool_used_as_call_argument() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  wibble(label: True)
+}"#,
+        find_position_of("True").to_selection()
+    );
+}
+
+#[test]
 fn extract_variable_ignores_names_in_other_branches() {
     assert_code_action!(
         EXTRACT_VARIABLE,

@@ -1,0 +1,16 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn main() {\n  wibble(label: 1)\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  wibble(label: 1)
+                ↑ 
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  let int = 1
+  wibble(label: int)
+}
