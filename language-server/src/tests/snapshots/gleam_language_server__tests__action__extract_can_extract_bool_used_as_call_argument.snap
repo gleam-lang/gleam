@@ -1,0 +1,16 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn main() {\n  wibble(label: True)\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  wibble(label: True)
+                ↑    
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  let bool = True
+  wibble(label: bool)
+}

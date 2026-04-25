@@ -3476,6 +3476,37 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         });
     }
 
+    fn visit_typed_expr_call(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        fun: &'ast TypedExpr,
+        arguments: &'ast [TypedCallArg],
+        open_parenthesis: &'ast Option<u32>,
+    ) {
+        // Function calls need some extra care. If we're inspecting a record
+        // call like this one: `Wibble(wobble, woo)` and the cursor is over the
+        // constructor itself we never want to allow extracting it, or it would
+        // result in the following code:
+        //
+        // ```gleam
+        // Wibble(wobble, woo)
+        // // ^^ Cursor here
+        //
+        // let wibble = Wibble
+        // wibble(wobble, woo)
+        // // That's a bit silly!
+        // ```
+        let fun_range = self.edits.src_span_to_lsp_range(fun.location());
+        if within(self.params.range, fun_range) && fun.is_record_constructor_function() {
+            return;
+        }
+
+        // Otherwise we just keep visiting like usual, no special handling is
+        // required.
+        ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments, open_parenthesis);
+    }
+
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
         let expr_location = expr.location();
         let expr_range = self.edits.src_span_to_lsp_range(expr_location);
@@ -3531,15 +3562,6 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
                 return;
             }
 
-            // Expressions that don't make sense to extract
-            TypedExpr::Panic { .. }
-            | TypedExpr::Echo { .. }
-            | TypedExpr::Block { .. }
-            | TypedExpr::ModuleSelect { .. }
-            | TypedExpr::Invalid { .. }
-            | TypedExpr::PositionalAccess { .. }
-            | TypedExpr::Var { .. } => (),
-
             TypedExpr::Int { location, .. }
             | TypedExpr::Float { location, .. }
             | TypedExpr::String { location, .. }
@@ -3556,7 +3578,20 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
             | TypedExpr::BitArray { location, .. }
             | TypedExpr::RecordUpdate { location, .. }
             | TypedExpr::NegateBool { location, .. }
-            | TypedExpr::NegateInt { location, .. } => {
+            | TypedExpr::NegateInt { location, .. }
+            // It generally makes no sense to extract variables, the only
+            // exception is for records with no fields (like `True` and
+            // `False`): in the AST those are `Var`s with a `Record`
+            // constructor. Extracting them is allowed!
+            | TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: type_::ValueConstructorVariant::Record { .. },
+                        ..
+                    },
+                location,
+                ..
+            } => {
                 if let Some(ExtractVariablePosition::CallArg) = self.position {
                     // Don't update latest statement, we don't want to insert the extracted
                     // variable inside the parenthesis where the call argument is located.
@@ -3568,6 +3603,15 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
                     name: self.generate_candidate_name(expr.type_()),
                 });
             }
+
+            // Expressions that don't make sense to extract
+            TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Invalid { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::Var { .. } => (),
         }
 
         ast::visit::visit_typed_expr(self, expr);
