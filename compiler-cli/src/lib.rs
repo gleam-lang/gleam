@@ -154,8 +154,7 @@ enum Command {
         #[arg(short, long, ignore_case = true, help = target_doc())]
         target: Option<Target>,
 
-        /// Don't print progress information
-        #[clap(long)]
+        #[arg(long, help = no_print_progress_doc())]
         no_print_progress: bool,
     },
 
@@ -322,8 +321,7 @@ enum Command {
         #[arg(short, long)]
         module: Option<String>,
 
-        /// Don't print progress information
-        #[clap(long)]
+        #[arg(long, help = no_print_progress_doc())]
         no_print_progress: bool,
 
         arguments: Vec<String>,
@@ -357,6 +355,9 @@ enum Command {
         /// Which runtime to use
         #[arg(long, ignore_case = true, help = runtime_doc())]
         runtime: Option<Runtime>,
+
+        #[arg(long, help = no_print_progress_doc())]
+        no_print_progress: bool,
 
         arguments: Vec<String>,
     },
@@ -434,6 +435,10 @@ fn template_doc() -> &'static str {
 
 fn target_doc() -> &'static str {
     "The platform to target"
+}
+
+fn no_print_progress_doc() -> &'static str {
+    "Don't print progress information"
 }
 
 fn runtime_doc() -> &'static str {
@@ -812,6 +817,7 @@ fn parse_and_run_command() -> Result<(), Error> {
             target,
             arguments,
             runtime,
+            no_print_progress,
         } => {
             let paths = find_project_paths()?;
             run::command(
@@ -821,7 +827,7 @@ fn parse_and_run_command() -> Result<(), Error> {
                 runtime,
                 None,
                 run::Which::Dev,
-                false,
+                no_print_progress,
             )
         }
 
