@@ -15,22 +15,10 @@ Error
   kind:   Constructor
   detail: gleam
   sort:   05_Error
-False
-  kind:   EnumMember
-  detail: gleam
-  sort:   5_False
-Nil
-  kind:   EnumMember
-  detail: gleam
-  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
   sort:   05_Ok
-True
-  kind:   EnumMember
-  detail: gleam
-  sort:   5_True
 main
   kind:   Function
   detail: fn() -> Result(Int, Nil)

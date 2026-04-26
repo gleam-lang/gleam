@@ -835,6 +835,11 @@ impl<'a, IO> Completer<'a, IO> {
             }
 
             let mut push_prelude_completion = |label: &str, kind, type_: Arc<Type>| {
+                match match_type(&self.expected_type, &type_) {
+                    TypeMatch::Incompatible => return,
+                    TypeMatch::Matching | TypeMatch::Unknown => (),
+                };
+
                 let label = label.to_string();
                 let sort_text = Some(sort_text(
                     CompletionKind::Prelude,

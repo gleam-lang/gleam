@@ -28,3 +28,8 @@
 - Fixed a bug where the language server wouldn't let one extract record
   constructors as variables.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server would suggest completions for values
+  from the language's prelude, even though their types were incompatible with
+  the current context.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
