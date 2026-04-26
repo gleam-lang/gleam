@@ -95,3 +95,21 @@ pub const wobble = [
 "#
     );
 }
+
+#[test]
+fn constant_todo_message() {
+    assert_format!(
+        r#"pub const wibble = todo as "message"
+"#
+    );
+}
+
+#[test]
+fn constant_todo_commented_message() {
+    assert_format!(
+        r#"pub const wibble = todo as
+  // some comment
+  "message"
+"#
+    );
+}
