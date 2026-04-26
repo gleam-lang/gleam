@@ -6,10 +6,10 @@ use crate::{
         Arg, Assert, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
         CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant, FunctionLiteralKind, HasLocation,
         ImplicitCallArgOrigin, InvalidExpression, Layer, RECORD_UPDATE_VARIABLE,
-        RecordBeingUpdated, SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssert,
-        TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr,
-        TypedMultiPattern, TypedStatement, USE_ASSIGNMENT_VARIABLE, UntypedArg, UntypedAssert,
-        UntypedAssignment, UntypedClause, UntypedClauseGuard, UntypedConstant,
+        RecordBeingUpdated, RecordUpdateAssignment, SrcSpan, Statement, TodoKind, TypeAst,
+        TypedArg, TypedAssert, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant,
+        TypedExpr, TypedMultiPattern, TypedStatement, USE_ASSIGNMENT_VARIABLE, UntypedArg,
+        UntypedAssert, UntypedAssignment, UntypedClause, UntypedClauseGuard, UntypedConstant,
         UntypedConstantBitArraySegment, UntypedExpr, UntypedExprBitArraySegment,
         UntypedMultiPattern, UntypedStatement, UntypedUse, UntypedUseAssignment, Use,
         UseAssignment,
@@ -3058,17 +3058,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // We create an Assignment for the old record expression and will
             // use a Var expression to refer back to it while constructing the
             // arguments.
-            let record_assignment = Assignment {
-                location: record_location,
-                pattern: Pattern::Variable {
-                    location: record_location,
-                    name: RECORD_UPDATE_VARIABLE.into(),
-                    type_: record_type.clone(),
-                    origin: VariableOrigin::generated(),
-                },
-                annotation: None,
-                compiled_case: CompiledCase::failure(),
-                kind: AssignmentKind::Generated,
+            let record_assignment = RecordUpdateAssignment {
+                name: RECORD_UPDATE_VARIABLE.into(),
                 value: record,
             };
 
