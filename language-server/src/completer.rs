@@ -301,10 +301,10 @@ impl<'a, IO> Completer<'a, IO> {
         }
     }
 
-    // Gets the current range around the cursor to place a completion
-    // and the phrase surrounding the cursor to use for completion.
-    // This method takes in a helper to determine what qualifies as
-    // a phrase depending on context.
+    /// Gets the current range around the cursor to place a completion
+    /// and the phrase surrounding the cursor to use for completion.
+    /// The `valid_phrase_char` is a function that returns true if a character
+    /// should be included in the phrase surrounding the cursor.
     fn get_phrase_surrounding_for_completion(
         &'a self,
         valid_phrase_char: &impl Fn(char) -> bool,
@@ -315,14 +315,20 @@ impl<'a, IO> Completer<'a, IO> {
         let before = self
             .src
             .get(..cursor as usize)
-            .and_then(|line| line.rsplit_once(valid_phrase_char).map(|r| r.1))
+            .and_then(|line| {
+                line.rsplit_once(|char| !valid_phrase_char(char))
+                    .map(|(_, suffix)| suffix)
+            })
             .unwrap_or("");
 
         // Get part of phrase following cursor
         let after = self
             .src
             .get(cursor as usize..)
-            .and_then(|line| line.split_once(valid_phrase_char).map(|r| r.0))
+            .and_then(|line| {
+                line.split_once(|char| !valid_phrase_char(char))
+                    .map(|(prefix, _)| prefix)
+            })
             .unwrap_or("");
 
         let text_before_cursor_range = Range {
@@ -359,8 +365,9 @@ impl<'a, IO> Completer<'a, IO> {
     // This is used to match the exact location to fill in the completion.
     fn get_phrase_surrounding_completion(&'a self) -> CursorSurroundings {
         self.get_phrase_surrounding_for_completion(&|c: char| {
-            // Checks if a character is not a valid name/upname character or a dot.
-            !c.is_ascii_alphanumeric() && c != '.' && c != '_'
+            // Checks if a character is not a valid name/upname character or a
+            // dot.
+            c.is_ascii_alphanumeric() || c == '.' || c == '_'
         })
     }
 
@@ -371,11 +378,11 @@ impl<'a, IO> Completer<'a, IO> {
         self.get_phrase_surrounding_for_completion(&|c: char| {
             // Checks if a character is not a valid name/upname character or whitespace.
             // The newline character is not included as well.
-            !c.is_ascii_alphanumeric() && c != '_' && c != ' ' && c != '\t'
+            c.is_ascii_alphanumeric() || c == '_' || c == ' ' || c == '\t'
         })
     }
 
-    /// Checks if the line being editted is an import line and provides completions if it is.
+    /// Checks if the line being edited is an import line and provides completions if it is.
     /// If the line includes a dot then it provides unqualified import completions.
     /// Otherwise it provides direct module import completions.
     pub fn import_completions(&'a self) -> Option<Result<Option<Vec<CompletionItem>>>> {
@@ -590,7 +597,7 @@ impl<'a, IO> Completer<'a, IO> {
     // be really hard to understand or use a lot of trait magic.
     // For now I've left it as is but might be worth revisiting.
 
-    /// Provides completions for when the context being editted is a type.
+    /// Provides completions for when the context being edited is a type.
     pub fn completion_types(&'a self) -> Vec<CompletionItem> {
         let cursor_surroundings = self.get_phrase_surrounding_completion();
         let selected_module = cursor_surroundings.selected_module();
@@ -745,7 +752,7 @@ impl<'a, IO> Completer<'a, IO> {
         completions
     }
 
-    /// Provides completions for when the context being editted is a value.
+    /// Provides completions for when the context being edited is a value.
     pub fn completion_values(&'a self) -> Vec<CompletionItem> {
         let cursor_surroundings = self.get_phrase_surrounding_completion();
         let selected_module = cursor_surroundings.selected_module();
@@ -1018,7 +1025,7 @@ impl<'a, IO> Completer<'a, IO> {
         }
     }
 
-    /// Provides completions for field accessors when the context being editted
+    /// Provides completions for field accessors when the context being edited
     /// is a custom type instance
     pub fn completion_field_accessors(&'a self, type_: Arc<Type>) -> Vec<CompletionItem> {
         if let Type::Named {
@@ -1087,7 +1094,7 @@ impl<'a, IO> Completer<'a, IO> {
         }
     }
 
-    /// Provides completions for labels when the context being editted is a call
+    /// Provides completions for labels when the context being edited is a call
     /// that has labelled arguments that can be passed
     pub fn completion_labels(
         &'a self,
