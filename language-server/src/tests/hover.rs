@@ -2146,3 +2146,124 @@ pub fn go(wibble: Wibble) {
         find_position_of("Wibble").nth_occurrence(4)
     );
 }
+
+#[test]
+fn hover_on_constant_todo() {
+    assert_hover!(
+        "
+const wibble = todo
+",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_1() {
+    assert_hover!(
+        "
+const wibble = todo
+",
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_in_list() {
+    assert_hover!(
+        "
+const wibble = [todo, 1]
+",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_in_list_2() {
+    assert_hover!(
+        "
+const wibble = [todo, 1]
+",
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_in_bit_array() {
+    assert_hover!(
+        "
+const wibble = <<todo:utf8>>
+",
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_in_bit_array_2() {
+    assert_hover!(
+        "
+const wibble = <<todo>>
+",
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_in_constructor() {
+    assert_hover!(
+        "
+const wibble = Ok(todo)
+",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_in_annotated_constructor() {
+    assert_hover!(
+        "
+const wibble: Result(String, Int) = Ok(todo)
+",
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_in_constructor_2() {
+    assert_hover!(
+        "
+const wibble = Ok(todo)
+",
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn hover_on_constant_annotated_todo() {
+    assert_hover!(
+        "
+const wibble: String = todo
+",
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_message() {
+    assert_hover!(
+        r#"
+const wibble = todo as "wobble"
+"#,
+        find_position_of("wobble")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_invalid_message_still_works() {
+    assert_hover!(
+        r#"
+const wobble = 1
+const wibble = todo as [wobble]
+"#,
+        find_position_of("wobble").nth_occurrence(2)
+    );
+}

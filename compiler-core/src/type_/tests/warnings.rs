@@ -4921,3 +4921,13 @@ pub fn run(data) {
         "#
     );
 }
+
+#[test]
+fn constant_used_in_todo_message_counts_as_used() {
+    assert_no_warnings!(
+        "
+const wibble = 1
+pub const wobble = todo as wibble
+"
+    );
+}

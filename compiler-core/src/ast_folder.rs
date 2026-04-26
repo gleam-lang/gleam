@@ -950,6 +950,12 @@ pub trait UntypedConstantFolder {
     /// You probably don't want to override this method.
     fn update_constant(&mut self, constant: UntypedConstant) -> UntypedConstant {
         match constant {
+            Constant::Todo {
+                location,
+                type_: (),
+                message,
+            } => self.fold_constant_todo(location, message),
+
             Constant::Int {
                 location,
                 value,
@@ -1030,6 +1036,18 @@ pub trait UntypedConstantFolder {
                 type_: (),
                 extra_information,
             } => self.fold_constant_invalid(location, extra_information),
+        }
+    }
+
+    fn fold_constant_todo(
+        &mut self,
+        location: SrcSpan,
+        message: Option<Box<UntypedConstant>>,
+    ) -> UntypedConstant {
+        Constant::Todo {
+            location,
+            type_: (),
+            message: message.map(|message| Box::new(self.fold_constant(*message))),
         }
     }
 
@@ -1186,7 +1204,8 @@ pub trait UntypedConstantFolder {
             | Constant::Float { .. }
             | Constant::String { .. }
             | Constant::Tuple { .. }
-            | Constant::Invalid { .. } => constant,
+            | Constant::Invalid { .. }
+            | Constant::Todo { .. } => constant,
 
             Constant::List {
                 location,

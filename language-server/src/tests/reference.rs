@@ -1095,3 +1095,25 @@ pub fn main() {
         find_position_of("mod.wibble").under_char('w')
     );
 }
+
+#[test]
+fn references_for_invalid_constant_todo_message_still_works() {
+    assert_references!(
+        "
+const wibble = 1
+const wobble = todo as wibble
+",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn references_for_invalid_constant_todo_message_still_works_2() {
+    assert_references!(
+        "
+const wibble = 1
+const wobble = todo as [wibble]
+",
+        find_position_of("wibble")
+    );
+}

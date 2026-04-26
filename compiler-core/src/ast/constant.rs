@@ -90,6 +90,12 @@ pub enum Constant<T, RecordTag> {
         /// states.
         extra_information: Option<InvalidExpression>,
     },
+
+    Todo {
+        location: SrcSpan,
+        type_: T,
+        message: Option<Box<Self>>,
+    },
 }
 
 impl TypedConstant {
@@ -105,6 +111,7 @@ impl TypedConstant {
             | Constant::Record { type_, .. }
             | Constant::RecordUpdate { type_, .. }
             | Constant::Var { type_, .. }
+            | Constant::Todo { type_, .. }
             | Constant::Invalid { type_, .. } => type_.clone(),
         }
     }
@@ -118,6 +125,12 @@ impl TypedConstant {
             | Constant::Float { .. }
             | Constant::String { .. }
             | Constant::Invalid { .. } => Located::Constant(self),
+
+            Constant::Todo { message, .. } => message
+                .iter()
+                .find_map(|message| message.find_node(byte_index))
+                .unwrap_or(Located::Constant(self)),
+
             Constant::Var {
                 module: Some((module_alias, location)),
                 constructor: Some(constructor),
@@ -182,6 +195,7 @@ impl TypedConstant {
             | Constant::Tuple { .. }
             | Constant::List { .. }
             | Constant::BitArray { .. }
+            | Constant::Todo { .. }
             | Constant::StringConcatenation { .. }
             | Constant::Invalid { .. } => None,
             Constant::Record {
@@ -206,6 +220,11 @@ impl TypedConstant {
             | Constant::Int { .. }
             | Constant::Float { .. }
             | Constant::String { .. } => im::hashset![],
+
+            Constant::Todo { message, .. } => message
+                .as_ref()
+                .map(|message| message.referenced_variables())
+                .unwrap_or(im::hashset![]),
 
             Constant::List { elements, .. } | Constant::Tuple { elements, .. } => elements
                 .iter()
@@ -245,6 +264,19 @@ impl TypedConstant {
 
     pub(crate) fn syntactically_eq(&self, other: &Self) -> bool {
         match (self, other) {
+            (
+                Constant::Todo { message, .. },
+                Constant::Todo {
+                    message: other_message,
+                    ..
+                },
+            ) => match (message, other_message) {
+                (None, None) => true,
+                (Some(_), None) | (None, Some(_)) => false,
+                (Some(message), Some(other_message)) => message.syntactically_eq(other_message),
+            },
+            (Constant::Todo { .. }, _) => false,
+
             (Constant::Int { int_value: n, .. }, Constant::Int { int_value: m, .. }) => n == m,
             (Constant::Int { .. }, _) => false,
 
@@ -416,6 +448,7 @@ impl TypedConstant {
             | Constant::BitArray { .. }
             | Constant::StringConcatenation { .. }
             | Constant::Var { .. }
+            | Constant::Todo { .. }
             | Constant::Invalid { .. } => None,
         }
     }
@@ -440,6 +473,7 @@ impl<A, B> Constant<A, B> {
             | Constant::BitArray { location, .. }
             | Constant::Var { location, .. }
             | Constant::Invalid { location, .. }
+            | Constant::Todo { location, .. }
             | Constant::StringConcatenation { location, .. } => *location,
         }
     }
@@ -453,6 +487,7 @@ impl<A, B> Constant<A, B> {
             | Constant::Var { .. } => true,
 
             Constant::Tuple { .. }
+            | Constant::Todo { .. }
             | Constant::List { .. }
             | Constant::Record { .. }
             | Constant::RecordUpdate { .. }

@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub const message = 1\npub const wibble = todo as message\n"
+---
+----- SOURCE CODE
+
+pub const message = 1
+pub const wibble = todo as message
+
+
+----- ERROR
+error: Constant todo found
+  ┌─ /src/one/two.gleam:3:20
+  │
+3 │ pub const wibble = todo as message
+  │                    ^^^^^^^^^^^^^^^ This code is incomplete
+
+This code will crash if it is run. Be sure to finish it before running your
+program.
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:28
+  │
+3 │ pub const wibble = todo as message
+  │                            ^^^^^^^
+
+Expected type:
+
+    String
+
+Found type:
+
+    Int

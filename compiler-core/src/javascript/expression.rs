@@ -2134,7 +2134,9 @@ impl<'module, 'a> Generator<'module, 'a> {
             Constant::RecordUpdate { .. } => {
                 panic!("record updates should not reach code generation")
             }
-
+            Constant::Todo { .. } => {
+                panic!("todo constants should not reach code generation")
+            }
             Constant::Invalid { .. } => {
                 panic!("invalid constants should not reach code generation")
             }
@@ -2485,6 +2487,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             | Constant::String { .. }
             | Constant::RecordUpdate { .. }
             | Constant::StringConcatenation { .. }
+            | Constant::Todo { .. }
             | Constant::Invalid { .. } => self.constant_expression(Context::Guard, expression),
         }
     }

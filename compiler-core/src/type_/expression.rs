@@ -1672,6 +1672,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         }
 
                         Constant::Int { .. }
+                        | Constant::Todo { .. }
                         | Constant::Tuple { .. }
                         | Constant::List { .. }
                         | Constant::Record { .. }
@@ -3867,6 +3868,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     | Constant::BitArray { .. }
                     | Constant::Var { .. }
                     | Constant::StringConcatenation { .. }
+                    | Constant::Todo { .. }
                     | Constant::Invalid { .. } => typed_record,
                 };
 
@@ -4326,6 +4328,31 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     location,
                     left: Box::new(left),
                     right: Box::new(right),
+                }
+            }
+
+            Constant::Todo {
+                location, message, ..
+            } => {
+                let type_ = self.new_unbound_var();
+                let message = message.map(|message| {
+                    let message = self.infer_const(&None, *message);
+                    if let Err(error) = unify(string(), message.type_()) {
+                        self.problems
+                            .error(convert_unify_error(error, message.location()))
+                    }
+                    Box::new(message)
+                });
+
+                // Constant todos always result in a compile time error, this
+                // way the developer has to remember to change them before
+                // running their code!
+                self.problems.error(Error::TodoConstant { location });
+
+                Constant::Todo {
+                    location,
+                    type_,
+                    message,
                 }
             }
 
@@ -5270,6 +5297,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             | Constant::RecordUpdate { .. }
             | Constant::BitArray { .. }
             | Constant::StringConcatenation { .. }
+            | Constant::Todo { .. }
             | Constant::Invalid { .. } => (),
         }
     }
@@ -5281,7 +5309,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 fn invalid_with_annotated_type(constant: TypedConstant, new_type: Arc<Type>) -> TypedConstant {
     // In case the types cannot be unified we change the inferred we
     // return a constant where the type matches the annotated one.
-    // This can help minimise fals positive later on!
+    // This can help minimise false positive later on!
     match constant {
         // For simple variants that don't carry their own type we
         // replace them with an invalid constant with the same
@@ -5294,6 +5322,16 @@ fn invalid_with_annotated_type(constant: TypedConstant, new_type: Arc<Type>) -> 
             location,
             type_: new_type,
             extra_information: None,
+        },
+
+        // Todos should never result in type errors like this one, but just to
+        // be safe rather than panicking we replace the type with the new one.
+        Constant::Todo {
+            location, message, ..
+        } => TypedConstant::Todo {
+            location,
+            type_: new_type,
+            message,
         },
 
         // In all other cases we don't want to lose information on

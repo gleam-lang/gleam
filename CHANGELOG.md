@@ -4,6 +4,10 @@
 
 ### Compiler
 
+- It is now possible to use the `todo` keyword in constants, this will result in
+  an helpful error message rather than a syntax error.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - The `gleam dev` command now accepts the `--no-print-progress` flag. When this

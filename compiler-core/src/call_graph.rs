@@ -461,6 +461,12 @@ impl<'a> CallGraphBuilder<'a> {
                 module: Some(_), ..
             } => (),
 
+            Constant::Todo { message, .. } => {
+                if let Some(message) = message {
+                    self.constant(message)
+                }
+            }
+
             Constant::List { elements, tail, .. } => {
                 for element in elements {
                     self.constant(element);
