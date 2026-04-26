@@ -4,6 +4,11 @@
 
 ### Compiler
 
+- The inference of record update expressions is now more fault tolerant: if
+  there's an error in the record being updated, the compiler can still able to
+  analyse the fields that are being provided.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - The `gleam dev` command now accepts the `--no-print-progress` flag. When this

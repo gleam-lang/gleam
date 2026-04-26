@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Wibble { Wibble(a: Int, b: Int) }\n\npub fn main() {\n  //                       v should see an error here\n  Wibble(..does_not_exist, a: True)\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble { Wibble(a: Int, b: Int) }
+
+pub fn main() {
+  //                       v should see an error here
+  Wibble(..does_not_exist, a: True)
+}
+
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:6:12
+  │
+6 │   Wibble(..does_not_exist, a: True)
+  │            ^^^^^^^^^^^^^^
+
+The name `does_not_exist` is not in scope here.
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:6:28
+  │
+6 │   Wibble(..does_not_exist, a: True)
+  │                            ^^^^^^^
+
+Expected type:
+
+    Int
+
+Found type:
+
+    Bool
