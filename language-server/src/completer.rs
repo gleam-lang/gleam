@@ -792,9 +792,10 @@ impl<'a, IO> Completer<'a, IO> {
         }
 
         // Module and prelude values
-        // Do not complete direct module values if the user has already started typing a module select.
-        // e.x. when the user has typed mymodule.| we know local module and prelude values are no longer
-        // relevant.
+        // Do not complete direct module values if the user has already started
+        // typing a module select.
+        // e.x. when the user has typed mymodule.| we know local module and
+        // prelude values are no longer relevant.
         if selected_module.is_none() {
             // Find the function that the cursor is in and push completions for
             // its arguments and local variables.
@@ -907,8 +908,10 @@ impl<'a, IO> Completer<'a, IO> {
                 }
 
                 if let Some(module) = import.used_name() {
-                    // If the user has already started a module select then don't show irrelevant modules.
-                    // e.x. when the user has typed mymodule.| we should only show items from mymodule.
+                    // If the user has already started a module select then
+                    // don't show irrelevant modules.
+                    // e.x. when the user has typed mymodule.| we should only
+                    // show items from mymodule.
                     if let Some(input_mod_name) = &selected_module
                         && &module != input_mod_name
                     {
@@ -926,8 +929,10 @@ impl<'a, IO> Completer<'a, IO> {
             }
 
             // Unqualified values
-            // Do not complete unqualified values if the user has already started typing a module select.
-            // e.x. when the user has typed mymodule.| we know unqualified module values are no longer relevant.
+            // Do not complete unqualified values if the user has already
+            // started typing a module select.
+            // e.x. when the user has typed mymodule.| we know unqualified
+            // module values are no longer relevant.
             if selected_module.is_none() {
                 for unqualified in &import.unqualified_values {
                     if let Some(value) = module.get_public_value(&unqualified.name) {
@@ -966,8 +971,10 @@ impl<'a, IO> Completer<'a, IO> {
                 .next_back()
                 .unwrap_or(module_full_name);
 
-            // If the user has already started a module select then don't show irrelevant modules.
-            // e.x. when the user has typed mymodule.| we should only show items from mymodule.
+            // If the user has already started a module select then don't show
+            // irrelevant modules.
+            // e.x. when the user has typed mymodule.| we should only show items
+            // from mymodule.
             if let Some(selected_module) = &selected_module
                 && qualifier != selected_module
             {
@@ -1017,9 +1024,11 @@ impl<'a, IO> Completer<'a, IO> {
                 ..
             } => importable_modules
                 .get(module)
-                .and_then(|i| i.accessors.get(name))
-                .filter(|a| a.publicity.is_importable() || module == &self.module.name)
-                .map(|a| a.accessors_for_variant(*inferred_variant)),
+                .and_then(|interface| interface.accessors.get(name))
+                .filter(|accessor| {
+                    accessor.publicity.is_importable() || module == &self.module.name
+                })
+                .map(|accessor| accessor.accessors_for_variant(*inferred_variant)),
 
             Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => None,
         }

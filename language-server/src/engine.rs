@@ -269,7 +269,7 @@ where
     ) -> Response<Option<Vec<lsp::CompletionItem>>> {
         self.respond(|this| {
             let module = match this.module_for_uri(&params.text_document.uri) {
-                Some(m) => m,
+                Some(module) => module,
                 None => return Ok(None),
             };
 
