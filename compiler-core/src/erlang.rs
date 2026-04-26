@@ -1587,6 +1587,16 @@ fn let_assert<'a>(
     ]
 }
 
+/// Generates an the document for assigning to a pattern, for example:
+///
+/// ```erl
+/// {A, B} = Value
+/// Something = fun(atom)
+/// ```
+///
+/// This takes care of the left hand side being any kind of pattern.
+/// If you need to generate an assignment and you know the left hand side to be
+/// a variable name, then you can use the `simple_variable_let` function!
 fn let_<'a>(
     value: &'a TypedExpr,
     pattern: &'a TypedPattern,
@@ -1597,6 +1607,23 @@ fn let_<'a>(
         .print(pattern)
         .append(" = ")
         .append(body)
+}
+
+/// This is used to render a simple variable assignment in Erlang, there's cases
+/// when the left hand side of an assignment is known to be a variable with a
+/// simple name. In that case we don't have to go through `let_` which needs a
+/// whole pattern.
+///
+/// If you need to deal with a complex `let` where the left hand side is a
+/// generic pattern use the `let_` function.
+fn simple_variable_let<'a>(
+    name: &'a EcoString,
+    value: &'a TypedExpr,
+    environment: &mut Env<'a>,
+) -> Document<'a> {
+    let body = maybe_block_expr(value, environment).group();
+    let name = environment.next_local_var_name(name.as_str());
+    docvec![name, " = ", body]
 }
 
 fn float<'a>(value: &str) -> Document<'a> {
@@ -2300,7 +2327,7 @@ fn docs_arguments_call<'a>(
 }
 
 fn record_update<'a>(
-    record: &'a Option<Box<TypedAssignment>>,
+    record: &'a Option<Box<RecordUpdateAssignment>>,
     constructor: &'a TypedExpr,
     arguments: &'a [TypedCallArg],
     env: &mut Env<'a>,
@@ -2309,7 +2336,7 @@ fn record_update<'a>(
 
     let document = match record.as_ref() {
         Some(record) => docvec![
-            assignment(record, env, Position::NotTail),
+            simple_variable_let(&record.name, &record.value, env),
             ",",
             line(),
             call(constructor, arguments, env)
