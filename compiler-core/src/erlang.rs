@@ -1726,18 +1726,36 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
         }
 
         Constant::List { elements, tail, .. } => {
-            let tail_elements = tail
-                .as_deref()
-                .and_then(|tail| tail.list_elements())
-                .unwrap_or_default();
-
-            join(
-                elements
-                    .iter()
-                    .chain(tail_elements)
-                    .map(|element| const_inline(element, env)),
-                break_(",", ", "),
-            )
+            match tail {
+                // There's no tail in the list, we join all the elements and
+                // call it a day.
+                None => join(
+                    elements.iter().map(|element| const_inline(element, env)),
+                    break_(",", ", "),
+                ),
+                Some(tail) => match tail.list_elements() {
+                    // There's a tail in the list whose elements are all known at
+                    // compile time. In this case we replace the tail with those
+                    // elements and create a single flat list.
+                    Some(tail_elements) => join(
+                        elements
+                            .iter()
+                            .chain(tail_elements)
+                            .map(|element| const_inline(element, env)),
+                        break_(",", ", "),
+                    ),
+                    // There's a tail in the list but we can't really tell what its
+                    // elements are at compile time. This means we have to use
+                    // erlang's syntax to append to a list.
+                    None => {
+                        let elements = join(
+                            elements.iter().map(|element| const_inline(element, env)),
+                            break_(",", ", "),
+                        );
+                        docvec![elements, " | ", const_inline(tail, env)]
+                    }
+                },
+            }
             .nest(INDENT)
             .surround("[", "]")
             .group()
@@ -3574,8 +3592,18 @@ fn find_referenced_private_functions(
             find_referenced_private_functions(right, already_found);
         }
 
-        Constant::Tuple { elements, .. } | Constant::List { elements, .. } => elements
+        Constant::Tuple { elements, .. } => elements
             .iter()
             .for_each(|element| find_referenced_private_functions(element, already_found)),
+
+        Constant::List { elements, tail, .. } => {
+            elements
+                .iter()
+                .for_each(|element| find_referenced_private_functions(element, already_found));
+
+            if let Some(tail) = tail {
+                find_referenced_private_functions(tail, already_found);
+            }
+        }
     }
 }
