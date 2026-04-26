@@ -1,0 +1,17 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub const updated = Wibble(..base, a: 1, b: 3)\npub const base = Wibble(a: 1, b: 2)\npub type Wibble { Wibble(a: Int, b: Int) }\n"
+---
+----- BEFORE ACTION
+
+pub const updated = Wibble(..base, a: 1, b: 3)
+                           ↑                  
+pub const base = Wibble(a: 1, b: 2)
+pub type Wibble { Wibble(a: Int, b: Int) }
+
+
+----- AFTER ACTION
+
+pub const updated = Wibble(a: 1, b: 3)
+pub const base = Wibble(a: 1, b: 2)
+pub type Wibble { Wibble(a: Int, b: Int) }

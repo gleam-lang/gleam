@@ -33,7 +33,7 @@ use lsp_types::{
 use std::{collections::HashSet, sync::Arc};
 
 use crate::{
-    code_action::{ReplaceUnderscoreWithType, type_errors_for_module},
+    code_action::{RemoveRedundantRecordUpdate, ReplaceUnderscoreWithType, type_errors_for_module},
     rename::rename_module_alias,
 };
 
@@ -450,6 +450,8 @@ where
             code_action_add_missing_patterns(module, &lines, &params, &this.error, &mut actions);
             actions
                 .extend(RemoveUnreachableCaseClauses::new(module, &lines, &params).code_actions());
+            actions
+                .extend(RemoveRedundantRecordUpdate::new(module, &lines, &params).code_actions());
             actions.extend(CollapseNestedCase::new(module, &lines, &params).code_actions());
             code_action_inexhaustive_let_to_case(
                 module,

@@ -62,7 +62,7 @@ Parsed {
                                     type_: (),
                                 },
                                 location: SrcSpan {
-                                    start: 39,
+                                    start: 37,
                                     end: 49,
                                 },
                             },
