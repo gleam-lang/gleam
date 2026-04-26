@@ -131,3 +131,16 @@ pub fn main(x) {
 "#,
     );
 }
+
+#[test]
+fn list_with_tail_used_in_guard() {
+    assert_erl!(
+        r#"
+pub fn go(x: List(Int), y: List(Int)) {
+  case x {
+    [1, ..x] if [1, 2, ..x] == y -> True
+    _ -> False
+  }
+}"#
+    )
+}
