@@ -3623,3 +3623,28 @@ pub fn main() -> Int {
 }"
     );
 }
+
+#[test]
+fn non_string_in_todo_constant_message() {
+    assert_module_error!("pub const wibble = todo as [1, 2, 3]");
+}
+
+#[test]
+fn string_variable_in_todo_constant_message() {
+    assert_module_error!(
+        r#"
+pub const message = "hello"
+pub const wibble = todo as message
+"#
+    );
+}
+
+#[test]
+fn non_string_variable_in_todo_constant_message() {
+    assert_module_error!(
+        r#"
+pub const message = 1
+pub const wibble = todo as message
+"#
+    );
+}

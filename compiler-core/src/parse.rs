@@ -1084,6 +1084,26 @@ where
         Ok(message)
     }
 
+    fn maybe_parse_constant_as_message(
+        &mut self,
+    ) -> Result<Option<Box<UntypedConstant>>, ParseError> {
+        let message = if let Some((as_start, as_end)) = self.maybe_one(&Token::As) {
+            match self.parse_const_value_unit()? {
+                Some(constant) => Some(Box::new(constant)),
+                None => {
+                    return Err(ParseError {
+                        error: ParseErrorType::MissingConstantAsMessage,
+                        location: SrcSpan::new(as_start, as_end),
+                    });
+                }
+            }
+        } else {
+            None
+        };
+
+        Ok(message)
+    }
+
     // An assignment, with `Let` already consumed
     fn parse_assignment(&mut self, start: u32) -> Result<UntypedStatement, ParseError> {
         let mut kind = match self.tok0 {
@@ -3195,9 +3215,14 @@ where
         match self.tok0.take() {
             Some((start, Token::Todo, end)) => {
                 self.advance();
+                let message = self.maybe_parse_constant_as_message()?;
+                let end = message
+                    .as_ref()
+                    .map_or(end, |message| message.location().end);
                 Ok(Some(Constant::Todo {
                     location: SrcSpan { start, end },
                     type_: (),
+                    message,
                 }))
             }
 

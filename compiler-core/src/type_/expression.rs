@@ -4325,12 +4325,29 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
             }
 
-            Constant::Todo { location, .. } => {
-                // Constant todos always result in a compile time error, this way
-                // the developer has to remember to change them before running their code!
+            Constant::Todo {
+                location, message, ..
+            } => {
                 let type_ = self.new_unbound_var();
+                let message = message.map(|message| {
+                    let message = self.infer_const(&None, *message);
+                    if let Err(error) = unify(string(), message.type_()) {
+                        self.problems
+                            .error(convert_unify_error(error, message.location()))
+                    }
+                    Box::new(message)
+                });
+
+                // Constant todos always result in a compile time error, this
+                // way the developer has to remember to change them before
+                // running their code!
                 self.problems.error(Error::TodoConstant { location });
-                Constant::Todo { location, type_ }
+
+                Constant::Todo {
+                    location,
+                    type_,
+                    message,
+                }
             }
 
             Constant::Invalid { .. } => panic!("invalid constants can not be in an untyped ast"),
@@ -5304,9 +5321,12 @@ fn invalid_with_annotated_type(constant: TypedConstant, new_type: Arc<Type>) -> 
 
         // Todos should never result in type errors like this one, but just to
         // be safe rather than panicking we replace the type with the new one.
-        Constant::Todo { location, .. } => TypedConstant::Todo {
+        Constant::Todo {
+            location, message, ..
+        } => TypedConstant::Todo {
             location,
             type_: new_type,
+            message,
         },
 
         // In all other cases we don't want to lose information on

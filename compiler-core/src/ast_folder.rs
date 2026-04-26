@@ -953,7 +953,8 @@ pub trait UntypedConstantFolder {
             Constant::Todo {
                 location,
                 type_: (),
-            } => self.fold_constant_todo(location),
+                message,
+            } => self.fold_constant_todo(location, message),
 
             Constant::Int {
                 location,
@@ -1038,10 +1039,15 @@ pub trait UntypedConstantFolder {
         }
     }
 
-    fn fold_constant_todo(&mut self, location: SrcSpan) -> UntypedConstant {
+    fn fold_constant_todo(
+        &mut self,
+        location: SrcSpan,
+        message: Option<Box<UntypedConstant>>,
+    ) -> UntypedConstant {
         Constant::Todo {
             location,
             type_: (),
+            message: message.map(|message| Box::new(self.fold_constant(*message))),
         }
     }
 

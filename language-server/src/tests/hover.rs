@@ -2246,3 +2246,24 @@ const wibble: String = todo
         find_position_of("todo")
     );
 }
+
+#[test]
+fn hover_on_constant_todo_message() {
+    assert_hover!(
+        r#"
+const wibble = todo as "wobble"
+"#,
+        find_position_of("wobble")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_invalid_message_still_works() {
+    assert_hover!(
+        r#"
+const wobble = 1
+const wibble = todo as [wobble]
+"#,
+        find_position_of("wobble").nth_occurrence(2)
+    );
+}

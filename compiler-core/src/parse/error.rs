@@ -147,6 +147,8 @@ pub enum ParseErrorType {
         name: EcoString,
         arguments: Vec<EcoString>,
     },
+    // `const x = todo as` with no message after the `as`.
+    MissingConstantAsMessage,
 }
 
 pub(crate) struct ParseErrorDetails {
@@ -714,6 +716,13 @@ See: https://tour.gleam.run/flow-control/case-expressions/"
                 text: "".into(),
                 hint: None,
                 label_text: "A clause guard block cannot be empty".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::MissingConstantAsMessage => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "I was expecting to see a constant expression after this `as`".into(),
                 extra_labels: vec![],
             },
 

@@ -1,0 +1,14 @@
+---
+source: language-server/src/tests/hover.rs
+expression: "\nconst wobble = 1\nconst wibble = todo as [wobble]\n"
+---
+
+const wobble = 1
+const wibble = todo as [wobble]
+                        ↑▔▔▔▔▔ 
+
+
+----- Hover content (markdown) -----
+```gleam
+Int
+```

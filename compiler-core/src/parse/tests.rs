@@ -2355,3 +2355,16 @@ fn unicode_fullwidth_caret() {
 fn unicode_fullwidth_colon() {
     assert_module_error!("pub fn wibble(x\u{FF1A} Int) { x }");
 }
+
+#[test]
+fn missing_todo_constant_message() {
+    assert_module_error!("pub const wibble = todo as");
+}
+
+#[test]
+fn missing_todo_constant_message_2() {
+    assert_module_error!(
+        "pub const wibble = todo as
+pub fn wibble() {}"
+    );
+}
