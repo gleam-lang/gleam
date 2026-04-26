@@ -673,7 +673,7 @@ impl<'a, IO> Completer<'a, IO> {
             // unqualified module types are no longer relevant.
             if selected_module.is_none() {
                 for unqualified in &import.unqualified_types {
-                    if let Some(type_) = module.get_public_type(&unqualified.name) {
+                    if let Some(type_) = module.get_importable_type(&unqualified.name) {
                         completions.push(type_completion(
                             None,
                             unqualified.used_name(),
@@ -923,7 +923,7 @@ impl<'a, IO> Completer<'a, IO> {
             // e.x. when the user has typed mymodule.| we know unqualified module values are no longer relevant.
             if selected_module.is_none() {
                 for unqualified in &import.unqualified_values {
-                    if let Some(value) = module.get_public_value(&unqualified.name) {
+                    if let Some(value) = module.get_importable_value(&unqualified.name) {
                         let name = unqualified.used_name();
                         completions.push(self.value_completion(
                             None,
