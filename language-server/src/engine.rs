@@ -303,6 +303,7 @@ where
                     ..
                 }
                 | Located::Constant(Constant::String { .. }) => None,
+
                 Located::Expression {
                     expression:
                         TypedExpr::Call { fun, arguments, .. }
@@ -318,6 +319,7 @@ where
                     completions.append(&mut completer.completion_labels(fun, arguments));
                     Some(completions)
                 }
+
                 Located::Expression {
                     expression: TypedExpr::RecordAccess { record, type_, .. },
                     ..
@@ -328,6 +330,7 @@ where
                     completions.append(&mut completer.completion_field_accessors(record.type_()));
                     Some(completions)
                 }
+
                 Located::Expression {
                     position:
                         ExpressionPosition::ArgumentOrLabel {
@@ -369,6 +372,7 @@ where
                     completer.expected_type = Some(expression.type_());
                     Some(completer.completion_values())
                 }
+
                 Located::ModuleFunction(_) => Some(completer.completion_types()),
 
                 Located::Statement(_) => Some(completer.completion_values()),

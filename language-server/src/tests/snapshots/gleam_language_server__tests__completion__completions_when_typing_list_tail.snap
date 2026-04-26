@@ -1,0 +1,27 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "\npub fn main() {\n  let wibble = [1, 2]\n  [3, 4, ..w]\n}\n"
+---
+
+pub fn main() {
+  let wibble = [1, 2]
+  [3, 4, ..w|]
+}
+
+
+----- Completion content -----
+main
+  kind:   Function
+  detail: fn() -> List(Int)
+  sort:   03_main
+  desc:   app
+  edits:
+    [3:11-3:12]: "main"
+wibble
+  kind:   Variable
+  detail: List(Int)
+  sort:   03_wibble
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [3:11-3:12]: "wibble"
