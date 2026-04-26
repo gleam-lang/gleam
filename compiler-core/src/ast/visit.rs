@@ -662,8 +662,13 @@ pub trait Visit<'ast> {
         visit_typed_constant(self, constant);
     }
 
-    fn visit_typed_constant_todo(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
-        visit_typed_constant_todo(self, location, type_);
+    fn visit_typed_constant_todo(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        message: &'ast Option<Box<TypedConstant>>,
+    ) {
+        visit_typed_constant_todo(self, location, type_, message);
     }
 
     fn visit_typed_constant_int(
@@ -927,6 +932,7 @@ pub fn visit_typed_constant_todo<'a, V: Visit<'a> + ?Sized>(
     _v: &mut V,
     _location: &'a SrcSpan,
     _type_: &'a Arc<Type>,
+    _message: &'a Option<Box<TypedConstant>>,
 ) {
     // No further traversal needed for constant todos
 }
@@ -1115,7 +1121,11 @@ where
 
 pub fn visit_typed_constant<'a, V: Visit<'a> + ?Sized>(v: &mut V, constant: &'a TypedConstant) {
     match constant {
-        super::Constant::Todo { location, type_ } => v.visit_typed_constant_todo(location, type_),
+        super::Constant::Todo {
+            location,
+            type_,
+            message,
+        } => v.visit_typed_constant_todo(location, type_, message),
         super::Constant::Int {
             location,
             value,

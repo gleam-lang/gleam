@@ -94,6 +94,7 @@ pub enum Constant<T, RecordTag> {
     Todo {
         location: SrcSpan,
         type_: T,
+        message: Option<Box<Self>>,
     },
 }
 
@@ -123,8 +124,13 @@ impl TypedConstant {
             Constant::Int { .. }
             | Constant::Float { .. }
             | Constant::String { .. }
-            | Constant::Invalid { .. }
-            | Constant::Todo { .. } => Located::Constant(self),
+            | Constant::Invalid { .. } => Located::Constant(self),
+
+            Constant::Todo { message, .. } => message
+                .iter()
+                .find_map(|message| message.find_node(byte_index))
+                .unwrap_or(Located::Constant(self)),
+
             Constant::Var {
                 module: Some((module_alias, location)),
                 constructor: Some(constructor),
@@ -211,10 +217,14 @@ impl TypedConstant {
             Constant::Var { name, .. } => im::hashset![name],
 
             Constant::Invalid { .. }
-            | Constant::Todo { .. }
             | Constant::Int { .. }
             | Constant::Float { .. }
             | Constant::String { .. } => im::hashset![],
+
+            Constant::Todo { message, .. } => message
+                .as_ref()
+                .map(|message| message.referenced_variables())
+                .unwrap_or(im::hashset![]),
 
             Constant::List { elements, .. } | Constant::Tuple { elements, .. } => elements
                 .iter()
@@ -254,7 +264,17 @@ impl TypedConstant {
 
     pub(crate) fn syntactically_eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Constant::Todo { .. }, Constant::Todo { .. }) => true,
+            (
+                Constant::Todo { message, .. },
+                Constant::Todo {
+                    message: other_message,
+                    ..
+                },
+            ) => match (message, other_message) {
+                (None, None) => true,
+                (Some(_), None) | (None, Some(_)) => false,
+                (Some(message), Some(other_message)) => message.syntactically_eq(other_message),
+            },
             (Constant::Todo { .. }, _) => false,
 
             (Constant::Int { int_value: n, .. }, Constant::Int { int_value: m, .. }) => n == m,
@@ -464,10 +484,10 @@ impl<A, B> Constant<A, B> {
             Constant::Int { .. }
             | Constant::Float { .. }
             | Constant::String { .. }
-            | Constant::Todo { .. }
             | Constant::Var { .. } => true,
 
             Constant::Tuple { .. }
+            | Constant::Todo { .. }
             | Constant::List { .. }
             | Constant::Record { .. }
             | Constant::RecordUpdate { .. }

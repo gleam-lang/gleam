@@ -975,3 +975,25 @@ pub fn main() {
         find_position_of("== mod.Wibble").under_char('i')
     );
 }
+
+#[test]
+fn goto_for_invalid_constant_todo_message_still_works() {
+    assert_goto!(
+        "
+const wibble = 1
+const wobble = todo as wibble
+",
+        find_position_of("wibble").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn goto_for_invalid_constant_todo_message_still_works_2() {
+    assert_goto!(
+        "
+const wibble = 1
+const wobble = todo as [wibble]
+",
+        find_position_of("wibble").nth_occurrence(2)
+    );
+}
