@@ -81,3 +81,7 @@
 - Fixed a bug where the language server would suggest the "wrap in anonymous"
   code action when hovering over a record update.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler would generate invalid code for guards using
+  lists with a tail.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
