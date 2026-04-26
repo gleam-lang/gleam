@@ -261,6 +261,10 @@ impl BeamCompiler for LanguageServerTestIO {
     ) -> Result<Vec<String>> {
         panic!("compile_beam({out:?}, {lib:?}, {modules:?}, {stdio:?}) is not implemented")
     }
+
+    fn otp_version(&self) -> Option<String> {
+        None
+    }
 }
 
 impl MakeLocker for LanguageServerTestIO {
