@@ -7396,6 +7396,48 @@ fn do_not_extract_top_level_expression_in_let_statement() {
 }
 
 #[test]
+fn allow_extracting_multiple_selects() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"
+pub fn go(wibble: Wibble) {
+    [
+        wibble.wobble.wubble.woo,
+        todo as "something else",
+    ]
+}
+
+pub type Wibble { Wibble(wobble: Wobble) }
+pub type Wobble { Wobble(wubble: Wubble) }
+pub type Wubble { Wubble(woo: Int) }
+"#,
+        find_position_of("wibble")
+            .nth_occurrence(2)
+            .select_until(find_position_of("woo"))
+    );
+}
+
+#[test]
+fn allow_extracting_part_of_multiple_selects() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"
+pub fn go(wibble: Wibble) {
+    [
+        wibble.wobble.wubble.woo,
+        todo as "something else",
+    ]
+}
+
+pub type Wibble { Wibble(wobble: Wobble) }
+pub type Wobble { Wobble(wubble: Wubble) }
+pub type Wubble { Wubble(woo: Int) }
+"#,
+        find_position_of("wubble").to_selection()
+    );
+}
+
+#[test]
 fn do_not_extract_top_level_module_call() {
     let src = r#"
 import list
