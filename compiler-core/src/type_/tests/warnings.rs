@@ -4832,6 +4832,32 @@ pub fn main(x) {
 }
 
 #[test]
+fn constant_list_prepending_requires_v1_16_warning() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub const one = []
+pub const other = [1, 2, ..one]
+",
+    );
+}
+
+#[test]
+fn constant_list_prepending_in_guard_requires_v1_16_warning() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+fn go(x) {
+  case x {
+    [1, ..] if [1, ..x] == x -> Nil
+    _ -> Nil
+  }
+}
+",
+    );
+}
+
+#[test]
 fn record_update_with_all_wrong_fields_produces_no_warnings_1() {
     assert_no_warnings!(
         "

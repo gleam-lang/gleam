@@ -20,6 +20,10 @@
   or git dependency on Hex when running `gleam update`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler wouldn't track the minimum required version
+  when using list prepending in constants.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a bug where the language server wouldn't let one extract record
   constructors as variables.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

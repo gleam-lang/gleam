@@ -4418,6 +4418,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let type_ = list(element_type);
 
         let tail = if let Some(tail) = tail {
+            self.track_feature_usage(FeatureKind::ConstantListWithTail, location);
             let tail = self.infer_const(&None, *tail);
             if let Err(error) = unify(type_.clone(), tail.type_()) {
                 self.problems

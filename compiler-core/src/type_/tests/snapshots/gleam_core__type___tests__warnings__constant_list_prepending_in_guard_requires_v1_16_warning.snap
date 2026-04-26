@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\nfn go(x) {\n  case x {\n    [1, ..] if [1, ..x] == x -> Nil\n    _ -> Nil\n  }\n}\n"
+---
+----- SOURCE CODE
+
+fn go(x) {
+  case x {
+    [1, ..] if [1, ..x] == x -> Nil
+    _ -> Nil
+  }
+}
+
+
+----- WARNING
+warning: Unused private function
+  ┌─ /src/warning/wrn.gleam:2:1
+  │
+2 │ fn go(x) {
+  │ ^^^^^^^^ This private function is never used
+
+Hint: You can safely remove it.
+
+warning: Incompatible gleam version range
+  ┌─ /src/warning/wrn.gleam:4:16
+  │
+4 │     [1, ..] if [1, ..x] == x -> Nil
+  │                ^^^^^^^^ This requires a Gleam version >= 1.16.0
+
+Prepending to a constant list was introduced in version v1.16.0. But the
+Gleam version range specified in your `gleam.toml` would allow this code to
+run on an earlier version like v1.0.0, resulting in compilation errors!
+
+Hint: Remove the version constraint from your `gleam.toml` or update it to
+be:
+
+    gleam = ">= 1.16.0"
