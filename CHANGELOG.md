@@ -23,3 +23,7 @@
 - Fixed a bug where the language server wouldn't let one extract record
   constructors as variables.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler would generate invalid code for guards using
+  lists with a tail.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
