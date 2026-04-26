@@ -1,0 +1,32 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn go(wibble: Wibble) {\n    [\n        wibble.wobble.wubble.woo,\n        todo as \"something else\",\n    ]\n}\n\npub type Wibble { Wibble(wobble: Wobble) }\npub type Wobble { Wobble(wubble: Wubble) }\npub type Wubble { Wubble(woo: Int) }\n"
+---
+----- BEFORE ACTION
+
+pub fn go(wibble: Wibble) {
+    [
+        wibble.wobble.wubble.woo,
+                      ↑          
+        todo as "something else",
+    ]
+}
+
+pub type Wibble { Wibble(wobble: Wobble) }
+pub type Wobble { Wobble(wubble: Wubble) }
+pub type Wubble { Wubble(woo: Int) }
+
+
+----- AFTER ACTION
+
+pub fn go(wibble: Wibble) {
+    let wubble = wibble.wobble.wubble
+    [
+        wubble.woo,
+        todo as "something else",
+    ]
+}
+
+pub type Wibble { Wibble(wobble: Wobble) }
+pub type Wobble { Wobble(wubble: Wubble) }
+pub type Wubble { Wubble(woo: Int) }
