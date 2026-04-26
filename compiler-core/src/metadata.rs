@@ -445,9 +445,14 @@ impl RemapIds {
                 type_: self.type_(type_),
                 extra_information,
             },
-            Constant::Todo { location, type_ } => Constant::Todo {
+            Constant::Todo {
+                location,
+                type_,
+                message,
+            } => Constant::Todo {
                 location,
                 type_: self.type_(type_),
+                message: message.map(|message| Box::new(self.constant(*message))),
             },
         }
     }

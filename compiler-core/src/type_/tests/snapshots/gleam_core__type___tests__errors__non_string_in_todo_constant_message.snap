@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "pub const wibble = todo as [1, 2, 3]"
+---
+----- SOURCE CODE
+pub const wibble = todo as [1, 2, 3]
+
+----- ERROR
+error: Constant todo found
+  ┌─ /src/one/two.gleam:1:20
+  │
+1 │ pub const wibble = todo as [1, 2, 3]
+  │                    ^^^^^^^^^^^^^^^^^ This code is incomplete
+
+This code will crash if it is run. Be sure to finish it before running your
+program.
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:28
+  │
+1 │ pub const wibble = todo as [1, 2, 3]
+  │                            ^^^^^^^^^
+
+Expected type:
+
+    String
+
+Found type:
+
+    List(Int)

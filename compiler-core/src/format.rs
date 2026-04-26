@@ -472,7 +472,9 @@ impl<'comments> Formatter<'comments> {
     fn const_expr<'a, A, B>(&mut self, value: &'a Constant<A, B>) -> Document<'a> {
         let comments = self.pop_comments(value.location().start);
         let document = match value {
-            Constant::Todo { .. } => "todo".to_doc(),
+            Constant::Todo { message, .. } => {
+                self.append_as_message_constant("todo".to_doc(), message.as_deref())
+            }
 
             Constant::Int { value, .. } => self.int(value),
 
@@ -496,7 +498,9 @@ impl<'comments> Formatter<'comments> {
             } => {
                 let segment_docs = segments
                     .iter()
-                    .map(|segment| bit_array_segment(segment, |e| self.const_expr(e)))
+                    .map(|segment| {
+                        bit_array_segment(segment, |expression| self.const_expr(expression))
+                    })
                     .collect_vec();
 
                 let packing = self.items_sequence_packing(
@@ -1058,7 +1062,7 @@ impl<'comments> Formatter<'comments> {
             .append(self.assigned_value(value));
 
         commented(
-            self.append_as_message(doc, PrecedingAs::Expression, message),
+            self.append_as_message_expression(doc, PrecedingAs::Expression, message),
             comments,
         )
     }
@@ -1067,13 +1071,17 @@ impl<'comments> Formatter<'comments> {
         let comments = self.pop_comments(expression.start_byte_index());
 
         let document = match expression {
-            UntypedExpr::Panic { message, .. } => {
-                self.append_as_message("panic".to_doc(), PrecedingAs::Keyword, message.as_deref())
-            }
+            UntypedExpr::Panic { message, .. } => self.append_as_message_expression(
+                "panic".to_doc(),
+                PrecedingAs::Keyword,
+                message.as_deref(),
+            ),
 
-            UntypedExpr::Todo { message, .. } => {
-                self.append_as_message("todo".to_doc(), PrecedingAs::Keyword, message.as_deref())
-            }
+            UntypedExpr::Todo { message, .. } => self.append_as_message_expression(
+                "todo".to_doc(),
+                PrecedingAs::Keyword,
+                message.as_deref(),
+            ),
 
             UntypedExpr::Echo {
                 expression,
@@ -2806,8 +2814,11 @@ impl<'comments> Formatter<'comments> {
             self.expr(&assert.value)
         };
 
-        let doc =
-            self.append_as_message(expression, PrecedingAs::Expression, assert.message.as_ref());
+        let doc = self.append_as_message_expression(
+            expression,
+            PrecedingAs::Expression,
+            assert.message.as_ref(),
+        );
         commented(docvec!["assert ", doc], comments)
     }
 
@@ -3101,7 +3112,7 @@ impl<'comments> Formatter<'comments> {
         Some(doc.force_break())
     }
 
-    fn append_as_message<'a>(
+    fn append_as_message_expression<'a>(
         &mut self,
         doc: Document<'a>,
         preceding_as: PrecedingAs,
@@ -3158,13 +3169,47 @@ impl<'comments> Formatter<'comments> {
         doc.group()
     }
 
+    fn append_as_message_constant<'a, A, B>(
+        &mut self,
+        doc: Document<'a>,
+        message: Option<&'a Constant<A, B>>,
+    ) -> Document<'a> {
+        let Some(message) = message else { return doc };
+
+        let comments = self.pop_comments(message.location().start);
+        let comments = printed_comments(comments, false);
+
+        let doc = match comments {
+            // If there's comments between the document and the message we want
+            // the `as` bit to be on the same line as the original document and
+            // go on a new indented line with the message and comments:
+            // ```gleam
+            // todo as
+            //   // comment!
+            //   "wibble"
+            // ```
+            Some(comments) => docvec![
+                doc.group(),
+                " as",
+                docvec![line(), comments, line(), self.const_expr(message).group()].nest(INDENT)
+            ],
+
+            None => {
+                let message = self.const_expr(message).group().nest(INDENT);
+                docvec![doc.group(), " as ", message]
+            }
+        };
+
+        doc.group()
+    }
+
     fn echo<'a>(
         &mut self,
         expression: &'a Option<Box<UntypedExpr>>,
         message: &'a Option<Box<UntypedExpr>>,
     ) -> Document<'a> {
         let Some(expression) = expression else {
-            return self.append_as_message(
+            return self.append_as_message_expression(
                 "echo".to_doc(),
                 PrecedingAs::Keyword,
                 message.as_deref(),
@@ -3192,7 +3237,7 @@ impl<'comments> Formatter<'comments> {
         //
         let doc = self.expr(expression);
         if expression.is_binop() || expression.is_pipeline() {
-            let doc = self.append_as_message(
+            let doc = self.append_as_message_expression(
                 doc.nest(INDENT),
                 PrecedingAs::Expression,
                 message.as_deref(),
@@ -3201,7 +3246,7 @@ impl<'comments> Formatter<'comments> {
         } else {
             docvec![
                 "echo ",
-                self.append_as_message(doc, PrecedingAs::Expression, message.as_deref())
+                self.append_as_message_expression(doc, PrecedingAs::Expression, message.as_deref())
             ]
         }
     }

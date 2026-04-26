@@ -1,0 +1,10 @@
+---
+source: language-server/src/tests/reference.rs
+expression: "\nconst wibble = 1\nconst wobble = todo as wibble\n"
+---
+-- app.gleam
+
+const wibble = 1
+      ↑▔▔▔▔▔    
+const wobble = todo as wibble
+                       ▔▔▔▔▔▔

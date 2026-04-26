@@ -457,10 +457,15 @@ impl<'a> CallGraphBuilder<'a> {
             | Constant::Float { .. }
             | Constant::String { .. }
             | Constant::Invalid { .. }
-            | Constant::Todo { .. }
             | Constant::Var {
                 module: Some(_), ..
             } => (),
+
+            Constant::Todo { message, .. } => {
+                if let Some(message) = message {
+                    self.constant(message)
+                }
+            }
 
             Constant::List { elements, tail, .. } => {
                 for element in elements {
