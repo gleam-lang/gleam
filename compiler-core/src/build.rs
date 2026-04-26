@@ -418,9 +418,13 @@ pub fn module_erlang_name(gleam_name: &EcoString) -> EcoString {
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnqualifiedImport<'a> {
     pub name: &'a EcoString,
+    pub as_name: &'a Option<EcoString>,
     pub module: &'a EcoString,
     pub is_type: bool,
+    pub is_upname: bool,
     pub location: &'a SrcSpan,
+    /// The location excluding the potential `as ...` clause, or the `type` keyword
+    pub imported_name_location: &'a SrcSpan,
 }
 
 /// The position of a located expression. Used to determine extra context,
