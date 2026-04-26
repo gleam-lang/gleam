@@ -142,6 +142,7 @@ const ADD_MISSING_TYPE_PARAMETER: &str = "Add missing type parameter";
 const REPLACE_UNDERSCORE_WITH_TYPE: &str = "Replace `_` with type";
 const WRAP_IN_ANONYMOUS_FUNCTION: &str = "Wrap in anonymous function";
 const UNWRAP_ANONYMOUS_FUNCTION: &str = "Remove anonymous function wrapper";
+const REMOVE_REDUNDANT_RECORD_UPDATE: &str = "Remove redundant record update";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -13806,5 +13807,104 @@ fn apply(x, k) {
   k(x)
 }",
         find_position_of("a * b * c").to_selection()
+    );
+}
+
+#[test]
+fn remove_redundant_record_update_triggered_on_the_record_spread() {
+    assert_code_action!(
+        REMOVE_REDUNDANT_RECORD_UPDATE,
+        "
+pub fn go(record: Wibble) {
+  Wibble(..record, a: 1, b: 2)
+}
+
+pub type Wibble { Wibble(a: Int, b: Int) }
+",
+        find_position_of("..").to_selection()
+    );
+}
+
+#[test]
+fn remove_redundant_record_update_triggered_on_the_record() {
+    assert_code_action!(
+        REMOVE_REDUNDANT_RECORD_UPDATE,
+        "
+pub fn go(record: Wibble) {
+  Wibble(..record, a: 1, b: 2)
+}
+
+pub type Wibble { Wibble(a: Int, b: Int) }
+",
+        find_position_of("record").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn remove_redundant_record_update_triggered_anywhere_on_the_expression() {
+    assert_code_action!(
+        REMOVE_REDUNDANT_RECORD_UPDATE,
+        "
+pub fn go(record: Wibble) {
+  Wibble(..record, a: 1, b: 2)
+}
+
+pub type Wibble { Wibble(a: Int, b: Int) }
+",
+        find_position_of("1").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
+fn remove_redundant_record_update_does_not_trigger_if_update_is_not_redundant() {
+    assert_no_code_actions!(
+        REMOVE_REDUNDANT_RECORD_UPDATE,
+        "
+pub fn go(record: Wibble) {
+  Wibble(..record, a: 1)
+}
+
+pub type Wibble { Wibble(a: Int, b: Int) }
+",
+        find_position_of("..record").to_selection()
+    );
+}
+
+#[test]
+fn remove_redundant_constant_record_update_triggered_on_the_record_spread() {
+    assert_code_action!(
+        REMOVE_REDUNDANT_RECORD_UPDATE,
+        "
+pub const updated = Wibble(..base, a: 1, b: 3)
+pub const base = Wibble(a: 1, b: 2)
+pub type Wibble { Wibble(a: Int, b: Int) }
+",
+        find_position_of("..").to_selection()
+    );
+}
+
+#[test]
+fn remove_redundant_constant_record_update_triggered_on_the_record() {
+    assert_code_action!(
+        REMOVE_REDUNDANT_RECORD_UPDATE,
+        "
+pub const updated = Wibble(..base, a: 1, b: 3)
+pub const base = Wibble(a: 1, b: 2)
+pub type Wibble { Wibble(a: Int, b: Int) }
+",
+        find_position_of("1").select_until(find_position_of("3"))
+    );
+}
+
+#[test]
+fn remove_redundant_constant_record_update_does_not_trigger_if_update_i_not_redundant() {
+    assert_no_code_actions!(
+        REMOVE_REDUNDANT_RECORD_UPDATE,
+        "
+pub const updated = Wibble(..base, a: 1)
+pub const base = Wibble(a: 1, b: 2)
+pub type Wibble { Wibble(a: Int, b: Int) }
+",
+        find_position_of("base").to_selection()
     );
 }

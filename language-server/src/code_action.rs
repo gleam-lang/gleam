@@ -9705,6 +9705,73 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveUnreachableCaseClauses<'ast> {
     }
 }
 
+/// Code action to remove a record update when all of its fields have been
+/// provided already:
+///
+/// ```gleam
+/// pub type Wibble { Wibble(one: Int, two: Int) }
+///
+/// wibble(..wibble, one:, two:)
+/// //     ^^^^^^^^ This is not needed and raises a warning!
+/// ```
+///
+pub struct RemoveRedundantRecordUpdate<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+}
+
+impl<'a> RemoveRedundantRecordUpdate<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        let spread_to_remove = self
+            .module
+            .ast
+            .type_info
+            .warnings
+            .iter()
+            .find_map(|warning| {
+                if let type_::Warning::AllFieldsRecordUpdate {
+                    location,
+                    record_location,
+                } = warning
+                    && within(
+                        self.params.range,
+                        self.edits.src_span_to_lsp_range(*location),
+                    )
+                {
+                    Some(*record_location)
+                } else {
+                    None
+                }
+            });
+
+        let Some(spread_to_remove) = spread_to_remove else {
+            return vec![];
+        };
+        self.edits.delete(spread_to_remove);
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Remove redundant record update")
+            .kind(CodeActionKind::QUICKFIX)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(true)
+            .push_to(&mut action);
+        action
+    }
+}
+
 /// Code action to add labels to a constructor/call where all the labels where
 /// omitted.
 ///
