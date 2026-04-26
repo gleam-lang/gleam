@@ -1274,6 +1274,7 @@ See: https://tour.gleam.run/functions/pipelines/",
                         FeatureKind::ConstantRecordUpdate => {
                             "The record update syntax for constants was"
                         }
+                        FeatureKind::ConstantListWithTail => "Prepending to a constant list was",
                     };
 
                     Diagnostic {

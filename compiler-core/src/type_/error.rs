@@ -1213,6 +1213,7 @@ pub enum FeatureKind {
     ExternalCustomType,
     ConstantRecordUpdate,
     ExpressionInSegmentSize,
+    ConstantListWithTail,
 }
 
 impl FeatureKind {
@@ -1251,6 +1252,8 @@ impl FeatureKind {
             FeatureKind::ExternalCustomType | FeatureKind::ConstantRecordUpdate => {
                 Version::new(1, 14, 0)
             }
+
+            FeatureKind::ConstantListWithTail => Version::new(1, 16, 0),
         }
     }
 }
