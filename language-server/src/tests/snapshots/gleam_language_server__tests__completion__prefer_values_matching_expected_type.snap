@@ -12,22 +12,10 @@ pub fn main() -> Bool {
 
 
 ----- Completion content -----
-Error
-  kind:   Constructor
-  detail: gleam
-  sort:   5_Error
 False
   kind:   EnumMember
   detail: gleam
   sort:   05_False
-Nil
-  kind:   EnumMember
-  detail: gleam
-  sort:   5_Nil
-Ok
-  kind:   Constructor
-  detail: gleam
-  sort:   5_Ok
 True
   kind:   EnumMember
   detail: gleam

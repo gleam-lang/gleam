@@ -343,6 +343,28 @@ where
                     );
                     Some(completions)
                 }
+
+                // If we're typing inside an expression body (and not being any
+                // more specific than this, meaning we're not editing some
+                // specific value inside it) we don't want to set the expected
+                // type to the type of the entire anonymous function, otherwise
+                // the language server would start recommending the wrong
+                // values:
+                //
+                // ```
+                // fn(x: Int) -> String {
+                //   | // <- Typing here
+                //     //    We don't want the language server to suggest values
+                //     //    of type `fn(Int) -> String`!
+                //   todo
+                // }
+                // ```
+                //
+                Located::Expression {
+                    position: ExpressionPosition::Expression,
+                    expression: TypedExpr::Fn { .. },
+                } => Some(completer.completion_values()),
+
                 Located::Expression { expression, .. } => {
                     completer.expected_type = Some(expression.type_());
                     Some(completer.completion_values())
