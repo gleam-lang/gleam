@@ -17,6 +17,33 @@
 
 ### Language server
 
+- The language server can now help with completions when typing a list's tail:
+
+  ```gleam
+  pub fn main() {
+    let things_i_like = ["Gleam", "Ice Cream"]
+    ["Dogs", ..t|]
+    //          ^ Can now suggest a completion for `things_i_like`
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The language server can now help with completions when typing a record update:
+
+  ```gleam
+  pub type User {
+    User(name: String, likes: List(String))
+  }
+
+  pub fn set_name(user: User, name: String) -> User {
+    User(..u|)
+    //      ^ Can now suggest a completion for `user`
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Bug fixes

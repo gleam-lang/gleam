@@ -146,6 +146,7 @@ enum TypeCompletionContext {
 /// wibble.w|ob
 /// //      ^ cursor here
 /// ```
+#[derive(Debug)]
 struct CursorSurroundings {
     /// The text surrounding the cursor. For example:
     ///
@@ -364,11 +365,60 @@ impl<'a, IO> Completer<'a, IO> {
     // A continuous phrase in this case is a name or typename that may have a dot in it.
     // This is used to match the exact location to fill in the completion.
     fn get_phrase_surrounding_completion(&'a self) -> CursorSurroundings {
-        self.get_phrase_surrounding_for_completion(&|c: char| {
+        let cursor_surroundings = self.get_phrase_surrounding_for_completion(&|c: char| {
             // Checks if a character is not a valid name/upname character or a
             // dot.
             c.is_ascii_alphanumeric() || c == '.' || c == '_'
-        })
+        });
+
+        // While a single `.` is ok to be in the cursor sentence, there's a
+        // special case where always accepting `.` is not ok: in list tails and
+        // record updates!
+        // In those case accepting a `.` means we would end up with a phrase
+        // surrounding the cursor that looks like this: `..wibble` and so we
+        // won't be able to show completions for that because it doesn't look
+        // like a module access or a name!
+        //
+        // So we need to do some final massaging of the cursor surroundings if
+        // we realise we have captures a `..` at the beginning of the sentence.
+        // This will allow the language server to provide good completions for
+        // list tails and record updates as well.
+        if cursor_surroundings.text_before_cursor.starts_with("..") {
+            let CursorSurroundings {
+                surrounding_text,
+                surrounding_text_range,
+                text_before_cursor,
+                text_before_cursor_range,
+                text_after_cursor,
+            } = cursor_surroundings;
+            let (_, text_before_cursor) = text_before_cursor.split_at(2);
+            let text_before_cursor_range = Range {
+                start: Position {
+                    character: text_before_cursor_range.start.character + 2,
+                    ..text_before_cursor_range.start
+                },
+                ..text_before_cursor_range
+            };
+
+            let (_, surrounding_text) = surrounding_text.split_at(2);
+            let surrounding_text_range = Range {
+                start: Position {
+                    character: surrounding_text_range.start.character + 2,
+                    ..surrounding_text_range.start
+                },
+                ..surrounding_text_range
+            };
+
+            CursorSurroundings {
+                surrounding_text: EcoString::from(surrounding_text),
+                surrounding_text_range,
+                text_before_cursor: EcoString::from(text_before_cursor),
+                text_before_cursor_range,
+                text_after_cursor,
+            }
+        } else {
+            cursor_surroundings
+        }
     }
 
     // Gets the current range around the cursor to place a completion.

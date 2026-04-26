@@ -1,0 +1,36 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "\npub type Wibble { Wibble(a: Int, b: String) }\n\npub fn main() {\n  let wibble = todo\n  Wibble(..w)\n}\n"
+---
+
+pub type Wibble { Wibble(a: Int, b: String) }
+
+pub fn main() {
+  let wibble = todo
+  Wibble(..w|)
+}
+
+
+----- Completion content -----
+Wibble
+  kind:   Constructor
+  detail: fn(Int, String) -> Wibble
+  sort:   03_Wibble
+  desc:   app
+  edits:
+    [5:11-5:12]: "Wibble"
+main
+  kind:   Function
+  detail: fn() -> Wibble
+  sort:   03_main
+  desc:   app
+  edits:
+    [5:11-5:12]: "main"
+wibble
+  kind:   Variable
+  detail: a
+  sort:   03_wibble
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [5:11-5:12]: "wibble"
