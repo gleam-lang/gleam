@@ -2039,19 +2039,41 @@ impl<'module, 'a> Generator<'module, 'a> {
 
             Constant::List { elements, tail, .. } => {
                 self.tracker.list_used = true;
+                let list = match tail {
+                    // There's no tail in the list, we join all the elements and
+                    // call it a day.
+                    None => list(
+                        elements
+                            .iter()
+                            .map(|element| self.constant_expression(context, element)),
+                    ),
 
-                let tail_elements = tail
-                    .as_deref()
-                    .and_then(|tail| tail.list_elements())
-                    .unwrap_or_default();
-
-                let list = list(
-                    elements
-                        .iter()
-                        .chain(tail_elements)
-                        .map(|element| self.constant_expression(context, element)),
-                );
-
+                    Some(tail) => match tail.list_elements() {
+                        // There's a tail in the list whose elements are all
+                        // known at compile time. In this case we replace the
+                        // tail with those elements and create a single flat
+                        // list.
+                        Some(tail_elements) => list(
+                            elements
+                                .iter()
+                                .chain(tail_elements)
+                                .map(|element| self.constant_expression(context, element)),
+                        ),
+                        // There's a tail in the list but we can't really tell
+                        // what its elements are at compile time. This means we
+                        // have to prepend to this list.
+                        None => {
+                            self.tracker.prepend_used = true;
+                            let tail = self.constant_expression(context, tail);
+                            prepend(
+                                elements
+                                    .iter()
+                                    .map(|element| self.constant_expression(context, element)),
+                                tail,
+                            )
+                        }
+                    },
+                };
                 match context {
                     Context::Constant => docvec!["/* @__PURE__ */ ", list],
                     Context::Guard => list,
@@ -2425,14 +2447,6 @@ impl<'module, 'a> Generator<'module, 'a> {
                     .map(|element| self.guard_constant_expression(element)),
             ),
 
-            Constant::List { elements, .. } => {
-                self.tracker.list_used = true;
-                list(
-                    elements
-                        .iter()
-                        .map(|element| self.guard_constant_expression(element)),
-                )
-            }
             Constant::Record { type_, name, .. } if type_.is_bool() && name == "True" => {
                 "true".to_doc()
             }
@@ -2490,6 +2504,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             Constant::Int { .. }
             | Constant::Float { .. }
             | Constant::String { .. }
+            | Constant::List { .. }
             | Constant::RecordUpdate { .. }
             | Constant::StringConcatenation { .. }
             | Constant::Todo { .. }

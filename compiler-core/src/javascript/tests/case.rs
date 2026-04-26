@@ -987,3 +987,16 @@ pub fn go() {
 }"#
     )
 }
+
+#[test]
+fn list_with_tail_used_in_guard() {
+    assert_js!(
+        r#"
+pub fn go(x: List(Int), y: List(Int)) {
+  case x {
+    [1, ..x] if [1, 2, ..x] == y -> True
+    _ -> False
+  }
+}"#
+    )
+}

@@ -226,9 +226,15 @@ impl TypedConstant {
                 .map(|message| message.referenced_variables())
                 .unwrap_or(im::hashset![]),
 
-            Constant::List { elements, .. } | Constant::Tuple { elements, .. } => elements
+            Constant::Tuple { elements, .. } => elements
                 .iter()
                 .map(|element| element.referenced_variables())
+                .fold(im::hashset![], im::HashSet::union),
+
+            Constant::List { elements, tail, .. } => elements
+                .iter()
+                .map(|element| element.referenced_variables())
+                .chain(tail.iter().map(|tail| tail.referenced_variables()))
                 .fold(im::hashset![], im::HashSet::union),
 
             Constant::Record { arguments, .. } => arguments
@@ -305,14 +311,23 @@ impl TypedConstant {
             (Constant::Tuple { .. }, _) => false,
 
             (
-                Constant::List { elements, .. },
+                Constant::List { elements, tail, .. },
                 Constant::List {
                     elements: other_elements,
+                    tail: other_tail,
                     ..
                 },
-            ) => pairwise_all(elements, other_elements, |(one, other)| {
-                one.syntactically_eq(other)
-            }),
+            ) => {
+                let tails_are_equal = match (tail, other_tail) {
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (Some(tail), Some(other_tail)) => tail.syntactically_eq(other_tail),
+                };
+                tails_are_equal
+                    && pairwise_all(elements, other_elements, |(one, other)| {
+                        one.syntactically_eq(other)
+                    })
+            }
             (Constant::List { .. }, _) => false,
 
             (
@@ -417,18 +432,27 @@ impl TypedConstant {
         }
     }
 
+    /// If the constant is a list whose elements are known at compile time, this
+    /// returns a vec of all its elements.
+    /// This can happen with:
+    /// - literal lists: `[1, 2]`
+    /// - literal lists whose tail is also known at compile time:
+    ///     - `[1, 2, ..[3, 4]]`
+    ///     - `[1, 2, ..a_known_module_constant]`
+    ///
     pub fn list_elements(&self) -> Option<Vec<&Self>> {
         match self {
-            Constant::List { elements, tail, .. } => Some(
-                elements
-                    .iter()
-                    .chain(
-                        tail.as_deref()
-                            .and_then(|tail| tail.list_elements())
-                            .unwrap_or_default(),
-                    )
-                    .collect(),
-            ),
+            Constant::List { elements, tail, .. } => {
+                if let Some(tail) = tail {
+                    // There's a tail, if it cannot be known at compile time,
+                    // then this entire list cannot be known at compile time!
+                    let tail_elements = tail.list_elements()?;
+                    Some(elements.iter().chain(tail_elements).collect())
+                } else {
+                    // There's no tail, we just return the elements
+                    Some(elements.iter().collect())
+                }
+            }
             Constant::Var {
                 constructor: Some(constructor),
                 ..

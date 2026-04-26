@@ -560,3 +560,16 @@ pub fn case_with_guard_does_not_pollute_outer_scope_test() {
   }
   assert a == b
 }
+
+// https://github.com/gleam-lang/gleam/issues/5641
+pub fn tail_of_list_in_clause_guard_is_not_ignored_test() {
+  assert go([2, 3, 4], [1, 2, 3, 4])
+  assert !go([2, 3], [1, 2])
+}
+
+pub fn go(x: List(Int), y: List(Int)) {
+  case x {
+    [_, ..x] if [1, 2, ..x] == y -> True
+    _ -> False
+  }
+}
