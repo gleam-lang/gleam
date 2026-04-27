@@ -524,7 +524,7 @@ where
             warnings.emit(Warning::Type {
                 path: module.src_path.clone(),
                 src: src.into(),
-                warning: warning.clone(),
+                warning: Box::new(warning.clone()),
             });
         }
 
