@@ -5967,7 +5967,18 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
         }
 
         ast::visit::visit_typed_assignment(self, assignment);
-        if let Some((name, _, ref type_)) = self.pattern_variable_under_cursor {
+        if let Some((name, _, ref type_)) = self.pattern_variable_under_cursor
+            // We must make sure that no other value was selected while visiting
+            // this. If it were `Some` that means that we have found _another_
+            // variable to match on inside the assignmemt itself. For example:
+            // ```gleam
+            // let a = {
+            //   let b = todo
+            //   //  ^ We're matching on this, not the outer one!
+            // }
+            // ```
+            && self.selected_value.is_none()
+        {
             self.selected_value = Some(PatternMatchedValue::LetVariable {
                 variable_name: name,
                 variable_type: type_.clone(),
