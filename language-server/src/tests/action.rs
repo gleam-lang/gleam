@@ -13225,6 +13225,32 @@ fn wrap_function_in_anonymous_function_does_not_trigger_on_invalid_record_update
 }
 
 #[test]
+fn wrap_function_in_anonymous_function_does_not_trigger_on_record_call() {
+    assert_no_code_actions!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  Wibble(1, 2)
+}
+
+pub type Wibble { Wibble(a: Int, b: Int) }
+",
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+#[test]
+fn wrap_function_in_anonymous_function_does_not_trigger_on_invalid_record_call() {
+    assert_no_code_actions!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  Wibble(1)
+}
+",
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+#[test]
 fn replace_nested_underscore_with_generic_type() {
     assert_code_action!(
         REPLACE_UNDERSCORE_WITH_TYPE,
