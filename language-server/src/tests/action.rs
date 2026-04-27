@@ -5939,6 +5939,21 @@ fn extract_variable_does_not_extract_echo() {
 }
 
 #[test]
+fn extract_variable_does_not_extract_record_constructor_in_record_update() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        r#"
+pub fn main() {
+  Wibble(..todo, a: 1)
+}
+
+pub type Wibble { Wibble(a: Int, b: Int) }
+"#,
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+#[test]
 fn extract_variable_does_not_extract_assignment() {
     assert_no_code_actions!(
         EXTRACT_VARIABLE,
