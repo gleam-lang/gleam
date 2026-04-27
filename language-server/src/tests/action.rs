@@ -13180,6 +13180,25 @@ fn op(i) {
 }
 
 #[test]
+fn wrap_function_in_anonymous_function_does_not_trigger_if_selection_is_not_within_the_function() {
+    assert_no_code_actions!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  let a = 1
+  some_function
+  let b = 2
+  Nil
+}
+
+fn some_function(i) {
+  todo
+}
+",
+        find_position_of("1").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
 fn replace_nested_underscore_with_generic_type() {
     assert_code_action!(
         REPLACE_UNDERSCORE_WITH_TYPE,
