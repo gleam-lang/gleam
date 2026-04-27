@@ -1717,16 +1717,19 @@ fn type_variable_ids_in_constructors_are_shared() {
                         TypeValueConstructorField {
                             type_: type_::generic_var(6),
                             label: None,
+                            label_location: None,
                             documentation: Some("Here's some documentation".into()),
                         },
                         TypeValueConstructorField {
                             type_: type_::int(),
                             label: None,
+                            label_location: None,
                             documentation: None,
                         },
                         TypeValueConstructorField {
                             type_: type_::tuple(vec![type_::generic_var(4), type_::generic_var(5)]),
                             label: None,
+                            label_location: None,
                             documentation: None,
                         },
                     ],
@@ -1758,16 +1761,19 @@ fn type_variable_ids_in_constructors_are_shared() {
                     TypeValueConstructorField {
                         type_: type_::generic_var(2),
                         label: None,
+                        label_location: None,
                         documentation: Some("Here's some documentation".into()),
                     },
                     TypeValueConstructorField {
                         type_: type_::int(),
                         label: None,
+                        label_location: None,
                         documentation: None,
                     },
                     TypeValueConstructorField {
                         type_: type_::tuple(vec![type_::generic_var(0), type_::generic_var(1)]),
                         label: None,
+                        label_location: None,
                         documentation: None,
                     },
                 ],
@@ -2015,6 +2021,7 @@ fn module_with_references() {
                 ],
             )]
             .into(),
+            label_references: HashMap::new(),
         },
         inline_functions: HashMap::new(),
     };

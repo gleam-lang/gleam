@@ -32,7 +32,7 @@ use crate::{
     build::{Origin, Target},
     inline::InlinableFunction,
     line_numbers::LineNumbers,
-    reference::ReferenceMap,
+    reference::{LabelReferenceMap, ReferenceMap},
     type_::expression::Implementations,
 };
 use error::*;
@@ -1026,6 +1026,7 @@ pub struct References {
     pub imported_modules: HashSet<EcoString>,
     pub value_references: ReferenceMap,
     pub type_references: ReferenceMap,
+    pub label_references: LabelReferenceMap,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -1101,6 +1102,7 @@ pub struct TypeValueConstructorField {
     /// This type of this parameter
     pub type_: Arc<Type>,
     pub label: Option<EcoString>,
+    pub label_location: Option<SrcSpan>,
     pub documentation: Option<EcoString>,
 }
 

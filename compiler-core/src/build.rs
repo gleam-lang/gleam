@@ -21,6 +21,7 @@ use crate::ast::{
     TypedConstant, TypedCustomType, TypedDefinitions, TypedExpr, TypedFunction, TypedImport,
     TypedModuleConstant, TypedPattern, TypedRecordConstructor, TypedStatement, TypedTypeAlias,
 };
+use crate::reference;
 use crate::type_::{Type, TypedCallArg};
 use crate::{
     ast::{Definition, SrcSpan, TypedModule},
@@ -461,7 +462,15 @@ pub enum Located<'a> {
         type_: std::sync::Arc<Type>,
     },
     UnqualifiedImport(UnqualifiedImport<'a>),
-    Label(SrcSpan, std::sync::Arc<Type>),
+    Label {
+        location: SrcSpan,
+        /// The type of the labelled argument value (used for hover).
+        type_: std::sync::Arc<Type>,
+        label: EcoString,
+        /// The type being constructed/matched and the constructor name.
+        /// Used for go-to-definition.
+        container: Option<(std::sync::Arc<Type>, EcoString)>,
+    },
     ModuleName {
         location: SrcSpan,
         module_name: EcoString,
@@ -492,6 +501,32 @@ impl<'a> Located<'a> {
         })
     }
 
+    /// Looks up the definition location of a record field label using
+    /// the pre-computed label reference map.
+    fn label_definition_location(
+        &self,
+        importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
+        record_type: &Arc<Type>,
+        label: &EcoString,
+        constructor: Option<&EcoString>,
+    ) -> Option<DefinitionLocation> {
+        let (module_name, type_name) = record_type.named_type_name()?;
+        let module = importable_modules.get(&module_name)?;
+        let key = (module_name.clone(), type_name, label.clone());
+        let references = module.references.label_references.get(&key)?;
+        let definition = references.iter().find(|r| {
+            r.kind == reference::ReferenceKind::Definition
+                && match (&r.constructor, constructor) {
+                    (Some(a), Some(b)) => a == b,
+                    _ => true,
+                }
+        })?;
+        Some(DefinitionLocation {
+            module: Some(module_name),
+            span: definition.location,
+        })
+    }
+
     pub fn definition_location(
         &self,
         importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
@@ -505,6 +540,10 @@ impl<'a> Located<'a> {
             }),
             Self::Statement(statement) => statement.definition_location(),
             Self::FunctionBody(statement) => None,
+            Self::Expression {
+                expression: TypedExpr::RecordAccess { record, label, .. },
+                ..
+            } => self.label_definition_location(importable_modules, &record.type_(), label, None),
             Self::Expression { expression, .. } => expression.definition_location(),
 
             Self::ModuleImport(import) => Some(DefinitionLocation {
@@ -552,7 +591,17 @@ impl<'a> Located<'a> {
             }),
             Self::Arg(_) => None,
             Self::Annotation { type_, .. } => self.type_location(importable_modules, type_.clone()),
-            Self::Label(_, _) => None,
+            Self::Label {
+                container: Some((container_type, constructor)),
+                label,
+                ..
+            } => self.label_definition_location(
+                importable_modules,
+                container_type,
+                label,
+                Some(constructor),
+            ),
+            Self::Label { .. } => None,
             Self::ModuleName { module_name, .. } => Some(DefinitionLocation {
                 module: Some(module_name.clone()),
                 span: SrcSpan::new(0, 0),
@@ -569,7 +618,7 @@ impl<'a> Located<'a> {
             Located::Statement(statement) => Some(statement.type_()),
             Located::Expression { expression, .. } => Some(expression.type_()),
             Located::Arg(arg) => Some(arg.type_.clone()),
-            Located::Label(_, type_) | Located::Annotation { type_, .. } => Some(type_.clone()),
+            Located::Label { type_, .. } | Located::Annotation { type_, .. } => Some(type_.clone()),
             Located::Constant(constant) => Some(constant.type_()),
             Located::ClauseGuard(guard) => Some(guard.type_()),
 

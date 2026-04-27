@@ -25,6 +25,18 @@ pub struct Reference {
 
 pub type ReferenceMap = HashMap<(EcoString, EcoString), Vec<Reference>>;
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct LabelReference {
+    pub location: SrcSpan,
+    pub kind: ReferenceKind,
+    /// The constructor this label belongs to. `None` for usages where the
+    /// constructor is unknown (e.g. `record.field`).
+    pub constructor: Option<EcoString>,
+}
+
+/// Key: (type_module, type_name, label_name)
+pub type LabelReferenceMap = HashMap<(EcoString, EcoString, EcoString), Vec<LabelReference>>;
+
 #[derive(Debug, Clone)]
 pub struct EntityInformation {
     pub origin: SrcSpan,
@@ -93,6 +105,9 @@ pub struct ReferenceTracker {
     /// The locations of the references to each type in this module, used for
     /// renaming and go-to reference.
     pub type_references: ReferenceMap,
+    /// The locations of the references to each record field label in this
+    /// module, keyed by (type_module, type_name, label_name).
+    pub label_references: LabelReferenceMap,
 
     /// This map is used to access the nodes of modules that were not
     /// aliased, given their name.
@@ -390,6 +405,25 @@ impl ReferenceTracker {
             .entry((module, name))
             .or_default()
             .push(Reference { location, kind });
+    }
+
+    pub fn register_label_reference(
+        &mut self,
+        type_module: EcoString,
+        type_name: EcoString,
+        label: EcoString,
+        location: SrcSpan,
+        kind: ReferenceKind,
+        constructor: Option<EcoString>,
+    ) {
+        self.label_references
+            .entry((type_module, type_name, label))
+            .or_default()
+            .push(LabelReference {
+                location,
+                kind,
+                constructor,
+            });
     }
 
     /// Like `register_type_reference`, but doesn't modify `self.type_references`.
