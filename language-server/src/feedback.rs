@@ -226,16 +226,16 @@ mod tests {
         let warning1 = Warning::Type {
             path: file1.clone(),
             src: "src".into(),
-            warning: type_::Warning::NoFieldsRecordUpdate {
+            warning: Box::new(type_::Warning::NoFieldsRecordUpdate {
                 location: SrcSpan::new(1, 2),
-            },
+            }),
         };
         let warning2 = Warning::Type {
             path: file2.clone(),
             src: "src".into(),
-            warning: type_::Warning::NoFieldsRecordUpdate {
+            warning: Box::new(type_::Warning::NoFieldsRecordUpdate {
                 location: SrcSpan::new(1, 2),
-            },
+            }),
         };
 
         let feedback = book_keeper.response(
@@ -287,9 +287,9 @@ mod tests {
         let warning1 = Warning::Type {
             path: file1.clone(),
             src: "src".into(),
-            warning: type_::Warning::NoFieldsRecordUpdate {
+            warning: Box::new(type_::Warning::NoFieldsRecordUpdate {
                 location: SrcSpan::new(1, 2),
-            },
+            }),
         };
 
         let locationless_error = Error::Gzip("Hello!".into());
@@ -321,9 +321,9 @@ mod tests {
         let warning1 = Warning::Type {
             path: file1.clone(),
             src: "src".into(),
-            warning: type_::Warning::NoFieldsRecordUpdate {
+            warning: Box::new(type_::Warning::NoFieldsRecordUpdate {
                 location: SrcSpan::new(1, 2),
-            },
+            }),
         };
         let error = Error::Parse {
             path: file3.clone(),

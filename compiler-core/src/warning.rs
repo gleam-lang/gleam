@@ -149,7 +149,7 @@ impl TypeWarningEmitter {
         self.emitter.emit(Warning::Type {
             path: self.module_path.clone(),
             src: self.module_src.clone(),
-            warning,
+            warning: Box::new(warning),
         });
     }
 }
@@ -159,7 +159,7 @@ pub enum Warning {
     Type {
         path: Utf8PathBuf,
         src: EcoString,
-        warning: type_::Warning,
+        warning: Box<type_::Warning>,
     },
 
     InvalidSource {
@@ -430,7 +430,7 @@ comment so it is not attached to any definition.",
                 hint: Some("Move the comment above the doc comment".into()),
             },
 
-            Warning::Type { path, warning, src } => match warning {
+            Warning::Type { path, warning, src } => match warning.as_ref() {
                 type_::Warning::Todo {
                     kind,
                     location,
@@ -466,7 +466,7 @@ A use expression must always be followed by at least one expression.",
                     let hint = if !type_.is_variable() {
                         Some(format!(
                             "I think its type is `{}`.\n",
-                            Printer::new(&names).print_type(type_)
+                            Printer::new(names).print_type(type_)
                         ))
                     } else {
                         None

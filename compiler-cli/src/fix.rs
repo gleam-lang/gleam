@@ -75,14 +75,13 @@ fn minimum_required_version_from_warnings(warnings: Vec<Warning>) -> Option<Vers
     warnings
         .iter()
         .filter_map(|warning| match warning {
-            Warning::Type {
-                warning:
-                    type_::Warning::FeatureRequiresHigherGleamVersion {
-                        minimum_required_version,
-                        ..
-                    },
-                ..
-            } => Some(minimum_required_version),
+            Warning::Type { warning, .. } => match warning.as_ref() {
+                type_::Warning::FeatureRequiresHigherGleamVersion {
+                    minimum_required_version,
+                    ..
+                } => Some(minimum_required_version),
+                _ => None,
+            },
             _ => None,
         })
         .reduce(std::cmp::max)
