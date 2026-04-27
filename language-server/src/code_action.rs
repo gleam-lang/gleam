@@ -11577,7 +11577,7 @@ impl<'a> WrapInAnonymousFunction<'a> {
 impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
     fn visit_typed_expr(&mut self, expression: &'ast TypedExpr) {
         let expression_range = src_span_to_lsp_range(expression.location(), self.line_numbers);
-        if !overlaps(self.params.range, expression_range) {
+        if !within(self.params.range, expression_range) {
             return;
         }
 
