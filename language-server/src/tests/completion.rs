@@ -2489,3 +2489,35 @@ pub fn main() {
         Position::new(3, 16)
     );
 }
+
+#[test]
+fn completions_when_typing_list_tail() {
+    assert_completion!(
+        TestProject::for_source(
+            "
+pub fn main() {
+  let wibble = [1, 2]
+  [3, 4, ..w]
+}
+"
+        ),
+        Position::new(3, 12)
+    );
+}
+
+#[test]
+fn completions_when_typing_record_update() {
+    assert_completion!(
+        TestProject::for_source(
+            "
+pub type Wibble { Wibble(a: Int, b: String) }
+
+pub fn main() {
+  let wibble = todo
+  Wibble(..w)
+}
+"
+        ),
+        Position::new(5, 12)
+    );
+}

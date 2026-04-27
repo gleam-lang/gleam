@@ -768,7 +768,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                         this.simple_variable_assignment(
                             &assignment.name,
                             &assignment.value,
-                            &assignment.location,
+                            assignment.location,
                         )
                     });
                 documents.push(self.add_statement_level(assignment_document));
@@ -915,7 +915,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         &mut self,
         name: &'a EcoString,
         value: &'a TypedExpr,
-        location: &'a SrcSpan,
+        location: SrcSpan,
     ) -> Document<'a> {
         // Subject must be rendered before the variable for variable numbering
         let subject =
@@ -959,7 +959,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         // generate just a simple assignment instead of using the decision tree
         // for the code generation step.
         if let TypedPattern::Variable { name, .. } = pattern {
-            return self.simple_variable_assignment(name, value, location);
+            return self.simple_variable_assignment(name, value, *location);
         }
 
         docvec![
@@ -1606,16 +1606,21 @@ impl<'module, 'a> Generator<'module, 'a> {
 
     fn record_update(
         &mut self,
-        record: &'a Option<Box<TypedAssignment>>,
+        record: &'a Option<Box<RecordUpdateAssignment>>,
         constructor: &'a TypedExpr,
         arguments: &'a [TypedCallArg],
     ) -> Document<'a> {
         match record.as_ref() {
-            Some(record) => docvec![
-                self.not_in_tail_position(None, |this| this.assignment(record)),
-                line(),
-                self.call(constructor, arguments),
-            ],
+            Some(assignment) => {
+                docvec![
+                    self.not_in_tail_position(None, |this| {
+                        let RecordUpdateAssignment { name, value } = assignment.as_ref();
+                        this.simple_variable_assignment(name, value, value.location())
+                    }),
+                    line(),
+                    self.call(constructor, arguments),
+                ]
+            }
             None => self.call(constructor, arguments),
         }
     }

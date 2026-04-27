@@ -125,9 +125,9 @@ use crate::{
     ast::{
         self, ArgNames, Assert, AssignName, Assignment, AssignmentKind, BitArrayOption,
         BitArraySegment, BitArraySize, CallArg, Clause, FunctionLiteralKind, Pattern,
-        PipelineAssignmentKind, Publicity, SrcSpan, Statement, TailPattern, TypedArg, TypedAssert,
-        TypedAssignment, TypedBitArraySize, TypedClause, TypedDefinitions, TypedExpr,
-        TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern,
+        PipelineAssignmentKind, Publicity, RecordUpdateAssignment, SrcSpan, Statement, TailPattern,
+        TypedArg, TypedAssert, TypedAssignment, TypedBitArraySize, TypedClause, TypedDefinitions,
+        TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern,
         TypedPipelineAssignment, TypedStatement, TypedUse, visit::Visit,
     },
     exhaustiveness::{Body, CompiledCase, Decision},
@@ -712,8 +712,12 @@ impl Inliner<'_> {
             } => TypedExpr::RecordUpdate {
                 location,
                 type_,
-                record_assignment: record_assignment
-                    .map(|assignment| Box::new(self.assignment(*assignment))),
+                record_assignment: record_assignment.map(|assignment| {
+                    Box::new(RecordUpdateAssignment {
+                        name: assignment.name,
+                        value: self.expression(assignment.value),
+                    })
+                }),
                 constructor: self.boxed_expression(constructor),
                 arguments: self.arguments(arguments),
             },

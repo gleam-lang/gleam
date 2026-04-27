@@ -178,9 +178,11 @@ pub enum TypedExpr {
     RecordUpdate {
         location: SrcSpan,
         type_: Arc<Type>,
-        /// If the record is an expression that is not a variable we will need to assign to a
-        /// variable so it can be referred multiple times.
-        record_assignment: Option<Box<TypedAssignment>>,
+        /// If the record is an expression that is not a variable we will need
+        /// to assign to a variable so it can be referred multiple times.
+        /// If this is `Some` it will contain the record value that has to be
+        /// assigned to a new variable.
+        record_assignment: Option<Box<RecordUpdateAssignment>>,
         constructor: Box<Self>,
         arguments: Vec<CallArg<Self>>,
     },
@@ -205,6 +207,24 @@ pub enum TypedExpr {
         /// states.
         extra_information: Option<InvalidExpression>,
     },
+}
+
+/// If the record is an expression used in an update is not a variable, we will
+/// need to assign it to one so it can be referred multiple times.
+/// For example:
+///
+/// ```gleam
+/// Wibble(..fun_call(1), a:, b:)
+/// //       ^^^^^^^^^^^ This will be `value`
+/// ```
+///
+/// While `name` is the name we pick for the variable that we will assign the
+/// value to.
+///
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecordUpdateAssignment {
+    pub name: EcoString,
+    pub value: TypedExpr,
 }
 
 impl TypedExpr {
@@ -429,7 +449,7 @@ impl TypedExpr {
                 .or_else(|| {
                     record_assignment
                         .as_ref()
-                        .and_then(|assignment| assignment.find_node(byte_index))
+                        .and_then(|assignment| assignment.value.find_node(byte_index))
                 })
                 .or_else(|| self.self_if_contains_location(byte_index)),
         }

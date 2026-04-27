@@ -146,6 +146,7 @@ enum TypeCompletionContext {
 /// wibble.w|ob
 /// //      ^ cursor here
 /// ```
+#[derive(Debug)]
 struct CursorSurroundings {
     /// The text surrounding the cursor. For example:
     ///
@@ -301,10 +302,10 @@ impl<'a, IO> Completer<'a, IO> {
         }
     }
 
-    // Gets the current range around the cursor to place a completion
-    // and the phrase surrounding the cursor to use for completion.
-    // This method takes in a helper to determine what qualifies as
-    // a phrase depending on context.
+    /// Gets the current range around the cursor to place a completion
+    /// and the phrase surrounding the cursor to use for completion.
+    /// The `valid_phrase_char` is a function that returns true if a character
+    /// should be included in the phrase surrounding the cursor.
     fn get_phrase_surrounding_for_completion(
         &'a self,
         valid_phrase_char: &impl Fn(char) -> bool,
@@ -315,14 +316,20 @@ impl<'a, IO> Completer<'a, IO> {
         let before = self
             .src
             .get(..cursor as usize)
-            .and_then(|line| line.rsplit_once(valid_phrase_char).map(|r| r.1))
+            .and_then(|line| {
+                line.rsplit_once(|char| !valid_phrase_char(char))
+                    .map(|(_, suffix)| suffix)
+            })
             .unwrap_or("");
 
         // Get part of phrase following cursor
         let after = self
             .src
             .get(cursor as usize..)
-            .and_then(|line| line.split_once(valid_phrase_char).map(|r| r.0))
+            .and_then(|line| {
+                line.split_once(|char| !valid_phrase_char(char))
+                    .map(|(prefix, _)| prefix)
+            })
             .unwrap_or("");
 
         let text_before_cursor_range = Range {
@@ -358,10 +365,60 @@ impl<'a, IO> Completer<'a, IO> {
     // A continuous phrase in this case is a name or typename that may have a dot in it.
     // This is used to match the exact location to fill in the completion.
     fn get_phrase_surrounding_completion(&'a self) -> CursorSurroundings {
-        self.get_phrase_surrounding_for_completion(&|c: char| {
-            // Checks if a character is not a valid name/upname character or a dot.
-            !c.is_ascii_alphanumeric() && c != '.' && c != '_'
-        })
+        let cursor_surroundings = self.get_phrase_surrounding_for_completion(&|c: char| {
+            // Checks if a character is not a valid name/upname character or a
+            // dot.
+            c.is_ascii_alphanumeric() || c == '.' || c == '_'
+        });
+
+        // While a single `.` is ok to be in the cursor sentence, there's a
+        // special case where always accepting `.` is not ok: in list tails and
+        // record updates!
+        // In those case accepting a `.` means we would end up with a phrase
+        // surrounding the cursor that looks like this: `..wibble` and so we
+        // won't be able to show completions for that because it doesn't look
+        // like a module access or a name!
+        //
+        // So we need to do some final massaging of the cursor surroundings if
+        // we realise we have captures a `..` at the beginning of the sentence.
+        // This will allow the language server to provide good completions for
+        // list tails and record updates as well.
+        if cursor_surroundings.text_before_cursor.starts_with("..") {
+            let CursorSurroundings {
+                surrounding_text,
+                surrounding_text_range,
+                text_before_cursor,
+                text_before_cursor_range,
+                text_after_cursor,
+            } = cursor_surroundings;
+            let (_, text_before_cursor) = text_before_cursor.split_at(2);
+            let text_before_cursor_range = Range {
+                start: Position {
+                    character: text_before_cursor_range.start.character + 2,
+                    ..text_before_cursor_range.start
+                },
+                ..text_before_cursor_range
+            };
+
+            let (_, surrounding_text) = surrounding_text.split_at(2);
+            let surrounding_text_range = Range {
+                start: Position {
+                    character: surrounding_text_range.start.character + 2,
+                    ..surrounding_text_range.start
+                },
+                ..surrounding_text_range
+            };
+
+            CursorSurroundings {
+                surrounding_text: EcoString::from(surrounding_text),
+                surrounding_text_range,
+                text_before_cursor: EcoString::from(text_before_cursor),
+                text_before_cursor_range,
+                text_after_cursor,
+            }
+        } else {
+            cursor_surroundings
+        }
     }
 
     // Gets the current range around the cursor to place a completion.
@@ -371,11 +428,11 @@ impl<'a, IO> Completer<'a, IO> {
         self.get_phrase_surrounding_for_completion(&|c: char| {
             // Checks if a character is not a valid name/upname character or whitespace.
             // The newline character is not included as well.
-            !c.is_ascii_alphanumeric() && c != '_' && c != ' ' && c != '\t'
+            c.is_ascii_alphanumeric() || c == '_' || c == ' ' || c == '\t'
         })
     }
 
-    /// Checks if the line being editted is an import line and provides completions if it is.
+    /// Checks if the line being edited is an import line and provides completions if it is.
     /// If the line includes a dot then it provides unqualified import completions.
     /// Otherwise it provides direct module import completions.
     pub fn import_completions(&'a self) -> Option<Result<Option<Vec<CompletionItem>>>> {
@@ -590,7 +647,7 @@ impl<'a, IO> Completer<'a, IO> {
     // be really hard to understand or use a lot of trait magic.
     // For now I've left it as is but might be worth revisiting.
 
-    /// Provides completions for when the context being editted is a type.
+    /// Provides completions for when the context being edited is a type.
     pub fn completion_types(&'a self) -> Vec<CompletionItem> {
         let cursor_surroundings = self.get_phrase_surrounding_completion();
         let selected_module = cursor_surroundings.selected_module();
@@ -745,7 +802,7 @@ impl<'a, IO> Completer<'a, IO> {
         completions
     }
 
-    /// Provides completions for when the context being editted is a value.
+    /// Provides completions for when the context being edited is a value.
     pub fn completion_values(&'a self) -> Vec<CompletionItem> {
         let cursor_surroundings = self.get_phrase_surrounding_completion();
         let selected_module = cursor_surroundings.selected_module();
@@ -785,9 +842,10 @@ impl<'a, IO> Completer<'a, IO> {
         }
 
         // Module and prelude values
-        // Do not complete direct module values if the user has already started typing a module select.
-        // e.x. when the user has typed mymodule.| we know local module and prelude values are no longer
-        // relevant.
+        // Do not complete direct module values if the user has already started
+        // typing a module select.
+        // e.x. when the user has typed mymodule.| we know local module and
+        // prelude values are no longer relevant.
         if selected_module.is_none() {
             // Find the function that the cursor is in and push completions for
             // its arguments and local variables.
@@ -827,6 +885,11 @@ impl<'a, IO> Completer<'a, IO> {
             }
 
             let mut push_prelude_completion = |label: &str, kind, type_: Arc<Type>| {
+                match match_type(&self.expected_type, &type_) {
+                    TypeMatch::Incompatible => return,
+                    TypeMatch::Matching | TypeMatch::Unknown => (),
+                };
+
                 let label = label.to_string();
                 let sort_text = Some(sort_text(
                     CompletionKind::Prelude,
@@ -900,8 +963,10 @@ impl<'a, IO> Completer<'a, IO> {
                 }
 
                 if let Some(module) = import.used_name() {
-                    // If the user has already started a module select then don't show irrelevant modules.
-                    // e.x. when the user has typed mymodule.| we should only show items from mymodule.
+                    // If the user has already started a module select then
+                    // don't show irrelevant modules.
+                    // e.x. when the user has typed mymodule.| we should only
+                    // show items from mymodule.
                     if let Some(input_mod_name) = &selected_module
                         && &module != input_mod_name
                     {
@@ -919,8 +984,10 @@ impl<'a, IO> Completer<'a, IO> {
             }
 
             // Unqualified values
-            // Do not complete unqualified values if the user has already started typing a module select.
-            // e.x. when the user has typed mymodule.| we know unqualified module values are no longer relevant.
+            // Do not complete unqualified values if the user has already
+            // started typing a module select.
+            // e.x. when the user has typed mymodule.| we know unqualified
+            // module values are no longer relevant.
             if selected_module.is_none() {
                 for unqualified in &import.unqualified_values {
                     if let Some(value) = module.get_public_value(&unqualified.name) {
@@ -959,8 +1026,10 @@ impl<'a, IO> Completer<'a, IO> {
                 .next_back()
                 .unwrap_or(module_full_name);
 
-            // If the user has already started a module select then don't show irrelevant modules.
-            // e.x. when the user has typed mymodule.| we should only show items from mymodule.
+            // If the user has already started a module select then don't show
+            // irrelevant modules.
+            // e.x. when the user has typed mymodule.| we should only show items
+            // from mymodule.
             if let Some(selected_module) = &selected_module
                 && qualifier != selected_module
             {
@@ -1010,15 +1079,17 @@ impl<'a, IO> Completer<'a, IO> {
                 ..
             } => importable_modules
                 .get(module)
-                .and_then(|i| i.accessors.get(name))
-                .filter(|a| a.publicity.is_importable() || module == &self.module.name)
-                .map(|a| a.accessors_for_variant(*inferred_variant)),
+                .and_then(|interface| interface.accessors.get(name))
+                .filter(|accessor| {
+                    accessor.publicity.is_importable() || module == &self.module.name
+                })
+                .map(|accessor| accessor.accessors_for_variant(*inferred_variant)),
 
             Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => None,
         }
     }
 
-    /// Provides completions for field accessors when the context being editted
+    /// Provides completions for field accessors when the context being edited
     /// is a custom type instance
     pub fn completion_field_accessors(&'a self, type_: Arc<Type>) -> Vec<CompletionItem> {
         if let Type::Named {
@@ -1087,7 +1158,7 @@ impl<'a, IO> Completer<'a, IO> {
         }
     }
 
-    /// Provides completions for labels when the context being editted is a call
+    /// Provides completions for labels when the context being edited is a call
     /// that has labelled arguments that can be passed
     pub fn completion_labels(
         &'a self,

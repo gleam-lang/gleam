@@ -269,7 +269,7 @@ where
     ) -> Response<Option<Vec<lsp::CompletionItem>>> {
         self.respond(|this| {
             let module = match this.module_for_uri(&params.text_document.uri) {
-                Some(m) => m,
+                Some(module) => module,
                 None => return Ok(None),
             };
 
@@ -303,6 +303,7 @@ where
                     ..
                 }
                 | Located::Constant(Constant::String { .. }) => None,
+
                 Located::Expression {
                     expression:
                         TypedExpr::Call { fun, arguments, .. }
@@ -318,6 +319,7 @@ where
                     completions.append(&mut completer.completion_labels(fun, arguments));
                     Some(completions)
                 }
+
                 Located::Expression {
                     expression: TypedExpr::RecordAccess { record, type_, .. },
                     ..
@@ -328,6 +330,7 @@ where
                     completions.append(&mut completer.completion_field_accessors(record.type_()));
                     Some(completions)
                 }
+
                 Located::Expression {
                     position:
                         ExpressionPosition::ArgumentOrLabel {
@@ -343,10 +346,33 @@ where
                     );
                     Some(completions)
                 }
+
+                // If we're typing inside an expression body (and not being any
+                // more specific than this, meaning we're not editing some
+                // specific value inside it) we don't want to set the expected
+                // type to the type of the entire anonymous function, otherwise
+                // the language server would start recommending the wrong
+                // values:
+                //
+                // ```
+                // fn(x: Int) -> String {
+                //   | // <- Typing here
+                //     //    We don't want the language server to suggest values
+                //     //    of type `fn(Int) -> String`!
+                //   todo
+                // }
+                // ```
+                //
+                Located::Expression {
+                    position: ExpressionPosition::Expression,
+                    expression: TypedExpr::Fn { .. },
+                } => Some(completer.completion_values()),
+
                 Located::Expression { expression, .. } => {
                     completer.expected_type = Some(expression.type_());
                     Some(completer.completion_values())
                 }
+
                 Located::ModuleFunction(_) => Some(completer.completion_types()),
 
                 Located::Statement(_) => Some(completer.completion_values()),
