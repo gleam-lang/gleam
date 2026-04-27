@@ -13199,6 +13199,32 @@ fn some_function(i) {
 }
 
 #[test]
+fn wrap_function_in_anonymous_function_does_not_trigger_on_record_update() {
+    assert_no_code_actions!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  Wibble(..todo, a: 1)
+}
+
+pub type Wibble { Wibble(a: Int, b: Int) }
+",
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+#[test]
+fn wrap_function_in_anonymous_function_does_not_trigger_on_invalid_record_update() {
+    assert_no_code_actions!(
+        WRAP_IN_ANONYMOUS_FUNCTION,
+        "pub fn main() {
+  Wibble(..todo, a: 1)
+}
+",
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+#[test]
 fn replace_nested_underscore_with_generic_type() {
     assert_code_action!(
         REPLACE_UNDERSCORE_WITH_TYPE,

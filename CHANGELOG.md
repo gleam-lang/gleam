@@ -68,3 +68,7 @@
 - Fixed a bug where the language server would suggest the "wrap in anonymous"
   code action even when not hovering directly over a function.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server would suggest the "wrap in anonymous"
+  code action when hovering over a record update.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
