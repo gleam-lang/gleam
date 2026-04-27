@@ -7861,6 +7861,24 @@ fn maybe_wibble() { Ok(Wobble) }
 }
 
 #[test]
+// https://github.com/gleam-lang/gleam/issues/5648
+fn pattern_match_on_variable_defined_inside_anonymous_function() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  let outcome = apply(#(Ok(1), Nil), fn(pair) {
+    let #(result, nil) = pair
+  })
+}
+
+fn apply(a, f) { f(a) }
+",
+        find_position_of("result").to_selection()
+    );
+}
+
+#[test]
 fn pattern_match_on_clause_variable_with_label() {
     assert_code_action!(
         PATTERN_MATCH_ON_VARIABLE,
