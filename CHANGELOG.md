@@ -50,6 +50,10 @@
   flag is passed, no progress information is printed.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The comment in `manifest.toml` now instructs the user to include it in their
+  source control repository.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Language server
 
 - The language server can now help with completions when typing a list's tail:
