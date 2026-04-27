@@ -3507,6 +3507,46 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments, open_parenthesis);
     }
 
+    fn visit_typed_expr_record_update(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        record: &'ast Option<Box<ast::RecordUpdateAssignment>>,
+        constructor: &'ast TypedExpr,
+        arguments: &'ast [TypedCallArg],
+    ) {
+        // Record updates need some extra care. If we're inspecting a record
+        // update like this one: `Wibble(..wobble, woo)` and the cursor is over
+        // the constructor itself we never want to allow extracting it, or it
+        // would result in the following code:
+        //
+        // ```gleam
+        // Wibble(..wobble, woo)
+        // // ^^ Cursor here
+        //
+        // let wibble = Wibble
+        // wibble(..wobble, woo)
+        // // That's a bit silly!
+        // ```
+        let constructor_range = self.edits.src_span_to_lsp_range(constructor.location());
+        if within(self.params.range, constructor_range)
+            && constructor.is_record_constructor_function()
+        {
+            return;
+        }
+
+        // Otherwise we just keep visiting like usual, no special handling is
+        // required.
+        ast::visit::visit_typed_expr_record_update(
+            self,
+            location,
+            type_,
+            record,
+            constructor,
+            arguments,
+        );
+    }
+
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
         let expr_location = expr.location();
         let expr_range = self.edits.src_span_to_lsp_range(expr_location);
