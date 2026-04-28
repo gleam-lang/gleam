@@ -10,7 +10,6 @@ members = [
   "test-output",
   "test-package-compiler",
   "test-project-compiler",
-  "language-server",
   "hexpm",
 ]
 
@@ -52,7 +51,7 @@ debug-ignore = "1"
 base16 = "0"
 # Language server protocol server plumbing
 lsp-server = "0"
-lsp-types = "=0.95.1"
+lsp-types = { package = "gen-lsp-types", version = "0.5.0", features = ["url"] }
 # Compact clone-on-write vector & string type
 ecow = "0"
 # Drop in replacement for std::path but with only utf-8

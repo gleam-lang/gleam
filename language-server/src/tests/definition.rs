@@ -1,12 +1,10 @@
-use lsp_types::{
-    GotoDefinitionParams, Location, Position, Range, Url, request::GotoTypeDefinitionParams,
-};
+use lsp_types::{DefinitionParams, Location, Position, Range, TypeDefinitionParams, Uri as Url};
 
 use super::*;
 
 fn definition(tester: &TestProject<'_>, position: Position) -> Option<Location> {
     tester.at(position, |engine, param, _| {
-        let params = GotoDefinitionParams {
+        let params = DefinitionParams {
             text_document_position_params: param,
             work_done_progress_params: Default::default(),
             partial_result_params: Default::default(),
@@ -24,7 +22,7 @@ fn pretty_definition(project: TestProject<'_>, position_finder: PositionFinder) 
 
 fn type_definition(tester: &TestProject<'_>, position: Position) -> Vec<Location> {
     tester.at(position, |engine, param, _| {
-        let params = GotoTypeDefinitionParams {
+        let params = TypeDefinitionParams {
             text_document_position_params: param,
             work_done_progress_params: Default::default(),
             partial_result_params: Default::default(),
@@ -430,7 +428,7 @@ fn main() {
         .add_hex_module("example_module", dep)
         .positioned_with_io(Position::new(3, 20));
 
-    let params = GotoDefinitionParams {
+    let params = DefinitionParams {
         text_document_position_params: position_param.clone(),
         work_done_progress_params: Default::default(),
         partial_result_params: Default::default(),
@@ -504,7 +502,7 @@ fn main() {
         .add_dep_module("example_module", dep)
         .positioned_with_io(Position::new(3, 20));
 
-    let params = GotoDefinitionParams {
+    let params = DefinitionParams {
         text_document_position_params: position_param.clone(),
         work_done_progress_params: Default::default(),
         partial_result_params: Default::default(),

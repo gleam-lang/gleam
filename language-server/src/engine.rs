@@ -26,9 +26,9 @@ use itertools::Itertools;
 use lsp::CodeAction;
 use lsp_server::ResponseError;
 use lsp_types::{
-    self as lsp, DocumentSymbol, FoldingRange, FoldingRangeKind, Hover, HoverContents,
-    MarkedString, Position, PrepareRenameResponse, Range, SignatureHelp, SymbolKind, SymbolTag,
-    TextEdit, Url, WorkspaceEdit,
+    self as lsp, Contents, DocumentSymbol, FoldingRange, FoldingRangeKind, Hover, MarkedString,
+    MarkupContent, Position, PrepareRenameResult, Range, SignatureHelp, SymbolKind, SymbolTag,
+    TextEdit, Uri as Url, WorkspaceEdit,
 };
 use std::{collections::HashSet, sync::Arc};
 
@@ -193,7 +193,7 @@ where
 
     pub fn goto_definition(
         &mut self,
-        params: lsp::GotoDefinitionParams,
+        params: lsp::DefinitionParams,
     ) -> Response<Option<lsp::Location>> {
         self.respond(|this| {
             let params = params.text_document_position_params;
@@ -214,7 +214,7 @@ where
 
     pub(crate) fn goto_type_definition(
         &mut self,
-        params: lsp_types::GotoDefinitionParams,
+        params: lsp_types::TypeDefinitionParams,
     ) -> Response<Vec<lsp::Location>> {
         self.respond(|this| {
             let params = params.text_document_position_params;
@@ -571,7 +571,7 @@ where
                             .print_type(&get_function_type(function))
                             .to_string(),
                     ),
-                    kind: SymbolKind::FUNCTION,
+                    kind: SymbolKind::Function,
                     tags: make_deprecated_symbol_tag(&function.deprecation),
                     deprecated: None,
                     range: src_span_to_lsp_range(full_function_span, &line_numbers),
@@ -603,7 +603,7 @@ where
                             .print_type_without_aliases(&alias.type_)
                             .to_string(),
                     ),
-                    kind: SymbolKind::CLASS,
+                    kind: SymbolKind::Class,
                     tags: make_deprecated_symbol_tag(&alias.deprecation),
                     deprecated: None,
                     range: src_span_to_lsp_range(full_alias_span, &line_numbers),
@@ -643,7 +643,7 @@ where
                             .print_type(&constant.type_)
                             .to_string(),
                     ),
-                    kind: SymbolKind::CONSTANT,
+                    kind: SymbolKind::Constant,
                     tags: make_deprecated_symbol_tag(&constant.deprecation),
                     deprecated: None,
                     range: src_span_to_lsp_range(full_constant_span, &line_numbers),
@@ -737,25 +737,28 @@ where
 
     pub fn prepare_rename(
         &mut self,
-        params: lsp::TextDocumentPositionParams,
-    ) -> Response<Option<PrepareRenameResponse>> {
+        params: lsp::PrepareRenameParams,
+    ) -> Response<Option<PrepareRenameResult>> {
         self.respond(|this| {
-            let (lines, found) = match this.node_at_position(&params) {
+            let (lines, found) = match this.node_at_position(&params.text_document_position_params)
+            {
                 Some(value) => value,
                 None => return Ok(None),
             };
 
-            let Some(current_module) = this.module_for_uri(&params.text_document.uri) else {
+            let Some(current_module) =
+                this.module_for_uri(&params.text_document_position_params.text_document.uri)
+            else {
                 return Ok(None);
             };
 
             let success_response = |location| {
-                Some(PrepareRenameResponse::Range(src_span_to_lsp_range(
+                Some(PrepareRenameResult::Range(src_span_to_lsp_range(
                     location, &lines,
                 )))
             };
 
-            let byte_index = lines.byte_index(params.position);
+            let byte_index = lines.byte_index(params.text_document_position_params.position);
 
             let referenced = reference_for_ast_node(found, &current_module.name);
 
@@ -813,7 +816,7 @@ where
         params: lsp::RenameParams,
     ) -> Response<Result<Option<WorkspaceEdit>, ResponseError>> {
         self.respond(|this| {
-            let position = &params.text_document_position;
+            let position = &params.text_document_position_params;
 
             let (lines, found) = match this.node_at_position(position) {
                 Some(value) => value,
@@ -913,7 +916,7 @@ where
         params: lsp::ReferenceParams,
     ) -> Response<Option<Vec<lsp::Location>>> {
         self.respond(|this| {
-            let position = &params.text_document_position;
+            let position = &params.text_document_position_params;
 
             let (lines, found) = match this.node_at_position(position) {
                 Some(value) => value,
@@ -1120,7 +1123,10 @@ Unused labelled fields:
                     };
 
                     Some(Hover {
-                        contents: HoverContents::Scalar(MarkedString::from_markdown(content)),
+                        contents: Contents::MarkupContent(MarkupContent {
+                            value: content,
+                            kind: lsp_types::MarkupKind::Markdown,
+                        }),
                         range,
                     })
                 }
@@ -1343,7 +1349,7 @@ fn custom_type_symbol(
                             .print_type(&argument.type_)
                             .to_string(),
                     ),
-                    kind: SymbolKind::FIELD,
+                    kind: SymbolKind::Field,
                     tags: None,
                     deprecated: None,
                     range: src_span_to_lsp_range(full_arg_span, line_numbers),
@@ -1373,9 +1379,9 @@ fn custom_type_symbol(
                 name: constructor.name.to_string(),
                 detail: None,
                 kind: if constructor.arguments.is_empty() {
-                    SymbolKind::ENUM_MEMBER
+                    SymbolKind::EnumMember
                 } else {
-                    SymbolKind::CONSTRUCTOR
+                    SymbolKind::Constructor
                 },
                 tags: make_deprecated_symbol_tag(&constructor.deprecation),
                 deprecated: None,
@@ -1411,7 +1417,7 @@ fn custom_type_symbol(
     DocumentSymbol {
         name: type_.name.to_string(),
         detail: None,
-        kind: SymbolKind::CLASS,
+        kind: SymbolKind::Class,
         tags: make_deprecated_symbol_tag(&type_.deprecation),
         deprecated: None,
         range: src_span_to_lsp_range(full_type_span, line_numbers),
@@ -1436,7 +1442,7 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers, module: 
 {documentation}"
     );
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(pattern.location(), &line_numbers)),
     }
 }
@@ -1472,7 +1478,7 @@ fn hover_for_function_head(
 {documentation}"
     );
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(fun.location, &line_numbers)),
     }
 }
@@ -1485,7 +1491,7 @@ fn hover_for_function_argument(
     let type_ = Printer::new(&module.ast.names).print_type(&argument.type_);
     let contents = format!("```gleam\n{type_}\n```");
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(argument.location, &line_numbers)),
     }
 }
@@ -1513,7 +1519,7 @@ fn hover_for_annotation(
 {documentation}"
     );
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(location, &line_numbers)),
     }
 }
@@ -1527,7 +1533,7 @@ fn hover_for_label(
     let type_ = Printer::new(&module.ast.names).print_type(&type_);
     let contents = format!("```gleam\n{type_}\n```");
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(location, &line_numbers)),
     }
 }
@@ -1546,7 +1552,7 @@ fn hover_for_module_constant(
         .unwrap_or(&empty_str);
     let contents = format!("```gleam\n{type_}\n```\n{documentation}");
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(constant.location, &line_numbers)),
     }
 }
@@ -1559,7 +1565,7 @@ fn hover_for_constant(
     let type_ = Printer::new(&module.ast.names).print_type(&constant.type_());
     let contents = format!("```gleam\n{type_}\n```");
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(constant.location(), &line_numbers)),
     }
 }
@@ -1572,7 +1578,7 @@ fn hover_for_clause_guard(
     let type_ = Printer::new(&module.ast.names).print_type(&guard.type_());
     let contents = format!("```gleam\n{type_}\n```");
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(guard.location(), &line_numbers)),
     }
 }
@@ -1585,7 +1591,7 @@ fn hover_for_string_prefix_pattern_variable(
     let type_ = Printer::new(&module.ast.names).print_type(&type_::string());
     let contents = format!("```gleam\n{type_}\n```");
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(location, lines)),
     }
 }
@@ -1613,7 +1619,7 @@ fn hover_for_expression(
 {documentation}{link_section}"
     );
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(expression.location(), &line_numbers)),
     }
 }
@@ -1641,7 +1647,7 @@ fn hover_for_imported_value(
 {documentation}{link_section}"
     );
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(*location, &line_numbers)),
     }
 }
@@ -1669,7 +1675,7 @@ fn hover_for_module(
 {link_section}",
     );
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(location, line_numbers)),
     }
 }
@@ -1684,7 +1690,7 @@ fn hover_for_custom_type(type_: &CustomType<Arc<Type>>, line_numbers: LineNumber
 
     let contents = format!("```gleam\n{name}\n```\n{documentation}");
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(type_.full_location(), &line_numbers)),
     }
 }
@@ -1719,7 +1725,7 @@ fn hover_for_constructor(
 
     let contents = format!("```gleam\n{constructor_doc}\n```\n{documentation}");
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(constructor.location, &line_numbers)),
     }
 }
@@ -1849,7 +1855,7 @@ fn code_action_unused_values(
         };
 
         CodeActionBuilder::new("Assign unused Result value to `_`")
-            .kind(lsp_types::CodeActionKind::QUICKFIX)
+            .kind(lsp_types::CodeActionKind::QuickFix)
             .changes(uri.clone(), vec![edit])
             .preferred(true)
             .push_to(actions);
@@ -1912,7 +1918,7 @@ fn code_action_fix_names(
             };
 
             CodeActionBuilder::new(format!("Rename to {correction}"))
-                .kind(lsp_types::CodeActionKind::QUICKFIX)
+                .kind(lsp_types::CodeActionKind::QuickFix)
                 .changes(uri.clone(), vec![edit])
                 .preferred(true)
                 .push_to(actions);
@@ -2011,5 +2017,5 @@ fn get_doc_marker_position(content_pos: u32) -> u32 {
 fn make_deprecated_symbol_tag(deprecation: &Deprecation) -> Option<Vec<SymbolTag>> {
     deprecation
         .is_deprecated()
-        .then(|| vec![SymbolTag::DEPRECATED])
+        .then(|| vec![SymbolTag::Deprecated])
 }

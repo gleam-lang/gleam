@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use lsp_types::{
-    CodeActionContext, CodeActionParams, DocumentChangeOperation, DocumentChanges,
-    PartialResultParams, Position, ResourceOp, Url, WorkDoneProgressParams,
+    CodeActionContext, CodeActionParams, DocumentChange, PartialResultParams, Position, Uri as Url,
+    WorkDoneProgressParams,
 };
 
 use super::*;
@@ -117,7 +117,7 @@ fn show_code_edits(tester: &TestProject<'_>, changed_files: HashMap<Url, String>
     }
 }
 
-fn format_code_action_file_operations<'a>(actions: &[lsp_types::CodeAction]) -> String {
+fn format_code_action_file_operations(actions: &[lsp_types::CodeAction]) -> String {
     // Display path the same on linux or windows so tests don't fail between targets
     let normalized_path = |uri: &Url| {
         format!(
@@ -137,36 +137,25 @@ fn format_code_action_file_operations<'a>(actions: &[lsp_types::CodeAction]) -> 
     actions
         .iter()
         .filter_map(|action| {
-            if let Some(DocumentChanges::Operations(operations)) = action
+            action
                 .edit
                 .as_ref()
                 .and_then(|edit| edit.document_changes.as_ref())
-            {
-                Some(operations)
-            } else {
-                None
-            }
         })
-        .flat_map(|operations| {
-            operations.into_iter().filter_map(|op| match op {
-                DocumentChangeOperation::Op(op) => Some(op),
-                DocumentChangeOperation::Edit(_) => None,
-            })
-        })
-        .map(|op| match op {
-            ResourceOp::Create(create) => {
-                format!("- Create {}", normalized_path(&create.uri))
+        .flatten()
+        .filter_map(|op| match op {
+            DocumentChange::CreateFile(create) => {
+                Some(format!("- Create {}", normalized_path(&create.uri)))
             }
-            ResourceOp::Rename(rename) => {
-                format!(
-                    "- Rename {} to {}",
-                    normalized_path(&rename.old_uri),
-                    normalized_path(&rename.new_uri)
-                )
+            DocumentChange::RenameFile(rename) => Some(format!(
+                "- Rename {} to {}",
+                normalized_path(&rename.old_uri),
+                normalized_path(&rename.new_uri)
+            )),
+            DocumentChange::DeleteFile(delete) => {
+                Some(format!("- Delete {}", normalized_path(&delete.uri)))
             }
-            ResourceOp::Delete(delete) => {
-                format!("- Delete {}", normalized_path(&delete.uri))
-            }
+            DocumentChange::TextDocumentEdit(_) => None,
         })
         .join("\n")
 }

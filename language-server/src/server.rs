@@ -18,8 +18,8 @@ use gleam_core::{
 };
 use lsp_server::ResponseError;
 use lsp_types::{
-    self as lsp, HoverProviderCapability, InitializeParams, Position, PublishDiagnosticsParams,
-    Range, RenameOptions, TextEdit, Url,
+    self as lsp, InitializeParams, Position, PublishDiagnosticsParams, Range, RenameOptions,
+    TextEdit, Uri as Url,
 };
 use serde_json::Value as Json;
 use std::collections::{HashMap, HashSet};
@@ -224,9 +224,9 @@ where
     fn publish_messages(&self, messages: Vec<Diagnostic>) {
         for message in messages {
             let params = lsp::ShowMessageParams {
-                typ: match message.level {
-                    Level::Error => lsp::MessageType::ERROR,
-                    Level::Warning => lsp::MessageType::WARNING,
+                kind: match message.level {
+                    Level::Error => lsp::MessageType::Error,
+                    Level::Warning => lsp::MessageType::Warning,
                 },
                 message: message.text,
             };
@@ -352,7 +352,7 @@ where
 
     fn goto_definition(
         &mut self,
-        params: lsp::GotoDefinitionParams,
+        params: lsp::DefinitionParams,
     ) -> (Result<Json, ResponseError>, Feedback) {
         let path = super::path(&params.text_document_position_params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.goto_definition(params))
@@ -360,7 +360,7 @@ where
 
     fn goto_type_definition(
         &mut self,
-        params: lsp_types::GotoDefinitionParams,
+        params: lsp_types::TypeDefinitionParams,
     ) -> (Result<Json, ResponseError>, Feedback) {
         let path = super::path(&params.text_document_position_params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.goto_type_definition(params))
@@ -370,14 +370,14 @@ where
         &mut self,
         params: lsp::CompletionParams,
     ) -> (Result<Json, ResponseError>, Feedback) {
-        let path = super::path(&params.text_document_position.text_document.uri);
+        let path = super::path(&params.text_document_position_params.text_document.uri);
 
         let src = match self.io.read(&path) {
             Ok(src) => src.into(),
             Err(error) => return self.path_error_response(path, error),
         };
         self.respond_with_engine(path, |engine| {
-            engine.completion(params.text_document_position, src)
+            engine.completion(params.text_document_position_params, src)
         })
     }
 
@@ -415,14 +415,14 @@ where
 
     fn prepare_rename(
         &mut self,
-        params: lsp::TextDocumentPositionParams,
+        params: lsp::PrepareRenameParams,
     ) -> (Result<Json, ResponseError>, Feedback) {
-        let path = super::path(&params.text_document.uri);
+        let path = super::path(&params.text_document_position_params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.prepare_rename(params))
     }
 
     fn rename(&mut self, params: lsp::RenameParams) -> (Result<Json, ResponseError>, Feedback) {
-        let path = super::path(&params.text_document_position.text_document.uri);
+        let path = super::path(&params.text_document_position_params.text_document.uri);
         self.fallible_respond_with_engine(
             path,
             |engine: &mut LanguageServerEngine<IO, ConnectionProgressReporter<'a>>| {
@@ -435,7 +435,7 @@ where
         &mut self,
         params: lsp_types::ReferenceParams,
     ) -> (Result<Json, ResponseError>, Feedback) {
-        let path = super::path(&params.text_document_position.text_document.uri);
+        let path = super::path(&params.text_document_position_params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.find_references(params))
     }
 
@@ -496,21 +496,23 @@ where
 
 fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializeParams {
     let server_capabilities = lsp::ServerCapabilities {
-        text_document_sync: Some(lsp::TextDocumentSyncCapability::Options(
+        text_document_sync: Some(
             lsp::TextDocumentSyncOptions {
                 open_close: Some(true),
-                change: Some(lsp::TextDocumentSyncKind::FULL),
+                change: Some(lsp::TextDocumentSyncKind::Full),
                 will_save: None,
                 will_save_wait_until: None,
-                save: Some(lsp::TextDocumentSyncSaveOptions::SaveOptions(
+                save: Some(
                     lsp::SaveOptions {
                         include_text: Some(false),
-                    },
-                )),
-            },
-        )),
+                    }
+                    .into(),
+                ),
+            }
+            .into(),
+        ),
         selection_range_provider: None,
-        hover_provider: Some(HoverProviderCapability::Simple(true)),
+        hover_provider: Some(true.into()),
         completion_provider: Some(lsp::CompletionOptions {
             resolve_provider: None,
             trigger_characters: Some(vec![".".into()]),
@@ -527,27 +529,30 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
                 work_done_progress: None,
             },
         }),
-        definition_provider: Some(lsp::OneOf::Left(true)),
-        type_definition_provider: Some(lsp::TypeDefinitionProviderCapability::Simple(true)),
+        definition_provider: Some(true.into()),
+        type_definition_provider: Some(true.into()),
         implementation_provider: None,
-        references_provider: Some(lsp::OneOf::Left(true)),
+        references_provider: Some(true.into()),
         document_highlight_provider: None,
-        document_symbol_provider: Some(lsp::OneOf::Left(true)),
+        document_symbol_provider: Some(true.into()),
         workspace_symbol_provider: None,
-        code_action_provider: Some(lsp::CodeActionProviderCapability::Simple(true)),
+        code_action_provider: Some(true.into()),
         code_lens_provider: None,
-        document_formatting_provider: Some(lsp::OneOf::Left(true)),
+        document_formatting_provider: Some(true.into()),
         document_range_formatting_provider: None,
         document_on_type_formatting_provider: None,
-        rename_provider: Some(lsp::OneOf::Right(RenameOptions {
-            prepare_provider: Some(true),
-            work_done_progress_options: lsp::WorkDoneProgressOptions {
-                work_done_progress: None,
-            },
-        })),
+        rename_provider: Some(
+            RenameOptions {
+                prepare_provider: Some(true),
+                work_done_progress_options: lsp::WorkDoneProgressOptions {
+                    work_done_progress: None,
+                },
+            }
+            .into(),
+        ),
         document_link_provider: None,
         color_provider: None,
-        folding_range_provider: Some(lsp::FoldingRangeProviderCapability::Simple(true)),
+        folding_range_provider: Some(true.into()),
         declaration_provider: None,
         execute_command_provider: None,
         workspace: None,
@@ -560,6 +565,9 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         inline_value_provider: None,
         inlay_hint_provider: None,
         diagnostic_provider: None,
+        type_hierarchy_provider: None,
+        notebook_document_sync: None,
+        inline_completion_provider: None,
     };
     let server_capabilities_json =
         serde_json::to_value(server_capabilities).expect("server_capabilities_serde");
@@ -573,8 +581,8 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
 
 fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
     let severity = match diagnostic.level {
-        Level::Error => lsp::DiagnosticSeverity::ERROR,
-        Level::Warning => lsp::DiagnosticSeverity::WARNING,
+        Level::Error => lsp::DiagnosticSeverity::Error,
+        Level::Warning => lsp::DiagnosticSeverity::Warning,
     };
     let hint = diagnostic.hint;
     let mut text = diagnostic.title;
@@ -626,7 +634,7 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
     match hint {
         Some(hint) => {
             let hint = lsp::Diagnostic {
-                severity: Some(lsp::DiagnosticSeverity::HINT),
+                severity: Some(lsp::DiagnosticSeverity::Hint),
                 message: hint,
                 // Some editors require this kind of "link" to group diagnostics.
                 // For example, in Zed "go to next diagnostic" would move you from

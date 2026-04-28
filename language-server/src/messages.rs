@@ -1,16 +1,11 @@
 use camino::Utf8PathBuf;
-use lsp::{
-    notification::{DidChangeWatchedFiles, DidOpenTextDocument},
-    request::GotoDefinition,
-};
+use lsp::{DefinitionRequest, DidChangeWatchedFilesNotification, DidOpenTextDocumentNotification};
 use lsp_types::{
-    self as lsp,
-    notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
-    request::{
-        CodeActionRequest, Completion, DocumentSymbolRequest, FoldingRangeRequest, Formatting,
-        GotoTypeDefinition, HoverRequest, PrepareRenameRequest, References, Rename,
-        SignatureHelpRequest,
-    },
+    self as lsp, CodeActionRequest, CompletionRequest, DidChangeTextDocumentNotification,
+    DidCloseTextDocumentNotification, DidSaveTextDocumentNotification, DocumentFormattingRequest,
+    DocumentSymbolRequest, FoldingRangeRequest, HoverRequest, PrepareRenameRequest,
+    ReferencesRequest, RenameRequest, SignatureHelpRequest, TextDocumentContentChangeEvent,
+    TypeDefinitionRequest,
 };
 use std::time::Duration;
 
@@ -24,14 +19,14 @@ pub enum Message {
 pub enum Request {
     Format(lsp::DocumentFormattingParams),
     Hover(lsp::HoverParams),
-    GoToDefinition(lsp::GotoDefinitionParams),
-    GoToTypeDefinition(lsp::GotoDefinitionParams),
+    GoToDefinition(lsp::DefinitionParams),
+    GoToTypeDefinition(lsp::TypeDefinitionParams),
     Completion(lsp::CompletionParams),
     CodeAction(lsp::CodeActionParams),
     SignatureHelp(lsp::SignatureHelpParams),
     DocumentSymbol(lsp::DocumentSymbolParams),
     FoldingRange(lsp::FoldingRangeParams),
-    PrepareRename(lsp::TextDocumentPositionParams),
+    PrepareRename(lsp::PrepareRenameParams),
     Rename(lsp::RenameParams),
     FindReferences(lsp::ReferenceParams),
 }
@@ -41,7 +36,7 @@ impl Request {
         let id = request.id.clone();
         match request.method.as_str() {
             "textDocument/formatting" => {
-                let params = cast_request::<Formatting>(request);
+                let params = cast_request::<DocumentFormattingRequest>(request);
                 Some(Message::Request(id, Request::Format(params)))
             }
             "textDocument/hover" => {
@@ -49,11 +44,11 @@ impl Request {
                 Some(Message::Request(id, Request::Hover(params)))
             }
             "textDocument/definition" => {
-                let params = cast_request::<GotoDefinition>(request);
+                let params = cast_request::<DefinitionRequest>(request);
                 Some(Message::Request(id, Request::GoToDefinition(params)))
             }
             "textDocument/completion" => {
-                let params = cast_request::<Completion>(request);
+                let params = cast_request::<CompletionRequest>(request);
                 Some(Message::Request(id, Request::Completion(params)))
             }
             "textDocument/codeAction" => {
@@ -73,7 +68,7 @@ impl Request {
                 Some(Message::Request(id, Request::FoldingRange(params)))
             }
             "textDocument/rename" => {
-                let params = cast_request::<Rename>(request);
+                let params = cast_request::<RenameRequest>(request);
                 Some(Message::Request(id, Request::Rename(params)))
             }
             "textDocument/prepareRename" => {
@@ -81,11 +76,11 @@ impl Request {
                 Some(Message::Request(id, Request::PrepareRename(params)))
             }
             "textDocument/typeDefinition" => {
-                let params = cast_request::<GotoTypeDefinition>(request);
+                let params = cast_request::<TypeDefinitionRequest>(request);
                 Some(Message::Request(id, Request::GoToTypeDefinition(params)))
             }
             "textDocument/references" => {
-                let params = cast_request::<References>(request);
+                let params = cast_request::<ReferencesRequest>(request);
                 Some(Message::Request(id, Request::FindReferences(params)))
             }
             _ => None,
@@ -113,7 +108,7 @@ impl Notification {
     fn extract(notification: lsp_server::Notification) -> Option<Message> {
         match notification.method.as_str() {
             "textDocument/didOpen" => {
-                let params = cast_notification::<DidOpenTextDocument>(notification);
+                let params = cast_notification::<DidOpenTextDocumentNotification>(notification);
                 let notification = Notification::SourceFileOpened {
                     path: super::path(&params.text_document.uri),
                     text: params.text_document.text,
@@ -121,29 +116,34 @@ impl Notification {
                 Some(Message::Notification(notification))
             }
             "textDocument/didChange" => {
-                let params = cast_notification::<DidChangeTextDocument>(notification);
+                let params = cast_notification::<DidChangeTextDocumentNotification>(notification);
+                let TextDocumentContentChangeEvent::TextDocumentContentChangeWholeDocument(change) =
+                    params.content_changes.into_iter().next_back()?
+                else {
+                    return None;
+                };
                 let notification = Notification::SourceFileChangedInMemory {
-                    path: super::path(&params.text_document.uri),
-                    text: params.content_changes.into_iter().next_back()?.text,
+                    path: super::path(&params.text_document.text_document_identifier.uri),
+                    text: change.text,
                 };
                 Some(Message::Notification(notification))
             }
             "textDocument/didSave" => {
-                let params = cast_notification::<DidSaveTextDocument>(notification);
+                let params = cast_notification::<DidSaveTextDocumentNotification>(notification);
                 let notification = Notification::SourceFileSaved {
                     path: super::path(&params.text_document.uri),
                 };
                 Some(Message::Notification(notification))
             }
             "textDocument/didClose" => {
-                let params = cast_notification::<DidCloseTextDocument>(notification);
+                let params = cast_notification::<DidCloseTextDocumentNotification>(notification);
                 let notification = Notification::SourceFileClosed {
                     path: super::path(&params.text_document.uri),
                 };
                 Some(Message::Notification(notification))
             }
             "workspace/didChangeWatchedFiles" => {
-                let params = cast_notification::<DidChangeWatchedFiles>(notification);
+                let params = cast_notification::<DidChangeWatchedFilesNotification>(notification);
                 let notification = Notification::ConfigFileChanged {
                     path: super::path(&params.changes.into_iter().next_back()?.uri),
                 };
@@ -263,19 +263,19 @@ impl MessageBuffer {
 
 fn cast_request<R>(request: lsp_server::Request) -> R::Params
 where
-    R: lsp::request::Request,
+    R: lsp::Request,
     R::Params: serde::de::DeserializeOwned,
 {
-    let (_, params) = request.extract(R::METHOD).expect("cast request");
+    let (_, params) = request.extract(R::METHOD.as_str()).expect("cast request");
     params
 }
 
 fn cast_notification<N>(notification: lsp_server::Notification) -> N::Params
 where
-    N: lsp::notification::Notification,
+    N: lsp::Notification,
     N::Params: serde::de::DeserializeOwned,
 {
     notification
-        .extract::<N::Params>(N::METHOD)
+        .extract::<N::Params>(N::METHOD.as_str())
         .expect("cast notification")
 }

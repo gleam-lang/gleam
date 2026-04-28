@@ -75,7 +75,7 @@ use gleam_core::{
     Result, ast::SrcSpan, build::Target, line_numbers::LineNumbers, manifest::Manifest,
     paths::ProjectPaths,
 };
-use lsp_types::{Position, Range, TextEdit, Url};
+use lsp_types::{Position, Range, TextEdit, Uri as Url};
 use std::any::Any;
 
 #[derive(Debug)]
