@@ -78,8 +78,10 @@ pub fn compile_package(
         let mut ast = parsed.module;
         ast.name = dep_name.into();
         let line_numbers = LineNumbers::new(dep_src);
-        let mut config = PackageConfig::default();
-        config.name = dep_package.into();
+        let config = PackageConfig {
+            name: dep_package.into(),
+            ..PackageConfig::default()
+        };
 
         let dep = crate::analyse::ModuleAnalyzerConstructor::<()> {
             target: Target::Erlang,
@@ -107,8 +109,10 @@ pub fn compile_package(
         .unwrap_or("my/module".into());
 
     ast.name = module_name.clone();
-    let mut config = PackageConfig::default();
-    config.name = "my_package".into();
+    let config = PackageConfig {
+        name: "my_package".into(),
+        ..PackageConfig::default()
+    };
     let ast = crate::analyse::ModuleAnalyzerConstructor {
         target: Target::Erlang,
         ids: &ids,
@@ -144,6 +148,7 @@ pub fn compile_package(
     .expect("to json")
 }
 
+#[allow(clippy::unwrap_used)]
 fn package_from_module(module: Module) -> Package {
     Package {
         config: PackageConfig {

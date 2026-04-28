@@ -2,6 +2,7 @@
 //! such as module functions or constants.
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod into_dependency_order_tests;
 
 use crate::{

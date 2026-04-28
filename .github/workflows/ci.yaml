@@ -412,7 +412,7 @@ jobs:
           key: v1-linux-gnu
 
       - name: Run linter
-        run: cargo clippy --workspace
+        run: cargo clippy --workspace --all-targets
 
       - run: cargo build
 

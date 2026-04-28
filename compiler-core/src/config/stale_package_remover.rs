@@ -82,6 +82,7 @@ impl<'a> StalePackageRemover<'a> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource};

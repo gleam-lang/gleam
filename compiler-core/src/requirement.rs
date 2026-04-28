@@ -147,6 +147,7 @@ impl<'de> Deserialize<'de> for Requirement {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
 
     use super::*;
@@ -161,12 +162,24 @@ mod tests {
             github = { git = "https://github.com/gleam-lang/otp.git", ref = "4d34935" }
         "#;
         let deps: HashMap<String, Requirement> = toml::from_str(toml).unwrap();
-        assert_eq!(deps["short"], Requirement::hex("~> 0.5").unwrap());
-        assert_eq!(deps["hex"], Requirement::hex("~> 1.0.0").unwrap());
-        assert_eq!(deps["local"], Requirement::path("/path/to/package"));
         assert_eq!(
-            deps["github"],
-            Requirement::git("https://github.com/gleam-lang/otp.git", "4d34935")
+            deps.get("short"),
+            Some(&Requirement::hex("~> 0.5").unwrap())
+        );
+        assert_eq!(
+            deps.get("hex"),
+            Some(&Requirement::hex("~> 1.0.0").unwrap())
+        );
+        assert_eq!(
+            deps.get("local"),
+            Some(&Requirement::path("/path/to/package"))
+        );
+        assert_eq!(
+            deps.get("github"),
+            Some(&Requirement::git(
+                "https://github.com/gleam-lang/otp.git",
+                "4d34935"
+            ))
         );
     }
 

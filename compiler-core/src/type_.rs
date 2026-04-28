@@ -9,6 +9,7 @@ pub(crate) mod prelude;
 pub mod pretty;
 pub mod printer;
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 pub mod tests;
 
 use camino::Utf8PathBuf;

@@ -589,7 +589,7 @@ fn provided_is_absolute() {
         ProvidedPackageSource::Local { path } => {
             assert!(path.is_absolute())
         }
-        _ => {
+        ProvidedPackageSource::Git { .. } => {
             panic!("Provide_local_package provided a package that is not local!")
         }
     }

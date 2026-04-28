@@ -39,8 +39,7 @@ fn remove_docs_request() {
 #[test]
 fn remove_docs_response_success() {
     let response = make_response(204, vec![]);
-    let result = crate::api_remove_docs_response(response).unwrap();
-    assert_eq!(result, ());
+    assert_eq!(crate::api_remove_docs_response(response).unwrap(), ());
 }
 
 #[test]
@@ -71,8 +70,7 @@ fn revert_release_request() {
 #[test]
 fn revert_release_response_success() {
     let response = make_response(204, vec![]);
-    let result = crate::api_revert_release_response(response).unwrap();
-    assert_eq!(result, ());
+    assert_eq!(crate::api_revert_release_response(response).unwrap(), ());
 }
 
 #[test]
@@ -108,8 +106,7 @@ fn add_owner_request() {
 #[test]
 fn add_owner_response_success() {
     let response = make_response(204, vec![]);
-    let result = crate::api_add_owner_response(response).unwrap();
-    assert_eq!(result, ());
+    assert_eq!(crate::api_add_owner_response(response).unwrap(), ());
 }
 
 #[test]
@@ -144,8 +141,7 @@ fn transfer_owner_request() {
 #[test]
 fn transfer_owner_response_success() {
     let response = make_response(204, vec![]);
-    let result = crate::api_transfer_owner_response(response).unwrap();
-    assert_eq!(result, ());
+    assert_eq!(crate::api_transfer_owner_response(response).unwrap(), ());
 }
 
 #[test]
@@ -176,8 +172,7 @@ fn remove_owner_request() {
 #[test]
 fn remove_owner_response_success() {
     let response = make_response(204, vec![]);
-    let result = crate::api_remove_owner_response(response).unwrap();
-    assert_eq!(result, ());
+    assert_eq!(crate::api_remove_owner_response(response).unwrap(), ());
 }
 
 #[test]
@@ -204,15 +199,13 @@ fn remove_key_request() {
 #[test]
 fn remove_key_response_success_204() {
     let response = make_response(204, vec![]);
-    let result = crate::api_remove_api_key_response(response).unwrap();
-    assert_eq!(result, ());
+    assert_eq!(crate::api_remove_api_key_response(response).unwrap(), ());
 }
 
 #[test]
 fn remove_key_response_success_200() {
     let response = make_response(200, vec![]);
-    let result = crate::api_remove_api_key_response(response).unwrap();
-    assert_eq!(result, ());
+    assert_eq!(crate::api_remove_api_key_response(response).unwrap(), ());
 }
 
 #[test]

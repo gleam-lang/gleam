@@ -26,6 +26,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use pretty_assertions::assert_eq;
 
+#[allow(clippy::unwrap_used)]
 fn roundtrip(input: &ModuleInterface) -> ModuleInterface {
     let buffer = encode(input).unwrap();
     let ids = UniqueIdGenerator::new();

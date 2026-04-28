@@ -1,6 +1,7 @@
 mod printer;
 mod source_links;
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests;
 
 use std::{collections::HashMap, time::SystemTime};
@@ -727,69 +728,4 @@ enum SearchProgrammingLanguage {
     // Elixir,
     // Erlang,
     Gleam,
-}
-
-#[test]
-fn package_config_to_json() {
-    let input = r#"
-name = "my_project"
-version = "1.0.0"
-licences = ["Apache-2.0", "MIT"]
-description = "Pretty complex config"
-target = "erlang"
-repository = { type = "github", user = "example", repo = "my_dep" }
-links = [{ title = "Home page", href = "https://example.com" }]
-internal_modules = ["my_app/internal"]
-gleam = ">= 0.30.0"
-
-[dependencies]
-gleam_stdlib = ">= 0.18.0 and < 2.0.0"
-my_other_project = { path = "../my_other_project" }
-
-[dev_dependencies]
-gleeunit = ">= 1.0.0 and < 2.0.0"
-
-[documentation]
-pages = [{ title = "My Page", path = "my-page.html", source = "./path/to/my-page.md" }]
-
-[erlang]
-application_start_module = "my_app/application"
-extra_applications = ["inets", "ssl"]
-
-[javascript]
-typescript_declarations = true
-source_maps = true
-runtime = "node"
-
-[javascript.deno]
-allow_all = false
-allow_ffi = true
-allow_env = ["DATABASE_URL"]
-allow_net = ["example.com:443"]
-allow_read = ["./database.sqlite"]
-"#;
-
-    let config = toml::from_str::<PackageConfig>(input).unwrap();
-    let info = PackageInformation {
-        package_config: config.clone(),
-    };
-    let json = package_information_as_json(config);
-    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
-    insta::assert_snapshot!(output);
-
-    let roundtrip: PackageInformation = serde_json::from_str(&json).unwrap();
-    assert_eq!(info, roundtrip);
-}
-
-#[test]
-fn barebones_package_config_to_json() {
-    let input = r#"
-name = "my_project"
-version = "1.0.0"
-"#;
-
-    let config = toml::from_str::<PackageConfig>(input).unwrap();
-    let json = package_information_as_json(config);
-    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
-    insta::assert_snapshot!(output);
 }

@@ -31,8 +31,6 @@ fn compile_module(src: &str) -> TypedModule {
             .expect("syntax error");
     let ast = parsed.module;
     let ids = UniqueIdGenerator::new();
-    let mut config = PackageConfig::default();
-    config.name = "thepackage".into();
     let mut modules = im::HashMap::new();
     // DUPE: preludeinsertion
     // TODO: Currently we do this here and also in the tests. It would be better
@@ -40,8 +38,10 @@ fn compile_module(src: &str) -> TypedModule {
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
     let line_numbers = LineNumbers::new(src);
-    let mut config = PackageConfig::default();
-    config.name = "thepackage".into();
+    let config = PackageConfig {
+        name: "thepackage".into(),
+        ..PackageConfig::default()
+    };
 
     crate::analyse::ModuleAnalyzerConstructor::<()> {
         target: Target::Erlang,

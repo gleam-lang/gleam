@@ -473,6 +473,7 @@ where
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use hexpm::RetirementStatus;
 
@@ -872,6 +873,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::wildcard_enum_match_arm)]
     fn resolution_not_found_dep() {
         let err = resolve_versions(
             &make_remote(),
@@ -904,6 +906,7 @@ the package unknown was not found in the package repository"
     }
 
     #[test]
+    #[allow(clippy::wildcard_enum_match_arm)]
     fn resolution_locked_version_doesnt_satisfy_requirements() {
         let err = resolve_versions(
             &make_remote(),

@@ -38,6 +38,7 @@ pub type Name = EcoString;
 pub type Result<Ok, Err = Error> = std::result::Result<Ok, Err>;
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 pub mod tests;
 
 macro_rules! wrap_format {
