@@ -72,6 +72,7 @@ jobs:
           target: ${{ matrix.target }}
           cargo-tool: ${{ matrix.cargo-tool }}
           expected-binary-architecture: ${{ matrix.expected-binary-architecture }}
+          generate-gleam-licences-html: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}

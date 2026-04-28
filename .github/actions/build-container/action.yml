@@ -58,11 +58,8 @@ runs:
     shell: bash
     id: versions
     run: |
-      # Strip `v` prefix from version
-      BARE_VERSION=$(echo "$VERSION" | sed -e 's|^v/\(.*\)|\1|')
-
       # Build version with platform
-      PLATFORM_VERSION=$BARE_VERSION-${{ matrix.base-image }}
+      PLATFORM_VERSION=$VERSION_VERSION-${{ matrix.base-image }}
 
       # Build container tag
       TAG=ghcr.io/${{ github.repository }}:$PLATFORM_VERSION
