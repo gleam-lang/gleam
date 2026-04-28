@@ -17,6 +17,8 @@ gleam_stdlib = ">= 0.70.0 and < 2.0.0"
 simplifile = ">= 2.4.0 and < 3.0.0"
 shellout = ">= 1.8.0 and < 2.0.0"
 tom = ">= 2.0.2 and < 3.0.0"
+htmb = ">= 2.1.0 and < 3.0.0"
+argv = ">= 1.0.2 and < 2.0.0"
 
 [dev_dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
