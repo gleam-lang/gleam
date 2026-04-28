@@ -222,6 +222,12 @@
 
 ### Formatter
 
+### Releases
+
+- A `gleam-licences.html` is now included with each release, detailing the
+  licences of the used dependencies.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Bug fixes
 
 - Fixed a bug where `gleam remove` would fail with a confusing File IO error
