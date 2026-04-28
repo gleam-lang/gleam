@@ -17,6 +17,10 @@ inputs:
     description: "Expected Binary Architecture"
     required: false
     default: ""
+  generate-gleam-licences-html:
+    description: "Generate gleam-licences.html"
+    required: false
+    default: "false"
   azure-tenant-id:
     description: "Azure Tenant ID for Windows Code Signing"
     required: false
@@ -34,9 +38,6 @@ inputs:
     required: false
 
 outputs:
-  archive:
-    description: "Path to build asset"
-    value: "${{ steps.build.outputs.archive }}"
   files:
     description: "Path to all files"
     value: |
@@ -46,6 +47,7 @@ outputs:
       ${{ steps.build.outputs.archive }}.sigstore
       ${{ steps.build.outputs.archive }}.sbom.spdx.json
       ${{ steps.build.outputs.archive }}.sbom.cyclonedx.json
+      ${{ inputs.generate-gleam-licences-html == 'true' && 'gleam-licences.html' || '' }}
 
 runs:
   using: "composite"
@@ -183,6 +185,33 @@ runs:
         TARGET: "${{ inputs.target }}"
         ARCHIVE: "${{ steps.build.outputs.archive }}"
 
+    - name: Install Erlang
+      if: ${{ inputs.generate-gleam-licences-html == 'true' }}
+      uses: erlef/setup-beam@fc68ffb90438ef2936bbb3251622353b3dcb2f93 # v1.24.0
+      with:
+        otp-version: "28.0.1"
+        rebar3-version: "3"
+
+    - name: Generate licences HTML
+      if: ${{ inputs.generate-gleam-licences-html == 'true' }}
+      shell: bash
+      working-directory: licence-bundler
+      run: |
+        case "$TARGET" in
+          wasm*)
+            echo "error: cannot generate gleam-licences.html from a wasm build"
+            exit 1
+            ;;
+          *windows*)
+            ../target/"$TARGET"/release/gleam.exe run
+            ;;
+          *)
+            ../target/"$TARGET"/release/gleam run
+            ;;
+        esac
+      env:
+        TARGET: "${{ inputs.target }}"
+
     # By using `cargo-sbom``, we create two formats of Build SBoMs
     # (SPDX and CycloneDX) for the gleam build.
     # We store those files alongside the build artifacts on the GitHub Release
@@ -261,4 +290,5 @@ runs:
           ${{ steps.build.outputs.archive }}.sigstore
           ${{ steps.build.outputs.archive }}.sbom.spdx.json
           ${{ steps.build.outputs.archive }}.sbom.cyclonedx.json
+          ${{ inputs.generate-gleam-licences-html == 'true' && 'gleam-licences.html' || '' }}
         overwrite: true
