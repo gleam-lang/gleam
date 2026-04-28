@@ -1,5 +1,5 @@
-import argv
 import gleam/bool
+import gleam/io
 import gleam/list
 import gleam/result
 import gleam/set.{type Set}
@@ -13,10 +13,6 @@ import tom
 pub fn main() -> Nil {
   let gleam_crates = determine_gleam_crates()
   let active_licences = determine_licences()
-  let assert [output_path] = argv.load().arguments
-    as "USAGE: gleam run out/licences.html"
-  assert string.ends_with(output_path, ".html")
-    as "Output path should end with .html"
 
   let assert Ok(output) =
     shellout.command(
@@ -106,7 +102,8 @@ pub fn main() -> Nil {
     |> htmb.render_page
     |> string_tree.to_string
 
-  let assert Ok(_) = simplifile.write(output_path, html)
+  let assert Ok(_) = simplifile.write("../gleam-licences.html", html)
+  io.println("Written ../gleam-licences.html")
 
   Nil
 }
