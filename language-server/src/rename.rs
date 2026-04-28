@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use ecow::EcoString;
 use lsp_server::ResponseError;
-use lsp_types::{Range, RenameParams, TextEdit, Url, WorkspaceEdit};
+use lsp_types::{Range, RenameParams, TextEdit, Uri as Url, WorkspaceEdit};
 
 use gleam_core::{
     analyse::name,
@@ -76,7 +76,11 @@ pub fn rename_local_variable(
         return RenameOutcome::InvalidName { name: new_name };
     }
 
-    let uri = params.text_document_position.text_document.uri.clone();
+    let uri = params
+        .text_document_position_params
+        .text_document
+        .uri
+        .clone();
     let mut edits = TextEdits::new(line_numbers);
 
     let references =
@@ -292,7 +296,11 @@ fn alias_references_in_module(
 
     RenameOutcome::Renamed {
         edit: workspace_edit(
-            params.text_document_position.text_document.uri.clone(),
+            params
+                .text_document_position_params
+                .text_document
+                .uri
+                .clone(),
             edits.edits,
         ),
     }
@@ -342,7 +350,11 @@ pub fn rename_module_alias(
         return RenameOutcome::InvalidName { name: new_name };
     }
 
-    let uri = params.text_document_position.text_document.uri.clone();
+    let uri = params
+        .text_document_position_params
+        .text_document
+        .uri
+        .clone();
     let mut edits = TextEdits::new(line_numbers);
 
     let mut finder = reference::FindModuleNameReferences {

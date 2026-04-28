@@ -1,4 +1,4 @@
-use lsp_types::{Hover, HoverContents, HoverParams, MarkedString, Position, Range};
+use lsp_types::{Contents, Hover, HoverParams, MarkedString, Position, Range};
 
 use super::*;
 
@@ -49,17 +49,17 @@ pub fn show_hover(code: &str, range: Range, position: Position) -> String {
     buffer
 }
 
-fn pretty_hover_contents(contents: HoverContents) -> String {
+fn pretty_hover_contents(contents: Contents) -> String {
     let (kind, content) = match contents {
-        HoverContents::Scalar(marked_string) => ("markdown", pretty_marked_string(marked_string)),
-        HoverContents::Array(marked_strings) => (
+        Contents::MarkedString(marked_string) => ("markdown", pretty_marked_string(marked_string)),
+        Contents::MarkedStringList(marked_strings) => (
             "markdown array",
             marked_strings
                 .into_iter()
                 .map(pretty_marked_string)
                 .join("\n\n"),
         ),
-        HoverContents::Markup(lsp_types::MarkupContent { kind, value }) => match kind {
+        Contents::MarkupContent(lsp_types::MarkupContent { kind, value }) => match kind {
             lsp_types::MarkupKind::PlainText => ("plaintext", value),
             lsp_types::MarkupKind::Markdown => ("markdown", value),
         },
@@ -70,7 +70,11 @@ fn pretty_hover_contents(contents: HoverContents) -> String {
 fn pretty_marked_string(marked_string: MarkedString) -> String {
     match marked_string {
         MarkedString::String(string) => string,
-        MarkedString::LanguageString(lsp_types::LanguageString { language, value }) => {
+        #[allow(deprecated)]
+        MarkedString::MarkedStringWithLanguage(lsp_types::MarkedStringWithLanguage {
+            language,
+            value,
+        }) => {
             format!("```{language}\n{value}\n```")
         }
     }

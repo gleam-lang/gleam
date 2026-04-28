@@ -1,6 +1,7 @@
 use super::*;
 use lsp_types::{
-    ParameterInformation, ParameterLabel, SignatureHelp, SignatureHelpParams, SignatureInformation,
+    ActiveParameter, ParameterInformation, ParameterInformationLabel, SignatureHelp,
+    SignatureHelpParams, SignatureInformation,
 };
 
 fn signature_help(tester: TestProject<'_>, position: Position) -> Option<SignatureHelp> {
@@ -42,11 +43,11 @@ fn pretty_signature_help(signature_help: SignatureHelp) -> String {
     };
 
     let label = match active_parameter {
-        None => label.to_string(),
-        Some(i) => match parameters.get(i as usize) {
+        None | Some(ActiveParameter::Null) => label.to_string(),
+        Some(ActiveParameter::Int(i)) => match parameters.get(i as usize) {
             None => label.to_string(),
             Some(ParameterInformation {
-                label: ParameterLabel::LabelOffsets([start, end]),
+                label: ParameterInformationLabel::Tuple((start, end)),
                 ..
             }) => {
                 let spaces = " ".repeat(*start as usize);

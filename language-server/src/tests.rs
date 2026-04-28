@@ -21,7 +21,7 @@ use hexpm::version::{Range, Version};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use itertools::Itertools;
-use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
+use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Uri as Url};
 
 use gleam_core::{
     Result,

@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use lsp_types::{
-    CompletionItem, CompletionItemKind, CompletionItemLabelDetails, CompletionTextEdit,
+    CompletionItem, CompletionItemKind, CompletionItemLabelDetails, CompletionItemTextEdit,
     Documentation, MarkupContent, MarkupKind, Position, Range, TextDocumentPositionParams,
     TextEdit,
 };
@@ -208,7 +208,7 @@ impl CursorSurroundings {
     /// > This could also return `None` as sometimes no further edit is actually
     /// > needed!
     ///
-    fn to_text_edit(&self, new_text: String) -> Option<CompletionTextEdit> {
+    fn to_text_edit(&self, new_text: String) -> Option<CompletionItemTextEdit> {
         // We need to check if the new text we're adding could actually be
         // a simple addition in the middle of something that is already being
         // typed.
@@ -247,14 +247,14 @@ impl CursorSurroundings {
             // This is one of the cases (like the one in the example above) were
             // the label is a more complete version of the text surrounding the
             // cursor. So we replace the entire range.
-            Some(_) => Some(CompletionTextEdit::Edit(TextEdit {
+            Some(_) => Some(CompletionItemTextEdit::TextEdit(TextEdit {
                 range: self.surrounding_text_range,
                 new_text,
             })),
             // In all other cases the completion is never meant to replace text
             // that comes after the cursor.
             // We only replace what comes before it with the new text.
-            None => Some(CompletionTextEdit::Edit(TextEdit {
+            None => Some(CompletionItemTextEdit::TextEdit(TextEdit {
                 range: self.text_before_cursor_range,
                 new_text,
             })),
@@ -632,8 +632,8 @@ impl<'a, IO> Completer<'a, IO> {
             .iter()
             .map(|(name, _)| CompletionItem {
                 label: name.to_string(),
-                kind: Some(CompletionItemKind::MODULE),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                kind: Some(CompletionItemKind::Module),
+                text_edit: Some(CompletionItemTextEdit::TextEdit(TextEdit {
                     range: Range { start, end },
                     new_text: name.to_string(),
                 })),
@@ -680,7 +680,7 @@ impl<'a, IO> Completer<'a, IO> {
                 completions.push(CompletionItem {
                     label,
                     detail: Some("Type".into()),
-                    kind: Some(CompletionItemKind::CLASS),
+                    kind: Some(CompletionItemKind::Class),
                     sort_text,
                     ..Default::default()
                 });
@@ -910,31 +910,31 @@ impl<'a, IO> Completer<'a, IO> {
                     PreludeType::Bool => {
                         push_prelude_completion(
                             "True",
-                            CompletionItemKind::ENUM_MEMBER,
+                            CompletionItemKind::EnumMember,
                             type_::bool(),
                         );
                         push_prelude_completion(
                             "False",
-                            CompletionItemKind::ENUM_MEMBER,
+                            CompletionItemKind::EnumMember,
                             type_::bool(),
                         );
                     }
                     PreludeType::Nil => {
                         push_prelude_completion(
                             "Nil",
-                            CompletionItemKind::ENUM_MEMBER,
+                            CompletionItemKind::EnumMember,
                             type_::nil(),
                         );
                     }
                     PreludeType::Result => {
                         push_prelude_completion(
                             "Ok",
-                            CompletionItemKind::CONSTRUCTOR,
+                            CompletionItemKind::Constructor,
                             type_::result(type_::unbound_var(0), type_::unbound_var(0)),
                         );
                         push_prelude_completion(
                             "Error",
-                            CompletionItemKind::CONSTRUCTOR,
+                            CompletionItemKind::Constructor,
                             type_::result(type_::unbound_var(0), type_::unbound_var(0)),
                         );
                     }
@@ -1201,7 +1201,7 @@ impl<'a, IO> Completer<'a, IO> {
                 CompletionItem {
                     label,
                     detail,
-                    kind: Some(CompletionItemKind::FIELD),
+                    kind: Some(CompletionItemKind::Field),
                     sort_text,
                     ..Default::default()
                 }
@@ -1237,7 +1237,7 @@ impl<'a, IO> Completer<'a, IO> {
 
         CompletionItem {
             label: label.clone(),
-            kind: Some(CompletionItemKind::KEYWORD),
+            kind: Some(CompletionItemKind::Keyword),
             detail: None,
             label_details: None,
             documentation: None,
@@ -1269,11 +1269,11 @@ impl<'a, IO> Completer<'a, IO> {
         let type_ = Printer::new().pretty_print(&value.type_, 0);
 
         let kind = Some(match value.variant {
-            ValueConstructorVariant::LocalVariable { .. } => CompletionItemKind::VARIABLE,
-            ValueConstructorVariant::ModuleConstant { .. } => CompletionItemKind::CONSTANT,
-            ValueConstructorVariant::ModuleFn { .. } => CompletionItemKind::FUNCTION,
-            ValueConstructorVariant::Record { arity: 0, .. } => CompletionItemKind::ENUM_MEMBER,
-            ValueConstructorVariant::Record { .. } => CompletionItemKind::CONSTRUCTOR,
+            ValueConstructorVariant::LocalVariable { .. } => CompletionItemKind::Variable,
+            ValueConstructorVariant::ModuleConstant { .. } => CompletionItemKind::Constant,
+            ValueConstructorVariant::ModuleFn { .. } => CompletionItemKind::Function,
+            ValueConstructorVariant::Record { arity: 0, .. } => CompletionItemKind::EnumMember,
+            ValueConstructorVariant::Record { .. } => CompletionItemKind::Constructor,
         });
 
         let documentation = value.get_documentation().map(|documentation| {
@@ -1304,7 +1304,7 @@ impl<'a, IO> Completer<'a, IO> {
 
         CompletionItem {
             label: label.into(),
-            kind: Some(CompletionItemKind::FIELD),
+            kind: Some(CompletionItemKind::Field),
             detail: Some(type_),
             sort_text: Some(sort_text(CompletionKind::FieldAccessor, label, type_match)),
             ..Default::default()
@@ -1339,9 +1339,9 @@ fn type_completion(
     };
 
     let kind = Some(if type_.type_.is_variable() {
-        CompletionItemKind::VARIABLE
+        CompletionItemKind::Variable
     } else {
-        CompletionItemKind::CLASS
+        CompletionItemKind::Class
     });
 
     let completion_text = match type_completion_context {
@@ -1467,7 +1467,7 @@ impl<'a> LocalCompletion<'a> {
 
         CompletionItem {
             label: label.clone(),
-            kind: Some(CompletionItemKind::VARIABLE),
+            kind: Some(CompletionItemKind::Variable),
             detail: Some(type_),
             label_details: Some(CompletionItemLabelDetails {
                 detail: None,
@@ -1479,7 +1479,7 @@ impl<'a> LocalCompletion<'a> {
                 &label,
                 type_match,
             )),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+            text_edit: Some(CompletionItemTextEdit::TextEdit(TextEdit {
                 range: insert_range,
                 new_text: label.clone(),
             })),

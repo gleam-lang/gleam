@@ -9,6 +9,7 @@ expression: completions
         kind: Some(
             Module,
         ),
+        tags: None,
         detail: None,
         documentation: None,
         deprecated: None,
@@ -19,7 +20,7 @@ expression: completions
         insert_text_format: None,
         insert_text_mode: None,
         text_edit: Some(
-            Edit(
+            TextEdit(
                 TextEdit {
                     range: Range {
                         start: Position {
@@ -35,11 +36,11 @@ expression: completions
                 },
             ),
         ),
+        text_edit_text: None,
         additional_text_edits: None,
-        command: None,
         commit_characters: None,
+        command: None,
         data: None,
-        tags: None,
     },
     CompletionItem {
         label: "example_module",
@@ -47,6 +48,7 @@ expression: completions
         kind: Some(
             Module,
         ),
+        tags: None,
         detail: None,
         documentation: None,
         deprecated: None,
@@ -57,7 +59,7 @@ expression: completions
         insert_text_format: None,
         insert_text_mode: None,
         text_edit: Some(
-            Edit(
+            TextEdit(
                 TextEdit {
                     range: Range {
                         start: Position {
@@ -73,11 +75,11 @@ expression: completions
                 },
             ),
         ),
+        text_edit_text: None,
         additional_text_edits: None,
-        command: None,
         commit_characters: None,
+        command: None,
         data: None,
-        tags: None,
     },
     CompletionItem {
         label: "indirect_module",
@@ -85,6 +87,7 @@ expression: completions
         kind: Some(
             Module,
         ),
+        tags: None,
         detail: None,
         documentation: None,
         deprecated: None,
@@ -95,7 +98,7 @@ expression: completions
         insert_text_format: None,
         insert_text_mode: None,
         text_edit: Some(
-            Edit(
+            TextEdit(
                 TextEdit {
                     range: Range {
                         start: Position {
@@ -111,10 +114,10 @@ expression: completions
                 },
             ),
         ),
+        text_edit_text: None,
         additional_text_edits: None,
-        command: None,
         commit_characters: None,
+        command: None,
         data: None,
-        tags: None,
     },
 ]

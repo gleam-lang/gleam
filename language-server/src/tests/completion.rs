@@ -29,7 +29,7 @@ fn apply_completion(src: &str, completions: Vec<CompletionItem>, value: &str) ->
         .unwrap_or_else(|| panic!("no completion with value `{value}`"));
 
     let mut edits = vec![];
-    if let Some(lsp_types::CompletionTextEdit::Edit(edit)) = &completion.text_edit {
+    if let Some(lsp_types::CompletionItemTextEdit::TextEdit(edit)) = &completion.text_edit {
         edits.push(edit.clone());
     }
     apply_code_edit(src, edits)
@@ -98,6 +98,7 @@ fn format_completion_results(completions: Vec<CompletionItem>) -> EcoString {
         kind,
         detail,
         documentation,
+        #[allow(deprecated)]
         deprecated,
         preselect,
         sort_text,
@@ -111,6 +112,7 @@ fn format_completion_results(completions: Vec<CompletionItem>) -> EcoString {
         commit_characters,
         data,
         tags,
+        text_edit_text,
     } in completions
     {
         assert!(deprecated.is_none());
@@ -123,6 +125,7 @@ fn format_completion_results(completions: Vec<CompletionItem>) -> EcoString {
         assert!(commit_characters.is_none());
         assert!(data.is_none());
         assert!(tags.is_none());
+        assert!(text_edit_text.is_none());
 
         buffer.push_str(&label);
 
@@ -167,7 +170,7 @@ fn format_completion_results(completions: Vec<CompletionItem>) -> EcoString {
         };
 
         if let Some(text_edit) = text_edit {
-            let lsp_types::CompletionTextEdit::Edit(e) = text_edit else {
+            let lsp_types::CompletionItemTextEdit::TextEdit(e) = text_edit else {
                 panic!("unexpected text edit in test {text_edit:?}");
             };
             buffer.push_str("\n  edits:");

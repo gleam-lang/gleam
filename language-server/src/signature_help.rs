@@ -5,8 +5,8 @@ use std::{
 
 use ecow::EcoString;
 use lsp_types::{
-    Documentation, MarkupContent, MarkupKind, ParameterInformation, ParameterLabel, SignatureHelp,
-    SignatureInformation,
+    ActiveParameter, Documentation, MarkupContent, MarkupKind, ParameterInformation,
+    ParameterInformationLabel, SignatureHelp, SignatureInformation,
 };
 
 use gleam_core::{
@@ -142,7 +142,8 @@ fn signature_help(
     let active_parameter = active_parameter_index(arity, supplied_arguments, index_to_label)
         // If we don't want to highlight any arg in the suggestion we have to
         // explicitly provide an out of bound index.
-        .or(Some(arity));
+        .or(Some(arity))
+        .map(ActiveParameter::Int);
 
     Some(SignatureHelp {
         signatures: vec![SignatureInformation {
@@ -266,7 +267,7 @@ fn print_signature_help(
         }
         signature.push_str(&printer.print_type(argument));
         let arg_end = signature.len();
-        let label = ParameterLabel::LabelOffsets([arg_start as u32, arg_end as u32]);
+        let label = ParameterInformationLabel::Tuple((arg_start as u32, arg_end as u32));
 
         parameter_informations.push(ParameterInformation {
             label,
