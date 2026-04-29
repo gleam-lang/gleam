@@ -521,3 +521,7 @@ jobs:
       - name: Test publishing with default main
         run: ./test.sh
         working-directory: ./test/publishing_default_main
+
+      - name: Test compilation after renaming project dir
+        run: ./test.sh
+        working-directory: ./test/compile_after_rename

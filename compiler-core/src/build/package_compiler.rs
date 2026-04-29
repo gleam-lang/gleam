@@ -5,7 +5,7 @@ use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::build::package_loader::CacheFiles;
 
 use crate::error::{DefinedModuleOrigin, FailedModule, SkipReason, SkippedModule};
-use crate::io::files_with_extension;
+use crate::io::{files_with_extension, make_relative};
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
@@ -277,7 +277,7 @@ where
         let priv_build = self.out.join("priv");
         if self.io.is_directory(&priv_source) && !self.io.is_directory(&priv_build) {
             tracing::debug!("linking_priv_to_build");
-            self.io.symlink_dir(&priv_source, &priv_build)?;
+            self.io.symlink_dir_relative(&priv_source, &priv_build)?;
         }
 
         let copier = NativeFileCopier::new(

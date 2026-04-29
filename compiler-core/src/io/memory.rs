@@ -193,6 +193,10 @@ impl FileSystemWriter for InMemoryFileSystem {
         panic!("unimplemented") // TODO
     }
 
+    fn symlink_dir_relative(&self, _: &Utf8Path, _: &Utf8Path) -> Result<(), Error> {
+        panic!("unimplemented") // TODO
+    }
+
     fn delete_file(&self, path: &Utf8Path) -> Result<(), Error> {
         let mut files = self.files.deref().borrow_mut();
         if files.get(path).is_some_and(|f| f.is_directory()) {
