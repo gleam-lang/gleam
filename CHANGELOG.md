@@ -357,6 +357,9 @@
   type error.
   ([Landon Boles](https://github.com/TheLDB))
 
+- Fixed a bug where the compiler would crash due to a broken symlink when renaming a project directory.
+  ([Rafael Epplée](https://github.com/raffomania))
+
 ## v1.19.2 - 2026-10-12
 
 ### Bug fixes
