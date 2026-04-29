@@ -332,9 +332,11 @@ pub fn wobble() {
 }
 ";
 
-    assert_completion!(TestProject::for_source(code)
-        .add_module("dep", dep)
-        .add_module("dep2", dep2));
+    assert_completion!(
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("dep2", dep2)
+    );
 }
 
 #[test]
@@ -393,9 +395,11 @@ fn importable_adds_extra_new_line_if_import_exists_below_other_definitions() {
     let dep = "pub fn wobble() {\nNil\n}";
     let code = "\nimport dep2\n"; // "code" goes after "fn typing_in_here() {}".
 
-    assert_completion!(TestProject::for_source(code)
-        .add_module("dep", dep)
-        .add_module("dep2", ""));
+    assert_completion!(
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("dep2", "")
+    );
 }
 
 #[test]
