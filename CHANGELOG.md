@@ -46,6 +46,10 @@
 
 ### Build tool
 
+- The `gleam remove` command now updates `gleam.toml` when `manifest.toml` is
+  missing rather than reporting a file IO error.
+  ([Arjun Rawal](https://github.com/arjunrawal1))
+
 - The `gleam dev` command now accepts the `--no-print-progress` flag. When this
   flag is passed, no progress information is printed.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

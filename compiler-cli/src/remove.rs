@@ -46,7 +46,54 @@ pub fn command(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
 
     // Write the updated config
     fs::write(root_config.as_path(), &toml.to_string())?;
+
+    // If there is no manifest, there is no dependency state to clean up.
+    // This can happen in a newly created project or while users are temporarily
+    // recreating their manifest. Removing the entry from gleam.toml is enough.
+    if !paths.manifest().exists() {
+        return Ok(());
+    }
+
     _ = crate::dependencies::cleanup(paths, cli::Reporter::new())?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use camino::Utf8PathBuf;
+    use gleam_core::paths::ProjectPaths;
+    use pretty_assertions::assert_eq;
+
+    use super::command;
+
+    #[test]
+    fn remove_dependency_without_manifest() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
+        let paths = ProjectPaths::new(root.clone());
+        std::fs::write(
+            root.join("gleam.toml"),
+            r#"name = "app"
+version = "1.0.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.44.0 and < 2.0.0"
+gleeunit = ">= 1.0.0 and < 2.0.0"
+"#,
+        )
+        .unwrap();
+
+        command(&paths, vec!["gleeunit".to_string()]).unwrap();
+
+        assert_eq!(
+            std::fs::read_to_string(root.join("gleam.toml")).unwrap(),
+            r#"name = "app"
+version = "1.0.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.44.0 and < 2.0.0"
+"#
+        );
+    }
 }
