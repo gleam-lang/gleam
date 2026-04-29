@@ -5,6 +5,7 @@ use gleam_core::{
     io::{
         BeamCompiler, Command, CommandExecutor, Content, DirEntry, FileSystemReader,
         FileSystemWriter, OutputFile, ReadDir, Stdio, WrappedReader, is_native_file_extension,
+        make_relative,
     },
     manifest::Manifest,
     paths::ProjectPaths,

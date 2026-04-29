@@ -186,3 +186,7 @@
   build directory was manually deleted. The compiler now automatically rebuilds
   the project when this configuration changes.
   ([daniellionel01](https://github.com/daniellionel01))
+
+- Fixed a bug where the compiler would crash when renaming a project directory
+  due to a broken symlink.
+  ([Rafael Epplée](https://github.com/raffomania))
