@@ -69,9 +69,41 @@ pub fn read(config_path: Utf8PathBuf) -> Result<(PackageConfig, Vec<Warning>), E
         err: Some(e.to_string()),
     })?;
     config.check_gleam_compatibility()?;
-    let warnings = config
+    let unknown_keys = config
         .unknown
         .keys()
+        .map(ToOwned::to_owned)
+        .chain(
+            config
+                .documentation
+                .unknown
+                .keys()
+                .map(|key| format!("docs.{key}")),
+        )
+        .chain(
+            config
+                .erlang
+                .unknown
+                .keys()
+                .map(|key| format!("erlang.{key}")),
+        )
+        .chain(
+            config
+                .javascript
+                .unknown
+                .keys()
+                .map(|key| format!("javascript.{key}")),
+        )
+        .chain(
+            config
+                .javascript
+                .deno
+                .unknown
+                .keys()
+                .map(|key| format!("javascript.deno.{key}")),
+        );
+
+    let warnings = unknown_keys
         .map(|key| Warning::UnknownConfigKey { name: key.into() })
         .collect::<Vec<_>>();
     Ok((config, warnings))

@@ -754,7 +754,7 @@ impl Default for PackageConfig {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Default, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct ErlangConfig {
     /// An module that can be set in the `.app` file as the entrypoint for a stateful application
     /// that defines a singleton supervision tree.
@@ -768,6 +768,9 @@ pub struct ErlangConfig {
     pub application_start_argument: Option<EcoString>,
     #[serde(default)]
     pub extra_applications: Vec<EcoString>,
+    /// This entry contains unknown values, which are used later to generate warning
+    #[serde(default, flatten)]
+    pub unknown: Table,
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
@@ -780,6 +783,9 @@ pub struct JavaScriptConfig {
     pub runtime: Runtime,
     #[serde(default, rename = "deno")]
     pub deno: DenoConfig,
+    /// This entry contains unknown values, which are used later to generate warning
+    #[serde(default, flatten)]
+    pub unknown: Table,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -851,7 +857,7 @@ where
     deserializer.deserialize_any(StringOrVec(PhantomData))
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Default, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct DenoConfig {
     #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
     pub allow_env: DenoFlag,
@@ -879,6 +885,9 @@ pub struct DenoConfig {
         deserialize_with = "uri_serde::deserialize_option"
     )]
     pub location: Option<Uri>,
+    /// This entry contains unknown values, which are used later to generate warning
+    #[serde(default, flatten)]
+    pub unknown: Table,
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
@@ -1017,17 +1026,23 @@ impl Repository {
     }
 }
 
-#[derive(Deserialize, Serialize, Default, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Default, Debug, PartialEq, Clone)]
 pub struct Docs {
     #[serde(default)]
     pub pages: Vec<DocsPage>,
+    /// This entry contains unknown values, which are used later to generate warning
+    #[serde(default, flatten)]
+    pub unknown: Table,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct DocsPage {
     pub title: String,
     pub path: String,
     pub source: Utf8PathBuf,
+    /// This entry contains unknown values, which are used later to generate warning
+    #[serde(default, flatten)]
+    pub unknown: Table,
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
