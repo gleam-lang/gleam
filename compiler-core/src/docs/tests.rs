@@ -96,6 +96,7 @@ fn compile_with_markdown_pages(
             title: (*title).into(),
             path: Utf8PathBuf::from(format!("{title}.html")),
             source: format!("{title}.md").into(),
+            unknown: Default::default(),
         })
         .collect_vec();
 
