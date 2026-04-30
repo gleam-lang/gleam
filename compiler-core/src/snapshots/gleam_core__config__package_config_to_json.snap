@@ -40,6 +40,9 @@ allow_env = ["DATABASE_URL"]
 allow_net = ["example.com:443"]
 allow_read = ["./database.sqlite"]
 
+[tools.my_tool]
+enable = true
+
 
 --- EXPORTED JSON
 
@@ -122,5 +125,10 @@ allow_read = ["./database.sqlite"]
   "target": "erlang",
   "internal_modules": [
     "my_app/internal"
-  ]
+  ],
+  "tools": {
+    "my_tool": {
+      "enable": true
+    }
+  }
 }

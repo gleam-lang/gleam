@@ -1411,6 +1411,9 @@ allow_ffi = true
 allow_env = ["DATABASE_URL"]
 allow_net = ["example.com:443"]
 allow_read = ["./database.sqlite"]
+
+[tools.my_tool]
+enable = true
 "#;
 
     let config = toml::from_str::<PackageConfig>(input).unwrap();
@@ -1454,4 +1457,36 @@ wibble = ">= 1.0.0 and < 2.0.0"
 "#;
     let canonical = deserialise_config("gleam.toml", toml.into()).expect("valid config");
     assert_eq!(canonical, hyphen_alternative)
+}
+
+#[test]
+fn unknown_keys_warning() {
+    let toml = r#"
+name = "wibble"
+version = "1.0.0"
+repository = { type = "github", user = "user", repo = "repo", wibble = "wobble" }
+links = [{ title = "Website", href = "https://example.com", wibble = "wobble" }]
+wibble = true
+
+[erlang]
+wibble = true
+
+[javascript]
+wibble = true
+
+[javascript.deno]
+wibble = true
+
+[tools.my_tool]
+enable = true
+"#;
+    let config = deserialise_config("gleam.toml", toml.into()).expect("valid config");
+    let warnings = config.generate_unknown_key_warnings();
+    let warnings = warnings
+        .into_iter()
+        .map(|warning| warning.to_pretty_string())
+        .collect::<String>();
+
+    let output = format!("--- GLEAM.TOML\n{toml}\n\n--- WARNINGS\n\n{warnings}");
+    insta::assert_snapshot!(output);
 }
