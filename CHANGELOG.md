@@ -80,9 +80,8 @@
   ([Sahil Upasane](https://github.com/404salad))
 
 - The build tool will now show a warning for unknown keys in `gleam.toml`. Note
-  that it doesn't give warnings for keys under `[tools]` taht is only supported
-  place for tools to place configuration. For example, project with this
-  `gleam.toml`:
+  that it doesn't give warnings for keys under `[tools]` that is only supported
+  place for tools' configuration. For example, project with this `gleam.toml`:
 
   ```toml
   name = "wibble"
