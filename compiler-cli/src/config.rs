@@ -1,6 +1,7 @@
 use camino::Utf8PathBuf;
 
 use gleam_core::{
+    Warning,
     config::PackageConfig,
     error::{Error, FileIoAction, FileKind},
     manifest::{Manifest, ManifestPackage, ManifestPackageSource},
@@ -35,11 +36,14 @@ pub fn find_package_config_for_module(
             continue;
         }
 
-        let configuration = read(root.join("gleam.toml"))?;
+        // We don't want warnings for config of dependency
+        let (configuration, _) = read(root.join("gleam.toml"))?;
         return Ok((configuration, PackageKind::Dependency));
     }
 
-    Ok((root_config(project_paths)?, PackageKind::Root))
+    // We don't want warnings for config of dependency
+    let (config, _) = root_config(project_paths)?;
+    Ok((config, PackageKind::Root))
 }
 
 fn package_root(package: &ManifestPackage, project_paths: &ProjectPaths) -> Utf8PathBuf {
@@ -52,11 +56,11 @@ fn package_root(package: &ManifestPackage, project_paths: &ProjectPaths) -> Utf8
     }
 }
 
-pub fn root_config(paths: &ProjectPaths) -> Result<PackageConfig, Error> {
+pub fn root_config(paths: &ProjectPaths) -> Result<(PackageConfig, Vec<Warning>), Error> {
     read(paths.root_config())
 }
 
-pub fn read(config_path: Utf8PathBuf) -> Result<PackageConfig, Error> {
+pub fn read(config_path: Utf8PathBuf) -> Result<(PackageConfig, Vec<Warning>), Error> {
     let toml = crate::fs::read(&config_path)?;
     let config: PackageConfig = toml::from_str(&toml).map_err(|e| Error::FileIo {
         action: FileIoAction::Parse,
@@ -65,7 +69,12 @@ pub fn read(config_path: Utf8PathBuf) -> Result<PackageConfig, Error> {
         err: Some(e.to_string()),
     })?;
     config.check_gleam_compatibility()?;
-    Ok(config)
+    let warnings = config
+        .unknown
+        .keys()
+        .map(|key| Warning::UnknownConfigKey { name: key.into() })
+        .collect::<Vec<_>>();
+    Ok((config, warnings))
 }
 
 pub fn ensure_config_exists(paths: &ProjectPaths) -> Result<(), Error> {
