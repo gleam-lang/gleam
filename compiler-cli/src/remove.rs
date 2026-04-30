@@ -46,7 +46,16 @@ pub fn command(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
 
     // Write the updated config
     fs::write(root_config.as_path(), &toml.to_string())?;
-    _ = crate::dependencies::cleanup(paths, cli::Reporter::new())?;
+
+    // If manifest.toml is missing (fresh `gleam new` project, or one where
+    // the user temporarily deleted manifest.toml while debugging dependency
+    // conflicts), there's nothing to resolve against -- removing the entry
+    // from gleam.toml is the whole job. Running cleanup() would try to read
+    // manifest.toml and error out with a confusing "File IO failure" even
+    // though gleam.toml was already updated correctly. See #5654.
+    if paths.manifest().exists() {
+        _ = crate::dependencies::cleanup(paths, cli::Reporter::new())?;
+    }
 
     Ok(())
 }

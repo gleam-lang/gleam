@@ -112,6 +112,13 @@
 
 ### Bug fixes
 
+- Fixed a bug where `gleam remove` would fail with a confusing "File IO failure"
+  error reading `manifest.toml` when the manifest didn't exist (e.g. on a fresh
+  project that hadn't yet resolved dependencies, or after manually deleting
+  `manifest.toml`). The dependency entry is now removed from `gleam.toml`
+  without attempting resolution when there is no manifest to clean up.
+  ([Matt Van Horn](https://github.com/mvanhorn))
+
 - Fixed a bug where the build tool would check for new major versions of a local
   or git dependency on Hex when running `gleam update`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
