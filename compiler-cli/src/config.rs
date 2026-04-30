@@ -2,7 +2,7 @@ use camino::Utf8PathBuf;
 
 use gleam_core::{
     Warning,
-    config::PackageConfig,
+    config::{PackageConfig, Repository},
     error::{Error, FileIoAction, FileKind},
     manifest::{Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
@@ -69,6 +69,7 @@ pub fn read(config_path: Utf8PathBuf) -> Result<(PackageConfig, Vec<Warning>), E
         err: Some(e.to_string()),
     })?;
     config.check_gleam_compatibility()?;
+    // Collect unknown keys from root and subkeys
     let unknown_keys = config
         .unknown
         .keys()
@@ -79,6 +80,35 @@ pub fn read(config_path: Utf8PathBuf) -> Result<(PackageConfig, Vec<Warning>), E
                 .unknown
                 .keys()
                 .map(|key| format!("docs.{key}")),
+        )
+        .chain(
+            config
+                .repository
+                .as_ref()
+                .map(|repo| match repo {
+                    Repository::GitHub { unknown, .. }
+                    | Repository::GitLab { unknown, .. }
+                    | Repository::BitBucket { unknown, .. }
+                    | Repository::Codeberg { unknown, .. }
+                    | Repository::SourceHut { unknown, .. }
+                    | Repository::Tangled { unknown, .. }
+                    | Repository::Gitea { unknown, .. }
+                    | Repository::Forgejo { unknown, .. }
+                    | Repository::Custom { unknown, .. } => unknown,
+                })
+                .into_iter()
+                .flat_map(|unknown| {
+                    unknown
+                        .into_iter()
+                        .map(|(key, _)| format!("repository.{key}"))
+                }),
+        )
+        .chain(
+            config
+                .links
+                .iter()
+                .flat_map(|link| &link.unknown)
+                .map(|(key, _)| format!("links.{key}")),
         )
         .chain(
             config

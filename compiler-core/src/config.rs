@@ -890,7 +890,7 @@ pub struct DenoConfig {
     pub unknown: Table,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 #[serde(tag = "type")]
 pub enum Repository {
     #[serde(rename = "github")]
@@ -900,6 +900,10 @@ pub enum Repository {
         path: Option<String>,
         #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
     #[serde(rename = "gitlab")]
     GitLab {
@@ -908,6 +912,10 @@ pub enum Repository {
         path: Option<String>,
         #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
     #[serde(rename = "bitbucket")]
     BitBucket {
@@ -916,6 +924,10 @@ pub enum Repository {
         path: Option<String>,
         #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
     #[serde(rename = "codeberg")]
     Codeberg {
@@ -924,6 +936,10 @@ pub enum Repository {
         path: Option<String>,
         #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
     #[serde(rename = "gitea")]
     Gitea {
@@ -937,6 +953,10 @@ pub enum Repository {
             deserialize_with = "uri_serde_default_https::deserialize"
         )]
         host: Uri,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
     #[serde(rename = "forgejo")]
     Forgejo {
@@ -950,6 +970,10 @@ pub enum Repository {
             deserialize_with = "uri_serde_default_https::deserialize"
         )]
         host: Uri,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
     #[serde(rename = "sourcehut")]
     SourceHut {
@@ -958,6 +982,10 @@ pub enum Repository {
         path: Option<String>,
         #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
     #[serde(rename = "tangled")]
     Tangled {
@@ -966,12 +994,20 @@ pub enum Repository {
         path: Option<String>,
         #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
     #[serde(rename = "custom")]
     Custom {
         url: String,
         #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
 }
 
@@ -1045,11 +1081,14 @@ pub struct DocsPage {
     pub unknown: Table,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct Link {
     pub title: String,
     #[serde(with = "uri_serde")]
     pub href: Uri,
+    /// This entry contains unknown values, which are used later to generate warning
+    #[serde(default, flatten)]
+    pub unknown: Table,
 }
 
 // Note we don't use http-serde since we also want to validate the scheme and host is set.
