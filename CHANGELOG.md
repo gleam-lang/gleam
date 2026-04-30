@@ -145,3 +145,11 @@
 - Fixed a bug where the compiler would generate invalid code for guards using
   lists with a tail.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler would not warn for integers over the safe
+  JavaScript limit in `BitArray` segments with a unit option.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler would incorrectly warn for integers over the
+  safe JavaScript limit in `BitArray` byte segments that aren't integers.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
