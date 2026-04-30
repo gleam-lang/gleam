@@ -5,7 +5,7 @@ use crate::io::ordered_map;
 use crate::manifest::Manifest;
 use crate::requirement::Requirement;
 use crate::version::COMPILER_VERSION;
-use crate::{Error, Result};
+use crate::{Error, Result, Warning};
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
 use globset::{Glob, GlobSetBuilder};
@@ -326,6 +326,71 @@ impl PackageConfig {
             }
         }
         Ok(())
+    }
+
+    /// Return list of warnings for unknown keys in config
+    pub fn generate_unknown_key_warnings(&self) -> Vec<Warning> {
+        // Collect unknown keys from root and subkeys
+        let unknown_keys = self
+            .unknown
+            .keys()
+            .map(ToOwned::to_owned)
+            .chain(
+                self.documentation
+                    .unknown
+                    .keys()
+                    .map(|key| format!("docs.{key}")),
+            )
+            .chain(
+                self.repository
+                    .as_ref()
+                    .map(|repo| match repo {
+                        Repository::GitHub { unknown, .. }
+                        | Repository::GitLab { unknown, .. }
+                        | Repository::BitBucket { unknown, .. }
+                        | Repository::Codeberg { unknown, .. }
+                        | Repository::SourceHut { unknown, .. }
+                        | Repository::Tangled { unknown, .. }
+                        | Repository::Gitea { unknown, .. }
+                        | Repository::Forgejo { unknown, .. }
+                        | Repository::Custom { unknown, .. } => unknown,
+                    })
+                    .into_iter()
+                    .flat_map(|unknown| {
+                        unknown
+                            .into_iter()
+                            .map(|(key, _)| format!("repository.{key}"))
+                    }),
+            )
+            .chain(
+                self.links
+                    .iter()
+                    .flat_map(|link| &link.unknown)
+                    .map(|(key, _)| format!("links.{key}")),
+            )
+            .chain(
+                self.erlang
+                    .unknown
+                    .keys()
+                    .map(|key| format!("erlang.{key}")),
+            )
+            .chain(
+                self.javascript
+                    .unknown
+                    .keys()
+                    .map(|key| format!("javascript.{key}")),
+            )
+            .chain(
+                self.javascript
+                    .deno
+                    .unknown
+                    .keys()
+                    .map(|key| format!("javascript.deno.{key}")),
+            );
+
+        unknown_keys
+            .map(|key| Warning::UnknownConfigKey { name: key.into() })
+            .collect::<Vec<_>>()
     }
 
     pub fn tag_for_version(&self, version: &Version) -> String {
