@@ -4962,6 +4962,34 @@ pub fn go(x: BitArray) {
     );
 }
 
+#[test]
+fn bit_array_match_on_integer_over_js_limit_with_unit() {
+    assert_js_warning!(
+        "
+pub fn go(x: BitArray) {
+  case x {
+    <<n:2-unit(250)>> -> n
+    _ -> 1
+  }
+}
+"
+    );
+}
+
+#[test]
+fn bit_array_match_on_bytes_does_not_complain_about_integer_size() {
+    assert_js_no_warnings!(
+        "
+pub fn go(x: BitArray) {
+  case x {
+    <<n:150-bytes>> -> n
+    _ -> <<>>
+  }
+}
+"
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/5599
 #[test]
 fn bit_array_size_constant() {

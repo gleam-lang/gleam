@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-expression: "\npub fn go(x: BitArray) {\n  case x {\n    <<n:size(53)>> -> n\n    _ -> 1\n  }\n}\n"
+expression: "\npub fn go(x: BitArray) {\n  case x {\n    <<n:2-unit(250)>> -> n\n    _ -> 1\n  }\n}\n"
 ---
 ----- SOURCE CODE
 
 pub fn go(x: BitArray) {
   case x {
-    <<n:size(53)>> -> n
+    <<n:2-unit(250)>> -> n
     _ -> 1
   }
 }
@@ -16,10 +16,10 @@ pub fn go(x: BitArray) {
 warning: Truncated bit array segment
   ┌─ /src/warning/wrn.gleam:4:7
   │
-4 │     <<n:size(53)>> -> n
-  │       ^^^^^^^^^^
+4 │     <<n:2-unit(250)>> -> n
+  │       ^^^^^^^^^^^^^
 
-This segment is a 53-bit long int, but on the JavaScript target numbers
+This segment is a 500-bit long int, but on the JavaScript target numbers
 have at most 52 bits. It would be truncated to its first 52 bits.
 
 Hint: Did you mean to use the `bytes` segment option?

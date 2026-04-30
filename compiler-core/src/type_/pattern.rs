@@ -494,7 +494,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             .expect("The function always returns Ok");
 
         self.check_pattern_segment_size_expression(&options);
-        self.check_matched_int_is_in_js_bounds(segment.value.as_ref(), &options);
 
         let segment_type = match bit_array::type_options_for_pattern(
             &options,
@@ -640,12 +639,16 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             | Pattern::Invalid { .. } => {}
         };
 
-        BitArraySegment {
+        let typed_segment = BitArraySegment {
             location: segment.location,
             value: Box::new(typed_value),
             options,
             type_,
-        }
+        };
+
+        self.check_matched_int_is_in_js_bounds(&typed_segment);
+
+        typed_segment
     }
 
     /// When we have an assignment or a case expression we unify the pattern with the
@@ -1532,61 +1535,36 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     /// That's the maximum size of ints on the JS target, matching on anything
     /// bigger would result in the number being truncated.
     ///
-    fn check_matched_int_is_in_js_bounds(
-        &mut self,
-        pattern: &UntypedPattern,
-        options: &[BitArrayOption<TypedPattern>],
-    ) {
+    fn check_matched_int_is_in_js_bounds(&mut self, segment: &TypedPatternBitArraySegment) {
         // This only makes sense to check on the js target
         // And if the segment actually defines a variable that would end up
-        // being truncated.
-        if self.environment.target != Target::JavaScript {
+        // being truncated and that is an integer!
+        if self.environment.target != Target::JavaScript || !segment.type_.is_int() {
             return;
         }
-        let (Pattern::Assign { .. } | Pattern::Variable { .. }) = pattern else {
-            return;
-        };
-
-        // We need to check if there's an explicit size value for the segment.
-        let Some((location, size_value)) = options.iter().find_map(|option| match option {
-            BitArrayOption::Size {
-                value, location, ..
-            } => Some((location, value)),
-
-            BitArrayOption::Bytes { .. }
-            | BitArrayOption::Int { .. }
-            | BitArrayOption::Float { .. }
-            | BitArrayOption::Bits { .. }
-            | BitArrayOption::Utf8 { .. }
-            | BitArrayOption::Utf16 { .. }
-            | BitArrayOption::Utf32 { .. }
-            | BitArrayOption::Utf8Codepoint { .. }
-            | BitArrayOption::Utf16Codepoint { .. }
-            | BitArrayOption::Utf32Codepoint { .. }
-            | BitArrayOption::Signed { .. }
-            | BitArrayOption::Unsigned { .. }
-            | BitArrayOption::Big { .. }
-            | BitArrayOption::Little { .. }
-            | BitArrayOption::Native { .. }
-            | BitArrayOption::Unit { .. } => None,
-        }) else {
+        let (Pattern::Assign { .. } | Pattern::Variable { .. }) = segment.value.as_ref() else {
             return;
         };
 
         // The size must be a compile time known number, otherwise there's not
         // much we can tell about it.
-        let Pattern::BitArraySize(size) = size_value.as_ref() else {
+        let Some(Pattern::BitArraySize(size)) = segment.size() else {
             return;
         };
+
+        // We need to check if there's an explicit size value for the segment.
         let Some(size) = size.compile_time_number() else {
             return;
         };
 
+        let unit = segment.unit();
+        let bits = size.clone() * unit;
+
         // If the size is above the JS limit we raise a warning.
-        if size > BigInt::from(52) {
+        if bits > BigInt::from(52) {
             self.problems.warning(Warning::JavaScriptBitArrayUnsafeInt {
-                location: *location,
-                size,
+                location: segment.location,
+                size: bits,
             });
         }
     }

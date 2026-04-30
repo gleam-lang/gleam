@@ -218,6 +218,14 @@
   patterns and guards of a case arm.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler would not warn for integers over the safe
+  JavaScript limit in `BitArray` segments with a unit option.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler would incorrectly warn for integers over the
+  safe JavaScript limit in `BitArray` byte segments that aren't integers.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a bug where enabling `javascript.typescript_declarations` or
   `javascript.source_maps` wouldn't generate their additional files unless the
   build directory was manually deleted. The compiler now automatically rebuilds
