@@ -123,6 +123,7 @@ allow_read = ["./database.sqlite"]
     "target": "erlang",
     "internal_modules": [
       "my_app/internal"
-    ]
+    ],
+    "tools": {}
   }
 }
