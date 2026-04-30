@@ -38,7 +38,8 @@ pub(crate) fn main_with_warnings(
     warnings: Rc<dyn WarningEmitterIO>,
 ) -> Result<Built> {
     let perform_codegen = options.codegen;
-    let root_config = crate::config::root_config(paths)?;
+    // Config warnings should already be emitted while dependency resolution
+    let (root_config, _) = crate::config::root_config(paths)?;
     let telemetry: &'static dyn Telemetry = if options.no_print_progress {
         &NullTelemetry
     } else {

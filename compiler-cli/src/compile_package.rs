@@ -24,7 +24,11 @@ pub fn command(options: CompilePackage) -> Result<()> {
     let mut defined_modules = im::HashMap::new();
     let warnings = WarningEmitter::new(Rc::new(ConsoleWarningEmitter));
     let paths = ProjectPaths::new(options.package_directory.clone());
-    let config = config::read(paths.root_config())?;
+    let (config, config_warnings) = config::read(paths.root_config())?;
+
+    for warning in config_warnings {
+        warnings.emit(warning);
+    }
 
     let target = match options.target {
         Target::Erlang => TargetCodegenConfiguration::Erlang { app_file: None },
