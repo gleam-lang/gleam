@@ -69,6 +69,6 @@ getrandom = { version = "0.2", features = ["js"] }
 # Non-empty vectors
 vec1 = "1"
 # Pubgrub dependency resolution algorithm
-pubgrub = "0.3"
+pubgrub = "0.4"
 # Open the user's web browser
 opener = "0"
