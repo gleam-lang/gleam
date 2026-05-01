@@ -370,7 +370,7 @@ jobs:
           persist-credentials: false
 
       - name: Ensure no merge commits
-        uses: NexusPHP/no-merge-commits@4f0fa727cc774b7b0d459b4d2372c3fc14f242d7 # v2.4.0
+        uses: NexusPHP/no-merge-commits@109a3342781ddcf26b2fa739f29e8ee9f68b7d8e # v2.4.1
         if: github.event_name == 'pull_request'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
