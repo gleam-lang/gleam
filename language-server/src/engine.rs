@@ -191,8 +191,6 @@ where
         self.compiler.take_warnings()
     }
 
-    // TODO: implement unqualified imported module functions
-    //
     pub fn goto_definition(
         &mut self,
         params: lsp::GotoDefinitionParams,
