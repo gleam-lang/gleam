@@ -260,6 +260,10 @@ fn alias_references_in_module(
             }
             ReferenceKind::Import { as_name_location } => {
                 match as_name_location {
+                    Some(as_name_location) if params.new_name == *name => edits.delete(
+                        // cut 4 chars earlier to include the " as "
+                        SrcSpan::new(as_name_location.start - 4, as_name_location.end),
+                    ),
                     Some(as_name_location) => {
                         edits.replace(as_name_location, params.new_name.clone())
                     }
