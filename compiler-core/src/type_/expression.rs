@@ -3050,6 +3050,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .clone();
 
         // infer the record being updated
+        let spread_location = record.location;
         let record = self.infer(*record.base);
         let record_location = record.location();
         let record_type = record.type_();
@@ -3085,8 +3086,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let variant =
             self.infer_record_update_variant(&typed_constructor, &value_constructor, &record_var)?;
 
-        let arguments =
-            self.infer_record_update_arguments(&variant, &record_var, arguments, location)?;
+        let arguments = self.infer_record_update_arguments(
+            &variant,
+            &record_var,
+            arguments,
+            location,
+            spread_location,
+        )?;
 
         Ok(TypedExpr::RecordUpdate {
             location,
@@ -3103,6 +3109,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         record: &TypedExpr,
         arguments: Vec<UntypedRecordUpdateArg>,
         location: SrcSpan,
+        spread_location: SrcSpan,
     ) -> Result<Vec<TypedCallArg>, Error> {
         let record_location = record.location();
         let record_type = record.type_();
@@ -3318,8 +3325,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         if implicit_arguments.is_empty() {
-            self.problems
-                .warning(Warning::AllFieldsRecordUpdate { location });
+            self.problems.warning(Warning::AllFieldsRecordUpdate {
+                location,
+                record_location: SrcSpan::new(
+                    spread_location.start,
+                    arguments
+                        .first()
+                        .map_or(spread_location.end, |argument| argument.location.start),
+                ),
+            });
         }
 
         let arguments = explicit_arguments
@@ -3786,6 +3800,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 self.track_feature_usage(FeatureKind::ConstantRecordUpdate, location);
+                let first_argument_start =
+                    arguments.first().map(|argument| argument.location.start);
+
                 let constructor = match self.infer_value_constructor(&module, &name, &location) {
                     Ok(constructor) => constructor,
                     Err(error) => {
@@ -3878,7 +3895,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                                 given: typed_record_type,
                                 situation: None,
                             },
-                            record.location,
+                            record.base.location(),
                         ));
                         return self.new_invalid_constant(location);
                     };
@@ -3887,7 +3904,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // For multi-variant custom types, you can't spread Dog to create Cat
                 if tag != base_tag {
                     self.problems.error(Error::UnsafeRecordUpdate {
-                        location: record.location,
+                        location: record.base.location(),
                         reason: UnsafeRecordUpdateReason::WrongVariant {
                             constructed_variant: tag,
                             spread_variant: base_tag,
@@ -3959,8 +3976,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                 // Emit warning if all fields are being overridden
                 if implicit_labelled_arguments.is_empty() {
-                    self.problems
-                        .warning(Warning::AllFieldsRecordUpdate { location });
+                    self.problems.warning(Warning::AllFieldsRecordUpdate {
+                        location,
+                        record_location: SrcSpan::new(
+                            record.location.start,
+                            first_argument_start.unwrap_or(record.location.end),
+                        ),
+                    });
                 }
 
                 // Check that fields implicitly overridden (including unlabelled ones) have compatible types.
@@ -3987,7 +4009,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             } = unify_error
                             {
                                 Error::UnsafeRecordUpdate {
-                                    location: record.location,
+                                    location: record.base.location(),
                                     reason: UnsafeRecordUpdateReason::IncompatibleFieldTypes {
                                         constructed_variant: expected_type.clone(),
                                         record_variant: typed_record_type.clone(),

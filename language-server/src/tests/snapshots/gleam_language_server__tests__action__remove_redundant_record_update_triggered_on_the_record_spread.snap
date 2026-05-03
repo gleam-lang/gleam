@@ -1,0 +1,21 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn go(record: Wibble) {\n  Wibble(..record, a: 1, b: 2)\n}\n\npub type Wibble { Wibble(a: Int, b: Int) }\n"
+---
+----- BEFORE ACTION
+
+pub fn go(record: Wibble) {
+  Wibble(..record, a: 1, b: 2)
+         ↑                    
+}
+
+pub type Wibble { Wibble(a: Int, b: Int) }
+
+
+----- AFTER ACTION
+
+pub fn go(record: Wibble) {
+  Wibble(a: 1, b: 2)
+}
+
+pub type Wibble { Wibble(a: Int, b: Int) }

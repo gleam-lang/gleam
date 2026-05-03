@@ -3523,10 +3523,10 @@ where
     ) -> Result<Option<UntypedConstant>, ParseError> {
         match self.maybe_one(&Token::LeftParen) {
             Some((par_s, _)) => {
-                if self.maybe_one(&Token::DotDot).is_some() {
+                if let Some((dot_dot_start, _)) = self.maybe_one(&Token::DotDot) {
                     let record = match self.parse_const_value()? {
                         Some(value) => RecordBeingUpdated {
-                            location: value.location(),
+                            location: SrcSpan::new(dot_dot_start, value.location().end),
                             base: Box::new(value),
                         },
                         None => {

@@ -541,7 +541,7 @@ A use expression must always be followed by at least one expression.",
                     }),
                 },
 
-                type_::Warning::AllFieldsRecordUpdate { location } => Diagnostic {
+                type_::Warning::AllFieldsRecordUpdate { location, .. } => Diagnostic {
                     title: "Redundant record update".into(),
                     text: "".into(),
                     hint: Some("It is better style to use the record creation syntax.".into()),

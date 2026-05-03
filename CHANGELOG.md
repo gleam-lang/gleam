@@ -108,6 +108,38 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now has a code action to remove a redundant record update.
+  For example:
+
+  ```gleam
+  pub type User {
+    User(name: String, likes: List(String))
+  }
+
+  pub fn main() {
+    let lucy = User(name: "Lucy", likes: ["Gleam", "Ice Cream"])
+    let jak = User(..lucy, name: "Jak", likes: ["Gleam", "Dogs"])
+    //             ^^^^^^ This record update is not needed!
+  }
+  ```
+
+  This record update is not actually needed and will raise a warning, all fields
+  are already specified. Triggering the code action anywhere on the expression
+  will remove the unnecessary update:
+
+  ```gleam
+  pub type User {
+    User(name: String, likes: List(String))
+  }
+
+  pub fn main() {
+    let lucy = User(name: "Lucy", likes: ["Gleam", "Ice Cream"])
+    let jak = User(name: "Jak", likes: ["Gleam", "Dogs"])
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server no longer shows completions for deprecated values from
   dependencies.
   ([Andrey Kozhev](https://github.com/ankddev))

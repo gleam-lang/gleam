@@ -886,7 +886,20 @@ pub enum Warning {
     },
 
     AllFieldsRecordUpdate {
+        /// The location of the entire redundant record expression.
         location: SrcSpan,
+        /// The location covering the record spread, including any comma that
+        /// might come after it:
+        ///
+        /// ```gleam
+        /// Wibble(..wibble, a: 1)
+        /// //     ^^^^^^^^^ This!
+        /// ```
+        ///
+        /// You might wonder why include the comma location as well, that's
+        /// what's most handy for the language server to suggest automatic
+        /// fixes to remove the record!
+        record_location: SrcSpan,
     },
 
     UnusedType {
