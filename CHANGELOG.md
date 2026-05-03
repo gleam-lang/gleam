@@ -149,3 +149,7 @@
 - Fixed a bug where the compiler would generate invalid code for guards using
   lists with a tail.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Made link href validation in gleam.toml files less strict so developers can
+  use relative links for internal documentation.
+  ([Tristan-Mihai Radulescu](https://github.com/Courtcircuits))

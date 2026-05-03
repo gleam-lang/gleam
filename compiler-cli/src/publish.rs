@@ -16,6 +16,7 @@ use gleam_core::{
     type_,
 };
 use hexpm::version::{Range, Version};
+use http::Uri;
 use itertools::Itertools;
 use sha2::Digest;
 use std::{collections::HashMap, io::Write, path::PathBuf};
@@ -577,7 +578,7 @@ fn metadata_config<'a>(
     source_files: &[Utf8PathBuf],
     generated_files: &[(Utf8PathBuf, String)],
 ) -> Result<String> {
-    let repo_url = http::Uri::try_from(
+    let repo_url = Uri::try_from(
         config
             .repository
             .as_ref()
@@ -598,6 +599,20 @@ fn metadata_config<'a>(
             }),
         })
         .collect();
+    let links: Vec<(&str, Uri)> = config
+        .links
+        .iter()
+        .map(|l| (l.title.as_str(), l.href.clone()))
+        .filter(|(_, href)| !href.clone().is_internal())
+        .map(|(title, href)| {
+            (
+                title,
+                href.as_uri().expect("Internal link not marked as internal"),
+            )
+        })
+        .chain(repo_url.into_iter().map(|u| ("Repository", u)))
+        .collect();
+
     let metadata = ReleaseMetadata {
         name: &config.name,
         version: &config.version,
@@ -605,12 +620,7 @@ fn metadata_config<'a>(
         source_files,
         generated_files,
         licenses: &config.licences,
-        links: config
-            .links
-            .iter()
-            .map(|l| (l.title.as_str(), l.href.clone()))
-            .chain(repo_url.into_iter().map(|u| ("Repository", u)))
-            .collect(),
+        links,
         requirements: requirements?,
         build_tools: vec!["gleam"],
     }
@@ -747,7 +757,7 @@ pub struct ReleaseMetadata<'a> {
     source_files: &'a [Utf8PathBuf],
     generated_files: &'a [(Utf8PathBuf, String)],
     licenses: &'a Vec<SpdxLicense>,
-    links: Vec<(&'a str, http::Uri)>,
+    links: Vec<(&'a str, Uri)>,
     requirements: Vec<ReleaseRequirement<'a>>,
     build_tools: Vec<&'a str>,
     // What should this be? I can't find it in the API anywhere.
@@ -756,7 +766,7 @@ pub struct ReleaseMetadata<'a> {
 
 impl ReleaseMetadata<'_> {
     pub fn as_erlang(&self) -> String {
-        fn link(link: &(&str, http::Uri)) -> String {
+        fn link(link: &(&str, Uri)) -> String {
             format!(
                 "\n  {{<<\"{name}\"/utf8>>, <<\"{url}\"/utf8>>}}",
                 name = link.0,
