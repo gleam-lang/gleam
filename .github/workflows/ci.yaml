@@ -105,7 +105,7 @@ jobs:
           rebar3-version: "3"
 
       - name: Setup Node
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "25"
 
@@ -125,7 +125,7 @@ jobs:
           key: v1-${{ matrix.target }}
 
       - name: Install Gleam
-        uses: clechasseur/rs-cargo@34806c2f3a52f2f236510fb17044cbcc62f04eba # v5.0.3
+        uses: clechasseur/rs-cargo@2ece93e6f28d1fa8b26fa53e9b3b06844c25a2ce # v5.0.4
         with:
           command: install
           args: "--path gleam-bin --target ${{ matrix.target }} --debug --locked --force"
@@ -150,7 +150,7 @@ jobs:
         if: ${{ matrix.run-integration-tests }}
 
       - name: Run tests
-        uses: clechasseur/rs-cargo@34806c2f3a52f2f236510fb17044cbcc62f04eba # v5.0.3
+        uses: clechasseur/rs-cargo@2ece93e6f28d1fa8b26fa53e9b3b06844c25a2ce # v5.0.4
         with:
           command: test
           # We only want to run the `test-output` when running integration tests.
@@ -330,7 +330,7 @@ jobs:
           toolchain: stable
           target: wasm32-unknown-unknown
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "25"
 
@@ -370,7 +370,7 @@ jobs:
           persist-credentials: false
 
       - name: Ensure no merge commits
-        uses: NexusPHP/no-merge-commits@4f0fa727cc774b7b0d459b4d2372c3fc14f242d7 # v2.4.0
+        uses: NexusPHP/no-merge-commits@109a3342781ddcf26b2fa739f29e8ee9f68b7d8e # v2.4.1
         if: github.event_name == 'pull_request'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -417,7 +417,7 @@ jobs:
       - run: cargo build
 
       - name: Upload artifact (Ubuntu)
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: gleam
           path: target/debug/gleam
