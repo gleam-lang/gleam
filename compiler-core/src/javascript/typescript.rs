@@ -585,7 +585,7 @@ impl<'a> TypeScriptGenerator<'a> {
                     let name = arg
                         .label
                         .as_ref()
-                        .map(|(_, s)| super::maybe_escape_identifier(s))
+                        .map(|(_, s)| super::maybe_escape_property(s))
                         .unwrap_or_else(|| eco_format!("{i}"))
                         .to_doc();
                     docvec![
