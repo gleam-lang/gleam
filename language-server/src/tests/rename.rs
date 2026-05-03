@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use lsp_types::{
-    Position, Range, RenameParams, TextDocumentPositionParams, Url, WorkDoneProgressParams,
+    Position, PrepareRenameParams, PrepareRenamePlaceholder, Range, RenameParams,
+    TextDocumentPositionParams, Uri as Url, WorkDoneProgressParams,
 };
 
 use super::{TestProject, find_position_of, hover};
@@ -16,22 +17,29 @@ fn rename(
     position: Position,
 ) -> Result<Option<(Range, lsp_types::WorkspaceEdit)>, String> {
     let prepare_rename_response = tester.at(position, |engine, params, _| {
-        let params = TextDocumentPositionParams {
-            text_document: params.text_document,
-            position,
+        let params = PrepareRenameParams {
+            text_document_position_params: TextDocumentPositionParams {
+                text_document: params.text_document,
+                position,
+            },
+            work_done_progress_params: WorkDoneProgressParams {
+                work_done_token: None,
+            },
         };
         engine.prepare_rename(params).result.unwrap()
     });
 
     let range = match prepare_rename_response {
-        Some(lsp_types::PrepareRenameResponse::Range(range)) => range,
-        Some(lsp_types::PrepareRenameResponse::RangeWithPlaceholder { range, .. }) => range,
+        Some(lsp_types::PrepareRenameResult::Range(range)) => range,
+        Some(lsp_types::PrepareRenameResult::PrepareRenamePlaceholder(
+            PrepareRenamePlaceholder { range, .. },
+        )) => range,
         _ => return Ok(None),
     };
 
     let outcome = tester.at(position, |engine, params, _| {
         let params = RenameParams {
-            text_document_position: TextDocumentPositionParams {
+            text_document_position_params: TextDocumentPositionParams {
                 text_document: params.text_document,
                 position,
             },

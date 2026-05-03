@@ -13,7 +13,7 @@ fn find_references(
 ) -> Option<HashMap<String, Vec<Range>>> {
     let locations = tester.at(position, |engine, params, _| {
         let params = ReferenceParams {
-            text_document_position: TextDocumentPositionParams {
+            text_document_position_params: TextDocumentPositionParams {
                 text_document: params.text_document,
                 position,
             },

@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use lsp_types::{
-    CodeActionContext, CodeActionParams, PartialResultParams, Position, Range, Url,
+    CodeActionContext, CodeActionParams, PartialResultParams, Position, Range, Uri as Url,
     WorkDoneProgressParams,
 };
 

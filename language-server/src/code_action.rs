@@ -28,7 +28,9 @@ use gleam_core::{
 };
 use im::HashMap;
 use itertools::Itertools;
-use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Url};
+use lsp_types::{
+    CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Uri as Url,
+};
 use vec1::{Vec1, vec1};
 
 use crate::engine::{completely_within, position_within};
@@ -61,6 +63,7 @@ impl CodeActionBuilder {
                 is_preferred: None,
                 disabled: None,
                 data: None,
+                tags: None,
             },
         }
     }
@@ -257,7 +260,7 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
 
         let mut actions = vec![];
         CodeActionBuilder::new("Remove redundant tuples")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut actions);
@@ -417,7 +420,7 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
         let uri = &self.params.text_document.uri;
 
         CodeActionBuilder::new("Convert to case")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(uri.clone(), vec![TextEdit { range, new_text }])
             .preferred(false)
             .push_to(&mut self.actions);
@@ -599,7 +602,7 @@ pub fn code_action_inexhaustive_let_to_case(
         text_edits.replace(*location, new_text);
 
         CodeActionBuilder::new("Convert to case")
-            .kind(CodeActionKind::QUICKFIX)
+            .kind(CodeActionKind::QuickFix)
             .changes(uri.clone(), text_edits.edits)
             .preferred(true)
             .push_to(actions);
@@ -689,7 +692,7 @@ impl<'a> UseLabelShorthandSyntax<'a> {
         }
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Use label shorthand syntax")
-            .kind(CodeActionKind::REFACTOR)
+            .kind(CodeActionKind::Refactor)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -882,7 +885,7 @@ impl<'a> FillInMissingLabelledArgs<'a> {
 
             let mut action = Vec::with_capacity(1);
             CodeActionBuilder::new("Fill labels")
-                .kind(CodeActionKind::QUICKFIX)
+                .kind(CodeActionKind::QuickFix)
                 .changes(self.params.text_document.uri.clone(), self.edits.edits)
                 .preferred(true)
                 .push_to(&mut action);
@@ -1202,7 +1205,7 @@ pub fn code_action_import_module(
             };
 
             CodeActionBuilder::new(title)
-                .kind(CodeActionKind::QUICKFIX)
+                .kind(CodeActionKind::QuickFix)
                 .changes(uri.clone(), edits)
                 .preferred(true)
                 .push_to(actions);
@@ -1353,7 +1356,7 @@ pub fn code_action_add_missing_patterns(
         }
 
         CodeActionBuilder::new("Add missing patterns")
-            .kind(CodeActionKind::QUICKFIX)
+            .kind(CodeActionKind::QuickFix)
             .changes(uri.clone(), edits.edits)
             .preferred(true)
             .push_to(actions);
@@ -1560,7 +1563,7 @@ impl<'a> AddAnnotations<'a> {
         };
 
         CodeActionBuilder::new(title)
-            .kind(CodeActionKind::REFACTOR)
+            .kind(CodeActionKind::Refactor)
             .changes(uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(actions);
@@ -1601,7 +1604,7 @@ impl<'a> AnnotateTopLevelDefinitions<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Annotate all top level definitions")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -1991,7 +1994,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
             "Unqualify {}.{}",
             self.qualified_constructor.used_name, self.qualified_constructor.constructor
         ))
-        .kind(CodeActionKind::REFACTOR)
+        .kind(CodeActionKind::Refactor)
         .changes(self.params.text_document.uri.clone(), self.edits.edits)
         .preferred(false)
         .push_to(&mut action);
@@ -2494,7 +2497,7 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
             module_name,
             constructor.name,
         ))
-        .kind(CodeActionKind::REFACTOR)
+        .kind(CodeActionKind::Refactor)
         .changes(self.params.text_document.uri.clone(), self.edits.edits)
         .preferred(false)
         .push_to(&mut action);
@@ -2867,7 +2870,7 @@ impl<'a> ConvertFromUse<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Convert from `use`")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -3017,7 +3020,7 @@ impl<'a> ConvertToUse<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Convert to `use`")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -3304,7 +3307,7 @@ impl<'a> ExtractVariable<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Extract variable")
-            .kind(CodeActionKind::REFACTOR_EXTRACT)
+            .kind(CodeActionKind::RefactorExtract)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -4054,7 +4057,7 @@ impl<'a> ExtractConstant<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Extract constant")
-            .kind(CodeActionKind::REFACTOR_EXTRACT)
+            .kind(CodeActionKind::RefactorExtract)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -4245,7 +4248,7 @@ impl<'a> ExpandFunctionCapture<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Expand function capture")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -4556,7 +4559,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast, IO> {
         maybe_import(&mut self.edits, self.module, DECODE_MODULE);
 
         CodeActionBuilder::new("Generate dynamic decoder")
-            .kind(CodeActionKind::REFACTOR)
+            .kind(CodeActionKind::Refactor)
             .preferred(false)
             .changes(
                 self.params.text_document.uri.clone(),
@@ -5208,7 +5211,7 @@ fn {name}({record_name}: {type_}) -> {json_type} {{
         maybe_import(&mut self.edits, self.module, JSON_MODULE);
 
         CodeActionBuilder::new("Generate to-JSON function")
-            .kind(CodeActionKind::REFACTOR)
+            .kind(CodeActionKind::Refactor)
             .preferred(false)
             .changes(
                 self.params.text_document.uri.clone(),
@@ -5581,7 +5584,7 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new(action_title)
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -6423,7 +6426,7 @@ impl<'a> GenerateFunction<'a> {
         };
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Generate function")
-            .kind(CodeActionKind::QUICKFIX)
+            .kind(CodeActionKind::QuickFix)
             .changes(uri, self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
@@ -6756,7 +6759,7 @@ impl<'a, IO> GenerateVariant<'a, IO> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Generate variant")
-            .kind(CodeActionKind::QUICKFIX)
+            .kind(CodeActionKind::QuickFix)
             .changes(variant_module, variant_edits)
             .preferred(true)
             .push_to(&mut action);
@@ -7328,7 +7331,7 @@ impl<'a> ConvertToFunctionCall<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Convert to function call")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -7460,7 +7463,7 @@ impl<'a> InlineVariable<'a> {
         self.edits.delete(location);
 
         CodeActionBuilder::new("Inline variable")
-            .kind(CodeActionKind::REFACTOR_INLINE)
+            .kind(CodeActionKind::RefactorInline)
             .changes(
                 self.params.text_document.uri.clone(),
                 std::mem::take(&mut self.edits.edits),
@@ -7698,7 +7701,7 @@ impl<'a> ConvertToPipe<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Convert to pipe")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -7927,7 +7930,7 @@ impl<'a> InterpolateString<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Interpolate string")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -8152,7 +8155,7 @@ impl<'a> FillUnusedFields<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Fill unused fields")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -8250,7 +8253,7 @@ impl<'a> RemoveEchos<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Remove all `echo`s from this module")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -8511,7 +8514,7 @@ impl<'a> WrapInBlock<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Wrap in block")
-            .kind(CodeActionKind::REFACTOR_EXTRACT)
+            .kind(CodeActionKind::RefactorExtract)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -8620,7 +8623,7 @@ impl<'a> FixBinaryOperation<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new(&format!("Use `{}`", replacement.name()))
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
@@ -8703,7 +8706,7 @@ impl<'a> FixTruncatedBitArraySegment<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new(&format!("Replace with `{replacement}`"))
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
@@ -8953,7 +8956,7 @@ impl<'a> RemoveUnusedImports<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Remove unused imports")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
@@ -9004,7 +9007,7 @@ impl<'a> RemoveBlock<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Remove block")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
@@ -9121,7 +9124,7 @@ impl<'a> RemovePrivateOpaque<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Remove opaque from private type")
-            .kind(CodeActionKind::QUICKFIX)
+            .kind(CodeActionKind::QuickFix)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
@@ -9458,7 +9461,7 @@ impl<'a> CollapseNestedCase<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Collapse nested case")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -9662,7 +9665,7 @@ impl<'a> RemoveUnreachableCaseClauses<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Remove unreachable clauses")
-            .kind(CodeActionKind::QUICKFIX)
+            .kind(CodeActionKind::QuickFix)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
@@ -9763,7 +9766,7 @@ impl<'a> AddOmittedLabels<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Add omitted labels")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -10220,7 +10223,7 @@ impl<'a> ExtractFunction<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Extract function")
-            .kind(CodeActionKind::REFACTOR_EXTRACT)
+            .kind(CodeActionKind::RefactorExtract)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -11189,7 +11192,7 @@ impl<'a> MergeCaseBranches<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Merge case branches")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -11425,7 +11428,7 @@ impl<'a> AddMissingTypeParameter<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Add missing type parameter")
-            .kind(CodeActionKind::QUICKFIX)
+            .kind(CodeActionKind::QuickFix)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
@@ -11522,7 +11525,7 @@ impl<'a> ReplaceUnderscoreWithType<'a> {
             .replace(location, format!("{}", printer.print_type(&type_)));
 
         CodeActionBuilder::new("Replace `_` with type")
-            .kind(CodeActionKind::QUICKFIX)
+            .kind(CodeActionKind::QuickFix)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
@@ -11617,7 +11620,7 @@ impl<'a> WrapInAnonymousFunction<'a> {
                 .insert(target.location.end, format!("({arguments}) }}"));
 
             CodeActionBuilder::new("Wrap in anonymous function")
-                .kind(CodeActionKind::REFACTOR_REWRITE)
+                .kind(CodeActionKind::RefactorRewrite)
                 .changes(
                     self.params.text_document.uri.clone(),
                     self.edits.edits.drain(..).collect(),
@@ -11798,7 +11801,7 @@ impl<'a> UnwrapAnonymousFunction<'a> {
             });
 
             CodeActionBuilder::new("Remove anonymous function wrapper")
-                .kind(CodeActionKind::REFACTOR_REWRITE)
+                .kind(CodeActionKind::RefactorRewrite)
                 .changes(self.params.text_document.uri.clone(), edits.edits)
                 .push_to(&mut actions);
         }
