@@ -1,0 +1,39 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\nimport mod.{wibble as wobble}\n\npub fn main() {\n  wobble()\n  mod.wibble()\n}\n"
+---
+----- BEFORE RENAME
+-- mod.gleam
+
+pub fn wibble() {
+  wibble()
+}
+
+
+-- app.gleam
+
+import mod.{wibble as wobble}
+            ↑▔▔▔▔▔           
+
+pub fn main() {
+  wobble()
+  mod.wibble()
+}
+
+
+----- AFTER RENAME
+-- mod.gleam
+
+pub fn wibble() {
+  wibble()
+}
+
+
+-- app.gleam
+
+import mod.{wibble}
+
+pub fn main() {
+  wibble()
+  mod.wibble()
+}
