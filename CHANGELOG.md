@@ -114,6 +114,12 @@
 
 ### Formatter
 
+### Releases
+
+- A `gleam-licences.html` is now included with each release, detailing the
+  licences of the used dependencies.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Bug fixes
 
 - Fixed a bug where the build tool would check for new major versions of a local
