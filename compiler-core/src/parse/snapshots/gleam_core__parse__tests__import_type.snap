@@ -32,8 +32,10 @@ Parsed {
                                     start: 28,
                                     end: 34,
                                 },
+                                as_name_location: None,
                                 name: "Wobble",
                                 as_name: None,
+                                is_upname: true,
                             },
                         ],
                         unqualified_types: [
@@ -46,8 +48,10 @@ Parsed {
                                     start: 20,
                                     end: 26,
                                 },
+                                as_name_location: None,
                                 name: "Wobble",
                                 as_name: None,
+                                is_upname: true,
                             },
                             UnqualifiedImport {
                                 location: SrcSpan {
@@ -58,8 +62,10 @@ Parsed {
                                     start: 41,
                                     end: 47,
                                 },
+                                as_name_location: None,
                                 name: "Wabble",
                                 as_name: None,
+                                is_upname: true,
                             },
                         ],
                         package: (),

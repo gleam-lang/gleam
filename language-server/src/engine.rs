@@ -1050,7 +1050,9 @@ where
                     name,
                     module: module_name,
                     is_type,
+                    is_upname: _,
                     location,
+                    imported_name_location: _,
                 }) => this
                     .compiler
                     .get_module_interface(module_name.as_str())

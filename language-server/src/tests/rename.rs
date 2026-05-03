@@ -531,6 +531,78 @@ pub fn main() {
 }
 
 #[test]
+fn rename_function_from_import() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub fn wibble() {
+  wibble()
+}
+"
+        ),
+        "
+import mod.{wibble}
+
+pub fn main() {
+  wibble()
+  mod.wibble()
+}
+",
+        "some_function",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn rename_function_from_aliased_import() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub fn wibble() {
+  wibble()
+}
+"
+        ),
+        "
+import mod.{wibble as wobble}
+
+pub fn main() {
+  wobble()
+  mod.wibble()
+}
+",
+        "some_function",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn rename_function_from_aliased_import_to_original_name() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub fn wibble() {
+  wibble()
+}
+"
+        ),
+        "
+import mod.{wibble as wobble}
+
+pub fn main() {
+  wobble()
+  mod.wibble()
+}
+",
+        "wibble",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
 fn rename_aliased_function() {
     assert_rename!(
         (
@@ -738,6 +810,81 @@ pub fn main() {
 }
 
 #[test]
+fn rename_constant_from_import() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub const something = 10
+
+fn wibble() {
+  something
+}
+"
+        ),
+        "
+import mod.{something}
+
+pub fn main() {
+  something + mod.something
+}
+",
+        "ten",
+        find_position_of("something")
+    );
+}
+
+#[test]
+fn rename_constant_from_aliased_import() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub const something = 10
+
+fn wibble() {
+  something
+}
+"
+        ),
+        "
+import mod.{something as smth}
+
+pub fn main() {
+  smth + mod.something
+}
+",
+        "ten",
+        find_position_of("something")
+    );
+}
+
+#[test]
+fn rename_constant_from_aliased_import_to_original_name() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub const something = 10
+
+fn wibble() {
+  something
+}
+"
+        ),
+        "
+import mod.{something as smth}
+
+pub fn main() {
+  smth + mod.something
+}
+",
+        "something",
+        find_position_of("something")
+    );
+}
+
+#[test]
 fn rename_aliased_constant() {
     assert_rename!(
         (
@@ -940,6 +1087,87 @@ pub fn main() {
 ",
         "Number",
         find_position_of("Constructor(75")
+    );
+}
+
+#[test]
+fn rename_type_variant_from_import() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub type Wibble {
+  Constructor(Int)
+}
+
+fn wibble() {
+  Constructor(81)
+}
+"
+        ),
+        "
+import mod.{Constructor}
+
+pub fn main() {
+  #(Constructor(75), mod.Constructor(57))
+}
+",
+        "Number",
+        find_position_of("Constructor")
+    );
+}
+
+#[test]
+fn rename_type_variant_from_aliased_import() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub type Wibble {
+  Constructor(Int)
+}
+
+fn wibble() {
+  Constructor(81)
+}
+"
+        ),
+        "
+import mod.{Constructor as C}
+
+pub fn main() {
+  #(C(75), mod.Constructor(57))
+}
+",
+        "Number",
+        find_position_of("Constructor")
+    );
+}
+
+#[test]
+fn rename_type_variant_from_aliased_import_to_original_name() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub type Wibble {
+  Constructor(Int)
+}
+
+fn wibble() {
+  Constructor(81)
+}
+"
+        ),
+        "
+import mod.{Constructor as C}
+
+pub fn main() {
+  #(C(75), mod.Constructor(57))
+}
+",
+        "Constructor",
+        find_position_of("Constructor")
     );
 }
 
@@ -1269,6 +1497,69 @@ pub fn main(w: Wibble) -> mod.Wibble { todo }
 ",
         "SomeType",
         find_position_of("Wibble)")
+    );
+}
+
+#[test]
+fn rename_type_from_import() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub type Wibble { Constructor }
+
+fn wibble(w: Wibble) -> Wibble { todo }
+"
+        ),
+        "
+import mod.{type Wibble}
+
+pub fn main(w: Wibble) -> mod.Wibble { todo }
+",
+        "SomeType",
+        find_position_of("Wibble")
+    );
+}
+
+#[test]
+fn rename_type_from_aliased_import() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub type Wibble { Constructor }
+
+fn wibble(w: Wibble) -> Wibble { todo }
+"
+        ),
+        "
+import mod.{type Wibble as Wobble}
+
+pub fn main(w: Wobble) -> mod.Wibble { todo }
+",
+        "SomeType",
+        find_position_of("Wibble")
+    );
+}
+
+#[test]
+fn rename_type_from_aliased_import_to_original_name() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub type Wibble { Constructor }
+
+fn wibble(w: Wibble) -> Wibble { todo }
+"
+        ),
+        "
+import mod.{type Wibble as Wobble}
+
+pub fn main(w: Wobble) -> mod.Wibble { todo }
+",
+        "Wibble",
+        find_position_of("Wibble")
     );
 }
 
