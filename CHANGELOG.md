@@ -44,6 +44,39 @@
   raised in.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now warns when a public function, constructor, or constant
+  exposes an `@internal` type. For example:
+
+  ```gleam
+  @internal
+  pub type Internal { ... }
+
+  pub fn process(value: Internal) -> Internal {
+    todo
+  }
+  ```
+
+  Will produce:
+
+  ```txt
+  warning: Internal type used in public interface
+    ┌─ /src/wrn.gleam:5:1
+    │
+  5 │ pub fn process(value: Internal) -> Internal {
+    │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  The following type is internal, but is being used by this public export.
+
+      Internal
+
+  Internal types should not be used in a public facing function since
+  they are hidden from the package's documentation.
+  ```
+
+  Using `pub type Alias = Internal` is a safe escape hatch: the alias is
+  public, so using it in a public signature does not trigger the warning.
+  ([Daniele Scaratti](https://github.com/lupodevelop))
+
 ### Build tool
 
 - The `gleam dev` command now accepts the `--no-print-progress` flag. When this
@@ -78,6 +111,11 @@
 - The package manager now has a specific error and automatic re-authentication
   flow for when a Hex session has been revoked or has expired.
   ([Sahil Upasane](https://github.com/404salad))
+
+- `gleam publish` now refuses to publish a package whose public API exposes
+  an `@internal` type directly. Use a public type alias to re-export the
+  type, or remove the `@internal` annotation.
+  ([Daniele Scaratti](https://github.com/lupodevelop))
 
 ### Language server
 
