@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n@internal\npub type Alias(a) = List(a)\n\npub fn foo() -> Alias(Int) { [] }\n"
+---
+----- SOURCE CODE
+
+@internal
+pub type Alias(a) = List(a)
+
+pub fn foo() -> Alias(Int) { [] }
+
+
+----- WARNING
+warning: Internal type used in public interface
+  ┌─ /src/warning/wrn.gleam:5:1
+  │
+5 │ pub fn foo() -> Alias(Int) { [] }
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following internal type is exposed by this public definition:
+
+    test_module.Alias(Int)
+
+Internal types are hidden from the package's documentation, so consumers
+cannot tell what they are. Either remove the `@internal` annotation, or
+re-export the type through a `pub type` alias.

@@ -559,6 +559,7 @@ impl TypeInterface {
 /// have the same id will also have the same incremental number in the end).
 fn from_type_helper(type_: &Type, id_map: &mut IdMap) -> TypeInterface {
     match type_ {
+        Type::Alias { aliased, .. } => from_type_helper(aliased.as_ref(), id_map),
         Type::Fn { arguments, return_ } => TypeInterface::Fn {
             parameters: arguments
                 .iter()
@@ -659,6 +660,7 @@ impl IdMap {
     /// be assigned to a new incremental number.
     fn add_type_variable_id(&mut self, type_: &Type) {
         match type_ {
+            Type::Alias { aliased, .. } => self.add_type_variable_id(aliased.as_ref()),
             // These types have no id to add to the map.
             Type::Named { .. } | Type::Fn { .. } | Type::Tuple { .. } => (),
             // If the type is actually a type variable whose id needs to be mapped.

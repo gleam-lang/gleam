@@ -639,6 +639,22 @@ impl RemapIds {
                     .map(|element| self.type_(element))
                     .collect(),
             },
+            Type::Alias {
+                name,
+                module,
+                publicity,
+                aliased,
+                parameters,
+            } => Type::Alias {
+                name,
+                module,
+                publicity,
+                aliased: self.type_(aliased),
+                parameters: parameters
+                    .into_iter()
+                    .map(|parameter| self.type_(parameter))
+                    .collect(),
+            },
         };
         Arc::new(type_)
     }

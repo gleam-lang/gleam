@@ -89,6 +89,8 @@ impl Printer {
             Type::Tuple { elements, .. } => {
                 self.arguments_to_gleam_doc(elements).surround("#(", ")")
             }
+
+            Type::Alias { aliased, .. } => self.print(aliased),
         }
     }
 

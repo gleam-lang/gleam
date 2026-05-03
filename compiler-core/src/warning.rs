@@ -1022,6 +1022,38 @@ variable, or delete the expression entirely if it's not needed.",
                     }),
                 },
 
+                type_::Warning::InternalTypeLeak {
+                    location,
+                    leaked,
+                    names,
+                } => {
+                    let leaked_str = format!("    {}", Printer::new(names).print_type(leaked));
+                    let text = wrap_format!(
+                        "The following internal type is exposed by this public definition:
+
+{}
+
+Internal types are hidden from the package's documentation, so consumers \
+cannot tell what they are. Either remove the `@internal` annotation, or \
+re-export the type through a `pub type` alias.",
+                        leaked_str,
+                    );
+                    Diagnostic {
+                        title: "Internal type used in public interface".into(),
+                        text,
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
                 type_::Warning::RedundantAssertAssignment { location } => Diagnostic {
                     title: "Redundant assertion".into(),
                     text: wrap(

@@ -1018,6 +1018,23 @@ pub enum Warning {
         location: SrcSpan,
     },
 
+    /// When a public function, constructor, or constant exposes an `@internal`
+    /// type as part of its signature. For example:
+    ///
+    /// ```gleam
+    /// @internal type Wibble
+    ///
+    /// pub fn wibble(thing: Wibble) { todo }
+    /// //            ^^^^^^^^^^^^^ There would be no documentation
+    /// //                          explaining what `Wibble` is in the
+    /// //                          package's doc site.
+    /// ```
+    InternalTypeLeak {
+        location: SrcSpan,
+        leaked: Type,
+        names: Names,
+    },
+
     RedundantAssertAssignment {
         location: SrcSpan,
     },
@@ -1412,6 +1429,7 @@ impl Warning {
             | Warning::CaseMatchOnLiteralCollection { location, .. }
             | Warning::CaseMatchOnLiteralValue { location, .. }
             | Warning::OpaqueExternalType { location, .. }
+            | Warning::InternalTypeLeak { location, .. }
             | Warning::RedundantAssertAssignment { location, .. }
             | Warning::AssertAssignmentOnImpossiblePattern { location, .. }
             | Warning::TodoOrPanicUsedAsFunction { location, .. }
@@ -1434,6 +1452,10 @@ impl Warning {
 
     pub(crate) fn is_todo(&self) -> bool {
         matches!(self, Self::Todo { .. })
+    }
+
+    pub(crate) fn is_internal_type_leak(&self) -> bool {
+        matches!(self, Self::InternalTypeLeak { .. })
     }
 }
 

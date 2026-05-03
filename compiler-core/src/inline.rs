@@ -1676,6 +1676,7 @@ impl FunctionToInlinable {
 
     fn type_(&self, type_: &Arc<Type>) -> InlinableType {
         match collapse_links(type_.clone()).as_ref() {
+            Type::Alias { aliased, .. } => self.type_(aliased),
             Type::Fn { arguments, return_ } => InlinableType::Function {
                 arguments: arguments
                     .iter()

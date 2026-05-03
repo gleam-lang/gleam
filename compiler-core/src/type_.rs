@@ -51,6 +51,18 @@ pub trait HasType {
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Type {
+    /// An explicit type alias declared with `pub type Foo = Bar`.
+    ///
+    /// The alias carries its own publicity so diagnostics can tell "this was an
+    /// alias" instead of accidentally warning about the underlying type.
+    Alias {
+        name: EcoString,
+        module: EcoString,
+        publicity: Publicity,
+        aliased: Arc<Type>,
+        parameters: Vec<Arc<Type>>,
+    },
+
     /// A nominal (named) type such as `Int`, `Float`, or a programmer defined
     /// custom type such as `Person`. The type can take other types as
     /// arguments (aka "generics" or "parametric polymorphism").
@@ -116,6 +128,7 @@ pub enum Type {
 impl Type {
     pub fn is_result_constructor(&self) -> bool {
         match self {
+            Type::Alias { aliased, .. } => aliased.is_result_constructor(),
             Type::Fn { return_, .. } => return_.is_result(),
             Type::Var { type_ } => type_.borrow().is_result_constructor(),
             Type::Named { .. } | Type::Tuple { .. } => false,
@@ -124,6 +137,7 @@ impl Type {
 
     pub fn is_result(&self) -> bool {
         match self {
+            Self::Alias { aliased, .. } => aliased.is_result(),
             Self::Named { name, module, .. } => "Result" == name && is_prelude_module(module),
             Self::Var { type_ } => type_.borrow().is_result(),
             Self::Fn { .. } | Self::Tuple { .. } => false,
@@ -132,6 +146,7 @@ impl Type {
 
     pub fn is_named(&self) -> bool {
         match self {
+            Self::Alias { .. } => true,
             Self::Named { .. } => true,
             Self::Var { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
@@ -139,6 +154,7 @@ impl Type {
 
     pub fn result_ok_type(&self) -> Option<Arc<Type>> {
         match self {
+            Self::Alias { aliased, .. } => aliased.result_ok_type(),
             Self::Named {
                 module,
                 name,
@@ -152,6 +168,7 @@ impl Type {
 
     pub fn result_types(&self) -> Option<(Arc<Type>, Arc<Type>)> {
         match self {
+            Self::Alias { aliased, .. } => aliased.result_types(),
             Self::Named {
                 module,
                 name,
@@ -167,6 +184,7 @@ impl Type {
 
     pub fn is_unbound(&self) -> bool {
         match self {
+            Self::Alias { aliased, .. } => aliased.is_unbound(),
             Self::Var { type_ } => type_.borrow().is_unbound(),
             Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
@@ -174,6 +192,7 @@ impl Type {
 
     pub fn is_variable(&self) -> bool {
         match self {
+            Self::Alias { aliased, .. } => aliased.is_variable(),
             Self::Var { type_ } => type_.borrow().is_variable(),
             Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
         }
@@ -181,6 +200,7 @@ impl Type {
 
     pub fn return_type(&self) -> Option<Arc<Self>> {
         match self {
+            Self::Alias { aliased, .. } => aliased.return_type(),
             Self::Fn { return_, .. } => Some(return_.clone()),
             Self::Var { type_ } => type_.borrow().return_type(),
             Self::Named { .. } | Self::Tuple { .. } => None,
@@ -189,6 +209,7 @@ impl Type {
 
     pub fn fn_types(&self) -> Option<(Vec<Arc<Self>>, Arc<Self>)> {
         match self {
+            Self::Alias { aliased, .. } => aliased.fn_types(),
             Self::Fn {
                 arguments, return_, ..
             } => Some((arguments.clone(), return_.clone())),
@@ -200,6 +221,7 @@ impl Type {
     /// Gets the types inside of a tuple. Returns `None` if the type is not a tuple.
     pub fn tuple_types(&self) -> Option<Vec<Arc<Self>>> {
         match self {
+            Self::Alias { aliased, .. } => aliased.tuple_types(),
             Self::Tuple { elements } => Some(elements.clone()),
             Self::Var { type_, .. } => type_.borrow().tuple_types(),
             Self::Named { .. } | Self::Fn { .. } => None,
@@ -210,6 +232,7 @@ impl Type {
     /// does not lead to a type constructor.
     pub fn constructor_types(&self) -> Option<Vec<Arc<Self>>> {
         match self {
+            Self::Alias { aliased, .. } => aliased.constructor_types(),
             Self::Named { arguments, .. } => Some(arguments.clone()),
             Self::Var { type_, .. } => type_.borrow().constructor_types(),
             Self::Fn { .. } | Self::Tuple { .. } => None,
@@ -220,6 +243,7 @@ impl Type {
     /// type.
     pub fn list_type(&self) -> Option<Arc<Self>> {
         match self {
+            Self::Alias { aliased, .. } => aliased.list_type(),
             Type::Named {
                 publicity: Publicity::Public,
                 name,
@@ -254,6 +278,7 @@ impl Type {
     #[must_use]
     fn is_fun(&self) -> bool {
         match self {
+            Self::Alias { aliased, .. } => aliased.is_fun(),
             Self::Fn { .. } => true,
             Self::Var { type_ } => type_.borrow().is_fun(),
             Self::Named { .. } | Self::Tuple { .. } => false,
@@ -262,6 +287,7 @@ impl Type {
 
     pub fn is_nil(&self) -> bool {
         match self {
+            Self::Alias { aliased, .. } => aliased.is_nil(),
             Self::Named { module, name, .. } if "Nil" == name && is_prelude_module(module) => true,
             Self::Var { type_ } => type_.borrow().is_nil(),
             Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
@@ -270,6 +296,7 @@ impl Type {
 
     pub fn is_bit_array(&self) -> bool {
         match self {
+            Self::Alias { aliased, .. } => aliased.is_bit_array(),
             Self::Named { module, name, .. } if "BitArray" == name && is_prelude_module(module) => {
                 true
             }
@@ -280,6 +307,7 @@ impl Type {
 
     pub fn is_utf_codepoint(&self) -> bool {
         match self {
+            Self::Alias { aliased, .. } => aliased.is_utf_codepoint(),
             Self::Named { module, name, .. }
                 if "UtfCodepoint" == name && is_prelude_module(module) =>
             {
@@ -292,6 +320,7 @@ impl Type {
 
     pub fn is_bool(&self) -> bool {
         match self {
+            Self::Alias { aliased, .. } => aliased.is_bool(),
             Self::Named { module, name, .. } if "Bool" == name && is_prelude_module(module) => true,
             Self::Var { type_ } => type_.borrow().is_bool(),
             Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
@@ -300,6 +329,7 @@ impl Type {
 
     pub fn is_int(&self) -> bool {
         match self {
+            Self::Alias { aliased, .. } => aliased.is_int(),
             Self::Named { module, name, .. } if "Int" == name && is_prelude_module(module) => true,
             Self::Var { type_ } => type_.borrow().is_int(),
             Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
@@ -308,6 +338,7 @@ impl Type {
 
     pub fn is_float(&self) -> bool {
         match self {
+            Self::Alias { aliased, .. } => aliased.is_float(),
             Self::Named { module, name, .. } if "Float" == name && is_prelude_module(module) => {
                 true
             }
@@ -318,6 +349,7 @@ impl Type {
 
     pub fn is_string(&self) -> bool {
         match self {
+            Self::Alias { aliased, .. } => aliased.is_string(),
             Self::Named { module, name, .. } if "String" == name && is_prelude_module(module) => {
                 true
             }
@@ -328,6 +360,7 @@ impl Type {
 
     pub fn is_list(&self) -> bool {
         match self {
+            Self::Alias { aliased, .. } => aliased.is_list(),
             Self::Named { module, name, .. } if "List" == name && is_prelude_module(module) => true,
             Self::Var { type_ } => type_.borrow().is_list(),
             Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => false,
@@ -336,6 +369,7 @@ impl Type {
 
     pub fn named_type_name(&self) -> Option<(EcoString, EcoString)> {
         match self {
+            Self::Alias { aliased, .. } => aliased.named_type_name(),
             Self::Named { module, name, .. } => Some((module.clone(), name.clone())),
             Self::Var { type_ } => type_.borrow().named_type_name(),
             Self::Fn { .. } | Self::Tuple { .. } => None,
@@ -344,6 +378,7 @@ impl Type {
 
     pub fn named_type_information(&self) -> Option<(EcoString, EcoString, Vec<Arc<Self>>)> {
         match self {
+            Self::Alias { aliased, .. } => aliased.named_type_information(),
             Self::Named {
                 module,
                 name,
@@ -357,6 +392,7 @@ impl Type {
 
     pub fn set_custom_type_variant(&mut self, index: u16) {
         match self {
+            Type::Alias { aliased, .. } => Arc::make_mut(aliased).set_custom_type_variant(index),
             Type::Named {
                 inferred_variant, ..
             } => *inferred_variant = Some(index),
@@ -367,6 +403,7 @@ impl Type {
 
     pub fn generalise_custom_type_variant(&mut self) {
         match self {
+            Type::Alias { aliased, .. } => Arc::make_mut(aliased).generalise_custom_type_variant(),
             Type::Named {
                 inferred_variant, ..
             } => *inferred_variant = None,
@@ -387,6 +424,7 @@ impl Type {
 
     pub fn custom_type_inferred_variant(&self) -> Option<u16> {
         match self {
+            Type::Alias { aliased, .. } => aliased.custom_type_inferred_variant(),
             Type::Named {
                 inferred_variant, ..
             } => *inferred_variant,
@@ -411,6 +449,9 @@ impl Type {
         environment: &mut Environment<'_>,
     ) -> Option<Vec<Arc<Self>>> {
         match self {
+            Self::Alias { aliased, .. } => {
+                aliased.named_type_arguments(publicity, package, module, name, arity, environment)
+            }
             Self::Named {
                 module: m,
                 name: n,
@@ -465,6 +506,11 @@ impl Type {
 
     pub fn find_private_type(&self) -> Option<Self> {
         match self {
+            Self::Alias {
+                publicity, aliased, ..
+            } if publicity.is_private() => None,
+            Self::Alias { aliased, .. } => aliased.find_private_type(),
+
             Self::Named {
                 publicity: Publicity::Private,
                 ..
@@ -496,6 +542,13 @@ impl Type {
 
     pub fn find_internal_type(&self) -> Option<Self> {
         match self {
+            // An internal alias is itself the leak. A public alias shields its
+            // inner type (callers see only the alias name). Private aliases are
+            // caught earlier by find_private_type, so return None to avoid
+            // double-reporting.
+            Self::Alias { publicity, .. } if publicity.is_internal() => Some(self.clone()),
+            Self::Alias { .. } => None,
+
             Self::Named { publicity, .. } if publicity.is_internal() => Some(self.clone()),
 
             Self::Named { arguments, .. } => arguments
@@ -523,6 +576,7 @@ impl Type {
 
     pub fn fn_arity(&self) -> Option<usize> {
         match self {
+            Self::Alias { aliased, .. } => aliased.fn_arity(),
             Self::Fn { arguments, .. } => Some(arguments.len()),
             Self::Named { .. } | Self::Var { .. } | Self::Tuple { .. } => None,
         }
@@ -532,6 +586,7 @@ impl Type {
     ///
     pub fn named_type_publicity(&self) -> Option<Publicity> {
         match self {
+            Type::Alias { aliased, .. } => aliased.named_type_publicity(),
             Type::Named { publicity, .. } => Some(*publicity),
             Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => None,
         }
@@ -544,6 +599,33 @@ impl Type {
     ///
     pub fn same_as(&self, other: &Self) -> bool {
         match (self, other) {
+            // name/module are intentionally ignored: same_as tests structural
+            // type equality, not alias identity. Use PartialEq for that.
+            (
+                Type::Alias {
+                    publicity,
+                    aliased,
+                    parameters,
+                    ..
+                },
+                Type::Alias {
+                    publicity: other_publicity,
+                    aliased: other_aliased,
+                    parameters: other_params,
+                    ..
+                },
+            ) => {
+                publicity == other_publicity
+                    && parameters.len() == other_params.len()
+                    && parameters
+                        .iter()
+                        .zip(other_params)
+                        .all(|(a, b)| a.same_as(b))
+                    && aliased.same_as(other_aliased)
+            }
+            (Type::Alias { aliased, .. }, rhs) => aliased.same_as(rhs),
+            (lhs, Type::Alias { aliased, .. }) => lhs.same_as(aliased),
+
             (Type::Named { .. }, Type::Fn { .. } | Type::Tuple { .. }) => false,
             (one @ Type::Named { .. }, Type::Var { type_ }) => {
                 type_.as_ref().borrow().same_as_other_type(one)
@@ -628,6 +710,10 @@ impl TypeVar {
             (TypeVar::Unbound { .. }, _) => true,
             (TypeVar::Link { type_ }, other) => type_.same_as(other),
 
+            (one @ TypeVar::Generic { .. }, Type::Alias { aliased, .. }) => {
+                one.same_as_other_type(aliased)
+            }
+
             (
                 TypeVar::Generic { .. },
                 Type::Named { .. } | Type::Fn { .. } | Type::Tuple { .. },
@@ -658,6 +744,9 @@ impl TypeVar {
 }
 
 pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
+    if let Type::Alias { aliased, .. } = t.deref() {
+        return collapse_links(aliased.clone());
+    }
     if let Type::Var { type_ } = t.deref()
         && let TypeVar::Link { type_ } = type_.borrow().deref()
     {
@@ -1019,6 +1108,12 @@ impl ModuleInterface {
     pub fn contains_todo(&self) -> bool {
         self.warnings.iter().any(|warning| warning.is_todo())
     }
+
+    pub fn contains_internal_type_leak(&self) -> bool {
+        self.warnings
+            .iter()
+            .any(|warning| warning.is_internal_type_leak())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
@@ -1071,6 +1166,20 @@ impl TypeVariantConstructors {
                     .expect("Type parameter not found in hydrator");
                 let error = "Hydrator must not store non generic types here";
                 match t.type_.as_ref() {
+                    Type::Alias { aliased, .. } => match aliased.as_ref() {
+                        Type::Var { type_ } => match type_.borrow().deref() {
+                            TypeVar::Generic { id } => *id,
+                            TypeVar::Unbound { .. } | TypeVar::Link { .. } => panic!("{}", error),
+                        },
+                        Type::Named { .. } | Type::Fn { .. } | Type::Tuple { .. } => {
+                            panic!("{}", error)
+                        }
+                        // A type parameter must resolve to a generic TypeVar.
+                        // Nested aliases cannot appear here because the hydrator
+                        // only wraps the *return* type in Type::Alias, never a
+                        // bare type parameter variable.
+                        Type::Alias { .. } => unreachable!("nested alias in type parameter"),
+                    },
                     Type::Var { type_ } => match type_.borrow().deref() {
                         TypeVar::Generic { id } => *id,
                         TypeVar::Unbound { .. } | TypeVar::Link { .. } => panic!("{}", error),
@@ -1572,6 +1681,7 @@ fn unify_unbound_type(type_: &Type, own_id: u64) -> Result<(), UnifyError> {
     }
 
     match type_ {
+        Type::Alias { aliased, .. } => unify_unbound_type(aliased, own_id),
         Type::Named { arguments, .. } => {
             for argument in arguments {
                 unify_unbound_type(argument, own_id)?
@@ -1650,6 +1760,27 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
                 type_: type_.clone(),
             }),
         },
+
+        Type::Alias {
+            name,
+            module,
+            publicity,
+            aliased,
+            parameters,
+        } => {
+            let aliased = generalise(aliased.clone());
+            let parameters = parameters
+                .iter()
+                .map(|type_| generalise(type_.clone()))
+                .collect();
+            Arc::new(Type::Alias {
+                name: name.clone(),
+                module: module.clone(),
+                publicity: *publicity,
+                aliased,
+                parameters,
+            })
+        }
 
         Type::Named {
             publicity,

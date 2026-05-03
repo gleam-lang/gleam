@@ -610,6 +610,9 @@ fn type_to_definition_locations<'a>(
     importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
 ) -> Vec<DefinitionLocation> {
     match type_.as_ref() {
+        Type::Alias { aliased, .. } => {
+            return type_to_definition_locations(aliased.clone(), importable_modules);
+        }
         // For named types we start with the location of the named type itself
         // followed by the locations of all types they reference in their args.
         //

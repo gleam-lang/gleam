@@ -1,11 +1,12 @@
 use bimap::BiMap;
 use ecow::{EcoString, eco_format};
 use im::HashMap;
+use std::ops::Deref;
 use std::{collections::HashSet, sync::Arc};
 
 use crate::{
     ast::SrcSpan,
-    type_::{Type, TypeAliasConstructor, TypeVar},
+    type_::{Type, TypeAliasConstructor, TypeVar, collapse_links},
 };
 
 /// This class keeps track of what names are used for modules in the current
@@ -122,9 +123,10 @@ pub struct Names {
     /// other packages. This is a common pattern in Gleam, in order to reexport
     /// an internal type, without exposing its implementation details. Because
     /// of this, we want to be able to properly handle this case, and use the
-    /// public alias rather than the internal underlying type. Since Gleam type
-    /// aliases are not part of the type system, we have to track them manually
-    /// here.
+    /// public alias rather than the internal underlying type. Since internal
+    /// types are not visible to external users, we track their public aliases
+    /// here so that diagnostic output names the public alias rather than the
+    /// unexpanded internal type.
     ///
     /// This is a mapping of internal types to their public aliases that we want
     /// to favour over the internal types.
@@ -189,6 +191,25 @@ impl Names {
         parameters: &[Arc<Type>],
     ) {
         match type_ {
+            Type::Alias {
+                aliased,
+                parameters: alias_params,
+                ..
+            } => {
+                if let Type::Named {
+                    module,
+                    name,
+                    arguments,
+                    ..
+                } = aliased.deref()
+                    && compare_arguments(arguments, parameters)
+                    && compare_arguments(alias_params, parameters)
+                {
+                    self.named_type_in_scope(module.clone(), name.clone(), local_alias);
+                    return;
+                }
+                _ = self.local_types.remove_by_right(&local_alias);
+            }
             Type::Named {
                 module,
                 name,
@@ -230,7 +251,8 @@ impl Names {
         alias_name: &EcoString,
         alias: &TypeAliasConstructor,
     ) {
-        match alias.type_.as_ref() {
+        let target = collapse_links(alias.type_.clone());
+        match target.as_ref() {
             Type::Named {
                 publicity,
                 package: type_package,
@@ -243,7 +265,7 @@ impl Names {
                 // - aliasing a type in the same package
                 // - the type is internal
                 // - the alias exposes the same type parameters as the internal type
-                if type_package == package
+                if *type_package == *package
                     && publicity.is_internal()
                     && compare_arguments(arguments, &alias.parameters)
                 {
@@ -253,7 +275,7 @@ impl Names {
                     );
                 }
             }
-            Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => {}
+            Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } | Type::Alias { .. } => {}
         }
     }
 
@@ -475,6 +497,39 @@ impl<'a> Printer<'a> {
 
     fn print(&mut self, type_: &Type, buffer: &mut EcoString, print_mode: PrintMode) {
         match type_ {
+            Type::Alias {
+                name,
+                module,
+                parameters,
+                ..
+            } => {
+                let info = self.names.named_type(module, name, print_mode);
+                match info {
+                    NameContextInformation::Qualified(module, name) => {
+                        buffer.push_str(module);
+                        buffer.push('.');
+                        buffer.push_str(name);
+                    }
+                    NameContextInformation::Unqualified(name) => {
+                        buffer.push_str(name);
+                    }
+                    NameContextInformation::Unimported(module, name) => {
+                        // alias not imported: show the module-qualified name so
+                        // the user knows which type is actually leaking.
+                        if let Some(short) = module.split('/').next_back() {
+                            buffer.push_str(short);
+                            buffer.push('.');
+                        }
+                        buffer.push_str(name);
+                    }
+                }
+                if !parameters.is_empty() {
+                    buffer.push('(');
+                    self.print_arguments(parameters, buffer, print_mode);
+                    buffer.push(')');
+                }
+            }
+
             Type::Named {
                 name,
                 arguments,

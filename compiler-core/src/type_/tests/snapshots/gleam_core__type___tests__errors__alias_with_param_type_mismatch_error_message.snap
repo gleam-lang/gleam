@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "type Pair(a) = #(a, a)\n\npub fn bad() -> Pair(Int) {\n  #(1, \"hello\")\n}"
+snapshot_kind: text
+---
+----- SOURCE CODE
+type Pair(a) = #(a, a)
+
+pub fn bad() -> Pair(Int) {
+  #(1, "hello")
+}
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:3
+  │
+4 │   #(1, "hello")
+  │   ^^^^^^^^^^^^^
+
+The type of this returned value doesn't match the return type
+annotation of this function.
+
+Expected type:
+
+    #(Int, Int)
+
+Found type:
+
+    #(Int, String)

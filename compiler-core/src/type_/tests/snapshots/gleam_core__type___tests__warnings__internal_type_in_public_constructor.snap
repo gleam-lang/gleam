@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n@internal\npub type Wibble {\n  Wibble\n}\n\npub type Wobble {\n    Wobble(Wibble)\n}\n"
+---
+----- SOURCE CODE
+
+@internal
+pub type Wibble {
+  Wibble
+}
+
+pub type Wobble {
+    Wobble(Wibble)
+}
+
+
+----- WARNING
+warning: Internal type used in public interface
+  ┌─ /src/warning/wrn.gleam:8:5
+  │
+8 │     Wobble(Wibble)
+  │     ^^^^^^^^^^^^^^
+
+The following internal type is exposed by this public definition:
+
+    Wibble
+
+Internal types are hidden from the package's documentation, so consumers
+cannot tell what they are. Either remove the `@internal` annotation, or
+re-export the type through a `pub type` alias.

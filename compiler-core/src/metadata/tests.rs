@@ -17,6 +17,7 @@ use crate::{
         self, Deprecation, ModuleInterface, Opaque, References, Type, TypeAliasConstructor,
         TypeConstructor, TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors,
         ValueConstructor, ValueConstructorVariant,
+        error::Warning,
         expression::{Implementations, Purity},
         prelude,
     },
@@ -115,6 +116,57 @@ fn empty_module() {
         references: References::default(),
         inline_functions: HashMap::new(),
     };
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn module_with_alias() {
+    let mut module = ModuleInterface {
+        warnings: vec![],
+        is_internal: true,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "one/two".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        values: HashMap::new(),
+        accessors: HashMap::new(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
+        contains_echo: false,
+
+        references: References::default(),
+        inline_functions: HashMap::new(),
+    };
+    let _ = module.type_aliases.insert(
+        "MyAlias".into(),
+        TypeAliasConstructor {
+            publicity: Publicity::Public,
+            module: "thepackage".into(),
+            type_: Arc::new(Type::Alias {
+                name: "MyAlias".into(),
+                module: "thepackage".into(),
+                aliased: Arc::new(Type::Named {
+                    publicity: Publicity::Private,
+                    package: "".into(),
+                    module: "gleam".into(),
+                    name: "Int".into(),
+                    arguments: vec![],
+                    inferred_variant: None,
+                }),
+                parameters: vec![],
+                publicity: Publicity::Public,
+            }),
+            arity: 0,
+            deprecation: Deprecation::NotDeprecated,
+            documentation: None,
+            origin: SrcSpan::default(),
+            parameters: vec![],
+        },
+    );
     assert_eq!(roundtrip(&module), module);
 }
 
@@ -1859,6 +1911,90 @@ fn module_with_type_aliases() {
         documentation: Vec::new(),
         contains_echo: false,
 
+        references: References::default(),
+        inline_functions: HashMap::new(),
+    };
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn module_with_public_alias_of_internal_type() {
+    let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "some_module".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        values: HashMap::new(),
+        accessors: HashMap::new(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: [(
+            "InternalAlias".into(),
+            TypeAliasConstructor {
+                publicity: Publicity::Public,
+                module: "some_module".into(),
+                type_: Arc::new(Type::Named {
+                    publicity: Publicity::Internal {
+                        attribute_location: Some(SrcSpan::new(0, 1)),
+                    },
+                    package: "some_package".into(),
+                    module: "some_module".into(),
+                    name: "Internal".into(),
+                    arguments: Vec::new(),
+                    inferred_variant: None,
+                }),
+                arity: 0,
+                deprecation: Deprecation::NotDeprecated,
+                documentation: Some("Some documentation".into()),
+                origin: Default::default(),
+                parameters: vec![],
+            },
+        )]
+        .into(),
+        documentation: Vec::new(),
+        contains_echo: false,
+
+        references: References::default(),
+        inline_functions: HashMap::new(),
+    };
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn module_with_internal_type_leak_warning() {
+    let module = ModuleInterface {
+        warnings: vec![Warning::InternalTypeLeak {
+            location: SrcSpan { start: 10, end: 20 },
+            leaked: Type::Named {
+                publicity: Publicity::Internal {
+                    attribute_location: None,
+                },
+                package: "some_package".into(),
+                module: "some_module".into(),
+                name: "Internal".into(),
+                arguments: vec![],
+                inferred_variant: None,
+            },
+            names: type_::printer::Names::new(),
+        }],
+        is_internal: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "some_module".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        values: HashMap::new(),
+        accessors: HashMap::new(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: vec![],
+        contains_echo: false,
         references: References::default(),
         inline_functions: HashMap::new(),
     };

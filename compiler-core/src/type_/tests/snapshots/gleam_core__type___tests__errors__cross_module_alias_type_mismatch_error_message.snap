@@ -1,0 +1,34 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport wibble.{type MyAlias}\n\npub fn bad() -> MyAlias {\n  \"hello\"\n}"
+snapshot_kind: text
+---
+----- SOURCE CODE
+-- wibble.gleam
+pub type MyAlias = Int
+
+-- main.gleam
+
+import wibble.{type MyAlias}
+
+pub fn bad() -> MyAlias {
+  "hello"
+}
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:5:3
+  │
+5 │   "hello"
+  │   ^^^^^^^
+
+The type of this returned value doesn't match the return type
+annotation of this function.
+
+Expected type:
+
+    MyAlias
+
+Found type:
+
+    String

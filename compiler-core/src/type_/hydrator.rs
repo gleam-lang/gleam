@@ -248,9 +248,37 @@ impl Hydrator {
                 // Unify argument types with instantiated parameter types so that the correct types
                 // are inserted into the return type
                 for (parameter, (location, argument)) in
-                    parameter_types.into_iter().zip(argument_types)
+                    parameter_types.iter().cloned().zip(argument_types)
                 {
                     unify(parameter, argument).map_err(|e| convert_unify_error(e, location))?;
+                }
+
+                // If this constructor corresponds to a type alias we need to
+                // wrap the result in Type::Alias so callers can tell an alias
+                // was used, rather than seeing the underlying type directly.
+                let maybe_alias = if let Some((module_name, _)) = module {
+                    // imported module alias? look in the module interface
+                    environment
+                        .importable_modules
+                        .get(&module_name)
+                        .and_then(|m| m.type_aliases.get(name))
+                } else {
+                    environment.module_type_aliases.get(name)
+                };
+
+                if let Some(alias_info) = maybe_alias {
+                    let publicity = alias_info.publicity;
+                    let aliased = return_type.clone();
+                    // `parameter_types` were instantiated above; they may have been
+                    // linked during unification and now reflect the final types.
+                    let parameters = parameter_types;
+                    return Ok(Arc::new(Type::Alias {
+                        name: name.clone(),
+                        module: alias_info.module.clone(),
+                        publicity,
+                        aliased,
+                        parameters,
+                    }));
                 }
 
                 Ok(return_type)

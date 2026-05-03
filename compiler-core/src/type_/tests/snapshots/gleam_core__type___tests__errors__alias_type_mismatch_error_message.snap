@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "type MyAlias = Int\n\npub fn expect_alias(x: MyAlias) -> MyAlias { x }\n\npub fn bad() -> MyAlias {\n  expect_alias(\"hello\")\n}"
+snapshot_kind: text
+---
+----- SOURCE CODE
+type MyAlias = Int
+
+pub fn expect_alias(x: MyAlias) -> MyAlias { x }
+
+pub fn bad() -> MyAlias {
+  expect_alias("hello")
+}
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:6:16
+  │
+6 │   expect_alias("hello")
+  │                ^^^^^^^
+
+Expected type:
+
+    MyAlias
+
+Found type:
+
+    String

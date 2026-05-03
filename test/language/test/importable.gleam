@@ -45,3 +45,16 @@ pub type Movie {
 }
 
 pub const war_games = Movie("WarGames")
+
+/// A simple type alias. Values of type `MovieAlias` are identical at runtime
+/// to `Movie` values; the alias is purely a compile-time name.
+pub type MovieAlias =
+  Movie
+
+/// A parametric type alias. `Pair(a, b)` is interchangeable with `#(a, b)`.
+pub type Pair(a, b) =
+  #(a, b)
+
+pub fn make_pair(a: a, b: b) -> Pair(a, b) {
+  #(a, b)
+}

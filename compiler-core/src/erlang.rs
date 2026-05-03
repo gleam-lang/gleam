@@ -9,7 +9,7 @@ mod tests;
 use crate::build::{Target, module_erlang_name};
 use crate::erlang::pattern::{PatternPrinter, StringPatternAssignment};
 use crate::strings::{convert_string_escape_chars, to_snake_case};
-use crate::type_::is_prelude_module;
+use crate::type_::{collapse_links, is_prelude_module};
 use crate::{
     Result,
     ast::{Function, *},
@@ -1676,22 +1676,26 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
     match &constructor.variant {
         ValueConstructorVariant::Record {
             name: record_name, ..
-        } => match constructor.type_.deref() {
-            Type::Fn { arguments, .. } => {
-                let chars = incrementing_arguments_list(arguments.len());
-                "fun("
-                    .to_doc()
-                    .append(chars.clone())
-                    .append(") -> {")
-                    .append(atom_string(to_snake_case(record_name)))
-                    .append(", ")
-                    .append(chars)
-                    .append("} end")
+        } => {
+            let t = collapse_links(constructor.type_.clone());
+            match t.as_ref() {
+                Type::Fn { arguments, .. } => {
+                    let chars = incrementing_arguments_list(arguments.len());
+                    "fun("
+                        .to_doc()
+                        .append(chars.clone())
+                        .append(") -> {")
+                        .append(atom_string(to_snake_case(record_name)))
+                        .append(", ")
+                        .append(chars)
+                        .append("} end")
+                }
+                Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
+                    atom_string(to_snake_case(record_name))
+                }
+                Type::Alias { .. } => unreachable!(),
             }
-            Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
-                atom_string(to_snake_case(record_name))
-            }
-        },
+        }
 
         ValueConstructorVariant::LocalVariable { .. } => env.local_var_name(name),
 
@@ -1801,12 +1805,16 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
             type_,
             arguments,
             ..
-        } if arguments.is_empty() => match type_.deref() {
-            Type::Fn { arguments, .. } => record_constructor_function(tag, arguments.len()),
-            Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
-                atom_string(to_snake_case(tag))
+        } if arguments.is_empty() => {
+            let t = collapse_links(type_.clone());
+            match t.as_ref() {
+                Type::Fn { arguments, .. } => record_constructor_function(tag, arguments.len()),
+                Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
+                    atom_string(to_snake_case(tag))
+                }
+                Type::Alias { .. } => unreachable!(),
             }
-        },
+        }
 
         Constant::Record { tag, arguments, .. } => {
             // Record updates are fully expanded during type checking, so we just handle arguments
@@ -3134,13 +3142,15 @@ fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'a>) -> Docum
 }
 
 fn module_select_fn<'a>(type_: Arc<Type>, module_name: &'a str, label: &'a str) -> Document<'a> {
-    match crate::type_::collapse_links(type_).as_ref() {
+    match collapse_links(type_).as_ref() {
         Type::Fn { arguments, .. } => function_reference(Some(module_name), label, arguments.len()),
 
-        Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => module_name_atom(module_name)
-            .append(":")
-            .append(atom(label))
-            .append("()"),
+        Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } | Type::Alias { .. } => {
+            module_name_atom(module_name)
+                .append(":")
+                .append(atom(label))
+                .append("()")
+        }
     }
 }
 
@@ -3364,6 +3374,7 @@ fn result_type_var_ids(ids: &mut HashMap<u64, u64>, arg_ok: &Type, arg_err: &Typ
 
 fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
     match type_ {
+        Type::Alias { aliased, .. } => type_var_ids(aliased, ids),
         Type::Var { type_ } => match type_.borrow().deref() {
             TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => {
                 let count = ids.entry(*id).or_insert(0);
@@ -3472,6 +3483,7 @@ impl<'a> TypePrinter<'a> {
 
     pub fn print(&self, type_: &Type) -> Document<'static> {
         match type_ {
+            Type::Alias { aliased, .. } => self.print(aliased.as_ref()),
             Type::Var { type_ } => self.print_var(&type_.borrow()),
 
             Type::Named {

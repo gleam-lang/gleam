@@ -227,6 +227,16 @@ pub fn type_aliases() {
 }
 
 #[test]
+pub fn function_with_aliased_function_type() {
+    assert_package_interface!(
+        "\n
+pub type F = fn(Int) -> Int
+pub fn foo(x: F) -> Int { x 1 }
+"
+    );
+}
+
+#[test]
 pub fn type_definition() {
     assert_package_interface!(
         "

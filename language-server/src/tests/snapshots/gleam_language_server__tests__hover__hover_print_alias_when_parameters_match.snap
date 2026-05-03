@@ -1,6 +1,7 @@
 ---
 source: language-server/src/tests/hover.rs
 expression: "\ntype MyResult(a, b) = Result(a, b)\n\nfn do_thing() -> MyResult(Int, Int) {\n  Error(1)\n}\n"
+snapshot_kind: text
 ---
 
 type MyResult(a, b) = Result(a, b)
@@ -13,5 +14,5 @@ fn do_thing() -> MyResult(Int, Int) {
 
 ----- Hover content (markdown) -----
 ```gleam
-fn() -> MyResult(Int, Int)
+fn() -> app.MyResult(Int, Int)
 ```

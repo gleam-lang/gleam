@@ -1586,14 +1586,6 @@ pub fn main() {
     );
 }
 
-/*
-
-TODO: These tests are commented out until we figure out a better way to deal
-      with reexports of internal types and reintroduce the warning.
-      As things stand it would break both Lustre and Mist.
-      You can see the thread starting around here for more context:
-      https://discord.com/channels/768594524158427167/768594524158427170/1227250677734969386
-
 #[test]
 fn internal_type_in_public_function_return() {
     assert_warning!(
@@ -1691,7 +1683,212 @@ pub type Wobble {
     );
 }
 
-*/
+// New tests verifying alias behaviour
+#[test]
+fn public_alias_of_internal_type_in_public_signature() {
+    assert_no_warnings!(
+        "
+@internal
+pub type Internal { Internal }
+
+pub type Alias = Internal
+
+pub fn foo() -> Alias { Alias }
+"
+    );
+}
+
+#[test]
+fn public_alias_reexported_from_external_module_does_not_warn() {
+    assert_no_warnings!(
+        (
+            "dep",
+            "dep/types",
+            "pub type Internal { Internal } pub type Alias = Internal"
+        ),
+        "
+import dep/types.{type Alias}
+
+pub fn foo() -> Alias { Alias }
+",
+    );
+}
+
+#[test]
+fn nested_public_alias_of_internal_type_does_not_warn() {
+    assert_no_warnings!(
+        "\n@internal
+pub type Internal { Internal }
+
+pub type Mid = Internal
+pub type Outer = Mid
+
+pub fn foo() -> Outer { Outer }
+"
+    );
+}
+
+#[test]
+fn collapse_links_follows_alias_chain() {
+    use crate::type_::{Publicity, Type, collapse_links};
+    use std::sync::Arc;
+
+    // Build a two-alias chain directly: a → b → Tuple(empty).
+    // Verifies that collapse_links traverses the full chain and returns the
+    // underlying non-alias type.
+    let tuple = Arc::new(Type::Tuple { elements: vec![] });
+    let b = Arc::new(Type::Alias {
+        name: "B".into(),
+        module: "test".into(),
+        publicity: Publicity::Public,
+        aliased: tuple,
+        parameters: vec![],
+    });
+    let a = Arc::new(Type::Alias {
+        name: "A".into(),
+        module: "test".into(),
+        publicity: Publicity::Public,
+        aliased: b,
+        parameters: vec![],
+    });
+
+    let result = collapse_links(a);
+    assert!(matches!(result.as_ref(), Type::Tuple { .. }));
+}
+
+#[test]
+fn collapse_links_idempotent() {
+    use crate::type_::{Publicity, Type, collapse_links};
+    use std::sync::Arc;
+
+    // build a long chain of aliases wrapping a simple named type
+    let mut t: Arc<Type> = Arc::new(Type::Named {
+        publicity: Publicity::Public,
+        package: "".into(),
+        module: "gleam".into(),
+        name: "Int".into(),
+        arguments: vec![],
+        inferred_variant: None,
+    });
+    for _ in 0..100 {
+        t = Arc::new(Type::Alias {
+            name: "Alias".into(),
+            module: "test".into(),
+            publicity: Publicity::Public,
+            aliased: t.clone(),
+            parameters: vec![],
+        });
+    }
+
+    let first = collapse_links(t);
+    let second = collapse_links(first.clone());
+    // collapse_links is idempotent: applying it to its own output is a no-op
+    assert_eq!(first, second);
+}
+
+#[test]
+fn internal_alias_in_public_signature_warns() {
+    assert_warning!(
+        "
+@internal
+pub type InternalAlias = Int
+
+pub fn foo() -> InternalAlias { 1 }
+"
+    );
+}
+
+#[test]
+fn internal_type_in_generic_position_warns() {
+    assert_warning!(
+        "
+@internal
+pub type Internal {
+  Internal
+}
+
+pub fn foo() -> List(Internal) { [] }
+"
+    );
+}
+
+#[test]
+fn internal_type_in_public_constant_warns() {
+    assert_warning!(
+        "
+@internal
+pub type Internal {
+  Internal
+}
+
+pub const c: Internal = Internal
+"
+    );
+}
+
+#[test]
+fn internal_type_used_by_internal_function_does_not_warn() {
+    // An @internal function using an @internal type is consistent: neither is
+    // visible to external users, so no warning should be emitted.
+    assert_no_warnings!(
+        "
+@internal
+pub type Internal {
+  Internal
+}
+
+@internal
+pub fn foo() -> Internal { Internal }
+"
+    );
+}
+
+#[test]
+fn internal_parametric_type_in_public_function_warns() {
+    // A parametric @internal type used in a public function should warn,
+    // even when applied to public type arguments.
+    assert_warning!(
+        "
+@internal
+pub type InternalBox(a) {
+  InternalBox(value: a)
+}
+
+pub fn new(x: Int) -> InternalBox(Int) { InternalBox(x) }
+"
+    );
+}
+
+#[test]
+fn public_parametric_alias_of_internal_type_does_not_warn() {
+    // A public parametric alias shields the underlying internal type.
+    // Using the alias in a public function should produce no warning.
+    assert_no_warnings!(
+        "
+@internal
+pub type InternalBox(a) {
+  InternalBox(value: a)
+}
+
+pub type Box(a) = InternalBox(a)
+
+pub fn new(x: Int) -> Box(Int) { InternalBox(x) }
+"
+    );
+}
+
+#[test]
+fn internal_parametric_alias_in_public_function_warns() {
+    // An @internal parametric alias is itself the leaked type.
+    assert_warning!(
+        "
+@internal
+pub type Alias(a) = List(a)
+
+pub fn foo() -> Alias(Int) { [] }
+"
+    );
+}
 
 #[test]
 fn redundant_let_assert() {

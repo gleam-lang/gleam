@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n@internal\npub type InternalAlias = Int\n\npub fn foo() -> InternalAlias { 1 }\n"
+---
+----- SOURCE CODE
+
+@internal
+pub type InternalAlias = Int
+
+pub fn foo() -> InternalAlias { 1 }
+
+
+----- WARNING
+warning: Internal type used in public interface
+  ┌─ /src/warning/wrn.gleam:5:1
+  │
+5 │ pub fn foo() -> InternalAlias { 1 }
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following internal type is exposed by this public definition:
+
+    test_module.InternalAlias
+
+Internal types are hidden from the package's documentation, so consumers
+cannot tell what they are. Either remove the `@internal` annotation, or
+re-export the type through a `pub type` alias.

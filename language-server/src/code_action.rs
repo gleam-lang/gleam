@@ -5774,6 +5774,7 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
         names: &mut NameGenerator,
     ) -> Option<Vec1<EcoString>> {
         match type_ {
+            Type::Alias { aliased, .. } => self.type_to_destructure_patterns(aliased, names),
             Type::Fn { .. } => None,
             Type::Var { type_ } => self.type_var_to_destructure_patterns(&type_.borrow(), names),
 
@@ -8847,7 +8848,8 @@ impl<'a> RemoveUnusedImports<'a> {
                 | type_::Warning::TopLevelDefinitionShadowsImport { .. }
                 | type_::Warning::RedundantComparison { .. }
                 | type_::Warning::UnusedRecursiveArgument { .. }
-                | type_::Warning::JavaScriptBitArrayUnsafeInt { .. } => None,
+                | type_::Warning::JavaScriptBitArrayUnsafeInt { .. }
+                | type_::Warning::InternalTypeLeak { .. } => None,
             })
             .sorted_by_key(|import| import.location())
             .collect_vec();

@@ -1182,7 +1182,7 @@ fn main(wibble: Wubble) {
 }
 
 #[test]
-fn hover_print_underlying_for_alias_with_parameters() {
+fn hover_function_signature_preserves_local_alias() {
     let code = "
 type LocalResult = Result(String, Int)
 

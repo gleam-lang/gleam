@@ -93,6 +93,7 @@ fn collect_generic_usages<'a>(
 
 fn generic_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
     match type_ {
+        Type::Alias { aliased, .. } => generic_ids(aliased.as_ref(), ids),
         Type::Var { type_ } => match type_.borrow().deref() {
             TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => {
                 let count = ids.entry(*id).or_insert(0);
@@ -269,6 +270,9 @@ impl<'a> TypeScriptGenerator<'a> {
     ///
     fn collect_imports_for_type<'b>(&mut self, type_: &'b Type, imports: &mut Imports<'a>) {
         match &type_ {
+            Type::Alias { aliased, .. } => {
+                self.collect_imports_for_type(aliased.as_ref(), imports);
+            }
             Type::Named {
                 package,
                 module,
@@ -893,6 +897,7 @@ impl<'a> TypeScriptGenerator<'a> {
         generic_printing: GenericPrinting<'_>,
     ) -> Document<'static> {
         match type_ {
+            Type::Alias { aliased, .. } => self.do_print(aliased.as_ref(), generic_printing),
             Type::Var { type_ } => self.print_var(&type_.borrow(), generic_printing),
 
             Type::Named {
@@ -923,6 +928,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
     fn do_print_force_generic_param(&mut self, type_: &Type) -> Document<'static> {
         match type_ {
+            Type::Alias { aliased, .. } => self.do_print_force_generic_param(aliased.as_ref()),
             Type::Var { type_ } => self.print_var(&type_.borrow(), GenericPrinting::AlwaysGeneric),
 
             Type::Named {

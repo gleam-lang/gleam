@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\nimport thepackage/internal.{type Wibble}\n\npub fn wibble(_wibble: Wibble) -> Int {\n  1\n}\n"
+---
+----- SOURCE CODE
+-- thepackage/internal.gleam
+pub type Wibble { Wibble }
+
+-- main.gleam
+
+import thepackage/internal.{type Wibble}
+
+pub fn wibble(_wibble: Wibble) -> Int {
+  1
+}
+
+
+----- WARNING
+warning: Internal type used in public interface
+  ┌─ /src/warning/wrn.gleam:4:1
+  │
+4 │ pub fn wibble(_wibble: Wibble) -> Int {
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following internal type is exposed by this public definition:
+
+    Wibble
+
+Internal types are hidden from the package's documentation, so consumers
+cannot tell what they are. Either remove the `@internal` annotation, or
+re-export the type through a `pub type` alias.

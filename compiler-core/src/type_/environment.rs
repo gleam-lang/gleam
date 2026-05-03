@@ -290,6 +290,7 @@ impl Environment<'_> {
     /// Follow link chains in a type to find the final unbound or generic var ID.
     fn resolve_type_var_id(type_: &Type) -> Option<u64> {
         match type_ {
+            Type::Alias { aliased, .. } => Self::resolve_type_var_id(aliased.as_ref()),
             Type::Var { type_ } => match type_.borrow().deref() {
                 TypeVar::Unbound { id } | TypeVar::Generic { id } => Some(*id),
                 TypeVar::Link { type_ } => Self::resolve_type_var_id(type_),
@@ -608,6 +609,26 @@ impl Environment<'_> {
         hydrator: &Hydrator,
     ) -> Arc<Type> {
         match t.deref() {
+            Type::Alias {
+                name,
+                module,
+                publicity,
+                aliased,
+                parameters,
+            } => {
+                let aliased = self.instantiate(aliased.clone(), ids, hydrator);
+                let parameters = parameters
+                    .iter()
+                    .map(|type_| self.instantiate(type_.clone(), ids, hydrator))
+                    .collect();
+                Arc::new(Type::Alias {
+                    name: name.clone(),
+                    module: module.clone(),
+                    publicity: *publicity,
+                    aliased,
+                    parameters,
+                })
+            }
             Type::Named {
                 publicity,
                 name,
@@ -981,11 +1002,23 @@ pub enum Imported {
 /// It two types are found to not be the same an error is returned.
 ///
 pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
+    // Aliases should not affect unification, they are merely a naming
+    // convenience.  We collapse them early so callers need not handle
+    // Alias everywhere.
+    let t1 = if let Type::Var { .. } = t1.deref() {
+        // leave `t1` alone; the existing variable-handling logic below will
+        // still deal with any aliases nested inside when necessary
+        t1
+    } else {
+        collapse_links(t1)
+    };
+    let t2 = collapse_links(t2);
+
     if t1 == t2 {
         return Ok(());
     }
 
-    // Collapse right hand side type links. Left hand side will be collapsed in the next block.
+    // Collapse any remaining TypeVar::Link on the right-hand side.
     if let Type::Var { type_ } = t2.deref()
         && let TypeVar::Link { type_ } = type_.borrow().deref()
     {
