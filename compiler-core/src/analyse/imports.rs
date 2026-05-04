@@ -130,6 +130,20 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         {
             self.problems.error(e);
         }
+
+        // If the imported type is also a public alias in the source module,
+        // mirror it locally so the hydrator wraps references in `Type::Alias`
+        // and the printer can show it without a module prefix. Duplicate
+        // diagnostics are reported by `insert_type_constructor` above.
+        if let Some(alias) = module.type_aliases.get(&import.name) {
+            let alias = alias.clone().with_location(import.location);
+            self.environment
+                .names
+                .alias_in_scope(alias.module.clone(), imported_name.clone());
+            let _ = self
+                .environment
+                .insert_type_alias(imported_name.clone(), alias);
+        }
     }
 
     fn register_unqualified_value(

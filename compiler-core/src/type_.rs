@@ -1628,6 +1628,13 @@ pub struct TypeAliasConstructor {
     pub parameters: Vec<Arc<Type>>,
 }
 
+impl TypeAliasConstructor {
+    pub(crate) fn with_location(mut self, location: SrcSpan) -> Self {
+        self.origin = location;
+        self
+    }
+}
+
 impl ValueConstructor {
     pub fn field_map(&self) -> Option<&FieldMap> {
         match &self.variant {

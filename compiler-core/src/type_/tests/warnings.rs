@@ -5185,3 +5185,83 @@ pub const wobble = todo as wibble
 "
     );
 }
+
+// Same-module variant: a public parametric alias re-exports a parametric
+// `@internal` type and a public function uses it in its signature.
+#[test]
+fn public_parametric_alias_of_internal_type_with_used_param_does_not_warn() {
+    assert_no_warnings!(
+        "
+@internal
+pub type HandlerInternal(message) {
+  HandlerInternal(message)
+}
+
+pub type Handler(message) = HandlerInternal(message)
+
+pub fn with_handler(_h: Handler(Int)) -> Int {
+  0
+}
+"
+    );
+}
+
+// Reproduces the original WebsocketHandler scenario from the issue: the
+// parametric alias and the underlying internal type live in a dependency
+// module and are imported unqualified into the consumer.
+#[test]
+fn public_parametric_alias_of_dependency_internal_type_does_not_warn() {
+    assert_no_warnings!(
+        (
+            "websocket/handler",
+            "@internal pub type HandlerInternal(message) { HandlerInternal(message) }
+pub type Handler(message) = HandlerInternal(message)"
+        ),
+        "
+import websocket/handler.{type Handler}
+
+pub fn with_handler(_h: Handler(Int)) -> Int {
+  0
+}
+",
+    );
+}
+
+// A `pub opaque` type is public but its constructors are not visible outside
+// the module. Exposing it via a public alias must not trigger the @internal
+// leak warning (opacity is unrelated to internality).
+#[test]
+fn public_alias_of_opaque_type_does_not_warn() {
+    assert_no_warnings!(
+        "
+pub opaque type Box {
+  Box(Int)
+}
+
+pub type Wrapped = Box
+
+pub fn make() -> Wrapped { Box(1) }
+"
+    );
+}
+
+// Three-link alias chain pointing at an internal type from another module.
+// As long as every alias along the chain is public, the warning must stay
+// quiet.
+#[test]
+fn multi_link_alias_chain_of_dependency_internal_type_does_not_warn() {
+    assert_no_warnings!(
+        (
+            "dep/internal_module",
+            "@internal pub type Internal { Internal }"
+        ),
+        "
+import dep/internal_module.{type Internal}
+
+pub type Mid = Internal
+pub type Outer = Mid
+
+pub fn use_outer(_x: Outer) -> Int { 0 }
+",
+    );
+}
