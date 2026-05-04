@@ -79,6 +79,10 @@
   flow for when a Hex session has been revoked or has expired.
   ([Sahil Upasane](https://github.com/404salad))
 
+- The build tool now deletes `escript` file after compilation, which is
+  unnecessary once the build is completed.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server can now help with completions when typing a list's tail:
