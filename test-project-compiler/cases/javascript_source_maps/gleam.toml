@@ -1,0 +1,8 @@
+name = "example"
+version = "1.0.0"
+target = "javascript"
+
+[javascript]
+source_maps = true
+
+[dependencies]

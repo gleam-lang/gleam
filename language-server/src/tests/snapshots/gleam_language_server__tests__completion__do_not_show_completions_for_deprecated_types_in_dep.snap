@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\nimport dep\n\npub fn wobble() -> W {\n    todo\n}\n"
 ---
+
 import dep
 
 pub fn wobble() -> W| {

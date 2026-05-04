@@ -1,6 +1,7 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use gleam_core::{
     io::{Content, FileSystemWriter, memory::InMemoryFileSystem},
+    javascript,
     version::COMPILER_VERSION,
 };
 use itertools::Itertools;
@@ -38,6 +39,15 @@ impl TestCompileOutput {
 
             match content {
                 _ if extension == Some("cache") => buffer.push_str("<.cache binary>"),
+
+                Content::Text(text) if text == javascript::PRELUDE => {
+                    buffer.push_str("<javascript prelude>")
+                }
+
+                Content::Text(text) if text == javascript::PRELUDE_TS_DEF => {
+                    buffer.push_str("<typescript prelude>")
+                }
+
                 Content::Binary(data) => write!(buffer, "<{} byte binary>", data.len()).unwrap(),
 
                 Content::Text(_) if normalised_path.ends_with("@@main.erl") => {
