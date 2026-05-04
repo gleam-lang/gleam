@@ -2,6 +2,7 @@ mod action;
 mod compilation;
 mod completion;
 mod definition;
+mod document_highlight;
 mod document_symbols;
 mod folding_range;
 mod hover;

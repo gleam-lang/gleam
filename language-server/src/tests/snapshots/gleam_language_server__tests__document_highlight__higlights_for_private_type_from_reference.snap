@@ -1,0 +1,18 @@
+---
+source: language-server/src/tests/document_highlight.rs
+expression: "\ntype Wibble { Wibble }\n\nfn main() -> Wibble {\n  todo\n}\n\nfn wobble(w: Wibble) {\n  todo\n}\n"
+---
+-- app.gleam
+
+type Wibble { Wibble }
+     ▔▔▔▔▔▔           
+
+fn main() -> Wibble {
+             ↑▔▔▔▔▔  
+  todo
+}
+
+fn wobble(w: Wibble) {
+             ▔▔▔▔▔▔   
+  todo
+}
