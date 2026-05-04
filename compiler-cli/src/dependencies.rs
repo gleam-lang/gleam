@@ -13,7 +13,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use ecow::{EcoString, eco_format};
 use flate2::read::GzDecoder;
 use gleam_core::{
-    Error, Result,
+    Error, Result, Warning,
     build::{Mode, SourceFingerprint, Target, Telemetry},
     config::PackageConfig,
     dependency::{self, PackageFetchError},
@@ -23,6 +23,7 @@ use gleam_core::{
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, PackageChanges},
     paths::ProjectPaths,
     requirement::Requirement,
+    warning::WarningEmitter,
 };
 use hexpm::version::Version;
 use itertools::Itertools;
@@ -38,7 +39,7 @@ use crate::{
     TreeOptions,
     build_lock::{BuildLock, Guard},
     cli,
-    fs::{self, ProjectIO},
+    fs::{self, ConsoleWarningEmitter, ProjectIO},
     http::HttpClient,
     text_layout::space_table,
 };
@@ -66,12 +67,23 @@ pub enum CheckMajorVersions {
 }
 
 pub fn list(paths: &ProjectPaths) -> Result<()> {
-    let (_, manifest) = get_manifest_details(paths)?;
+    let warnings = WarningEmitter::new(Rc::new(ConsoleWarningEmitter));
+    let (_, config_warnings, manifest) = get_manifest_details(paths)?;
+
+    for warning in config_warnings {
+        warnings.emit(warning);
+    }
+
     list_manifest_packages(std::io::stdout(), manifest)
 }
 
 pub fn tree(paths: &ProjectPaths, options: TreeOptions) -> Result<()> {
-    let (config, manifest) = get_manifest_details(paths)?;
+    let warnings = WarningEmitter::new(Rc::new(ConsoleWarningEmitter));
+    let (config, config_warnings, manifest) = get_manifest_details(paths)?;
+
+    for warning in config_warnings {
+        warnings.emit(warning);
+    }
 
     // Initialize the root package since it is not part of the manifest
     let root_package = ManifestPackage {
@@ -92,9 +104,9 @@ pub fn tree(paths: &ProjectPaths, options: TreeOptions) -> Result<()> {
     list_package_and_dependencies_tree(std::io::stdout(), options, packages.clone(), config.name)
 }
 
-fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest)> {
+fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Vec<Warning>, Manifest)> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let config = crate::config::root_config(paths)?;
+    let (config, config_warnings) = crate::config::root_config(paths)?;
     let package_fetcher = PackageFetcher::new(runtime.handle().clone());
     let dependency_manager = DependencyManagerConfig {
         use_manifest: UseManifest::Yes,
@@ -109,7 +121,7 @@ fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest
     let manifest = dependency_manager
         .resolve_versions(paths, &config, Vec::new())?
         .manifest;
-    Ok((config, manifest))
+    Ok((config, config_warnings, manifest))
 }
 
 fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) -> Result<()> {
@@ -220,7 +232,12 @@ fn list_dependencies_tree(
 }
 
 pub fn outdated(paths: &ProjectPaths) -> Result<()> {
-    let (_, manifest) = get_manifest_details(paths)?;
+    let warnings = WarningEmitter::new(Rc::new(ConsoleWarningEmitter));
+    let (_, config_warnings, manifest) = get_manifest_details(paths)?;
+
+    for warning in config_warnings {
+        warnings.emit(warning);
+    }
 
     let total_packages = manifest
         .packages
@@ -283,7 +300,13 @@ pub fn cleanup<Telem: Telemetry>(paths: &ProjectPaths, telemetry: Telem) -> Resu
     let _guard: Guard = lock.lock(&telemetry)?;
 
     // Read the project config
-    let config = crate::root_config(paths)?;
+    let warnings = WarningEmitter::new(Rc::new(ConsoleWarningEmitter));
+    let (config, config_warnings) = crate::root_config(paths)?;
+
+    for warning in config_warnings {
+        warnings.emit(warning);
+    }
+
     let old_manifest = read_manifest_from_disc(paths)?;
     let mut manifest = old_manifest.clone();
 
@@ -1075,7 +1098,8 @@ fn provide_package(
         None => (),
     }
     // Load the package
-    let config = crate::config::read(package_path.join("gleam.toml"))?;
+    // We don't want warnings for config of dependencies
+    let (config, _) = crate::config::read(package_path.join("gleam.toml"))?;
     // Check that we are loading the correct project
     if config.name != package_name {
         return Err(Error::WrongDependencyProvided {

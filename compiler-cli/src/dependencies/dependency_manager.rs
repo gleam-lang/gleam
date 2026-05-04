@@ -8,13 +8,14 @@ use gleam_core::{
     manifest::{Manifest, ManifestPackageSource, PackageChanges, Resolved},
     paths::ProjectPaths,
     requirement::Requirement,
+    warning::WarningEmitter,
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::{
     build_lock::BuildLock,
     dependencies::{pretty_print_major_versions_available, write_manifest_to_disc},
-    fs::ProjectIO,
+    fs::{ConsoleWarningEmitter, ProjectIO},
 };
 
 use super::{
@@ -158,13 +159,19 @@ where
         // build directory if there is no gleam.toml
         crate::config::ensure_config_exists(paths)?;
 
+        let warnings = WarningEmitter::new(Rc::new(ConsoleWarningEmitter));
         let lock = BuildLock::new_packages(paths)?;
         let _guard = lock.lock(&self.telemetry);
 
         let fs = ProjectIO::boxed();
 
         // Read the project config
-        let mut config = crate::config::read(paths.root_config())?;
+        let (mut config, config_warnings) = crate::config::read(paths.root_config())?;
+
+        for warning in config_warnings {
+            warnings.emit(warning);
+        }
+
         let project_name = config.name.clone();
 
         // Insert the new packages to add, if it exists

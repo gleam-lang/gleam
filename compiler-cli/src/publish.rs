@@ -14,18 +14,29 @@ use gleam_core::{
     paths::{self, ProjectPaths},
     requirement::Requirement,
     type_,
+    warning::WarningEmitter,
 };
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
-use std::{collections::HashMap, io::Write, path::PathBuf};
+use std::{collections::HashMap, io::Write, path::PathBuf, rc::Rc};
 
-use crate::{build, cli, docs, fs, http::HttpClient, new::default_readme};
+use crate::{
+    build, cli, docs,
+    fs::{self, ConsoleWarningEmitter},
+    http::HttpClient,
+    new::default_readme,
+};
 
 const CORE_TEAM_PUBLISH_PASSWORD: &str = "Trans rights are human rights";
 
 pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<()> {
-    let mut config = crate::config::root_config(paths)?;
+    let warnings = WarningEmitter::new(Rc::new(ConsoleWarningEmitter));
+    let (mut config, config_warnings) = crate::config::root_config(paths)?;
+
+    for warning in config_warnings {
+        warnings.emit(warning);
+    }
 
     let should_publish = check_for_gleam_prefix(&config)?
         && check_for_version_zero(&config)?

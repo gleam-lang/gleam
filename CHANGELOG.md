@@ -79,6 +79,40 @@
   flow for when a Hex session has been revoked or has expired.
   ([Sahil Upasane](https://github.com/404salad))
 
+- The build tool will now show a warning for unknown keys in `gleam.toml`. Note
+  that it doesn't give warnings for keys under `[tools]` that is only supported
+  place for tools' configuration. For example, project with this `gleam.toml`:
+
+  ```toml
+  name = "wibble"
+  version = "1.0.0"
+  wibble = true
+  wobble = false
+
+  [tools]
+  wibble = true
+  ```
+
+  Will give following warnings:
+
+  ```txt
+  warning: Unknown config key
+
+  Config key 'wibble' isn't allowed.
+
+  Hint: See the `gleam.toml` schema at
+  https://gleam.run/writing-gleam/gleam-toml.
+
+  warning: Unknown config key
+
+  Config key 'wobble' isn't allowed.
+
+  Hint: See the `gleam.toml` schema at
+  https://gleam.run/writing-gleam/gleam-toml.
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server can now help with completions when typing a list's tail:
