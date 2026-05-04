@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\n// Public type from another module should be suggested.\n\nimport module\npub fn main() {\n    One\n}"
+---
+----- SOURCE CODE
+-- module.gleam
+
+pub type OneOrTwo {
+    One
+    Two
+}
+
+-- main.gleam
+
+// Public type from another module should be suggested.
+
+import module
+pub fn main() {
+    One
+}
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:6:5
+  │
+6 │     One
+  │     ^^^
+
+The custom type variant constructor `One` is not in scope here.
+Did you mean one of these:
+
+  - module.One

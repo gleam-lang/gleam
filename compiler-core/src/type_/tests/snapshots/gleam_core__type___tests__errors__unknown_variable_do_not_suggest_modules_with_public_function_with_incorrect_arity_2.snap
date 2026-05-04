@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\n// For functions, we only check the arity and not the type of arguments or the\n// return value.\n// In pipelines, function calls are considered to have arity arguments.len() + 1.\n// Function with incorrect arity from another module should not be suggested.\n\nimport module\npub fn main() {\n    1 |> add(2)\n}"
+---
+----- SOURCE CODE
+-- module.gleam
+
+pub fn add(x: Int) {
+    fn(y: Int) { x + y }
+}
+
+-- main.gleam
+
+// For functions, we only check the arity and not the type of arguments or the
+// return value.
+// In pipelines, function calls are considered to have arity arguments.len() + 1.
+// Function with incorrect arity from another module should not be suggested.
+
+import module
+pub fn main() {
+    1 |> add(2)
+}
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:9:10
+  │
+9 │     1 |> add(2)
+  │          ^^^
+
+The name `add` is not in scope here.
