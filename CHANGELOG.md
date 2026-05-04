@@ -186,3 +186,7 @@
   build directory was manually deleted. The compiler now automatically rebuilds
   the project when this configuration changes.
   ([daniellionel01](https://github.com/daniellionel01))
+
+- Fixed a bug where using the `bytes` and `unit` options together on a bit array
+  segment could generate incorrect code on the JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))

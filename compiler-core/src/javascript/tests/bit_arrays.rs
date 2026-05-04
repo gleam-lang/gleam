@@ -2819,3 +2819,28 @@ pub fn run(data) {
         "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5208
+#[test]
+fn unit_option_ignores_bytes() {
+    assert_js!(
+        "
+pub fn main() {
+  let assert <<x:unit(2)-bytes-size(3)>> = <<1:6>>
+  x
+}
+"
+    );
+}
+
+#[test]
+fn unit_option_ignores_bytes_regardless_of_order() {
+    assert_js!(
+        "
+pub fn main() {
+  let assert <<x:bytes-unit(2)-size(3)>> = <<1:6>>
+  x
+}
+"
+    );
+}

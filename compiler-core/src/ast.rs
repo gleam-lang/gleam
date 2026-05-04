@@ -3661,12 +3661,16 @@ impl<Value, Type> BitArraySegment<Value, Type> {
         })
     }
 
+    /// Returns the unit of `size` in the bit array segment. The `unit` option
+    /// overrides the `bytes` option, so if a segment has both, the unit is what
+    /// is specified in `unit`, not 8.
     pub fn unit(&self) -> u8 {
-        self.options
-            .iter()
-            .find_map(|option| match option {
-                BitArrayOption::Unit { value, .. } => Some(*value),
-                BitArrayOption::Bytes { .. } => Some(8),
+        let mut has_bytes_option = false;
+
+        for option in self.options.iter() {
+            match option {
+                BitArrayOption::Unit { value, .. } => return *value,
+                BitArrayOption::Bytes { .. } => has_bytes_option = true,
                 BitArrayOption::Int { .. }
                 | BitArrayOption::Float { .. }
                 | BitArrayOption::Bits { .. }
@@ -3681,9 +3685,11 @@ impl<Value, Type> BitArraySegment<Value, Type> {
                 | BitArrayOption::Big { .. }
                 | BitArrayOption::Little { .. }
                 | BitArrayOption::Native { .. }
-                | BitArrayOption::Size { .. } => None,
-            })
-            .unwrap_or(1)
+                | BitArrayOption::Size { .. } => {}
+            }
+        }
+
+        if has_bytes_option { 8 } else { 1 }
     }
 
     pub(crate) fn has_bits_option(&self) -> bool {
