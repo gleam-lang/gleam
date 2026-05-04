@@ -201,6 +201,10 @@
   decoder" code action even when not explicitly hovering a custom type.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the language server would suggest the "generate json
+  encoder" code action even when not explicitly hovering a custom type.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a bug where enabling `javascript.typescript_declarations` or
   `javascript.source_maps` wouldn't generate their additional files unless the
   build directory was manually deleted. The compiler now automatically rebuilds

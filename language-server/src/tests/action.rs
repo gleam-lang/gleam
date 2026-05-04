@@ -8786,6 +8786,30 @@ pub type Person {
 }
 
 #[test]
+fn generate_json_only_triggers_within_a_type() {
+    let src = "
+pub type Person {
+  Person(name: String, age: Int, height: Float, is_cool: Bool)
+}
+
+pub fn main() {
+  // unrelated
+  todo
+}
+";
+
+    assert_no_code_actions!(
+        GENERATE_TO_JSON_FUNCTION,
+        TestProject::for_source(src).add_package_module(
+            "gleam_json",
+            "gleam/json",
+            "pub type Json"
+        ),
+        find_position_of("type").select_until(find_position_of("todo"))
+    );
+}
+
+#[test]
 fn convert_to_function_call_works_with_argument_in_first_position_2() {
     assert_code_action!(
         CONVERT_TO_FUNCTION_CALL,

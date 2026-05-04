@@ -5181,8 +5181,10 @@ fn is_nil_like(type_: &Type) -> bool {
 
 impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
     fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
-        let range = self.edits.src_span_to_lsp_range(custom_type.location);
-        if !overlaps(self.params.range, range) {
+        let range = self
+            .edits
+            .src_span_to_lsp_range(custom_type.full_location());
+        if !within(self.params.range, range) {
             return;
         }
 
