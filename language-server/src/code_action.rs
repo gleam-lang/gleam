@@ -1284,7 +1284,7 @@ pub fn code_action_add_missing_patterns(
     for (location, missing) in missing_patterns {
         let mut edits = TextEdits::new(line_numbers);
         let range = edits.src_span_to_lsp_range(location);
-        if !overlaps(params.range, range) {
+        if !within(params.range, range) {
             return;
         }
 

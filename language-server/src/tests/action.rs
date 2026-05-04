@@ -10114,6 +10114,19 @@ fn wibble() {
     );
 }
 
+#[test]
+fn add_missing_patterns_needs_to_be_within_the_inexhaustive_case_expression() {
+    assert_no_code_actions!(
+        ADD_MISSING_PATTERNS,
+        r#"
+fn wibble() {
+  case True {}
+}
+"#,
+        find_position_of("fn").select_until(find_position_of("}"))
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/4626
 #[test]
 fn add_missing_patterns_opaque_type() {
