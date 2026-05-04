@@ -54,6 +54,7 @@ fn hex_error_conversion() {
     );
 }
 
+#[test]
 fn io_link_file_error() {
     let error = Error::FileIo {
         kind: FileKind::File,
