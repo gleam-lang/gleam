@@ -11458,7 +11458,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddMissingTypeParameter<'ast> {
             .src_span_to_lsp_range(custom_type.full_location());
 
         // Only continue, if the action was selected anywhere within the custom type definition.
-        if !overlaps(self.params.range, custom_type_range) {
+        if !within(self.params.range, custom_type_range) {
             return;
         }
 

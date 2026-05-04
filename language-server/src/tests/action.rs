@@ -12881,6 +12881,24 @@ type Wibble {
 }
 
 #[test]
+fn add_missing_type_parameter_can_only_trigger_if_within_type() {
+    assert_no_code_actions!(
+        ADD_MISSING_TYPE_PARAMETER,
+        r#"
+type Wibble {
+  Wibble(field: t)
+}
+
+pub fn main() {
+    // unrelated
+    todo
+}
+"#,
+        find_position_of("type").select_until(find_position_of("todo"))
+    );
+}
+
+#[test]
 fn add_missing_type_parameter_to_exising_parameter() {
     assert_code_action!(
         ADD_MISSING_TYPE_PARAMETER,
