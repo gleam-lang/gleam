@@ -8,7 +8,7 @@ import option.{Some}
 
 pub fn main() {
     let list = [Some(1), option.None]
-                ▔▔▔▔▔↑               
+                ▔▔▔↑                 
     let tuple = #(Some(2), option.None)
 }
 

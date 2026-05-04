@@ -9,7 +9,7 @@ import list.{map, filter}
 pub fn process_list(items: List(Int)) -> List(Int) {
     items
     |> map(fn(x) { x + 1 })
-    ▔▔▔▔▔▔↑                
+       ↑                   
     |> map(fn(x) { x * 2 })
 }
 

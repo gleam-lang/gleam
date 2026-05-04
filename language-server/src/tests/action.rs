@@ -4521,7 +4521,25 @@ pub fn main() {
     assert_code_action!(
         "Qualify map as list.map",
         TestProject::for_source(src).add_hex_module("list", "pub fn map(list, f) { todo }"),
-        find_position_of("map(").select_until(find_position_of("[1, 2, 3]")),
+        find_position_of("map").nth_occurrence(2).to_selection(),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_only_triggers_when_within_an_expression() {
+    let src = r#"
+import list.{map}
+
+pub fn main() {
+    let identity = map([1, 2, 3], fn(x) { x })
+    let double = map([1, 2, 3], fn(x) { x * 2 })
+}
+// end
+"#;
+    assert_no_code_actions!(
+        "Qualify map as list.map",
+        TestProject::for_source(src).add_hex_module("list", "pub fn map(list, f) { todo }"),
+        find_position_of("import").select_until(find_position_of("// end")),
     );
 }
 
@@ -4541,7 +4559,7 @@ pub fn circle_circumference(radius: Float) -> Float {
     assert_code_action!(
         "Qualify pi as mymath.pi",
         TestProject::for_source(src).add_hex_module("mymath", "pub const pi = 3.14159"),
-        find_position_of("pi *.").select_until(find_position_of(" radius")),
+        find_position_of("pi").nth_occurrence(2).to_selection(),
     );
 }
 
@@ -4558,7 +4576,10 @@ pub fn create_user(name: String) -> User {
         "Qualify User as user.User",
         TestProject::for_source(src)
             .add_hex_module("user", "pub type User { User(name: String, id: Int) }"),
-        find_position_of("User(").select_until(find_position_of("name: name")),
+        find_position_of("User")
+            .nth_occurrence(4)
+            .under_char('s')
+            .to_selection(),
     );
 }
 
@@ -4575,7 +4596,7 @@ import user.{type User, User}
         "Qualify User as user.User",
         TestProject::for_source(src)
             .add_hex_module("user", "pub type User { User(name: String, id: Int) }"),
-        find_position_of("User(").select_until(find_position_of("name: name")),
+        find_position_of("User").nth_occurrence(2).to_selection(),
     );
 }
 
@@ -4598,7 +4619,7 @@ pub fn user_list(users: List(User)) -> List(String) {
         "Qualify User as user.User",
         TestProject::for_source(src)
             .add_hex_module("user", "pub type User { User(name: String, id: Int) }"),
-        find_position_of("User(").select_until(find_position_of("name: name")),
+        find_position_of("User").nth_occurrence(2).to_selection(),
     );
 }
 
@@ -4619,7 +4640,7 @@ pub fn process_list(items: List(Int)) -> List(Int) {
             "list",
             "pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) { todo }"
         ),
-        find_position_of("|> map").select_until(find_position_of("(fn(x)")),
+        find_position_of("map").nth_occurrence(2).to_selection(),
     );
 }
 
@@ -4639,7 +4660,7 @@ pub fn process_result(res: Result(Int, String)) -> Int {
         "Qualify Ok as result.Ok",
         TestProject::for_source(src)
             .add_hex_module("result", "pub type Result(a, e) { Ok(a) Error(e) }"),
-        find_position_of("Ok(").select_until(find_position_of("value)")),
+        find_position_of("Ok").nth_occurrence(2).to_selection(),
     );
 }
 
@@ -4661,7 +4682,7 @@ pub fn maybe_increment(x: Option(Int)) -> Option(Int) {
             .add_hex_module("option", "pub type Option(a) { Some(a) None }"),
         find_position_of("Opt")
             .nth_occurrence(2)
-            .select_until(find_position_of("ion(")),
+            .select_until(find_position_of("ion").nth_occurrence(3)),
     );
 }
 
@@ -4686,7 +4707,9 @@ pub fn process_names(names: List(List(Int))) -> List(Int) {
 pub fn flatten(lists: List(List(a))) -> List(a) { todo }"
             )
             .add_hex_module("operation", "pub fn double(s: Int) -> Int { todo }"),
-        find_position_of("(dou").select_until(find_position_of("ble)")),
+        find_position_of("dou")
+            .nth_occurrence(2)
+            .select_until(find_position_of("ble").nth_occurrence(2)),
     );
 }
 
@@ -4705,7 +4728,9 @@ pub fn double_list(items: List(Int)) -> List(Int) {
             "list",
             "pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) { todo }"
         ),
-        find_position_of("transform(").select_until(find_position_of("items,")),
+        find_position_of("transform")
+            .nth_occurrence(2)
+            .to_selection(),
     );
 }
 
@@ -4724,7 +4749,9 @@ pub fn double_list(items: List(Int)) -> List(Int) {
             "list",
             "pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) { todo }"
         ),
-        find_position_of("transform(").select_until(find_position_of("items,")),
+        find_position_of("transform")
+            .nth_occurrence(2)
+            .to_selection(),
     );
 }
 
@@ -4744,7 +4771,9 @@ pub fn double_list(items: List(Int)) -> List(Int) {
             "list",
             "pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) { todo }"
         ),
-        find_position_of("transform(").select_until(find_position_of("items,")),
+        find_position_of("transform")
+            .nth_occurrence(2)
+            .to_selection(),
     );
 }
 
@@ -4766,7 +4795,7 @@ pub fn maybe_increment(x: Option(Int)) -> Option(Int) {
             .add_hex_module("option", "pub type Option(a) { Some(a) None }"),
         find_position_of("Opt")
             .nth_occurrence(2)
-            .select_until(find_position_of("ion(")),
+            .select_until(find_position_of("ion").nth_occurrence(3)),
     );
 }
 
@@ -4788,7 +4817,7 @@ pub fn maybe_increment(x: Maybe(Int)) -> Maybe(Int) {
             .add_hex_module("option", "pub type Option(a) { Some(a) None }"),
         find_position_of("May")
             .nth_occurrence(2)
-            .select_until(find_position_of("be(")),
+            .select_until(find_position_of("be").nth_occurrence(3)),
     );
 }
 
@@ -4810,7 +4839,7 @@ pub fn maybe_increment(x: Option(Int)) -> Option(Int) {
             .add_hex_module("option", "pub type Option(a) { Some(a) None }"),
         find_position_of("Opt")
             .nth_occurrence(2)
-            .select_until(find_position_of("ion(")),
+            .select_until(find_position_of("ion").nth_occurrence(3)),
     );
 }
 
@@ -4828,7 +4857,7 @@ pub fn main() {
         "Qualify Some as option.Some",
         TestProject::for_source(src)
             .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
-        find_position_of("Some(").select_until(find_position_of("1)")),
+        find_position_of("Some(1)").select_until(find_position_of("Some(1)").under_char('e')),
     );
 }
 #[test]
@@ -4853,7 +4882,7 @@ pub fn main() {
         "Qualify Some as option.Some",
         TestProject::for_source(src)
             .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
-        find_position_of("Some(").select_until(find_position_of("1)")),
+        find_position_of("Some(1)").select_until(find_position_of("Some(1)").under_char('e')),
     );
 }
 

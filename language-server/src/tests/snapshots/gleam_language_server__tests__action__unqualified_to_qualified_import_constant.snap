@@ -8,7 +8,7 @@ import mymath.{pi}
 
 pub fn circle_area(radius: Float) -> Float {
     pi *. radius *. radius
-    ▔▔▔▔▔↑                
+    ↑                     
 }
 
 pub fn circle_circumference(radius: Float) -> Float {

@@ -11,7 +11,7 @@ pub fn process_names(names: List(List(Int))) -> List(Int) {
     names
     |> flatten
     |> map(double)
-          ▔▔▔▔↑   
+           ▔▔▔↑   
 }
 
 

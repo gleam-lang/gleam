@@ -8,7 +8,7 @@ import user.{type User, User}
 
 pub fn create_user(name: String) -> User {
     User(name: name, id: 1)
-    ▔▔▔▔▔↑                 
+     ↑                     
 }
 
 

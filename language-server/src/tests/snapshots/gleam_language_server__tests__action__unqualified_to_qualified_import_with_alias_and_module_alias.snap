@@ -8,7 +8,7 @@ import list.{map as transform} as lst
 
 pub fn double_list(items: List(Int)) -> List(Int) {
     transform(items, fn(x) { x * 2 })
-    ▔▔▔▔▔▔▔▔▔▔↑                      
+    ↑                                
 }
 
 

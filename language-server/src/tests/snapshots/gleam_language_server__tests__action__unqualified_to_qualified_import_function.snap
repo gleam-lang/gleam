@@ -8,7 +8,7 @@ import list.{map}
 
 pub fn main() {
     let identity = map([1, 2, 3], fn(x) { x })
-                   ▔▔▔▔↑                      
+                   ↑                          
     let double = map([1, 2, 3], fn(x) { x * 2 })
 }
 

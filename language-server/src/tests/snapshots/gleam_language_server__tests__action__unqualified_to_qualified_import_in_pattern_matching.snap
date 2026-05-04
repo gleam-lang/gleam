@@ -9,7 +9,7 @@ import result.{type Result, Ok, Error}
 pub fn process_result(res: Result(Int, String)) -> Int {
     case res {
         Ok(value) -> value
-        ▔▔▔↑              
+        ↑                 
         Error(_) -> 0
     }
 }

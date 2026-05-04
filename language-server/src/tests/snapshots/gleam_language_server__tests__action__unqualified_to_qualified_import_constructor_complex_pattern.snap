@@ -8,7 +8,7 @@ import option.{None, Some}
 
 pub fn main() {
     case [Some(1), None] {
-          ▔▔▔▔▔↑          
+          ▔▔▔↑            
         [None, ..] -> todo
         [Some(_), ..] -> todo
         _ -> todo

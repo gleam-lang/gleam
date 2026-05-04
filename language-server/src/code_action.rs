@@ -2318,7 +2318,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
     ) {
         if !name.is_qualified()
             && let Some(name) = name.name()
-            && overlaps(
+            && within(
                 self.params.range,
                 src_span_to_lsp_range(*location, self.line_numbers),
             )
@@ -2336,7 +2336,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         name: &'ast EcoString,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
-        if overlaps(self.params.range, range)
+        if within(self.params.range, range)
             && let Some(module_name) = match &constructor.variant {
                 type_::ValueConstructorVariant::ModuleConstant { module, .. }
                 | type_::ValueConstructorVariant::ModuleFn { module, .. }
@@ -2362,7 +2362,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         type_: &'ast Arc<Type>,
     ) {
         if module.is_none()
-            && overlaps(
+            && within(
                 self.params.range,
                 src_span_to_lsp_range(*location, self.line_numbers),
             )
@@ -2396,7 +2396,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         record_constructor: &'ast Option<Box<ValueConstructor>>,
     ) {
         if module.is_none()
-            && overlaps(
+            && within(
                 self.params.range,
                 src_span_to_lsp_range(*location, self.line_numbers),
             )
@@ -2433,7 +2433,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         type_: &'ast Arc<Type>,
     ) {
         if module.is_none()
-            && overlaps(
+            && within(
                 self.params.range,
                 src_span_to_lsp_range(*location, self.line_numbers),
             )

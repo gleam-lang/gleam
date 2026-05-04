@@ -6,7 +6,7 @@ expression: "\npub fn create_user(name: String) -> User {\n    User(name: name, 
 
 pub fn create_user(name: String) -> User {
     User(name: name, id: 1)
-    ▔▔▔▔▔↑                 
+    ↑                      
 }
 
 import user.{type User, User}
