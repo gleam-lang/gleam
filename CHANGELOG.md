@@ -240,3 +240,10 @@
   directly matches branch when existing variables with same exist in outer
   scope.
   ([Andrey Kozhev](https://github.com/ankddev))
+
+- Fixed a bug where `gleam publish` wrote the wrong application name into the
+  published package metadata for dependencies whose Hex package name differs
+  from their internal OTP application name. This caused Mix-based projects to
+  fail to build when they depended on Gleam packages with transitive
+  dependencies.
+  ([Logan Bresnahan](https://github.com/LoganBresnahan))
