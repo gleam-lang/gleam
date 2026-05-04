@@ -207,12 +207,7 @@ where
 
         // Each package may specify a Gleam version that it supports, so we
         // verify that this version is appropriate.
-        self.check_gleam_version()?;
-
-        // Checks if JavaScript configuration has changed since the last build (particularly
-        // TypeScript declarations) and rebuilds the project if necessary to ensure consistent
-        // compilation with current settings.
-        self.rebuild_if_javascript_config_changed()?;
+        self.check_gleam_version_and_build_configuration()?;
 
         // The JavaScript target requires a prelude module to be written.
         self.write_prelude()?;
@@ -256,70 +251,48 @@ where
     }
 
     /// Checks that version file found in the build directory matches the
-    /// current version of gleam. If not, we will clear the build directory
-    /// before continuing. This will ensure that upgrading gleam will not leave
-    /// one with confusing or hard to debug states.
-    pub fn check_gleam_version(&self) -> Result<(), Error> {
+    /// current version of gleam, and if build-impacting configuration
+    /// options are the same. If not, we will clear the build directory
+    /// before continuing. This will ensure that upgrading gleam will not
+    /// leave one with confusing or hard to debug states, and changing
+    /// config won't result in anything being missing.
+    pub fn check_gleam_version_and_build_configuration(&self) -> Result<(), Error> {
         let build_path = self
             .paths
             .build_directory_for_target(self.mode(), self.target());
-        let version_path = self.paths.build_gleam_version(self.mode(), self.target());
-        if self.io.is_file(&version_path) {
-            let version = self.io.read(&version_path)?;
-            if version == COMPILER_VERSION {
+        let path = self
+            .paths
+            .build_configuration_fingerprint(self.mode(), self.target());
+
+        let js = self.target().is_javascript();
+        let mut flags = BitFlags::new();
+        flags.set(0, js && self.config.javascript.typescript_declarations);
+        flags.set(1, js && self.config.javascript.source_maps);
+        dbg!(&flags.bits);
+
+        let fingerprint = format!("{COMPILER_VERSION} {}", flags.bits);
+
+        if self.io.is_file(&path) {
+            let previous = self.io.read(&path)?;
+            if &previous == &fingerprint {
                 return Ok(());
             }
         }
 
-        // Either file is missing our the versions do not match. Time to rebuild
-        tracing::info!("removing_build_state_from_different_gleam_version");
+        // Either file is missing our the config does not match. Time to rebuild
+        tracing::info!("removing_build_state_for_differing_configuration");
         self.io.delete_directory(&build_path)?;
 
         // Recreate build directory with new updated version file
         self.io.mkdir(&build_path)?;
         self.io
-            .write(&version_path, COMPILER_VERSION)
+            .write(&path, &fingerprint)
             .map_err(|e| Error::FileIo {
                 action: FileIoAction::WriteTo,
                 kind: FileKind::File,
-                path: version_path,
+                path,
                 err: Some(e.to_string()),
             })
-    }
-
-    /// Checks if JavaScript configuration has changed since the last build.
-    /// If it has changed (e.g., TypeScript declarations setting), we clear the build directory
-    /// to ensure a clean rebuild with the new settings.
-    pub fn rebuild_if_javascript_config_changed(&self) -> Result<(), Error> {
-        if !self.target().is_javascript() || !self.options.codegen.should_codegen(true) {
-            return Ok(());
-        }
-
-        let build_path = self
-            .paths
-            .build_directory_for_target(self.mode(), self.target());
-
-        let ts_indicator_path = build_path.join("typescript-declarations");
-        let ts_enabled = self.config.javascript.typescript_declarations;
-
-        let needs_rebuild = if ts_enabled {
-            !self.io.is_file(&ts_indicator_path)
-        } else {
-            self.io.is_file(&ts_indicator_path)
-        };
-
-        if needs_rebuild {
-            tracing::info!("removing_build_state_due_to_javascript_config_change");
-            self.io.delete_directory(&build_path)?;
-
-            self.io.mkdir(&build_path)?;
-
-            if ts_enabled {
-                self.io.write(&ts_indicator_path, "")?;
-            }
-        }
-
-        Ok(())
     }
 
     pub fn compile_dependencies(&mut self) -> Result<Vec<Module>, Error> {
@@ -768,4 +741,27 @@ pub(crate) fn usable_build_tools(package: &ManifestPackage) -> Result<Vec<BuildT
         package: package.name.to_string(),
         build_tools: package.build_tools.clone(),
     })
+}
+
+#[derive(Debug)]
+struct BitFlags {
+    bits: u8,
+}
+
+impl BitFlags {
+    fn new() -> Self {
+        Self { bits: 0 }
+    }
+
+    fn set(&mut self, bit: u8, value: bool) {
+        if value {
+            self.bits |= 1 << bit;
+        } else {
+            self.bits &= !(1 << bit);
+        }
+    }
+
+    fn get(&self, bit: u8) -> bool {
+        self.bits & (1 << bit) != 0
+    }
 }

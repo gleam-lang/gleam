@@ -1,11 +1,11 @@
 ---
 source: test-project-compiler/src/generated_tests.rs
-expression: "./cases/with_dev_dep"
+expression: "./cases/erlang_source_maps"
 ---
-//// with_dev_dep/build/prod/erlang/example/_gleam_artefacts/example@@main.erl
+//// erlang_source_maps/build/prod/erlang/example/_gleam_artefacts/example@@main.erl
 <erlang entrypoint>
 
-//// with_dev_dep/build/prod/erlang/example/ebin/example.app
+//// erlang_source_maps/build/prod/erlang/example/ebin/example.app
 {application, example, [
     {vsn, "1.0.0"},
     {applications, []},
@@ -15,5 +15,5 @@ expression: "./cases/with_dev_dep"
 ]}.
 
 
-//// with_dev_dep/build/prod/erlang/fingerprint
+//// erlang_source_maps/build/prod/erlang/fingerprint
 <gleam compiler version string> 0

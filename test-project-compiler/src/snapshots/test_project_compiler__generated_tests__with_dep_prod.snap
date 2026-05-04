@@ -15,5 +15,5 @@ expression: "./cases/with_dep"
 ]}.
 
 
-//// with_dep/build/prod/erlang/gleam_version
-<gleam compiler version string>
+//// with_dep/build/prod/erlang/fingerprint
+<gleam compiler version string> 0
