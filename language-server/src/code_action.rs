@@ -11839,7 +11839,7 @@ impl<'a> UnwrapAnonymousFunction<'a> {
         body: &'a Vec1<TypedStatement>,
     ) {
         let function_range = src_span_to_lsp_range(*location, self.line_numbers);
-        if !overlaps(self.params.range, function_range) {
+        if !within(self.params.range, function_range) {
             return;
         }
 
@@ -11909,7 +11909,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnwrapAnonymousFunction<'ast> {
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
         let function_range = src_span_to_lsp_range(*location, self.line_numbers);
-        if !overlaps(self.params.range, function_range) {
+        if !within(self.params.range, function_range) {
             return;
         }
 
