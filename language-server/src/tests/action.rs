@@ -7726,6 +7726,24 @@ pub type Person {
 }
 
 #[test]
+fn generate_dynamic_decoder_only_works_if_withing_a_type() {
+    assert_no_code_actions!(
+        GENERATE_DYNAMIC_DECODER,
+        "
+pub type Person {
+  Person(name: String, age: Int, height: Float, is_cool: Bool, brain: BitArray)
+}
+
+pub fn main() {
+  // unrelated
+  todo
+}
+",
+        find_position_of("pub type").select_until(find_position_of("todo"))
+    );
+}
+
+#[test]
 fn generate_dynamic_decoder_complex_types() {
     let src = "
 import gleam/option

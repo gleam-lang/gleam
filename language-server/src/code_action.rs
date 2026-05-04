@@ -4530,8 +4530,10 @@ impl<'a, IO> GenerateDynamicDecoder<'a, IO> {
 
 impl<'ast, IO> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast, IO> {
     fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
-        let range = self.edits.src_span_to_lsp_range(custom_type.location);
-        if !overlaps(self.params.range, range) {
+        let range = self
+            .edits
+            .src_span_to_lsp_range(custom_type.full_location());
+        if !within(self.params.range, range) {
             return;
         }
 
