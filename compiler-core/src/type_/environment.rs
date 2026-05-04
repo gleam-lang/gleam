@@ -1002,12 +1002,15 @@ pub enum Imported {
 /// It two types are found to not be the same an error is returned.
 ///
 pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
-    // Aliases should not affect unification, they are merely a naming
-    // convenience.  We collapse them early so callers need not handle
-    // Alias everywhere.
+    // Keep the originals so error messages can mention the alias the
+    // user wrote rather than the underlying type.
+    let original_t1 = t1.clone();
+    let original_t2 = t2.clone();
+
+    // Collapse aliases so the rest of unification need not handle them.
+    // `Type::Var` is skipped: its `RefCell` is borrowed further down, and
+    // collapsing through the variable would require resolving it first.
     let t1 = if let Type::Var { .. } = t1.deref() {
-        // leave `t1` alone; the existing variable-handling logic below will
-        // still deal with any aliases nested inside when necessary
         t1
     } else {
         collapse_links(t1)
@@ -1080,8 +1083,8 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
             }
 
             Action::CouldNotUnify => Err(UnifyError::CouldNotUnify {
-                expected: t1.clone(),
-                given: t2,
+                expected: original_t1,
+                given: original_t2,
                 situation: None,
             }),
         };
@@ -1107,7 +1110,11 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
             },
         ) if m1 == m2 && n1 == n2 && arguments1.len() == arguments2.len() => {
             for (a, b) in arguments1.iter().zip(arguments2) {
-                unify_enclosed_type(t1.clone(), t2.clone(), unify(a.clone(), b.clone()))?;
+                unify_enclosed_type(
+                    original_t1.clone(),
+                    original_t2.clone(),
+                    unify(a.clone(), b.clone()),
+                )?;
             }
             Ok(())
         }
@@ -1123,7 +1130,11 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
             },
         ) if elements1.len() == elements2.len() => {
             for (a, b) in elements1.iter().zip(elements2) {
-                unify_enclosed_type(t1.clone(), t2.clone(), unify(a.clone(), b.clone()))?;
+                unify_enclosed_type(
+                    original_t1.clone(),
+                    original_t2.clone(),
+                    unify(a.clone(), b.clone()),
+                )?;
             }
             Ok(())
         }
@@ -1142,25 +1153,25 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
         ) => {
             if arguments1.len() != arguments2.len() {
                 Err(unify_wrong_arity(
-                    &t1,
+                    &original_t1,
                     arguments1.len(),
-                    &t2,
+                    &original_t2,
                     arguments2.len(),
                 ))?
             }
 
             for (i, (a, b)) in arguments1.iter().zip(arguments2).enumerate() {
                 unify(a.clone(), b.clone())
-                    .map_err(|_| unify_wrong_arguments(&t1, a, &t2, b, i))?;
+                    .map_err(|_| unify_wrong_arguments(&original_t1, a, &original_t2, b, i))?;
             }
 
             unify(return1.clone(), return2.clone())
-                .map_err(|_| unify_wrong_returns(&t1, return1, &t2, return2))
+                .map_err(|_| unify_wrong_returns(&original_t1, return1, &original_t2, return2))
         }
 
         _ => Err(UnifyError::CouldNotUnify {
-            expected: t1.clone(),
-            given: t2.clone(),
+            expected: original_t1,
+            given: original_t2,
             situation: None,
         }),
     }

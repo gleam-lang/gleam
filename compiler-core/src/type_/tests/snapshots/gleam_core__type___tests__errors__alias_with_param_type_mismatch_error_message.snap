@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: "type Pair(a) = #(a, a)\n\npub fn bad() -> Pair(Int) {\n  #(1, \"hello\")\n}"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 type Pair(a) = #(a, a)
@@ -22,7 +21,7 @@ annotation of this function.
 
 Expected type:
 
-    #(Int, Int)
+    Pair(Int)
 
 Found type:
 

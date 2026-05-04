@@ -4859,8 +4859,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         type_: Arc<Type>,
         kind: ArgumentKind,
     ) -> TypedExpr {
-        let type_ = collapse_links(type_);
-        let value = match (&*type_, argument) {
+        // The collapsed view is used for pattern-matching on the expected
+        // shape, but `unify` below receives the original `type_` so any alias
+        // name survives into error messages.
+        let collapsed = collapse_links(type_.clone());
+        let value = match (&*collapsed, argument) {
             // If the argument is expected to be a function and we are passed a
             // function literal with the correct number of arguments then we
             // have special handling of this argument, passing in information
