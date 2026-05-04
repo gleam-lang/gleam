@@ -79,6 +79,10 @@
   flow for when a Hex session has been revoked or has expired.
   ([Sahil Upasane](https://github.com/404salad))
 
+- The build tool now falls back to recursively hardlinking directories on
+  Windows when it fails to symlink one due to disabled "Developer mode".
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server can now help with completions when typing a list's tail:

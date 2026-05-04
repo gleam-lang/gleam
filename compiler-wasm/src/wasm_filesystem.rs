@@ -59,6 +59,10 @@ impl FileSystemWriter for WasmFileSystem {
         Ok(())
     }
 
+    fn hardlink_directory(&self, _: &Utf8Path, _: &Utf8Path) -> Result<(), Error> {
+        Ok(())
+    }
+
     fn symlink_dir(&self, _: &Utf8Path, _: &Utf8Path) -> Result<(), Error> {
         Ok(())
     }
