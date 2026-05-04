@@ -5,6 +5,7 @@ use gleam_core::{
     io::{
         BeamCompiler, Command, CommandExecutor, Content, DirEntry, FileSystemReader,
         FileSystemWriter, OutputFile, ReadDir, Stdio, WrappedReader, is_native_file_extension,
+        make_relative,
     },
     manifest::Manifest,
     paths::ProjectPaths,
@@ -185,6 +186,10 @@ impl FileSystemWriter for ProjectIO {
 
     fn symlink_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error> {
         symlink_dir(from, to)
+    }
+
+    fn symlink_dir_relative(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error> {
+        symlink_dir_relative(from, to)
     }
 
     fn delete_file(&self, path: &Utf8Path) -> Result<()> {
@@ -682,6 +687,43 @@ pub fn symlink_dir(
         path: Utf8PathBuf::from(dest.as_ref()),
         err: Some(err.to_string()),
     })?;
+    Ok(())
+}
+
+/// Calculate a relative path to the given source path and symlink to that.
+/// `dest` is the filename of the symlink, including the name of the symlink itself.
+/// # Panics
+/// The provided source path should be absolute, otherwise will panic.
+pub fn symlink_dir_relative(
+    src: impl AsRef<Utf8Path> + Debug,
+    dest: impl AsRef<Utf8Path> + Debug,
+) -> Result<(), Error> {
+    // make_relative acts as if starting from *within* its `target_path` argument.
+    // However, here, we want `target_path` to be the symlink, so we'll have to navigate starting
+    // from the *parent* directory.
+    // the call to `parent()` can return None if there's no final path component, e.g. if the path is "/". But in that case, we couldn't really create a symlink for that location, so it's ok to return an error.
+    let symlink_parent_dir = dest.as_ref().parent().ok_or_else(|| Error::FileIo {
+        kind: FileKind::File,
+        action: FileIoAction::FindParent,
+        path: Utf8PathBuf::from(dest.as_ref()),
+        err: None,
+    })?;
+    let relative_src = make_relative(symlink_parent_dir, src.as_ref());
+
+    tracing::debug!(src=?src, relative_src=?relative_src, dest=?dest, "creating relative symlink");
+
+    #[cfg(target_family = "windows")]
+    let result = std::os::windows::fs::symlink_dir(relative_src, dest.as_ref());
+    #[cfg(not(target_family = "windows"))]
+    let result = std::os::unix::fs::symlink(relative_src, dest.as_ref());
+
+    result.map_err(|err| Error::FileIo {
+        action: FileIoAction::Link,
+        kind: FileKind::File,
+        path: Utf8PathBuf::from(dest.as_ref()),
+        err: Some(err.to_string()),
+    })?;
+
     Ok(())
 }
 

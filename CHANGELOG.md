@@ -158,3 +158,7 @@
 - Fixed a bug where the compiler would generate invalid code for guards using
   lists with a tail.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler would crash when renaming a project directory
+  due to a broken symlink.
+  ([Rafael Epplée](https://github.com/raffomania))

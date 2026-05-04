@@ -96,6 +96,10 @@ where
         self.io.symlink_dir(from, to)
     }
 
+    fn symlink_dir_relative(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error> {
+        self.io.symlink_dir_relative(from, to)
+    }
+
     fn delete_file(&self, path: &Utf8Path) -> Result<()> {
         self.io.delete_file(path)
     }

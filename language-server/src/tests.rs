@@ -215,6 +215,14 @@ impl FileSystemWriter for LanguageServerTestIO {
         self.io.symlink_dir(from, to)
     }
 
+    fn symlink_dir_relative(
+        &self,
+        from: &Utf8Path,
+        to: &Utf8Path,
+    ) -> Result<(), gleam_core::Error> {
+        self.io.symlink_dir_relative(from, to)
+    }
+
     fn delete_file(&self, path: &Utf8Path) -> Result<()> {
         self.io.delete_file(path)
     }
