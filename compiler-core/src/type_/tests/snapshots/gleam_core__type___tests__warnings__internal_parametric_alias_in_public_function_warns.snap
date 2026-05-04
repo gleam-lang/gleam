@@ -19,7 +19,7 @@ warning: Internal type used in public interface
 
 The following internal type is exposed by this public definition:
 
-    test_module.Alias(Int)
+    Alias(Int)
 
 Internal types are hidden from the package's documentation, so consumers
 cannot tell what they are. Either remove the `@internal` annotation, or

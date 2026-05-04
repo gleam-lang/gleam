@@ -1,7 +1,6 @@
 ---
 source: language-server/src/tests/hover.rs
 expression: "\ntype LocalResult = Result(String, Int)\n\nfn do_thing() -> LocalResult {\n  Error(1)\n}\n"
-snapshot_kind: text
 ---
 
 type LocalResult = Result(String, Int)
@@ -14,5 +13,5 @@ fn do_thing() -> LocalResult {
 
 ----- Hover content (markdown) -----
 ```gleam
-fn() -> app.LocalResult
+fn() -> LocalResult
 ```

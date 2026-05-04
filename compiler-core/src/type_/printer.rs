@@ -49,6 +49,11 @@ pub struct Names {
     ///
     local_types: BiMap<(EcoString, EcoString), EcoString>,
 
+    /// Aliases visible without qualification in the current module.
+    /// Kept separately from `local_types` so the alias and its underlying
+    /// type can share the same display name.
+    local_aliases: HashSet<(EcoString, EcoString)>,
+
     /// Mapping of imported modules to their locally used named
     ///
     /// key:   The name of the module
@@ -164,11 +169,16 @@ impl Names {
     pub fn new() -> Self {
         Self {
             local_types: Default::default(),
+            local_aliases: Default::default(),
             imported_modules: Default::default(),
             type_variables: Default::default(),
             local_value_constructors: Default::default(),
             reexport_aliases: Default::default(),
         }
+    }
+
+    pub fn alias_in_scope(&mut self, module: EcoString, name: EcoString) {
+        _ = self.local_aliases.insert((module, name));
     }
 
     /// Record a named type in this module.
@@ -500,27 +510,38 @@ impl<'a> Printer<'a> {
             Type::Alias {
                 name,
                 module,
+                aliased,
                 parameters,
                 ..
             } => {
-                let info = self.names.named_type(module, name, print_mode);
-                match info {
-                    NameContextInformation::Qualified(module, name) => {
-                        buffer.push_str(module);
-                        buffer.push('.');
-                        buffer.push_str(name);
-                    }
-                    NameContextInformation::Unqualified(name) => {
-                        buffer.push_str(name);
-                    }
-                    NameContextInformation::Unimported(module, name) => {
-                        // alias not imported: show the module-qualified name so
-                        // the user knows which type is actually leaking.
-                        if let Some(short) = module.split('/').next_back() {
-                            buffer.push_str(short);
+                if print_mode == PrintMode::ExpandAliases {
+                    self.print(aliased, buffer, print_mode);
+                    return;
+                }
+
+                if self
+                    .names
+                    .local_aliases
+                    .contains(&(module.clone(), name.clone()))
+                {
+                    buffer.push_str(name);
+                } else {
+                    match self.names.named_type(module, name, print_mode) {
+                        NameContextInformation::Qualified(module, name) => {
+                            buffer.push_str(module);
                             buffer.push('.');
+                            buffer.push_str(name);
                         }
-                        buffer.push_str(name);
+                        NameContextInformation::Unqualified(name) => {
+                            buffer.push_str(name);
+                        }
+                        NameContextInformation::Unimported(qualified_module, qualified_name) => {
+                            if let Some(short) = qualified_module.split('/').next_back() {
+                                buffer.push_str(short);
+                                buffer.push('.');
+                            }
+                            buffer.push_str(qualified_name);
+                        }
                     }
                 }
                 if !parameters.is_empty() {

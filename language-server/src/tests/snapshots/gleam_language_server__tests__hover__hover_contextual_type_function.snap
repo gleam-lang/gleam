@@ -1,7 +1,6 @@
 ---
 source: language-server/src/tests/hover.rs
 expression: "\nimport wibble/wobble\ntype MyInt = Int\nfn func(value: wobble.Wibble) -> MyInt { 1 }\n"
-snapshot_kind: text
 ---
 
 import wibble/wobble
@@ -12,5 +11,5 @@ fn func(value: wobble.Wibble) -> MyInt { 1 }
 
 ----- Hover content (markdown) -----
 ```gleam
-fn(wobble.Wibble) -> app.MyInt
+fn(wobble.Wibble) -> MyInt
 ```

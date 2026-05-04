@@ -1,7 +1,6 @@
 ---
 source: language-server/src/tests/hover.rs
 expression: "\nimport wibble/wobble\n\ntype Wubble = wobble.Wibble\n\nfn main(wibble: Wubble) {\n  wibble\n}\n"
-snapshot_kind: text
 ---
 
 import wibble/wobble
@@ -16,5 +15,5 @@ fn main(wibble: Wubble) {
 
 ----- Hover content (markdown) -----
 ```gleam
-app.Wubble
+wobble.Wibble
 ```
