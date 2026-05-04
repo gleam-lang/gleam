@@ -1815,7 +1815,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
         arguments_types: Option<Vec<Arc<Type>>>,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
-        if overlaps(self.params.range, range)
+        if within(self.params.range, range)
             && let Some(module_alias) = name.module_name()
             && let Some(name) = name.name()
             && let Some(import) = self.get_module_import(module_alias, name, ast::Layer::Type)
@@ -1846,7 +1846,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
         //  ↑
         // This allows us to offer a code action when hovering over the module name.
         let range = src_span_to_lsp_range(*location, self.line_numbers);
-        if overlaps(self.params.range, range)
+        if within(self.params.range, range)
             && let ModuleValueConstructor::Record {
                 name: constructor_name,
                 ..
@@ -1885,7 +1885,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
         type_: &'ast Arc<Type>,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
-        if overlaps(self.params.range, range)
+        if within(self.params.range, range)
             && let Some((module_alias, _)) = module
             && let Inferred::Known(_) = constructor
             && let Some(import) = self.get_module_import(module_alias, name, ast::Layer::Value)
@@ -1922,7 +1922,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
         record_constructor: &'ast Option<Box<ValueConstructor>>,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
-        if overlaps(self.params.range, range)
+        if within(self.params.range, range)
             && let Some((module_alias, _)) = module
             && let Some(import) = self.get_module_import(module_alias, name, ast::Layer::Value)
         {
@@ -1955,7 +1955,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
         type_: &'ast Arc<Type>,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
-        if overlaps(self.params.range, range)
+        if within(self.params.range, range)
             && let Some((module_alias, _)) = module
             && let Some(constructor) = constructor
             && let type_::ValueConstructorVariant::Record { .. } = &constructor.variant

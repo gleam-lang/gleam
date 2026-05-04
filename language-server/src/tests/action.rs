@@ -3847,6 +3847,24 @@ pub fn main(x) -> option.Option(Int) {
 }
 
 #[test]
+fn test_qualified_to_unqualified_only_triggers_within_qualified_value() {
+    let src = r#"
+import option
+
+pub fn main(x) -> option.Option(Int) {
+    option.Some(1)
+}
+// end
+"#;
+    assert_no_code_actions!(
+        "Unqualify option.Option",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("import").select_until(find_position_of("// end")),
+    );
+}
+
+#[test]
 fn test_qualified_to_unqualified_import_nested_type_outer() {
     let src = r#"
 import option
