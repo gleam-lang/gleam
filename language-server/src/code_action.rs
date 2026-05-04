@@ -545,7 +545,7 @@ pub fn code_action_inexhaustive_let_to_case(
         let mut text_edits = TextEdits::new(line_numbers);
 
         let range = text_edits.src_span_to_lsp_range(location);
-        if !overlaps(params.range, range) {
+        if !within(params.range, range) {
             return;
         }
 

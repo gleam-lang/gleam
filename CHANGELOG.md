@@ -181,6 +181,10 @@
   lists with a tail.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the language server would suggest the "convert to case" code
+  action even when not explicitly hovering an inexhaustive let assignment.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a bug where enabling `javascript.typescript_declarations` or
   `javascript.source_maps` wouldn't generate their additional files unless the
   build directory was manually deleted. The compiler now automatically rebuilds

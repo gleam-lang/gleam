@@ -5711,6 +5711,17 @@ fn inexhaustive_let_alias_to_case() {
 }
 
 #[test]
+fn cursor_must_be_within_let_assignment_to_trigger_action() {
+    assert_no_code_actions!(
+        CONVERT_TO_CASE,
+        "pub fn main() {
+  let 10 as ten = 10
+}",
+        find_position_of("pub").select_until(find_position_of("}")),
+    );
+}
+
+#[test]
 fn inexhaustive_let_tuple_to_case() {
     assert_code_action!(
         CONVERT_TO_CASE,
