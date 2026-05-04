@@ -301,6 +301,20 @@ pub fn cleanup<Telem: Telemetry>(paths: &ProjectPaths, telemetry: Telem) -> Resu
     let changes = PackageChanges::between_manifests(&old_manifest, &manifest);
     telemetry.resolved_package_versions(&changes);
 
+    // Invalidate build caches after removing package
+    let target = config.target;
+    let name = config.name.clone();
+
+    // We need to clean build directory for the top level package for both dev
+    // and prod modes
+    for mode in [Mode::Dev, Mode::Prod] {
+        let lock = BuildLock::new_target(paths, mode, target)?;
+        let _guard = lock.lock(&telemetry)?;
+
+        let build_directory_path = paths.build_directory_for_package(mode, target, &name);
+        fs::delete_directory(build_directory_path.as_ref())?;
+    }
+
     Ok(manifest)
 }
 
