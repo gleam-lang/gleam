@@ -2002,6 +2002,49 @@ fn module_with_internal_type_leak_warning() {
 }
 
 #[test]
+fn contains_internal_type_leak_detects_warning() {
+    let leak = Warning::InternalTypeLeak {
+        location: SrcSpan { start: 0, end: 1 },
+        leaked: Type::Named {
+            publicity: Publicity::Internal {
+                attribute_location: None,
+            },
+            package: "pkg".into(),
+            module: "pkg/internal".into(),
+            name: "Internal".into(),
+            arguments: vec![],
+            inferred_variant: None,
+        },
+        names: type_::printer::Names::new(),
+    };
+
+    let leaking = ModuleInterface {
+        warnings: vec![leak],
+        is_internal: false,
+        package: "pkg".into(),
+        origin: Origin::Src,
+        name: "pkg/main".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        values: HashMap::new(),
+        accessors: HashMap::new(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: vec![],
+        contains_echo: false,
+        references: References::default(),
+        inline_functions: HashMap::new(),
+    };
+    assert!(leaking.contains_internal_type_leak());
+
+    let mut clean = leaking.clone();
+    clean.warnings.clear();
+    assert!(!clean.contains_internal_type_leak());
+}
+
+#[test]
 fn module_with_documentation() {
     let module = ModuleInterface {
         warnings: vec![],
