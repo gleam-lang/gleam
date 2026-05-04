@@ -1693,7 +1693,7 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
                 Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
                     atom_string(to_snake_case(record_name))
                 }
-                Type::Alias { .. } => unreachable!(),
+                Type::Alias { .. } => unreachable!("collapse_links strips Type::Alias"),
             }
         }
 
@@ -1812,7 +1812,7 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
                 Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
                     atom_string(to_snake_case(tag))
                 }
-                Type::Alias { .. } => unreachable!(),
+                Type::Alias { .. } => unreachable!("collapse_links strips Type::Alias"),
             }
         }
 

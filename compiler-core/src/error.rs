@@ -1320,13 +1320,12 @@ resulting in compilation errors!"
             }],
 
             Error::CannotPublishLeakedInternalType { unfinished } => vec![Diagnostic {
-                title: "Cannot publish unfinished code".into(),
+                title: "Internal types leaked through public API".into(),
                 text: format!(
-                    "These modules leak internal types in their public API and cannot be published:
+                    "These modules expose `@internal` types in a public function, \
+constructor, or constant and cannot be published:
 
 {}
-
-Please make sure internal types do not appear in public functions and try again.
 ",
                     unfinished
                         .iter()
@@ -1334,7 +1333,11 @@ Please make sure internal types do not appear in public functions and try again.
                         .join("\n")
                 ),
                 level: Level::Error,
-                hint: None,
+                hint: Some(
+                    "Use a public type alias (`pub type Alias = Internal`) to expose \
+a stable name without revealing the internal type, or drop the `@internal` annotation."
+                        .into(),
+                ),
                 location: None,
             }],
 
