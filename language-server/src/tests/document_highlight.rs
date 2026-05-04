@@ -274,6 +274,30 @@ pub fn main() {
 }
 
 #[test]
+fn highlights_for_function_from_unqualified_aliased_reference() {
+    assert_highlights!(
+        (
+            "mod",
+            "
+pub fn wibble() {
+  wibble()
+}
+"
+        ),
+        "
+import mod.{wibble as wobble}
+
+pub fn main() {
+  let value = wobble()
+  mod.wibble()
+  value
+}
+",
+        find_position_of("wobble()"),
+    );
+}
+
+#[test]
 fn highlights_for_private_constant() {
     assert_highlights!(
         "
@@ -386,6 +410,31 @@ pub fn main() {
 }
 ",
         find_position_of("wibble +"),
+    );
+}
+
+#[test]
+fn highlights_for_constant_from_unqualified_aliased_reference() {
+    assert_highlights!(
+        (
+            "mod",
+            "
+pub const wibble = 10
+
+fn wobble() {
+  wibble
+}
+"
+        ),
+        "
+import mod.{wibble as wobble}
+
+pub fn main() {
+  let value = mod.wibble
+  wobble + value
+}
+",
+        find_position_of("wobble +"),
     );
 }
 
@@ -505,6 +554,31 @@ pub fn main() {
 }
 ",
         find_position_of("Wibble").nth_occurrence(3),
+    );
+}
+
+#[test]
+fn higlights_for_type_variant_from_unqualified_aliased_reference() {
+    assert_highlights!(
+        (
+            "mod",
+            "
+pub type Wibble { Wibble }
+
+fn wobble() {
+  Wibble
+}
+"
+        ),
+        "
+import mod.{Wibble as Wobble}
+
+pub fn main() {
+  let value = mod.Wibble
+  Wobble
+}
+",
+        find_position_of("Wobble").nth_occurrence(2),
     );
 }
 
@@ -653,6 +727,30 @@ pub fn main() -> Wibble {
 }
 ",
         find_position_of("Wibble").nth_occurrence(2),
+    );
+}
+
+#[test]
+fn higlights_for_type_from_unqualified_aliased_reference() {
+    assert_highlights!(
+        (
+            "mod",
+            "
+pub type Wibble { Wibble }
+
+fn wobble() -> Wibble {
+  todo
+}
+"
+        ),
+        "
+import mod.{type Wibble as Wobble}
+
+pub fn main() -> Wobble {
+  let _: mod.Wibble = todo
+}
+",
+        find_position_of("Wobble").nth_occurrence(2),
     );
 }
 
