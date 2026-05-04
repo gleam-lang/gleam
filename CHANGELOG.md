@@ -125,6 +125,13 @@
 
 ### Bug fixes
 
+- Fixed a bug where the generated TypeScript declarations for record fields
+  using JavaScript reserved property names (`constructor`, `prototype`,
+  `__proto__`, `then`) did not match the names used in the generated JavaScript
+  classes, leading to incorrect TypeScript declarations and misleading
+  autocompletion.
+  ([Metbcy](https://github.com/Metbcy))
+
 - Fixed a bug where the build tool would check for new major versions of a local
   or git dependency on Hex when running `gleam update`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
