@@ -179,4 +179,8 @@ where
     ) -> Result<Vec<String>, Error> {
         panic!("The language server is not permitted to create subprocesses")
     }
+
+    fn otp_version(&self) -> Option<String> {
+        None
+    }
 }

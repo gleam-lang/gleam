@@ -79,6 +79,10 @@
   flow for when a Hex session has been revoked or has expired.
   ([Sahil Upasane](https://github.com/404salad))
 
+- Erlang shipments now warn when run on a different OTP version than they were
+  built with.
+  ([Joris Hartog](https://github.com/nootr))
+
 ### Language server
 
 - The language server can now help with completions when typing a list's tail:
