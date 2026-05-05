@@ -34,8 +34,6 @@ fn default_javascript_runtime() -> Runtime {
     Runtime::NodeJs
 }
 
-pub type Dependencies = HashMap<EcoString, Requirement>;
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SpdxLicense {
     pub licence: String,
@@ -166,16 +164,16 @@ pub struct PackageConfig {
     #[serde(
         default,
         serialize_with = "ordered_map",
-        deserialize_with = "dependencies_map::deserialize"
+        deserialize_with = "map_with_package_name_keys ::deserialize"
     )]
-    pub dependencies: Dependencies,
+    pub dependencies: HashMap<EcoString, Requirement>,
     #[serde(
         default,
         alias = "dev-dependencies",
         serialize_with = "ordered_map",
-        deserialize_with = "dependencies_map::deserialize"
+        deserialize_with = "map_with_package_name_keys ::deserialize"
     )]
-    pub dev_dependencies: Dependencies,
+    pub dev_dependencies: HashMap<EcoString, Requirement>,
     #[serde(default)]
     pub repository: Option<Repository>,
     #[serde(default)]
@@ -217,7 +215,7 @@ where
 }
 
 impl PackageConfig {
-    pub fn dependencies_for(&self, mode: Mode) -> Result<Dependencies> {
+    pub fn dependencies_for(&self, mode: Mode) -> Result<HashMap<EcoString, Requirement>> {
         match mode {
             Mode::Dev | Mode::Lsp => self.all_direct_dependencies(),
             Mode::Prod => Ok(self.dependencies.clone()),
@@ -226,7 +224,7 @@ impl PackageConfig {
 
     // Return all the dependencies listed in the configuration, that is, all the
     // direct dependencies, both in the `dependencies` and `dev_dependencies`.
-    pub fn all_direct_dependencies(&self) -> Result<Dependencies> {
+    pub fn all_direct_dependencies(&self) -> Result<HashMap<EcoString, Requirement>> {
         let mut deps =
             HashMap::with_capacity(self.dependencies.len() + self.dev_dependencies.len());
         for (name, requirement) in self.dependencies.iter().chain(&self.dev_dependencies) {
@@ -1207,7 +1205,7 @@ pub(crate) mod package_name {
     }
 }
 
-pub(crate) mod dependencies_map {
+pub mod map_with_package_name_keys {
     use ecow::EcoString;
     use serde::{Deserialize, Deserializer, de};
     use std::collections::HashMap;

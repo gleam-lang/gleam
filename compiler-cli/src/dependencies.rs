@@ -571,13 +571,14 @@ fn write_manifest_to_disc(paths: &ProjectPaths, manifest: &Manifest) -> Result<(
 // the `project/build/packages` directory.
 // For descriptions of packages provided by paths and git deps, see the ProvidedPackage struct.
 // The same package may appear in both at different times.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 struct LocalPackages {
-    packages: HashMap<String, Version>,
+    #[serde(deserialize_with = "gleam_core::config::map_with_package_name_keys::deserialize")]
+    packages: HashMap<EcoString, Version>,
 }
 
 impl LocalPackages {
-    pub fn extra_local_packages(&self, manifest: &Manifest) -> Vec<(String, Version)> {
+    pub fn extra_local_packages(&self, manifest: &Manifest) -> Vec<(EcoString, Version)> {
         let manifest_packages: HashSet<_> = manifest
             .packages
             .iter()
@@ -634,10 +635,41 @@ impl LocalPackages {
             packages: manifest
                 .packages
                 .iter()
-                .map(|p| (p.name.to_string(), p.version.clone()))
+                .map(|p| (p.name.clone(), p.version.clone()))
                 .collect(),
         }
     }
+}
+
+#[test]
+fn local_packages_deserialise_ok() {
+    let toml = r#"
+[packages]
+gleam_stdlib = "1.0.0"
+gleam_otp = "1.1.0"
+"#;
+    let packages: LocalPackages = toml::from_str(toml).unwrap();
+    assert_eq!(
+        packages,
+        LocalPackages {
+            packages: HashMap::from_iter([
+                ("gleam_stdlib".into(), Version::new(1, 0, 0)),
+                ("gleam_otp".into(), Version::new(1, 1, 0)),
+            ])
+        }
+    )
+}
+
+#[test]
+fn local_packages_deserialise_invalid_name() {
+    let toml = r#"
+[packages]
+gleam_stdlib = "1.0.0"
+"../../stuff" = "1.1.0"
+"#;
+    let error = toml::from_str::<LocalPackages>(toml)
+        .expect_err("should fail to deserialise because of invalid name");
+    insta::assert_snapshot!(insta::internals::AutoName, error.to_string());
 }
 
 fn is_same_requirements(

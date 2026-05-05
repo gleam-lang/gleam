@@ -517,8 +517,13 @@
   ([evipepota](https://github.com/evipepota) and
   ([Louis Pilfold](https://github.com/lpil))
 
-- Restrict publication tarball creation so they cannot contain files from
-  outside the project root.
+- Stricter deserialisation rules for files internal the build directory to
+  reject corrupted data.
   ([Abdelrahman Ahmed Aboelkasem](https://github.com/0x2face),
   ([Aly](https://github.com/spect3r1), and
   ([Louis Pilfold](https://github.com/lpil))
+
+- Restrict publication tarball creation so they cannot contain files from
+  outside the project root.
+  ([Abdelrahman Ahmed Aboelkasem](https://github.com/0x2face),
+  ([Aly](https://github.com/spect3r1), and ([Louis Pilfold](https://github.com/lpil))
