@@ -11906,6 +11906,77 @@ pub fn main() {
 }
 
 #[test]
+fn no_extract_function_selecting_multiple_case_branches() {
+    assert_no_code_actions!(
+        EXTRACT_FUNCTION,
+        r#"
+const pi = 3.14
+
+pub fn main() {
+  let value = 3.15
+
+  let string = case value {
+    0.0 -> "Zero"
+    1.0 -> "One"
+    _ -> "Something else"
+  }
+
+  echo string
+}
+"#,
+        find_position_of("0.0").select_until(find_position_of("else"))
+    );
+}
+
+#[test]
+fn no_extract_function_selecting_case_branch_pattern() {
+    assert_no_code_actions!(
+        EXTRACT_FUNCTION,
+        r#"
+const pi = 3.14
+
+pub fn main() {
+  let value = 3.15
+
+  let string = case value {
+    0.0 -> "Zero"
+    1.0 -> "One"
+    _ -> "Something else"
+  }
+
+  echo string
+}
+"#,
+        find_position_of("0.0").select_until(find_position_of("Zero").under_last_char())
+    );
+}
+
+#[test]
+fn no_extract_function_selecting_case_branch_guard() {
+    assert_no_code_actions!(
+        EXTRACT_FUNCTION,
+        r#"
+const pi = 3.14
+
+pub fn main() {
+  let value = 3.15
+
+  let string = case value {
+    0.0 if True -> "Zero"
+    1.0 -> "One"
+    _ -> "Something else"
+  }
+
+  echo string
+}
+"#,
+        find_position_of("True")
+            .under_char('u')
+            .select_until(find_position_of("Zero").under_last_char())
+    );
+}
+
+#[test]
 fn extract_use_inside_function() {
     assert_code_action!(
         EXTRACT_FUNCTION,

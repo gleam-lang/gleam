@@ -11074,6 +11074,58 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
         self.register_referenced_variable(name, type_, *location, *definition_location);
     }
 
+    fn visit_typed_expr_case(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        subjects: &'ast [TypedExpr],
+        clauses: &'ast [ast::TypedClause],
+        compiled_case: &'ast CompiledCase,
+    ) {
+        let was_extracting_already = self.function.is_some();
+
+        // We first visit as usual...
+        ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
+
+        // But then we need to check we're in a situation where it actually makes
+        // sense to extract: if the cursor is entirely within the case (so it's
+        // not part of a bigger extracted chunk) and it spans over one of the
+        // branches' pattern or guard, then we don't want to allow extracting
+        // anything. Popping up the action would be confusing.
+        // For example:
+        //
+        // ```gleam
+        // case wibble {
+        //   Ok(_) -> todo
+        // //^^^^^^^^^^^^^ If I'm selecting this whole branch it makes no sense
+        //                 to propose extracting it as a function
+        //   _ if wibble -> todo
+        // //        ^^^^^^^^^^^ If I'm selecting this it makes no sense to
+        // //                    propose extracting it as a function
+        // }
+        // ```
+
+        // We were already extracting something, we don't want to render that
+        // choice null, this is just a part of a bigger piece being extracted.
+        if was_extracting_already {
+            return;
+        }
+
+        for clause in clauses {
+            let left_hand_side_location = SrcSpan {
+                start: clause.pattern_location().start,
+                end: clause.then.location().start - 1,
+            };
+            let left_hand_side_range = self.edits.src_span_to_lsp_range(left_hand_side_location);
+            // If there's any overlapping with one of the patterns, then we
+            // don't want to extract anything.
+            if overlaps(self.params.range, left_hand_side_range) {
+                self.function = None;
+                break;
+            }
+        }
+    }
+
     fn visit_typed_bit_array_size_variable(
         &mut self,
         location: &'ast SrcSpan,
