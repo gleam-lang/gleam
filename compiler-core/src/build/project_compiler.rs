@@ -268,7 +268,6 @@ where
         let mut flags = BitFlags::new();
         flags.set(0, js && self.config.javascript.typescript_declarations);
         flags.set(1, js && self.config.javascript.source_maps);
-        dbg!(&flags.bits);
 
         let fingerprint = format!("{COMPILER_VERSION} {}", flags.bits);
 
