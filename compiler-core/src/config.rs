@@ -1045,7 +1045,7 @@ mod non_ascending_path_buf {
         D: Deserializer<'de>,
     {
         let path = Utf8PathBuf::deserialize(deserializer)?;
-        if path.is_absolute() {
+        if path.is_absolute() || (cfg!(windows) && path.starts_with("\\")) {
             return Err(D::Error::custom("paths must be relative"));
         }
         for component in path.components() {
@@ -1404,6 +1404,19 @@ name = "one_two"
 
 [documentation]
 pages = [{ title = "My Page", path = "stuff.html", source = "something\\..\\..\\secrets.txt" }]
+"#;
+
+    assert!(toml::from_str::<PackageConfig>(input).is_err())
+}
+
+#[cfg(windows)]
+#[test]
+fn docs_absolute_source_windows() {
+    let input = r#"
+name = "one_two"
+
+[documentation]
+pages = [{ title = "My Page", path = "stuff.html", source = "C:\\etc\\passwd" }]
 "#;
 
     assert!(toml::from_str::<PackageConfig>(input).is_err())
