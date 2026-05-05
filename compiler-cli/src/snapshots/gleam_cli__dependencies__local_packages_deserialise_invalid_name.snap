@@ -1,0 +1,9 @@
+---
+source: compiler-cli/src/dependencies.rs
+expression: error.to_string()
+---
+TOML parse error at line 2, column 1
+  |
+2 | [packages]
+  | ^^^^^^^^^^
+invalid value: string "../../stuff", expected a package name containing only lowercase letter, numbers, and underscores
