@@ -1015,8 +1015,46 @@ pub struct Docs {
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct DocsPage {
     pub title: String,
+    #[serde(default, deserialize_with = "non_ascending_path_string::deserialize")]
     pub path: String,
+    #[serde(default, deserialize_with = "non_ascending_path_buf::deserialize")]
     pub source: Utf8PathBuf,
+}
+
+mod non_ascending_path_string {
+    use serde::{Deserialize, Deserializer, de::Error as _};
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<String, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let path = String::deserialize(deserializer)?.replace('\\', "/");
+        if path.starts_with("../") || path.contains("/../") {
+            return Err(D::Error::custom("paths must not contain .. segments"));
+        }
+        Ok(path)
+    }
+}
+
+mod non_ascending_path_buf {
+    use camino::{Utf8Component, Utf8PathBuf};
+    use serde::{Deserialize, Deserializer, de::Error as _};
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Utf8PathBuf, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let path = Utf8PathBuf::deserialize(deserializer)?;
+        if path.is_absolute() {
+            return Err(D::Error::custom("paths must be relative"));
+        }
+        for component in path.components() {
+            if component == Utf8Component::ParentDir {
+                return Err(D::Error::custom("paths must not contain .. segments"));
+            }
+        }
+        Ok(path)
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
@@ -1241,6 +1279,151 @@ name = "1"
             .unwrap_err()
             .to_string(),
     )
+}
+
+#[test]
+fn docs_dot_dot_string_path() {
+    let input = r#"
+name = "one_two"
+
+[documentation]
+pages = [{ title = "My Page", path = "../secrets.txt", source = "./path/to/my-page.md" }]
+"#;
+
+    insta::assert_snapshot!(
+        insta::internals::AutoName,
+        toml::from_str::<PackageConfig>(input)
+            .unwrap_err()
+            .to_string()
+    );
+}
+
+#[test]
+fn docs_prefix_dot_dot_string_path() {
+    let input = r#"
+name = "one_two"
+
+[documentation]
+pages = [{ title = "My Page", path = "something/../../secrets.txt", source = "./path/to/my-page.md" }]
+"#;
+
+    insta::assert_snapshot!(
+        insta::internals::AutoName,
+        toml::from_str::<PackageConfig>(input)
+            .unwrap_err()
+            .to_string()
+    );
+}
+
+#[test]
+fn docs_windows_dot_dot_string_path() {
+    let input = r#"
+name = "one_two"
+
+[documentation]
+pages = [{ title = "My Page", path = "..\\secrets.txt", source = "./path/to/my-page.md" }]
+"#;
+
+    insta::assert_snapshot!(
+        insta::internals::AutoName,
+        toml::from_str::<PackageConfig>(input)
+            .unwrap_err()
+            .to_string()
+    );
+}
+
+#[test]
+fn docs_prefix_windows_dot_dot_string_path() {
+    let input = r#"
+name = "one_two"
+
+[documentation]
+pages = [{ title = "My Page", path = "something\\..\\..\\secrets.txt", source = "./path/to/my-page.md" }]
+"#;
+
+    insta::assert_snapshot!(
+        insta::internals::AutoName,
+        toml::from_str::<PackageConfig>(input)
+            .unwrap_err()
+            .to_string()
+    );
+}
+
+#[test]
+fn docs_dot_dot_path_buf() {
+    let input = r#"
+name = "one_two"
+
+[documentation]
+pages = [{ title = "My Page", path = "stuff.html", source = "../secrets.txt" }]
+"#;
+
+    insta::assert_snapshot!(
+        insta::internals::AutoName,
+        toml::from_str::<PackageConfig>(input)
+            .unwrap_err()
+            .to_string()
+    );
+}
+
+#[test]
+fn docs_prefix_dot_dot_path_buf() {
+    let input = r#"
+name = "one_two"
+
+[documentation]
+pages = [{ title = "My Page", path = "stuff.html", source = "something/../../secrets.txt" }]
+"#;
+
+    insta::assert_snapshot!(
+        insta::internals::AutoName,
+        toml::from_str::<PackageConfig>(input)
+            .unwrap_err()
+            .to_string()
+    );
+}
+
+#[cfg(windows)]
+#[test]
+fn docs_windows_dot_dot_path_buf() {
+    let input = r#"
+name = "one_two"
+
+[documentation]
+pages = [{ title = "My Page", path = "stuff.html", source = "..\\secrets.txt" }]
+"#;
+
+    assert!(toml::from_str::<PackageConfig>(input).is_err())
+}
+
+#[cfg(windows)]
+#[test]
+fn docs_prefix_windows_dot_dot_path_buf() {
+    let input = r#"
+name = "one_two"
+
+[documentation]
+pages = [{ title = "My Page", path = "stuff.html", source = "something\\..\\..\\secrets.txt" }]
+"#;
+
+    assert!(toml::from_str::<PackageConfig>(input).is_err())
+}
+
+#[test]
+fn docs_absolute_source() {
+    let input = r#"
+name = "one_two"
+
+[documentation]
+pages = [{ title = "My Page", path = "stuff.html", source = "/etc/passwd" }]
+"#;
+
+    insta::assert_snapshot!(
+        insta::internals::AutoName,
+        toml::from_str::<PackageConfig>(input)
+            .unwrap_err()
+            .to_string()
+    );
 }
 
 #[test]

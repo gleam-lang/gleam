@@ -1,6 +1,6 @@
 use std::{collections::HashMap, time::SystemTime};
 
-use camino::{Utf8Component, Utf8Path, Utf8PathBuf};
+use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
 
 use crate::{cli, fs::ProjectIO, http::HttpClient};
@@ -10,7 +10,7 @@ use gleam_core::{
     build::{Codegen, Compile, Mode, Options, Package, Target},
     config::{DocsPage, PackageConfig},
     docs::{Dependency, DependencyKind, DocContext},
-    error::{Error, FileIoAction, FileKind},
+    error::Error,
     hex,
     io::HttpClient as _,
     manifest::ManifestPackageSource,
@@ -151,7 +151,12 @@ pub(crate) fn build_documentation(
 ) -> Result<Vec<gleam_core::io::OutputFile>, Error> {
     compiled.attach_doc_and_module_comments();
     cli::print_generating_documentation();
-    let pages = documentation_pages(paths, config)?;
+    let mut pages = vec![DocsPage {
+        title: "README".into(),
+        path: "index.html".into(),
+        source: paths.readme(), // TODO: support non markdown READMEs. Or a default if there is none.
+    }];
+    pages.extend(config.documentation.pages.iter().cloned());
     let mut outputs = gleam_core::docs::generate_html(
         paths,
         gleam_core::docs::DocumentationConfig {
@@ -171,218 +176,6 @@ pub(crate) fn build_documentation(
         cached_modules,
     ));
     Ok(outputs)
-}
-
-fn documentation_pages(
-    paths: &ProjectPaths,
-    config: &PackageConfig,
-) -> Result<Vec<DocsPage>, Error> {
-    let mut pages = vec![DocsPage {
-        title: "README".into(),
-        path: "index.html".into(),
-        source: paths.readme(), // TODO: support non markdown READMEs. Or a default if there is none.
-    }];
-
-    for page in &config.documentation.pages {
-        let path = validate_docs_page_path(paths, config, page)?;
-        let source = validate_docs_page_source(paths, page)?;
-        pages.push(DocsPage {
-            title: page.title.clone(),
-            path: path.into_string(),
-            source,
-        });
-    }
-
-    Ok(pages)
-}
-
-fn validate_docs_page_path(
-    paths: &ProjectPaths,
-    config: &PackageConfig,
-    page: &DocsPage,
-) -> Result<Utf8PathBuf, Error> {
-    normalize_path_within_base(
-        &paths.root_config(),
-        "path",
-        Utf8Path::new(&page.path),
-        &page.path,
-        &paths.build_documentation_directory(&config.name),
-        "documentation output directory",
-    )
-}
-
-fn validate_docs_page_source(paths: &ProjectPaths, page: &DocsPage) -> Result<Utf8PathBuf, Error> {
-    let source = normalize_path_within_base(
-        &paths.root_config(),
-        "source",
-        &page.source,
-        &page.source,
-        paths.root(),
-        "project root",
-    )?;
-    Ok(paths.root().join(source))
-}
-
-fn normalize_path_within_base(
-    config_path: &Utf8Path,
-    field_name: &str,
-    path: &Utf8Path,
-    value: impl std::fmt::Display,
-    base: &Utf8Path,
-    boundary_name: &str,
-) -> Result<Utf8PathBuf, Error> {
-    debug_assert!(base.is_absolute());
-    let base_parts = base
-        .components()
-        .filter_map(|component| match component {
-            Utf8Component::Normal(component) => Some(component.to_string()),
-            _ => None,
-        })
-        .collect::<Vec<_>>();
-    let mut normalized_parts = base_parts.clone();
-    let base_depth = base_parts.len();
-
-    for component in path.components() {
-        match component {
-            Utf8Component::CurDir => (),
-            Utf8Component::Normal(component) => normalized_parts.push(component.to_string()),
-            Utf8Component::ParentDir => {
-                if !normalized_parts.is_empty() {
-                    let _ = normalized_parts.pop();
-                }
-            }
-            Utf8Component::RootDir | Utf8Component::Prefix(_) => {
-                return Err(Error::FileIo {
-                    action: FileIoAction::Parse,
-                    kind: FileKind::File,
-                    path: config_path.to_path_buf(),
-                    err: Some(format!(
-                        "Invalid documentation page {field_name} `{value}`. It must stay within the {boundary_name}."
-                    )),
-                });
-            }
-        }
-    }
-
-    if normalized_parts.get(..base_depth) != Some(base_parts.as_slice()) {
-        return Err(Error::FileIo {
-            action: FileIoAction::Parse,
-            kind: FileKind::File,
-            path: config_path.to_path_buf(),
-            err: Some(format!(
-                "Invalid documentation page {field_name} `{value}`. It must stay within the {boundary_name}."
-            )),
-        });
-    }
-
-    let mut normalized = Utf8PathBuf::new();
-    for component in normalized_parts.into_iter().skip(base_depth) {
-        normalized.push(component);
-    }
-
-    Ok(normalized)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use gleam_core::config::PackageConfig;
-
-    #[test]
-    fn custom_docs_page_path_must_stay_within_project() {
-        let paths = ProjectPaths::new(Utf8PathBuf::from("/tmp/project"));
-        let mut config = PackageConfig::default();
-        config.documentation.pages.push(DocsPage {
-            title: "Escape".into(),
-            path: "../../escape.html".into(),
-            source: Utf8PathBuf::from("README.md"),
-        });
-
-        let error = documentation_pages(&paths, &config).expect_err("invalid docs page path");
-
-        assert!(matches!(
-            error,
-            Error::FileIo {
-                action: FileIoAction::Parse,
-                ..
-            }
-        ));
-    }
-
-    #[test]
-    fn custom_docs_page_absolute_path_is_rejected() {
-        let paths = ProjectPaths::new(Utf8PathBuf::from("/tmp/project"));
-        let mut config = PackageConfig::default();
-        config.name = "project".into();
-        config.documentation.pages.push(DocsPage {
-            title: "Escape".into(),
-            path: "/tmp/escape.html".into(),
-            source: Utf8PathBuf::from("README.md"),
-        });
-
-        let error = documentation_pages(&paths, &config).expect_err("invalid docs page path");
-
-        assert!(matches!(
-            error,
-            Error::FileIo {
-                action: FileIoAction::Parse,
-                ..
-            }
-        ));
-    }
-
-    #[test]
-    fn custom_docs_pages_are_resolved_under_the_docs_output_directory() {
-        let paths = ProjectPaths::new(Utf8PathBuf::from("/tmp/project"));
-        let mut config = PackageConfig::default();
-        config.name = "project".into();
-        config.documentation.pages.push(DocsPage {
-            title: "Guide".into(),
-            path: "../project/guides/intro.html".into(),
-            source: Utf8PathBuf::from("docs/intro.md"),
-        });
-
-        let pages = documentation_pages(&paths, &config).expect("valid docs pages");
-
-        assert_eq!(pages[1].path, "guides/intro.html");
-        assert_eq!(pages[1].source, Utf8PathBuf::from("/tmp/project/docs/intro.md"));
-    }
-
-    #[test]
-    fn custom_docs_page_source_must_stay_within_project_root() {
-        let paths = ProjectPaths::new(Utf8PathBuf::from("/tmp/project"));
-        let mut config = PackageConfig::default();
-        config.documentation.pages.push(DocsPage {
-            title: "Leak".into(),
-            path: "leak.html".into(),
-            source: Utf8PathBuf::from("/etc/passwd"),
-        });
-
-        let error = documentation_pages(&paths, &config).expect_err("invalid docs page source");
-
-        assert!(matches!(
-            error,
-            Error::FileIo {
-                action: FileIoAction::Parse,
-                ..
-            }
-        ));
-    }
-
-    #[test]
-    fn custom_docs_page_source_can_leave_and_return_within_project_root() {
-        let paths = ProjectPaths::new(Utf8PathBuf::from("/tmp/project"));
-        let mut config = PackageConfig::default();
-        config.documentation.pages.push(DocsPage {
-            title: "Guide".into(),
-            path: "guide.html".into(),
-            source: Utf8PathBuf::from("docs/../README.md"),
-        });
-
-        let pages = documentation_pages(&paths, &config).expect("valid docs pages");
-
-        assert_eq!(pages[1].source, Utf8PathBuf::from("/tmp/project/README.md"));
-    }
 }
 
 pub fn publish(paths: &ProjectPaths) -> Result<()> {

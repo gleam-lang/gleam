@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/config.rs
+expression: "toml::from_str::<PackageConfig>(input).unwrap_err().to_string()"
+---
+TOML parse error at line 5, column 61
+  |
+5 | pages = [{ title = "My Page", path = "stuff.html", source = "something/../../secrets.txt" }]
+  |                                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+paths must not contain .. segments
