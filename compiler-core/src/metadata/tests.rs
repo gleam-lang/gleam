@@ -15,7 +15,7 @@ use crate::{
     build::Origin,
     line_numbers::LineNumbers,
     parse::LiteralFloatValue,
-    reference::{Reference, ReferenceKind},
+    reference::{ModuleNameReference, Reference, ReferenceKind},
     type_::{
         self, Deprecation, ModuleInterface, Opaque, References, Type, TypeAliasConstructor,
         TypeConstructor, TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors,
@@ -1985,15 +1985,24 @@ fn module_with_references() {
                     vec![
                         Reference {
                             location: SrcSpan::new(26, 35),
-                            kind: ReferenceKind::Qualified,
+                            kind: ReferenceKind::Qualified {
+                                module_alias: "some_other_module".into(),
+                                module_location: SrcSpan::new(26, 29),
+                            },
                         },
                         Reference {
                             location: SrcSpan::new(152, 204),
-                            kind: ReferenceKind::Qualified,
+                            kind: ReferenceKind::Qualified {
+                                module_alias: "some_other_module".into(),
+                                module_location: SrcSpan::new(26, 29),
+                            },
                         },
                         Reference {
                             location: SrcSpan::new(0, 8),
-                            kind: ReferenceKind::Qualified,
+                            kind: ReferenceKind::Qualified {
+                                module_alias: "some_alias".into(),
+                                module_location: SrcSpan::new(26, 29),
+                            },
                         },
                     ],
                 ),
@@ -2004,7 +2013,10 @@ fn module_with_references() {
                 vec![
                     Reference {
                         location: SrcSpan::new(26, 35),
-                        kind: ReferenceKind::Qualified,
+                        kind: ReferenceKind::Qualified {
+                            module_alias: "some_alias".into(),
+                            module_location: SrcSpan::new(26, 29),
+                        },
                     },
                     Reference {
                         location: SrcSpan::new(152, 204),
@@ -2014,6 +2026,23 @@ fn module_with_references() {
                         location: SrcSpan::new(0, 8),
                         kind: ReferenceKind::Definition,
                     },
+                ],
+            )]
+            .into(),
+            module_references: [(
+                "some_module".into(),
+                vec![
+                    ModuleNameReference::Import {
+                        module_location: SrcSpan::new(5, 20),
+                        import_end: 31,
+                    },
+                    ModuleNameReference::AliasedImport {
+                        module_location: SrcSpan::new(5, 20),
+                        alias_location: SrcSpan::new(26, 32),
+                        alias: "some_alias".into(),
+                    },
+                    ModuleNameReference::ModuleSelect(SrcSpan::new(92, 100)),
+                    ModuleNameReference::AliasedModuleSelect(SrcSpan::new(152, 160)),
                 ],
             )]
             .into(),

@@ -8,7 +8,7 @@ use lsp_types::{
     DidCloseTextDocumentNotification, DidSaveTextDocumentNotification, DocumentFormattingRequest,
     DocumentHighlightRequest, DocumentSymbolRequest, FoldingRangeRequest, HoverRequest,
     PrepareRenameRequest, ReferencesRequest, RenameRequest, SignatureHelpRequest,
-    TextDocumentContentChangeEvent, TypeDefinitionRequest,
+    TextDocumentContentChangeEvent, TypeDefinitionRequest, WillRenameFilesRequest,
 };
 use std::time::Duration;
 
@@ -33,6 +33,7 @@ pub enum Request {
     Rename(lsp::RenameParams),
     FindReferences(lsp::ReferenceParams),
     DocumentHighlight(lsp::DocumentHighlightParams),
+    RenameFiles(lsp::RenameFilesParams),
 }
 
 impl Request {
@@ -90,6 +91,10 @@ impl Request {
             "textDocument/documentHighlight" => {
                 let params = cast_request::<DocumentHighlightRequest>(request);
                 Some(Message::Request(id, Request::DocumentHighlight(params)))
+            }
+            "workspace/willRenameFiles" => {
+                let params = cast_request::<WillRenameFilesRequest>(request);
+                Some(Message::Request(id, Request::RenameFiles(params)))
             }
             _ => None,
         }

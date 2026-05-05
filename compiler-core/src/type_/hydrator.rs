@@ -179,8 +179,11 @@ impl Hydrator {
                     .clone();
 
                 if let Some((type_module, type_name)) = return_type.named_type_name() {
-                    let reference_kind = if module.is_some() {
-                        ReferenceKind::Qualified
+                    let reference_kind = if let Some((module_alias, module_location)) = &module {
+                        ReferenceKind::Qualified {
+                            module_alias: module_alias.clone(),
+                            module_location: *module_location,
+                        }
                     } else if name != &type_name {
                         ReferenceKind::Alias
                     } else {

@@ -809,6 +809,20 @@ impl<'a> TestProject<'a> {
 
         executor(&mut engine, params, code.into())
     }
+
+    /// Run a test in a project without a specific position (for workspace-wide
+    /// actions).
+    pub fn run<T>(
+        &self,
+        executor: impl FnOnce(
+            &mut LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO>,
+        ) -> T,
+    ) -> T {
+        // Use a throwaway position and ignore it
+        let (mut engine, _) = self.positioned_with_io(Position::default());
+
+        executor(&mut engine)
+    }
 }
 
 #[derive(Clone)]

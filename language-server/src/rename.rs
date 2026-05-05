@@ -9,14 +9,14 @@ use lsp_types::{Range, RenameParams, TextEdit, Uri as Url, WorkspaceEdit};
 
 use gleam_core::{
     analyse::name,
-    ast::{self, SrcSpan, visit::Visit},
+    ast::{self, SrcSpan},
     build::Module,
     line_numbers::LineNumbers,
-    reference::ReferenceKind,
+    reference::{ModuleNameReference, ReferenceKind},
     type_::{ModuleInterface, error::Named},
 };
 
-use crate::reference::{self, FindTypeVariableReferences, ModuleNameReferenceKind};
+use crate::reference::FindTypeVariableReferences;
 
 use super::{
     TextEdits,
@@ -224,7 +224,7 @@ fn rename_references_in_module(
         match reference.kind {
             // If the reference is an alias, the alias name will remain unchanged.
             ReferenceKind::Alias => {}
-            ReferenceKind::Qualified
+            ReferenceKind::Qualified { .. }
             | ReferenceKind::Unqualified
             | ReferenceKind::Import
             | ReferenceKind::Definition => edits.replace(reference.location, new_name.clone()),
@@ -261,7 +261,7 @@ fn alias_references_in_module(
 
     for reference in references {
         match reference.kind {
-            ReferenceKind::Qualified => {}
+            ReferenceKind::Qualified { .. } => {}
             ReferenceKind::Unqualified | ReferenceKind::Alias => {
                 edits.replace(reference.location, params.new_name.clone())
             }
@@ -346,7 +346,6 @@ pub fn rename_module_alias(
     line_numbers: &LineNumbers,
     params: &RenameParams,
     module_name: &EcoString,
-    module_alias: &EcoString,
 ) -> RenameOutcome {
     let new_name = EcoString::from(&params.new_name);
     if name::check_name_case(SrcSpan::default(), &new_name, Named::Variable).is_err() {
@@ -360,32 +359,40 @@ pub fn rename_module_alias(
         .clone();
     let mut edits = TextEdits::new(line_numbers);
 
-    let mut finder = reference::FindModuleNameReferences {
-        references: Vec::new(),
-        module_name,
-        module_alias,
-    };
-    finder.visit_typed_module(&module.ast);
-
     let original_module_name = module_name.split('/').next_back().unwrap_or("");
 
-    for reference in finder.references {
-        match reference.kind {
-            ModuleNameReferenceKind::Import => {
-                edits.insert(reference.location.end, format!(" as {}", &params.new_name))
-            }
-            ModuleNameReferenceKind::AliasedImport => {
+    let Some(references) = module
+        .ast
+        .type_info
+        .references
+        .module_references
+        .get(module_name)
+    else {
+        return RenameOutcome::Renamed {
+            edit: workspace_edit(uri, edits.edits),
+        };
+    };
+
+    for reference in references {
+        match reference {
+            ModuleNameReference::Import {
+                module_location: _,
+                import_end,
+            } => edits.insert(*import_end, format!(" as {}", &params.new_name)),
+            ModuleNameReference::AliasedImport {
+                alias_location,
+                module_location: _,
+                alias: _,
+            } => {
                 if params.new_name == original_module_name {
-                    edits.delete(SrcSpan::new(
-                        reference.location.start - 1,
-                        reference.location.end,
-                    ));
+                    edits.delete(SrcSpan::new(alias_location.start - 1, alias_location.end));
                 } else {
-                    edits.replace(reference.location, format!("as {}", &params.new_name))
+                    edits.replace(*alias_location, format!("as {}", &params.new_name))
                 }
             }
-            ModuleNameReferenceKind::ModuleSelect => {
-                edits.replace(reference.location, params.new_name.to_string())
+            ModuleNameReference::ModuleSelect(location)
+            | ModuleNameReference::AliasedModuleSelect(location) => {
+                edits.replace(*location, params.new_name.to_string());
             }
         }
     }
@@ -422,5 +429,78 @@ pub fn rename_type_variable(
 
     RenameOutcome::Renamed {
         edit: workspace_edit(uri, edits.edits),
+    }
+}
+
+pub fn rename_module_occurrences(
+    old_name: EcoString,
+    new_name: EcoString,
+    modules: &im::HashMap<EcoString, ModuleInterface>,
+    sources: &HashMap<EcoString, ModuleSourceInformation>,
+    changes: &mut HashMap<Url, Vec<TextEdit>>,
+) {
+    let name_parts = new_name.split('/');
+    for part in name_parts {
+        if name::check_name_case(SrcSpan::default(), &part.into(), Named::Variable).is_err() {
+            return;
+        }
+    }
+
+    let last_component_of_new_name = new_name
+        .split('/')
+        .next_back()
+        .unwrap_or(&new_name)
+        .to_string();
+
+    for module in modules.values() {
+        if !module.references.imported_modules.contains(&old_name) {
+            continue;
+        }
+
+        let Some(source_information) = sources.get(&module.name) else {
+            continue;
+        };
+
+        let Some(references) = module.references.module_references.get(&old_name) else {
+            continue;
+        };
+
+        let Some(uri) = url_from_path(source_information.path.as_str()) else {
+            continue;
+        };
+
+        let mut edits = TextEdits::new(&source_information.line_numbers);
+
+        for reference in references {
+            match reference {
+                ModuleNameReference::Import {
+                    module_location: location,
+                    import_end: _,
+                } => edits.replace(*location, new_name.to_string()),
+                ModuleNameReference::AliasedImport {
+                    module_location: location,
+                    alias_location,
+                    alias,
+                } => {
+                    edits.replace(*location, new_name.to_string());
+                    // If we've imported a module using an alias, for example
+                    // `import wibble as wobble`, and we then rename the file
+                    // to `wobble.gleam`, the alias is no longer needed as the
+                    // name is already `wobble`.
+                    if *alias == last_component_of_new_name {
+                        edits.delete(SrcSpan::new(alias_location.start - 1, alias_location.end));
+                    }
+                }
+                // If we've imported a module using an alias, we don't touch the
+                // alias, so any expressions referencing the alias name don't need
+                // to change.
+                ModuleNameReference::AliasedModuleSelect(_) => {}
+                ModuleNameReference::ModuleSelect(location) => {
+                    edits.replace(*location, last_component_of_new_name.clone())
+                }
+            }
+        }
+
+        changes.entry(uri).or_default().extend(edits.edits);
     }
 }

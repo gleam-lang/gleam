@@ -88,6 +88,29 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The language server now automatically updates imports when a Gleam module is
+  renamed. For example:
+
+  ```gleam
+  import db_users
+
+  pub fn main() -> db_users.User {
+    db_users.new("username")
+  }
+  ```
+
+  Renaming `db_users.gleam` to `database/user.gleam` would produce:
+
+  ```gleam
+  import database/user
+
+  pub fn main() -> user.User {
+    user.new("username")
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 ### Bug fixes

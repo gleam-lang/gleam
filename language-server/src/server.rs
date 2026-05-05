@@ -19,10 +19,13 @@ use gleam_core::{
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
 };
+use itertools::Itertools;
 use lsp_server::ResponseError;
 use lsp_types::{
-    self as lsp, InitializeParams, Position, PublishDiagnosticsParams, Range, RenameOptions,
-    TextEdit, Uri as Url,
+    self as lsp, FileOperationFilter, FileOperationOptions, FileOperationPattern,
+    FileOperationPatternKind, FileOperationRegistrationOptions, InitializeParams, Position,
+    PublishDiagnosticsParams, Range, RenameFilesParams, RenameOptions, TextEdit, Uri as Url,
+    WorkspaceOptions,
 };
 use serde_json::Value as Json;
 use std::collections::{HashMap, HashSet};
@@ -113,6 +116,7 @@ where
             Request::GoToTypeDefinition(param) => self.goto_type_definition(param),
             Request::FindReferences(param) => self.find_references(param),
             Request::DocumentHighlight(param) => self.document_highlight(param),
+            Request::RenameFiles(param) => self.rename_files(param),
         };
 
         self.publish_feedback(feedback);
@@ -435,6 +439,30 @@ where
         )
     }
 
+    fn rename_files(
+        &mut self,
+        params: RenameFilesParams,
+    ) -> (Result<Json, ResponseError>, Feedback) {
+        let renames = params
+            .files
+            .into_iter()
+            .map(|file| {
+                (
+                    Url::parse(&file.old_uri).expect("Uri should be valid"),
+                    Url::parse(&file.new_uri).expect("Uri should be valid"),
+                )
+            })
+            .collect_vec();
+
+        let Some((_, first_renamed_file)) = renames.first() else {
+            return (Ok(serde_json::json!(null)), Feedback::none());
+        };
+
+        self.respond_with_engine(super::path(first_renamed_file), |engine| {
+            engine.rename_files(renames)
+        })
+    }
+
     fn find_references(
         &mut self,
         params: lsp_types::ReferenceParams,
@@ -567,7 +595,27 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         folding_range_provider: Some(true.into()),
         declaration_provider: None,
         execute_command_provider: None,
-        workspace: None,
+        workspace: Some(WorkspaceOptions {
+            workspace_folders: None,
+            file_operations: Some(FileOperationOptions {
+                did_create: None,
+                will_create: None,
+                will_rename: Some(FileOperationRegistrationOptions {
+                    filters: vec![FileOperationFilter {
+                        scheme: Some("file".into()),
+                        pattern: FileOperationPattern {
+                            glob: "**/*.gleam".into(),
+                            matches: Some(FileOperationPatternKind::File),
+                            options: None,
+                        },
+                    }],
+                }),
+                did_rename: None,
+                did_delete: None,
+                will_delete: None,
+            }),
+            text_document_content: None,
+        }),
         call_hierarchy_provider: None,
         semantic_tokens_provider: None,
         moniker_provider: None,

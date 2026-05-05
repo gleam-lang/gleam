@@ -1455,12 +1455,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // We only register the reference here, if we know that this is a module access.
                 // Otherwise we would register module access even if we are actually accessing
                 // the field on a record
+                let module_location =
+                    SrcSpan::new(location.start, location.start + module_alias.len() as u32);
                 self.environment.references.register_value_reference(
                     module_name.clone(),
                     label.clone(),
                     &label,
                     SrcSpan::new(field_start, location.end),
-                    ReferenceKind::Qualified,
+                    ReferenceKind::Qualified {
+                        module_alias: module_alias.clone(),
+                        module_location,
+                    },
                 );
                 TypedExpr::ModuleSelect {
                     location,
@@ -2577,7 +2582,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     match self.infer_clause_guard_variable(name.clone(), location) {
                         // If the variable itself cannot be inferred as one, then
                         // it could really be a module select. We try that one
-                        // as an elternative.
+                        // as an alternative.
                         Err(error) => self.infer_guard_module_access(
                             name,
                             label,
@@ -2594,7 +2599,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
                 } else {
                     // If it doesn't this has to be a regular record access and
-                    // we try and inferr it as such.
+                    // we try and infer it as such.
                     let inferred_container = self.infer_clause_guard(*container.clone());
                     self.infer_guard_record_access(
                         inferred_container,
@@ -2854,7 +2859,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                                 label.clone(),
                                 &label,
                                 label_location,
-                                ReferenceKind::Qualified,
+                                ReferenceKind::Qualified {
+                                    module_alias: module_alias.clone(),
+                                    module_location,
+                                },
                             );
 
                             Ok(ClauseGuard::ModuleSelect {
@@ -3717,16 +3725,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             ReferenceRegistration::DoNotRegister => (),
 
             ReferenceRegistration::Register | ReferenceRegistration::VariableArgument { .. } => {
-                self.register_value_constructor_reference(
-                    name,
-                    &variant,
-                    *location,
-                    if module.is_some() {
-                        ReferenceKind::Qualified
-                    } else {
-                        ReferenceKind::Unqualified
-                    },
-                );
+                let kind = if let Some((module_alias, module_location)) = module {
+                    ReferenceKind::Qualified {
+                        module_alias: module_alias.clone(),
+                        module_location: *module_location,
+                    }
+                } else {
+                    ReferenceKind::Unqualified
+                };
+                self.register_value_constructor_reference(name, &variant, *location, kind);
             }
         }
 
