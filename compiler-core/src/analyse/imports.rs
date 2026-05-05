@@ -295,12 +295,15 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                 import.module.clone(),
                 alias_location,
                 import.location,
+                import.module_location,
             );
         } else {
             self.environment.references.register_module(
                 used_name.clone(),
                 import.module.clone(),
                 import.location,
+                import.module_location,
+                None,
             );
         }
 

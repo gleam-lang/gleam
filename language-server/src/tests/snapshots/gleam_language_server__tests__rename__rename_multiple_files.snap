@@ -1,0 +1,38 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\nimport wibble\nimport wobble\n\npub fn main() -> wibble.Wibble {\n  wobble.wibble\n}\n"
+---
+----- BEFORE RENAME
+-- wibble.gleam
+pub type Wibble { Wibble Wobble }
+
+-- wobble.gleam
+import wibble
+pub const wibble = wibble.Wobble
+
+-- app.gleam
+
+import wibble
+import wobble
+
+pub fn main() -> wibble.Wibble {
+  wobble.wibble
+}
+
+
+----- AFTER RENAME
+-- wibble/wibble.gleam
+pub type Wibble { Wibble Wobble }
+
+-- wibble/wobble.gleam
+import wibble/wibble
+pub const wibble = wibble.Wobble
+
+-- app.gleam
+
+import wibble/wibble
+import wibble/wobble
+
+pub fn main() -> wibble.Wibble {
+  wobble.wibble
+}

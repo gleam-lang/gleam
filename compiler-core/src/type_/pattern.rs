@@ -1185,16 +1185,20 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     }
                 }
 
+                let kind = if let Some((module_alias, module_location)) = &module {
+                    ReferenceKind::Qualified {
+                        module_alias: module_alias.clone(),
+                        module_location: *module_location,
+                    }
+                } else {
+                    ReferenceKind::Unqualified
+                };
                 self.environment.references.register_value_reference(
                     pattern_constructor.module.clone(),
                     pattern_constructor.name.clone(),
                     &name,
                     name_location,
-                    if module.is_some() {
-                        ReferenceKind::Qualified
-                    } else {
-                        ReferenceKind::Unqualified
-                    },
+                    kind,
                 );
 
                 let instantiated_constructor_type =

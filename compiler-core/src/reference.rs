@@ -8,19 +8,168 @@ use petgraph::{
     stable_graph::{NodeIndex, StableGraph},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+/// Describes one of a number of situations where references can be generated.
+/// See each variant for an explanation.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ReferenceKind {
-    Qualified,
+    /// A type or value which is referenced using the qualified syntax, along with
+    /// some information about the qualifier which is used for tracking module name
+    /// references. For example:
+    /// ```gleam
+    /// import gleam/option.{Some}
+    ///
+    /// pub fn main() -> option.Option(Int) {
+    /// //               ^^^^^^ `module_location` covers this
+    ///   Some(1)
+    /// }
+    /// ```
+    ///
+    /// Here, `module_alias` is `option`, as that's what's being used as a
+    /// qualifier.
+    ///
+    ///
+    /// ```gleam
+    /// import gleam/int as integer
+    ///
+    /// pub fn main() {
+    ///   integer.add(1, 2)
+    /// //^^^^^^^ `module_location` covers this
+    /// }
+    /// ```
+    ///
+    /// In this case, `module_alias` is `integer`, due to the aliased import.
+    ///
+    Qualified {
+        module_alias: EcoString,
+        module_location: SrcSpan,
+    },
+    /// A type or value is being referenced using unqualified syntax. This may
+    /// be due to being imported unqualified, or because it's from the same
+    /// module. For example:
+    ///
+    /// ```gleam
+    /// import gleam/option.{None}
+    ///
+    /// pub fn main() {
+    ///   none()
+    /// //^^^^ Unqualified
+    /// }
+    ///
+    /// fn none() {
+    ///   None
+    /// //^^^^ Unqualified
+    /// }
+    /// ```
+    ///
     Unqualified,
+    /// A value or type is being referenced inside an unqualified import. For
+    /// example:
+    /// ```gleam
+    /// import gleam/option.{None}
+    /// //                   ^^^^ Import
+    /// import gleam/dynamic/decode.{type Dynamic}
+    /// //                                ^^^^^^^ Import
+    /// ```
     Import,
+    /// The original definition location of a type or value. This also counts as
+    /// a reference for renaming and "find references" purposes. For example:
+    ///
+    /// ```gleam
+    /// pub type Wibble {
+    /// //       ^^^^^^ Definition
+    ///   Wibble(Int)
+    /// //^^^^^^ Definition
+    /// }
+    ///
+    /// pub fn extract(w: Wibble) {
+    /// //     ^^^^^^^ Definition
+    ///   let Wibble(x) = w
+    ///   x
+    /// }
+    /// ```
     Definition,
+    /// A value or type is being referenced using unqualified syntax, with a
+    /// name other than its original definition. This can be due to importing it
+    /// using an alias, or due to referencing it through a type alias. For example:
+    ///
+    /// ```gleam
+    /// import gleam/option.{None as Nothing, type Option as Maybe}
+    ///
+    /// pub fn nothing() -> Maybe(_) {
+    /// //                  ^^^^^ Alias
+    ///   Nothing
+    /// //^^^^^^^ Alias
+    /// }
+    /// ```
+    ///
     Alias,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Reference {
     pub location: SrcSpan,
     pub kind: ReferenceKind,
+}
+
+/// A reference to a module name. This is similar to a `Reference`, which covers
+/// types and values, but it is separate because we care about slightly different
+/// pieces of information when, for example, renaming modules vs. renaming types
+/// or values.
+///
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum ModuleNameReference {
+    /// The location of a module name in a `ModuleSelect`, when the module name
+    /// is not aliased. For example:
+    /// ```gleam
+    /// import gleam/option
+    ///
+    /// pub fn main() -> option.Option(_) {
+    /// //               ^^^^^^ ModuleSelect
+    ///   option.None
+    /// //^^^^^^ ModuleSelect
+    /// }
+    /// ```
+    ///
+    ModuleSelect(SrcSpan),
+    /// The location of a module name in a `ModuleSelect`, when the module name
+    /// *is* aliased. For example:
+    /// ```gleam
+    /// import gleam/option as maybe
+    ///
+    /// pub fn main() -> maybe.Option(_) {
+    /// //               ^^^^^ AliasedModuleSelect
+    ///   maybe.None
+    /// //^^^^^ AliasedModuleSelect
+    /// }
+    /// ```
+    ///
+    AliasedModuleSelect(SrcSpan),
+    /// The location of a module name in an `import` statement, when the module
+    /// name is not aliased. For example:
+    /// ```gleam
+    /// import gleam/option.{None, Some}
+    /// //     ^^^^^^^^^^^^ Import     ^ `import_end`
+    /// ```
+    ///
+    Import {
+        module_location: SrcSpan,
+        import_end: u32,
+    },
+    /// The location of a module name in an `import` statement, when the module
+    /// name *is* aliased. Also stores the location of the alias (including the
+    /// `as` keyword), and what the alias is. For example:
+    /// ```gleam
+    /// import gleam/option.{None, Some} as maybe
+    /// //     ^^^^^^^^^^^^ `module_location`
+    /// //                               ^^^^^^^^ `alias_location`
+    /// ```
+    /// In this example, `alias` would be `maybe`.
+    ///
+    AliasedImport {
+        module_location: SrcSpan,
+        alias_location: SrcSpan,
+        alias: EcoString,
+    },
 }
 
 pub type ReferenceMap = HashMap<(EcoString, EcoString), Vec<Reference>>;
@@ -93,6 +242,9 @@ pub struct ReferenceTracker {
     /// The locations of the references to each type in this module, used for
     /// renaming and go-to reference.
     pub type_references: ReferenceMap,
+    /// The locations of the references to each imported module, used for
+    /// renaming and go-to reference.
+    pub module_references: HashMap<EcoString, Vec<ModuleNameReference>>,
 
     /// This map is used to access the nodes of modules that were not
     /// aliased, given their name.
@@ -277,11 +429,16 @@ impl ReferenceTracker {
         module_name: EcoString,
         alias_location: SrcSpan,
         import_location: SrcSpan,
+        module_location: SrcSpan,
     ) {
-        // We first record a node for the module being aliased. We use its entire
-        // name to identify it in this case and keep track of the node it's
-        // associated with.
-        self.register_module(module_name.clone(), module_name.clone(), import_location);
+        // We first record a node for the module being aliased.
+        self.register_module(
+            used_name.clone(),
+            module_name.clone(),
+            import_location,
+            module_location,
+            Some(alias_location),
+        );
 
         // Then we create a node for the alias, as the alias itself might be
         // unused!
@@ -312,11 +469,28 @@ impl ReferenceTracker {
         used_name: EcoString,
         module_name: EcoString,
         location: SrcSpan,
+        module_location: SrcSpan,
+        alias_location: Option<SrcSpan>,
     ) {
         self.current_node = self.create_node(used_name.clone(), EntityLayer::Module);
         let _ = self
             .module_name_to_node
             .insert(module_name.clone(), self.current_node);
+
+        let reference = if let Some(alias_location) = alias_location {
+            ModuleNameReference::AliasedImport {
+                module_location,
+                alias_location,
+                alias: used_name.clone(),
+            }
+        } else {
+            ModuleNameReference::Import {
+                module_location,
+                import_end: location.end,
+            }
+        };
+
+        self.register_module_name_reference(module_name.clone(), reference);
 
         let entity = Entity {
             name: used_name,
@@ -357,8 +531,20 @@ impl ReferenceTracker {
         location: SrcSpan,
         kind: ReferenceKind,
     ) {
-        match kind {
-            ReferenceKind::Qualified | ReferenceKind::Import | ReferenceKind::Definition => {}
+        match &kind {
+            ReferenceKind::Qualified {
+                module_alias,
+                module_location,
+            } => {
+                let last_module_segment = module.split('/').next_back().unwrap_or(&module);
+                let reference = if last_module_segment == module_alias {
+                    ModuleNameReference::ModuleSelect(*module_location)
+                } else {
+                    ModuleNameReference::AliasedModuleSelect(*module_location)
+                };
+                self.register_module_name_reference(module.clone(), reference);
+            }
+            ReferenceKind::Import | ReferenceKind::Definition => {}
             ReferenceKind::Alias | ReferenceKind::Unqualified => {
                 let target = self.get_or_create_node(referenced_name.clone(), EntityLayer::Value);
                 _ = self.graph.add_edge(self.current_node, target, ());
@@ -379,8 +565,20 @@ impl ReferenceTracker {
         location: SrcSpan,
         kind: ReferenceKind,
     ) {
-        match kind {
-            ReferenceKind::Qualified | ReferenceKind::Import | ReferenceKind::Definition => {}
+        match &kind {
+            ReferenceKind::Qualified {
+                module_alias,
+                module_location,
+            } => {
+                let last_module_segment = module.split('/').next_back().unwrap_or(&module);
+                let reference = if last_module_segment == module_alias {
+                    ModuleNameReference::ModuleSelect(*module_location)
+                } else {
+                    ModuleNameReference::AliasedModuleSelect(*module_location)
+                };
+                self.register_module_name_reference(module.clone(), reference);
+            }
+            ReferenceKind::Import | ReferenceKind::Definition => {}
             ReferenceKind::Alias | ReferenceKind::Unqualified => {
                 self.register_type_reference_in_call_graph(referenced_name.clone())
             }
@@ -390,6 +588,22 @@ impl ReferenceTracker {
             .entry((module, name))
             .or_default()
             .push(Reference { location, kind });
+    }
+
+    /// Register a reference to a module in the code. This is separate to
+    /// `register_module_reference`, as references to modules can be created
+    /// implicitly, for example when using unqualified imports. This only register
+    /// explicit references in the source code, when the module name or local
+    /// alias is written.
+    pub fn register_module_name_reference(
+        &mut self,
+        module: EcoString,
+        reference: ModuleNameReference,
+    ) {
+        self.module_references
+            .entry(module)
+            .or_default()
+            .push(reference);
     }
 
     /// Like `register_type_reference`, but doesn't modify `self.type_references`.

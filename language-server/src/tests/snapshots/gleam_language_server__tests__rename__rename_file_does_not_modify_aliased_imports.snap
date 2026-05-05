@@ -1,0 +1,44 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\nimport wibble/wobble.{Wibble} as wibble\n\npub fn main() -> wibble.Wibble {\n  assert wibble.wibble == Wibble\n  wibble.Wobble\n}\n"
+---
+----- BEFORE RENAME
+-- wibble/wobble.gleam
+
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+pub const wibble = Wibble
+
+
+-- app.gleam
+
+import wibble/wobble.{Wibble} as wibble
+
+pub fn main() -> wibble.Wibble {
+  assert wibble.wibble == Wibble
+  wibble.Wobble
+}
+
+
+----- AFTER RENAME
+-- wibble/wubble.gleam
+
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+pub const wibble = Wibble
+
+
+-- app.gleam
+
+import wibble/wubble.{Wibble} as wibble
+
+pub fn main() -> wibble.Wibble {
+  assert wibble.wibble == Wibble
+  wibble.Wobble
+}

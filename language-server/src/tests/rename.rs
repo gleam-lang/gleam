@@ -2,8 +2,10 @@ use std::collections::HashMap;
 
 use lsp_types::{
     Position, PrepareRenameParams, PrepareRenamePlaceholder, Range, RenameParams,
-    TextDocumentPositionParams, Uri as Url, WorkDoneProgressParams,
+    TextDocumentPositionParams, Uri as Url, WorkDoneProgressParams, WorkspaceEdit,
 };
+
+use crate::url_from_path;
 
 use super::{TestProject, find_position_of, hover};
 
@@ -15,7 +17,7 @@ fn rename(
     tester: &TestProject<'_>,
     new_name: &str,
     position: Position,
-) -> Result<Option<(Range, lsp_types::WorkspaceEdit)>, String> {
+) -> Result<Option<(Range, WorkspaceEdit)>, String> {
     let prepare_rename_response = tester.at(position, |engine, params, _| {
         let params = PrepareRenameParams {
             text_document_position_params: TextDocumentPositionParams {
@@ -56,6 +58,29 @@ fn rename(
     }
 }
 
+fn rename_files(tester: &TestProject<'_>, renames: &[(&str, &str)]) -> HashMap<String, String> {
+    let edit = tester.run(|engine| {
+        let params = renames
+            .iter()
+            .map(|(old_name, new_name)| {
+                let old_url =
+                    url_from_path(engine.path_for_module_name(old_name).as_str()).unwrap();
+                let new_url =
+                    url_from_path(engine.path_for_module_name(new_name).as_str()).unwrap();
+                (old_url, new_url)
+            })
+            .collect();
+        engine.rename_files(params).result.unwrap()
+    });
+
+    let changes = edit
+        .expect("No text edit found")
+        .changes
+        .expect("No text edit found");
+
+    apply_code_edit(tester, changes)
+}
+
 fn apply_rename(
     tester: &TestProject<'_>,
     new_name: &str,
@@ -83,6 +108,51 @@ fn apply_code_edit(
     modules
 }
 
+fn display_result(
+    project: &TestProject<'_>,
+    modules: HashMap<String, String>,
+    renamed_modules: HashMap<&str, &str>,
+    range: Option<Range>,
+) -> String {
+    let mut output = String::from("----- BEFORE RENAME\n");
+    for (name, src) in project.root_package_modules.iter() {
+        output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+    }
+
+    let src = project.src;
+    let app_src_before = if let Some(range) = range {
+        hover::show_hover(src, range, range.start)
+    } else {
+        src.to_string()
+    };
+    output.push_str(&format!(
+        "-- app.gleam\n{app_src_before}\n\n----- AFTER RENAME\n",
+    ));
+
+    for &(name, src) in project.root_package_modules.iter() {
+        let used_name = if let Some(new_name) = renamed_modules.get(name) {
+            new_name
+        } else {
+            name
+        };
+        output.push_str(&format!(
+            "-- {used_name}.gleam\n{}\n\n",
+            modules
+                .get(name)
+                .map(|string| string.as_str())
+                .unwrap_or(src)
+        ));
+    }
+    output.push_str(&format!(
+        "-- app.gleam\n{}",
+        modules
+            .get("app")
+            .map(|string| string.as_str())
+            .unwrap_or(src)
+    ));
+    output
+}
+
 macro_rules! assert_rename {
     ($code:literal, $new_name:literal, $position:expr $(,)?) => {
         assert_rename!(TestProject::for_source($code), $new_name, $position);
@@ -102,30 +172,7 @@ macro_rules! assert_rename {
         let position = $position.find_position(src);
         let (range, result) = apply_rename(&project, $new_name, position);
 
-        let mut output = String::from("----- BEFORE RENAME\n");
-        for (name, src) in project.root_package_modules.iter() {
-            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
-        }
-        output.push_str(&format!(
-            "-- app.gleam\n{}\n\n----- AFTER RENAME\n",
-            hover::show_hover(src, range, range.start)
-        ));
-        for (name, src) in project.root_package_modules.iter() {
-            output.push_str(&format!(
-                "-- {name}.gleam\n{}\n\n",
-                result
-                    .get(*name)
-                    .map(|string| string.as_str())
-                    .unwrap_or(*src)
-            ));
-        }
-        output.push_str(&format!(
-            "-- app.gleam\n{}",
-            result
-                .get("app")
-                .map(|string| string.as_str())
-                .unwrap_or(src)
-        ));
+        let output = display_result(&project, result, HashMap::new(), Some(range));
 
         insta::assert_snapshot!(insta::internals::AutoName, output, src);
     };
@@ -157,6 +204,18 @@ macro_rules! assert_rename_error {
         let error = rename($project, $new_name, position).unwrap_err();
         let snapshot = format!("Error response message:\n\n{error}");
         insta::assert_snapshot!(insta::internals::AutoName, snapshot, src);
+    };
+}
+
+macro_rules! assert_rename_files {
+    ($(($old_name:literal, $new_name:literal, $module_src:literal)),+, $code:literal, $(,)?) => {
+        let project = TestProject::for_source($code)$(.add_module($old_name, $module_src))*;
+
+        let renames = [$(($old_name, $new_name),)*];
+        let result = rename_files(&project, &renames);
+        let output = display_result(&project, result, renames.into(), None);
+
+        insta::assert_snapshot!(insta::internals::AutoName, output, project.src);
     };
 }
 
@@ -2599,5 +2658,166 @@ pub type Option(anything) {
 ",
         "SomeType",
         find_position_of("anything")
+    );
+}
+#[test]
+fn renaming_file_modifies_imports_and_references() {
+    assert_rename_files!(
+        (
+            "wibble/wobble",
+            "wibble/wubble",
+            "
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+pub const wibble = Wibble
+"
+        ),
+        "
+import wibble/wobble.{Wibble}
+
+pub fn main() -> wobble.Wibble {
+  assert wobble.wibble == Wibble
+  wobble.Wobble
+}
+",
+    );
+}
+
+#[test]
+fn change_directory_of_file() {
+    assert_rename_files!(
+        (
+            "wobble",
+            "wibble/wobble",
+            "
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+pub const wibble = Wibble
+"
+        ),
+        "
+import wobble.{Wibble}
+
+pub fn main() -> wobble.Wibble {
+  assert wobble.wibble == Wibble
+  wobble.Wobble
+}
+",
+    );
+}
+
+#[test]
+fn rename_file_does_not_modify_aliased_imports() {
+    assert_rename_files!(
+        (
+            "wibble/wobble",
+            "wibble/wubble",
+            "
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+pub const wibble = Wibble
+"
+        ),
+        "
+import wibble/wobble.{Wibble} as wibble
+
+pub fn main() -> wibble.Wibble {
+  assert wibble.wibble == Wibble
+  wibble.Wobble
+}
+",
+    );
+}
+
+#[test]
+fn rename_file_removes_unnecessary_alias() {
+    assert_rename_files!(
+        (
+            "wibble/wobble",
+            "wibble/wibble",
+            "
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+pub const wibble = Wibble
+"
+        ),
+        "
+import wibble/wobble.{Wibble} as wibble
+
+pub fn main() -> wibble.Wibble {
+  assert wibble.wibble == Wibble
+  wibble.Wobble
+}
+",
+    );
+}
+
+#[test]
+fn rename_file_changes_all_correct_ast_nodes() {
+    assert_rename_files!(
+        (
+            "wibble",
+            "wobble",
+            "
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+pub const wibble = Wibble
+"
+        ),
+        "
+import wibble
+
+pub const one = wibble.Wibble
+
+pub const two = wibble.wibble
+
+pub fn main() -> wibble.Wibble {
+  case wibble.Wobble {
+    x if x == wibble.Wibble -> x
+    x if x == wibble.wibble -> x
+    wibble.Wobble -> wibble.wibble
+  }
+}
+",
+    );
+}
+
+#[test]
+fn rename_multiple_files() {
+    assert_rename_files!(
+        (
+            "wibble",
+            "wibble/wibble",
+            "pub type Wibble { Wibble Wobble }"
+        ),
+        (
+            "wobble",
+            "wibble/wobble",
+            "import wibble
+pub const wibble = wibble.Wobble"
+        ),
+        "
+import wibble
+import wobble
+
+pub fn main() -> wibble.Wibble {
+  wobble.wibble
+}
+",
     );
 }

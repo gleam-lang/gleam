@@ -30,12 +30,15 @@ use lsp_types::{
     MarkupContent, Position, PrepareRenameResult, Range, SignatureHelp, SymbolKind, SymbolTag,
     TextEdit, Uri as Url, WorkspaceEdit,
 };
-use std::{collections::HashSet, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use crate::{
     code_action::{RemoveRedundantRecordUpdate, ReplaceUnderscoreWithType, type_errors_for_module},
     reference::find_module_references_in_module,
-    rename::{rename_module_alias, rename_type_variable},
+    rename::{rename_module_alias, rename_module_occurrences, rename_type_variable},
 };
 
 use super::{
@@ -835,7 +838,17 @@ where
                         None
                     }
                 }
-                Some(Referenced::ModuleName { location, .. }) => success_response(location),
+                Some(Referenced::ModuleName {
+                    location,
+                    module_alias,
+                    ..
+                }) => success_response(SrcSpan::new(
+                    // Since the location contains the full module name (e.g. `wibble/wobble/woo`),
+                    // we just want to include the last segment so we get a rename of the string
+                    // `woo`, as that's the being referenced in module access expressions.
+                    location.end - module_alias.len() as u32,
+                    location.end,
+                )),
 
                 Some(Referenced::TypeVariable { location, name: _ }) => success_response(location),
 
@@ -932,12 +945,9 @@ where
                 )
                 .into_result(),
 
-                Some(Referenced::ModuleName {
-                    module_name,
-                    module_alias,
-                    ..
-                }) => rename_module_alias(module, &lines, &params, &module_name, &module_alias)
-                    .into_result(),
+                Some(Referenced::ModuleName { module_name, .. }) => {
+                    rename_module_alias(module, &lines, &params, &module_name).into_result()
+                }
 
                 Some(Referenced::TypeVariable { location, name }) => {
                     rename_type_variable(module, &lines, &params, location, name).into_result()
@@ -1079,6 +1089,36 @@ where
                         })
                         .collect()
                 }))
+        })
+    }
+
+    /// Triggers after the renaming of one or more `.gleam` files, updating any
+    /// imports to those modules.
+    pub fn rename_files(&mut self, renames: Vec<(Url, Url)>) -> Response<Option<WorkspaceEdit>> {
+        self.respond(|this| {
+            let mut changes = HashMap::new();
+
+            for (old_uri, new_uri) in renames {
+                let Some(old_name) = this.module_name_for_uri(&old_uri) else {
+                    continue;
+                };
+                let Some(new_name) = this.module_name_for_uri(&new_uri) else {
+                    continue;
+                };
+                rename_module_occurrences(
+                    old_name,
+                    new_name,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
+                    &mut changes,
+                );
+            }
+
+            Ok(Some(WorkspaceEdit {
+                changes: Some(changes),
+                document_changes: None,
+                change_annotations: None,
+            }))
         })
     }
 
@@ -1305,7 +1345,7 @@ Unused labelled fields:
         self.module_node_at_position(params, module)
     }
 
-    fn module_for_uri(&self, uri: &Url) -> Option<&Module> {
+    fn module_name_for_uri(&self, uri: &Url) -> Option<EcoString> {
         // The to_file_path method is available on these platforms
         #[cfg(any(unix, windows, target_os = "redox", target_os = "wasi"))]
         let path = uri.to_file_path().expect("URL file");
@@ -1319,12 +1359,22 @@ Unused labelled fields:
             .components()
             .skip(1)
             .map(|c| c.as_os_str().to_string_lossy());
-        let module_name: EcoString = Itertools::intersperse(components, "/".into())
+        let name = Itertools::intersperse(components, "/".into())
             .collect::<String>()
             .strip_suffix(".gleam")?
             .into();
+        Some(name)
+    }
 
+    fn module_for_uri(&self, uri: &Url) -> Option<&Module> {
+        let module_name = self.module_name_for_uri(uri)?;
         self.compiler.modules.get(&module_name)
+    }
+
+    #[cfg(test)]
+    pub fn path_for_module_name(&self, module_name: &str) -> Utf8PathBuf {
+        let src_directory = self.paths.src_directory();
+        src_directory.join(module_name).with_extension("gleam")
     }
 }
 
