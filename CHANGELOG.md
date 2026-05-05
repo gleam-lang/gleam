@@ -504,4 +504,11 @@
 
 - Restrict custom documentation page `path` and `source` values so `gleam docs
   build` cannot escape the docs output directory or project root.
-  ([evipepota](https://github.com/evipepota))
+  ([evipepota](https://github.com/evipepota) and
+  ([Louis Pilfold](https://github.com/lpil))
+
+- Restrict publication tarball creation so they cannot contain files from
+  outside the project root.
+  ([Abdelrahman Ahmed Aboelkasem](https://github.com/0x2face),
+  ([Aly](https://github.com/spect3r1), and
+  ([Louis Pilfold](https://github.com/lpil))

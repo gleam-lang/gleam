@@ -418,6 +418,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("Incorrect Hex one-time-password")]
     IncorrectHexOneTimePassword,
+
+    #[error("{path} could not be added to the tarball as it is outside the project root")]
+    TarPathOutsideOfProjectRoot { path: Utf8PathBuf },
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
@@ -988,6 +991,21 @@ errors."
 You'll need to re-authenticate to continue using Hex."
                     .into(),
                 hint: Some("Run 'gleam hex authenticate' to log in again.".into()),
+                level: Level::Error,
+                location: None,
+            }],
+
+            Error::TarPathOutsideOfProjectRoot { path } => vec![Diagnostic {
+                title: "Cannot add path to tar archive".into(),
+                text: wrap(&format!(
+                    "The path {path} is outside this Gleam project, \
+so we cannot safely add it to the archive for publishing. If we permitted this \
+then malicious actors could abuse this functionality to trick you into sharing \
+your private information.
+
+Move the file into your Gleam project and try again."
+                )),
+                hint: None,
                 level: Level::Error,
                 location: None,
             }],
