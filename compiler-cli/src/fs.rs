@@ -5,6 +5,7 @@ use gleam_core::{
     io::{
         BeamCompiler, Command, CommandExecutor, Content, DirEntry, FileSystemReader,
         FileSystemWriter, OutputFile, ReadDir, Stdio, WrappedReader, is_native_file_extension,
+        make_relative,
     },
     manifest::Manifest,
     paths::ProjectPaths,
@@ -669,12 +670,10 @@ pub fn symlink_dir(
     dest: impl AsRef<Utf8Path> + Debug,
 ) -> Result<(), Error> {
     tracing::debug!(src=?src, dest=?dest, "symlinking");
-    let src = canonicalise(src.as_ref())?;
-
     #[cfg(target_family = "windows")]
     let result = std::os::windows::fs::symlink_dir(src, dest.as_ref());
     #[cfg(not(target_family = "windows"))]
-    let result = std::os::unix::fs::symlink(src, dest.as_ref());
+    let result = std::os::unix::fs::symlink(src.as_ref(), dest.as_ref());
 
     result.map_err(|err| Error::FileIo {
         action: FileIoAction::Link,

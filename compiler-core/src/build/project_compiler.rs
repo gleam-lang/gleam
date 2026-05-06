@@ -503,7 +503,8 @@ where
             let dep_dest = mix_build_lib_dir.join(dep.as_str());
             if self.io.is_directory(&dep_source) && !self.io.is_directory(&dep_dest) {
                 tracing::debug!("linking_{}_to_build", dep);
-                self.io.symlink_dir(&dep_source, &dep_dest)?;
+                self.io
+                    .symlink_dir(&self.io.canonicalise(&dep_source)?, &dep_dest)?;
             }
         }
 
@@ -537,7 +538,8 @@ where
             let source = mix_build_dir.join("lib").join(application_name.as_str());
             if self.io.is_directory(&source) && !self.io.is_directory(&dest) {
                 tracing::debug!("linking_{}_to_build", application_name);
-                self.io.symlink_dir(&source, &dest)?;
+                self.io
+                    .symlink_dir(&self.io.canonicalise(&source)?, &dest)?;
             }
             Ok(())
         } else {

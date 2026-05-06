@@ -4,8 +4,10 @@ mod tests;
 use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::build::package_loader::CacheFiles;
 
-use crate::error::{DefinedModuleOrigin, FailedModule, SkipReason, SkippedModule};
-use crate::io::files_with_extension;
+use crate::error::{
+    DefinedModuleOrigin, FailedModule, FileIoAction, FileKind, SkipReason, SkippedModule,
+};
+use crate::io::{files_with_extension, make_relative};
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
@@ -277,7 +279,26 @@ where
         let priv_build = self.out.join("priv");
         if self.io.is_directory(&priv_source) && !self.io.is_directory(&priv_build) {
             tracing::debug!("linking_priv_to_build");
-            self.io.symlink_dir(&priv_source, &priv_build)?;
+
+            // make_relative acts as if starting from *within* its `target_path` argument.
+            // However, below, we want `target_path` to be the symlink, so we'll have to navigate
+            // starting from the *parent* directory.
+            // the call to `parent()` can return None if there's no final path component,
+            // e.g. if the path is "/". But in that case, we couldn't really create a symlink
+            // for that location anyway, so it's ok to return an error.
+            let symlink_parent_dir = priv_build.parent().ok_or_else(|| Error::FileIo {
+                kind: FileKind::File,
+                action: FileIoAction::FindParent,
+                path: Utf8PathBuf::from(priv_build.clone()),
+                err: None,
+            })?;
+            // make_relative expects an absolute source path and will panic otherwise.
+            let symlink_parent_dir = &self.io.canonicalise(symlink_parent_dir)?;
+
+            // Create a relative link here to make sure it still points to a valid location
+            // if the project directory is renamed or moved.
+            let priv_source_relative = make_relative(symlink_parent_dir, &priv_source.as_ref());
+            self.io.symlink_dir(&priv_source_relative, &priv_build)?;
         }
 
         let copier = NativeFileCopier::new(
