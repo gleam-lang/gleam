@@ -1,6 +1,22 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
+use std::{
+    cmp,
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
+
+use camino::{Utf8Path, Utf8PathBuf};
+use ecow::EcoString;
+use hexpm::version::Version;
+use itertools::Itertools;
+
+use super::{
+    Codegen, Compile, ErlangAppCodegenConfiguration, ErlangOutput, Outcome,
+    elixir_libraries::ElixirLibraries,
+    package_compiler::{CachedWarnings, CheckModuleConflicts, Compiled},
+};
 use crate::{
     Error, Result,
     analyse::TargetSupport,
@@ -19,22 +35,6 @@ use crate::{
     version::COMPILER_VERSION,
     warning::{WarningEmitter, WarningEmitterIO},
 };
-use ecow::EcoString;
-use hexpm::version::Version;
-use itertools::Itertools;
-use std::{
-    cmp,
-    collections::{HashMap, HashSet},
-    rc::Rc,
-};
-
-use super::{
-    Codegen, Compile, ErlangAppCodegenConfiguration, ErlangOutput, Outcome,
-    elixir_libraries::ElixirLibraries,
-    package_compiler::{CachedWarnings, CheckModuleConflicts, Compiled},
-};
-
-use camino::{Utf8Path, Utf8PathBuf};
 
 // On Windows we have to call rebar3 via a little wrapper script.
 //
@@ -485,7 +485,8 @@ where
             let dep_dest = mix_build_lib_dir.join(dep.as_str());
             if self.io.is_directory(&dep_source) && !self.io.is_directory(&dep_dest) {
                 tracing::debug!("linking_{}_to_build", dep);
-                self.io.symlink_dir(&dep_source, &dep_dest)?;
+                self.io
+                    .symlink_dir(&self.io.canonicalise(&dep_source)?, &dep_dest)?;
             }
         }
 
@@ -519,7 +520,8 @@ where
             let source = mix_build_dir.join("lib").join(application_name.as_str());
             if self.io.is_directory(&source) && !self.io.is_directory(&dest) {
                 tracing::debug!("linking_{}_to_build", application_name);
-                self.io.symlink_dir(&source, &dest)?;
+                self.io
+                    .symlink_dir(&self.io.canonicalise(&source)?, &dest)?;
             }
             Ok(())
         } else {

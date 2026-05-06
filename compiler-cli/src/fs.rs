@@ -1,6 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
+use std::{
+    collections::HashSet,
+    fmt::Debug,
+    fs::{File, exists},
+    io::{self, BufRead, BufReader, Write},
+    sync::{Arc, Mutex, OnceLock},
+    time::SystemTime,
+};
+
+use camino::{ReadDirUtf8, Utf8Path, Utf8PathBuf};
 use gleam_core::{
     Result, Warning,
     build::{NullTelemetry, Target},
@@ -15,16 +25,6 @@ use gleam_core::{
 };
 use gleam_language_server::{DownloadDependencies, Locker, MakeLocker};
 use regex::Regex;
-use std::{
-    collections::HashSet,
-    fmt::Debug,
-    fs::{File, exists},
-    io::{self, BufRead, BufReader, Write},
-    sync::{Arc, Mutex, OnceLock},
-    time::SystemTime,
-};
-
-use camino::{ReadDirUtf8, Utf8Path, Utf8PathBuf};
 
 use crate::{beam_compiler::BeamCompilerInstance, dependencies, lsp::LspLocker};
 
@@ -753,7 +753,6 @@ pub fn symlink_dir(src: impl AsRef<Utf8Path>, dest: impl AsRef<Utf8Path>) -> Res
     let src = src.as_ref();
     let dest = dest.as_ref();
     tracing::debug!(src=?src, dest=?dest, "symlinking");
-    let src = canonicalise(src)?;
 
     #[cfg(target_family = "windows")]
     let result = std::os::windows::fs::symlink_dir(&src, dest);
@@ -763,7 +762,7 @@ pub fn symlink_dir(src: impl AsRef<Utf8Path>, dest: impl AsRef<Utf8Path>) -> Res
     result.map_err(|error| Error::FileIo {
         action: FileIoAction::Link(dest.to_path_buf()),
         kind: FileKind::File,
-        path: src,
+        path: Utf8PathBuf::from(src),
         cause: FileIoCause::std_io(error),
     })?;
     Ok(())

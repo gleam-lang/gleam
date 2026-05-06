@@ -4,13 +4,22 @@
 #[cfg(test)]
 mod tests;
 
+use std::{
+    collections::{HashMap, HashSet},
+    time::SystemTime,
+};
+
+use askama::Template;
+use camino::{Utf8Path, Utf8PathBuf};
+use ecow::{EcoString, eco_format};
+use src_span::{LineNumbers, SrcSpan};
+
+use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration, Telemetry};
 use crate::analyse::TargetSupport;
 use crate::ast::TypedModule;
 use crate::build::package_loader::CacheFiles;
 use crate::build::{ErlangOutput, module_erlang_name};
-
 use crate::error::{DefinedModuleOrigin, FailedModule, SkipReason, SkippedModule};
-
 use crate::metadata;
 use crate::requirement::Requirement;
 use crate::type_::PRELUDE_MODULE_NAME;
@@ -32,17 +41,6 @@ use crate::{
     uid::UniqueIdGenerator,
     warning::{TypeWarningEmitter, WarningEmitter},
 };
-use askama::Template;
-use ecow::{EcoString, eco_format};
-use src_span::{LineNumbers, SrcSpan};
-use std::{
-    collections::{HashMap, HashSet},
-    time::SystemTime,
-};
-
-use camino::{Utf8Path, Utf8PathBuf};
-
-use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration, Telemetry};
 
 #[derive(Debug)]
 pub struct Compiled {
@@ -256,7 +254,8 @@ where
         let priv_build = self.out.join("priv");
         if self.io.is_directory(&priv_source) && !self.io.is_directory(&priv_build) {
             tracing::debug!("linking_priv_to_build");
-            self.io.symlink_dir(&priv_source, &priv_build)?;
+            self.io
+                .symlink_dir(&self.io.canonicalise(&priv_source)?, &priv_build)?;
         }
 
         let copier = NativeFileCopier::new(
