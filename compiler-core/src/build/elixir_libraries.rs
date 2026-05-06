@@ -123,7 +123,8 @@ where
                 self.io.delete_directory(&dest)?;
             }
             tracing::debug!("linking_{}_to_build", name,);
-            self.io.symlink_dir(&source, &dest)?;
+            self.io
+                .symlink_dir(&self.io.canonicalise(&source)?, &dest)?;
         }
 
         Ok(())

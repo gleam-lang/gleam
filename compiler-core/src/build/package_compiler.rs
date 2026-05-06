@@ -277,7 +277,8 @@ where
         let priv_build = self.out.join("priv");
         if self.io.is_directory(&priv_source) && !self.io.is_directory(&priv_build) {
             tracing::debug!("linking_priv_to_build");
-            self.io.symlink_dir(&priv_source, &priv_build)?;
+            self.io
+                .symlink_dir(&self.io.canonicalise(&priv_source)?, &priv_build)?;
         }
 
         let copier = NativeFileCopier::new(
