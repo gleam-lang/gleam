@@ -51,8 +51,8 @@
 
   ([Daniele Scaratti](https://github.com/lupodevelop))
 
-- The code generated for destructuring exhaustive patterns is now less verbose
-  on the JavaScript target.
+- The code generated for destructuring exhaustive patterns with `let` is now
+  less verbose on the JavaScript target.
 
   ([Gavin Morrow](https://github.com/gavinmorrow))
 
