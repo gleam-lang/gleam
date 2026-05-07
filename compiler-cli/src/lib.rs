@@ -448,6 +448,8 @@ fn runtime_doc() -> &'static str {
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum ExportTarget {
+    /// Precompiled Erlang in a single file, suitable for CLIs
+    Escript,
     /// Precompiled Erlang, suitable for deployment
     ErlangShipment,
     /// The package bundled into a tarball, suitable for publishing to Hex
@@ -893,6 +895,10 @@ fn parse_and_run_command() -> Result<(), Error> {
         Command::Export(ExportTarget::ErlangShipment) => {
             let paths = find_project_paths()?;
             export::erlang_shipment(&paths)
+        }
+        Command::Export(ExportTarget::Escript) => {
+            let paths = find_project_paths()?;
+            export::escript(&paths)
         }
         Command::Export(ExportTarget::HexTarball) => {
             let paths = find_project_paths()?;

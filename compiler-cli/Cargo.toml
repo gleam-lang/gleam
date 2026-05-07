@@ -33,6 +33,8 @@ toml_edit = "0"
 fslock = "0"
 # Provides a way to determine if two files are the same using filesystem node ids
 same-file = "1"
+# Creation of zip files
+zip = { version = "8", features = ["deflate"] }
 
 async-trait.workspace = true
 base16.workspace = true
