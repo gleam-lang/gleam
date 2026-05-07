@@ -22,7 +22,7 @@ tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
 fs_extra = "1"
 tracing-subscriber = { version = "0.3.23", features = ["fmt", "env-filter"] }
 # HTTP client
-reqwest = { version = "0", default-features = false, features = ["rustls-tls"] }
+reqwest = { version = "^0.13", default-features = false, features = ["rustls"] }
 # Checksums
 sha2 = "0"
 # Getting hostname
