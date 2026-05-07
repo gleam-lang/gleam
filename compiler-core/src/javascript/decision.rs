@@ -335,8 +335,17 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
                         .expect("invalid clause index")
                         .location(),
                     DecisionKind::LetAssert {
-                        subject_location, ..
-                    } => subject_location,
+                        subject_location,
+                        pattern_location,
+                        ..
+                    } => match self.variables.variable_assignment {
+                        // When the variables are being declared, they
+                        // correspond to the pattern.
+                        VariableAssignment::Declare => pattern_location,
+                        // When the variables are being assigned, they
+                        // correspond to the subject.
+                        VariableAssignment::Reassign => subject_location,
+                    },
                 };
                 let source_map_tracker = self
                     .variables
