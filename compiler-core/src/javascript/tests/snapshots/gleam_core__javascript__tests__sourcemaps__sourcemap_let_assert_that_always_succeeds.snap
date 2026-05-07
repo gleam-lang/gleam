@@ -1,0 +1,53 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+expression: "\npub fn go(x) {\n  let assert #(wibble, wobble) = x\n}\n"
+---
+----- SOURCE CODE
+0 |
+1 |pub fn go(x) {
+2 |  let assert #(wibble, wobble) = x
+3 |}
+
+----- COMPILED JAVASCRIPT
+0 |//# sourceMappingURL=mod.mjs.map
+1 |export function go(x) {
+2 |  let wibble = x[0];
+3 |  let wobble = x[1];
+4 |  return x;
+5 |}
+
+----- SOURCE MAP
+File: my/mod.mjs
+Sources: mod.gleam
+Mappings:
+----- 
+
+
+⏷
+//# sourceMappingURL=mod.mjs.map
+
+----- 
+pub fn go(x) {
+  
+⏷
+export function go(x) {
+  
+----- 
+let assert 
+⏷
+
+----- 
+#(wibble, wobble) = x
+}
+⏷
+let wibble = x[0];
+  let wobble = x[1];
+  return x;
+}
+----- 
+
+
+⏷
+
+
+-----
