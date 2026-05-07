@@ -30,7 +30,6 @@ export function go() {
   }
   let x = _block;
   let $2 = [x, 3];
-  let a;
-  a = $2[0];
+  let a = $2[0];
   return a;
 }

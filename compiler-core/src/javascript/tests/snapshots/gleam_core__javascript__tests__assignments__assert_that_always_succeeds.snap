@@ -26,7 +26,6 @@ class Wibble extends $CustomType {
 
 export function go() {
   let $ = new Wibble(1);
-  let n;
-  n = $[0];
+  let n = $[0];
   return n;
 }

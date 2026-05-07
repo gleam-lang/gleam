@@ -20,8 +20,7 @@ function fun(f) {
 export function go() {
   return fun(
     (_use0) => {
-      let n;
-      n = _use0[1];
+      let n = _use0[1];
       return n;
     },
   );

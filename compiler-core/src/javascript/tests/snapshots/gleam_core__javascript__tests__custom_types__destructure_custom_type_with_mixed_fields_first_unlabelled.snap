@@ -34,15 +34,10 @@ export const Cat$Cat$cuteness = (value) => value.cuteness;
 export const Cat$Cat$1 = (value) => value.cuteness;
 
 export function go(cat) {
-  let x;
-  let y;
-  x = cat[0];
-  y = cat.cuteness;
-  let y$1;
-  y$1 = cat.cuteness;
-  let x$1;
-  let y$2;
-  x$1 = cat[0];
-  y$2 = cat.cuteness;
+  let x = cat[0];
+  let y = cat.cuteness;
+  let y$1 = cat.cuteness;
+  let x$1 = cat[0];
+  let y$2 = cat.cuteness;
   return x$1;
 }
