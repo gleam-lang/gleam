@@ -521,3 +521,11 @@ jobs:
       - name: Test publishing with default main
         run: ./test.sh
         working-directory: ./test/publishing_default_main
+
+      - name: Test publishing with src symlink escape
+        run: ./test.sh
+        working-directory: ./test/publishing_src_symlink_escape
+
+      - name: Test publishing with priv symlink escape
+        run: ./test.sh
+        working-directory: ./test/publishing_priv_symlink_escape

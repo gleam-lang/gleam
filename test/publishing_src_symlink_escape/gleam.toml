@@ -1,0 +1,6 @@
+name = "symlink_escape"
+version = "1.0.0"
+description = "Test project"
+licences = ["Apache-2.0"]
+
+[dependencies]
