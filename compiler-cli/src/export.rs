@@ -5,6 +5,12 @@ use gleam_core::{
     build::{Codegen, Compile, Mode, Options, Target},
     paths::ProjectPaths,
 };
+use itertools::Itertools;
+use std::io::{self, Write};
+use std::{fs::File, io::Cursor};
+use zip::ZipWriter;
+
+use crate::fs;
 
 static ENTRYPOINT_FILENAME_POWERSHELL: &str = "entrypoint.ps1";
 static ENTRYPOINT_FILENAME_POSIX_SHELL: &str = "entrypoint.sh";
@@ -14,8 +20,106 @@ static ENTRYPOINT_TEMPLATE_POWERSHELL: &str =
 static ENTRYPOINT_TEMPLATE_POSIX_SHELL: &str =
     include_str!("../templates/erlang-shipment-entrypoint.sh");
 
-// TODO: start in embedded mode
-// TODO: test
+/// Generate a single file of precompiled Erlang, suitable for CLIs.
+pub fn escript(paths: &ProjectPaths) -> Result<()> {
+    // TODO: Add new entrypoint shim module
+    //
+    // ```erlang
+    // -module(gleescript_main_shim).
+    //
+    // -export([main/1]).
+    //
+    // main(_) ->
+    //     io:setopts(standard_io, [binary, {encoding, utf8}]),
+    //     io:setopts(standard_error, [{encoding, utf8}]),
+    //     ApplicationModule = INLINE_THE_MODULE_HERE,
+    //     {ok, _} = application:ensure_all_started(ApplicationModule),
+    //     ApplicationModule:main().
+    // ```
+    //
+    // TODO: Compile project (including new shim)
+    //
+    // TODO: Build zip archive of all the files
+    //
+    // TODO: Make a file with
+    //   1. shebang
+    //   2. emulator flags including `-escript main gleescript_main_shim`
+    //   3. the zip file
+    //   4. write to disc
+    let target = Target::Erlang;
+    let mode = Mode::Prod;
+    let build = paths.build_directory_for_target(mode, target);
+    let out = paths.erlang_shipment_directory();
+
+    crate::fs::mkdir(&out)?;
+
+    // Reset the directories to ensure we have a clean slate and no old code
+    crate::fs::delete_directory(&build)?;
+    crate::fs::delete_directory(&out)?;
+
+    let manifest = crate::build::download_dependencies(paths, crate::cli::Reporter::new())?;
+    let packages = manifest
+        .packages
+        .iter()
+        .map(|package| package.name.clone())
+        .collect_vec();
+
+    // Build project in production mode
+    let build_options = Options {
+        root_target_support: TargetSupport::Enforced,
+        warnings_as_errors: false,
+        codegen: Codegen::All,
+        compile: Compile::All,
+        mode,
+        target: Some(target),
+        no_print_progress: false,
+    };
+    let built = crate::build::main(paths, build_options, manifest)?;
+
+    // Create a zip file to write to
+
+    let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
+    let options = zip::write::SimpleFileOptions::default();
+
+    for package in packages {
+        let directory = format!("{package}/ebin");
+        zip.add_directory(directory, options).map_err(|_| todo!())?;
+
+        let zip_path = format!("{package}/ebin/{package}.app");
+        zip.start_file(&zip_path, options).map_err(|_| todo!())?;
+        // TODO: move to fs
+        let input = paths.build_package_app_file(mode, target, &package);
+
+        // TODO: replace this with only iterating over the production packages
+        if !input.exists() {
+            continue;
+        }
+
+        let mut file = std::fs::File::open(dbg!(input)).unwrap();
+        let _: u64 = std::io::copy(&mut file, &mut zip).map_err(|_| todo!())?;
+
+        // let name = path.file_name().expect("Directory name");
+        // let build = build.join(name);
+        // let out = out.join(name);
+        // crate::fs::mkdir(&out)?;
+        //
+        // // Copy desired package subdirectories
+        // for subdirectory in ["ebin", "priv", "include"] {
+        //     let source = build.join(subdirectory);
+        //     if source.is_dir() {
+        //         let source = crate::fs::canonicalise(&source)?;
+        //         let out = out.join(subdirectory);
+        //         crate::fs::copy_dir(source, &out)?;
+        //     }
+        // }
+    }
+
+    let result = zip.finish().map_err(|_| todo!())?;
+    let bytes: Vec<u8> = result.into_inner();
+    fs::write_bytes(&Utf8PathBuf::from("stuff.zip"), &bytes)?;
+
+    Ok(())
+}
 
 /// Generate a directory of precompiled Erlang along with a start script.
 /// Suitable for deployment to a server.

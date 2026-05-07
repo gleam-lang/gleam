@@ -124,6 +124,18 @@ impl ProjectPaths {
             .join("ebin")
     }
 
+    pub fn build_package_app_file(
+        &self,
+        mode: Mode,
+        target: Target,
+        package_name: &str,
+    ) -> Utf8PathBuf {
+        self.build_directory_for_package(mode, target, package_name)
+            .join("ebin")
+            .join(package_name)
+            .with_extension("app")
+    }
+
     /// A path to a special file that contains the version of gleam
     /// that last built the artifacts along with build-impacting
     /// configuration, such as whether to generate source maps. If
