@@ -59,7 +59,7 @@ runs:
     id: versions
     run: |
       # Build version with platform
-      PLATFORM_VERSION=$VERSION_VERSION-${{ matrix.base-image }}
+      PLATFORM_VERSION=$VERSION-${{ matrix.base-image }}
 
       # Build container tag
       TAG=ghcr.io/${{ github.repository }}:$PLATFORM_VERSION
