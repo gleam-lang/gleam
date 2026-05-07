@@ -1531,14 +1531,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     }
 
     /// This raises a warning if we're on the js target and we're matching on
-    /// an integer segment that has an explicit literal size over 52 bits.
+    /// an int segment that has an explicit literal size over 52 bits.
     /// That's the maximum size of ints on the JS target, matching on anything
     /// bigger would result in the number being truncated.
     ///
     fn check_matched_int_is_in_js_bounds(&mut self, segment: &TypedPatternBitArraySegment) {
         // This only makes sense to check on the js target
         // And if the segment actually defines a variable that would end up
-        // being truncated and that is an integer!
+        // being truncated and that is an int!
         if self.environment.target != Target::JavaScript || !segment.type_.is_int() {
             return;
         }

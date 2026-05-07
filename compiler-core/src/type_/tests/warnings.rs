@@ -491,17 +491,17 @@ pub const make_two = one.Two
 
 // https://github.com/gleam-lang/gleam/issues/2050
 #[test]
-fn double_unary_integer_literal() {
+fn double_unary_int_literal() {
     assert_warning!("pub fn main() { let _ = --7 }");
 }
 
 #[test]
-fn even_number_of_multiple_integer_negations_raise_a_single_warning() {
+fn even_number_of_multiple_int_negations_raise_a_single_warning() {
     assert_warning!("pub fn main() { let _ = ----7 }");
 }
 
 #[test]
-fn odd_number_of_multiple_integer_negations_raise_a_single_warning_that_highlights_the_unnecessary_ones()
+fn odd_number_of_multiple_int_negations_raise_a_single_warning_that_highlights_the_unnecessary_ones()
  {
     assert_warning!("pub fn main() { let _ = -----7 }");
 }
@@ -519,7 +519,7 @@ fn odd_number_of_multiple_bool_negations_raise_a_single_warning_that_highlights_
 
 // https://github.com/gleam-lang/gleam/issues/2050
 #[test]
-fn double_unary_integer_variable() {
+fn double_unary_int_variable() {
     assert_warning!(
         r#"
         pub fn main() {
@@ -4580,7 +4580,7 @@ pub fn main() {
 }
 
 #[test]
-fn impossible_to_reach_integer_segment() {
+fn impossible_to_reach_int_segment() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -4593,7 +4593,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn impossible_to_reach_integer_segment_2() {
+fn impossible_to_reach_int_segment_2() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -4606,7 +4606,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn impossible_to_reach_integer_segment_3() {
+fn impossible_to_reach_int_segment_3() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -4619,7 +4619,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn impossible_to_reach_integer_segment_4() {
+fn impossible_to_reach_int_segment_4() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -4632,7 +4632,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn multiple_impossible_to_reach_integer_segments() {
+fn multiple_impossible_to_reach_int_segments() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -4645,7 +4645,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn assert_on_impossible_to_reach_integer_segment() {
+fn assert_on_impossible_to_reach_int_segment() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -4937,7 +4937,7 @@ pub fn main() {
 }
 
 #[test]
-fn bit_array_match_on_integer_over_js_limit() {
+fn bit_array_match_on_int_over_js_limit() {
     assert_js_warning!(
         "
 pub fn go(x: BitArray) {
@@ -4949,7 +4949,7 @@ pub fn go(x: BitArray) {
 }
 
 #[test]
-fn bit_array_match_on_integer_over_js_limit_1() {
+fn bit_array_match_on_int_over_js_limit_1() {
     assert_js_warning!(
         "
 pub fn go(x: BitArray) {
@@ -4963,7 +4963,7 @@ pub fn go(x: BitArray) {
 }
 
 #[test]
-fn bit_array_match_on_integer_over_js_limit_with_unit() {
+fn bit_array_match_on_int_over_js_limit_with_unit() {
     assert_js_warning!(
         "
 pub fn go(x: BitArray) {
@@ -4977,7 +4977,7 @@ pub fn go(x: BitArray) {
 }
 
 #[test]
-fn bit_array_match_on_bytes_does_not_complain_about_integer_size() {
+fn bit_array_match_on_bytes_does_not_complain_about_int_size() {
     assert_js_no_warnings!(
         "
 pub fn go(x: BitArray) {
