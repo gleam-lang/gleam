@@ -39,7 +39,8 @@ pub fn get_current_directory() -> Result<Utf8PathBuf, Error> {
 }
 
 // Return the first directory with a gleam.toml as a UTF-8 Path
-pub fn get_project_root(mut path: Utf8PathBuf) -> Result<Utf8PathBuf, Error> {
+pub fn get_project_root(original_path: Utf8PathBuf) -> Result<Utf8PathBuf, Error> {
+    let mut path = original_path.clone();
     loop {
         if path.join("gleam.toml").is_file() {
             return Ok(path);
@@ -49,7 +50,7 @@ pub fn get_project_root(mut path: Utf8PathBuf) -> Result<Utf8PathBuf, Error> {
             Some(path) => path.into(),
             None => {
                 return Err(Error::UnableToFindProjectRoot {
-                    path: path.to_string(),
+                    path: original_path.to_string(),
                 });
             }
         }
