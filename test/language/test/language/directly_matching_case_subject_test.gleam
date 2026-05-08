@@ -29,22 +29,20 @@ pub fn no_duplicate_let_after_directly_matching_case_test() {
 }
 
 // https://github.com/gleam-lang/gleam/issues/5612
-pub fn no_duplicate_let_after_case_with_same_named_variable() {
+pub fn no_duplicate_let_after_case_with_same_named_variable_test() {
   let x = case #(1, 2) {
     #(_, x) -> x
   }
-
   assert x == 2
 }
 
 // https://github.com/gleam-lang/gleam/issues/5612
-pub fn no_duplicate_let_after_case_with_same_named_variable_with_declaration_before_and_after() {
+pub fn no_duplicate_let_after_case_with_same_named_variable_with_declaration_before_and_after_test() {
   let x = 0
   let x = x
   let x = case #(1, 2) {
     #(_, x) -> x
   }
-
   let x = x
   assert x == 2
 }
