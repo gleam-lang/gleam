@@ -1,11 +1,10 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-expression: "\npub fn go() {\n  let x = 0\n  let x = case #(1, 2) {\n    #(_, x) -> x\n  }\n\n  x\n}"
+expression: "\npub fn go() {\n  let x = case #(1, 2) {\n    #(_, x) -> x\n  }\n\n  x\n}"
 ---
 ----- SOURCE CODE
 
 pub fn go() {
-  let x = 0
   let x = case #(1, 2) {
     #(_, x) -> x
   }
@@ -15,11 +14,10 @@ pub fn go() {
 
 ----- COMPILED JAVASCRIPT
 export function go() {
-  let x = 0;
   let _block;
   let $ = [1, 2];
-  let x$1 = $[1];
-  _block = x$1;
+  let x = $[1];
+  _block = x;
   let x$1 = _block;
   return x$1;
 }
