@@ -17,13 +17,8 @@ use gleam_core::{
 };
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
-use reqwest::get;
 use sha2::Digest;
-use std::{
-    collections::HashMap,
-    io::Write,
-    process::{Command, Stdio},
-};
+use std::{collections::HashMap, io::Write};
 
 use crate::{build, cli, docs, fs, http::HttpClient, new::default_readme};
 
@@ -1131,4 +1126,58 @@ src/also-ignored.gleam";
         .collect_vec();
 
     assert_eq!(expected_exported_files, chosen_exported_files);
+}
+
+#[test]
+fn find_git_repo_root_at_same_level() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
+
+    fs::mkdir(path.join(".git")).expect("Create directory");
+
+    let repository_root = get_git_repository_root(path);
+    assert!(
+        repository_root
+            .expect("There should be repo root")
+            .ends_with("my_project")
+    );
+}
+
+#[test]
+fn find_missing_git_repo_root_at_same_level() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
+
+    let repository_root = get_git_repository_root(path);
+    assert!(repository_root.is_none());
+}
+
+#[test]
+fn find_git_repo_root_at_lower_level() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
+
+    fs::mkdir(path.join(".git")).expect("Create directory");
+
+    let current_path = path.join("subdirectory").join("another_subdirectory");
+    fs::mkdir(&current_path).expect("Create directory");
+
+    let repository_root = get_git_repository_root(current_path);
+    assert!(
+        repository_root
+            .expect("There should be repo root")
+            .ends_with("my_project")
+    );
+}
+
+#[test]
+fn find_missing_git_repo_root_at_lower_level() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
+
+    let current_path = path.join("subdirectory").join("another_subdirectory");
+    fs::mkdir(&current_path).expect("Create directory");
+
+    let repository_root = get_git_repository_root(current_path);
+    assert!(repository_root.is_none());
 }
