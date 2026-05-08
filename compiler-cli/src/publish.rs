@@ -17,6 +17,7 @@ use gleam_core::{
 };
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
+use reqwest::get;
 use sha2::Digest;
 use std::{
     collections::HashMap,
@@ -120,28 +121,13 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
 
     // Prompt the user to make a git tag if they have not.
     let has_repo = config.repository.is_some();
-    let is_repository = Command::new("git")
-        .arg("rev-parse")
-        .arg("--is-inside-work-tree")
-        // We don't need Git's output, since it will exit with code 0 if we are
-        // inside work tree
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false);
+    let repository_root = get_git_repository_root(".".into());
+    if has_repo && let Some(repository_root) = repository_root {
+        let git = repository_root.join(".git");
 
-    if has_repo && is_repository {
         let tag_name = config.tag_for_version(&config.version);
-        let tag_exists = Command::new("git")
-            .args(["rev-parse", "--verify", &tag_name])
-            // We don't need Git's output, since it will exit with code 0 if the
-            // tag exists
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .map(|s| s.success())
-            .unwrap_or(false);
+        let git_tag = git.join("refs").join("tags").join(&tag_name);
+        let tag_exists = git_tag.exists();
 
         if !tag_exists {
             println!(
@@ -156,6 +142,20 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         }
     }
     Ok(())
+}
+
+/// Returns root of Git repository in base path if it is initialised.
+fn get_git_repository_root(mut path: Utf8PathBuf) -> Option<Utf8PathBuf> {
+    loop {
+        if path.join(".git").is_dir() {
+            return Some(path);
+        }
+
+        path = match path.parent() {
+            Some(path) => path.into(),
+            None => return None,
+        }
+    }
 }
 
 fn check_for_invalid_readme(config: &PackageConfig, paths: &ProjectPaths) -> Result<(), Error> {
