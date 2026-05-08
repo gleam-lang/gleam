@@ -48,7 +48,6 @@
   backend so `(bitSize - c) % 8 === 0` becomes `bitSize % 8 === 0` when the
   constant offset `c` is congruent modulo 8. This produces more uniform
   generated code for byte-aligned patterns.
-
   ([Daniele Scaratti](https://github.com/lupodevelop))
 
 ### Build tool
@@ -235,3 +234,9 @@
 - Fixed a bug where using the `bytes` and `unit` options together on a bit array
   segment could generate incorrect code on the JavaScript target.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the JavaScript code generator could produce duplicate `let`
+  declarations for internal variables after a `case` expression whose subject
+  directly matches branch when existing variables with same exist in outer
+  scope.
+  ([Andrey Kozhev](https://github.com/ankddev))
