@@ -1306,6 +1306,49 @@ pub fn go(x) {
 }
 
 #[test]
+fn case_match_two_floats() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<a:float-32, b:float-32>> -> #(a, b)
+    _ -> #(0.0, 0.0)
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn case_match_float_two_clauses() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<a:float-32, _:int-16>> -> a
+    <<c:float-32, d:float-32>> -> c +. d
+    _ -> 0.0
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn case_match_float_discard() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<_:float-32>> -> "float"
+    _ -> "other"
+  }
+}
+"#,
+    );
+}
+
+#[test]
 fn match_float_sized_little_endian() {
     assert_js!(
         r#"

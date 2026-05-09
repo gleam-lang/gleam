@@ -21,7 +21,7 @@ use crate::{
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use num_bigint::BigInt;
-use std::{collections::HashMap, sync::OnceLock};
+use std::{collections::{HashMap, VecDeque}, sync::OnceLock};
 
 pub static ASSIGNMENT_VAR: &str = "$";
 
@@ -432,7 +432,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             let old_names = self.variables.scoped_variable_names.clone();
             let old_segments = self.variables.segment_values.clone();
             let old_segment_names = self.variables.scoped_segment_names.clone();
-            let old_cached_float = self.variables.cached_float_var.clone();
+            let old_cached_float = self.variables.cached_float_vars.clone();
 
             let result = self.decision(fallback);
 
@@ -460,7 +460,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             self.variables.scoped_variable_names = old_names;
             self.variables.segment_values = old_segments;
             self.variables.scoped_segment_names = old_segment_names;
-            self.variables.cached_float_var = old_cached_float;
+            self.variables.cached_float_vars = old_cached_float;
             return result;
         }
 
@@ -687,7 +687,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
         let old_names = self.variables.scoped_variable_names.clone();
         let old_segments = self.variables.segment_values.clone();
         let old_segment_names = self.variables.scoped_segment_names.clone();
-        let old_cached_float = self.variables.cached_float_var.clone();
+        let old_cached_float = self.variables.cached_float_vars.clone();
         let output = run(self);
 
         match &self.kind {
@@ -700,7 +700,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
         self.variables.scoped_variable_names = old_names;
         self.variables.segment_values = old_segments;
         self.variables.scoped_segment_names = old_segment_names;
-        self.variables.cached_float_var = old_cached_float;
+        self.variables.cached_float_vars = old_cached_float;
         output
     }
 
@@ -1001,12 +1001,16 @@ struct Variables<'generator, 'module, 'a> {
     ///
     scoped_segment_names: HashMap<EcoString, EcoString>,
 
-    /// When a `SegmentIsFiniteFloat` check pre-computes a float read, the
-    /// variable holding the result is stored here so that the subsequent
-    /// body binding for the same float segment can reuse it instead of
-    /// emitting a second `bitArraySliceToFloat` call.
+    /// When `SegmentIsFiniteFloat` checks pre-compute float reads, the
+    /// variables holding the results are queued here (FIFO) so that the
+    /// subsequent body bindings for the same float segments can reuse them
+    /// instead of emitting duplicate `bitArraySliceToFloat` calls.
     ///
-    cached_float_var: Option<EcoString>,
+    /// A queue is used because patterns like `<<a:float-32, b:float-32>>`
+    /// produce multiple float checks, and the body bindings consume them
+    /// in the same order they were declared.
+    ///
+    cached_float_vars: VecDeque<EcoString>,
 }
 
 impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
@@ -1021,7 +1025,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             scoped_variable_names: HashMap::new(),
             segment_values: HashMap::new(),
             scoped_segment_names: HashMap::new(),
-            cached_float_var: None,
+            cached_float_vars: VecDeque::new(),
         }
     }
 
@@ -1273,7 +1277,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     // result to it inside the condition so the body binding
                     // can reuse it without a second `bitArraySliceToFloat`
                     // call.
-                    if let Some(var_name) = self.cached_float_var.as_ref() {
+                    if let Some(var_name) = self.cached_float_vars.back() {
                         docvec!["Number.isFinite(", var_name.clone(), " = ", float_call, ")"]
                     } else {
                         docvec!["Number.isFinite(", float_call, ")"]
@@ -1432,7 +1436,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 // If the float read was already pre-computed by a
                 // `SegmentIsFiniteFloat` check, reuse the cached variable
                 // instead of emitting a duplicate `bitArraySliceToFloat` call.
-                if let Some(var_name) = self.cached_float_var.take() {
+                if let Some(var_name) = self.cached_float_vars.pop_front() {
                     return var_name.to_doc();
                 }
                 self.bit_array_slice_to_float(bit_array, start, end, endianness)
@@ -1867,7 +1871,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         } = check
         {
             let var_name = self.next_local_var(&ASSIGNMENT_VAR.into());
-            self.cached_float_var = Some(var_name.clone());
+            self.cached_float_vars.push_back(var_name.clone());
             check_assignments.push(docvec!["let ", var_name, ";"]);
         }
 
