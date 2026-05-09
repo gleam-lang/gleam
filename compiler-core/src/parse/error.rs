@@ -106,8 +106,11 @@ pub enum ParseErrorType {
         hint: Option<EcoString>,
     },
     UnexpectedFunction, // a function was used called outside of another function
-    // A variable was assigned or discarded on the left hand side of a <> pattern
+    /// A variable was assigned or discarded on the left hand side of a <> pattern
     ConcatPatternVariableLeftHandSide,
+    /// A variable was assigned as infix between prefix and suffix string
+    /// patterns using <>
+    ConcatPatternVariableInInfixPosition,
     ListSpreadWithoutTail,               // let x = [1, ..]
     ExpectedFunctionBody,                // let x = fn()
     RedundantInternalAttribute,          // for a private definition marked as internal
@@ -552,6 +555,20 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 .join("\n"),
                 hint: None,
                 label_text: "This must be a string literal".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ConcatPatternVariableInInfixPosition => ParseErrorDetails {
+                text: [
+                    "We can't tell what size this infix should be so we don't know",
+                    "how to handle this pattern.",
+                    "",
+                    "If you want to match one character consider using `pop_grapheme`",
+                    "from the stdlib's `gleam/string` module.",
+                ]
+                .join("\n"),
+                hint: None,
+                label_text: "This must be a string literal prefix".into(),
                 extra_labels: vec![],
             },
 
