@@ -432,6 +432,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             let old_names = self.variables.scoped_variable_names.clone();
             let old_segments = self.variables.segment_values.clone();
             let old_segment_names = self.variables.scoped_segment_names.clone();
+            let old_cached_float = self.variables.cached_float_var.clone();
 
             let result = self.decision(fallback);
 
@@ -459,6 +460,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             self.variables.scoped_variable_names = old_names;
             self.variables.segment_values = old_segments;
             self.variables.scoped_segment_names = old_segment_names;
+            self.variables.cached_float_var = old_cached_float;
             return result;
         }
 
@@ -500,7 +502,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             // - the assignments we need to bring all the bit array segments
             //   referenced by this check
             let (check_doc, body, mut segment_assignments) = self.inside_new_scope(|this| {
-                let segment_assignments = this.variables.bit_array_segment_assignments(check);
+                let segment_assignments = this.variables.bit_array_segment_assignments(var, check);
 
                 // If the pattern matches on a single character, use the character
                 // code instead of `.startsWith`.
@@ -685,6 +687,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
         let old_names = self.variables.scoped_variable_names.clone();
         let old_segments = self.variables.segment_values.clone();
         let old_segment_names = self.variables.scoped_segment_names.clone();
+        let old_cached_float = self.variables.cached_float_var.clone();
         let output = run(self);
 
         match &self.kind {
@@ -697,6 +700,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
         self.variables.scoped_variable_names = old_names;
         self.variables.segment_values = old_segments;
         self.variables.scoped_segment_names = old_segment_names;
+        self.variables.cached_float_var = old_cached_float;
         output
     }
 
@@ -996,6 +1000,13 @@ struct Variables<'generator, 'module, 'a> {
     /// difference that a segment is identified by its name.
     ///
     scoped_segment_names: HashMap<EcoString, EcoString>,
+
+    /// When a `SegmentIsFiniteFloat` check pre-computes a float read, the
+    /// variable holding the result is stored here so that the subsequent
+    /// body binding for the same float segment can reuse it instead of
+    /// emitting a second `bitArraySliceToFloat` call.
+    ///
+    cached_float_var: Option<EcoString>,
 }
 
 impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
@@ -1010,6 +1021,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             scoped_variable_names: HashMap::new(),
             segment_values: HashMap::new(),
             scoped_segment_names: HashMap::new(),
+            cached_float_var: None,
         }
     }
 
@@ -1253,9 +1265,19 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                         (Some(start), Some(end)) => (start + end).to_doc(),
                         (_, _) => docvec![start_doc.clone(), " + ", self.read_size_to_doc(size)],
                     };
-                    let check = self.bit_array_slice_to_float(value, start_doc, end, endianness);
+                    let float_call =
+                        self.bit_array_slice_to_float(value, start_doc, end, endianness);
 
-                    docvec!["Number.isFinite(", check, ")"]
+                    // If we have a cached variable from
+                    // `bit_array_segment_assignments`, assign the float call
+                    // result to it inside the condition so the body binding
+                    // can reuse it without a second `bitArraySliceToFloat`
+                    // call.
+                    if let Some(var_name) = self.cached_float_var.as_ref() {
+                        docvec!["Number.isFinite(", var_name.clone(), " = ", float_call, ")"]
+                    } else {
+                        docvec!["Number.isFinite(", float_call, ")"]
+                    }
                 }
 
                 // Here we need to make sure that the bit array has a specific
@@ -1406,7 +1428,15 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             ReadType::Int => {
                 self.bit_array_slice_to_int(bit_array, start, end, endianness, *signed)
             }
-            ReadType::Float => self.bit_array_slice_to_float(bit_array, start, end, endianness),
+            ReadType::Float => {
+                // If the float read was already pre-computed by a
+                // `SegmentIsFiniteFloat` check, reuse the cached variable
+                // instead of emitting a duplicate `bitArraySliceToFloat` call.
+                if let Some(var_name) = self.cached_float_var.take() {
+                    return var_name.to_doc();
+                }
+                self.bit_array_slice_to_float(bit_array, start, end, endianness)
+            }
             ReadType::BitArray => self.bit_array_slice_with_end(bit_array, from, end),
             ReadType::String | ReadType::UtfCodepoint => {
                 panic!("invalid slice type made it to code generation: {type_:#?}")
@@ -1804,7 +1834,11 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     /// the referenced segments into scope, so they're available to use for the
     /// runtime check.
     ///
-    fn bit_array_segment_assignments(&mut self, check: &RuntimeCheck) -> Vec<Document<'a>> {
+    fn bit_array_segment_assignments(
+        &mut self,
+        _variable: &Variable,
+        check: &'a RuntimeCheck,
+    ) -> Vec<Document<'a>> {
         let mut check_assignments = vec![];
         for (segment, _) in check.referenced_segment_patterns() {
             // If the segment was already bound to a variable in this scope we
@@ -1821,6 +1855,22 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             self.bind_segment(variable_name.clone(), segment.clone());
             check_assignments.push(let_doc(variable_name, segment_value))
         }
+
+        // If this is a `SegmentIsFiniteFloat` check, declare a variable to
+        // cache the result of the float read. The variable is declared here
+        // (before the if-condition) but assigned inside the condition via an
+        // assignment expression `$N = bitArraySliceToFloat(...)`. This way
+        // the float is only computed after earlier checks (like size) pass,
+        // and the result can be reused in the body binding.
+        if let RuntimeCheck::BitArray {
+            test: BitArrayTest::SegmentIsFiniteFloat { .. },
+        } = check
+        {
+            let var_name = self.next_local_var(&ASSIGNMENT_VAR.into());
+            self.cached_float_var = Some(var_name.clone());
+            check_assignments.push(docvec!["let ", var_name, ";"]);
+        }
+
         check_assignments
     }
 

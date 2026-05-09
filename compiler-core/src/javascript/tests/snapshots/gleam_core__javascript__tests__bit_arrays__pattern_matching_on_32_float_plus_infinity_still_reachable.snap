@@ -18,7 +18,8 @@ import { bitArraySliceToFloat } from "../gleam.mjs";
 
 export function go(x) {
   if (x.bitSize === 32) {
-    if (Number.isFinite(bitArraySliceToFloat(x, 0, 32, true))) {
+    let $;
+    if (Number.isFinite($ = bitArraySliceToFloat(x, 0, 32, true))) {
       return "Float";
     } else if (
       x.byteAt(0) === 127 &&
