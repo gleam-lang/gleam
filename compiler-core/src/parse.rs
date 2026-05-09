@@ -1365,6 +1365,14 @@ where
                             Some((_, Token::Concatenate, _)) => {
                                 self.advance();
                                 let (r_start, right, r_end) = self.expect_assign_name()?;
+
+                                // Can't match on prefix and suffix
+                                if let Some((_, Token::Concatenate, _)) = self.tok0 {
+                                    return concat_pattern_variable_in_infix_position_error(
+                                        r_start, r_end,
+                                    );
+                                }
+
                                 Pattern::StringPrefix {
                                     location: SrcSpan { start, end: r_end },
                                     left_location: SrcSpan {
@@ -1399,6 +1407,12 @@ where
                     Some((_, Token::Concatenate, _)) => {
                         self.advance();
                         let (r_start, right, r_end) = self.expect_assign_name()?;
+
+                        // Can't match on prefix and suffix
+                        if let Some((_, Token::Concatenate, _)) = self.tok0 {
+                            return concat_pattern_variable_in_infix_position_error(r_start, r_end);
+                        }
+
                         Pattern::StringPrefix {
                             location: SrcSpan { start, end: r_end },
                             left_location: SrcSpan { start, end },
@@ -4646,6 +4660,16 @@ functions are declared separately from types.";
 fn concat_pattern_variable_left_hand_side_error<T>(start: u32, end: u32) -> Result<T, ParseError> {
     Err(ParseError {
         error: ParseErrorType::ConcatPatternVariableLeftHandSide,
+        location: SrcSpan::new(start, end),
+    })
+}
+
+fn concat_pattern_variable_in_infix_position_error<T>(
+    start: u32,
+    end: u32,
+) -> Result<T, ParseError> {
+    Err(ParseError {
+        error: ParseErrorType::ConcatPatternVariableInInfixPosition,
         location: SrcSpan::new(start, end),
     })
 }
