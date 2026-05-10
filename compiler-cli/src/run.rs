@@ -109,7 +109,7 @@ pub fn setup(
     let options = Options {
         warnings_as_errors: false,
         compile: match package_kind {
-            // If we're trying to run a dependecy module we do not compile and
+            // If we're trying to run a dependency module we do not compile and
             // check the root package. So we can run the main function from a
             // dependency's module even if the root package doesn't compile.
             PackageKind::Dependency => Compile::DepsOnly,
@@ -140,16 +140,11 @@ pub fn setup(
     )?;
 
     // Warn if the module being run is internal and NOT in the root package
-    match package_kind {
-        PackageKind::Root => {}
-        PackageKind::Dependency => {
-            if mod_config.is_internal_module(&module) {
-                let warning = Warning::InternalModuleMainFunction {
-                    module: module.clone(),
-                };
-                console_warning_emitter.emit_warning(warning);
-            }
-        }
+    if package_kind == PackageKind::Dependency && mod_config.is_internal_module(&module) {
+        let warning = Warning::InternalModuleMainFunction {
+            module: module.clone(),
+        };
+        console_warning_emitter.emit_warning(warning);
     }
 
     // A module can not be run if it does not exist or does not have a public main function.
