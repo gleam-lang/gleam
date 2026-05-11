@@ -9,7 +9,7 @@ use lsp_types::{
     request::{
         CodeActionRequest, Completion, DocumentSymbolRequest, FoldingRangeRequest, Formatting,
         GotoTypeDefinition, HoverRequest, PrepareRenameRequest, References, Rename,
-        SignatureHelpRequest,
+        SignatureHelpRequest, WorkspaceSymbolRequest,
     },
 };
 use std::time::Duration;
@@ -31,6 +31,7 @@ pub enum Request {
     SignatureHelp(lsp::SignatureHelpParams),
     DocumentSymbol(lsp::DocumentSymbolParams),
     FoldingRange(lsp::FoldingRangeParams),
+    WorkspaceSymbol(lsp::WorkspaceSymbolParams),
     PrepareRename(lsp::TextDocumentPositionParams),
     Rename(lsp::RenameParams),
     FindReferences(lsp::ReferenceParams),
@@ -87,6 +88,10 @@ impl Request {
             "textDocument/references" => {
                 let params = cast_request::<References>(request);
                 Some(Message::Request(id, Request::FindReferences(params)))
+            }
+            "workspace/symbol" => {
+                let params = cast_request::<WorkspaceSymbolRequest>(request);
+                Some(Message::Request(id, Request::WorkspaceSymbol(params)))
             }
             _ => None,
         }
