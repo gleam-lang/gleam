@@ -284,3 +284,8 @@
   fail to build when they depended on Gleam packages with transitive
   dependencies.
   ([Logan Bresnahan](https://github.com/LoganBresnahan))
+
+- Fixed a bug where cli would fail to complete https connections from behind a proxy
+  with self-signed certificates. The cli now defaults to using system trust stores
+  for trusted CAs, allowing use in proxied network environments.
+  ([apsoras][https://github.com/apsoras])
