@@ -50,6 +50,9 @@
   generated code for byte-aligned patterns.
   ([Daniele Scaratti](https://github.com/lupodevelop))
 
+- Gleam will now warn when running a deprecated or internal module main function
+  ([Kevin Chen](https://github.com/kfc35) & [Lioncat2002](https://github.com/Lioncat2002))
+
 ### Build tool
 
 - The `gleam dev` command now accepts the `--no-print-progress` flag. When this

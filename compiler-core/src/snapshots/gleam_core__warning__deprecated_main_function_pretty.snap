@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/warning.rs
+expression: warning.to_pretty_string()
+---
+warning: Deprecated main function
+
+The main function in module `apple` was deprecated with this message: Use
+some other method please!

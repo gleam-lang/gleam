@@ -7,7 +7,7 @@ use gleam_core::{
     error::{FileIoAction, FileKind},
     paths::ProjectPaths,
     type_,
-    warning::VectorWarningEmitterIO,
+    warning::{VectorWarningEmitterIO, WarningEmitter},
 };
 use hexpm::version::Version;
 
@@ -30,7 +30,7 @@ pub fn run(paths: &ProjectPaths) -> Result<()> {
             no_print_progress: false,
         },
         build::download_dependencies(paths, cli::Reporter::new())?,
-        warnings.clone(),
+        Rc::new(WarningEmitter::new(warnings.clone())),
     )?;
     let warnings = warnings.take();
 
