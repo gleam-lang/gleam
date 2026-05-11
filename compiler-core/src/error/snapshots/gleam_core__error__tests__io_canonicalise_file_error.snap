@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/error/tests.rs
+expression: error
+---
+error: File IO failure
+
+An error occurred while trying to canonicalise this file:
+
+    /file
+
+The error message from the file IO library was:
+
+    Critical error!

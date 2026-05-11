@@ -90,6 +90,10 @@
   flow for when a Hex session has been revoked or has expired.
   ([Sahil Upasane](https://github.com/404salad))
 
+- The build tool now includes destination path in the error when it fails to
+  link or copy file or directory.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server can now help with completions when typing a list's tail:
