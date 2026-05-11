@@ -182,6 +182,10 @@ pub enum Warning {
         src: EcoString,
         location: SrcSpan,
     },
+
+    UnknownConfigKey {
+        name: EcoString,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -1493,6 +1497,17 @@ The imported value could not be used in this module anyway."
                 title: "Empty module".into(),
                 text: format!("Module '{name}' contains no public definitions."),
                 hint: Some("You can safely remove this module.".into()),
+                level: diagnostic::Level::Warning,
+                location: None,
+            },
+
+            Warning::UnknownConfigKey { name } => Diagnostic {
+                title: "Unknown config key".into(),
+                text: format!("Config key '{name}' isn't allowed."),
+                hint: Some(
+                    "See the `gleam.toml` schema at https://gleam.run/writing-gleam/gleam-toml."
+                        .into(),
+                ),
                 level: diagnostic::Level::Warning,
                 location: None,
             },

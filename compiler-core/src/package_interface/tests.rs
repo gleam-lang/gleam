@@ -161,7 +161,10 @@ fn package_from_module(module: Module) -> Package {
             gleam_version: Some(GleamVersion::new("1.0.0".to_string()).unwrap()),
             licences: vec![],
             description: "description".into(),
-            documentation: Docs { pages: vec![] },
+            documentation: Docs {
+                pages: vec![],
+                unknown: Default::default(),
+            },
             dependencies: std::collections::HashMap::new(),
             dev_dependencies: std::collections::HashMap::new(),
             repository: None,
@@ -174,6 +177,8 @@ fn package_from_module(module: Module) -> Package {
                     .build()
                     .expect("internals glob"),
             ]),
+            tools: Default::default(),
+            unknown: Default::default(),
         },
         cached_module_names: Vec::new(),
         modules: vec![module],

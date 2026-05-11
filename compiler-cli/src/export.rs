@@ -118,7 +118,8 @@ fn write_entrypoint_script(
 }
 
 pub fn hex_tarball(paths: &ProjectPaths) -> Result<()> {
-    let mut config = crate::config::root_config(paths)?;
+    // Config warnings should already be emitted while dependency resolution
+    let (mut config, _) = crate::config::root_config(paths)?;
     let data: Vec<u8> = crate::publish::build_hex_tarball(paths, &mut config)?;
 
     let path = paths.build_export_hex_tarball(&config.name, &config.version.to_string());
@@ -169,7 +170,9 @@ pub fn package_interface(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
 }
 
 pub fn package_information(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
-    let config = crate::config::root_config(paths)?;
+    // Config warnings should already be emitted while dependency resolution
+    let (config, _) = crate::config::root_config(paths)?;
+
     let out = gleam_core::docs::generate_json_package_information(out, config);
     crate::fs::write_outputs_under(&[out], paths.root())?;
     Ok(())

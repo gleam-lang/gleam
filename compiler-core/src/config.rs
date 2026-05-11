@@ -5,7 +5,7 @@ use crate::io::ordered_map;
 use crate::manifest::Manifest;
 use crate::requirement::Requirement;
 use crate::version::COMPILER_VERSION;
-use crate::{Error, Result};
+use crate::{Error, Result, Warning};
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
 use globset::{Glob, GlobSetBuilder};
@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{self};
 use std::marker::PhantomData;
+use toml::Table;
 
 #[cfg(test)]
 use crate::manifest::ManifestPackage;
@@ -188,6 +189,14 @@ pub struct PackageConfig {
     pub target: Target,
     #[serde(default)]
     pub internal_modules: Option<Vec<Glob>>,
+    /// This entry contains values from [tools] table, which is the only way
+    /// for tools to store configuration inside package config, other unknown
+    /// values are unsupported. It isn't used anywhere in the compiler and build tool.
+    #[serde(default)]
+    pub tools: Table,
+    /// This entry contains unknown values, which are used later to generate warning
+    #[serde(default, flatten)]
+    pub unknown: Table,
 }
 
 pub fn serialise_gleam_version<S>(
@@ -317,6 +326,71 @@ impl PackageConfig {
             }
         }
         Ok(())
+    }
+
+    /// Return list of warnings for unknown keys in config
+    pub fn generate_unknown_key_warnings(&self) -> Vec<Warning> {
+        // Collect unknown keys from root and subkeys
+        let unknown_keys = self
+            .unknown
+            .keys()
+            .map(ToOwned::to_owned)
+            .chain(
+                self.documentation
+                    .unknown
+                    .keys()
+                    .map(|key| format!("docs.{key}")),
+            )
+            .chain(
+                self.repository
+                    .as_ref()
+                    .map(|repo| match repo {
+                        Repository::GitHub { unknown, .. }
+                        | Repository::GitLab { unknown, .. }
+                        | Repository::BitBucket { unknown, .. }
+                        | Repository::Codeberg { unknown, .. }
+                        | Repository::SourceHut { unknown, .. }
+                        | Repository::Tangled { unknown, .. }
+                        | Repository::Gitea { unknown, .. }
+                        | Repository::Forgejo { unknown, .. }
+                        | Repository::Custom { unknown, .. } => unknown,
+                    })
+                    .into_iter()
+                    .flat_map(|unknown| {
+                        unknown
+                            .into_iter()
+                            .map(|(key, _)| format!("repository.{key}"))
+                    }),
+            )
+            .chain(
+                self.links
+                    .iter()
+                    .flat_map(|link| &link.unknown)
+                    .map(|(key, _)| format!("links.{key}")),
+            )
+            .chain(
+                self.erlang
+                    .unknown
+                    .keys()
+                    .map(|key| format!("erlang.{key}")),
+            )
+            .chain(
+                self.javascript
+                    .unknown
+                    .keys()
+                    .map(|key| format!("javascript.{key}")),
+            )
+            .chain(
+                self.javascript
+                    .deno
+                    .unknown
+                    .keys()
+                    .map(|key| format!("javascript.deno.{key}")),
+            );
+
+        unknown_keys
+            .map(|key| Warning::UnknownConfigKey { name: key.into() })
+            .collect::<Vec<_>>()
     }
 
     pub fn tag_for_version(&self, version: &Version) -> String {
@@ -739,11 +813,13 @@ impl Default for PackageConfig {
             links: Default::default(),
             internal_modules: Default::default(),
             target: Target::Erlang,
+            tools: Default::default(),
+            unknown: Default::default(),
         }
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Default, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct ErlangConfig {
     /// An module that can be set in the `.app` file as the entrypoint for a stateful application
     /// that defines a singleton supervision tree.
@@ -757,6 +833,9 @@ pub struct ErlangConfig {
     pub application_start_argument: Option<EcoString>,
     #[serde(default)]
     pub extra_applications: Vec<EcoString>,
+    /// This entry contains unknown values, which are used later to generate warning
+    #[serde(default, flatten)]
+    pub unknown: Table,
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
@@ -769,6 +848,9 @@ pub struct JavaScriptConfig {
     pub runtime: Runtime,
     #[serde(default, rename = "deno")]
     pub deno: DenoConfig,
+    /// This entry contains unknown values, which are used later to generate warning
+    #[serde(default, flatten)]
+    pub unknown: Table,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -840,7 +922,7 @@ where
     deserializer.deserialize_any(StringOrVec(PhantomData))
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Default, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct DenoConfig {
     #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
     pub allow_env: DenoFlag,
@@ -868,9 +950,12 @@ pub struct DenoConfig {
         deserialize_with = "uri_serde::deserialize_option"
     )]
     pub location: Option<Uri>,
+    /// This entry contains unknown values, which are used later to generate warning
+    #[serde(default, flatten)]
+    pub unknown: Table,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 #[serde(tag = "type")]
 pub enum Repository {
     #[serde(rename = "github")]
@@ -880,6 +965,10 @@ pub enum Repository {
         path: Option<String>,
         #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
     #[serde(rename = "gitlab")]
     GitLab {
@@ -888,6 +977,10 @@ pub enum Repository {
         path: Option<String>,
         #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
     #[serde(rename = "bitbucket")]
     BitBucket {
@@ -896,6 +989,10 @@ pub enum Repository {
         path: Option<String>,
         #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
     #[serde(rename = "codeberg")]
     Codeberg {
@@ -904,6 +1001,10 @@ pub enum Repository {
         path: Option<String>,
         #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
     #[serde(rename = "gitea")]
     Gitea {
@@ -917,6 +1018,10 @@ pub enum Repository {
             deserialize_with = "uri_serde_default_https::deserialize"
         )]
         host: Uri,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
     #[serde(rename = "forgejo")]
     Forgejo {
@@ -930,6 +1035,10 @@ pub enum Repository {
             deserialize_with = "uri_serde_default_https::deserialize"
         )]
         host: Uri,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
     #[serde(rename = "sourcehut")]
     SourceHut {
@@ -938,6 +1047,10 @@ pub enum Repository {
         path: Option<String>,
         #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
     #[serde(rename = "tangled")]
     Tangled {
@@ -946,12 +1059,20 @@ pub enum Repository {
         path: Option<String>,
         #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
     #[serde(rename = "custom")]
     Custom {
         url: String,
         #[serde(alias = "tag-prefix")]
         tag_prefix: Option<String>,
+
+        /// This entry contains unknown values, which are used later to generate warning
+        #[serde(default, flatten)]
+        unknown: Table,
     },
 }
 
@@ -1006,24 +1127,33 @@ impl Repository {
     }
 }
 
-#[derive(Deserialize, Serialize, Default, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Default, Debug, PartialEq, Clone)]
 pub struct Docs {
     #[serde(default)]
     pub pages: Vec<DocsPage>,
+    /// This entry contains unknown values, which are used later to generate warning
+    #[serde(default, flatten)]
+    pub unknown: Table,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct DocsPage {
     pub title: String,
     pub path: String,
     pub source: Utf8PathBuf,
+    /// This entry contains unknown values, which are used later to generate warning
+    #[serde(default, flatten)]
+    pub unknown: Table,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct Link {
     pub title: String,
     #[serde(with = "uri_serde")]
     pub href: Uri,
+    /// This entry contains unknown values, which are used later to generate warning
+    #[serde(default, flatten)]
+    pub unknown: Table,
 }
 
 // Note we don't use http-serde since we also want to validate the scheme and host is set.
@@ -1281,6 +1411,9 @@ allow_ffi = true
 allow_env = ["DATABASE_URL"]
 allow_net = ["example.com:443"]
 allow_read = ["./database.sqlite"]
+
+[tools.my_tool]
+enable = true
 "#;
 
     let config = toml::from_str::<PackageConfig>(input).unwrap();
@@ -1324,4 +1457,36 @@ wibble = ">= 1.0.0 and < 2.0.0"
 "#;
     let canonical = deserialise_config("gleam.toml", toml.into()).expect("valid config");
     assert_eq!(canonical, hyphen_alternative)
+}
+
+#[test]
+fn unknown_keys_warning() {
+    let toml = r#"
+name = "wibble"
+version = "1.0.0"
+repository = { type = "github", user = "user", repo = "repo", wibble = "wobble" }
+links = [{ title = "Website", href = "https://example.com", wibble = "wobble" }]
+wibble = true
+
+[erlang]
+wibble = true
+
+[javascript]
+wibble = true
+
+[javascript.deno]
+wibble = true
+
+[tools.my_tool]
+enable = true
+"#;
+    let config = deserialise_config("gleam.toml", toml.into()).expect("valid config");
+    let warnings = config.generate_unknown_key_warnings();
+    let warnings = warnings
+        .into_iter()
+        .map(|warning| warning.to_pretty_string())
+        .collect::<String>();
+
+    let output = format!("--- GLEAM.TOML\n{toml}\n\n--- WARNINGS\n\n{warnings}");
+    insta::assert_snapshot!(output);
 }

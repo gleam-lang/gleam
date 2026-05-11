@@ -49,7 +49,8 @@ pub struct BuildOptions {
 }
 
 pub fn build(paths: &ProjectPaths, options: BuildOptions) -> Result<()> {
-    let config = crate::config::root_config(paths)?;
+    // Config warnings should already be emitted while dependency resolution
+    let (config, _) = crate::config::root_config(paths)?;
 
     // Reset the build directory for the root package so that's recompiled and
     // the docs can be up to date for all modules.
@@ -155,6 +156,7 @@ pub(crate) fn build_documentation(
         title: "README".into(),
         path: "index.html".into(),
         source: paths.readme(), // TODO: support non markdown READMEs. Or a default if there is none.
+        unknown: Default::default(),
     }];
     pages.extend(config.documentation.pages.iter().cloned());
     let mut outputs = gleam_core::docs::generate_html(
@@ -179,7 +181,9 @@ pub(crate) fn build_documentation(
 }
 
 pub fn publish(paths: &ProjectPaths) -> Result<()> {
-    let config = crate::config::root_config(paths)?;
+    // Config warnings should already be emitted while dependency resolution
+    let (config, _) = crate::config::root_config(paths)?;
+
     let http = HttpClient::new();
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let hex_config = hexpm::Config::new();
