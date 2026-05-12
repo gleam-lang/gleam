@@ -513,8 +513,15 @@ where
                 .extend(AnnotateTopLevelDefinitions::new(module, &lines, &params).code_actions());
             actions.extend(ReplaceUnderscoreWithType::new(module, &lines, &params).code_actions());
             actions.extend(
-                CreateUnknownModule::new(module, &lines, &params, &this.paths, &this.error)
-                    .code_actions(),
+                CreateUnknownModule::new(
+                    module,
+                    &this.compiler,
+                    &lines,
+                    &params,
+                    &this.paths,
+                    &this.error,
+                )
+                .code_actions(),
             );
 
             actions.sort_by_key(|one| {
