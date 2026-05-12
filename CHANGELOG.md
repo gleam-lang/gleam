@@ -44,9 +44,9 @@
   raised in.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The compiler now normalizes remaining-bytes bit-array checks for the JavaScript
-  backend so `(bitSize - c) % 8 === 0` becomes `bitSize % 8 === 0` when the
-  constant offset `c` is congruent modulo 8. This produces more uniform
+- The compiler now normalizes remaining-bytes bit-array checks for the
+  JavaScript backend so `(bitSize - c) % 8 === 0` becomes `bitSize % 8 === 0`
+  when the constant offset `c` is congruent modulo 8. This produces more uniform
   generated code for byte-aligned patterns.
   ([Daniele Scaratti](https://github.com/lupodevelop))
 
@@ -157,11 +157,9 @@
 
 - The language server now offers a code action to create unknown modules
   when an import is added for a module that doesn't exist.
-
   For example, if `import wobble/woo` is added to `src/wiggle.gleam`,
   then a code action to create `src/wobble/woo.gleam` will be presented
   when triggered over `import wobble/woo`.
-
   ([Cory Forsstrom](https://github.com/tarkah))
 
 - The language server now supports finding references when triggered on an
@@ -285,7 +283,7 @@
   dependencies.
   ([Logan Bresnahan](https://github.com/LoganBresnahan))
 
-- Fixed a bug where cli would fail to complete https connections from behind a proxy
-  with self-signed certificates. The cli now defaults to using system trust stores
-  for trusted CAs, allowing use in proxied network environments.
+- Fixed a bug where cli would fail to complete https connections from behind a
+  proxy with self-signed certificates. The cli now defaults to using system
+  trust stores for trusted CAs, allowing use in proxied network environments.
   ([apsoras][https://github.com/apsoras])

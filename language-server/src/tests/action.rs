@@ -14213,6 +14213,22 @@ pub fn main() {
 }
 
 #[test]
+fn create_unknown_module_doesnt_trigger_when_module_is_importable() {
+    let code = "
+pub fn main() {
+  wibble.something()
+}
+";
+
+    assert_no_code_actions!(
+        "Create src/wobble/wibble.gleam",
+        TestProject::for_source(code)
+            .add_module("wobble/wibble", "pub type Wibble { Wobble(String) }"),
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
 fn create_unknown_module_doesnt_trigger_when_import_not_selected() {
     let code = "
 import wibble/wobble
