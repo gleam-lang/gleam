@@ -432,6 +432,19 @@ where
 
             code_action_unused_values(module, &lines, &params, &mut actions);
             actions.extend(RemoveUnusedImports::new(module, &lines, &params).code_actions());
+            code_action_fix_names(module, &lines, &params, &this.error, &mut actions);
+            code_action_import_module(module, &lines, &params, &this.error, &mut actions);
+            code_action_add_missing_patterns(module, &lines, &params, &this.error, &mut actions);
+            actions
+                .extend(RemoveUnreachableCaseClauses::new(module, &lines, &params).code_actions());
+            actions
+                .extend(RemoveRedundantRecordUpdate::new(module, &lines, &params).code_actions());
+            actions.extend(CollapseNestedCase::new(module, &lines, &params).code_actions());
+            actions.extend(FixBinaryOperation::new(module, &lines, &params).code_actions());
+            actions
+                .extend(FixTruncatedBitArraySegment::new(module, &lines, &params).code_actions());
+            actions.extend(RemovePrivateOpaque::new(module, &lines, &params).code_actions());
+            actions.extend(AddMissingTypeParameter::new(module, &lines, &params).code_actions());
             code_action_convert_qualified_constructor_to_unqualified(
                 module,
                 &this.compiler,
@@ -445,14 +458,6 @@ where
                 &params,
                 &mut actions,
             );
-            code_action_fix_names(module, &lines, &params, &this.error, &mut actions);
-            code_action_import_module(module, &lines, &params, &this.error, &mut actions);
-            code_action_add_missing_patterns(module, &lines, &params, &this.error, &mut actions);
-            actions
-                .extend(RemoveUnreachableCaseClauses::new(module, &lines, &params).code_actions());
-            actions
-                .extend(RemoveRedundantRecordUpdate::new(module, &lines, &params).code_actions());
-            actions.extend(CollapseNestedCase::new(module, &lines, &params).code_actions());
             code_action_inexhaustive_let_to_case(
                 module,
                 &lines,
@@ -461,14 +466,11 @@ where
                 &mut actions,
             );
             actions.extend(MergeCaseBranches::new(module, &lines, &params).code_actions());
-            actions.extend(FixBinaryOperation::new(module, &lines, &params).code_actions());
-            actions
-                .extend(FixTruncatedBitArraySegment::new(module, &lines, &params).code_actions());
             actions.extend(LetAssertToCase::new(module, &lines, &params).code_actions());
             actions
                 .extend(RedundantTupleInCaseSubject::new(module, &lines, &params).code_actions());
-            actions.extend(UseLabelShorthandSyntax::new(module, &lines, &params).code_actions());
             actions.extend(FillInMissingLabelledArgs::new(module, &lines, &params).code_actions());
+            actions.extend(UseLabelShorthandSyntax::new(module, &lines, &params).code_actions());
             actions.extend(ConvertFromUse::new(module, &lines, &params).code_actions());
             actions.extend(RemoveEchos::new(module, &lines, &params).code_actions());
             actions.extend(ConvertToUse::new(module, &lines, &params).code_actions());
@@ -493,7 +495,6 @@ where
             actions.extend(InlineVariable::new(module, &lines, &params).code_actions());
             actions.extend(WrapInBlock::new(module, &lines, &params).code_actions());
             actions.extend(RemoveBlock::new(module, &lines, &params).code_actions());
-            actions.extend(RemovePrivateOpaque::new(module, &lines, &params).code_actions());
             actions.extend(ExtractFunction::new(module, &lines, &params).code_actions());
             GenerateDynamicDecoder::new(module, &lines, &params, &mut actions, &this.compiler)
                 .code_actions();
@@ -510,7 +511,6 @@ where
             AddAnnotations::new(module, &lines, &params).code_action(&mut actions);
             actions
                 .extend(AnnotateTopLevelDefinitions::new(module, &lines, &params).code_actions());
-            actions.extend(AddMissingTypeParameter::new(module, &lines, &params).code_actions());
             actions.extend(ReplaceUnderscoreWithType::new(module, &lines, &params).code_actions());
             actions.extend(
                 CreateUnknownModule::new(module, &lines, &params, &this.paths, &this.error)
