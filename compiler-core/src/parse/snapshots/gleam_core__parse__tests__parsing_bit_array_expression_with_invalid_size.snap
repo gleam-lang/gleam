@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "pub fn wibble() {\n  let assert <<1:size(Upname)>> = todo\n}"
+---
+----- SOURCE CODE
+pub fn wibble() {
+  let assert <<1:size(Upname)>> = todo
+}
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:23
+  │
+2 │   let assert <<1:size(Upname)>> = todo
+  │                       ^^^^^^ I was not expecting this
+
+Found a name, expected one of: 
+- A variable name or an integer

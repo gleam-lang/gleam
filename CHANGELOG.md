@@ -270,8 +270,7 @@
   that is not a literal number.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Fixed a confusing error message when writing a constant bit array with a unit
-  that is not a literal number.
+- Fixed a confusing error message when writing bit arrays with an invalid unit.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - Fixed a confusing error message when writing a constant bit array with an

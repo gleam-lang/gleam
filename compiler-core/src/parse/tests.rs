@@ -2381,6 +2381,33 @@ fn parsing_bit_array_constant_with_non_integer_unit() {
 }
 
 #[test]
+fn parsing_bit_array_expression_with_invalid_size() {
+    assert_module_error!(
+        "pub fn wibble() {
+  let assert <<1:size(Upname)>> = todo
+}"
+    );
+}
+
+#[test]
+fn parsing_bit_array_expression_with_invalid_unit() {
+    assert_module_error!(
+        "pub fn wibble() {
+  <<1:unit(Upname)>>
+}"
+    );
+}
+
+#[test]
+fn parsing_bit_array_pattern_with_invalid_unit() {
+    assert_module_error!(
+        "pub fn wibble() {
+  let assert <<1:unit(Upname)>> = todo
+}"
+    );
+}
+
+#[test]
 fn parsing_bit_array_constant_with_invalid_segment_type() {
     assert_module_error!("pub const wibble = <<1:Upname>>");
 }
