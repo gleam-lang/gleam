@@ -3803,8 +3803,9 @@ where
                 if self.maybe_one(&Token::LeftParen).is_some() {
                     // named function segment
                     match name.as_str() {
-                        "unit" => match self.next_tok() {
+                        "unit" => match self.tok0.take() {
                             Some((int_s, Token::Int { value, .. }, int_e)) => {
+                                self.advance();
                                 let (_, end) = self.expect_one(&Token::RightParen)?;
                                 let v = value.replace("_", "");
                                 match u8::from_str(&v) {
@@ -3822,7 +3823,10 @@ where
                                     }),
                                 }
                             }
-                            _ => self.next_tok_unexpected(vec!["positive integer".into()]),
+                            tok0 => {
+                                self.tok0 = tok0;
+                                self.next_tok_unexpected(vec!["A positive integer".into()])
+                            }
                         },
 
                         "size" => {
