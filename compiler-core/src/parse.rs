@@ -3797,9 +3797,10 @@ where
         arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
         to_int_segment: &impl Fn(EcoString, BigInt, u32, u32) -> A,
     ) -> Result<Option<BitArrayOption<A>>, ParseError> {
-        match self.next_tok() {
+        match self.tok0.take() {
             // named segment
             Some((start, Token::Name { name }, end)) => {
+                self.advance();
                 if self.maybe_one(&Token::LeftParen).is_some() {
                     // named function segment
                     match name.as_str() {
@@ -3853,16 +3854,22 @@ where
                 }
             }
             // int segment
-            Some((start, Token::Int { value, int_value }, end)) => Ok(Some(BitArrayOption::Size {
-                location: SrcSpan { start, end },
-                value: Box::new(to_int_segment(value, int_value, start, end)),
-                short_form: true,
-            })),
+            Some((start, Token::Int { value, int_value }, end)) => {
+                self.advance();
+                Ok(Some(BitArrayOption::Size {
+                    location: SrcSpan { start, end },
+                    value: Box::new(to_int_segment(value, int_value, start, end)),
+                    short_form: true,
+                }))
+            }
             // invalid
-            _ => self.next_tok_unexpected(vec![
-                "A valid bit array segment type".into(),
-                "See: https://tour.gleam.run/data-types/bit-arrays/".into(),
-            ]),
+            tok0 => {
+                self.tok0 = tok0;
+                self.next_tok_unexpected(vec![
+                    "A valid bit array segment type".into(),
+                    "See: https://tour.gleam.run/data-types/bit-arrays/".into(),
+                ])
+            }
         }
     }
 

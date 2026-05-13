@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "pub const wibble = <<1:Upname>>"
+---
+----- SOURCE CODE
+pub const wibble = <<1:Upname>>
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:24
+  │
+1 │ pub const wibble = <<1:Upname>>
+  │                        ^^^^^^ I was not expecting this
+
+Found a name, expected one of: 
+- A valid bit array segment type
+- See: https://tour.gleam.run/data-types/bit-arrays/
