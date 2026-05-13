@@ -4293,9 +4293,15 @@ functions are declared separately from types.";
 
     // Expect a String else error
     fn expect_string(&mut self) -> Result<(u32, EcoString, u32), ParseError> {
-        match self.next_tok() {
-            Some((start, Token::String { value }, end)) => Ok((start, value, end)),
-            _ => self.next_tok_unexpected(vec!["a string".into()]),
+        match self.tok0.take() {
+            Some((start, Token::String { value }, end)) => {
+                self.advance();
+                Ok((start, value, end))
+            }
+            tok0 => {
+                self.tok0 = tok0;
+                self.next_tok_unexpected(vec!["a string".into()])
+            }
         }
     }
 

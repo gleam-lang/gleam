@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\n@external(erlang, Upname, [])\nfn wibble() -> Nil\n"
+---
+----- SOURCE CODE
+
+@external(erlang, Upname, [])
+fn wibble() -> Nil
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:19
+  │
+2 │ @external(erlang, Upname, [])
+  │                   ^^^^^^ I was not expecting this
+
+Found a name, expected one of: 
+- a string
