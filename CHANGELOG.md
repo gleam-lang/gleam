@@ -18,6 +18,7 @@
   ```
 
   The compiler will display this error message:
+
   ```text
     error: Unknown variable
     ┌─ /path/to/project/src/project.gleam:4:3
@@ -192,6 +193,34 @@
 
 - The language server now presents quick fix code actions before refactoring
   ones.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The language server now allows to further pattern match on a discard by
+  replacing it with the patterns it is discarding.
+  For example:
+
+  ```gleam
+  pub fn list_names(x: Result(List(String), Nil)) {
+    case x {
+      Error(Nil) -> io.println("no names")
+      Ok(_) -> todo
+      // ^ Triggering the code action here
+    }
+  }
+  ```
+
+  Triggering the code action will result in the following code:
+
+  ```gleam
+  pub fn list_names(x: Result(List(String), Nil)) {
+    case x {
+      Error(Nil) -> io.println("no names")
+      Ok([]) -> todo
+      Ok([first, ..rest]) -> todo
+    }
+  }
+  ```
+
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - The language server no longer shows completions for deprecated values from
