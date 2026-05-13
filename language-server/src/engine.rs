@@ -516,6 +516,27 @@ where
                 CreateUnknownModule::new(module, &lines, &params, &this.paths, &this.error)
                     .code_actions(),
             );
+
+            actions.sort_by_key(|one| {
+                let preferred_key = if one.is_preferred == Some(true) { 0 } else { 1 };
+                let kind_key = match &one.kind {
+                    Some(lsp_types::CodeActionKind::QuickFix) => 1,
+                    Some(lsp_types::CodeActionKind::Refactor) => 2,
+                    Some(lsp_types::CodeActionKind::RefactorExtract) => 2,
+                    Some(lsp_types::CodeActionKind::RefactorInline) => 2,
+                    Some(lsp_types::CodeActionKind::RefactorMove) => 2,
+                    Some(lsp_types::CodeActionKind::RefactorRewrite) => 2,
+                    Some(lsp_types::CodeActionKind::Source) => 3,
+                    Some(lsp_types::CodeActionKind::SourceOrganizeImports) => 3,
+                    Some(lsp_types::CodeActionKind::SourceFixAll) => 3,
+                    Some(lsp_types::CodeActionKind::Custom(_)) => 4,
+                    Some(lsp_types::CodeActionKind::Notebook) => 5,
+                    Some(lsp_types::CodeActionKind::Empty) => 6,
+                    None => 7,
+                };
+                (preferred_key, kind_key)
+            });
+
             Ok(if actions.is_empty() {
                 None
             } else {
