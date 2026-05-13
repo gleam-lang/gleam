@@ -132,6 +132,12 @@ pub enum UntypedExpr {
 
     RecordUpdate {
         location: SrcSpan,
+        /// This is where the `..` starts:
+        /// ```gleam
+        /// Wibble(  ..wobble, a: 1)
+        /// //       ^ Here!
+        /// ```
+        spread_start: u32,
         constructor: Box<Self>,
         record: RecordBeingUpdated<UntypedExpr>,
         arguments: Vec<UntypedRecordUpdateArg>,

@@ -326,9 +326,11 @@ pub trait Visit<'ast> {
         visit_typed_expr_bit_array(self, location, type_, segments);
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn visit_typed_expr_record_update(
         &mut self,
         location: &'ast SrcSpan,
+        spread_start: &'ast u32,
         type_: &'ast Arc<Type>,
         updated_record: &'ast TypedExpr,
         updated_record_assigned_name: &'ast Option<EcoString>,
@@ -338,6 +340,7 @@ pub trait Visit<'ast> {
         visit_typed_expr_record_update(
             self,
             location,
+            spread_start,
             type_,
             updated_record,
             updated_record_assigned_name,
@@ -1383,6 +1386,7 @@ where
         } => v.visit_typed_expr_bit_array(location, type_, segments),
         TypedExpr::RecordUpdate {
             location,
+            spread_start,
             type_,
             updated_record,
             updated_record_assigned_name,
@@ -1390,6 +1394,7 @@ where
             arguments,
         } => v.visit_typed_expr_record_update(
             location,
+            spread_start,
             type_,
             updated_record,
             updated_record_assigned_name,
@@ -1703,9 +1708,11 @@ pub fn visit_typed_expr_bit_array<'a, V>(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn visit_typed_expr_record_update<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
+    _spread_start: &'a u32,
     _type_: &'a Arc<Type>,
     updated_record: &'a TypedExpr,
     _updated_record_assigned_name: &'a Option<EcoString>,

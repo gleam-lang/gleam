@@ -177,6 +177,12 @@ pub enum TypedExpr {
     /// we do for pipelines.
     RecordUpdate {
         location: SrcSpan,
+        /// This is where the `..` starts:
+        /// ```gleam
+        /// Wibble(  ..wobble, a: 1)
+        /// //       ^ Here!
+        /// ```
+        spread_start: u32,
         type_: Arc<Type>,
         /// This is the record being updated as written in the code:
         /// ```gleam
@@ -438,6 +444,7 @@ impl TypedExpr {
                 constructor,
                 arguments,
                 updated_record,
+                spread_start,
                 ..
             } => arguments
                 .iter()
@@ -466,6 +473,25 @@ impl TypedExpr {
                         } else {
                             found
                         }
+                    })
+                })
+                .or_else(|| {
+                    // If we're hovering over the two `..` then we also want to
+                    // count that as hovering the entire expression and show the
+                    // fields that are not being updated.
+                    if !SrcSpan::new(*spread_start, updated_record.location().start)
+                        .contains(byte_index)
+                    {
+                        return None;
+                    }
+
+                    Some(Located::Expression {
+                        expression: self,
+                        position: ExpressionPosition::UpdatedRecord {
+                            unchanged_record_fields: self
+                                .unchanged_record_fields()
+                                .unwrap_or_default(),
+                        },
                     })
                 })
                 .or_else(|| self.self_if_contains_location(byte_index)),

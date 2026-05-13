@@ -705,6 +705,7 @@ impl Inliner<'_> {
 
             TypedExpr::RecordUpdate {
                 location,
+                spread_start,
                 type_,
                 updated_record,
                 updated_record_assigned_name,
@@ -712,6 +713,7 @@ impl Inliner<'_> {
                 arguments,
             } => TypedExpr::RecordUpdate {
                 location,
+                spread_start,
                 type_,
                 updated_record: Box::new(self.expression(*updated_record)),
                 updated_record_assigned_name,

@@ -350,10 +350,11 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
 
             UntypedExpr::RecordUpdate {
                 location,
+                spread_start,
                 constructor,
                 record,
                 arguments,
-            } => self.fold_record_update(location, constructor, record, arguments),
+            } => self.fold_record_update(location, spread_start, constructor, record, arguments),
 
             UntypedExpr::NegateBool { location, value } => self.fold_negate_bool(location, value),
 
@@ -573,6 +574,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
 
             UntypedExpr::RecordUpdate {
                 location,
+                spread_start,
                 constructor,
                 record,
                 arguments,
@@ -587,6 +589,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                     .collect();
                 UntypedExpr::RecordUpdate {
                     location,
+                    spread_start,
                     constructor,
                     record,
                     arguments,
@@ -906,12 +909,14 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
     fn fold_record_update(
         &mut self,
         location: SrcSpan,
+        spread_start: u32,
         constructor: Box<UntypedExpr>,
         record: RecordBeingUpdated<UntypedExpr>,
         arguments: Vec<UntypedRecordUpdateArg>,
     ) -> UntypedExpr {
         UntypedExpr::RecordUpdate {
             location,
+            spread_start,
             constructor,
             record,
             arguments,

@@ -540,10 +540,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             UntypedExpr::RecordUpdate {
                 location,
+                spread_start,
                 constructor,
                 record,
                 arguments,
-            } => self.infer_record_update(*constructor, record, arguments, location),
+            } => self.infer_record_update(*constructor, record, arguments, location, spread_start),
 
             UntypedExpr::NegateBool { location, value } => {
                 Ok(self.infer_negate_bool(location, *value))
@@ -2996,6 +2997,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         record: RecordBeingUpdated<UntypedExpr>,
         arguments: Vec<UntypedRecordUpdateArg>,
         location: SrcSpan,
+        spread_start: u32,
     ) -> Result<TypedExpr, Error> {
         // infer the constructor being used
         let typed_constructor = self.infer_or_error(constructor.clone())?;
@@ -3096,6 +3098,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         Ok(TypedExpr::RecordUpdate {
             location,
+            spread_start,
             type_: variant.return_type,
             updated_record: Box::new(record),
             updated_record_assigned_name,
