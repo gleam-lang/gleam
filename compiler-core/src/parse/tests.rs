@@ -2368,3 +2368,10 @@ fn missing_todo_constant_message_2() {
 pub fn wibble() {}"
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5711
+#[test]
+fn parsing_bit_array_constant_with_non_integer_size() {
+    assert_module_error!("pub const wibble = <<1:size(something)>>");
+}
+

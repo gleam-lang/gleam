@@ -3374,9 +3374,8 @@ where
                 self.advance();
                 let segments = Parser::series_of(
                     self,
-                    &|s| {
-                        Parser::parse_bit_array_segment(
-                            s,
+                    &|this| {
+                        this.parse_bit_array_segment(
                             &Parser::parse_const_value,
                             &Parser::expect_const_int,
                             &bit_array_const_int,
@@ -3764,7 +3763,7 @@ where
                 let options = if self.maybe_one(&Token::Colon).is_some() {
                     Parser::series_of(
                         self,
-                        &|s| Parser::parse_bit_array_option(s, &arg_parser, &to_int_segment),
+                        &|this| this.parse_bit_array_option(&arg_parser, &to_int_segment),
                         Some(&Token::Minus),
                     )?
                 } else {
@@ -3772,7 +3771,7 @@ where
                 };
                 let end = options
                     .last()
-                    .map(|o| o.location().end)
+                    .map(|option| option.location().end)
                     .unwrap_or_else(|| value.location().end);
                 Ok(Some(BitArraySegment {
                     location: SrcSpan {
@@ -3927,13 +3926,19 @@ where
     }
 
     fn expect_const_int(&mut self) -> Result<UntypedConstant, ParseError> {
-        match self.next_tok() {
-            Some((start, Token::Int { value, int_value }, end)) => Ok(Constant::Int {
-                location: SrcSpan { start, end },
-                value,
-                int_value,
-            }),
-            _ => self.next_tok_unexpected(vec!["A variable name or an integer".into()]),
+        match self.tok0.take() {
+            Some((start, Token::Int { value, int_value }, end)) => {
+                self.advance();
+                Ok(Constant::Int {
+                    location: SrcSpan { start, end },
+                    value,
+                    int_value,
+                })
+            }
+            tok0 => {
+                self.tok0 = tok0;
+                self.next_tok_unexpected(vec!["An integer".into()])
+            }
         }
     }
 
