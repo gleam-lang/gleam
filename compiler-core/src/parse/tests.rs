@@ -2379,3 +2379,8 @@ fn parsing_bit_array_constant_with_non_integer_size() {
 fn parsing_bit_array_constant_with_non_integer_unit() {
     assert_module_error!("pub const wibble = <<1:unit(something)>>");
 }
+
+#[test]
+fn parsing_bit_array_constant_with_invalid_segment_type() {
+    assert_module_error!("pub const wibble = <<1:Upname>>");
+}
