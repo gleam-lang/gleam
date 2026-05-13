@@ -1133,8 +1133,12 @@ Unused labelled fields:
                 Located::StringPrefixPatternVariable { location, .. } => Some(
                     hover_for_string_prefix_pattern_variable(location, &lines, module),
                 ),
-                Located::Expression { expression, .. } => Some(hover_for_expression(
+                Located::Expression {
                     expression,
+                    position,
+                } => Some(hover_for_expression(
+                    expression,
+                    position,
                     lines,
                     module,
                     &this.hex_deps,
@@ -1596,8 +1600,9 @@ fn hover_for_string_prefix_pattern_variable(
     }
 }
 
-fn hover_for_expression(
-    expression: &TypedExpr,
+fn hover_for_expression<'a>(
+    expression: &'a TypedExpr,
+    position: ExpressionPosition<'a>,
     line_numbers: LineNumbers,
     module: &Module,
     hex_deps: &HashSet<EcoString>,
@@ -1611,13 +1616,38 @@ fn hover_for_expression(
         .unwrap_or("".to_string());
 
     // Show the type of the hovered node to the user
-    let type_ = Printer::new(&module.ast.names).print_type(expression.type_().as_ref());
+    let mut printer = Printer::new(&module.ast.names);
+    let type_ = printer.print_type(expression.type_().as_ref());
+
+    // If the expression is a record update and there's record fields that are
+    // begin implicitly updated, then we want to list them in the hover.
+    let unchanged_record_update_fields = match position {
+        ExpressionPosition::Expression | ExpressionPosition::ArgumentOrLabel { .. } => "",
+
+        ExpressionPosition::UpdatedRecord {
+            unchanged_record_fields,
+        } if !unchanged_record_fields.is_empty() => &format!(
+            "Unchanged record fields:\n{}",
+            unchanged_record_fields
+                .iter()
+                .map(|(label, type_)| format!("- `{}: {}`", label, printer.print_type(type_)))
+                .join("\n")
+        ),
+        ExpressionPosition::UpdatedRecord { .. } => "",
+    };
+
+    let description = [documentation, unchanged_record_update_fields, &link_section]
+        .iter()
+        .filter(|string| !string.is_empty())
+        .join("\n\n");
+
     let contents = format!(
         "```gleam
 {type_}
 ```
-{documentation}{link_section}"
+{description}"
     );
+
     Hover {
         contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(expression.location(), &line_numbers)),
