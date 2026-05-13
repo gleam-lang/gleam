@@ -63,15 +63,23 @@ impl BeamCompiler {
             reason: ShellCommandFailureReason::IoError(e.kind()),
         })?;
 
+        let escript_path = paths::compilation_escript_path(out);
+
         let mut buf = String::new();
         let mut accumulated_modules: Vec<String> = Vec::new();
         while let (Ok(_), Ok(None)) = (inner.stdout.read_line(&mut buf), inner.process.try_wait()) {
             match buf.trim() {
                 "gleam-compile-result-ok" => {
+                    // Delete escript file, which is unnecessary after compilation
+                    io.delete_file(&escript_path)?;
+
                     // Return Ok with the accumulated modules
                     return Ok(accumulated_modules);
                 }
                 "gleam-compile-result-error" => {
+                    // Delete escript file, which is unnecessary after compilation
+                    io.delete_file(&escript_path)?;
+
                     return Err(Error::ShellCommand {
                         program: "escript".into(),
                         reason: ShellCommandFailureReason::Unknown,
@@ -91,7 +99,10 @@ impl BeamCompiler {
             buf.clear()
         }
 
-        // if we get here, stdout got closed before we got an "ok" or "err".
+        // Delete escript file, which is unnecessary after compilation
+        io.delete_file(&escript_path)?;
+
+        // If we get here, stdout got closed before we got an "ok" or "err".
         Err(Error::ShellCommand {
             program: "escript".into(),
             reason: ShellCommandFailureReason::Unknown,
@@ -103,9 +114,7 @@ impl BeamCompiler {
         io: &IO,
         out: &Utf8Path,
     ) -> Result<BeamCompilerInner, Error> {
-        let escript_path = out
-            .join(paths::ARTEFACT_DIRECTORY_NAME)
-            .join("gleam@@compile.erl");
+        let escript_path = paths::compilation_escript_path(out);
 
         let escript_source = std::include_str!("../templates/gleam@@compile.erl");
         io.write(&escript_path, escript_source)?;
