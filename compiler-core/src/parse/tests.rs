@@ -2375,3 +2375,7 @@ fn parsing_bit_array_constant_with_non_integer_size() {
     assert_module_error!("pub const wibble = <<1:size(something)>>");
 }
 
+#[test]
+fn parsing_bit_array_constant_with_non_integer_unit() {
+    assert_module_error!("pub const wibble = <<1:unit(something)>>");
+}
