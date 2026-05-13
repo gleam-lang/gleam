@@ -3826,7 +3826,7 @@ where
                             }
                             tok0 => {
                                 self.tok0 = tok0;
-                                self.next_tok_unexpected(vec!["A positive integer".into()])
+                                self.next_tok_unexpected(vec!["A positive int".into()])
                             }
                         },
 
