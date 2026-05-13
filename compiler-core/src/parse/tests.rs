@@ -2411,3 +2411,33 @@ fn parsing_bit_array_pattern_with_invalid_unit() {
 fn parsing_bit_array_constant_with_invalid_segment_type() {
     assert_module_error!("pub const wibble = <<1:Upname>>");
 }
+
+#[test]
+fn parsing_invalid_external_module_name() {
+    assert_module_error!(
+        "
+@external(erlang, Upname, [])
+fn wibble() -> Nil
+"
+    );
+}
+
+#[test]
+fn parsing_invalid_external_function_name() {
+    assert_module_error!(
+        r#"
+@external(erlang, "module", Upname)
+fn wibble() -> Nil
+"#
+    );
+}
+
+#[test]
+fn parsing_invalid_deprecation_message() {
+    assert_module_error!(
+        r#"
+@deprecated(Upname)
+fn wibble() -> Nil
+"#
+    );
+}
