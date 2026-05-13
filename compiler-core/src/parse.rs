@@ -3911,19 +3911,26 @@ where
     }
 
     fn parse_bit_array_size_unit(&mut self) -> Result<BitArraySize<()>, ParseError> {
-        match self.next_tok() {
-            Some((start, Token::Name { name }, end)) => Ok(BitArraySize::Variable {
-                location: SrcSpan { start, end },
-                name,
-                constructor: None,
-                type_: (),
-            }),
-            Some((start, Token::Int { value, int_value }, end)) => Ok(BitArraySize::Int {
-                location: SrcSpan { start, end },
-                value,
-                int_value,
-            }),
+        match self.tok0.take() {
+            Some((start, Token::Name { name }, end)) => {
+                self.advance();
+                Ok(BitArraySize::Variable {
+                    location: SrcSpan { start, end },
+                    name,
+                    constructor: None,
+                    type_: (),
+                })
+            }
+            Some((start, Token::Int { value, int_value }, end)) => {
+                self.advance();
+                Ok(BitArraySize::Int {
+                    location: SrcSpan { start, end },
+                    value,
+                    int_value,
+                })
+            }
             Some((start, Token::LeftBrace, _)) => {
+                self.advance();
                 let inner = self.expect_bit_array_size()?;
                 let (_, end) = self.expect_one(&Token::RightBrace)?;
 
@@ -3932,7 +3939,10 @@ where
                     inner: Box::new(inner),
                 })
             }
-            _ => self.next_tok_unexpected(vec!["A variable name or an integer".into()]),
+            tok0 => {
+                self.tok0 = tok0;
+                self.next_tok_unexpected(vec!["A variable name or an integer".into()])
+            }
         }
     }
 
