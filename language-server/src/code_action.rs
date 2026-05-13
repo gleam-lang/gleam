@@ -5522,11 +5522,26 @@ pub enum PatternLocation {
         /// This location covers the entire list tail pattern, including the `..`
         location: SrcSpan,
     },
+    /// When the pattern being matched is a discard. For example:
+    /// ```gleam
+    /// case wibble {
+    ///   Ok(_) -> todo
+    /// //   ^ Hovering this!
+    /// }
+    /// ```
+    Discard { location: SrcSpan },
 }
 
 impl PatternLocation {
     fn regular(location: SrcSpan) -> Self {
         Self::Regular { location }
+    }
+
+    fn is_discard(&self) -> bool {
+        match self {
+            PatternLocation::Regular { .. } | PatternLocation::ListTail { .. } => false,
+            PatternLocation::Discard { .. } => true,
+        }
     }
 }
 
@@ -5581,13 +5596,20 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
                 clause_location,
                 bound_variables,
             }) => {
+                let title = if variable_location.is_discard() {
+                    "Pattern match on value"
+                } else {
+                    "Pattern match on variable"
+                };
+
                 self.match_on_clause_variable(
                     variable_type,
                     variable_location,
                     clause_location,
                     &bound_variables,
                 );
-                "Pattern match on variable"
+
+                title
             }
 
             None => return vec![],
@@ -5739,8 +5761,9 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
         let nesting = " ".repeat(clause_range.start.character as usize);
 
         let variable_location = match variable_location {
-            PatternLocation::Regular { location } => location,
-            PatternLocation::ListTail { location } => location,
+            PatternLocation::Regular { location }
+            | PatternLocation::ListTail { location }
+            | PatternLocation::Discard { location } => location,
         };
 
         let variable_start = (variable_location.start - clause_location.start) as usize;
@@ -6109,6 +6132,23 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
         }
 
         ast::visit::visit_typed_use(self, use_);
+    }
+
+    fn visit_typed_pattern_discard(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        type_: &'ast Arc<Type>,
+    ) {
+        if within(
+            self.params.range,
+            self.edits.src_span_to_lsp_range(*location),
+        ) {
+            let location = PatternLocation::Discard {
+                location: *location,
+            };
+            self.pattern_variable_under_cursor = Some((name, location, type_.clone()));
+        }
     }
 
     fn visit_typed_pattern_variable(
