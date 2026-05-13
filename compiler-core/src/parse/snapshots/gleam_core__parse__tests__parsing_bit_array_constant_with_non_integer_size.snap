@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "pub const wibble = <<1:size(something)>>"
+---
+----- SOURCE CODE
+pub const wibble = <<1:size(something)>>
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:29
+  │
+1 │ pub const wibble = <<1:size(something)>>
+  │                             ^^^^^^^^^ I was not expecting this
+
+Found a name, expected one of: 
+- An integer
