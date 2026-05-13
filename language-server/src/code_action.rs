@@ -3526,7 +3526,8 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
-        record: &'ast Option<Box<ast::RecordUpdateAssignment>>,
+        updated_record: &'ast TypedExpr,
+        updated_record_assigned_name: &'ast Option<EcoString>,
         constructor: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
     ) {
@@ -3556,7 +3557,8 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
             self,
             location,
             type_,
-            record,
+            updated_record,
+            updated_record_assigned_name,
             constructor,
             arguments,
         );
@@ -11822,7 +11824,8 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
-        record: &'ast Option<Box<ast::RecordUpdateAssignment>>,
+        updated_record: &'ast TypedExpr,
+        updated_record_assigned_name: &'ast Option<EcoString>,
         constructor: &'ast TypedExpr,
         arguments: &'ast [TypedCallArg],
     ) {
@@ -11845,7 +11848,8 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
             self,
             location,
             type_,
-            record,
+            updated_record,
+            updated_record_assigned_name,
             constructor,
             arguments,
         );

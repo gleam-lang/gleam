@@ -344,11 +344,17 @@ impl<'module, 'a> Generator<'module, 'a> {
             }
 
             TypedExpr::RecordUpdate {
-                record_assignment,
+                updated_record_assigned_name,
+                updated_record,
                 constructor,
                 arguments,
                 ..
-            } => self.record_update(record_assignment, constructor, arguments),
+            } => self.record_update(
+                updated_record_assigned_name,
+                updated_record,
+                constructor,
+                arguments,
+            ),
 
             TypedExpr::Var {
                 name, constructor, ..
@@ -594,7 +600,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                 | TypedExpr::Pipeline { .. }
                 | TypedExpr::RecordUpdate {
                     // Record updates that assign a variable generate multiple statements
-                    record_assignment: Some(_),
+                    updated_record_assigned_name: Some(_),
                     ..
                 },
                 Position::Expression(Ordering::Loose),
@@ -606,7 +612,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                 | TypedExpr::Pipeline { .. }
                 | TypedExpr::RecordUpdate {
                     // Record updates that assign a variable generate multiple statements
-                    record_assignment: Some(_),
+                    updated_record_assigned_name: Some(_),
                     ..
                 },
                 Position::Expression(Ordering::Strict),
@@ -1606,17 +1612,19 @@ impl<'module, 'a> Generator<'module, 'a> {
 
     fn record_update(
         &mut self,
-        record: &'a Option<Box<RecordUpdateAssignment>>,
+        updated_record_assigned_name: &'a Option<EcoString>,
+        updated_record: &'a TypedExpr,
         constructor: &'a TypedExpr,
         arguments: &'a [TypedCallArg],
     ) -> Document<'a> {
-        match record.as_ref() {
-            Some(assignment) => {
+        match updated_record_assigned_name.as_ref() {
+            Some(name) => {
                 docvec![
-                    self.not_in_tail_position(None, |this| {
-                        let RecordUpdateAssignment { name, value } = assignment.as_ref();
-                        this.simple_variable_assignment(name, value, value.location())
-                    }),
+                    self.not_in_tail_position(None, |this| this.simple_variable_assignment(
+                        name,
+                        updated_record,
+                        updated_record.location(),
+                    )),
                     line(),
                     self.call(constructor, arguments),
                 ]

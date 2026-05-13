@@ -6,10 +6,10 @@ use crate::{
         Arg, Assert, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
         CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant, FunctionLiteralKind, HasLocation,
         ImplicitCallArgOrigin, InvalidExpression, Layer, RECORD_UPDATE_VARIABLE,
-        RecordBeingUpdated, RecordUpdateAssignment, SrcSpan, Statement, TodoKind, TypeAst,
-        TypedArg, TypedAssert, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant,
-        TypedExpr, TypedMultiPattern, TypedStatement, USE_ASSIGNMENT_VARIABLE, UntypedArg,
-        UntypedAssert, UntypedAssignment, UntypedClause, UntypedClauseGuard, UntypedConstant,
+        RecordBeingUpdated, SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssert,
+        TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr,
+        TypedMultiPattern, TypedStatement, USE_ASSIGNMENT_VARIABLE, UntypedArg, UntypedAssert,
+        UntypedAssignment, UntypedClause, UntypedClauseGuard, UntypedConstant,
         UntypedConstantBitArraySegment, UntypedExpr, UntypedExprBitArraySegment,
         UntypedMultiPattern, UntypedStatement, UntypedUse, UntypedUseAssignment, Use,
         UseAssignment,
@@ -3055,40 +3055,40 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let record_location = record.location();
         let record_type = record.type_();
 
-        let (record_var, record_assignment) = if record.is_var() {
-            (record, None)
-        } else {
-            // We create an Assignment for the old record expression and will
-            // use a Var expression to refer back to it while constructing the
-            // arguments.
-            let record_assignment = RecordUpdateAssignment {
-                name: RECORD_UPDATE_VARIABLE.into(),
-                value: record,
-            };
-
-            let record_var = TypedExpr::Var {
-                location: record_location,
-                constructor: ValueConstructor {
-                    publicity: Publicity::Private,
-                    deprecation: Deprecation::NotDeprecated,
-                    type_: record_type,
-                    variant: ValueConstructorVariant::LocalVariable {
-                        location: record_location,
-                        origin: VariableOrigin::generated(),
-                    },
-                },
-                name: RECORD_UPDATE_VARIABLE.into(),
-            };
-            (record_var, Some(Box::new(record_assignment)))
-        };
-
         // infer the fields of the variant we want to update
         let variant =
-            self.infer_record_update_variant(&typed_constructor, &value_constructor, &record_var)?;
+            self.infer_record_update_variant(&typed_constructor, &value_constructor, &record)?;
+
+        // The `infer_record_update_arguments` function wants as an argument the
+        // expression representing the variable that the fields will refer to
+        // when built.
+        let (updated_record_assigned_name, record_var) = match record.is_var() {
+            // If the record is a var we can reference it directly!
+            true => (None, &record),
+            // Otherwise we'll have to assign the record to a generated variable
+            // and then reference it multiple times.
+            // So we create a new variable from scratch to assign the record to.
+            false => (
+                Some(RECORD_UPDATE_VARIABLE.into()),
+                &TypedExpr::Var {
+                    location: record_location,
+                    constructor: ValueConstructor {
+                        publicity: Publicity::Private,
+                        deprecation: Deprecation::NotDeprecated,
+                        type_: record_type,
+                        variant: ValueConstructorVariant::LocalVariable {
+                            location: record_location,
+                            origin: VariableOrigin::generated(),
+                        },
+                    },
+                    name: RECORD_UPDATE_VARIABLE.into(),
+                },
+            ),
+        };
 
         let arguments = self.infer_record_update_arguments(
             &variant,
-            &record_var,
+            record_var,
             arguments,
             location,
             spread_location,
@@ -3097,7 +3097,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Ok(TypedExpr::RecordUpdate {
             location,
             type_: variant.return_type,
-            record_assignment,
+            updated_record: Box::new(record),
+            updated_record_assigned_name,
             constructor: Box::new(typed_constructor),
             arguments,
         })

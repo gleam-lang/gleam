@@ -178,11 +178,27 @@ pub enum TypedExpr {
     RecordUpdate {
         location: SrcSpan,
         type_: Arc<Type>,
+        /// This is the record being updated as written in the code:
+        /// ```gleam
+        /// Wibble(..wibble, a: 1)
+        /// //       ^^^^^^ This!
+        ///
+        /// Wibble(..fun(1), a: 1)
+        /// //       ^^^^^ This!
+        /// ```
+        ///
+        updated_record: Box<Self>,
         /// If the record is an expression that is not a variable we will need
-        /// to assign to a variable so it can be referred multiple times.
-        /// If this is `Some` it will contain the record value that has to be
-        /// assigned to a new variable.
-        record_assignment: Option<Box<RecordUpdateAssignment>>,
+        /// to assign to a variable so it can be referred to multiple times.
+        /// If this is `Some` it will contain the name we've picked for the
+        /// variable the record should be assigned to.
+        updated_record_assigned_name: Option<EcoString>,
+        /// The constructor used to build a new record:
+        /// ```gleam
+        ///   Wibble(..wibble, a: 1)
+        /// //^^^^^^ This!
+        /// ```
+        ///
         constructor: Box<Self>,
         arguments: Vec<CallArg<Self>>,
     },
@@ -207,24 +223,6 @@ pub enum TypedExpr {
         /// states.
         extra_information: Option<InvalidExpression>,
     },
-}
-
-/// If the record is an expression used in an update is not a variable, we will
-/// need to assign it to one so it can be referred multiple times.
-/// For example:
-///
-/// ```gleam
-/// Wibble(..fun_call(1), a:, b:)
-/// //       ^^^^^^^^^^^ This will be `value`
-/// ```
-///
-/// While `name` is the name we pick for the variable that we will assign the
-/// value to.
-///
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RecordUpdateAssignment {
-    pub name: EcoString,
-    pub value: TypedExpr,
 }
 
 impl TypedExpr {
@@ -437,20 +435,16 @@ impl TypedExpr {
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
             Self::RecordUpdate {
-                record_assignment,
                 constructor,
                 arguments,
+                updated_record,
                 ..
             } => arguments
                 .iter()
                 .filter(|argument| argument.implicit.is_none())
                 .find_map(|argument| argument.find_node(byte_index, constructor, arguments))
                 .or_else(|| constructor.find_node(byte_index))
-                .or_else(|| {
-                    record_assignment
-                        .as_ref()
-                        .and_then(|assignment| assignment.value.find_node(byte_index))
-                })
+                .or_else(|| updated_record.find_node(byte_index))
                 .or_else(|| self.self_if_contains_location(byte_index)),
         }
     }
@@ -602,18 +596,14 @@ impl TypedExpr {
                 .find_map(|arg| arg.value.find_statement(byte_index)),
 
             Self::RecordUpdate {
-                record_assignment,
+                updated_record,
                 arguments,
                 ..
             } => arguments
                 .iter()
                 .filter(|arg| arg.implicit.is_none())
                 .find_map(|arg| arg.find_statement(byte_index))
-                .or_else(|| {
-                    record_assignment
-                        .as_ref()
-                        .and_then(|r| r.value.find_statement(byte_index))
-                }),
+                .or_else(|| updated_record.find_statement(byte_index)),
         }
     }
 
