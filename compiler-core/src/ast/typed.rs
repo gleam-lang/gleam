@@ -444,7 +444,30 @@ impl TypedExpr {
                 .filter(|argument| argument.implicit.is_none())
                 .find_map(|argument| argument.find_node(byte_index, constructor, arguments))
                 .or_else(|| constructor.find_node(byte_index))
-                .or_else(|| updated_record.find_node(byte_index))
+                .or_else(|| {
+                    // If the updated record contains the index, then we update
+                    // the found position to be `UpdatedRecord`
+                    updated_record.find_node(byte_index).map(|found| {
+                        if let Located::Expression {
+                            expression,
+                            position:
+                                ExpressionPosition::ArgumentOrLabel { .. }
+                                | ExpressionPosition::Expression,
+                        } = found
+                        {
+                            Located::Expression {
+                                expression,
+                                position: ExpressionPosition::UpdatedRecord {
+                                    unchanged_record_fields: self
+                                        .unchanged_record_fields()
+                                        .unwrap_or_default(),
+                                },
+                            }
+                        } else {
+                            found
+                        }
+                    })
+                })
                 .or_else(|| self.self_if_contains_location(byte_index)),
         }
     }
@@ -1656,6 +1679,32 @@ impl TypedExpr {
 
     pub fn is_todo_with_no_message(&self) -> bool {
         matches!(self, TypedExpr::Todo { message: None, .. })
+    }
+
+    /// If the expression is a record update, this returns a list with the names
+    /// of its labelled arguments that are not being changed by the record
+    /// update.
+    pub fn unchanged_record_fields(&self) -> Option<Vec<(EcoString, Arc<Type>)>> {
+        let TypedExpr::RecordUpdate { arguments, .. } = self else {
+            return None;
+        };
+
+        let mut unchanged_arguments = vec![];
+        for argument in arguments {
+            // All arguments that stay the same are generated as "implicit"
+            // arguments, we only care about them!
+            if !argument.is_implicit() {
+                continue;
+            }
+            // The label should always be present for these implicit arguments,
+            // technically this will never fail, but rather than panicking I
+            // just "continue".
+            let Some(label) = argument.label.as_ref() else {
+                continue;
+            };
+            unchanged_arguments.push((label.clone(), argument.value.type_()))
+        }
+        Some(unchanged_arguments)
     }
 }
 

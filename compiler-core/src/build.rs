@@ -426,12 +426,22 @@ pub struct UnqualifiedImport<'a> {
 /// The position of a located expression. Used to determine extra context,
 /// such as whether to provide label completions if the expression is in
 /// argument position.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionPosition<'a> {
     Expression,
     ArgumentOrLabel {
         called_function: &'a TypedExpr,
         function_arguments: &'a [TypedCallArg],
+    },
+    /// This is for an expression that is used in a record update spread:
+    /// ```gleam
+    /// Wibble(..wibble, a: 1)
+    /// //     ^^^^^^^^ This!
+    /// ```
+    UpdatedRecord {
+        /// These are all the record fields that are not being updated in the
+        /// update.
+        unchanged_record_fields: Vec<(EcoString, Arc<Type>)>,
     },
 }
 
