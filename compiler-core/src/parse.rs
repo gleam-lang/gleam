@@ -3941,7 +3941,7 @@ where
             }
             tok0 => {
                 self.tok0 = tok0;
-                self.next_tok_unexpected(vec!["A variable name or an integer".into()])
+                self.next_tok_unexpected(vec!["A variable name or an int".into()])
             }
         }
     }
