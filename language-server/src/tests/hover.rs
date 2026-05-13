@@ -2104,6 +2104,22 @@ pub fn go(x: mod.Wibble) {
 }
 
 #[test]
+fn hover_on_record_dot_of_record_update_shows_ignored_fields() {
+    assert_hover!(
+        "
+type Wibble {
+  Wibble(a: Int, b: Bool)
+}
+
+pub fn go(wibble: Wibble) {
+    Wibble(..wibble, a: 1)
+}
+",
+        find_position_of("..")
+    );
+}
+
+#[test]
 fn hover_on_record_being_updated_shows_ignored_fields() {
     assert_hover!(
         "

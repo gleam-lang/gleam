@@ -3524,6 +3524,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
     fn visit_typed_expr_record_update(
         &mut self,
         location: &'ast SrcSpan,
+        spread_start: &'ast u32,
         type_: &'ast Arc<Type>,
         updated_record: &'ast TypedExpr,
         updated_record_assigned_name: &'ast Option<EcoString>,
@@ -3555,6 +3556,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         ast::visit::visit_typed_expr_record_update(
             self,
             location,
+            spread_start,
             type_,
             updated_record,
             updated_record_assigned_name,
@@ -11862,6 +11864,7 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
     fn visit_typed_expr_record_update(
         &mut self,
         location: &'ast SrcSpan,
+        spread_start: &'ast u32,
         type_: &'ast Arc<Type>,
         updated_record: &'ast TypedExpr,
         updated_record_assigned_name: &'ast Option<EcoString>,
@@ -11886,6 +11889,7 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
         ast::visit::visit_typed_expr_record_update(
             self,
             location,
+            spread_start,
             type_,
             updated_record,
             updated_record_assigned_name,

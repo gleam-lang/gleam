@@ -983,6 +983,7 @@ where
 
                                 expr = UntypedExpr::RecordUpdate {
                                     location: SrcSpan { start, end },
+                                    spread_start: dot_s,
                                     constructor: Box::new(expr),
                                     record,
                                     arguments,
