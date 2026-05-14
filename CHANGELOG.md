@@ -92,6 +92,25 @@
 
 ### Language server
 
+- When hovering a record update expression, the language server can now show the
+  fields that are not being updated. For example:
+
+  ```gleam
+  pub type Person {
+    Person(name: String, age: Int)
+  }
+
+  pub fn happy_birthday_mom() {
+    let mom = Person(name: "Antonella", age: 60)
+    Person(..mom, age: 61)
+    //     ^^^^^ Hovering this will show:
+    //           Unchanged fields:
+    //           - name
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server can now help with completions when typing a list's tail:
 
   ```gleam
