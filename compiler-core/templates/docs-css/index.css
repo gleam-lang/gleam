@@ -605,12 +605,20 @@ body.drawer-open .label-closed {
 /* Tables */
 
 table {
+  display: block;
+  overflow-inline: auto;
   border-spacing: 0;
   border-collapse: collapse;
 }
 
 table td,
 table th {
+  /* Inside table cells we don't won't to break words anywhere, otherwise in
+  narrow columns or in tables with many columns we'd end up with columns with
+  a single character per line.
+  */
+  word-break: normal;
+  overflow-wrap: normal;
   padding: 6px 13px;
   border: 1px solid var(--table-border);
 }

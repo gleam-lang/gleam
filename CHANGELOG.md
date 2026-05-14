@@ -61,6 +61,9 @@
   flag is passed, no progress information is printed.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Tables in the generated docs now look better on smaller screens.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The comment in `manifest.toml` now instructs the user to include it in their
   source control repository.
   ([Louis Pilfold](https://github.com/lpil))
