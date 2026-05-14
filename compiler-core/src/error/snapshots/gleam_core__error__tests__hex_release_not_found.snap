@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/error/tests.rs
+expression: "err[0]"
+---
+Diagnostic {
+    title: "Hex API failure",
+    text: "There is no version 1.234234.2 of the package birdie.",
+    level: Error,
+    location: None,
+    hint: None,
+}

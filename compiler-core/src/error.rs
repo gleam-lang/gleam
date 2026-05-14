@@ -204,6 +204,9 @@ pub enum Error {
     #[error("Hex error: {0}")]
     Hex(String),
 
+    #[error("Hex release not found")]
+    HexReleaseNotFound { package: String, version: String },
+
     #[error("{error}")]
     ExpandTar { error: String },
 
@@ -1614,6 +1617,14 @@ This was error from the Hex client library:
                     location: None,
                 }]
             }
+
+            Error::HexReleaseNotFound { package, version } => vec![Diagnostic {
+                title: "Hex API failure".into(),
+                text: format!("There is no version {version} of the package {package}."),
+                hint: None,
+                level: Level::Error,
+                location: None,
+            }],
 
             Error::DuplicateModule {
                 module,
