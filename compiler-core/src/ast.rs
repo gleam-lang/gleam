@@ -1296,8 +1296,8 @@ pub struct UnqualifiedImport {
     /// The location excluding the potential `as ...` clause, or the `type` keyword.
     /// For example, in `type Wibble as Wobble`, it covers `Wibble`.
     pub imported_name_location: SrcSpan,
-    /// The location of the alias name (ie the name after `as`).
-    /// For example, in `type Wibble as Wobble`, it covers `Wobble`.
+    /// The location of the `as ...` clause.
+    /// For example, in `type Wibble as Wobble`, it covers `as Wobble`.
     pub as_name_location: Option<SrcSpan>,
     pub name: EcoString,
     pub as_name: Option<EcoString>,

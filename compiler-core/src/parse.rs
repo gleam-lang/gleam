@@ -3080,8 +3080,8 @@ where
                         as_name: None,
                         is_upname: false,
                     };
-                    if self.maybe_one(&Token::As).is_some() {
-                        let (start, as_name, end) = self.expect_name()?;
+                    if let Some((start, _end)) = self.maybe_one(&Token::As) {
+                        let (_start, as_name, end) = self.expect_name()?;
                         import.as_name = Some(as_name);
                         import.as_name_location = Some(SrcSpan { start, end });
                         import.location.end = end;
@@ -3100,8 +3100,8 @@ where
                         as_name: None,
                         is_upname: true,
                     };
-                    if self.maybe_one(&Token::As).is_some() {
-                        let (start, as_name, end) = self.expect_upname()?;
+                    if let Some((start, _end)) = self.maybe_one(&Token::As) {
+                        let (_start, as_name, end) = self.expect_upname()?;
                         import.as_name = Some(as_name);
                         import.as_name_location = Some(SrcSpan { start, end });
                         import.location.end = end;
@@ -3121,8 +3121,8 @@ where
                         as_name: None,
                         is_upname: true,
                     };
-                    if self.maybe_one(&Token::As).is_some() {
-                        let (start, as_name, end) = self.expect_upname()?;
+                    if let Some((start, _end)) = self.maybe_one(&Token::As) {
+                        let (_start, as_name, end) = self.expect_upname()?;
                         import.as_name = Some(as_name);
                         import.as_name_location = Some(SrcSpan { start, end });
                         import.location.end = end;
