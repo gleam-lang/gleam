@@ -124,16 +124,32 @@ impl ProjectPaths {
             .join("ebin")
     }
 
-    pub fn build_package_app_file(
+    pub fn build_package_dot_app(
         &self,
         mode: Mode,
         target: Target,
         package_name: &str,
     ) -> Utf8PathBuf {
-        self.build_directory_for_package(mode, target, package_name)
-            .join("ebin")
+        self.build_package_ebin(mode, target, package_name)
             .join(package_name)
             .with_extension("app")
+    }
+
+    pub fn build_package_beam(
+        &self,
+        mode: Mode,
+        target: Target,
+        package_name: &str,
+        module_name: &str,
+    ) -> Utf8PathBuf {
+        self.build_package_ebin(mode, target, package_name)
+            .join(module_name.replace('/', "@"))
+            .with_extension("beam")
+    }
+
+    fn build_package_ebin(&self, mode: Mode, target: Target, package_name: &str) -> Utf8PathBuf {
+        self.build_directory_for_package(mode, target, package_name)
+            .join("ebin")
     }
 
     /// A path to a special file that contains the version of gleam
