@@ -5,12 +5,10 @@ use gleam_core::{
     build::{Codegen, Compile, Mode, Options, Target},
     paths::ProjectPaths,
 };
+use im::HashSet;
 use itertools::Itertools;
 use std::io::{self, Write};
 use std::{fs::File, io::Cursor};
-use zip::ZipWriter;
-
-use crate::fs;
 
 static ENTRYPOINT_FILENAME_POWERSHELL: &str = "entrypoint.ps1";
 static ENTRYPOINT_FILENAME_POSIX_SHELL: &str = "entrypoint.sh";
@@ -58,11 +56,6 @@ pub fn escript(paths: &ProjectPaths) -> Result<()> {
     crate::fs::delete_directory(&out)?;
 
     let manifest = crate::build::download_dependencies(paths, crate::cli::Reporter::new())?;
-    let packages = manifest
-        .packages
-        .iter()
-        .map(|package| package.name.clone())
-        .collect_vec();
 
     // Build project in production mode
     let build_options = Options {
@@ -75,50 +68,81 @@ pub fn escript(paths: &ProjectPaths) -> Result<()> {
         no_print_progress: false,
     };
     let built = crate::build::main(paths, build_options, manifest)?;
+    let mut packages = HashSet::new();
 
     // Create a zip file to write to
+    let mut zip = ZipArchive::new(Cursor::new(Vec::new()));
 
-    let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
-    let options = zip::write::SimpleFileOptions::default();
-
-    for package in packages {
-        let directory = format!("{package}/ebin");
-        zip.add_directory(directory, options).map_err(|_| todo!())?;
-
-        let zip_path = format!("{package}/ebin/{package}.app");
-        zip.start_file(&zip_path, options).map_err(|_| todo!())?;
-        // TODO: move to fs
-        let input = paths.build_package_app_file(mode, target, &package);
-
-        // TODO: replace this with only iterating over the production packages
-        if !input.exists() {
+    for module in built.module_interfaces.values() {
+        // Skip the prelude module, it doesn't exist at runtime.
+        if module.is_prelude() {
             continue;
         }
 
-        let mut file = std::fs::File::open(dbg!(input)).unwrap();
-        let _: u64 = std::io::copy(&mut file, &mut zip).map_err(|_| todo!())?;
+        let package = &module.package;
 
-        // let name = path.file_name().expect("Directory name");
-        // let build = build.join(name);
-        // let out = out.join(name);
-        // crate::fs::mkdir(&out)?;
-        //
-        // // Copy desired package subdirectories
-        // for subdirectory in ["ebin", "priv", "include"] {
-        //     let source = build.join(subdirectory);
-        //     if source.is_dir() {
-        //         let source = crate::fs::canonicalise(&source)?;
-        //         let out = out.join(subdirectory);
-        //         crate::fs::copy_dir(source, &out)?;
-        //     }
-        // }
+        // If we have not seen this package before then create its directory and
+        // configuration in the archive
+        if packages.insert(module.package.clone()).is_none() {
+            zip.create_directory(format!("{package}/ebin"))?;
+            let app_disc_path = paths.build_package_dot_app(mode, target, &package);
+            let app_zip_path = format!("{package}/ebin/{package}.app");
+            zip.add_file_from_disc(app_disc_path, app_zip_path)?;
+        }
+
+        let beam_disc_path = paths.build_package_beam(mode, target, &package, &module.name);
+        let beam_zip_path = format!(
+            "{package}/ebin/{name}.beam",
+            name = module.name.replace("/", "@")
+        );
+        zip.add_file_from_disc(beam_disc_path, beam_zip_path)?;
     }
 
     let result = zip.finish().map_err(|_| todo!())?;
     let bytes: Vec<u8> = result.into_inner();
-    fs::write_bytes(&Utf8PathBuf::from("stuff.zip"), &bytes)?;
+    crate::fs::write_bytes(&Utf8PathBuf::from("stuff.zip"), &bytes)?;
 
     Ok(())
+}
+
+pub struct ZipArchive<W: std::io::Write + std::io::Seek> {
+    zip: zip::ZipWriter<W>,
+}
+
+impl<W: std::io::Write + std::io::Seek> ZipArchive<W> {
+    pub fn new(writer: W) -> Self {
+        Self {
+            zip: zip::ZipWriter::new(writer),
+        }
+    }
+
+    pub fn finish(self) -> Result<W> {
+        self.zip.finish().map_err(|_| todo!("implement error"))
+    }
+
+    pub fn create_directory(&mut self, path: impl Into<String>) -> Result<()> {
+        self.zip
+            .add_directory(path, self.options())
+            .map_err(|_| todo!())
+    }
+
+    pub fn add_file_from_disc(
+        &mut self,
+        disc_path: impl AsRef<std::path::Path>,
+        zip_path: impl Into<String>,
+    ) -> Result<()> {
+        self.zip
+            .start_file(zip_path.into(), self.options())
+            .map_err(|_| todo!("implement error"))?;
+        // TODO: move this file open code to the fs module
+        let mut file = std::fs::File::open(disc_path).unwrap();
+        let _: u64 = std::io::copy(&mut file, &mut self.zip).unwrap();
+        Ok(())
+    }
+
+    fn options(&self) -> zip::write::FileOptions<'static, ()> {
+        zip::write::SimpleFileOptions::default()
+    }
 }
 
 /// Generate a directory of precompiled Erlang along with a start script.

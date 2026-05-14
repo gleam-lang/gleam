@@ -1026,6 +1026,10 @@ pub struct ModuleInterface {
 }
 
 impl ModuleInterface {
+    pub fn is_prelude(&self) -> bool {
+        self.name == "gleam"
+    }
+
     pub fn contains_todo(&self) -> bool {
         self.warnings.iter().any(|warning| warning.is_todo())
     }
