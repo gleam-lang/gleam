@@ -83,11 +83,11 @@
   triggered from an import statement:
 
   ```gleam
-  import foo.{type Foo}
-  //               ^^^ Trigger find references or rename here
+  import wibble.{type Wibble}
+  //                  ^^^^^^ Trigger find references or rename here
 
   pub fn main() {
-    let _ = Foo
+    let _ = Wibble
   }
   ```
 
