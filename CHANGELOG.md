@@ -90,6 +90,9 @@
   flow for when a Hex session has been revoked or has expired.
   ([Sahil Upasane](https://github.com/404salad))
 
+- New packages are created requesting Erlang/OTP version 29 on GitHub actions.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Language server
 
 - The language server can now help with completions when typing a list's tail:
