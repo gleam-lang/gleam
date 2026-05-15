@@ -1,9 +1,6 @@
 #!/usr/bin/env escript
 -mode(compile).
 
-% TODO: Don't concurrently print warnings and errors
-% TODO: Some tests
-
 main(_) ->
     ok = io:setopts([binary, {encoding, utf8}]),
     ok = configure_logging(),
