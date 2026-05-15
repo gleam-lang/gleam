@@ -295,4 +295,16 @@
 - Fixed a bug where cli would fail to complete https connections from behind a proxy
   with self-signed certificates. The cli now defaults to using system trust stores
   for trusted CAs, allowing use in proxied network environments.
-  ([apsoras][https://github.com/apsoras])
+  ([apsoras](https://github.com/apsoras))
+
+- The compiler no longer reports false type mismatch errors when type-checking
+  mutually recursive function definitions such as these:
+
+  ```gleam
+  type Test(a) { Test(a) }
+
+  fn it(value: Test(a)) { it2(value) }
+  fn it2(value: Test(a)) -> Test(a) { it(value) }
+  ```
+
+  ([Adi Salimgereyev](https://github.com/abs0luty))
