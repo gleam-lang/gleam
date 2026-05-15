@@ -1186,11 +1186,13 @@ target, so it cannot be run.",
             Error::MainFunctionHasWrongArity { module, arity } => vec![Diagnostic {
                 title: "Main function has wrong arity".into(),
                 text: wrap_format!(
-                    "`{module}:main` should have an arity of 0 to be run but its arity is {arity}."
+                    "`{module}.main` should have an arity of 0 to be run but its arity is {arity}."
                 ),
                 level: Level::Error,
                 location: None,
-                hint: Some("Change the function signature of main to `pub fn main() {}`.".into()),
+                hint: Some(
+                    "Change the function signature of main to `pub fn main() -> Nil`.".into(),
+                ),
             }],
 
             Error::ProjectRootAlreadyExist { path } => vec![Diagnostic {

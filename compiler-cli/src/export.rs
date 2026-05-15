@@ -1,12 +1,13 @@
 use std::io::Cursor;
 
-use crate::fs;
+use crate::fs::{self, ZipArchive};
 use camino::Utf8PathBuf;
 use gleam_core::{
     Result,
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Target},
     paths::ProjectPaths,
+    type_::ModuleFunction,
 };
 
 static ENTRYPOINT_FILENAME_POWERSHELL: &str = "entrypoint.ps1";
@@ -20,8 +21,6 @@ static ENTRYPOINT_TEMPLATE_POSIX_SHELL: &str =
 /// Generate a single file of precompiled Erlang, suitable for CLIs.
 pub fn escript(paths: &ProjectPaths) -> Result<()> {
     use std::io::Write;
-
-    // TODO: ensure that the main function exists
 
     let target = Target::Erlang;
     let mode = Mode::Prod;
@@ -43,12 +42,16 @@ pub fn escript(paths: &ProjectPaths) -> Result<()> {
         no_print_progress: false,
     };
     let built = crate::build::main(paths, build_options, manifest)?;
+    let package_name = &built.root_package.config.name;
+
+    // The main function must exist for the escript to call. This will return an
+    // error if it could not be found.
+    let _: ModuleFunction = built.get_main_function(package_name, target)?;
 
     // Create the zip archive for the code
     let mut zip = ZipArchive::new(Cursor::new(Vec::new()));
 
-    for entry in fs::read_dir(&build)? {
-        let entry = entry.map_err(|e| todo!())?;
+    for entry in fs::read_dir(&build)?.filter_map(Result::ok) {
         let ebin = entry.path().join("ebin");
 
         // We want the ebin code directories for each package
@@ -56,8 +59,7 @@ pub fn escript(paths: &ProjectPaths) -> Result<()> {
             continue;
         }
 
-        for entry in fs::read_dir(&ebin)? {
-            let entry = entry.map_err(|e| todo!())?;
+        for entry in fs::read_dir(&ebin)?.filter_map(Result::ok) {
             let path = entry.path();
             let extension = path.extension().unwrap_or_default();
 
@@ -80,8 +82,8 @@ pub fn escript(paths: &ProjectPaths) -> Result<()> {
 
     let zip = zip.finish()?.into_inner();
 
-    let package_name = Utf8PathBuf::from(&built.root_package.config.name);
-    let mut file = std::fs::File::create(&package_name).map_err(|_| todo!())?;
+    let escript_path = Utf8PathBuf::from(package_name);
+    let mut file = fs::open_file(&escript_path)?;
     let header = format!(
         "#!/usr/bin/env escript
 %%
@@ -89,52 +91,17 @@ pub fn escript(paths: &ProjectPaths) -> Result<()> {
 "
     );
 
-    file.write_all(header.as_bytes()).unwrap();
-    file.write_all(&zip).unwrap();
-
-    fs::make_executable(&package_name)?;
+    fs::write_to_open_file(&mut file, &escript_path, header)?;
+    fs::write_to_open_file(&mut file, &escript_path, zip)?;
+    fs::make_executable(&escript_path)?;
 
     println!(
         "
-Your escript has been generated to ./{package_name}.
+Your escript has been generated to ./{escript_path}.
 ",
     );
 
     Ok(())
-}
-
-pub struct ZipArchive<W: std::io::Write + std::io::Seek> {
-    zip: zip::ZipWriter<W>,
-}
-
-impl<W: std::io::Write + std::io::Seek> ZipArchive<W> {
-    pub fn new(writer: W) -> Self {
-        Self {
-            zip: zip::ZipWriter::new(writer),
-        }
-    }
-
-    pub fn finish(self) -> Result<W> {
-        self.zip.finish().map_err(|_| todo!("implement error"))
-    }
-
-    pub fn add_file_from_disc(
-        &mut self,
-        disc_path: impl AsRef<std::path::Path>,
-        zip_path: impl Into<String>,
-    ) -> Result<()> {
-        self.zip
-            .start_file(zip_path.into(), self.options())
-            .map_err(|_| todo!("implement error"))?;
-        // TODO: move this file open code to the fs module
-        let mut file = std::fs::File::open(disc_path).unwrap();
-        let _: u64 = std::io::copy(&mut file, &mut self.zip).unwrap();
-        Ok(())
-    }
-
-    fn options(&self) -> zip::write::FileOptions<'static, ()> {
-        zip::write::SimpleFileOptions::default()
-    }
 }
 
 /// Generate a directory of precompiled Erlang along with a start script.
