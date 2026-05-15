@@ -2707,3 +2707,51 @@ pub fn main() {
         find_position_of("mod.wibble").under_char('w')
     );
 }
+
+#[test]
+fn rename_alias_with_weird_spacing() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub fn wibble() {
+  wibble()
+}
+"
+        ),
+        "
+import mod.{wibble     as         wobble}
+
+pub fn main() {
+  wobble()
+  mod.wibble()
+}
+",
+        "some_function",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn rename_alias_with_weird_spacing_to_original_name() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub fn wibble() {
+  wibble()
+}
+"
+        ),
+        "
+import mod.{wibble     as         wobble}
+
+pub fn main() {
+  wobble()
+  mod.wibble()
+}
+",
+        "wibble",
+        find_position_of("wibble")
+    );
+}
