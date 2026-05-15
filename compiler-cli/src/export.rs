@@ -1,3 +1,5 @@
+use std::io::Cursor;
+
 use crate::fs;
 use camino::Utf8PathBuf;
 use gleam_core::{
@@ -6,7 +8,6 @@ use gleam_core::{
     build::{Codegen, Compile, Mode, Options, Target},
     paths::ProjectPaths,
 };
-use im::HashSet;
 
 static ENTRYPOINT_FILENAME_POWERSHELL: &str = "entrypoint.ps1";
 static ENTRYPOINT_FILENAME_POSIX_SHELL: &str = "entrypoint.sh";
@@ -20,40 +21,14 @@ static ENTRYPOINT_TEMPLATE_POSIX_SHELL: &str =
 pub fn escript(paths: &ProjectPaths) -> Result<()> {
     use std::io::Write;
 
-    // TODO: Add new entrypoint shim module
-    //
-    // ```erlang
-    // -module(gleescript_main_shim).
-    //
-    // -export([main/1]).
-    //
-    // main(_) ->
-    //     io:setopts(standard_io, [binary, {encoding, utf8}]),
-    //     io:setopts(standard_error, [{encoding, utf8}]),
-    //     ApplicationModule = INLINE_THE_MODULE_HERE,
-    //     {ok, _} = application:ensure_all_started(ApplicationModule),
-    //     ApplicationModule:main().
-    // ```
-    //
-    // TODO: Compile project (including new shim)
-    //
-    // TODO: Build zip archive of all the files
-    //
-    // TODO: Make a file with
-    //   1. shebang
-    //   2. emulator flags including `-escript main gleescript_main_shim`
-    //   3. the zip file
-    //   4. write to disc
+    // TODO: ensure that the main function exists
+
     let target = Target::Erlang;
     let mode = Mode::Prod;
     let build = paths.build_directory_for_target(mode, target);
-    let out = paths.erlang_shipment_directory();
-
-    fs::mkdir(&out)?;
 
     // Reset the directories to ensure we have a clean slate and no old code
     fs::delete_directory(&build)?;
-    fs::delete_directory(&out)?;
 
     let manifest = crate::build::download_dependencies(paths, crate::cli::Reporter::new())?;
 
@@ -68,44 +43,60 @@ pub fn escript(paths: &ProjectPaths) -> Result<()> {
         no_print_progress: false,
     };
     let built = crate::build::main(paths, build_options, manifest)?;
-    let mut packages = HashSet::new();
 
-    // Create the escript file
-    let zip_path = Utf8PathBuf::from(&built.root_package.config.name);
-    let mut file = std::fs::File::create(&zip_path).map_err(|_| todo!())?;
+    // Create the zip archive for the code
+    let mut zip = ZipArchive::new(Cursor::new(Vec::new()));
 
-    let header = b"#!/usr/bin/env escript\n%% \n%%!\n";
-    file.write_all(header).unwrap();
+    for entry in fs::read_dir(&build)? {
+        let entry = entry.map_err(|e| todo!())?;
+        let ebin = entry.path().join("ebin");
 
-    // The compile code is added as a zip archive
-    let mut zip = ZipArchive::new(file);
-
-    for module in built.module_interfaces.values() {
-        // Skip the prelude module, it doesn't exist at runtime.
-        if module.is_prelude() {
+        // We want the ebin code directories for each package
+        if !ebin.is_dir() {
             continue;
         }
 
-        let package = &module.package;
+        for entry in fs::read_dir(&ebin)? {
+            let entry = entry.map_err(|e| todo!())?;
+            let path = entry.path();
+            let extension = path.extension().unwrap_or_default();
 
-        // If we have not seen this package before then create its configuration in the archive
-        if packages.insert(module.package.clone()).is_none() {
-            let app_disc_path = paths.build_package_dot_app(mode, target, &package);
-            zip.add_file_from_disc(app_disc_path, format!("{package}.app"))?;
+            let Some(name) = path.file_name() else {
+                continue;
+            };
+
+            if !path.is_file() {
+                continue;
+            }
+
+            // We want to copy compiled BEAM bytecode and app configuration files
+            if extension != "beam" && extension != "app" {
+                continue;
+            }
+
+            zip.add_file_from_disc(path, name)?;
         }
-
-        let beam_disc_path = paths.build_package_beam(mode, target, &package, &module.name);
-        let mut beam_zip_path = module.name.replace("/", "@");
-        beam_zip_path.push_str(".beam");
-        zip.add_file_from_disc(beam_disc_path, beam_zip_path)?;
     }
 
-    zip.finish()?.flush().unwrap();
-    fs::make_executable(&zip_path)?;
+    let zip = zip.finish()?.into_inner();
+
+    let package_name = Utf8PathBuf::from(&built.root_package.config.name);
+    let mut file = std::fs::File::create(&package_name).map_err(|_| todo!())?;
+    let header = format!(
+        "#!/usr/bin/env escript
+%%
+%%!-escript main {package_name}@@main
+"
+    );
+
+    file.write_all(header.as_bytes()).unwrap();
+    file.write_all(&zip).unwrap();
+
+    fs::make_executable(&package_name)?;
 
     println!(
         "
-Your escript has been generated to {zip_path}.
+Your escript has been generated to ./{package_name}.
 ",
     );
 

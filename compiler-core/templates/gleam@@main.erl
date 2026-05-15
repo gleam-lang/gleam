@@ -1,11 +1,12 @@
 -module('{{ application }}@@main').
--export([run/1]).
+-export([run/1, main/1]).
 
 -define(red, "\e[31;1m").
 -define(grey, "\e[90m").
 -define(reset_color, "\e[39m").
 -define(reset_all, "\e[0m").
 
+%%% Used by `gleam run`
 run(Module) ->
     io:setopts(standard_io, [binary, {encoding, utf8}]),
     io:setopts(standard_error, [{encoding, utf8}]),
@@ -19,6 +20,10 @@ run(Module) ->
             print_error(exit, Reason),
             init:stop(1)
     end.
+
+%%% Used by escripts
+main(_) ->
+    run('{{ application }}').
 
 run_module(Module) ->
     try
