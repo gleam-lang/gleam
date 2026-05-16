@@ -46,7 +46,13 @@ pub fn command(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
 
     // Write the updated config
     fs::write(root_config.as_path(), &toml.to_string())?;
-    _ = crate::dependencies::cleanup(paths, cli::Reporter::new())?;
+
+    // If there's no manifest yet (e.g. the project has never been built) we
+    // don't need to clean it up. `cleanup` reads manifest.toml unconditionally
+    // and that failed with a confusing "File IO failure" before this guard.
+    if paths.manifest().exists() {
+        _ = crate::dependencies::cleanup(paths, cli::Reporter::new())?;
+    }
 
     Ok(())
 }

@@ -190,6 +190,11 @@
 
 ### Bug fixes
 
+- Fixed a bug where `gleam remove` would fail with a confusing File IO error
+  if `manifest.toml` didn't exist yet (e.g. in a freshly-created project or
+  after the manifest had been deleted).
+  ([Charlie Tonneslan](https://github.com/c-tonneslan))
+
 - Fixed a bug where the build tool would check for new major versions of a local
   or git dependency on Hex when running `gleam update`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
