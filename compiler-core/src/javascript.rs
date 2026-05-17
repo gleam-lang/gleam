@@ -1241,7 +1241,7 @@ fn maybe_escape_identifier(word: &str) -> EcoString {
     }
 }
 
-fn maybe_escape_property(label: &str) -> EcoString {
+pub(super) fn maybe_escape_property(label: &str) -> EcoString {
     if is_usable_js_property(label) {
         EcoString::from(label)
     } else {
