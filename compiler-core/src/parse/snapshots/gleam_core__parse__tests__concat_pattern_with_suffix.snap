@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\n        case \"\" {\n          \"prefix\" <> rest <> \"suffix\" -> rest\n        }\n        "
+---
+----- SOURCE CODE
+
+        case "" {
+          "prefix" <> rest <> "suffix" -> rest
+        }
+        
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:28
+  │
+3 │           "prefix" <> rest <> "suffix" -> rest
+  │                            ^^ This is not allowed in a string pattern
+
+String patterns can only match on a prefix, not both a prefix and a suffix.
+
+If you want to match on a suffix consider using `string.ends_with`
+from the stdlib's `gleam/string` module.

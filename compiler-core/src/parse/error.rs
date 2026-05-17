@@ -108,6 +108,8 @@ pub enum ParseErrorType {
     UnexpectedFunction, // a function was used called outside of another function
     // A variable was assigned or discarded on the left hand side of a <> pattern
     ConcatPatternVariableLeftHandSide,
+    // A <> suffix was added after a prefix pattern like "prefix" <> var <> "suffix"
+    ConcatPatternWithSuffix,
     ListSpreadWithoutTail,               // let x = [1, ..]
     ExpectedFunctionBody,                // let x = fn()
     RedundantInternalAttribute,          // for a private definition marked as internal
@@ -552,6 +554,19 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 .join("\n"),
                 hint: None,
                 label_text: "This must be a string literal".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::ConcatPatternWithSuffix => ParseErrorDetails {
+                text: [
+                    "String patterns can only match on a prefix, not both a prefix and a suffix.",
+                    "",
+                    "If you want to match on a suffix consider using `string.ends_with`",
+                    "from the stdlib's `gleam/string` module.",
+                ]
+                .join("\n"),
+                hint: None,
+                label_text: "This is not allowed in a string pattern".into(),
                 extra_labels: vec![],
             },
 

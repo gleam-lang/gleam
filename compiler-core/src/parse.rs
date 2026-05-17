@@ -1364,6 +1364,18 @@ where
                             Some((_, Token::Concatenate, _)) => {
                                 self.advance();
                                 let (r_start, right, r_end) = self.expect_assign_name()?;
+                                // "prefix" as x <> var <> "suffix" is not supported
+                                if let Some((suffix_start, Token::Concatenate, suffix_end)) =
+                                    self.tok0
+                                {
+                                    return Err(ParseError {
+                                        error: ParseErrorType::ConcatPatternWithSuffix,
+                                        location: SrcSpan {
+                                            start: suffix_start,
+                                            end: suffix_end,
+                                        },
+                                    });
+                                }
                                 Pattern::StringPrefix {
                                     location: SrcSpan { start, end: r_end },
                                     left_location: SrcSpan {
@@ -1398,6 +1410,16 @@ where
                     Some((_, Token::Concatenate, _)) => {
                         self.advance();
                         let (r_start, right, r_end) = self.expect_assign_name()?;
+                        // "prefix" <> var <> "suffix" is not supported
+                        if let Some((suffix_start, Token::Concatenate, suffix_end)) = self.tok0 {
+                            return Err(ParseError {
+                                error: ParseErrorType::ConcatPatternWithSuffix,
+                                location: SrcSpan {
+                                    start: suffix_start,
+                                    end: suffix_end,
+                                },
+                            });
+                        }
                         Pattern::StringPrefix {
                             location: SrcSpan { start, end: r_end },
                             left_location: SrcSpan { start, end },

@@ -634,6 +634,30 @@ fn assign_left_hand_side_of_concat_pattern() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/5695
+#[test]
+fn concat_pattern_with_suffix() {
+    assert_error!(
+        r#"
+        case "" {
+          "prefix" <> rest <> "suffix" -> rest
+        }
+        "#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5695
+#[test]
+fn concat_pattern_with_suffix_and_as() {
+    assert_error!(
+        r#"
+        case "" {
+          "prefix" as p <> rest <> "suffix" -> rest
+        }
+        "#
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/1890
 #[test]
 fn valueless_list_spread_expression() {
