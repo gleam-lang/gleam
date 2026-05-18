@@ -15,4 +15,4 @@ error: Syntax error
   │                       ^^^^^^ I was not expecting this
 
 Found a name, expected one of: 
-- A variable name or an integer
+- A variable name or an int
