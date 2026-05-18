@@ -1,0 +1,22 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn wibble(a: Bool, b: Bool) {\n  case a {}\n  case b {}\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn wibble(a: Bool, b: Bool) {
+  case a {}
+  case b {}
+  ▔▔▔▔▔↑   
+}
+
+
+----- AFTER ACTION
+
+pub fn wibble(a: Bool, b: Bool) {
+  case a {}
+  case b {
+    True -> todo
+    False -> todo
+  }
+}
