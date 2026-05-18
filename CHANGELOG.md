@@ -93,6 +93,10 @@
 - New packages are created requesting Erlang/OTP version 29 on GitHub actions.
   ([Louis Pilfold](https://github.com/lpil))
 
+- The build tool now falls back to recursively hardlinking directories on
+  Windows when it fails to symlink one due to disabled "Developer mode".
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server can now help with completions when typing a list's tail:
