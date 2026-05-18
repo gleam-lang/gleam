@@ -10,5 +10,5 @@ fn do_things(wibble: wobble.Wibble) { wibble }
 
 ----- Hover content (markdown) -----
 ```gleam
-Wibble
+wobble.Wibble
 ```

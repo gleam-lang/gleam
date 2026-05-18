@@ -12,5 +12,5 @@ fn do_thing() -> MyResult(Int, Int) {
 
 ----- Hover content (markdown) -----
 ```gleam
-fn() -> Result(Int, Int)
+fn() -> MyResult(Int, Int)
 ```

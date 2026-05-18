@@ -1499,7 +1499,9 @@ fn hover_for_function_head(
         .map(|(_, doc)| doc)
         .unwrap_or(&empty_str);
     let function_type = get_function_type(fun);
-    let formatted_type = PrettyPrinter::new().pretty_print(&function_type, 0);
+    let formatted_type = PrettyPrinter::new()
+        .add_full_names(&module.ast.names)
+        .pretty_print(&function_type, 0);
     let contents = format!(
         "```gleam
 {formatted_type}
@@ -1517,7 +1519,9 @@ fn hover_for_function_argument(
     line_numbers: LineNumbers,
     module: &Module,
 ) -> Hover {
-    let type_ = PrettyPrinter::new().pretty_print(&argument.type_, 0);
+    let type_ = PrettyPrinter::new()
+        .add_full_names(&module.ast.names)
+        .pretty_print(&argument.type_, 0);
     let contents = format!("```gleam\n{type_}\n```");
     Hover {
         contents: Contents::MarkedString(MarkedString::String(contents)),

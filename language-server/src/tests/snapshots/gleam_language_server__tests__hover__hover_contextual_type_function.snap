@@ -10,5 +10,5 @@ fn func(value: wobble.Wibble) -> MyInt { 1 }
 
 ----- Hover content (markdown) -----
 ```gleam
-fn(Wibble) -> Int
+fn(wobble.Wibble) -> MyInt
 ```
