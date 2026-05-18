@@ -431,7 +431,7 @@ pub enum Command {
 impl Command {
     pub fn run(self, directory: Utf8PathBuf) -> Result<(), Error> {
         match self {
-            Command::Build {
+            Self::Build {
                 target,
                 warnings_as_errors,
                 no_print_progress,
@@ -440,69 +440,69 @@ impl Command {
                 command_build(&paths, target, warnings_as_errors, no_print_progress)
             }
 
-            Command::Check { target } => {
+            Self::Check { target } => {
                 let paths = find_project_paths(directory)?;
                 command_check(&paths, target)
             }
 
-            Command::Docs(Docs::Build { open, target }) => {
+            Self::Docs(Docs::Build { open, target }) => {
                 let paths = find_project_paths(directory)?;
                 docs::build(&paths, docs::BuildOptions { open, target })
             }
 
-            Command::Docs(Docs::Publish) => {
+            Self::Docs(Docs::Publish) => {
                 let paths = find_project_paths(directory)?;
                 docs::publish(&paths)
             }
 
-            Command::Docs(Docs::Remove { package, version }) => docs::remove(package, version),
+            Self::Docs(Docs::Remove { package, version }) => docs::remove(package, version),
 
-            Command::Format {
+            Self::Format {
                 stdin,
                 files,
                 check,
             } => format::run(stdin, check, files),
 
-            Command::Fix => {
+            Self::Fix => {
                 let paths = find_project_paths(directory)?;
                 fix::run(&paths)
             }
 
-            Command::Deps(Dependencies::List) => {
+            Self::Deps(Dependencies::List) => {
                 let paths = find_project_paths(directory)?;
                 dependencies::list(&paths)
             }
 
-            Command::Deps(Dependencies::Download) => {
+            Self::Deps(Dependencies::Download) => {
                 let paths = find_project_paths(directory)?;
                 download_dependencies(&paths)
             }
 
-            Command::Deps(Dependencies::Outdated) => {
+            Self::Deps(Dependencies::Outdated) => {
                 let paths = find_project_paths(directory)?;
                 dependencies::outdated(&paths)
             }
 
-            Command::Deps(Dependencies::Update(options)) => {
+            Self::Deps(Dependencies::Update(options)) => {
                 let paths = find_project_paths(directory)?;
                 dependencies::update(&paths, options.packages)
             }
 
-            Command::Deps(Dependencies::Tree(options)) => {
+            Self::Deps(Dependencies::Tree(options)) => {
                 let paths = find_project_paths(directory)?;
                 dependencies::tree(&paths, options)
             }
 
-            Command::Hex(Hex::Authenticate) => hex::authenticate(),
+            Self::Hex(Hex::Authenticate) => hex::authenticate(),
 
-            Command::New(options) => new::create(options, COMPILER_VERSION),
+            Self::New(options) => new::create(options, COMPILER_VERSION),
 
-            Command::Shell => {
+            Self::Shell => {
                 let paths = find_project_paths(directory)?;
                 shell::command(&paths)
             }
 
-            Command::Run {
+            Self::Run {
                 target,
                 arguments,
                 runtime,
@@ -521,7 +521,7 @@ impl Command {
                 )
             }
 
-            Command::Test {
+            Self::Test {
                 target,
                 arguments,
                 runtime,
@@ -538,7 +538,7 @@ impl Command {
                 )
             }
 
-            Command::Dev {
+            Self::Dev {
                 target,
                 arguments,
                 runtime,
@@ -556,84 +556,84 @@ impl Command {
                 )
             }
 
-            Command::CompilePackage(opts) => compile_package::command(opts),
+            Self::CompilePackage(opts) => compile_package::command(opts),
 
-            Command::Publish { replace, yes } => {
+            Self::Publish { replace, yes } => {
                 let paths = find_project_paths(directory)?;
                 publish::command(&paths, replace, yes)
             }
 
-            Command::PrintConfig => {
+            Self::PrintConfig => {
                 let paths = find_project_paths(directory)?;
                 print_config(&paths)
             }
 
-            Command::Hex(Hex::Retire {
+            Self::Hex(Hex::Retire {
                 package,
                 version,
                 reason,
                 message,
             }) => hex::retire(package, version, reason, message),
 
-            Command::Hex(Hex::Unretire { package, version }) => hex::unretire(package, version),
+            Self::Hex(Hex::Unretire { package, version }) => hex::unretire(package, version),
 
-            Command::Hex(Hex::Revert { package, version }) => {
+            Self::Hex(Hex::Revert { package, version }) => {
                 let paths = find_project_paths(directory)?;
                 hex::revert(&paths, package, version)
             }
 
-            Command::Hex(Hex::Owner(Owner::Add {
+            Self::Hex(Hex::Owner(Owner::Add {
                 package,
                 username_or_email,
                 level,
             })) => owner::add(package, username_or_email, level),
 
-            Command::Hex(Hex::Owner(Owner::Transfer {
+            Self::Hex(Hex::Owner(Owner::Transfer {
                 package,
                 username_or_email,
             })) => owner::transfer(package, username_or_email),
 
-            Command::Add { packages, dev } => {
+            Self::Add { packages, dev } => {
                 let paths = find_project_paths(directory)?;
                 add::command(&paths, packages, dev)
             }
 
-            Command::Remove { packages } => {
+            Self::Remove { packages } => {
                 let paths = find_project_paths(directory)?;
                 remove::command(&paths, packages)
             }
 
-            Command::Update(options) => {
+            Self::Update(options) => {
                 let paths = find_project_paths(directory)?;
                 dependencies::update(&paths, options.packages)
             }
 
-            Command::Clean => {
+            Self::Clean => {
                 let paths = find_project_paths(directory)?;
                 clean(&paths)
             }
 
-            Command::LanguageServer => lsp::main(),
+            Self::LanguageServer => lsp::main(),
 
-            Command::Export(ExportTarget::ErlangShipment) => {
+            Self::Export(ExportTarget::ErlangShipment) => {
                 let paths = find_project_paths(directory)?;
                 export::erlang_shipment(&paths)
             }
-            Command::Export(ExportTarget::Escript) => {
+            Self::Export(ExportTarget::Escript) => {
                 let paths = find_project_paths(directory)?;
                 export::escript(&paths)
             }
-            Command::Export(ExportTarget::HexTarball) => {
+            Self::Export(ExportTarget::HexTarball) => {
                 let paths = find_project_paths(directory)?;
                 export::hex_tarball(&paths)
             }
-            Command::Export(ExportTarget::JavascriptPrelude) => export::javascript_prelude(),
-            Command::Export(ExportTarget::TypescriptPrelude) => export::typescript_prelude(),
-            Command::Export(ExportTarget::PackageInterface { output }) => {
+            Self::Export(ExportTarget::JavascriptPrelude) => export::javascript_prelude(),
+            Self::Export(ExportTarget::TypescriptPrelude) => export::typescript_prelude(),
+            Self::Export(ExportTarget::PackageInterface { output }) => {
                 let paths = find_project_paths(directory)?;
                 export::package_interface(&paths, output)
             }
-            Command::Export(ExportTarget::PackageInformation { output }) => {
+            Self::Export(ExportTarget::PackageInformation { output }) => {
                 let paths = find_project_paths(directory)?;
                 export::package_information(&paths, output)
             }
