@@ -1285,7 +1285,7 @@ pub fn code_action_add_missing_patterns(
         let mut edits = TextEdits::new(line_numbers);
         let range = edits.src_span_to_lsp_range(location);
         if !within(params.range, range) {
-            return;
+            continue;
         }
 
         let Some(Located::Expression {
