@@ -254,6 +254,14 @@ impl BeamCompiler for ProjectIO {
             .expect("could not get beam_compiler")
             .compile(self, out, lib, modules, stdio)
     }
+
+    fn otp_version(&self) -> Option<String> {
+        self.beam_compiler
+            .lock()
+            .as_ref()
+            .expect("could not get beam_compiler")
+            .otp_version()
+    }
 }
 
 impl MakeLocker for ProjectIO {

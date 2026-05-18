@@ -71,6 +71,7 @@ pub struct Built {
     pub root_package: Package,
     pub module_interfaces: im::HashMap<EcoString, type_::ModuleInterface>,
     compiled_dependency_modules: Vec<Module>,
+    pub otp_version: Option<String>,
 }
 
 impl Built {
@@ -232,6 +233,7 @@ where
             root_package,
             module_interfaces: self.importable_modules,
             compiled_dependency_modules,
+            otp_version: self.io.otp_version(),
         })
     }
 

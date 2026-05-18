@@ -327,6 +327,8 @@ pub trait BeamCompiler {
         modules: &HashSet<Utf8PathBuf>,
         stdio: Stdio,
     ) -> Result<Vec<String>, Error>;
+
+    fn otp_version(&self) -> Option<String>;
 }
 
 /// A trait used to write files.

@@ -93,6 +93,10 @@
 - New packages are created requesting Erlang/OTP version 29 on GitHub actions.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Erlang shipments now warn when run on a different OTP version than they were
+  built with.
+  ([Joris Hartog](https://github.com/nootr))
+
 ### Language server
 
 - The language server can now help with completions when typing a list's tail:
