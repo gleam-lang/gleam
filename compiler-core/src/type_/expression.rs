@@ -4198,7 +4198,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     } => (
                         name.clone(),
                         match field_map {
-                            Some(fm) => Inferred::Known(fm.clone()),
+                            Some(field_map) => Inferred::Known(field_map.clone()),
                             None => Inferred::Unknown,
                         },
                     ),
@@ -4843,26 +4843,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
             });
 
-        if let Err(e) = field_map {
-            if let Error::IncorrectArity {
-                expected,
-                given,
-                context,
-                labels,
-                location,
-            } = e
-            {
+        if let Err(error) = field_map {
+            if let Error::IncorrectArity { .. } = error {
                 labelled_arity_error = true;
-                self.problems.error(Error::IncorrectArity {
-                    expected,
-                    given,
-                    context,
-                    labels,
-                    location,
-                });
-            } else {
-                self.problems.error(e);
             }
+            self.problems.error(error);
         }
 
         let mut missing_arguments = 0;
