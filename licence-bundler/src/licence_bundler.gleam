@@ -14,6 +14,15 @@ pub fn main() -> Nil {
   let gleam_crates = determine_gleam_crates()
   let active_licences = determine_licences()
 
+  // This command makes cargo print all the dependencies with their name,
+  // version, and licence SPDX expression. Unfortunately it is a tree and not a
+  // list, so it requires some further parsing to use.
+  //
+  // The output is too verbose to show an example here, so run this command if
+  // you want to see it yourself:
+  //
+  //     cargo tree --format "{p} {l}" --edges no-dev,no-build,no-proc
+  //
   let assert Ok(output) =
     shellout.command(
       run: "cargo",
@@ -34,8 +43,7 @@ pub fn main() -> Nil {
     |> list.filter(fn(line) { line != "" })
     |> list.map(trim_line_prefix)
     |> list.filter_map(dependency_information(_, gleam_crates, active_licences))
-    |> set.from_list
-    |> set.to_list
+    |> list.unique
     |> list.sort(fn(a, b) {
       string.compare(
         a.name <> a.licence_identifier,
@@ -69,10 +77,11 @@ pub fn main() -> Nil {
         h("section", [], [
           h("h2", [], [t("Rust dependency packages")]),
           h_ul(rust_dependencies, fn(package) {
+            let licences = package.used_licences
             assert licences != [] as { package.name <> " missing licences" }
             let licences =
-              list.map(package.used_licences, licence_link)
-              |> list.intersperse(t(" or "))
+              list.map(licences, licence_link)
+              |> list.intersperse(t(", "))
             let url =
               "https://crates.io/crates/"
               <> package.name
@@ -138,7 +147,10 @@ type Crate {
   Crate(
     name: String,
     version: String,
+    /// The SPDX expression that says what licences can be used for this crate.
     licence_identifier: String,
+    /// The licences from that SPDX expression that we are using. The expression
+    /// can contain OR, so not all the licences referenced may be in use by us.
     used_licences: List(String),
   )
 }
