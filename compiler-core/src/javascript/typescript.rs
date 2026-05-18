@@ -567,7 +567,7 @@ impl<'a> TypeScriptGenerator<'a> {
                         let name = argument
                             .label
                             .as_ref()
-                            .map(|(_, s)| super::maybe_escape_identifier(s))
+                            .map(|(_, s)| super::maybe_escape_property(s))
                             .unwrap_or_else(|| eco_format!("argument${i}"))
                             .to_doc();
                         docvec![
@@ -585,7 +585,7 @@ impl<'a> TypeScriptGenerator<'a> {
                     let name = arg
                         .label
                         .as_ref()
-                        .map(|(_, s)| super::maybe_escape_identifier(s))
+                        .map(|(_, s)| super::maybe_escape_property(s))
                         .unwrap_or_else(|| eco_format!("{i}"))
                         .to_doc();
                     docvec![
@@ -616,7 +616,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
         for (index, parameter) in constructor.arguments.iter().enumerate() {
             let name = if let Some((_, label)) = &parameter.label {
-                super::maybe_escape_identifier(label)
+                super::maybe_escape_property(label)
             } else {
                 eco_format!("${index}")
             };

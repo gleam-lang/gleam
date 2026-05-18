@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub type Box {\n  Box(then: Int)\n}\n"
+---
+----- SOURCE CODE
+
+pub type Box {
+  Box(then: Int)
+}
+
+
+----- TYPESCRIPT DEFINITIONS
+import type * as _ from "../gleam.d.mts";
+
+export class Box extends _.CustomType {
+  /** @deprecated */
+  constructor(then$: number);
+  /** @deprecated */
+  then$: number;
+}
+export function Box$Box(then$: number): Box$;
+export function Box$isBox(value: any): value is Box$;
+export function Box$Box$0(value: Box$): number;
+export function Box$Box$then(value: Box$): number;
+
+export type Box$ = Box;

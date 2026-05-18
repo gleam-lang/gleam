@@ -634,6 +634,39 @@ pub fn main() {
     );
 }
 #[test]
+fn record_with_field_named_constructor_typescript() {
+    assert_ts_def!(
+        r#"
+pub type Box {
+  Box(constructor: Int)
+}
+"#,
+    );
+}
+
+#[test]
+fn record_with_field_named_then_typescript() {
+    assert_ts_def!(
+        r#"
+pub type Box {
+  Box(then: Int)
+}
+"#,
+    );
+}
+
+#[test]
+fn record_with_field_named_prototype_typescript() {
+    assert_ts_def!(
+        r#"
+pub type Box {
+  Box(prototype: Int)
+}
+"#,
+    );
+}
+
+#[test]
 fn record_access_in_guard_with_reserved_field_name() {
     assert_js!(
         r#"
