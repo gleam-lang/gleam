@@ -1,0 +1,11 @@
+---
+source: test-commands/src/tests.rs
+expression: error
+---
+error: Module does not have a main function
+
+`escript_without_main_function` does not have a main function so the module
+can not be run.
+
+Hint: Add a public `main` function to
+`src/escript_without_main_function.gleam`.
