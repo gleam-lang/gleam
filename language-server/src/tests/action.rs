@@ -10207,6 +10207,22 @@ fn wibble() {
     );
 }
 
+#[test]
+fn add_missing_patterns_fires_for_second_inexhaustive_case_when_first_does_not_contain_cursor() {
+    assert_code_action!(
+        ADD_MISSING_PATTERNS,
+        r#"
+pub fn wibble(a: Bool, b: Bool) {
+  case a {}
+  case b {}
+}
+"#,
+        find_position_of("case")
+            .nth_occurrence(2)
+            .select_until(find_position_of("b {"))
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/4626
 #[test]
 fn add_missing_patterns_opaque_type() {
