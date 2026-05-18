@@ -263,7 +263,51 @@ fn alias_references_in_module(
                 edits.replace(reference.location, params.new_name.clone())
             }
             ReferenceKind::Import => {
-                edits.insert(reference.location.end, format!(" as {}", params.new_name));
+                let import = module
+                    .ast
+                    .definitions
+                    .imports
+                    .iter()
+                    .find_map(|import| {
+                        let unqualified_imports = match layer {
+                            ast::Layer::Value => &import.unqualified_values,
+                            ast::Layer::Type => &import.unqualified_types,
+                        };
+                        unqualified_imports
+                            .iter()
+                            // Use `.name` instead of `.as_name` because this
+                            // is being triggered on an import statement, and so
+                            // the old name being passed into this function is
+                            // always the original name and never the alias.
+                            // (ie when triggered on `wibble as wobble`, the
+                            // value of `name` is `wibble` and not `wobble`.)
+                            .find(|unqualified_import| unqualified_import.name == *name)
+                    })
+                    .expect("import should exist in ast");
+
+                if let Some(as_name_location) = import.as_name_location {
+                    // `as ...` clause exists
+                    if import.name == params.new_name {
+                        // Remove the `as ...` clause
+                        edits.delete(SrcSpan {
+                            start: as_name_location.start - 1,
+                            end: as_name_location.end,
+                        });
+                    } else {
+                        // Just edit the name in the `as ...`
+                        edits.replace(as_name_location, format!("as {}", &params.new_name));
+                    }
+                } else {
+                    // no `as ...` clause
+                    if import.name != params.new_name {
+                        // Add an `as ...` clause.
+                        edits.insert(
+                            import.imported_name_location.end,
+                            format!(" as {}", &params.new_name),
+                        )
+                    }
+                }
+
                 found_import = true;
             }
             ReferenceKind::Definition => {}

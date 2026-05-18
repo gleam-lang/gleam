@@ -184,6 +184,20 @@
 
   ([Gavin Morrow](https://github.com/gavinmorrow))
 
+- The language server can now find references for and rename items when
+  triggered from an import statement:
+
+  ```gleam
+  import wibble.{type Wibble}
+  //                  ^^^^^^ Trigger find references or rename here
+
+  pub fn main() {
+    let _ = Wibble
+  }
+  ```
+
+  ([Gavin Morrow](https://github.com/gavinmorrow))
+
 ### Formatter
 
 ### Bug fixes
