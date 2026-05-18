@@ -5022,6 +5022,42 @@ pub fn run(data) {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/5607
+#[test]
+fn bit_array_size_qualified_constant() {
+    assert_no_warnings!(
+        ("thepackage/sizes", "pub const chunk_size = 8"),
+        r#"
+import thepackage/sizes
+
+pub fn run(data) {
+  case data {
+    <<x:bytes-size(sizes.chunk_size), _:bits>> -> x
+    _ -> data
+  }
+}
+        "#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5607
+#[test]
+fn bit_array_size_qualified_constant_in_expression() {
+    assert_no_warnings!(
+        ("thepackage/sizes", "pub const width = 4\npub const height = 2"),
+        r#"
+import thepackage/sizes
+
+pub fn run(data) {
+  case data {
+    <<x:bytes-size(sizes.width * sizes.height), _:bits>> -> x
+    _ -> data
+  }
+}
+        "#
+    );
+}
+
 #[test]
 fn constant_used_in_todo_message_counts_as_used() {
     assert_no_warnings!(

@@ -2732,6 +2732,7 @@ pub enum BitArraySize<Type> {
     Variable {
         location: SrcSpan,
         name: EcoString,
+        module: Option<(EcoString, SrcSpan)>,
         constructor: Option<Box<ValueConstructor>>,
         type_: Type,
     },
@@ -2809,11 +2810,17 @@ impl<T> BitArraySize<T> {
             (BitArraySize::Int { .. }, _) => false,
 
             (
-                BitArraySize::Variable { name, .. },
+                BitArraySize::Variable { name, module, .. },
                 BitArraySize::Variable {
-                    name: other_name, ..
+                    name: other_name,
+                    module: other_module,
+                    ..
                 },
-            ) => name == other_name,
+            ) => {
+                name == other_name
+                    && module.as_ref().map(|(m, _)| m)
+                        == other_module.as_ref().map(|(m, _)| m)
+            }
             (BitArraySize::Variable { .. }, _) => false,
 
             (

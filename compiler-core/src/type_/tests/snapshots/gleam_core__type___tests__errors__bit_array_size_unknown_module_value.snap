@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport thepackage/sizes\n\npub fn run(data) {\n  case data {\n    <<x:bytes-size(sizes.unknown_const), _:bits>> -> x\n    _ -> data\n  }\n}\n"
+---
+----- SOURCE CODE
+-- thepackage/sizes.gleam
+pub const chunk_size = 8
+
+-- main.gleam
+
+import thepackage/sizes
+
+pub fn run(data) {
+  case data {
+    <<x:bytes-size(sizes.unknown_const), _:bits>> -> x
+    _ -> data
+  }
+}
+
+
+----- ERROR
+error: Unknown module value
+  ┌─ /src/one/two.gleam:6:20
+  │
+6 │     <<x:bytes-size(sizes.unknown_const), _:bits>> -> x
+  │                    ^^^^^^^^^^^^^^^^^^^ Did you mean `chunk_size`?
+
+The module `thepackage/sizes` does not have a `unknown_const` value.

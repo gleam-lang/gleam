@@ -501,10 +501,11 @@ pub trait Visit<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         name: &'ast EcoString,
+        module: &'ast Option<(EcoString, SrcSpan)>,
         constructor: &'ast Option<Box<ValueConstructor>>,
         type_: &'ast Arc<Type>,
     ) {
-        visit_typed_bit_array_size_variable(self, location, name, constructor, type_)
+        visit_typed_bit_array_size_variable(self, location, name, module, constructor, type_)
     }
 
     fn visit_typed_pattern_assign(
@@ -2087,9 +2088,10 @@ where
         BitArraySize::Variable {
             location,
             name,
+            module,
             constructor,
             type_,
-        } => v.visit_typed_bit_array_size_variable(location, name, constructor, type_),
+        } => v.visit_typed_bit_array_size_variable(location, name, module, constructor, type_),
         BitArraySize::BinaryOperator { left, right, .. } => {
             v.visit_typed_pattern_bit_array_size(left);
             v.visit_typed_pattern_bit_array_size(right);
@@ -2111,6 +2113,7 @@ pub fn visit_typed_bit_array_size_variable<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
     _name: &'a EcoString,
+    _module: &'a Option<(EcoString, SrcSpan)>,
     _constructor: &'a Option<Box<ValueConstructor>>,
     _type_: &'a Arc<Type>,
 ) where
