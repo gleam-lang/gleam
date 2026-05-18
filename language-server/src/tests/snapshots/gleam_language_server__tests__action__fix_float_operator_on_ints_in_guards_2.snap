@@ -1,0 +1,21 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  case todo {\n    _ if 1 -. 2 -> todo\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  case todo {
+    _ if 1 -. 2 -> todo
+         ▔▔▔▔▔↑        
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  case todo {
+    _ if 1 - 2 -> todo
+  }
+}

@@ -10048,6 +10048,121 @@ fn name() { "Jak" }
     );
 }
 
+#[test]
+fn fix_float_operator_on_ints_in_guards() {
+    let name = "Use `>=`";
+    assert_code_action!(
+        name,
+        r#"
+pub fn main() {
+  case todo {
+    _ if 1 >=. 2 -> todo
+  }
+}
+"#,
+        find_position_of("1").to_selection()
+    );
+}
+
+#[test]
+fn fix_float_operator_on_ints_in_guards_2() {
+    let name = "Use `-`";
+    assert_code_action!(
+        name,
+        r#"
+pub fn main() {
+  case todo {
+    _ if 1 -. 2 -> todo
+  }
+}
+"#,
+        find_position_of("1").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
+fn fix_float_operator_on_ints_in_guards_3() {
+    let name = "Use `*`";
+    assert_code_action!(
+        name,
+        r#"
+pub fn main() {
+  let wobble = 3
+  case todo {
+    _ if 1 *. wobble -> todo
+  }
+}
+"#,
+        find_position_of("*.").to_selection()
+    );
+}
+
+#[test]
+fn fix_int_operator_on_floats_in_guards() {
+    let name = "Use `>=.`";
+    assert_code_action!(
+        name,
+        r#"
+pub fn main() {
+  case todo {
+    _ if 1.0 >= 2.3 -> todo
+  }
+}
+"#,
+        find_position_of("1").to_selection()
+    );
+}
+
+#[test]
+fn fix_int_operator_on_floats_in_guards_2() {
+    let name = "Use `-.`";
+    assert_code_action!(
+        name,
+        r#"
+pub fn main() {
+  case todo {
+    _ if 1.12 - 2.0 -> todo
+  }
+}
+"#,
+        find_position_of("1").select_until(find_position_of("2.0"))
+    );
+}
+
+#[test]
+fn fix_int_operator_on_floats_in_guards_3() {
+    let name = "Use `*.`";
+    assert_code_action!(
+        name,
+        r#"
+pub fn main() {
+  let wobble = 3.2
+  case todo {
+    _ if 1.3 * wobble -> todo
+  }
+}
+"#,
+        find_position_of("*").to_selection()
+    );
+}
+
+#[test]
+fn fix_plus_operator_on_strings_in_guards() {
+    let name = "Use `<>`";
+    assert_code_action!(
+        name,
+        r#"
+pub fn main() {
+  let name = "jak"
+  case todo {
+    _ if "hello, " + name -> todo
+  }
+}
+"#,
+        find_position_of("hello").select_until(find_position_of("name ->"))
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/4454
 #[test]
 fn unqualify_already_imported_type() {
