@@ -44,6 +44,16 @@ fn hex_session_revoked() {
 }
 
 #[test]
+fn hex_release_not_found() {
+    let err = Error::HexReleaseNotFound {
+        package: "birdie".to_string(),
+        version: "1.234234.2".to_string(),
+    }
+    .to_diagnostics();
+    assert_debug_snapshot!(err[0]);
+}
+
+#[test]
 fn hex_error_conversion() {
     assert_eq!(
         Error::hex(hexpm::ApiError::OAuthRefreshTokenRejected),

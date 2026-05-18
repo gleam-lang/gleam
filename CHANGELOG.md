@@ -90,6 +90,10 @@
   flow for when a Hex session has been revoked or has expired.
   ([Sahil Upasane](https://github.com/404salad))
 
+- The `gleam hex revert` command now reports the missing package version when
+  the requested release does not exist on Hex.
+  ([fizyxbt](https://github.com/fizyxbt))
+
 - New packages are created requesting Erlang/OTP version 29 on GitHub actions.
   ([Louis Pilfold](https://github.com/lpil))
 
