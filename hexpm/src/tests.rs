@@ -76,6 +76,15 @@ fn revert_release_response_success() {
 }
 
 #[test]
+fn revert_release_response_too_old_error() {
+    let response = make_response(422, r#"{"message":"Validation error(s)","status":422,"errors":{"inserted_at":"can only delete a release up to one hour after publication"}}"#.as_bytes().to_vec());
+    let result = crate::api_revert_release_response(response).unwrap_err();
+    assert!(matches!(result, ApiError::ValidationError {..}));
+    assert_eq!(format!("{}", result), "The Hex Api returned validation error(s):\ninserted_at: can only delete a release up to one hour after publication\n");
+}
+
+
+#[test]
 fn add_owner_request() {
     let key = WriteActionCredentials::OAuthAccessToken {
         access_token: EcoString::from("my-api-key-here"),

@@ -592,6 +592,7 @@ pub fn api_revert_release_response(response: http::Response<Vec<u8>>) -> Result<
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
         StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
+        StatusCode::UNPROCESSABLE_ENTITY => Err(ApiError::validation_error(body)),
         status => Err(ApiError::unexpected_response(status, body)),
     }
 }
@@ -777,11 +778,21 @@ pub enum ApiError {
 
     #[error("The supplied one-time-password was not correct")]
     IncorrectOneTimePassword,
+
+    #[error("The Hex Api returned validation error(s):\n{0}")]
+    ValidationError(ValidationErrorBody),
 }
 
 impl ApiError {
     fn unexpected_response(status: StatusCode, body: Vec<u8>) -> Self {
         ApiError::UnexpectedResponse(status, String::from_utf8_lossy(&body).to_string())
+    }
+
+    fn validation_error(body: Vec<u8>) -> Self {
+        match serde_json::from_slice(&body) {
+            Ok(body) => ApiError::ValidationError(body),
+            Err(_) => Self::unexpected_response(StatusCode::UNPROCESSABLE_ENTITY, body),
+        }
     }
 
     /// Returns `true` if the api error is [`NotFound`].
@@ -793,6 +804,23 @@ impl ApiError {
 
     pub fn is_invalid_protobuf(&self) -> bool {
         matches!(self, Self::InvalidProtobuf(_))
+    }
+}
+
+
+#[derive(Debug, PartialEq, Eq, serde::Deserialize)]
+pub struct ValidationErrorBody {
+    pub message: String,
+    pub status: u16,
+    pub errors: HashMap<String, String>
+}
+
+impl Display for ValidationErrorBody {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (key, value) in self.errors.iter() {
+            write!(f, "{}: {}\n", key, value)?;
+        }
+        Ok(())
     }
 }
 

@@ -528,6 +528,7 @@ impl Error {
             | hexpm::ApiError::LateModification
             | hexpm::ApiError::OAuthTimeout
             | hexpm::ApiError::OAuthAccessDenied
+            | hexpm::ApiError::ValidationError(_)
             | hexpm::ApiError::ExpiredToken => Self::Hex(error.to_string()),
 
             hexpm::ApiError::OAuthRefreshTokenRejected => Self::HexSessionRevoked,
