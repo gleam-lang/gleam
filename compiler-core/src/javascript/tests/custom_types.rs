@@ -204,6 +204,18 @@ pub fn go() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/5613
+#[test]
+fn typescript_record_with_javascript_keyword_labels() {
+    assert_ts_def!(
+        r#"
+pub type Box {
+  Box(constructor: Int, prototype: Int, then: Int, other: Int)
+}
+"#,
+    );
+}
+
 #[test]
 fn long_name_variant_mixed_labels_typescript() {
     assert_ts_def!(
