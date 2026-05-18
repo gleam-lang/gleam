@@ -13,4 +13,4 @@ error: Syntax error
   │                             ^^^^^^^^^ I was not expecting this
 
 Found a name, expected one of: 
-- An integer
+- An int
