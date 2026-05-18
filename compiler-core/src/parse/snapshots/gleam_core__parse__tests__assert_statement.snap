@@ -14,8 +14,8 @@ expression: assert 10 != 11
                     start: 7,
                     end: 15,
                 },
-                name: NotEq,
-                name_location: SrcSpan {
+                operator: NotEq,
+                operator_location: SrcSpan {
                     start: 10,
                     end: 12,
                 },

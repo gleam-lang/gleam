@@ -511,11 +511,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             UntypedExpr::BinOp {
                 location,
-                name,
-                name_location,
+                operator,
+                operator_location,
                 left,
                 right,
-            } => Ok(self.infer_binop(name, name_location, *left, *right, location)),
+            } => Ok(self.infer_binop(operator, operator_location, *left, *right, location)),
 
             UntypedExpr::FieldAccess {
                 label_location,
@@ -1850,13 +1850,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_binop(
         &mut self,
-        name: BinOp,
-        name_location: SrcSpan,
+        operator: BinOp,
+        operator_location: SrcSpan,
         left: UntypedExpr,
         right: UntypedExpr,
         location: SrcSpan,
     ) -> TypedExpr {
-        let (input_type, output_type) = match &name {
+        let (input_type, output_type) = match &operator {
             BinOp::Eq | BinOp::NotEq => {
                 let left = self.infer(left);
                 let right = self.infer(right);
@@ -1867,15 +1867,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     // We only want to warn for redundant comparisons if it
                     // makes sense to compare the two values.
                     // That is, their types should match!
-                    self.check_for_redundant_comparison(name, &left, &right, location);
+                    self.check_for_redundant_comparison(operator, &left, &right, location);
                 }
 
-                self.check_for_inefficient_empty_list_check(name, &left, &right, location);
+                self.check_for_inefficient_empty_list_check(operator, &left, &right, location);
 
                 return TypedExpr::BinOp {
                     location,
-                    name,
-                    name_location,
+                    operator,
+                    operator_location,
                     type_: bool(),
                     left: Box::new(left),
                     right: Box::new(right),
@@ -1911,51 +1911,53 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if unify_left.is_ok() && unify_right.is_ok() {
             // We only want to warn for redundant comparisons if it makes sense
             // to compare the two values. That is, their types should match!
-            self.check_for_redundant_comparison(name, &left, &right, location);
+            self.check_for_redundant_comparison(operator, &left, &right, location);
         }
 
         // There's some common cases in which we can provide nicer error messages:
         // - if we're using a float operator on int values
         // - if we're using an int operator on float values
         // - if we're using `+` on strings
-        if name.is_float_operator() && left.type_().is_int() && right.type_().is_int() {
+        if operator.is_float_operator() && left.type_().is_int() && right.type_().is_int() {
             self.problems.error(Error::FloatOperatorOnInts {
-                operator: name,
-                location: name_location,
+                operator,
+                location: operator_location,
             })
-        } else if name.is_int_operator() && left.type_().is_float() && right.type_().is_float() {
+        } else if operator.is_int_operator() && left.type_().is_float() && right.type_().is_float()
+        {
             self.problems.error(Error::IntOperatorOnFloats {
-                operator: name,
-                location: name_location,
+                operator,
+                location: operator_location,
             })
-        } else if name == BinOp::AddInt && left.type_().is_string() && right.type_().is_string() {
+        } else if operator == BinOp::AddInt && left.type_().is_string() && right.type_().is_string()
+        {
             self.problems.error(Error::StringConcatenationWithAddInt {
-                location: name_location,
+                location: operator_location,
             })
         } else {
             // In all other cases we just report an error for each of the operands.
             if let Err(error) = unify_left {
                 self.problems.error(
                     error
-                        .operator_situation(name)
+                        .operator_situation(operator)
                         .into_error(left.type_defining_location()),
                 );
             }
             if let Err(error) = unify_right {
                 self.problems.error(
                     error
-                        .operator_situation(name)
+                        .operator_situation(operator)
                         .into_error(right.type_defining_location()),
                 );
             }
         }
 
-        self.check_for_inefficient_empty_list_check(name, &left, &right, location);
+        self.check_for_inefficient_empty_list_check(operator, &left, &right, location);
 
         TypedExpr::BinOp {
             location,
-            name,
-            name_location,
+            operator,
+            operator_location,
             type_: output_type,
             left: Box::new(left),
             right: Box::new(right),

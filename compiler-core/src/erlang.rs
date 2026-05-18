@@ -824,7 +824,7 @@ fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> D
         } => docvec![env.local_var_name(name), "/binary"],
 
         TypedExpr::BinOp {
-            name: BinOp::Concatenate,
+            operator: BinOp::Concatenate,
             ..
         } => docvec![expr(value, env), "/binary"],
 
@@ -2607,8 +2607,11 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         } => case(subjects, clauses, env),
 
         TypedExpr::BinOp {
-            name, left, right, ..
-        } => bin_op(name, left, right, env),
+            operator,
+            left,
+            right,
+            ..
+        } => bin_op(operator, left, right, env),
 
         TypedExpr::Tuple { elements, .. } => tuple(
             elements
@@ -2740,9 +2743,12 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
             assert_call(fun, arguments, &mut assignments, env)
         }
         TypedExpr::BinOp {
-            name, left, right, ..
+            operator,
+            left,
+            right,
+            ..
         } => {
-            let operator = match name {
+            let operator_document = match operator {
                 BinOp::And => {
                     return assert_and(left, right, message, *location, env);
                 }
@@ -2772,10 +2778,14 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
             let left_document = assign_to_variable(left, &mut assignments, env);
             let right_document = assign_to_variable(right, &mut assignments, env);
             (
-                binop_documents(left_document.clone(), operator, right_document.clone()),
+                binop_documents(
+                    left_document.clone(),
+                    operator_document,
+                    right_document.clone(),
+                ),
                 vec![
                     ("kind", atom("binary_operator")),
-                    ("operator", atom(name.name())),
+                    ("operator", atom(operator.name())),
                     (
                         "left",
                         asserted_expression(

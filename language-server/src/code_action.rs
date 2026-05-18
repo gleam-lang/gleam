@@ -3961,9 +3961,12 @@ fn can_be_constant(
 
         // Extract concat binary operation if both sides can be constants
         TypedExpr::BinOp {
-            name, left, right, ..
+            operator,
+            left,
+            right,
+            ..
         } => {
-            matches!(name, ast::BinOp::Concatenate)
+            matches!(operator, ast::BinOp::Concatenate)
                 && can_be_constant(module, left, Some(module_constants))
                 && can_be_constant(module, right, Some(module_constants))
         }
@@ -7719,8 +7722,8 @@ impl<'a> ConvertToPipe<'a> {
         // If the expression being piped is a binary operation with
         // precedence lower than pipes then we have to wrap it in curly
         // braces to not mess with the order of operations.
-        let arg_text = if let TypedExpr::BinOp { name, .. } = arg.value
-            && name.precedence() < PIPE_PRECEDENCE
+        let arg_text = if let TypedExpr::BinOp { operator, .. } = arg.value
+            && operator.precedence() < PIPE_PRECEDENCE
         {
             &format!("{{ {arg_text} }}")
         } else {

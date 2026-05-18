@@ -4926,31 +4926,31 @@ fn reduce_bit_array_size((_, token, _): Spanned, estack: &mut Vec<BitArraySize<(
 
 fn expr_op_reduction(
     (token_start, token, token_end): Spanned,
-    l: UntypedExpr,
-    r: UntypedExpr,
+    left: UntypedExpr,
+    right: UntypedExpr,
 ) -> UntypedExpr {
     if token == Token::Pipe {
-        let expressions = if let UntypedExpr::PipeLine { mut expressions } = l {
-            expressions.push(r);
+        let expressions = if let UntypedExpr::PipeLine { mut expressions } = left {
+            expressions.push(right);
             expressions
         } else {
-            vec1![l, r]
+            vec1![left, right]
         };
         UntypedExpr::PipeLine { expressions }
     } else {
         match tok_to_binop(&token) {
-            Some(bin_op) => UntypedExpr::BinOp {
+            Some(operator) => UntypedExpr::BinOp {
                 location: SrcSpan {
-                    start: l.location().start,
-                    end: r.location().end,
+                    start: left.location().start,
+                    end: right.location().end,
                 },
-                name: bin_op,
-                name_location: SrcSpan {
+                operator,
+                operator_location: SrcSpan {
                     start: token_start,
                     end: token_end,
                 },
-                left: Box::new(l),
-                right: Box::new(r),
+                left: Box::new(left),
+                right: Box::new(right),
             },
             _ => {
                 panic!("Token could not be converted to binop.")
