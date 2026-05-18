@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main(x: Int) {\n  case x {\n    _ if x != \"\" || False -> 2\n    _ -> 1\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(x: Int) {
+  case x {
+    _ if x != "" || False -> 2
+    _ -> 1
+  }
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:15
+  │
+4 │     _ if x != "" || False -> 2
+  │               ^^
+
+Expected type:
+
+    Int
+
+Found type:
+
+    String
