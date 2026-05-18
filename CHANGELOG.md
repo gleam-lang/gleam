@@ -129,6 +129,10 @@
   improves suggestions to push a tag, if it doesn't exists.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The error message when failing to decrypt the local Hex API key is now more
+  informative and helpful.
+  ([Moritz Böhme](https://github.com/MoritzBoehme))
+
 ### Language server
 
 - The language server can now help with completions when typing a list's tail:
