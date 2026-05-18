@@ -129,6 +129,10 @@
   improves suggestions to push a tag, if it doesn't exists.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Hex.pm validation errors are formatted in a human readable form.
+  For example when reverting an old release.
+  ([Moritz Böhme](https://github.com/MoritzBoehme))
+
 ### Language server
 
 - The language server can now help with completions when typing a list's tail:
