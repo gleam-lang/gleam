@@ -3607,6 +3607,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "test-commands"
+version = "1.16.0"
+dependencies = [
+ "camino",
+ "gleam-cli",
+ "gleam-core",
+ "insta",
+ "test-helpers-rs",
+]
+
+[[package]]
 name = "test-helpers-rs"
 version = "0.1.0"
 dependencies = [

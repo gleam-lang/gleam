@@ -1,0 +1,5 @@
+name = "escript_with_wrong_arity_main_function"
+version = "1.0.0"
+
+[dependencies]
+[dev_dependencies]
