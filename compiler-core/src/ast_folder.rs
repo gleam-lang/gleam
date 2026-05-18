@@ -1476,9 +1476,12 @@ pub trait PatternFolder {
                 value,
                 int_value,
             } => self.fold_bit_array_size_int(location, value, int_value),
-            BitArraySize::Variable { location, name, .. } => {
-                self.fold_bit_array_size_variable(location, name)
-            }
+            BitArraySize::Variable {
+                location,
+                name,
+                module,
+                ..
+            } => self.fold_bit_array_size_variable(location, name, module),
             BitArraySize::BinaryOperator {
                 location,
                 operator,
@@ -1514,10 +1517,12 @@ pub trait PatternFolder {
         &mut self,
         location: SrcSpan,
         name: EcoString,
+        module: Option<(EcoString, SrcSpan)>,
     ) -> BitArraySize<()> {
         BitArraySize::Variable {
             location,
             name,
+            module,
             constructor: None,
             type_: (),
         }

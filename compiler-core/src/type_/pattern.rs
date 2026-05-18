@@ -1351,70 +1351,129 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     int_value,
                 }
             }
-            BitArraySize::Variable { name, location, .. } => {
-                let constructor = match self.variables.get_mut(&name) {
-                    // If we've bound a variable in the current bit array pattern,
-                    // we want to use that.
-                    Some(variable) if variable.in_scope() => {
-                        variable.usage = Usage::UsedInPattern;
-                        ValueConstructor::local_variable(
-                            variable.location,
-                            variable.origin.clone(),
-                            variable.type_.clone(),
-                        )
-                    }
-                    // Otherwise, we check the local scope.
-                    Some(_) | None => match self.environment.get_variable(&name) {
-                        Some(constructor) => constructor.clone(),
-                        None => {
-                            return Err(Error::UnknownVariable {
+            BitArraySize::Variable {
+                name,
+                location,
+                module,
+                ..
+            } => {
+                let constructor = if let Some((module_alias, module_location)) = &module {
+                    // Qualified name: module_alias.name — look up in imported modules
+                    let (_, imported_module) = self
+                        .environment
+                        .imported_modules
+                        .get(module_alias)
+                        .ok_or_else(|| Error::UnknownModule {
+                            location: *module_location,
+                            name: module_alias.clone(),
+                            suggestions: self
+                                .environment
+                                .suggest_modules(module_alias, Imported::Value(name.clone())),
+                        })?;
+
+                    let vc =
+                        imported_module
+                            .get_importable_value(&name)
+                            .ok_or_else(|| Error::UnknownModuleValue {
                                 location,
                                 name: name.clone(),
-                                variables: self.environment.local_value_names(),
-                                discarded_location: self
-                                    .environment
-                                    .discarded_names
-                                    .get(&eco_format!("_{name}"))
-                                    .cloned(),
-                                type_with_name_in_scope: self
-                                    .environment
-                                    .module_types
-                                    .keys()
-                                    .any(|type_| type_ == &name),
-                                possible_modules: self
-                                    .environment
-                                    .get_possible_modules_with_value(&name),
-                            });
+                                module_name: imported_module.name.clone(),
+                                value_constructors: imported_module.public_value_names(),
+                                type_with_same_name: imported_module
+                                    .get_importable_type(&name)
+                                    .is_some(),
+                                context: ModuleValueUsageContext::ModuleAccess,
+                            })?
+                            .clone();
+
+                    self.environment
+                        .references
+                        .register_module_reference(module_alias.clone());
+
+                    if let ValueConstructorVariant::ModuleConstant {
+                        name: canonical,
+                        module: mod_name,
+                        ..
+                    } = &vc.variant
+                    {
+                        self.environment.references.register_value_reference(
+                            mod_name.clone(),
+                            canonical.clone(),
+                            &name,
+                            location,
+                            ReferenceKind::Qualified,
+                        );
+                    }
+
+                    vc
+                } else {
+                    // Unqualified name — look up in local scope
+                    match self.variables.get_mut(&name) {
+                        // If we've bound a variable in the current bit array pattern,
+                        // we want to use that.
+                        Some(variable) if variable.in_scope() => {
+                            variable.usage = Usage::UsedInPattern;
+                            ValueConstructor::local_variable(
+                                variable.location,
+                                variable.origin.clone(),
+                                variable.type_.clone(),
+                            )
                         }
-                    },
+                        // Otherwise, we check the local scope.
+                        Some(_) | None => match self.environment.get_variable(&name) {
+                            Some(constructor) => constructor.clone(),
+                            None => {
+                                return Err(Error::UnknownVariable {
+                                    location,
+                                    name: name.clone(),
+                                    variables: self.environment.local_value_names(),
+                                    discarded_location: self
+                                        .environment
+                                        .discarded_names
+                                        .get(&eco_format!("_{name}"))
+                                        .cloned(),
+                                    type_with_name_in_scope: self
+                                        .environment
+                                        .module_types
+                                        .keys()
+                                        .any(|type_| type_ == &name),
+                                    possible_modules: self
+                                        .environment
+                                        .get_possible_modules_with_value(&name),
+                                });
+                            }
+                        },
+                    }
                 };
 
-                match &constructor.variant {
-                    ValueConstructorVariant::LocalVariable { .. } => (),
-                    ValueConstructorVariant::ModuleConstant {
-                        name: canonical,
-                        module,
-                        ..
-                    }
-                    | ValueConstructorVariant::ModuleFn {
-                        name: canonical,
-                        module,
-                        ..
-                    }
-                    | ValueConstructorVariant::Record {
-                        name: canonical,
-                        module,
-                        ..
-                    } => self.environment.references.register_value_reference(
-                        module.clone(),
-                        canonical.clone(),
-                        &name,
-                        location,
-                        ReferenceKind::Unqualified,
-                    ),
-                };
+                if module.is_none() {
+                    match &constructor.variant {
+                        ValueConstructorVariant::LocalVariable { .. } => (),
+                        ValueConstructorVariant::ModuleConstant {
+                            name: canonical,
+                            module: mod_name,
+                            ..
+                        }
+                        | ValueConstructorVariant::ModuleFn {
+                            name: canonical,
+                            module: mod_name,
+                            ..
+                        }
+                        | ValueConstructorVariant::Record {
+                            name: canonical,
+                            module: mod_name,
+                            ..
+                        } => self.environment.references.register_value_reference(
+                            mod_name.clone(),
+                            canonical.clone(),
+                            &name,
+                            location,
+                            ReferenceKind::Unqualified,
+                        ),
+                    };
+                    self.environment.increment_usage(&name);
+                }
 
-                self.environment.increment_usage(&name);
                 let type_ = self.environment.instantiate(
                     constructor.type_.clone(),
                     &mut hashmap![],
@@ -1425,6 +1484,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 BitArraySize::Variable {
                     name,
                     location,
+                    module,
                     constructor: Some(Box::new(constructor)),
                     type_,
                 }

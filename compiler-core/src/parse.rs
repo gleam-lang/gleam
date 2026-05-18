@@ -3913,11 +3913,37 @@ where
 
     fn parse_bit_array_size_unit(&mut self) -> Result<BitArraySize<()>, ParseError> {
         match self.tok0.take() {
+            // Qualified name: module.constant
+            Some((start, Token::Name { name: module_alias }, module_end))
+                if self.peek_tok1() == Some(&Token::Dot) =>
+            {
+                self.advance(); // advance past module name
+                self.advance(); // advance past dot
+
+                match self.tok0.take() {
+                    Some((_, Token::Name { name }, end)) => {
+                        self.advance();
+                        Ok(BitArraySize::Variable {
+                            location: SrcSpan { start, end },
+                            name,
+                            module: Some((module_alias, SrcSpan { start, end: module_end })),
+                            constructor: None,
+                            type_: (),
+                        })
+                    }
+                    tok0 => {
+                        self.tok0 = tok0;
+                        self.next_tok_unexpected(vec!["A variable name".into()])
+                    }
+                }
+            }
+
             Some((start, Token::Name { name }, end)) => {
                 self.advance();
                 Ok(BitArraySize::Variable {
                     location: SrcSpan { start, end },
                     name,
+                    module: None,
                     constructor: None,
                     type_: (),
                 })

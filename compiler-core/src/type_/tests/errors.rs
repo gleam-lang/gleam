@@ -4204,3 +4204,36 @@ pub fn main() {
 }"
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5607
+#[test]
+fn bit_array_size_unknown_module() {
+    assert_module_error!(
+        "
+pub fn run(data) {
+  case data {
+    <<x:bytes-size(unknown.chunk_size), _:bits>> -> x
+    _ -> data
+  }
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5607
+#[test]
+fn bit_array_size_unknown_module_value() {
+    assert_module_error!(
+        ("thepackage/sizes", "pub const chunk_size = 8"),
+        "
+import thepackage/sizes
+
+pub fn run(data) {
+  case data {
+    <<x:bytes-size(sizes.unknown_const), _:bits>> -> x
+    _ -> data
+  }
+}
+"
+    );
+}

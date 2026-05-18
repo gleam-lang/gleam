@@ -447,11 +447,13 @@ impl Inliner<'_> {
             BitArraySize::Variable {
                 location,
                 name,
+                module,
                 constructor,
                 type_,
             } => BitArraySize::Variable {
                 location,
                 name: self.variable_name(name),
+                module,
                 constructor,
                 type_,
             },
@@ -1360,6 +1362,7 @@ impl<'ast> Visit<'ast> for FindInlinableParameters {
         &mut self,
         _location: &'ast SrcSpan,
         name: &'ast EcoString,
+        _module: &'ast Option<(EcoString, SrcSpan)>,
         constructor: &'ast Option<Box<ValueConstructor>>,
         _type_: &'ast Arc<Type>,
     ) {
