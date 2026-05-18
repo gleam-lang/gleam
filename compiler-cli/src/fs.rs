@@ -793,3 +793,17 @@ impl WarningEmitterIO for ConsoleWarningEmitter {
             .expect("Writing warning to stderr");
     }
 }
+
+/// Returns root of Git repository in base path if it is initialised.
+pub fn get_git_repository_root(mut path: Utf8PathBuf) -> Option<Utf8PathBuf> {
+    loop {
+        if path.join(".git").is_dir() {
+            return Some(path);
+        }
+
+        path = match path.parent() {
+            Some(path) => path.into(),
+            None => return None,
+        }
+    }
+}

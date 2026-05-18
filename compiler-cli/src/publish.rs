@@ -116,7 +116,7 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
 
     // Prompt the user to make a git tag if they have not.
     let has_repo = config.repository.is_some();
-    let repository_root = get_git_repository_root(".".into());
+    let repository_root = fs::get_git_repository_root(".".into());
     if has_repo && let Some(repository_root) = repository_root {
         let git = repository_root.join(".git");
 
@@ -137,20 +137,6 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         }
     }
     Ok(())
-}
-
-/// Returns root of Git repository in base path if it is initialised.
-fn get_git_repository_root(mut path: Utf8PathBuf) -> Option<Utf8PathBuf> {
-    loop {
-        if path.join(".git").is_dir() {
-            return Some(path);
-        }
-
-        path = match path.parent() {
-            Some(path) => path.into(),
-            None => return None,
-        }
-    }
 }
 
 fn check_for_invalid_readme(config: &PackageConfig, paths: &ProjectPaths) -> Result<(), Error> {
@@ -1135,7 +1121,7 @@ fn find_git_repo_root_at_same_level() {
 
     fs::mkdir(path.join(".git")).expect("Create directory");
 
-    let repository_root = get_git_repository_root(path);
+    let repository_root = fs::get_git_repository_root(path);
     assert!(
         repository_root
             .expect("There should be repo root")
@@ -1148,7 +1134,7 @@ fn find_missing_git_repo_root_at_same_level() {
     let tmp = tempfile::tempdir().unwrap();
     let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
 
-    let repository_root = get_git_repository_root(path);
+    let repository_root = fs::get_git_repository_root(path);
     assert!(repository_root.is_none());
 }
 
@@ -1162,7 +1148,7 @@ fn find_git_repo_root_at_lower_level() {
     let current_path = path.join("subdirectory").join("another_subdirectory");
     fs::mkdir(&current_path).expect("Create directory");
 
-    let repository_root = get_git_repository_root(current_path);
+    let repository_root = fs::get_git_repository_root(current_path);
     assert!(
         repository_root
             .expect("There should be repo root")
@@ -1178,6 +1164,6 @@ fn find_missing_git_repo_root_at_lower_level() {
     let current_path = path.join("subdirectory").join("another_subdirectory");
     fs::mkdir(&current_path).expect("Create directory");
 
-    let repository_root = get_git_repository_root(current_path);
+    let repository_root = fs::get_git_repository_root(current_path);
     assert!(repository_root.is_none());
 }
