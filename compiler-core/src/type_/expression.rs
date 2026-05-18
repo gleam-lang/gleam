@@ -2641,6 +2641,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             ClauseGuard::BinaryOperator {
                 location,
                 operator,
+                operator_location,
                 left,
                 right,
             } => {
@@ -2679,8 +2680,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         // If both operands are floats, then we use a more specialised
                         // error.
                         if left.type_().is_float() && right.type_().is_float() {
-                            self.problems
-                                .error(Error::IntOperatorOnFloats { operator, location });
+                            self.problems.error(Error::IntOperatorOnFloats {
+                                operator,
+                                location: operator_location,
+                            });
                         } else {
                             if let Err(error) = unify(int(), left.type_()) {
                                 self.problems
@@ -2706,8 +2709,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         // If both operands are int then we use a more specialised
                         // error
                         if left.type_().is_int() && right.type_().is_int() {
-                            self.problems
-                                .error(Error::FloatOperatorOnInts { operator, location });
+                            self.problems.error(Error::FloatOperatorOnInts {
+                                operator,
+                                location: operator_location,
+                            });
                         } else {
                             if let Err(error) = unify(float(), left.type_()) {
                                 self.problems
@@ -2737,6 +2742,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ClauseGuard::BinaryOperator {
                     location,
                     operator,
+                    operator_location,
                     left: Box::new(left),
                     right: Box::new(right),
                 }

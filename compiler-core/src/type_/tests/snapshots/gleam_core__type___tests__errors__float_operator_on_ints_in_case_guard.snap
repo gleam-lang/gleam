@@ -7,9 +7,9 @@ case 3 { x if x +. 2 == 5.0 -> "a" _ -> "b" }
 
 ----- ERROR
 error: Type mismatch
-  ┌─ /src/one/two.gleam:1:15
+  ┌─ /src/one/two.gleam:1:17
   │
 1 │ case 3 { x if x +. 2 == 5.0 -> "a" _ -> "b" }
-  │               ^^^^^^ Use + instead
+  │                 ^^ Use + instead
 
 The +. operator can only be used on Floats.

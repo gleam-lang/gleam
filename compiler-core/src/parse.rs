@@ -4960,21 +4960,23 @@ fn expr_op_reduction(
 }
 
 fn clause_guard_reduction(
-    (_, token, _): Spanned,
-    l: UntypedClauseGuard,
-    r: UntypedClauseGuard,
+    (start, token, end): Spanned,
+    left: UntypedClauseGuard,
+    right: UntypedClauseGuard,
 ) -> UntypedClauseGuard {
     let location = SrcSpan {
-        start: l.location().start,
-        end: r.location().end,
+        start: left.location().start,
+        end: right.location().end,
     };
-    let left = Box::new(l);
-    let right = Box::new(r);
+    let left = Box::new(left);
+    let right = Box::new(right);
     let operator = tok_to_binop(&token).expect("Token could not be converted to binop.");
+    let operator_location = SrcSpan::new(start, end);
 
     UntypedClauseGuard::BinaryOperator {
         location,
         operator,
+        operator_location,
         left,
         right,
     }
