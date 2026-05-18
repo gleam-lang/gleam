@@ -152,6 +152,10 @@
   programs bundled into a single file.
   ([Louis Pilfold](https://github.com/lpil))
 
+- The error message when failing to decrypt the local Hex API key is now more
+  informative and helpful.
+  ([Moritz Böhme](https://github.com/MoritzBoehme))
+
 ### Language server
 
 - The language server now offers a "Fill labels" code action on constants to
