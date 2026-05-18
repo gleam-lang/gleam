@@ -625,7 +625,7 @@ pub fn reader(path: impl AsRef<Utf8Path>) -> Result<WrappedReader, Error> {
         err: Some(err.to_string()),
     })?;
 
-    Ok(WrappedReader::new(path.as_ref(), Box::new(reader)))
+    Ok(WrappedReader::new(path, Box::new(reader)))
 }
 
 pub fn buffered_reader<P: AsRef<Utf8Path>>(path: P) -> Result<impl BufRead, Error> {
