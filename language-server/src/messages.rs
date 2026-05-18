@@ -3,9 +3,9 @@ use lsp::{DefinitionRequest, DidChangeWatchedFilesNotification, DidOpenTextDocum
 use lsp_types::{
     self as lsp, CodeActionRequest, CompletionRequest, DidChangeTextDocumentNotification,
     DidCloseTextDocumentNotification, DidSaveTextDocumentNotification, DocumentFormattingRequest,
-    DocumentSymbolRequest, FoldingRangeRequest, HoverRequest, PrepareRenameRequest,
-    ReferencesRequest, RenameRequest, SignatureHelpRequest, TextDocumentContentChangeEvent,
-    TypeDefinitionRequest,
+    DocumentHighlightRequest, DocumentSymbolRequest, FoldingRangeRequest, HoverRequest,
+    PrepareRenameRequest, ReferencesRequest, RenameRequest, SignatureHelpRequest,
+    TextDocumentContentChangeEvent, TypeDefinitionRequest,
 };
 use std::time::Duration;
 
@@ -29,6 +29,7 @@ pub enum Request {
     PrepareRename(lsp::PrepareRenameParams),
     Rename(lsp::RenameParams),
     FindReferences(lsp::ReferenceParams),
+    DocumentHighlight(lsp::DocumentHighlightParams),
 }
 
 impl Request {
@@ -82,6 +83,10 @@ impl Request {
             "textDocument/references" => {
                 let params = cast_request::<ReferencesRequest>(request);
                 Some(Message::Request(id, Request::FindReferences(params)))
+            }
+            "textDocument/documentHighlight" => {
+                let params = cast_request::<DocumentHighlightRequest>(request);
+                Some(Message::Request(id, Request::DocumentHighlight(params)))
             }
             _ => None,
         }
