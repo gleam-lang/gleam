@@ -1,5 +1,3 @@
-use std::io::Cursor;
-
 use crate::fs::{self, ZipArchive};
 use camino::Utf8PathBuf;
 use gleam_core::{
@@ -9,6 +7,7 @@ use gleam_core::{
     paths::ProjectPaths,
     type_::ModuleFunction,
 };
+use std::io::Cursor;
 
 static ENTRYPOINT_FILENAME_POWERSHELL: &str = "entrypoint.ps1";
 static ENTRYPOINT_FILENAME_POSIX_SHELL: &str = "entrypoint.sh";
