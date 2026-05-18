@@ -430,6 +430,8 @@ impl<'a> CallGraphBuilder<'a> {
 
     fn guard(&mut self, guard: &'a UntypedClauseGuard) {
         match guard {
+            ClauseGuard::Invalid { .. } => (),
+
             ClauseGuard::BinaryOperator { left, right, .. } => {
                 self.guard(left);
                 self.guard(right);

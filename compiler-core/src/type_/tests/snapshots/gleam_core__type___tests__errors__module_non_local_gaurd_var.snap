@@ -7,6 +7,19 @@ fn one() { 1 }
 fn main() { case 1 { _ if one -> 1 } }
 
 ----- ERROR
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:2:13
+  │
+2 │ fn main() { case 1 { _ if one -> 1 } }
+  │             ^^^^^^^^^^^^^^^^^^^^^^^^
+
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    _
+
 error: Invalid guard variable
   ┌─ /src/one/two.gleam:2:27
   │

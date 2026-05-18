@@ -2304,6 +2304,11 @@ pub enum ClauseGuard<Type, RecordTag> {
     },
 
     Constant(Constant<Type, RecordTag>),
+
+    Invalid {
+        location: SrcSpan,
+        type_: Type,
+    },
 }
 
 impl<A, B> ClauseGuard<A, B> {
@@ -2315,6 +2320,7 @@ impl<A, B> ClauseGuard<A, B> {
             | ClauseGuard::Var { location, .. }
             | ClauseGuard::TupleIndex { location, .. }
             | ClauseGuard::ModuleSelect { location, .. }
+            | ClauseGuard::Invalid { location, .. }
             | ClauseGuard::Block { location, .. } => *location,
             ClauseGuard::FieldAccess {
                 label_location,
@@ -2337,6 +2343,7 @@ impl<A, B> ClauseGuard<A, B> {
             ClauseGuard::BinaryOperator { operator, .. } => Some(*operator),
 
             ClauseGuard::Constant(_)
+            | ClauseGuard::Invalid { .. }
             | ClauseGuard::Var { .. }
             | ClauseGuard::Not { .. }
             | ClauseGuard::TupleIndex { .. }
@@ -2356,6 +2363,7 @@ impl TypedClauseGuard {
             ClauseGuard::ModuleSelect { type_, .. } => type_.clone(),
             ClauseGuard::Constant(constant) => constant.type_(),
             ClauseGuard::Block { value, .. } => value.type_(),
+            ClauseGuard::Invalid { type_, .. } => type_.clone(),
 
             ClauseGuard::Not { .. } => type_::bool(),
 
@@ -2426,6 +2434,7 @@ impl TypedClauseGuard {
             | ClauseGuard::Block { value, .. } => value.find_node(byte_index),
             ClauseGuard::Constant(constant) => constant.find_node(byte_index),
             ClauseGuard::Var { .. } => Some(Located::ClauseGuard(self)),
+            ClauseGuard::Invalid { .. } => Some(Located::ClauseGuard(self)),
         }
     }
 
@@ -2439,6 +2448,7 @@ impl TypedClauseGuard {
             ClauseGuard::FieldAccess { container, .. } => container.referenced_variables(),
             ClauseGuard::Constant(constant) => constant.referenced_variables(),
             ClauseGuard::ModuleSelect { .. } => im::HashSet::new(),
+            ClauseGuard::Invalid { .. } => im::HashSet::new(),
 
             ClauseGuard::BinaryOperator { left, right, .. } => left
                 .referenced_variables()
@@ -2523,6 +2533,9 @@ impl TypedClauseGuard {
                 one.syntactically_eq(other)
             }
             (ClauseGuard::Constant(_), _) => false,
+
+            // An invalid guard is never the same as another one
+            (ClauseGuard::Invalid { .. }, _) => false,
         }
     }
 
@@ -2532,6 +2545,7 @@ impl TypedClauseGuard {
             | ClauseGuard::BinaryOperator { .. }
             | ClauseGuard::Not { .. }
             | ClauseGuard::TupleIndex { .. }
+            | ClauseGuard::Invalid { .. }
             | ClauseGuard::FieldAccess { .. } => None,
             ClauseGuard::Constant(constant) => constant.definition_location(),
             ClauseGuard::Var {
