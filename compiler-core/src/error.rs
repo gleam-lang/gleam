@@ -1767,17 +1767,15 @@ The error from the encryption library was:
                 }]
             }
 
-            Error::FailedToDecryptLocalHexApiKey { detail } => {
+            Error::FailedToDecryptLocalHexApiKey { detail: _detail } => {
                 let text = wrap_format!(
                     "Unable to decrypt the local Hex API key with the given password.
-The error from the encryption library was:
-
-    {detail}"
-                );
+Did you make a typo? Please try again.");
                 vec![Diagnostic {
                     title: "Failed to decrypt local Hex API key".into(),
                     text,
-                    hint: None,
+                    hint: Some("If you have forgotten your local password you can create
+new credentials with `gleam hex authenticate`.".into()),
                     level: Level::Error,
                     location: None,
                 }]
