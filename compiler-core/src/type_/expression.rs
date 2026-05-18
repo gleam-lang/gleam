@@ -2427,14 +2427,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             let (typed_pattern, typed_alternatives, error_encountered) =
                 this.infer_clause_pattern(pattern, alternative_patterns, subjects, &location);
 
-            let guard = match this.infer_optional_clause_guard(guard) {
-                Ok(guard) => guard,
-                // If an error occurs inferring guard then assume no guard
-                Err(error) => {
-                    this.problems.error(error);
-                    None
-                }
-            };
+            let guard = this.infer_optional_clause_guard(guard);
             let then = this.infer(then);
             let clause = Clause {
                 location,
@@ -2488,49 +2481,34 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_optional_clause_guard(
         &mut self,
         guard: Option<UntypedClauseGuard>,
-    ) -> Result<Option<TypedClauseGuard>, Error> {
-        match guard {
-            // If there is no guard we do nothing
-            None => Ok(None),
-
-            // If there is a guard we assert that it is of type Bool
-            Some(guard) => {
-                let guard = self.infer_clause_guard(guard)?;
-                unify(bool(), guard.type_())
-                    .map_err(|e| convert_unify_error(e, guard.location()))?;
-                Ok(Some(guard))
-            }
+    ) -> Option<TypedClauseGuard> {
+        // If there is a guard we type check it and assert that it is of type
+        // Bool.
+        let guard = self.infer_clause_guard(guard?);
+        if let Err(error) = unify(bool(), guard.type_()) {
+            self.problems
+                .error(convert_unify_error(error, guard.location()));
         }
+        Some(guard)
     }
 
-    fn infer_clause_guard(&mut self, guard: UntypedClauseGuard) -> Result<TypedClauseGuard, Error> {
+    fn infer_clause_guard(&mut self, guard: UntypedClauseGuard) -> TypedClauseGuard {
         match guard {
+            ClauseGuard::Invalid { .. } => {
+                unreachable!("untyped guard should never be invalid")
+            }
+
             ClauseGuard::Var { location, name, .. } => {
-                let constructor =
-                    self.infer_value_constructor(&None, &name, &location, ValueUsage::Other)?;
-
-                // We cannot support all values in guard expressions as the BEAM does not
-                let (definition_location, origin) = match &constructor.variant {
-                    ValueConstructorVariant::LocalVariable {
-                        location, origin, ..
-                    } => (*location, origin.clone()),
-                    ValueConstructorVariant::ModuleFn { .. }
-                    | ValueConstructorVariant::Record { .. } => {
-                        return Err(Error::NonLocalClauseGuardVariable { location, name });
+                match self.infer_clause_guard_variable(name, location) {
+                    Ok(variable) => variable,
+                    Err(error) => {
+                        self.problems.error(error);
+                        ClauseGuard::Invalid {
+                            location,
+                            type_: self.new_unbound_var(),
+                        }
                     }
-
-                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                        return Ok(ClauseGuard::Constant(literal.clone()));
-                    }
-                };
-
-                Ok(ClauseGuard::Var {
-                    location,
-                    name,
-                    origin,
-                    type_: constructor.type_,
-                    definition_location,
-                })
+                }
             }
 
             ClauseGuard::TupleIndex {
@@ -2539,35 +2517,44 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 index,
                 ..
             } => {
-                let tuple = self.infer_clause_guard(*tuple)?;
-                match tuple.type_().as_ref() {
-                    Type::Tuple { elements } => {
-                        let type_ = elements
-                            .get(index as usize)
-                            .ok_or(Error::OutOfBoundsTupleIndex {
+                let tuple = self.infer_clause_guard(*tuple);
+                let index_type = match tuple.type_().as_ref() {
+                    Type::Tuple { elements } => match elements.get(index as usize) {
+                        Some(type_) => type_.clone(),
+                        // If the index is outside the tuple range, then we
+                        // report the error and return an unbound type to keep
+                        // going.
+                        None => {
+                            self.problems.error(Error::OutOfBoundsTupleIndex {
                                 location,
                                 index,
                                 size: elements.len(),
-                            })?
-                            .clone();
-                        Ok(ClauseGuard::TupleIndex {
-                            location,
-                            index,
-                            type_,
-                            tuple: Box::new(tuple),
-                        })
-                    }
+                            });
+                            self.new_unbound_var()
+                        }
+                    },
 
-                    type_ if type_.is_unbound() => Err(Error::NotATupleUnbound {
-                        location: tuple.location(),
-                    }),
+                    tuple_type if tuple_type.is_unbound() => {
+                        self.problems.error(Error::NotATupleUnbound {
+                            location: tuple.location(),
+                        });
+                        self.new_unbound_var()
+                    }
 
                     Type::Named { .. } | Type::Fn { .. } | Type::Var { .. } => {
-                        Err(Error::NotATuple {
+                        self.problems.error(Error::NotATuple {
                             location: tuple.location(),
                             given: tuple.type_(),
-                        })
+                        });
+                        self.new_unbound_var()
                     }
+                };
+
+                ClauseGuard::TupleIndex {
+                    location,
+                    index,
+                    type_: index_type,
+                    tuple: Box::new(tuple),
                 }
             }
 
@@ -2577,48 +2564,79 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 container,
                 index: _,
                 type_: (),
-            } => match self.infer_clause_guard(*container.clone()) {
-                Ok(container) => self.infer_guard_record_access(container, label, label_location),
+            } => {
+                let container_location = container.location();
+                let result = if let ClauseGuard::Var { name, location, .. } = *container {
+                    // If the container looks like a regular variable, then this
+                    // could either be a module select, or a record access.
+                    match self.infer_clause_guard_variable(name.clone(), location) {
+                        // If the variable itself cannot be inferred as one, then
+                        // it could really be a module select. We try that one
+                        // as an elternative.
+                        Err(error) => self.infer_guard_module_access(
+                            name,
+                            label,
+                            location,
+                            label_location,
+                            error,
+                        ),
+                        // Otherwise that's a proper variable and not a module name,
+                        // so the whole expression has to be inferred as a regular
+                        // record access.
+                        Ok(variable) => {
+                            self.infer_guard_record_access(variable, label.clone(), label_location)
+                        }
+                    }
+                } else {
+                    // If it doesn't this has to be a regular record access and
+                    // we try and inferr it as such.
+                    let inferred_container = self.infer_clause_guard(*container.clone());
+                    self.infer_guard_record_access(
+                        inferred_container,
+                        label.clone(),
+                        label_location,
+                    )
+                };
 
-                Err(err) => {
-                    if let ClauseGuard::Var { name, location, .. } = *container {
-                        self.infer_guard_module_access(name, label, location, label_location, err)
-                    } else {
-                        Err(Error::RecordAccessUnknownType {
-                            location: label_location,
-                        })
+                match result {
+                    Ok(inferred) => inferred,
+                    Err(error) => {
+                        self.problems.error(error);
+                        ClauseGuard::Invalid {
+                            location: container_location.merge(&label_location),
+                            type_: self.new_unbound_var(),
+                        }
                     }
                 }
-            },
+            }
 
-            ClauseGuard::ModuleSelect { location, .. } => {
-                Err(Error::RecordAccessUnknownType { location })
+            ClauseGuard::ModuleSelect { .. } => {
+                unreachable!("untyped guard should never be module select")
             }
 
             ClauseGuard::Not {
                 location,
                 expression,
             } => {
-                let expression = self.infer_clause_guard(*expression)?;
-                unify(bool(), expression.type_())
-                    .map_err(|e| convert_unify_error(e, expression.location()))?;
-                Ok(ClauseGuard::Not {
+                let expression = self.infer_clause_guard(*expression);
+                if let Err(error) = unify(bool(), expression.type_()) {
+                    self.problems
+                        .error(convert_unify_error(error, expression.location()))
+                };
+                ClauseGuard::Not {
                     location,
                     expression: Box::new(expression),
-                })
+                }
             }
 
             ClauseGuard::Constant(constant) => {
-                Ok(ClauseGuard::Constant(self.infer_const(&None, constant)))
+                ClauseGuard::Constant(self.infer_const(&None, constant))
             }
 
-            ClauseGuard::Block { value, location } => {
-                let value = self.infer_clause_guard(*value)?;
-                Ok(ClauseGuard::Block {
-                    location,
-                    value: Box::new(value),
-                })
-            }
+            ClauseGuard::Block { value, location } => ClauseGuard::Block {
+                location,
+                value: Box::new(self.infer_clause_guard(*value)),
+            },
 
             ClauseGuard::BinaryOperator {
                 location,
@@ -2626,20 +2644,25 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 left,
                 right,
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                let right = self.infer_clause_guard(*right)?;
+                let left = self.infer_clause_guard(*left);
+                let right = self.infer_clause_guard(*right);
 
                 match operator {
                     BinOp::And | BinOp::Or => {
-                        unify(bool(), left.type_())
-                            .map_err(|e| convert_unify_error(e, left.location()))?;
-                        unify(bool(), right.type_())
-                            .map_err(|e| convert_unify_error(e, right.location()))?;
+                        if let Err(error) = unify(bool(), left.type_()) {
+                            self.problems
+                                .error(convert_unify_error(error, left.location()));
+                        }
+                        if let Err(error) = unify(bool(), right.type_()) {
+                            self.problems
+                                .error(convert_unify_error(error, right.location()));
+                        }
                     }
 
                     BinOp::Eq | BinOp::NotEq => {
-                        unify(left.type_(), right.type_())
-                            .map_err(|e| convert_unify_error(e, location))?;
+                        if let Err(error) = unify(left.type_(), right.type_()) {
+                            self.problems.error(convert_unify_error(error, location));
+                        }
                     }
 
                     BinOp::GtInt
@@ -2652,15 +2675,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     | BinOp::MultInt
                     | BinOp::RemainderInt => {
                         self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
-
+                        // If both operands are floats, then we use a more specialised
+                        // error.
                         if left.type_().is_float() && right.type_().is_float() {
-                            return Err(Error::IntOperatorOnFloats { operator, location });
+                            self.problems
+                                .error(Error::IntOperatorOnFloats { operator, location });
+                        } else {
+                            if let Err(error) = unify(int(), left.type_()) {
+                                self.problems
+                                    .error(convert_unify_error(error, left.location()));
+                            }
+                            if let Err(error) = unify(int(), right.type_()) {
+                                self.problems
+                                    .error(convert_unify_error(error, right.location()));
+                            }
                         }
-
-                        unify(int(), left.type_())
-                            .map_err(|e| convert_unify_error(e, left.location()))?;
-                        unify(int(), right.type_())
-                            .map_err(|e| convert_unify_error(e, right.location()))?;
                     }
 
                     BinOp::GtFloat
@@ -2673,34 +2702,77 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     | BinOp::MultFloat => {
                         self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
 
+                        // If both operands are int then we use a more specialised
+                        // error
                         if left.type_().is_int() && right.type_().is_int() {
-                            return Err(Error::FloatOperatorOnInts { operator, location });
+                            self.problems
+                                .error(Error::FloatOperatorOnInts { operator, location });
+                        } else {
+                            if let Err(error) = unify(float(), left.type_()) {
+                                self.problems
+                                    .error(convert_unify_error(error, left.location()));
+                            }
+                            if let Err(error) = unify(float(), right.type_()) {
+                                self.problems
+                                    .error(convert_unify_error(error, right.location()));
+                            }
                         }
-
-                        unify(float(), left.type_())
-                            .map_err(|e| convert_unify_error(e, left.location()))?;
-                        unify(float(), right.type_())
-                            .map_err(|e| convert_unify_error(e, right.location()))?;
                     }
 
                     BinOp::Concatenate => {
                         self.track_feature_usage(FeatureKind::ConcatenateInGuards, location);
 
-                        unify(string(), left.type_())
-                            .map_err(|e| convert_unify_error(e, left.location()))?;
-                        unify(string(), right.type_())
-                            .map_err(|e| convert_unify_error(e, right.location()))?;
+                        if let Err(error) = unify(string(), left.type_()) {
+                            self.problems
+                                .error(convert_unify_error(error, left.location()));
+                        }
+                        if let Err(error) = unify(string(), right.type_()) {
+                            self.problems
+                                .error(convert_unify_error(error, right.location()));
+                        }
                     }
                 }
 
-                Ok(ClauseGuard::BinaryOperator {
+                ClauseGuard::BinaryOperator {
                     location,
                     operator,
                     left: Box::new(left),
                     right: Box::new(right),
-                })
+                }
             }
         }
+    }
+
+    fn infer_clause_guard_variable(
+        &mut self,
+        name: EcoString,
+        location: SrcSpan,
+    ) -> Result<TypedClauseGuard, Error> {
+        let constructor =
+            self.infer_value_constructor(&None, &name, &location, ValueUsage::Other)?;
+
+        // We cannot support all values in guard expressions as the BEAM does not
+        let (definition_location, origin) = match &constructor.variant {
+            ValueConstructorVariant::LocalVariable {
+                location, origin, ..
+            } => (*location, origin.clone()),
+
+            ValueConstructorVariant::ModuleFn { .. } | ValueConstructorVariant::Record { .. } => {
+                return Err(Error::NonLocalClauseGuardVariable { location, name });
+            }
+
+            ValueConstructorVariant::ModuleConstant { literal, .. } => {
+                return Ok(ClauseGuard::Constant(literal.clone()));
+            }
+        };
+
+        Ok(ClauseGuard::Var {
+            location,
+            name,
+            origin,
+            type_: constructor.type_,
+            definition_location,
+        })
     }
 
     fn infer_guard_record_access(
@@ -2742,7 +2814,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<TypedClauseGuard, Error> {
         let module_access = self
             .infer_module_access(&name, label, &module_location, label_location)
-            .and_then(|ma| {
+            .and_then(|module_select| {
                 if let TypedExpr::ModuleSelect {
                     location,
                     field_start: _,
@@ -2751,7 +2823,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     module_name,
                     module_alias,
                     constructor,
-                } = ma
+                } = module_select
                 {
                     match constructor {
                         ModuleValueConstructor::Constant {

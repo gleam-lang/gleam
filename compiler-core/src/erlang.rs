@@ -1967,6 +1967,8 @@ fn bare_clause_guard<'a>(
     assignments: &HashMap<EcoString, &StringPatternAssignment<'a>>,
 ) -> Document<'a> {
     match guard {
+        ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to code generation"),
+
         ClauseGuard::Block { value, .. } => {
             bare_clause_guard(value, env, assignments).surround("(", ")")
         }
@@ -2049,6 +2051,8 @@ fn clause_guard_string_concatenate_argument<'a>(
     assignments: &HashMap<EcoString, &StringPatternAssignment<'a>>,
 ) -> Document<'a> {
     match guard {
+        ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to code generation"),
+
         ClauseGuard::Constant(Constant::String { value, .. }) => {
             docvec!['"', string_inner(value), "\"/utf8"]
         }
@@ -2119,6 +2123,7 @@ fn clause_guard<'a>(
     assignments: &HashMap<EcoString, &StringPatternAssignment<'a>>,
 ) -> Document<'a> {
     match guard {
+        ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to code generation"),
         // Binary operators are wrapped in parens
         ClauseGuard::BinaryOperator { .. } => "("
             .to_doc()

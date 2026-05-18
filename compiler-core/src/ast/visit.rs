@@ -1864,6 +1864,7 @@ where
             literal,
         ),
         super::ClauseGuard::Constant(constant) => v.visit_typed_constant(constant),
+        super::ClauseGuard::Invalid { .. } => (),
     }
 }
 

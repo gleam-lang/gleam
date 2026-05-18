@@ -2310,6 +2310,8 @@ impl<'module, 'a> Generator<'module, 'a> {
 
     pub(crate) fn guard(&mut self, guard: &'a TypedClauseGuard) -> Document<'a> {
         match guard {
+            ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to code generation"),
+
             ClauseGuard::Block { value, .. } => self.guard(value).surround("(", ")"),
 
             ClauseGuard::BinaryOperator {
@@ -2434,6 +2436,7 @@ impl<'module, 'a> Generator<'module, 'a> {
 
     fn wrapped_guard(&mut self, guard: &'a TypedClauseGuard) -> Document<'a> {
         match guard {
+            ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to code generation"),
             ClauseGuard::Var { .. }
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::Constant(_)
