@@ -19,8 +19,6 @@ static ENTRYPOINT_TEMPLATE_POSIX_SHELL: &str =
 
 /// Generate a single file of precompiled Erlang, suitable for CLIs.
 pub fn escript(paths: &ProjectPaths) -> Result<()> {
-    use std::io::Write;
-
     let target = Target::Erlang;
     let mode = Mode::Prod;
     let build = paths.build_directory_for_target(mode, target);
@@ -81,7 +79,7 @@ pub fn escript(paths: &ProjectPaths) -> Result<()> {
 
     let zip = zip.finish()?.into_inner();
 
-    let escript_path = Utf8PathBuf::from(package_name);
+    let escript_path = paths.root().join(package_name.as_str());
     let mut file = fs::open_file(&escript_path)?;
     let header = format!(
         "#!/usr/bin/env escript
