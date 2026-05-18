@@ -370,8 +370,11 @@ impl<'module, 'a> Generator<'module, 'a> {
             TypedExpr::Block { statements, .. } => self.block(statements),
 
             TypedExpr::BinOp {
-                name, left, right, ..
-            } => self.bin_op(name, left, right),
+                operator,
+                left,
+                right,
+                ..
+            } => self.bin_op(operator, left, right),
 
             TypedExpr::Todo {
                 message, location, ..
@@ -628,7 +631,7 @@ impl<'module, 'a> Generator<'module, 'a> {
     /// a function literal.
     pub fn child_expression(&mut self, expression: &'a TypedExpr) -> Document<'a> {
         match expression {
-            TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {}
+            TypedExpr::BinOp { operator, .. } if operator.is_operator_to_wrap() => {}
             TypedExpr::Fn { .. } => {}
 
             TypedExpr::Int { .. }
@@ -1037,9 +1040,12 @@ impl<'module, 'a> Generator<'module, 'a> {
             }
 
             TypedExpr::BinOp {
-                name, left, right, ..
+                operator,
+                left,
+                right,
+                ..
             } => {
-                match name {
+                match operator {
                     BinOp::And => return self.assert_and(left, right, message, location),
                     BinOp::Or => return self.assert_or(left, right, message, location),
                     BinOp::Eq
@@ -1073,7 +1079,7 @@ impl<'module, 'a> Generator<'module, 'a> {
 
                 (
                     self.bin_op_with_doc_operands(
-                        *name,
+                        *operator,
                         left_document.clone(),
                         right_document.clone(),
                         &left.type_(),
@@ -1081,7 +1087,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                     .surround("(", ")"),
                     vec![
                         ("kind", string("binary_operator")),
-                        ("operator", string(name.name())),
+                        ("operator", string(operator.name())),
                         (
                             "left",
                             self.asserted_expression(
@@ -1163,8 +1169,11 @@ impl<'module, 'a> Generator<'module, 'a> {
     fn negate_bool_expression(&mut self, value: &'a TypedExpr) -> Document<'a> {
         match value {
             TypedExpr::BinOp {
-                name, left, right, ..
-            } => match name {
+                operator,
+                left,
+                right,
+                ..
+            } => match operator {
                 BinOp::And => self.print_bin_op(left, right, "||"),
                 BinOp::Or => self.print_bin_op(left, right, "&&"),
                 BinOp::Eq => self.equal(left, right, false),

@@ -84,8 +84,8 @@ pub enum TypedExpr {
     BinOp {
         location: SrcSpan,
         type_: Arc<Type>,
-        name: BinOp,
-        name_location: SrcSpan,
+        operator: BinOp,
+        operator_location: SrcSpan,
         left: Box<Self>,
         right: Box<Self>,
     },
@@ -903,8 +903,11 @@ impl TypedExpr {
     pub fn is_known_bool(&self) -> bool {
         match self {
             TypedExpr::BinOp {
-                left, right, name, ..
-            } if name.is_bool_operator() => left.is_known_bool() && right.is_known_bool(),
+                left,
+                right,
+                operator,
+                ..
+            } if operator.is_bool_operator() => left.is_known_bool() && right.is_known_bool(),
             TypedExpr::NegateBool { value, .. } => value.is_known_bool(),
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
@@ -1521,16 +1524,19 @@ impl TypedExpr {
 
             (
                 TypedExpr::BinOp {
-                    name, left, right, ..
+                    operator,
+                    left,
+                    right,
+                    ..
                 },
                 TypedExpr::BinOp {
-                    name: other_name,
+                    operator: other_operator,
                     left: other_left,
                     right: other_right,
                     ..
                 },
             ) => {
-                name == other_name
+                operator == other_operator
                     && left.syntactically_eq(other_left)
                     && right.syntactically_eq(other_right)
             }

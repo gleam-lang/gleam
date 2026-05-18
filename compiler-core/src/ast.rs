@@ -2044,7 +2044,7 @@ fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &Type
                 ..
             },
             TypedExpr::BinOp {
-                name: BinOp::Concatenate,
+                operator: BinOp::Concatenate,
                 left,
                 right,
                 ..

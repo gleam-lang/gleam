@@ -1147,8 +1147,11 @@ impl<'comments> Formatter<'comments> {
             } => self.call(fun, arguments, location),
 
             UntypedExpr::BinOp {
-                name, left, right, ..
-            } => self.bin_op(name, left, right, false),
+                operator,
+                left,
+                right,
+                ..
+            } => self.bin_op(operator, left, right, false),
 
             UntypedExpr::Case {
                 subjects,
@@ -1621,8 +1624,11 @@ impl<'comments> Formatter<'comments> {
         let side_doc = match side {
             UntypedExpr::String { value, .. } => self.bin_op_string(value),
             UntypedExpr::BinOp {
-                name, left, right, ..
-            } => self.bin_op(name, left, right, nest_steps),
+                operator,
+                left,
+                right,
+                ..
+            } => self.bin_op(operator, left, right, nest_steps),
             UntypedExpr::Int { .. }
             | UntypedExpr::Float { .. }
             | UntypedExpr::Block { .. }
@@ -2447,10 +2453,13 @@ impl<'comments> Formatter<'comments> {
         // Othewise we just print the expression as a normal expr.
         match expression {
             UntypedExpr::BinOp {
-                name, left, right, ..
+                operator,
+                left,
+                right,
+                ..
             } if siblings > 1 => {
                 let comments = self.pop_comments(expression.start_byte_index());
-                let doc = self.bin_op(name, left, right, true).group();
+                let doc = self.bin_op(operator, left, right, true).group();
                 commented(doc, comments)
             }
             UntypedExpr::PipeLine { expressions } if siblings > 1 => {

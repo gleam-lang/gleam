@@ -1330,11 +1330,11 @@ where
         TypedExpr::BinOp {
             location,
             type_,
-            name,
-            name_location,
+            operator,
+            operator_location,
             left,
             right,
-        } => v.visit_typed_expr_bin_op(location, type_, name, name_location, left, right),
+        } => v.visit_typed_expr_bin_op(location, type_, operator, operator_location, left, right),
         TypedExpr::Case {
             location,
             type_,

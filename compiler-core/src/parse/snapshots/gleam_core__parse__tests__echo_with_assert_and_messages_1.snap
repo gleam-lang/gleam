@@ -14,8 +14,8 @@ expression: assert 1 == echo 2 as this_belongs_to_echo as this_belongs_to_assert
                     start: 7,
                     end: 42,
                 },
-                name: Eq,
-                name_location: SrcSpan {
+                operator: Eq,
+                operator_location: SrcSpan {
                     start: 9,
                     end: 11,
                 },
