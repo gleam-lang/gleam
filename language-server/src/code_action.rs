@@ -9079,8 +9079,8 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveBlock<'ast> {
         &mut self,
         _location: &'ast SrcSpan,
         _type_: &'ast Arc<Type>,
-        _name: &'ast ast::BinOp,
-        _name_location: &'ast SrcSpan,
+        _operator: &'ast ast::BinOp,
+        _operator_location: &'ast SrcSpan,
         left: &'ast TypedExpr,
         right: &'ast TypedExpr,
     ) {

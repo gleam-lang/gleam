@@ -2260,6 +2260,12 @@ pub enum ClauseGuard<Type, RecordTag> {
     BinaryOperator {
         location: SrcSpan,
         operator: BinOp,
+        /// This is the span covering the operator itself. For example:
+        /// ```gleam
+        /// _ if 1.0 +. 2.3 == 3.0 -> todo
+        /// //       ^^ This!
+        /// ```
+        operator_location: SrcSpan,
         left: Box<Self>,
         right: Box<Self>,
     },

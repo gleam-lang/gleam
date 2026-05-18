@@ -72,12 +72,20 @@ expression: "\ncase 2, 3 {\n    x, y if x + y == 1 -> True\n}"
                                     end: 35,
                                 },
                                 operator: Eq,
+                                operator_location: SrcSpan {
+                                    start: 31,
+                                    end: 33,
+                                },
                                 left: BinaryOperator {
                                     location: SrcSpan {
                                         start: 25,
                                         end: 30,
                                     },
                                     operator: AddInt,
+                                    operator_location: SrcSpan {
+                                        start: 27,
+                                        end: 28,
+                                    },
                                     left: Var {
                                         location: SrcSpan {
                                             start: 25,

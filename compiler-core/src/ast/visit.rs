@@ -214,12 +214,20 @@ pub trait Visit<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
-        name: &'ast BinOp,
-        name_location: &'ast SrcSpan,
+        operator: &'ast BinOp,
+        operator_location: &'ast SrcSpan,
         left: &'ast TypedExpr,
         right: &'ast TypedExpr,
     ) {
-        visit_typed_expr_bin_op(self, location, type_, name, name_location, left, right);
+        visit_typed_expr_bin_op(
+            self,
+            location,
+            type_,
+            operator,
+            operator_location,
+            left,
+            right,
+        );
     }
 
     fn visit_typed_expr_case(
@@ -396,6 +404,17 @@ pub trait Visit<'ast> {
 
     fn visit_typed_clause_guard(&mut self, guard: &'ast TypedClauseGuard) {
         visit_typed_clause_guard(self, guard);
+    }
+
+    fn visit_typed_clause_guard_bin_op(
+        &mut self,
+        left: &'ast TypedClauseGuard,
+        right: &'ast TypedClauseGuard,
+        operator: &'ast BinOp,
+        operator_location: &'ast SrcSpan,
+        location: &'ast SrcSpan,
+    ) {
+        visit_typed_clause_guard_bin_op(self, left, right, operator, operator_location, location);
     }
 
     fn visit_typed_clause_guard_var(
@@ -1564,8 +1583,8 @@ pub fn visit_typed_expr_bin_op<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
     _type_: &'a Arc<Type>,
-    _name: &'a BinOp,
-    _name_location: &'a SrcSpan,
+    _operator: &'a BinOp,
+    _operator_location: &'a SrcSpan,
     left: &'a TypedExpr,
     right: &'a TypedExpr,
 ) where
@@ -1813,10 +1832,13 @@ where
     V: Visit<'a> + ?Sized,
 {
     match guard {
-        super::ClauseGuard::BinaryOperator { left, right, .. } => {
-            v.visit_typed_clause_guard(left);
-            v.visit_typed_clause_guard(right);
-        }
+        super::ClauseGuard::BinaryOperator {
+            left,
+            right,
+            location,
+            operator,
+            operator_location,
+        } => v.visit_typed_clause_guard_bin_op(left, right, operator, operator_location, location),
         super::ClauseGuard::Block { location: _, value } => v.visit_typed_clause_guard(value),
         super::ClauseGuard::Not {
             location: _,
@@ -1866,6 +1888,20 @@ where
         super::ClauseGuard::Constant(constant) => v.visit_typed_constant(constant),
         super::ClauseGuard::Invalid { .. } => (),
     }
+}
+
+pub fn visit_typed_clause_guard_bin_op<'a, V>(
+    v: &mut V,
+    left: &'a TypedClauseGuard,
+    right: &'a TypedClauseGuard,
+    _operator: &'a BinOp,
+    _operator_location: &'a SrcSpan,
+    _location: &'a SrcSpan,
+) where
+    V: Visit<'a> + ?Sized,
+{
+    v.visit_typed_clause_guard(left);
+    v.visit_typed_clause_guard(right);
 }
 
 pub fn visit_typed_clause_guard_var<'a, V>(

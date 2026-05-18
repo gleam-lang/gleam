@@ -44,6 +44,10 @@ expression: "case 1 {\n  _ if { 1 || { 1 || 1 } } || 1  -> 1\n}"
                                     end: 40,
                                 },
                                 operator: Or,
+                                operator_location: SrcSpan {
+                                    start: 36,
+                                    end: 38,
+                                },
                                 left: Block {
                                     location: SrcSpan {
                                         start: 16,
@@ -55,6 +59,10 @@ expression: "case 1 {\n  _ if { 1 || { 1 || 1 } } || 1  -> 1\n}"
                                             end: 33,
                                         },
                                         operator: Or,
+                                        operator_location: SrcSpan {
+                                            start: 20,
+                                            end: 22,
+                                        },
                                         left: Constant(
                                             Int {
                                                 location: SrcSpan {
@@ -76,6 +84,10 @@ expression: "case 1 {\n  _ if { 1 || { 1 || 1 } } || 1  -> 1\n}"
                                                     end: 31,
                                                 },
                                                 operator: Or,
+                                                operator_location: SrcSpan {
+                                                    start: 27,
+                                                    end: 29,
+                                                },
                                                 left: Constant(
                                                     Int {
                                                         location: SrcSpan {
