@@ -275,6 +275,7 @@ impl PackageFetchError {
             | hexpm::ApiError::IncorrectChecksum
             | hexpm::ApiError::Forbidden
             | hexpm::ApiError::NotReplacing
+            | hexpm::ApiError::LateDeletion
             | hexpm::ApiError::LateModification => Self::ApiError(api_error),
         }
     }

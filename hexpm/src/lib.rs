@@ -594,8 +594,14 @@ pub fn api_revert_release_response(response: http::Response<Vec<u8>>) -> Result<
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
         StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
+        StatusCode::UNPROCESSABLE_ENTITY if is_late_deletion(&body) => Err(ApiError::LateDeletion),
         status => Err(ApiError::unexpected_response(status, body)),
     }
+}
+
+fn is_late_deletion(body: &[u8]) -> bool {
+    String::from_utf8_lossy(body)
+        .contains("can only delete a release up to one hour after publication")
 }
 
 /// See: https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.owner.ex#L47
@@ -764,6 +770,9 @@ pub enum ApiError {
 
     #[error("Can only modify a release up to one hour after publication")]
     LateModification,
+
+    #[error("Can only delete a release up to one hour after publication")]
+    LateDeletion,
 
     #[error("The oauth request wasn't approved in time")]
     OAuthTimeout,
