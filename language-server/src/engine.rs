@@ -19,6 +19,7 @@ use gleam_core::{
         self, Deprecation, ModuleInterface, Type, TypeConstructor, ValueConstructor,
         ValueConstructorVariant,
         error::{Named, VariableSyntax},
+        pretty::Printer as PrettyPrinter,
         printer::Printer,
     },
 };
@@ -1498,7 +1499,7 @@ fn hover_for_function_head(
         .map(|(_, doc)| doc)
         .unwrap_or(&empty_str);
     let function_type = get_function_type(fun);
-    let formatted_type = Printer::new(&module.ast.names).print_type(&function_type);
+    let formatted_type = PrettyPrinter::new().pretty_print(&function_type, 0);
     let contents = format!(
         "```gleam
 {formatted_type}
@@ -1516,7 +1517,7 @@ fn hover_for_function_argument(
     line_numbers: LineNumbers,
     module: &Module,
 ) -> Hover {
-    let type_ = Printer::new(&module.ast.names).print_type(&argument.type_);
+    let type_ = PrettyPrinter::new().pretty_print(&argument.type_, 0);
     let contents = format!("```gleam\n{type_}\n```");
     Hover {
         contents: Contents::MarkedString(MarkedString::String(contents)),

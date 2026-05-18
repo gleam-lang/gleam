@@ -2,7 +2,6 @@
 source: language-server/src/tests/hover.rs
 expression: "\nimport wibble/wobble\n\nfn do_things(wibble: wobble.Wibble) { wibble }\n"
 ---
-
 import wibble/wobble
 
 fn do_things(wibble: wobble.Wibble) { wibble }
@@ -11,5 +10,5 @@ fn do_things(wibble: wobble.Wibble) { wibble }
 
 ----- Hover content (markdown) -----
 ```gleam
-wobble.Wibble
+Wibble
 ```
