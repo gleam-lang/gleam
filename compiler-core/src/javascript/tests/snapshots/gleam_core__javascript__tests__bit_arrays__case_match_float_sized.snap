@@ -16,14 +16,18 @@ pub fn go(x) {
 import { bitArraySliceToFloat } from "../gleam.mjs";
 
 export function go(x) {
-  if (
-    x.bitSize >= 32 &&
-    Number.isFinite(bitArraySliceToFloat(x, 0, 32, true)) &&
-    x.bitSize === 40
-  ) {
-    let a = bitArraySliceToFloat(x, 0, 32, true);
-    let b = x.byteAt(4);
-    return [a, b];
+  if (x.bitSize >= 32) {
+    let $;
+    if (
+      Number.isFinite($ = bitArraySliceToFloat(x, 0, 32, true)) &&
+      x.bitSize === 40
+    ) {
+      let a = $;
+      let b = x.byteAt(4);
+      return [a, b];
+    } else {
+      return [1.1, 2];
+    }
   } else {
     return [1.1, 2];
   }

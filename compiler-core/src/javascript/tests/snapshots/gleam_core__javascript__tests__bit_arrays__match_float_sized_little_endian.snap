@@ -17,13 +17,25 @@ const FILEPATH = "src/module.gleam";
 export function go(x) {
   let a;
   let b;
-  if (
-    x.bitSize >= 32 &&
-    Number.isFinite(bitArraySliceToFloat(x, 0, 32, false)) &&
-    x.bitSize === 40
-  ) {
-    a = bitArraySliceToFloat(x, 0, 32, false);
-    b = x.byteAt(4);
+  if (x.bitSize >= 32) {
+    let $;
+    if (
+      Number.isFinite($ = bitArraySliceToFloat(x, 0, 32, false)) &&
+      x.bitSize === 40
+    ) {
+      a = $;
+      b = x.byteAt(4);
+    } else {
+      throw makeError(
+        "let_assert",
+        FILEPATH,
+        "my/mod",
+        3,
+        "go",
+        "Pattern match failed, no pattern matched the value.",
+        { value: x, start: 18, end: 61, pattern_start: 29, pattern_end: 57 }
+      )
+    }
   } else {
     throw makeError(
       "let_assert",
