@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  let wobble = 3\n  case todo {\n    _ if 1 *. wobble -> todo\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let wobble = 3
+  case todo {
+    _ if 1 *. wobble -> todo
+           ↑                
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let wobble = 3
+  case todo {
+    _ if 1 * wobble -> todo
+  }
+}

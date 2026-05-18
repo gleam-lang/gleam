@@ -8688,15 +8688,74 @@ impl<'a> FixBinaryOperation<'a> {
             .push_to(&mut action);
         action
     }
+
+    fn try_fix(
+        &mut self,
+        left: Arc<Type>,
+        right: Arc<Type>,
+        operator: ast::BinOp,
+        operator_location: SrcSpan,
+    ) {
+        if operator.is_int_operator() && left.is_float() && right.is_float() {
+            self.fix = operator
+                .float_equivalent()
+                .map(|fix| (operator_location, fix));
+        } else if operator.is_float_operator() && left.is_int() && right.is_int() {
+            self.fix = operator
+                .int_equivalent()
+                .map(|fix| (operator_location, fix))
+        } else if operator == ast::BinOp::AddInt && left.is_string() && right.is_string() {
+            self.fix = Some((operator_location, ast::BinOp::Concatenate))
+        }
+    }
 }
 
 impl<'ast> ast::visit::Visit<'ast> for FixBinaryOperation<'ast> {
+    fn visit_typed_expr_case(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        subjects: &'ast [TypedExpr],
+        clauses: &'ast [ast::TypedClause],
+        compiled_case: &'ast CompiledCase,
+    ) {
+        ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
+    }
+    fn visit_typed_clause_guard(&mut self, guard: &'ast TypedClauseGuard) {
+        ast::visit::visit_typed_clause_guard(self, guard);
+    }
+
+    fn visit_typed_clause_guard_bin_op(
+        &mut self,
+        left: &'ast TypedClauseGuard,
+        right: &'ast TypedClauseGuard,
+        operator: &'ast ast::BinOp,
+        operator_location: &'ast SrcSpan,
+        location: &'ast SrcSpan,
+    ) {
+        let binop_range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, binop_range) {
+            return;
+        }
+
+        self.try_fix(left.type_(), right.type_(), *operator, *operator_location);
+
+        ast::visit::visit_typed_clause_guard_bin_op(
+            self,
+            left,
+            right,
+            operator,
+            operator_location,
+            location,
+        );
+    }
+
     fn visit_typed_expr_bin_op(
         &mut self,
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
-        name: &'ast ast::BinOp,
-        name_location: &'ast SrcSpan,
+        operator: &'ast ast::BinOp,
+        operator_location: &'ast SrcSpan,
         left: &'ast TypedExpr,
         right: &'ast TypedExpr,
     ) {
@@ -8705,23 +8764,14 @@ impl<'ast> ast::visit::Visit<'ast> for FixBinaryOperation<'ast> {
             return;
         }
 
-        if name.is_int_operator() && left.type_().is_float() && right.type_().is_float() {
-            self.fix = name.float_equivalent().map(|fix| (*name_location, fix));
-        } else if name.is_float_operator() && left.type_().is_int() && right.type_().is_int() {
-            self.fix = name.int_equivalent().map(|fix| (*name_location, fix))
-        } else if *name == ast::BinOp::AddInt
-            && left.type_().is_string()
-            && right.type_().is_string()
-        {
-            self.fix = Some((*name_location, ast::BinOp::Concatenate))
-        }
+        self.try_fix(left.type_(), right.type_(), *operator, *operator_location);
 
         ast::visit::visit_typed_expr_bin_op(
             self,
             location,
             type_,
-            name,
-            name_location,
+            operator,
+            operator_location,
             left,
             right,
         );
