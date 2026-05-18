@@ -2661,7 +2661,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                     BinOp::Eq | BinOp::NotEq => {
                         if let Err(error) = unify(left.type_(), right.type_()) {
-                            self.problems.error(convert_unify_error(error, location));
+                            self.problems
+                                .error(convert_unify_error(error, right.location()));
                         }
                     }
 

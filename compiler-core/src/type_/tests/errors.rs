@@ -4204,3 +4204,75 @@ pub fn main() {
 }"
     );
 }
+
+#[test]
+pub fn clause_guard_is_fault_tolerant() {
+    assert_module_error!(
+        r#"
+pub fn main(x: Int) {
+  case x {
+    _ if x == "" && wibble -> 2
+    _ -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+pub fn clause_guard_is_fault_tolerant_with_record_access() {
+    assert_module_error!(
+        r#"
+pub type Wibble { Wibble(field: Int) }
+
+pub fn main(wibble: Wibble) {
+  case wibble {
+    _ if wibble.field == "" && wibble -> 2
+    _ -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+pub fn clause_guard_is_fault_tolerant_with_int_binop() {
+    assert_module_error!(
+        r#"
+pub fn main(x: Int) {
+  case x {
+    _ if x + "" -> 2
+    _ -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+pub fn clause_guard_is_fault_tolerant_with_not_equals() {
+    assert_module_error!(
+        r#"
+pub fn main(x: Int) {
+  case x {
+    _ if x != "" || False -> 2
+    _ -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+pub fn clause_guard_is_fault_tolerant_with_not_equals_and_binop() {
+    assert_module_error!(
+        r#"
+pub fn main(x: Int) {
+  case x {
+    _ if { x != "" } +. 2.0 -> 2
+    _ -> 1
+  }
+}
+"#
+    );
+}
