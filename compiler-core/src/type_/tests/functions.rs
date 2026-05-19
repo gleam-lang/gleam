@@ -572,3 +572,16 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn constant_record_incorrect_arg_types_fault_tolerance() {
+    assert_module_error!(
+        r#"
+pub type Wibble {
+  Wibble(Int, Int)
+}
+
+pub const wibble = Wibble(1.0, 1.0)
+"#
+    );
+}
