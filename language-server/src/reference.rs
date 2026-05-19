@@ -943,7 +943,7 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
         location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
-        arguments: &'ast Vec<ast::CallArg<ast::TypedConstant>>,
+        arguments: &'ast Option<Vec<ast::CallArg<ast::TypedConstant>>>,
         type_: &'ast std::sync::Arc<Type>,
         field_map: &'ast analyse::Inferred<gleam_core::type_::FieldMap>,
         record_constructor: &'ast Option<Box<ValueConstructor>>,

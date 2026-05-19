@@ -1798,7 +1798,7 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
 
         Constant::Record {
             type_, arguments, ..
-        } if arguments.is_empty() => {
+        } if arguments.is_none() => {
             let tag = literal
                 .constant_record_tag()
                 .expect("record without inferred constructor made it to code generation");
@@ -1819,6 +1819,7 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
             // Record updates are fully expanded during type checking, so we just handle arguments
             let arguments_doc = arguments
                 .iter()
+                .flatten()
                 .map(|argument| const_inline(&argument.value, env));
             let tag = atom_string(to_snake_case(&tag));
             tuple(std::iter::once(tag).chain(arguments_doc))
@@ -3638,6 +3639,7 @@ fn find_referenced_private_functions(
 
         TypedConstant::Record { arguments, .. } => arguments
             .iter()
+            .flatten()
             .for_each(|argument| find_referenced_private_functions(&argument.value, already_found)),
 
         TypedConstant::StringConcatenation { left, right, .. } => {

@@ -174,54 +174,56 @@ Parsed {
                             },
                             module: None,
                             name: "Person",
-                            arguments: [
-                                CallArg {
-                                    label: None,
-                                    location: SrcSpan {
-                                        start: 85,
-                                        end: 92,
-                                    },
-                                    value: String {
+                            arguments: Some(
+                                [
+                                    CallArg {
+                                        label: None,
                                         location: SrcSpan {
                                             start: 85,
                                             end: 92,
                                         },
-                                        value: "Alice",
+                                        value: String {
+                                            location: SrcSpan {
+                                                start: 85,
+                                                end: 92,
+                                            },
+                                            value: "Alice",
+                                        },
+                                        implicit: None,
                                     },
-                                    implicit: None,
-                                },
-                                CallArg {
-                                    label: None,
-                                    location: SrcSpan {
-                                        start: 94,
-                                        end: 96,
-                                    },
-                                    value: Int {
+                                    CallArg {
+                                        label: None,
                                         location: SrcSpan {
                                             start: 94,
                                             end: 96,
                                         },
-                                        value: "30",
-                                        int_value: 30,
+                                        value: Int {
+                                            location: SrcSpan {
+                                                start: 94,
+                                                end: 96,
+                                            },
+                                            value: "30",
+                                            int_value: 30,
+                                        },
+                                        implicit: None,
                                     },
-                                    implicit: None,
-                                },
-                                CallArg {
-                                    label: None,
-                                    location: SrcSpan {
-                                        start: 98,
-                                        end: 106,
-                                    },
-                                    value: String {
+                                    CallArg {
+                                        label: None,
                                         location: SrcSpan {
                                             start: 98,
                                             end: 106,
                                         },
-                                        value: "London",
+                                        value: String {
+                                            location: SrcSpan {
+                                                start: 98,
+                                                end: 106,
+                                            },
+                                            value: "London",
+                                        },
+                                        implicit: None,
                                     },
-                                    implicit: None,
-                                },
-                            ],
+                                ],
+                            ),
                             type_: (),
                             field_map: Unknown,
                             record_constructor: None,

@@ -342,22 +342,24 @@ impl RemapIds {
                 location,
                 module,
                 name,
-                arguments: arguments
-                    .into_iter()
-                    .map(
-                        |CallArg {
-                             label,
-                             location,
-                             value,
-                             implicit,
-                         }| CallArg {
-                            label,
-                            location,
-                            value: self.constant(value),
-                            implicit,
-                        },
-                    )
-                    .collect(),
+                arguments: arguments.map(|arguments| {
+                    arguments
+                        .into_iter()
+                        .map(
+                            |CallArg {
+                                 label,
+                                 location,
+                                 value,
+                                 implicit,
+                             }| CallArg {
+                                label,
+                                location,
+                                value: self.constant(value),
+                                implicit,
+                            },
+                        )
+                        .collect()
+                }),
                 type_: self.type_(type_),
                 field_map,
                 record_constructor: record_constructor

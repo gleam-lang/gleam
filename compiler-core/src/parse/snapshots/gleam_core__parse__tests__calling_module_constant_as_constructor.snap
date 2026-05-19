@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub type Wibble { Wibble(Int) }\npub const wibble = Wibble\npub const a = wibble(1)\n"
+---
+----- SOURCE CODE
+
+pub type Wibble { Wibble(Int) }
+pub const wibble = Wibble
+pub const a = wibble(1)
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:4:15
+  │
+4 │ pub const a = wibble(1)
+  │               ^^^^^^^ Functions can only be called within other functions

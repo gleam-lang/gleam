@@ -4026,7 +4026,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     && let ValueConstructorVariant::Record { name, .. } =
                         resolved_record_constructor.variant
                 {
-                    (arguments, name)
+                    (arguments.unwrap_or(vec![]), name)
                 } else {
                     self.problems.error(convert_unify_error(
                         UnifyError::CouldNotUnify {
@@ -4169,59 +4169,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     module,
                     location,
                     name,
-                    arguments: final_arguments,
+                    arguments: Some(final_arguments),
                     type_: expected_type,
                     field_map: Inferred::Known(field_map),
-                    record_constructor: Some(Box::new(constructor)),
-                }
-            }
-
-            Constant::Record {
-                module,
-                location,
-                name,
-                arguments,
-                ..
-            } if arguments.is_empty() => {
-                let constructor = match self.infer_value_constructor(
-                    &module,
-                    &name,
-                    &location,
-                    ValueUsage::Other,
-                ) {
-                    Ok(constructor) => constructor,
-                    Err(error) => {
-                        self.problems.error(error);
-                        return self.new_invalid_constant(location);
-                    }
-                };
-
-                let field_map = match &constructor.variant {
-                    ValueConstructorVariant::Record { field_map, .. } => match field_map {
-                        Some(field_map) => Inferred::Known(field_map.clone()),
-                        None => Inferred::Unknown,
-                    },
-
-                    ValueConstructorVariant::ModuleFn { .. }
-                    | ValueConstructorVariant::LocalVariable { .. } => {
-                        self.problems
-                            .error(Error::NonLocalClauseGuardVariable { location, name });
-                        return self.new_invalid_constant(location);
-                    }
-
-                    // TODO: remove this clone. Could use an rc instead
-                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                        return literal.clone();
-                    }
-                };
-
-                Constant::Record {
-                    module,
-                    location,
-                    name,
-                    arguments: vec![],
-                    type_: constructor.type_.clone(),
-                    field_map,
                     record_constructor: Some(Box::new(constructor)),
                 }
             }
@@ -4346,21 +4296,23 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         module: Option<(EcoString, SrcSpan)>,
         location: SrcSpan,
         name: EcoString,
-        mut arguments: Vec<CallArg<UntypedConstant>>,
+        arguments: Option<Vec<CallArg<UntypedConstant>>>,
     ) -> Constant<Arc<Type>> {
         // We start by inferring the value constructor. If we can't do that we
         // immediately fail and return an invalid node.
         // TODO: in future we might want to make this more fault tolerant and
         //       still check the arguments even if the constructor itself cannot
         //       be inferred, like we do for expressions!
-        let constructor = match self.infer_value_constructor(
-            &module,
-            &name,
-            &location,
-            ValueUsage::Call {
+
+        // The usage counts as a call only if there's actually an arguments list!
+        // `Wibble()` and `Wibble(1, 2)` are calls, but `Wibble` is not!
+        let usage = arguments
+            .as_ref()
+            .map_or(ValueUsage::Other, |arguments| ValueUsage::Call {
                 arity: arguments.len(),
-            },
-        ) {
+            });
+
+        let constructor = match self.infer_value_constructor(&module, &name, &location, usage) {
             Ok(constructor) => constructor,
             Err(error) => {
                 self.problems.error(error);
@@ -4379,9 +4331,27 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
 
             // TODO: remove this clone. Could be an rc instead
-            ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                return literal.clone();
+            ValueConstructorVariant::ModuleConstant { .. } => {
+                unreachable!("module constant called as a record is a syntax error")
             }
+        };
+
+        // If the arguments are none, then there's nothing else left to type, we
+        // can just return.
+        // Otherwise we'll have to go on and also check the arguments.
+        let Some(mut arguments) = arguments else {
+            return Constant::Record {
+                module,
+                location,
+                name,
+                arguments: None,
+                type_: constructor.type_.clone(),
+                field_map: match field_map {
+                    Some(field_map) => Inferred::Known(field_map),
+                    None => Inferred::Unknown,
+                },
+                record_constructor: Some(Box::new(constructor)),
+            };
         };
 
         // This is basically the same code as do_infer_call_with_known_fun()
@@ -4496,7 +4466,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             module,
             location,
             name,
-            arguments: typed_arguments,
+            arguments: Some(typed_arguments),
             type_: expected_return,
             field_map: match field_map {
                 Some(field_map) => Inferred::Known(field_map),

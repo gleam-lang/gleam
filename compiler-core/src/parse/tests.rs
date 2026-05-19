@@ -1509,6 +1509,22 @@ case my_string {
 }
 
 #[test]
+fn constant_record_with_empty_arguments_is_record() {
+    assert_parse_module!("pub const wibble = Wibble()");
+}
+
+#[test]
+fn calling_module_constant_as_constructor() {
+    assert_module_error!(
+        "
+pub type Wibble { Wibble(Int) }
+pub const wibble = Wibble
+pub const a = wibble(1)
+"
+    );
+}
+
+#[test]
 fn invalid_label_shorthand() {
     assert_module_error!(
         "
@@ -1775,20 +1791,6 @@ pub fn main() {
   }
 }
 "#
-    );
-}
-
-// https://github.com/gleam-lang/gleam/issues/3730
-#[test]
-fn missing_constructor_arguments() {
-    assert_module_error!(
-        "
-pub type A {
-  A(Int)
-}
-
-const a = A()
-"
     );
 }
 

@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type A { A }\nconst a = A()\n"
+---
+----- SOURCE CODE
+
+pub type A { A }
+const a = A()
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:11
+  │
+3 │ const a = A()
+  │           ^^^
+
+This value is being called as a function but its type is:
+
+    A

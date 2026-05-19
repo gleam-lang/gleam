@@ -3575,18 +3575,11 @@ where
                         "a constant record argument",
                     )?;
 
-                    if arguments.is_empty() {
-                        return parse_error(
-                            ParseErrorType::ConstantRecordConstructorNoArguments,
-                            SrcSpan::new(par_s, par_e),
-                        );
-                    }
-
                     Ok(Some(Constant::Record {
                         location: SrcSpan { start, end: par_e },
                         module,
                         name,
-                        arguments,
+                        arguments: Some(arguments),
                         type_: (),
                         field_map: Inferred::Unknown,
                         record_constructor: None,
@@ -3597,7 +3590,7 @@ where
                 location: SrcSpan { start, end },
                 module,
                 name,
-                arguments: vec![],
+                arguments: None,
                 type_: (),
                 field_map: Inferred::Unknown,
                 record_constructor: None,

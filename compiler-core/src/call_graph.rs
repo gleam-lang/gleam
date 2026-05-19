@@ -485,7 +485,7 @@ impl<'a> CallGraphBuilder<'a> {
             }
 
             Constant::Record { arguments, .. } => {
-                for argument in arguments {
+                for argument in arguments.iter().flatten() {
                     self.constant(&argument.value);
                 }
             }

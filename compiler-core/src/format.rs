@@ -515,21 +515,21 @@ impl<'comments> Formatter<'comments> {
 
             Constant::Record {
                 name,
-                arguments,
+                arguments: None,
                 module: None,
                 ..
-            } if arguments.is_empty() => name.to_doc(),
+            } => name.to_doc(),
 
             Constant::Record {
                 name,
-                arguments,
+                arguments: None,
                 module: Some((module, _)),
                 ..
-            } if arguments.is_empty() => module.to_doc().append(".").append(name.as_str()),
+            } => module.to_doc().append(".").append(name.as_str()),
 
             Constant::Record {
                 name,
-                arguments,
+                arguments: Some(arguments),
                 module: None,
                 location,
                 ..
@@ -545,7 +545,7 @@ impl<'comments> Formatter<'comments> {
 
             Constant::Record {
                 name,
-                arguments,
+                arguments: Some(arguments),
                 module: Some((module, _)),
                 location,
                 ..

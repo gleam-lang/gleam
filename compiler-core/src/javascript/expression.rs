@@ -2119,16 +2119,25 @@ impl<'module, 'a> Generator<'module, 'a> {
                 // arguments then this is the constructor being referenced, not the
                 // function being called.
                 if let Some(arity) = type_.fn_arity()
-                    && arguments.is_empty()
+                    && arguments.is_none()
                     && arity != 0
                 {
                     let arity = arity as u16;
                     return record_constructor(type_.clone(), None, name, arity, self.tracker);
                 }
 
-                // Record updates are fully expanded during type checking, so we just handle arguments
+                // Otherwise we're always constructing a record! Even if there's
+                // no argument list:
+                // ```gleam
+                // pub type Wibble { Wibble }
+                // pub const wibble = Wibble // <- here we're constructing the record!
+                // ```
+                //
+                // Record updates are fully expanded during type checking, so we
+                // just handle arguments
                 let field_values = arguments
                     .iter()
+                    .flatten()
                     .map(|argument| self.constant_expression(context, &argument.value))
                     .collect_vec();
 
@@ -2469,56 +2478,14 @@ impl<'module, 'a> Generator<'module, 'a> {
             }
             Constant::Record { type_, .. } if type_.is_nil() => "undefined".to_doc(),
 
-            Constant::Record {
-                arguments,
-                module,
-                name,
-                type_,
-                ..
-            } => {
-                let tag = expression
-                    .constant_record_tag()
-                    .expect("record without inferred constructor made it to code generation");
-
-                if module.is_none() && type_.is_result() {
-                    if tag == "Ok" {
-                        self.tracker.ok_used = true;
-                    } else {
-                        self.tracker.error_used = true;
-                    }
-                }
-
-                // If there's no arguments and the type is a function that takes
-                // arguments then this is the constructor being referenced, not the
-                // function being called.
-                if let Some(arity) = type_.fn_arity()
-                    && arguments.is_empty()
-                    && arity != 0
-                {
-                    let arity = arity as u16;
-                    return record_constructor(type_.clone(), None, name, arity, self.tracker);
-                }
-
-                // Record updates are fully expanded during type checking, so we just
-                // handle arguments
-                let field_values = arguments
-                    .iter()
-                    .map(|argument| self.guard_constant_expression(&argument.value))
-                    .collect_vec();
-                construct_record(
-                    module.as_ref().map(|(module, _)| module.as_str()),
-                    name,
-                    field_values,
-                )
-            }
-
             Constant::BitArray { segments, .. } => {
                 self.constant_bit_array(segments, Context::Guard)
             }
 
             Constant::Var { name, .. } => self.local_var(name).to_doc(),
 
-            Constant::Int { .. }
+            Constant::Record { .. }
+            | Constant::Int { .. }
             | Constant::Float { .. }
             | Constant::String { .. }
             | Constant::List { .. }
