@@ -1,0 +1,7 @@
+name = "escript_with_dependency"
+version = "1.0.0"
+
+[dependencies]
+argv = ">= 1.1.0 and < 2.0.0"
+
+[dev_dependencies]
