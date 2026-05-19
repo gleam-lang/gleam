@@ -4349,6 +4349,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         name: EcoString,
         mut arguments: Vec<CallArg<Constant<(), ()>>>,
     ) -> Constant<Arc<Type>, EcoString> {
+        // We start by inferring the value constructor. If we can't do that we
+        // immediately fail and return an invalid node.
+        // TODO: in future we might want to make this more fault tolerant and
+        //       still check the arguments even if the constructor itself cannot
+        //       be inferred, like we do for expressions!
         let constructor = match self.infer_value_constructor(
             &module,
             &name,
@@ -4363,6 +4368,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 return self.new_invalid_constant(location);
             }
         };
+
         let (tag, field_map, variant_index) = match &constructor.variant {
             ValueConstructorVariant::Record {
                 name,
@@ -4372,7 +4378,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => (
                 name.clone(),
                 match field_map {
-                    Some(fm) => Inferred::Known(fm.clone()),
+                    Some(field_map) => Inferred::Known(field_map.clone()),
                     None => Inferred::Unknown,
                 },
                 *variant_index,
@@ -4390,6 +4396,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 return literal.clone();
             }
         };
+
         // Pretty much all the other infer functions operate on UntypedExpr
         // or TypedExpr rather than ClauseGuard. To make things easier we
         // build the TypedExpr equivalent of the constructor and use that
@@ -4437,6 +4444,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 name: name.clone(),
             },
         };
+
         // This is basically the same code as do_infer_call_with_known_fun()
         // except the args are typed with infer_clause_guard() here.
         // This duplication is a bit awkward but it works!
@@ -4465,12 +4473,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 UnexpectedLabelledArgKind::FunctionParameter,
             ),
         };
+
         // If there's an error reordering the fields, or there's labelled
         // arguments with no field map, then we return an invalid expression.
         if let Err(error) = result {
             self.problems.error(error);
             return self.new_invalid_constant(location);
         }
+
         let (mut arguments_types, return_type) =
             match match_fun_type(fun.type_(), arguments.len(), self.environment) {
                 Ok((arguments_types, return_type)) => (arguments_types, return_type),
@@ -4484,6 +4494,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     return self.new_invalid_constant(location);
                 }
             };
+
         let arguments = arguments_types
             .iter_mut()
             .zip(arguments)
@@ -4510,6 +4521,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
             })
             .collect_vec();
+
         Constant::Record {
             module,
             location,
