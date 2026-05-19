@@ -335,7 +335,6 @@ impl RemapIds {
                 module,
                 name,
                 arguments,
-                tag,
                 type_,
                 field_map,
                 record_constructor,
@@ -359,7 +358,6 @@ impl RemapIds {
                         },
                     )
                     .collect(),
-                tag,
                 type_: self.type_(type_),
                 field_map,
                 record_constructor: record_constructor
@@ -376,7 +374,6 @@ impl RemapIds {
                         location: record_location,
                     },
                 arguments,
-                tag,
                 type_,
                 field_map,
             } => Constant::RecordUpdate {
@@ -402,7 +399,6 @@ impl RemapIds {
                         },
                     )
                     .collect(),
-                tag,
                 type_: self.type_(type_),
                 field_map,
             },

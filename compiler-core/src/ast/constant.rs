@@ -2,12 +2,11 @@ use super::*;
 use crate::analyse::Inferred;
 use crate::type_::{FieldMap, HasType};
 
-pub type TypedConstant = Constant<Arc<Type>, EcoString>;
-pub type UntypedConstant = Constant<(), ()>;
+pub type TypedConstant = Constant<Arc<Type>>;
+pub type UntypedConstant = Constant<()>;
 
-// TODO: remove RecordTag paramter
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub enum Constant<T, RecordTag> {
+pub enum Constant<T> {
     Int {
         location: SrcSpan,
         value: EcoString,
@@ -43,7 +42,6 @@ pub enum Constant<T, RecordTag> {
         module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
         arguments: Vec<CallArg<Self>>,
-        tag: RecordTag,
         type_: T,
         field_map: Inferred<FieldMap>,
         record_constructor: Option<Box<ValueConstructor>>,
@@ -56,7 +54,6 @@ pub enum Constant<T, RecordTag> {
         name: EcoString,
         record: RecordBeingUpdated<Self>,
         arguments: Vec<RecordUpdateArg<Self>>,
-        tag: RecordTag,
         type_: T,
         field_map: Inferred<FieldMap>,
     },
@@ -476,6 +473,23 @@ impl TypedConstant {
             | Constant::Invalid { .. } => None,
         }
     }
+
+    /// If the constant is a record or record update this returns its tag.
+    /// It might return `None` if the record constructor couldn't be inferred.
+    pub(crate) fn constant_record_tag(&self) -> Option<EcoString> {
+        if let Constant::Record {
+            record_constructor: Some(constructor),
+            ..
+        } = self
+            && let ValueConstructorVariant::Record { name, .. } = &constructor.variant
+        {
+            Some(name.clone())
+        } else if let Constant::RecordUpdate { name, .. } = self {
+            Some(name.clone())
+        } else {
+            None
+        }
+    }
 }
 
 impl HasType for TypedConstant {
@@ -484,7 +498,7 @@ impl HasType for TypedConstant {
     }
 }
 
-impl<A, B> Constant<A, B> {
+impl<A> Constant<A> {
     pub fn location(&self) -> SrcSpan {
         match self {
             Constant::Int { location, .. }
@@ -522,13 +536,13 @@ impl<A, B> Constant<A, B> {
     }
 }
 
-impl<A, B> HasLocation for Constant<A, B> {
+impl<A> HasLocation for Constant<A> {
     fn location(&self) -> SrcSpan {
         self.location()
     }
 }
 
-impl<A, B> bit_array::GetLiteralValue for Constant<A, B> {
+impl<A> bit_array::GetLiteralValue for Constant<A> {
     fn as_int_literal(&self) -> Option<BigInt> {
         if let Constant::Int { int_value, .. } = self {
             Some(int_value.clone())

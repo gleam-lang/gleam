@@ -75,7 +75,7 @@ pub enum UntypedExpr {
         location: SrcSpan,
         subjects: Vec<Self>,
         // None if the case expression is missing a body.
-        clauses: Option<Vec<Clause<Self, (), ()>>>,
+        clauses: Option<Vec<Clause<Self, ()>>>,
     },
 
     FieldAccess {

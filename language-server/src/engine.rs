@@ -1571,7 +1571,7 @@ fn hover_for_label(
 }
 
 fn hover_for_module_constant(
-    constant: &ModuleConstant<Arc<Type>, EcoString>,
+    constant: &ModuleConstant<Arc<Type>>,
     line_numbers: LineNumbers,
     module: &Module,
 ) -> Hover {

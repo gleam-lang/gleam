@@ -3958,7 +3958,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
                 };
 
-                let (tag, field_map) = match &constructor.variant {
+                let (constructor_tag, field_map) = match &constructor.variant {
                     ValueConstructorVariant::Record {
                         name,
                         field_map: Some(field_map),
@@ -4032,29 +4032,35 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 };
 
                 // Get the field arguments from the record that we'll use as the base.
-                let (base_arguments, base_tag) =
-                    if let Constant::Record { arguments, tag, .. } = resolved_record {
-                        (arguments, tag)
-                    } else {
-                        self.problems.error(convert_unify_error(
-                            UnifyError::CouldNotUnify {
-                                expected: expected_type.clone(),
-                                given: typed_record_type,
-                                situation: None,
-                            },
-                            record.base.location(),
-                        ));
-                        return self.new_invalid_constant(location);
-                    };
+                let (base_arguments, updated_record_tag) = if let Constant::Record {
+                    arguments,
+                    record_constructor: Some(resolved_record_constructor),
+                    ..
+                } = resolved_record
+                    && let ValueConstructorVariant::Record { name, .. } =
+                        resolved_record_constructor.variant
+                {
+                    (arguments, name)
+                } else {
+                    self.problems.error(convert_unify_error(
+                        UnifyError::CouldNotUnify {
+                            expected: expected_type.clone(),
+                            given: typed_record_type,
+                            situation: None,
+                        },
+                        record.base.location(),
+                    ));
+                    return self.new_invalid_constant(location);
+                };
 
                 // Check that the variant being spread matches the constructor variant
                 // For multi-variant custom types, you can't spread Dog to create Cat
-                if tag != base_tag {
+                if constructor_tag != updated_record_tag {
                     self.problems.error(Error::UnsafeRecordUpdate {
                         location: record.base.location(),
                         reason: UnsafeRecordUpdateReason::WrongVariant {
-                            constructed_variant: tag,
-                            spread_variant: base_tag,
+                            constructed_variant: constructor_tag,
+                            spread_variant: updated_record_tag,
                         },
                     });
                     return self.new_invalid_constant(location);
@@ -4179,7 +4185,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     name,
                     arguments: final_arguments,
                     type_: expected_type,
-                    tag,
                     field_map: Inferred::Known(field_map),
                     record_constructor: Some(Box::new(constructor)),
                 }
@@ -4205,16 +4210,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
                 };
 
-                let (tag, field_map) = match &constructor.variant {
-                    ValueConstructorVariant::Record {
-                        name, field_map, ..
-                    } => (
-                        name.clone(),
-                        match field_map {
-                            Some(field_map) => Inferred::Known(field_map.clone()),
-                            None => Inferred::Unknown,
-                        },
-                    ),
+                let field_map = match &constructor.variant {
+                    ValueConstructorVariant::Record { field_map, .. } => match field_map {
+                        Some(field_map) => Inferred::Known(field_map.clone()),
+                        None => Inferred::Unknown,
+                    },
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable { .. } => {
@@ -4235,7 +4235,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     name,
                     arguments: vec![],
                     type_: constructor.type_.clone(),
-                    tag,
                     field_map,
                     record_constructor: Some(Box::new(constructor)),
                 }
@@ -4361,8 +4360,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         module: Option<(EcoString, SrcSpan)>,
         location: SrcSpan,
         name: EcoString,
-        mut arguments: Vec<CallArg<Constant<(), ()>>>,
-    ) -> Constant<Arc<Type>, EcoString> {
+        mut arguments: Vec<CallArg<UntypedConstant>>,
+    ) -> Constant<Arc<Type>> {
         // We start by inferring the value constructor. If we can't do that we
         // immediately fail and return an invalid node.
         // TODO: in future we might want to make this more fault tolerant and
@@ -4383,10 +4382,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         };
 
-        let (tag, field_map) = match &constructor.variant {
-            ValueConstructorVariant::Record {
-                name, field_map, ..
-            } => (name.clone(), field_map.clone()),
+        let field_map = match &constructor.variant {
+            ValueConstructorVariant::Record { field_map, .. } => field_map.clone(),
 
             ValueConstructorVariant::ModuleFn { .. }
             | ValueConstructorVariant::LocalVariable { .. } => {
@@ -4482,7 +4479,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             name,
             arguments,
             type_: return_type,
-            tag,
             field_map: match field_map {
                 Some(field_map) => Inferred::Known(field_map),
                 None => Inferred::Unknown,
@@ -5531,7 +5527,6 @@ fn invalid_with_annotated_type(constant: TypedConstant, new_type: Arc<Type>) -> 
             module,
             name,
             arguments,
-            tag,
             type_: _,
             field_map,
             record_constructor,
@@ -5540,7 +5535,6 @@ fn invalid_with_annotated_type(constant: TypedConstant, new_type: Arc<Type>) -> 
             module,
             name,
             arguments,
-            tag,
             type_: new_type,
             field_map,
             record_constructor,
@@ -5553,7 +5547,6 @@ fn invalid_with_annotated_type(constant: TypedConstant, new_type: Arc<Type>) -> 
             name,
             record,
             arguments,
-            tag,
             type_: _,
             field_map,
         } => Constant::RecordUpdate {
@@ -5563,7 +5556,6 @@ fn invalid_with_annotated_type(constant: TypedConstant, new_type: Arc<Type>) -> 
             name,
             record,
             arguments,
-            tag,
             type_: new_type,
             field_map,
         },

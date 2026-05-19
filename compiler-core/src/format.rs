@@ -469,7 +469,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn const_expr<'a, A, B>(&mut self, value: &'a Constant<A, B>) -> Document<'a> {
+    fn const_expr<'a, A>(&mut self, value: &'a Constant<A>) -> Document<'a> {
         let comments = self.pop_comments(value.location().start);
         let document = match value {
             Constant::Todo { message, .. } => {
@@ -593,11 +593,11 @@ impl<'comments> Formatter<'comments> {
         commented(document, comments)
     }
 
-    fn const_list<'a, A, B>(
+    fn const_list<'a, A>(
         &mut self,
-        elements: &'a [Constant<A, B>],
+        elements: &'a [Constant<A>],
         location: &SrcSpan,
-        tail: &'a Option<Box<Constant<A, B>>>,
+        tail: &'a Option<Box<Constant<A>>>,
     ) -> Document<'a> {
         if elements.is_empty() {
             // We take all comments that come _before_ the end of the list,
@@ -692,9 +692,9 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    pub fn const_tuple<'a, A, B>(
+    pub fn const_tuple<'a, A>(
         &mut self,
-        elements: &'a [Constant<A, B>],
+        elements: &'a [Constant<A>],
         location: &SrcSpan,
     ) -> Document<'a> {
         if elements.is_empty() {
@@ -1540,12 +1540,12 @@ impl<'comments> Formatter<'comments> {
         )
     }
 
-    pub fn const_record_update<'a, A, B>(
+    pub fn const_record_update<'a, A>(
         &mut self,
         module: &Option<(EcoString, SrcSpan)>,
         name: &'a EcoString,
-        record: &'a RecordBeingUpdated<Constant<A, B>>,
-        arguments: &'a [RecordUpdateArg<Constant<A, B>>],
+        record: &'a RecordBeingUpdated<Constant<A>>,
+        arguments: &'a [RecordUpdateArg<Constant<A>>],
         location: &SrcSpan,
     ) -> Document<'a> {
         let constructor_doc = match module {
@@ -2720,10 +2720,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn constant_call_arg<'a, A, B>(
-        &mut self,
-        argument: &'a CallArg<Constant<A, B>>,
-    ) -> Document<'a> {
+    fn constant_call_arg<'a, A>(&mut self, argument: &'a CallArg<Constant<A>>) -> Document<'a> {
         self.format_call_arg(argument, constant_call_arg_formatting, |this, value| {
             this.const_expr(value)
         })
@@ -3180,10 +3177,10 @@ impl<'comments> Formatter<'comments> {
         doc.group()
     }
 
-    fn append_as_message_constant<'a, A, B>(
+    fn append_as_message_constant<'a, A>(
         &mut self,
         doc: Document<'a>,
-        message: Option<&'a Constant<A, B>>,
+        message: Option<&'a Constant<A>>,
     ) -> Document<'a> {
         let Some(message) = message else { return doc };
 
@@ -3669,9 +3666,9 @@ fn pattern_call_arg_formatting(
     }
 }
 
-fn constant_call_arg_formatting<A, B>(
-    argument: &CallArg<Constant<A, B>>,
-) -> CallArgFormatting<'_, Constant<A, B>> {
+fn constant_call_arg_formatting<A>(
+    argument: &CallArg<Constant<A>>,
+) -> CallArgFormatting<'_, Constant<A>> {
     match argument {
         // An argument supplied using label shorthand syntax.
         _ if argument.uses_label_shorthand() => CallArgFormatting::ShorthandLabelled(

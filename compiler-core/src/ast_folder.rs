@@ -993,7 +993,6 @@ pub trait UntypedConstantFolder {
                 module,
                 name,
                 arguments,
-                tag: (),
                 type_: (),
                 field_map: _,
                 record_constructor: _,
@@ -1006,7 +1005,6 @@ pub trait UntypedConstantFolder {
                 name,
                 record,
                 arguments,
-                tag: (),
                 type_: (),
                 field_map: _,
             } => self.fold_constant_record_update(
@@ -1124,7 +1122,6 @@ pub trait UntypedConstantFolder {
             module,
             name,
             arguments,
-            tag: (),
             type_: (),
             field_map: Inferred::Unknown,
             record_constructor: None,
@@ -1147,7 +1144,6 @@ pub trait UntypedConstantFolder {
             name,
             record,
             arguments,
-            tag: (),
             type_: (),
             field_map: Inferred::Unknown,
         }
@@ -1236,7 +1232,6 @@ pub trait UntypedConstantFolder {
                 module,
                 name,
                 arguments,
-                tag,
                 type_,
                 field_map,
                 record_constructor,
@@ -1253,7 +1248,6 @@ pub trait UntypedConstantFolder {
                     module,
                     name,
                     arguments,
-                    tag,
                     type_,
                     field_map,
                     record_constructor,
@@ -1267,7 +1261,6 @@ pub trait UntypedConstantFolder {
                 name,
                 record,
                 arguments,
-                tag,
                 type_,
                 field_map,
             } => {
@@ -1290,7 +1283,6 @@ pub trait UntypedConstantFolder {
                     name,
                     record,
                     arguments,
-                    tag,
                     type_,
                     field_map,
                 }
