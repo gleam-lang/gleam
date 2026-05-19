@@ -81,6 +81,9 @@ pub fn escript(paths: &ProjectPaths) -> Result<()> {
 
     let escript_path = paths.root().join(package_name.as_str());
     let mut file = fs::open_file(&escript_path)?;
+
+    // The -escript flag in the header instructs the BEAM `escript` program
+    // to run the regular Gleam entrypoint module when running this escript.
     let header = format!(
         "#!/usr/bin/env escript
 %%
