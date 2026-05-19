@@ -153,7 +153,7 @@ jobs:
         uses: clechasseur/rs-cargo@2ece93e6f28d1fa8b26fa53e9b3b06844c25a2ce # v5.0.4
         with:
           command: test
-          # We only want to run the `test-output` when running integration tests.
+          # We only want to run `test-{output,commands}` when running integration tests.
           # There's a caveat though: when `cargo-tool` is `cross` it uses a container
           # and would result in these integration tests failing due to not finding
           # the escript binary. So, in case `cargo-tool != cargo` we'll skip the
@@ -163,7 +163,7 @@ jobs:
             --target ${{ matrix.target }}
             ${{ ((matrix.run-integration-tests && matrix.cargo-tool == 'cargo')
                   && ' ')
-                  || '--exclude test-output' }}
+                  || '--exclude test-output --exclude test-commands' }}
           tool: ${{ matrix.cargo-tool }}
 
       - name: test/project_erlang (non-windows)
