@@ -1,0 +1,18 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub const power = 10\npub const a_constant = Wibble()\npub type Wibble { Wibble(power: Int, another_arg: Int) }\n "
+---
+----- BEFORE ACTION
+
+pub const power = 10
+pub const a_constant = Wibble()
+                              ↑
+pub type Wibble { Wibble(power: Int, another_arg: Int) }
+ 
+
+
+----- AFTER ACTION
+
+pub const power = 10
+pub const a_constant = Wibble(power:, another_arg: todo)
+pub type Wibble { Wibble(power: Int, another_arg: Int) }
