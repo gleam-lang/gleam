@@ -833,19 +833,27 @@ impl<W: Write + io::Seek> ZipArchive<W> {
     }
 
     pub fn finish(self) -> Result<W> {
-        self.zip.finish().map_err(|_| todo!("implement error"))
+        self.zip
+            .finish()
+            .map_err(|e| Error::ZipFinish(e.to_string()))
     }
 
     pub fn add_file_from_disc(
         &mut self,
-        disc_path: impl AsRef<std::path::Path>,
+        disc_path: impl AsRef<Utf8Path>,
         zip_path: impl Into<String>,
     ) -> Result<()> {
+        let disc_path = disc_path.as_ref();
         self.zip
             .start_file(zip_path.into(), self.options())
             .map_err(|_| todo!("implement error"))?;
         let mut file = File::open(disc_path).unwrap();
-        let _: u64 = io::copy(&mut file, &mut self.zip).unwrap();
+        let _: u64 = io::copy(&mut file, &mut self.zip).map_err(|e| Error::FileIo {
+            kind: FileKind::File,
+            action: FileIoAction::Copy,
+            path: disc_path.to_path_buf(),
+            err: Some(e.to_string()),
+        })?;
         Ok(())
     }
 

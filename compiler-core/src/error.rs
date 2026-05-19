@@ -214,6 +214,9 @@ pub enum Error {
     TarFinish(String),
 
     #[error("{0}")]
+    ZipFinish(String),
+
+    #[error("{0}")]
     Gzip(String),
 
     #[error("shell program `{program}` not found")]
@@ -1593,6 +1596,23 @@ This was error from the tar library:
                 );
                 vec![Diagnostic {
                     title: "Failure creating tar archive".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: None,
+                }]
+            }
+
+            Error::ZipFinish(detail) => {
+                let text = format!(
+                    "There was a problem when creating a zip archive.
+
+This was error from the zip library:
+
+    {detail}"
+                );
+                vec![Diagnostic {
+                    title: "Failure creating zip archive".into(),
                     text,
                     hint: None,
                     level: Level::Error,

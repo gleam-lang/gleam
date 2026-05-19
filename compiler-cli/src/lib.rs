@@ -141,7 +141,6 @@ pub struct TreeOptions {
         .usage(styling::AnsiColor::Yellow.on_default())
         .literal(styling::AnsiColor::Green.on_default())
 )]
-
 pub enum Command {
     /// Build the project
     Build {
