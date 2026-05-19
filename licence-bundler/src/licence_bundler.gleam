@@ -21,7 +21,7 @@ pub fn main() -> Nil {
   // The output is too verbose to show an example here, so run this command if
   // you want to see it yourself:
   //
-  //     cargo tree --format "{p} {l}" --edges no-dev,no-build,no-proc
+  //     cargo tree --format "{p} {l}" --color never --edges no-dev,no-build,no-proc
   //
   let assert Ok(output) =
     shellout.command(
@@ -30,6 +30,8 @@ pub fn main() -> Nil {
         "tree",
         "--format",
         "{p} {l}",
+        "--color",
+        "never",
         "--edges",
         "no-dev,no-build,no-proc-macro",
       ],
