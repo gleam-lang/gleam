@@ -215,6 +215,23 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- When using the wrong operator in a guard, the language server can now suggest
+  and apply an automatic fix. For example:
+
+  ```gleam
+  pub fn categorise() {
+    case pokemon {
+      Pokemon(name:, ..) if name == "rai" + "chu" -> todo
+      _ -> todo
+    }
+  }
+  ```
+
+  Gleam has no operator overloading, and the operator used to join strings is
+  `<>`, not `+`. The language server can automatically fix this common mistake.
+  Triggering the code action on the guard will replace `+` with `<>`.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server now presents quick fix code actions before refactoring
   ones.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
