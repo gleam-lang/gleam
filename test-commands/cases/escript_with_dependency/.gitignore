@@ -2,4 +2,4 @@
 *.ez
 /build
 erl_crash.dump
-escript_ok
+escript_with_dependency
