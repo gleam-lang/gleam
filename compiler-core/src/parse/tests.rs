@@ -634,6 +634,24 @@ fn assign_left_hand_side_of_concat_pattern() {
     );
 }
 
+#[test]
+fn discard_infix_of_concat_pattern() {
+    assert_error!(
+        r#"case "" {
+    "prefix" <> _ <> "suffix" -> Nil
+}"#
+    );
+}
+
+#[test]
+fn assign_infix_of_concat_pattern() {
+    assert_error!(
+        r#"case "" {
+    "prefix" <> infix <> "suffix" -> infix
+}"#
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/1890
 #[test]
 fn valueless_list_spread_expression() {

@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "case \"\" {\n    \"prefix\" <> _ <> \"suffix\" -> Nil\n}"
+---
+----- SOURCE CODE
+case "" {
+    "prefix" <> _ <> "suffix" -> Nil
+}
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:17
+  │
+2 │     "prefix" <> _ <> "suffix" -> Nil
+  │                 ^ This must be a string literal prefix
+
+We can't tell what size this infix should be so we don't know
+how to handle this pattern.
+
+If you want to match one character consider using `pop_grapheme`
+from the stdlib's `gleam/string` module.
