@@ -189,7 +189,7 @@ runs:
       if: ${{ inputs.generate-gleam-licences-html == 'true' }}
       uses: erlef/setup-beam@fc68ffb90438ef2936bbb3251622353b3dcb2f93 # v1.24.0
       with:
-        otp-version: "28.0.1"
+        otp-version: "29"
         rebar3-version: "3"
 
     - name: Generate licences HTML

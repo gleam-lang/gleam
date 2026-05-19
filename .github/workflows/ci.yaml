@@ -100,8 +100,8 @@ jobs:
       - name: Install Erlang
         uses: erlef/setup-beam@fc68ffb90438ef2936bbb3251622353b3dcb2f93 # v1.24.0
         with:
-          otp-version: "28.0.1"
-          elixir-version: "1.18"
+          otp-version: "29"
+          elixir-version: "1.19"
           rebar3-version: "3"
 
       - name: Setup Node
@@ -444,8 +444,8 @@ jobs:
       - name: Install Erlang
         uses: erlef/setup-beam@fc68ffb90438ef2936bbb3251622353b3dcb2f93 # v1.24.0
         with:
-          otp-version: "26.1"
-          elixir-version: "1.16.1"
+          otp-version: "29"
+          elixir-version: "1.19"
           rebar3-version: "3"
 
       - name: Download Gleam binary from previous job
