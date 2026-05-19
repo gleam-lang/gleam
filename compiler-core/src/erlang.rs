@@ -1797,23 +1797,30 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
         ),
 
         Constant::Record {
-            tag,
-            type_,
-            arguments,
-            ..
-        } if arguments.is_empty() => match type_.deref() {
-            Type::Fn { arguments, .. } => record_constructor_function(tag, arguments.len()),
-            Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
-                atom_string(to_snake_case(tag))
-            }
-        },
+            type_, arguments, ..
+        } if arguments.is_empty() => {
+            let tag = literal
+                .constant_record_tag()
+                .expect("record without inferred constructor made it to code generation");
 
-        Constant::Record { tag, arguments, .. } => {
+            match type_.deref() {
+                Type::Fn { arguments, .. } => record_constructor_function(tag, arguments.len()),
+                Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
+                    atom_string(to_snake_case(&tag))
+                }
+            }
+        }
+
+        Constant::Record { arguments, .. } => {
+            let tag = literal
+                .constant_record_tag()
+                .expect("record without inferred constructor made it to code generation");
+
             // Record updates are fully expanded during type checking, so we just handle arguments
             let arguments_doc = arguments
                 .iter()
                 .map(|argument| const_inline(&argument.value, env));
-            let tag = atom_string(to_snake_case(tag));
+            let tag = atom_string(to_snake_case(&tag));
             tuple(std::iter::once(tag).chain(arguments_doc))
         }
 
@@ -1837,13 +1844,13 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
     }
 }
 
-fn record_constructor_function(tag: &EcoString, arity: usize) -> Document<'_> {
+fn record_constructor_function<'a>(tag: EcoString, arity: usize) -> Document<'a> {
     let chars = incrementing_arguments_list(arity);
     "fun("
         .to_doc()
         .append(chars.clone())
         .append(") -> {")
-        .append(atom_string(to_snake_case(tag)))
+        .append(atom_string(to_snake_case(&tag)))
         .append(", ")
         .append(chars)
         .append("} end")
@@ -2572,7 +2579,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name, arity, .. },
             ..
-        } => record_constructor_function(name, *arity as usize),
+        } => record_constructor_function(name.clone(), *arity as usize),
 
         TypedExpr::ModuleSelect {
             type_,

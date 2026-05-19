@@ -204,7 +204,7 @@ pub fn parse_statement_sequence(src: &str) -> Result<Vec1<UntypedStatement>, Par
 // Test Interface
 //
 #[cfg(test)]
-pub fn parse_const_value(src: &str) -> Result<Constant<(), ()>, ParseError> {
+pub fn parse_const_value(src: &str) -> Result<UntypedConstant, ParseError> {
     let lex = lexer::make_tokenizer(src);
     let mut parser = Parser::new(lex);
     let expr = parser.parse_const_value();
@@ -3560,7 +3560,6 @@ where
                         name,
                         record,
                         arguments: update_arguments,
-                        tag: (),
                         type_: (),
                         field_map: Inferred::Unknown,
                     }))
@@ -3588,7 +3587,6 @@ where
                         module,
                         name,
                         arguments,
-                        tag: (),
                         type_: (),
                         field_map: Inferred::Unknown,
                         record_constructor: None,
@@ -3600,7 +3598,6 @@ where
                 module,
                 name,
                 arguments: vec![],
-                tag: (),
                 type_: (),
                 field_map: Inferred::Unknown,
                 record_constructor: None,

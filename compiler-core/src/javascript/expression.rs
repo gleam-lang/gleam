@@ -2100,10 +2100,13 @@ impl<'module, 'a> Generator<'module, 'a> {
                 arguments,
                 module,
                 name,
-                tag,
                 type_,
                 ..
             } => {
+                let tag = expression
+                    .constant_record_tag()
+                    .expect("record without inferred constructor made it to code generation");
+
                 if module.is_none() && type_.is_result() {
                     if tag == "Ok" {
                         self.tracker.ok_used = true;
@@ -2470,10 +2473,13 @@ impl<'module, 'a> Generator<'module, 'a> {
                 arguments,
                 module,
                 name,
-                tag,
                 type_,
                 ..
             } => {
+                let tag = expression
+                    .constant_record_tag()
+                    .expect("record without inferred constructor made it to code generation");
+
                 if module.is_none() && type_.is_result() {
                     if tag == "Ok" {
                         self.tracker.ok_used = true;

@@ -944,7 +944,6 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
         arguments: &'ast Vec<ast::CallArg<ast::TypedConstant>>,
-        tag: &'ast EcoString,
         type_: &'ast std::sync::Arc<Type>,
         field_map: &'ast analyse::Inferred<gleam_core::type_::FieldMap>,
         record_constructor: &'ast Option<Box<ValueConstructor>>,
@@ -964,7 +963,6 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
             module,
             name,
             arguments,
-            tag,
             type_,
             field_map,
             record_constructor,
@@ -979,7 +977,6 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
         name: &'ast EcoString,
         record: &'ast ast::RecordBeingUpdated<ast::TypedConstant>,
         arguments: &'ast [ast::RecordUpdateArg<ast::TypedConstant>],
-        tag: &'ast EcoString,
         type_: &'ast std::sync::Arc<Type>,
         field_map: &'ast analyse::Inferred<gleam_core::type_::FieldMap>,
     ) {
@@ -1000,7 +997,6 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
             name,
             record,
             arguments,
-            tag,
             type_,
             field_map,
         )

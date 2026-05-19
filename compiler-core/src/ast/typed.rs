@@ -94,7 +94,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         type_: Arc<Type>,
         subjects: Vec<Self>,
-        clauses: Vec<Clause<Self, Arc<Type>, EcoString>>,
+        clauses: Vec<Clause<Self, Arc<Type>>>,
         compiled_case: CompiledCase,
     },
 

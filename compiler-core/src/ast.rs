@@ -1031,8 +1031,8 @@ impl TypedImport {
     }
 }
 
-pub type UntypedModuleConstant = ModuleConstant<(), ()>;
-pub type TypedModuleConstant = ModuleConstant<Arc<Type>, EcoString>;
+pub type UntypedModuleConstant = ModuleConstant<()>;
+pub type TypedModuleConstant = ModuleConstant<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A certain fixed value that can be used in multiple places
@@ -1043,7 +1043,7 @@ pub type TypedModuleConstant = ModuleConstant<Arc<Type>, EcoString>;
 /// pub const start_year = 2101
 /// pub const end_year = 2111
 /// ```
-pub struct ModuleConstant<T, ConstantRecordTag> {
+pub struct ModuleConstant<T> {
     pub documentation: Option<(u32, EcoString)>,
     /// The location of the constant, starting at the "(pub) const" keywords and
     /// ending after the ": Type" annotation, or (without an annotation) after its name.
@@ -1052,7 +1052,7 @@ pub struct ModuleConstant<T, ConstantRecordTag> {
     pub name: EcoString,
     pub name_location: SrcSpan,
     pub annotation: Option<TypeAst>,
-    pub value: Box<Constant<T, ConstantRecordTag>>,
+    pub value: Box<Constant<T>>,
     pub type_: T,
     pub deprecation: Deprecation,
     pub implementations: Implementations,
@@ -1195,18 +1195,18 @@ impl TypedTypeAlias {
     }
 }
 
-pub type UntypedDefinition = Definition<(), UntypedExpr, (), ()>;
+pub type UntypedDefinition = Definition<(), UntypedExpr, ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Definition<T, Expr, ConstantRecordTag, PackageName> {
+pub enum Definition<T, Expr, PackageName> {
     Function(Function<T, Expr>),
     TypeAlias(TypeAlias<T>),
     CustomType(CustomType<T>),
     Import(Import<PackageName>),
-    ModuleConstant(ModuleConstant<T, ConstantRecordTag>),
+    ModuleConstant(ModuleConstant<T>),
 }
 
-impl<A, B, C, E> Definition<A, B, C, E> {
+impl<A, B, C> Definition<A, B, C> {
     pub fn location(&self) -> SrcSpan {
         match self {
             Definition::Function(Function { location, .. })
@@ -1834,20 +1834,20 @@ pub type MultiPattern<Type> = Vec<Pattern<Type>>;
 pub type UntypedMultiPattern = MultiPattern<()>;
 pub type TypedMultiPattern = MultiPattern<Arc<Type>>;
 
-pub type TypedClause = Clause<TypedExpr, Arc<Type>, EcoString>;
+pub type TypedClause = Clause<TypedExpr, Arc<Type>>;
 
-pub type UntypedClause = Clause<UntypedExpr, (), ()>;
+pub type UntypedClause = Clause<UntypedExpr, ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Clause<Expr, Type, RecordTag> {
+pub struct Clause<Expr, Type> {
     pub location: SrcSpan,
     pub pattern: MultiPattern<Type>,
     pub alternative_patterns: Vec<MultiPattern<Type>>,
-    pub guard: Option<ClauseGuard<Type, RecordTag>>,
+    pub guard: Option<ClauseGuard<Type>>,
     pub then: Expr,
 }
 
-impl<A, B, C> Clause<A, B, C> {
+impl<A, B> Clause<A, B> {
     pub fn pattern_count(&self) -> usize {
         1 + self.alternative_patterns.len()
     }
@@ -2247,14 +2247,14 @@ fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &Type
     }
 }
 
-pub type UntypedClauseGuard = ClauseGuard<(), ()>;
-pub type TypedClauseGuard = ClauseGuard<Arc<Type>, EcoString>;
+pub type UntypedClauseGuard = ClauseGuard<()>;
+pub type TypedClauseGuard = ClauseGuard<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ClauseGuard<Type, RecordTag> {
+pub enum ClauseGuard<Type> {
     Block {
         location: SrcSpan,
-        value: Box<ClauseGuard<Type, RecordTag>>,
+        value: Box<ClauseGuard<Type>>,
     },
 
     BinaryOperator {
@@ -2300,10 +2300,10 @@ pub enum ClauseGuard<Type, RecordTag> {
         label: EcoString,
         module_name: EcoString,
         module_alias: EcoString,
-        literal: Constant<Type, RecordTag>,
+        literal: Constant<Type>,
     },
 
-    Constant(Constant<Type, RecordTag>),
+    Constant(Constant<Type>),
 
     Invalid {
         location: SrcSpan,
@@ -2311,7 +2311,7 @@ pub enum ClauseGuard<Type, RecordTag> {
     },
 }
 
-impl<A, B> ClauseGuard<A, B> {
+impl<A> ClauseGuard<A> {
     pub fn location(&self) -> SrcSpan {
         match self {
             ClauseGuard::Constant(constant) => constant.location(),
