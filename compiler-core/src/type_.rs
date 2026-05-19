@@ -884,6 +884,16 @@ impl ValueConstructorVariant {
             ValueConstructorVariant::Record { field_map, .. } => field_map.as_ref(),
         }
     }
+
+    fn is_record_constructor_function(&self) -> bool {
+        match self {
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::ModuleFn { .. }
+            | ValueConstructorVariant::ModuleConstant { .. } => false,
+            // If it has an arity of zero then it can't be used as a function!
+            ValueConstructorVariant::Record { arity, .. } => *arity > 0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

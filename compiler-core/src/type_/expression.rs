@@ -4369,20 +4369,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         };
 
-        let (tag, field_map, variant_index) = match &constructor.variant {
+        let (tag, field_map) = match &constructor.variant {
             ValueConstructorVariant::Record {
-                name,
-                field_map,
-                variant_index,
-                ..
-            } => (
-                name.clone(),
-                match field_map {
-                    Some(field_map) => Inferred::Known(field_map.clone()),
-                    None => Inferred::Unknown,
-                },
-                *variant_index,
-            ),
+                name, field_map, ..
+            } => (name.clone(), field_map.clone()),
 
             ValueConstructorVariant::ModuleFn { .. }
             | ValueConstructorVariant::LocalVariable { .. } => {
@@ -4397,78 +4387,26 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         };
 
-        // Pretty much all the other infer functions operate on UntypedExpr
-        // or TypedExpr rather than ClauseGuard. To make things easier we
-        // build the TypedExpr equivalent of the constructor and use that
-        // TODO: resvisit this. It is rather awkward at present how we
-        // have to convert to this other data structure.
-        let fun = match &module {
-            Some((module_alias, module_location)) => {
-                let type_ = Arc::clone(&constructor.type_);
-                let module_name = self
-                    .environment
-                    .imported_modules
-                    // TODO: remove
-                    .get(module_alias)
-                    .expect("Failed to find previously located module import")
-                    .1
-                    .name
-                    .clone();
-                let module_value_constructor = ModuleValueConstructor::Record {
-                    name: name.clone(),
-                    variant_index,
-                    field_map: match &field_map {
-                        Inferred::Known(fm) => Some(fm.clone()),
-                        Inferred::Unknown => None,
-                    },
-                    arity: arguments.len() as u16,
-                    type_: Arc::clone(&type_),
-                    location: constructor.variant.definition_location(),
-                    documentation: None,
-                };
-
-                TypedExpr::ModuleSelect {
-                    location: module_location.merge(&location),
-                    field_start: location.start,
-                    label: name.clone(),
-                    module_alias: module_alias.clone(),
-                    module_name,
-                    type_,
-                    constructor: module_value_constructor,
-                }
-            }
-
-            None => TypedExpr::Var {
-                constructor: constructor.clone(),
-                location,
-                name: name.clone(),
-            },
-        };
-
         // This is basically the same code as do_infer_call_with_known_fun()
         // except the args are typed with infer_clause_guard() here.
         // This duplication is a bit awkward but it works!
         // Potentially this could be improved later
-        let result = match self.get_field_map(&fun) {
-            // There's an error retrieving the field map, in that case we
-            // return an invalid constant.
-            Err(error) => {
-                self.problems
-                    .error(convert_get_value_constructor_error(error, location, None));
-                return self.new_invalid_constant(location);
-            }
+        let result = match &field_map {
             // The fun has a field map so labelled arguments may be present
             // and need to be reordered.
-            Ok(Some(field_map)) => {
+            Some(field_map) => {
                 field_map.reorder(&mut arguments, location, IncorrectArityContext::Function)
             }
             // The fun or constructor has no field map and so we error
             // if arguments have been labelled.
-            Ok(None) if fun.is_record_constructor_function() => assert_no_labelled_arguments(
-                &arguments,
-                UnexpectedLabelledArgKind::RecordConstructorArgument,
-            ),
-            Ok(None) => assert_no_labelled_arguments(
+            None if constructor.variant.is_record_constructor_function() => {
+                assert_no_labelled_arguments(
+                    &arguments,
+                    UnexpectedLabelledArgKind::RecordConstructorArgument,
+                )
+            }
+
+            None => assert_no_labelled_arguments(
                 &arguments,
                 UnexpectedLabelledArgKind::FunctionParameter,
             ),
@@ -4482,12 +4420,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         let (mut arguments_types, return_type) =
-            match match_fun_type(fun.type_(), arguments.len(), self.environment) {
+            match match_fun_type(constructor.type_.clone(), arguments.len(), self.environment) {
                 Ok((arguments_types, return_type)) => (arguments_types, return_type),
                 Err(error) => {
                     self.problems.error(convert_not_fun_error(
                         error,
-                        fun.location(),
+                        module.map_or(location, |(_, module_location)| {
+                            module_location.merge(&location)
+                        }),
                         location,
                         CallKind::Function,
                     ));
@@ -4529,7 +4469,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             arguments,
             type_: return_type,
             tag,
-            field_map,
+            field_map: match field_map {
+                Some(field_map) => Inferred::Known(field_map),
+                None => Inferred::Unknown,
+            },
             record_constructor: Some(Box::new(constructor)),
         }
     }
