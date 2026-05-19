@@ -740,7 +740,7 @@ pub trait Visit<'ast> {
         location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
-        arguments: &'ast Vec<CallArg<TypedConstant>>,
+        arguments: &'ast Option<Vec<CallArg<TypedConstant>>>,
         type_: &'ast Arc<Type>,
         field_map: &'ast Inferred<FieldMap>,
         record_constructor: &'ast Option<Box<ValueConstructor>>,
@@ -864,12 +864,12 @@ pub fn visit_typed_constant_record<'a, V: Visit<'a> + ?Sized>(
     _location: &'a SrcSpan,
     _module: &'a Option<(EcoString, SrcSpan)>,
     _name: &'a EcoString,
-    arguments: &'a Vec<CallArg<TypedConstant>>,
+    arguments: &'a Option<Vec<CallArg<TypedConstant>>>,
     _type_: &'a Arc<Type>,
     _field_map: &'a Inferred<FieldMap>,
     _record_constructor: &'a Option<Box<ValueConstructor>>,
 ) {
-    for argument in arguments {
+    for argument in arguments.iter().flatten() {
         v.visit_typed_constant(&argument.value)
     }
 }

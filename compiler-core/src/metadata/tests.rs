@@ -1169,7 +1169,7 @@ fn constant_record() {
         location: Default::default(),
         module: None,
         name: "".into(),
-        arguments: vec![
+        arguments: Some(vec![
             CallArg {
                 implicit: None,
                 label: None,
@@ -1190,7 +1190,7 @@ fn constant_record() {
                     int_value: 1.into(),
                 },
             },
-        ],
+        ]),
         type_: type_::int(),
         field_map: Inferred::Unknown,
         record_constructor: None,

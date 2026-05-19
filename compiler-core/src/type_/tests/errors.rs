@@ -4276,3 +4276,27 @@ pub fn main(x: Int) {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3730
+#[test]
+fn missing_constructor_arguments() {
+    assert_module_error!(
+        "
+pub type A {
+  A(Int)
+}
+
+const a = A()
+"
+    );
+}
+
+#[test]
+fn constant_calling_constructor_with_no_arguments() {
+    assert_module_error!(
+        "
+pub type A { A }
+const a = A()
+"
+    );
+}

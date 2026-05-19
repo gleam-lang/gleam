@@ -1115,7 +1115,7 @@ pub trait UntypedConstantFolder {
         location: SrcSpan,
         module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
-        arguments: Vec<CallArg<UntypedConstant>>,
+        arguments: Option<Vec<CallArg<UntypedConstant>>>,
     ) -> UntypedConstant {
         Constant::Record {
             location,
@@ -1236,13 +1236,15 @@ pub trait UntypedConstantFolder {
                 field_map,
                 record_constructor,
             } => {
-                let arguments = arguments
-                    .into_iter()
-                    .map(|mut argument| {
-                        argument.value = self.fold_constant(argument.value);
-                        argument
-                    })
-                    .collect();
+                let arguments = arguments.map(|arguments| {
+                    arguments
+                        .into_iter()
+                        .map(|mut argument| {
+                            argument.value = self.fold_constant(argument.value);
+                            argument
+                        })
+                        .collect()
+                });
                 Constant::Record {
                     location,
                     module,

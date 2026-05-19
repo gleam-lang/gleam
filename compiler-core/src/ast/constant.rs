@@ -41,7 +41,20 @@ pub enum Constant<T> {
         location: SrcSpan,
         module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
-        arguments: Vec<CallArg<Self>>,
+        /// These are the arguments used when calling the record.
+        /// If the record is not being called to build a value, then this will
+        /// be `None`. A couple of examples:
+        /// ```gleam
+        /// pub const a = Wibble
+        /// // arguments: None
+        ///
+        /// pub const b = Wibble()
+        /// // arguments: Some(vec![])
+        ///
+        /// pub const c = Wibble(1, 2)
+        /// // arguments: Some(vec![1, 2])
+        /// ```
+        arguments: Option<Vec<CallArg<Self>>>,
         type_: T,
         field_map: Inferred<FieldMap>,
         record_constructor: Option<Box<ValueConstructor>>,
@@ -160,6 +173,7 @@ impl TypedConstant {
                 .unwrap_or(Located::Constant(self)),
             Constant::Record { arguments, .. } => arguments
                 .iter()
+                .flatten()
                 .find_map(|argument| argument.find_node(byte_index))
                 .unwrap_or(Located::Constant(self)),
             Constant::RecordUpdate {
@@ -236,6 +250,7 @@ impl TypedConstant {
 
             Constant::Record { arguments, .. } => arguments
                 .iter()
+                .flatten()
                 .map(|argument| argument.value.referenced_variables())
                 .fold(im::hashset![], im::HashSet::union),
 
@@ -347,11 +362,19 @@ impl TypedConstant {
                     (Some((one, _)), Some((other, _))) => one == other,
                 };
 
-                modules_are_equal
-                    && name == other_name
-                    && pairwise_all(arguments, other_arguments, |(one, other)| {
-                        one.label == other.label && one.value.syntactically_eq(&other.value)
-                    })
+                let arguments_are_equal = match (arguments, other_arguments) {
+                    (None, None) => true,
+                    (None, Some(_)) | (Some(_), None) => false,
+                    (Some(arguments), Some(other_arguments)) => {
+                        modules_are_equal
+                            && name == other_name
+                            && pairwise_all(arguments, other_arguments, |(one, other)| {
+                                one.label == other.label && one.value.syntactically_eq(&other.value)
+                            })
+                    }
+                };
+
+                modules_are_equal && arguments_are_equal
             }
             (Constant::Record { .. }, _) => false,
 
