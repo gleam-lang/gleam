@@ -860,9 +860,12 @@ impl<'a> FillInMissingLabelledArgs<'a> {
                 false
             };
 
-        let variables_in_scope = enclosing_function
-            .map(|fun| ScopeVariableCollector::new(call_location.start).collect_from_function(fun))
-            .unwrap_or_default();
+        let scope_variables =
+            ScopeVariableCollector::new(call_location.start, &self.module.ast.definitions);
+        let variables_in_scope = match enclosing_function {
+            Some(function) => scope_variables.collect_from_function(function),
+            None => scope_variables.variables,
+        };
 
         let labels_list = missing_labels
             .map(|label| {
@@ -963,6 +966,52 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         self.use_right_hand_side_location = previous;
     }
 
+    fn visit_typed_constant_record(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        arguments: &'ast Option<Vec<CallArg<ast::TypedConstant>>>,
+        type_: &'ast Arc<Type>,
+        field_map: &'ast Inferred<FieldMap>,
+        record_constructor: &'ast Option<Box<ValueConstructor>>,
+    ) {
+        let record_range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, record_range) {
+            return;
+        }
+
+        if let Some(arguments) = arguments
+            && let Inferred::Known(field_map) = field_map
+        {
+            self.selected_call = Some(SelectedCall {
+                location: *location,
+                field_map,
+                arguments: arguments.iter().map(Self::empty_argument).collect(),
+                kind: SelectedCallKind::Value,
+                fun_type: record_constructor
+                    .as_ref()
+                    .map(|constructor| constructor.type_.clone()),
+                enclosing_function: None,
+            })
+        }
+
+        // We only want to take into account the innermost function call
+        // containing the current selection so we can't stop at the first call
+        // we find (the outermost one) and have to keep traversing it in case
+        // we're inside a nested call.
+        ast::visit::visit_typed_constant_record(
+            self,
+            location,
+            module,
+            name,
+            arguments,
+            type_,
+            field_map,
+            record_constructor,
+        );
+    }
+
     fn visit_typed_expr_call(
         &mut self,
         location: &'ast SrcSpan,
@@ -1042,15 +1091,24 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
 /// Collects variables that are in scope at a given cursor position.
 struct ScopeVariableCollector {
     cursor: u32,
-    variables: HashMap<EcoString, Arc<Type>>,
+    pub variables: HashMap<EcoString, Arc<Type>>,
 }
 
 impl ScopeVariableCollector {
-    fn new(cursor: u32) -> Self {
-        Self {
-            cursor,
-            variables: HashMap::new(),
-        }
+    fn new(cursor: u32, definitions: &TypedDefinitions) -> Self {
+        let TypedDefinitions { constants, .. } = definitions;
+
+        // When creating a collector, we add module constants to the variables
+        // that are in scope.
+        // These will always be available inside the body of any function we
+        // might want to analyse (unless they are shadowed and replaced in the
+        // map, that is)
+        let variables = constants
+            .iter()
+            .map(|constant| (constant.name.clone(), constant.type_.clone()))
+            .collect();
+
+        Self { cursor, variables }
     }
 
     fn collect_from_function(mut self, fun: &TypedFunction) -> HashMap<EcoString, Arc<Type>> {

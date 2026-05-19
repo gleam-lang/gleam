@@ -1,0 +1,16 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub const wibble = Wibble(1,)\npub type Wibble { Wibble(arg1: Int, arg2: Int) }\n "
+---
+----- BEFORE ACTION
+
+pub const wibble = Wibble(1,)
+                     ↑       
+pub type Wibble { Wibble(arg1: Int, arg2: Int) }
+ 
+
+
+----- AFTER ACTION
+
+pub const wibble = Wibble(1,arg2: todo)
+pub type Wibble { Wibble(arg1: Int, arg2: Int) }
