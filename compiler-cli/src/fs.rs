@@ -844,9 +844,13 @@ impl<W: Write + io::Seek> ZipArchive<W> {
         zip_path: impl Into<String>,
     ) -> Result<()> {
         let disc_path = disc_path.as_ref();
+        let zip_path = zip_path.into();
         self.zip
-            .start_file(zip_path.into(), self.options())
-            .map_err(|_| todo!("implement error"))?;
+            .start_file(zip_path.clone(), self.options())
+            .map_err(|e| Error::ZipAdd {
+                path: zip_path,
+                error: e.to_string(),
+            })?;
         let mut file = File::open(disc_path).unwrap();
         let _: u64 = io::copy(&mut file, &mut self.zip).map_err(|e| Error::FileIo {
             kind: FileKind::File,
