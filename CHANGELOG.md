@@ -79,6 +79,10 @@
   raised in.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- When writing a constant record with an empty arguments list the compiler will
+  no longer stop to analyse the entire module.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler now normalizes remaining-bytes bit-array checks for the
   JavaScript backend so `(bitSize - c) % 8 === 0` becomes `bitSize % 8 === 0`
   when the constant offset `c` is congruent modulo 8. This produces more uniform
@@ -136,6 +140,28 @@
   ([Andrey Kozhev](https://github.com/ankddev))
 
 ### Language server
+
+- The language server now offers a "Fill labels" code action on constants to
+  automatically fill in the missing labelled arguments from a record
+  constructor. For example:
+
+  ```gleam
+  pub type Pokemon {
+    Pokemon(number: Int, name: String, hp: Int)
+  }
+
+  pub const cleffa = Pokemon(number: 173)
+  ```
+
+  In this code snippet we haven't specified the `name` and `hp` fields, that's
+  an error! Triggering the "Fill labels" code action will result in the
+  following:
+
+  ```gleam
+  pub const cleffa = Pokemon(number: 173, name: todo, hp: todo)
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - When hovering a record update expression, the language server can now show the
   fields that are not being updated. For example:
