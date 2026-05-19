@@ -4810,62 +4810,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.problems.error(error);
         }
 
-        let mut missing_arguments = 0;
-        let mut ignored_labelled_arguments = vec![];
         // Extract the type of the fun, ensuring it actually is a function
-        let (mut arguments_types, return_type) =
-            match match_fun_type(fun.type_(), arguments.len(), self.environment) {
-                Ok(function) => function,
-                Err(error) => {
-                    let converted_error =
-                        convert_not_fun_error(error.clone(), fun.location(), location, kind);
-                    match error {
-                        // If the function was valid but had the wrong number of arguments passed.
-                        // Then we keep the error but still want to continue analysing the arguments that were passed.
-                        MatchFunTypeError::IncorrectArity {
-                            arguments: arg_types,
-                            return_type,
-                            expected,
-                            given,
-                            ..
-                        } => {
-                            missing_arguments = expected.saturating_sub(given);
-                            // If the function has labels then arity issues will already
-                            // be handled by the field map so we can ignore them here.
-                            if !labelled_arity_error {
-                                self.problems.error(converted_error);
-                                (arg_types, return_type)
-                            } else {
-                                // Since arity errors with labels cause incorrect
-                                // ordering, we can't type check the labelled arguments here.
-                                let first_labelled_arg =
-                                    arguments.iter().position(|arg| arg.label.is_some());
-                                ignored_labelled_arguments = arguments
-                                    .iter()
-                                    .skip_while(|argument| argument.label.is_none())
-                                    .map(|argument| {
-                                        (
-                                            argument.label.clone(),
-                                            argument.location,
-                                            argument.implicit,
-                                        )
-                                    })
-                                    .collect_vec();
-                                let arguments_to_keep =
-                                    first_labelled_arg.unwrap_or(arguments.len());
-                                (
-                                    arg_types.iter().take(arguments_to_keep).cloned().collect(),
-                                    return_type,
-                                )
-                            }
-                        }
-                        MatchFunTypeError::NotFn { .. } => {
-                            self.problems.error(converted_error);
-                            (vec![], self.new_unbound_var())
-                        }
-                    }
-                }
-            };
+        let FunctionTypeMatch {
+            expected_arguments: mut arguments_types,
+            expected_return: return_type,
+            missing_arguments,
+            ignored_labelled_arguments,
+        } = self.fault_tolerant_match_function_type(
+            labelled_arity_error,
+            kind,
+            fun.type_(),
+            fun.location(),
+            location,
+            &arguments,
+        );
 
         // When typing the function's arguments we don't care if the previous
         // expression panics or not because we want to provide a specialised
@@ -4971,7 +4929,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         //
         // So now what we want to do is add back those labelled arguments to
         // make sure the LS can still see that those were explicitly supplied.
-        for (label, location, implicit) in ignored_labelled_arguments {
+        for IgnoredLabelledArgument {
+            label,
+            location,
+            implicit,
+        } in ignored_labelled_arguments
+        {
             typed_arguments.push(CallArg {
                 label,
                 value: TypedExpr::Invalid {
@@ -5454,6 +5417,120 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             | Constant::Invalid { .. } => (),
         }
     }
+
+    fn fault_tolerant_match_function_type<A>(
+        &mut self,
+        has_labelled_arity_error: bool,
+        call_kind: CallKind,
+        constructor_type: Arc<Type>,
+        // The span of the called element
+        called_location: SrcSpan,
+        // The full span of the function call
+        full_location: SrcSpan,
+        arguments: &[CallArg<A>],
+    ) -> FunctionTypeMatch {
+        // We start by matching the function type. If there's no error we're good
+        // to go, we can immediately return the inferred types.
+        let result = match_fun_type(constructor_type, arguments.len(), self.environment);
+        let error = match result {
+            Err(error) => error,
+            Ok((expected_arguments, expected_return)) => {
+                return FunctionTypeMatch {
+                    expected_arguments,
+                    expected_return,
+                    missing_arguments: 0,
+                    ignored_labelled_arguments: vec![],
+                };
+            }
+        };
+
+        let converted_error =
+            convert_not_fun_error(error.clone(), called_location, full_location, call_kind);
+
+        match error {
+            // If the error is caused by the called thing not being a function
+            // then there isn't much to do, there's no further expectation on
+            // the function types.
+            MatchFunTypeError::NotFn { .. } => {
+                self.problems.error(converted_error);
+                FunctionTypeMatch {
+                    expected_arguments: vec![],
+                    expected_return: self.new_unbound_var(),
+                    missing_arguments: 0,
+                    ignored_labelled_arguments: vec![],
+                }
+            }
+
+            // If the function was valid but had the wrong number of arguments
+            // passed that's when we want to try and recover!
+            // We will have to continue analysing the arguments that were
+            // passed.
+            MatchFunTypeError::IncorrectArity {
+                arguments: arguments_types,
+                return_type,
+                expected,
+                given,
+                ..
+            } => {
+                let missing_arguments = expected.saturating_sub(given);
+
+                // If the function has labels then arity issues will already
+                // be handled by the field map so we can ignore them here.
+                if !has_labelled_arity_error {
+                    self.problems.error(converted_error);
+                    return FunctionTypeMatch {
+                        expected_arguments: arguments_types,
+                        expected_return: return_type,
+                        missing_arguments,
+                        ignored_labelled_arguments: vec![],
+                    };
+                }
+
+                // Since arity errors with labels cause incorrect ordering, we
+                // can't type check the labelled arguments here.
+                let first_labelled_arg = arguments.iter().position(|arg| arg.label.is_some());
+                let arguments_to_keep = first_labelled_arg.unwrap_or(arguments.len());
+                let kept_arguments = arguments_types
+                    .iter()
+                    .take(arguments_to_keep)
+                    .cloned()
+                    .collect();
+                let ignored_labelled_arguments = arguments
+                    .iter()
+                    .skip_while(|argument| argument.label.is_none())
+                    .map(|argument| IgnoredLabelledArgument {
+                        label: argument.label.clone(),
+                        location: argument.location(),
+                        implicit: argument.implicit,
+                    })
+                    .collect_vec();
+
+                FunctionTypeMatch {
+                    expected_arguments: kept_arguments,
+                    expected_return: return_type,
+                    missing_arguments,
+                    ignored_labelled_arguments,
+                }
+            }
+        }
+    }
+}
+
+struct FunctionTypeMatch {
+    /// The types the arguments of the function are expected to have.
+    expected_arguments: Vec<Arc<Type>>,
+    /// The return type the function is expected to have.
+    expected_return: Arc<Type>,
+    /// How many arguments are missing from the function call.
+    missing_arguments: usize,
+    /// A list of the labelled arguments that were not provided to the function call.
+    ignored_labelled_arguments: Vec<IgnoredLabelledArgument>,
+}
+
+struct IgnoredLabelledArgument {
+    label: Option<EcoString>,
+    location: SrcSpan,
+    implicit: Option<ImplicitCallArgOrigin>,
 }
 
 /// Given a constants, this will change its type into the given one, turning
