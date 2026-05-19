@@ -793,8 +793,7 @@ impl<'a> FillInMissingLabelledArgs<'a> {
 
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
-
-        if let Some(SelectedCall {
+        let Some(SelectedCall {
             location: call_location,
             field_map,
             arguments,
@@ -802,108 +801,106 @@ impl<'a> FillInMissingLabelledArgs<'a> {
             fun_type,
             enclosing_function,
         }) = self.selected_call
-        {
-            let is_use_call = arguments.iter().any(|arg| arg.is_use_implicit_callback());
-            let missing_labels = field_map.missing_labels(&arguments);
+        else {
+            return vec![];
+        };
 
-            // If we're applying the code action to a use call, then we know
-            // that the last missing argument is going to be implicitly inserted
-            // by the compiler, so in that case we don't want to also add that
-            // last label to the completions.
-            let missing_labels = missing_labels.iter().peekable();
-            let mut missing_labels = if is_use_call {
-                missing_labels.dropping_back(1)
-            } else {
-                missing_labels
-            };
+        let is_use_call = arguments.iter().any(|arg| arg.is_use_implicit_callback());
+        let missing_labels = field_map.missing_labels(&arguments);
 
-            // If we couldn't find any missing label to insert we just return.
-            if missing_labels.peek().is_none() {
-                return vec![];
-            }
+        // If we're applying the code action to a use call, then we know
+        // that the last missing argument is going to be implicitly inserted
+        // by the compiler, so in that case we don't want to also add that
+        // last label to the completions.
+        let missing_labels = missing_labels.iter().peekable();
+        let mut missing_labels = if is_use_call {
+            missing_labels.dropping_back(1)
+        } else {
+            missing_labels
+        };
 
-            // A pattern could have been written with no parentheses at all!
-            // So we need to check for the last character to see if parentheses
-            // are there or not before filling the arguments in
-            let has_parentheses = ")"
-                == code_at(
-                    self.module,
-                    SrcSpan::new(call_location.end - 1, call_location.end),
-                );
-            let label_insertion_start = if has_parentheses {
-                // If it ends with a parentheses we'll need to start inserting
-                // right before the closing one...
-                call_location.end - 1
-            } else {
-                // ...otherwise we just append the result
-                call_location.end
-            };
-
-            // Now we need to figure out if there's a comma at the end of the
-            // arguments list:
-            //
-            //   call(one, |)
-            //             ^ Cursor here, with a comma behind
-            //
-            //   call(one|)
-            //           ^ Cursor here, no comma behind, we'll have to add one!
-            //
-            let has_comma_after_last_argument =
-                if let Some(last_arg) = arguments.iter().rfind(|arg| !arg.is_implicit()) {
-                    self.module
-                        .code
-                        .get(last_arg.location.end as usize..=label_insertion_start as usize)
-                        .is_some_and(|text| text.contains(','))
-                } else {
-                    false
-                };
-
-            let variables_in_scope = enclosing_function
-                .map(|fun| {
-                    ScopeVariableCollector::new(call_location.start).collect_from_function(fun)
-                })
-                .unwrap_or_default();
-
-            let labels_list = missing_labels
-                .map(|label| {
-                    Self::format_label(label, &kind, &fun_type, field_map, &variables_in_scope)
-                })
-                .join(", ");
-
-            let has_no_explicit_arguments = arguments
-                .iter()
-                .filter(|arg| !arg.is_implicit())
-                .peekable()
-                .peek()
-                .is_none();
-
-            let labels_list = if has_no_explicit_arguments || has_comma_after_last_argument {
-                labels_list
-            } else {
-                format!(", {labels_list}")
-            };
-
-            let edit = if has_parentheses {
-                labels_list
-            } else {
-                // If the variant whose arguments we're filling in was written
-                // with no parentheses we need to add those as well to make it a
-                // valid constructor.
-                format!("({labels_list})")
-            };
-
-            self.edits.insert(label_insertion_start, edit);
-
-            let mut action = Vec::with_capacity(1);
-            CodeActionBuilder::new("Fill labels")
-                .kind(CodeActionKind::QuickFix)
-                .changes(self.params.text_document.uri.clone(), self.edits.edits)
-                .preferred(true)
-                .push_to(&mut action);
-            return action;
+        // If we couldn't find any missing label to insert we just return.
+        if missing_labels.peek().is_none() {
+            return vec![];
         }
 
-        vec![]
+        // A pattern could have been written with no parentheses at all!
+        // So we need to check for the last character to see if parentheses
+        // are there or not before filling the arguments in
+        let has_parentheses = ")"
+            == code_at(
+                self.module,
+                SrcSpan::new(call_location.end - 1, call_location.end),
+            );
+        let label_insertion_start = if has_parentheses {
+            // If it ends with a parentheses we'll need to start inserting
+            // right before the closing one...
+            call_location.end - 1
+        } else {
+            // ...otherwise we just append the result
+            call_location.end
+        };
+
+        // Now we need to figure out if there's a comma at the end of the
+        // arguments list:
+        //
+        //   call(one, |)
+        //             ^ Cursor here, with a comma behind
+        //
+        //   call(one|)
+        //           ^ Cursor here, no comma behind, we'll have to add one!
+        //
+        let has_comma_after_last_argument =
+            if let Some(last_arg) = arguments.iter().rfind(|arg| !arg.is_implicit()) {
+                self.module
+                    .code
+                    .get(last_arg.location.end as usize..=label_insertion_start as usize)
+                    .is_some_and(|text| text.contains(','))
+            } else {
+                false
+            };
+
+        let variables_in_scope = enclosing_function
+            .map(|fun| ScopeVariableCollector::new(call_location.start).collect_from_function(fun))
+            .unwrap_or_default();
+
+        let labels_list = missing_labels
+            .map(|label| {
+                Self::format_label(label, &kind, &fun_type, field_map, &variables_in_scope)
+            })
+            .join(", ");
+
+        let has_no_explicit_arguments = arguments
+            .iter()
+            .filter(|arg| !arg.is_implicit())
+            .peekable()
+            .peek()
+            .is_none();
+
+        let labels_list = if has_no_explicit_arguments || has_comma_after_last_argument {
+            labels_list
+        } else {
+            format!(", {labels_list}")
+        };
+
+        let edit = if has_parentheses {
+            labels_list
+        } else {
+            // If the variant whose arguments we're filling in was written
+            // with no parentheses we need to add those as well to make it a
+            // valid constructor.
+            format!("({labels_list})")
+        };
+
+        self.edits.insert(label_insertion_start, edit);
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Fill labels")
+            .kind(CodeActionKind::QuickFix)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(true)
+            .push_to(&mut action);
+        action
     }
 
     /// Formats a label for insertion. Uses `label:` syntax if there's a variable
