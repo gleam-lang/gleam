@@ -21,6 +21,7 @@ struct BeamCompilerInner {
     process: Child,
     stdin: ChildStdin,
     stdout: BufReader<ChildStdout>,
+    otp_version: String,
 }
 
 #[derive(Debug, Default)]
@@ -130,12 +131,31 @@ impl BeamCompiler {
 
         let stdin = process.stdin.take().expect("could not get child stdin");
         let stdout = process.stdout.take().expect("could not get child stdout");
+        let mut stdout = BufReader::new(stdout);
+
+        let mut version_line = String::new();
+        let _ = stdout
+            .read_line(&mut version_line)
+            .map_err(|e| Error::ShellCommand {
+                program: "escript".into(),
+                reason: ShellCommandFailureReason::IoError(e.kind()),
+            })?;
+        let otp_version = version_line
+            .trim()
+            .strip_prefix("gleam-otp-version:")
+            .expect("BEAM compiler did not report OTP version")
+            .to_string();
 
         Ok(BeamCompilerInner {
             process,
             stdin,
-            stdout: BufReader::new(stdout),
+            stdout,
+            otp_version,
         })
+    }
+
+    pub fn otp_version(&self) -> Option<String> {
+        self.inner.as_ref().map(|inner| inner.otp_version.clone())
     }
 }
 
