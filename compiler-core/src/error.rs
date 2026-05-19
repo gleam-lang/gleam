@@ -213,6 +213,9 @@ pub enum Error {
     #[error("{0}")]
     TarFinish(String),
 
+    #[error("{error}")]
+    ZipAdd { path: String, error: String },
+
     #[error("{0}")]
     ZipFinish(String),
 
@@ -1552,8 +1555,8 @@ This was error from the gzip library:
             }
 
             Error::AddTar { path, err } => {
-                let text = format!(
-                    "There was a problem when attempting to add the file {path}
+                let text = wrap_format!(
+                    "There was a problem when attempting to add the file {path} \
 to a tar archive.
 
 This was error from the tar library:
@@ -1596,6 +1599,24 @@ This was error from the tar library:
                 );
                 vec![Diagnostic {
                     title: "Failure creating tar archive".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: None,
+                }]
+            }
+
+            Error::ZipAdd { path, error: err } => {
+                let text = wrap_format!(
+                    "There was a problem when attempting to add the file {path} \
+to a zip archive.
+
+This was error from the zip library:
+
+    {err}"
+                );
+                vec![Diagnostic {
+                    title: "Failure creating zip archive".into(),
                     text,
                     hint: None,
                     level: Level::Error,
