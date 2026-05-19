@@ -4423,30 +4423,37 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             ),
         };
 
-        // If there's an error reordering the fields, or there's labelled
-        // arguments with no field map, then we return an invalid expression.
+        // If there's an error with the constructor being passed the wrong
+        // number of arguments we keep track of it, but don't immediately return
+        // an invalid node!
+        // We still want to analyse the passed arguments.
+        let mut labelled_arity_error = false;
         if let Err(error) = result {
+            if let Error::IncorrectArity { .. } = error {
+                labelled_arity_error = true;
+            }
             self.problems.error(error);
-            return self.new_invalid_constant(location);
         }
 
-        let (mut arguments_types, return_type) =
-            match match_fun_type(constructor.type_.clone(), arguments.len(), self.environment) {
-                Ok((arguments_types, return_type)) => (arguments_types, return_type),
-                Err(error) => {
-                    self.problems.error(convert_not_fun_error(
-                        error,
-                        module.map_or(location, |(_, module_location)| {
-                            module_location.merge(&location)
-                        }),
-                        location,
-                        CallKind::Function,
-                    ));
-                    return self.new_invalid_constant(location);
-                }
-            };
+        let called_location = module.as_ref().map_or(location, |(_, module_location)| {
+            module_location.merge(&location)
+        });
 
-        let arguments = arguments_types
+        let FunctionTypeMatch {
+            mut expected_arguments,
+            expected_return,
+            missing_arguments: _,
+            ignored_labelled_arguments,
+        } = self.fault_tolerant_match_function_type(
+            labelled_arity_error,
+            CallKind::Function,
+            constructor.type_.clone(),
+            called_location,
+            location,
+            &arguments,
+        );
+
+        let mut typed_arguments = expected_arguments
             .iter_mut()
             .zip(arguments)
             .map(|(type_, argument): (&mut Arc<Type>, _)| {
@@ -4473,12 +4480,38 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             })
             .collect_vec();
 
+        // Now if we had supplied less arguments than required and some of those
+        // were labelled, in the previous step we would have got rid of those
+        // _before_ typing.
+        // That is because we can only reliably type positional arguments in
+        // case of mismatched arity, as labelled arguments cannot be reordered.
+        //
+        // So now what we want to do is add back those labelled arguments to
+        // make sure the LS can still see that those were explicitly supplied.
+        for IgnoredLabelledArgument {
+            label,
+            location,
+            implicit,
+        } in ignored_labelled_arguments
+        {
+            typed_arguments.push(CallArg {
+                label,
+                value: TypedConstant::Invalid {
+                    location,
+                    type_: self.new_unbound_var(),
+                    extra_information: None,
+                },
+                implicit,
+                location,
+            })
+        }
+
         Constant::Record {
             module,
             location,
             name,
-            arguments,
-            type_: return_type,
+            arguments: typed_arguments,
+            type_: expected_return,
             field_map: match field_map {
                 Some(field_map) => Inferred::Known(field_map),
                 None => Inferred::Unknown,
@@ -5516,6 +5549,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     }
 }
 
+#[derive(Debug)]
 struct FunctionTypeMatch {
     /// The types the arguments of the function are expected to have.
     expected_arguments: Vec<Arc<Type>>,
@@ -5527,6 +5561,7 @@ struct FunctionTypeMatch {
     ignored_labelled_arguments: Vec<IgnoredLabelledArgument>,
 }
 
+#[derive(Debug)]
 struct IgnoredLabelledArgument {
     label: Option<EcoString>,
     location: SrcSpan,
