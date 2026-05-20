@@ -27,5 +27,6 @@ pub fn new() -> other.Wibble { todo }
 
 // --- Edits applied to module 'other'
 pub type Wibble {
+  Wibble
   Wobble
 }

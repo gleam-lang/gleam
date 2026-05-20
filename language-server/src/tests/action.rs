@@ -112,6 +112,7 @@ fn show_code_edits(tester: &TestProject<'_>, changed_files: HashMap<Url, String>
         // file before each!
         changed_files
             .iter()
+            .sorted_by_key(|(url, _)| *url)
             .map(|(url, code)| format_code(url, code))
             .join("\n")
     }
@@ -433,6 +434,56 @@ pub fn new() -> other.Wibble { todo }
     assert_code_action!(
         GENERATE_VARIANT,
         TestProject::for_source(src).add_module("other", "pub type Wibble"),
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn generate_unqualified_variant_in_other_module_adds_an_unqualified_import_if_other_variants_are_unqualified()
+ {
+    let src = r#"
+import other.{ Wibble }
+
+pub fn main() -> other.Wibble {
+  let assert Wobble = new()
+}
+
+pub fn new() -> other.Wibble { todo }
+"#;
+
+    assert_code_action!(
+        GENERATE_VARIANT,
+        TestProject::for_source(src).add_module(
+            "other",
+            "pub type Wibble {
+  Wibble
+}"
+        ),
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn generate_unqualified_variant_in_other_module_adds_qualification_if_other_variants_are_not_imported()
+ {
+    let src = r#"
+import other
+
+pub fn main() -> other.Wibble {
+  let assert Wobble = new()
+}
+
+pub fn new() -> other.Wibble { todo }
+"#;
+
+    assert_code_action!(
+        GENERATE_VARIANT,
+        TestProject::for_source(src).add_module(
+            "other",
+            "pub type Wibble {
+  Wibble
+}"
+        ),
         find_position_of("Wobble").to_selection()
     );
 }

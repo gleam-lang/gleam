@@ -6739,8 +6739,37 @@ pub struct GenerateVariant<'a, IO> {
 
 struct VariantToGenerate<'a> {
     name: &'a str,
-    end_position: u32,
+
     arguments_types: Vec<Arc<Type>>,
+
+    /// The start of the variant where the code action was triggered.
+    /// For example:
+    ///
+    /// ```gleam
+    /// Wobble
+    ///     ^ Trigger here to generate `Wobble`
+    /// ^ The start is here!
+    /// ```
+    variant_start: u32,
+
+    /// If the variant where we triggered the code action is already qualified.
+    /// For example:
+    ///
+    /// ```gleam
+    /// wibble.Wobble // -> true
+    /// Wobble        // -> false
+    /// ```
+    ///
+    is_qualified: bool,
+
+    /// Where the custom type to add this variant to ends.
+    ///
+    end_position: u32,
+
+    /// The already existing constructors of the custom type this new variant is
+    /// going to be added to.
+    ///
+    constructors: &'a [RecordConstructor<Arc<Type>>],
 
     /// Wether the type we're adding the variant to is written with braces or
     /// not. We need this information to add braces when missing.
@@ -6824,6 +6853,16 @@ impl Argument<'_> {
     }
 }
 
+enum GenerateVariantEdits<'a> {
+    GenerateInCurrentModule {
+        current_module_edits: TextEdits<'a>,
+    },
+    GenerateInDifferentModule {
+        current_module_edits: TextEdits<'a>,
+        variant_module_edits: TextEdits<'a>,
+    },
+}
+
 impl<'a, IO> GenerateVariant<'a, IO> {
     pub fn new(
         module: &'a Module,
@@ -6845,33 +6884,99 @@ impl<'a, IO> GenerateVariant<'a, IO> {
 
         let Some(VariantToGenerate {
             name,
+            constructors,
             arguments_types,
             given_arguments,
             module_name,
             end_position,
             type_braces,
+            variant_start,
+            is_qualified,
         }) = &self.variant_to_generate
         else {
             return vec![];
         };
 
-        let Some((variant_module, variant_edits)) = self.edits_to_create_variant(
+        // Now we need to figure out if we're going to have to edit just the current
+        // module (because the variant will be added to a type that is defined there),
+        // or if we'll have to edit both the current module (to import the newly
+        // generated variant) and a different module (where the variant definition
+        // is going to end up).
+        let current_module_line_numbers = LineNumbers::new(&self.module.code);
+        let current_module_edits = TextEdits::new(&current_module_line_numbers);
+        let Some(variant_module) = self.compiler.modules.get(module_name) else {
+            return vec![];
+        };
+        let variant_module_line_numbers = LineNumbers::new(&variant_module.code);
+        let variant_module_edits = TextEdits::new(&variant_module_line_numbers);
+
+        let mut edits = if *module_name == self.module.name {
+            GenerateVariantEdits::GenerateInCurrentModule {
+                current_module_edits,
+            }
+        } else {
+            GenerateVariantEdits::GenerateInDifferentModule {
+                current_module_edits,
+                variant_module_edits,
+            }
+        };
+
+        self.edits_to_create_variant(
+            &mut edits,
             name,
             arguments_types,
             given_arguments,
-            module_name,
             *end_position,
             *type_braces,
-        ) else {
-            return vec![];
+        );
+        // If the variant is qualified already we don't have to do anything,
+        // otherwise we need to import it in the current module.
+        if !is_qualified {
+            self.edits_to_import_variant(
+                &mut edits,
+                module_name,
+                name,
+                *variant_start,
+                self.module,
+                constructors,
+            );
+        }
+
+        let mut builder = CodeActionBuilder::new("Generate variant")
+            .kind(CodeActionKind::QuickFix)
+            .preferred(true);
+
+        match edits {
+            GenerateVariantEdits::GenerateInCurrentModule {
+                current_module_edits,
+            } => {
+                builder = builder.changes(
+                    self.params.text_document.uri.clone(),
+                    current_module_edits.edits,
+                )
+            }
+            GenerateVariantEdits::GenerateInDifferentModule {
+                current_module_edits,
+                variant_module_edits,
+            } => {
+                let Some(variant_module_path) = url_from_path(variant_module.input_path.as_str())
+                else {
+                    return vec![];
+                };
+
+                if !current_module_edits.edits.is_empty() {
+                    builder = builder.changes(
+                        self.params.text_document.uri.clone(),
+                        current_module_edits.edits,
+                    );
+                }
+
+                builder = builder.changes(variant_module_path, variant_module_edits.edits)
+            }
         };
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new("Generate variant")
-            .kind(CodeActionKind::QuickFix)
-            .changes(variant_module, variant_edits)
-            .preferred(true)
-            .push_to(&mut action);
+        builder.push_to(&mut action);
         action
     }
 
@@ -6880,13 +6985,13 @@ impl<'a, IO> GenerateVariant<'a, IO> {
     ///
     fn edits_to_create_variant(
         &self,
+        edits: &mut GenerateVariantEdits<'_>,
         variant_name: &str,
         arguments_types: &[Arc<Type>],
         given_arguments: &Option<Arguments<'_>>,
-        module_name: &EcoString,
         end_position: u32,
         type_braces: TypeBraces,
-    ) -> Option<(Url, Vec<TextEdit>)> {
+    ) {
         let mut label_names = NameGenerator::new();
         let mut printer = Printer::new(&self.module.ast.names);
         let arguments = arguments_types
@@ -6918,36 +7023,30 @@ impl<'a, IO> GenerateVariant<'a, IO> {
             TypeBraces::NoBraces => (format!(" {{\n  {variant}\n}}"), end_position),
         };
 
-        if *module_name == self.module.name {
-            // If we're editing the current module we can use the line numbers that
-            // were already computed before-hand without wasting any time to add the
-            // new edit.
-            let mut edits = TextEdits::new(self.line_numbers);
-            edits.insert(insert_at, new_text);
-            Some((self.params.text_document.uri.clone(), edits.edits))
-        } else {
-            // Otherwise we're changing a different module and we need to get its
-            // code and line numbers to properly apply the new edit.
-            let module = self
-                .compiler
-                .modules
-                .get(module_name)
-                .expect("module to exist");
-            let line_numbers = LineNumbers::new(&module.code);
-            let mut edits = TextEdits::new(&line_numbers);
-            edits.insert(insert_at, new_text);
-            Some((url_from_path(module.input_path.as_str())?, edits.edits))
+        match edits {
+            GenerateVariantEdits::GenerateInCurrentModule {
+                current_module_edits,
+            } => current_module_edits.insert(insert_at, new_text),
+            GenerateVariantEdits::GenerateInDifferentModule {
+                variant_module_edits,
+                ..
+            } => variant_module_edits.insert(insert_at, new_text),
         }
     }
 
     fn try_save_variant_to_generate(
         &mut self,
+        is_qualified: bool,
         function_name_location: SrcSpan,
         function_type: &Arc<Type>,
         given_arguments: Option<Arguments<'a>>,
     ) {
-        let variant_to_generate =
-            self.variant_to_generate(function_name_location, function_type, given_arguments);
+        let variant_to_generate = self.variant_to_generate(
+            is_qualified,
+            function_name_location,
+            function_type,
+            given_arguments,
+        );
         if variant_to_generate.is_some() {
             self.variant_to_generate = variant_to_generate;
         }
@@ -6955,6 +7054,7 @@ impl<'a, IO> GenerateVariant<'a, IO> {
 
     fn variant_to_generate(
         &mut self,
+        is_qualified: bool,
         function_name_location: SrcSpan,
         type_: &Arc<Type>,
         given_arguments: Option<Arguments<'a>>,
@@ -6972,35 +7072,123 @@ impl<'a, IO> GenerateVariant<'a, IO> {
 
         let (module_name, type_name, _) = custom_type.named_type_information()?;
         let module = self.compiler.modules.get(&module_name)?;
-        let (end_position, type_braces) = (module.ast.definitions.custom_types.iter())
-            .filter(|custom_type| custom_type.name == type_name)
-            .find_map(|custom_type| {
-                // If there's already a variant with this name then we definitely
-                // don't want to generate a new variant with the same name!
-                let variant_with_this_name_already_exists = custom_type
-                    .constructors
-                    .iter()
-                    .map(|constructor| &constructor.name)
-                    .any(|existing_constructor_name| existing_constructor_name == name);
-                if variant_with_this_name_already_exists {
-                    return None;
-                }
-                let type_braces = if custom_type.end_position == custom_type.location.end {
-                    TypeBraces::NoBraces
-                } else {
-                    TypeBraces::HasBraces
-                };
-                Some((custom_type.end_position, type_braces))
-            })?;
+        let (end_position, type_braces, constructors) =
+            (module.ast.definitions.custom_types.iter())
+                .filter(|custom_type| custom_type.name == type_name)
+                .find_map(|custom_type| {
+                    // If there's already a variant with this name then we definitely
+                    // don't want to generate a new variant with the same name!
+                    let variant_with_this_name_already_exists = custom_type
+                        .constructors
+                        .iter()
+                        .map(|constructor| &constructor.name)
+                        .any(|existing_constructor_name| existing_constructor_name == name);
+                    if variant_with_this_name_already_exists {
+                        return None;
+                    }
+                    let type_braces = if custom_type.end_position == custom_type.location.end {
+                        TypeBraces::NoBraces
+                    } else {
+                        TypeBraces::HasBraces
+                    };
+                    Some((
+                        custom_type.end_position,
+                        type_braces,
+                        &custom_type.constructors,
+                    ))
+                })?;
 
         Some(VariantToGenerate {
             name,
+            is_qualified,
+            constructors,
             arguments_types,
             given_arguments,
             module_name,
             end_position,
             type_braces,
+            variant_start: function_name_location.start,
         })
+    }
+
+    /// If the variant is generated in a module different from the current one,
+    /// this will add the edits needed to correctly import the variant so that
+    /// it's readily available.
+    /// It will also respect the developer's choice of how variants for the type
+    /// are imported:
+    ///
+    /// ```diff
+    /// - import wibble.{ Wibble }
+    /// + import wibble.{ Wibble, Wobble }
+    /// // If generating `Wobble`, and other variants of that type are
+    /// // unqualified already the new variant is imported unqualified as well.
+    /// ```
+    ///
+    /// ```diff
+    /// import wibble
+    ///
+    /// pub fn main() {
+    /// -  let assert Wobble = todo
+    /// +  let assert wibble.Wobble = todo
+    /// }
+    /// // If no variant is used in an unqualified manner, than the variant
+    /// // that triggered the generation is also qualified!
+    /// ```
+    fn edits_to_import_variant(
+        &self,
+        edits: &mut GenerateVariantEdits<'_>,
+        variant_module_name: &str,
+        variant_name: &str,
+        variant_start: u32,
+        module: &'a Module,
+        constructors: &[RecordConstructor<Arc<Type>>],
+    ) {
+        let GenerateVariantEdits::GenerateInDifferentModule {
+            current_module_edits,
+            ..
+        } = edits
+        else {
+            // If the variant is added to the current module, then no further
+            // edits are needed. The variant is already available in the current
+            // module!
+            return;
+        };
+
+        let constructors_names: HashSet<_> = constructors
+            .iter()
+            .map(|constructor| &constructor.name)
+            .collect();
+
+        // We start by getting the import for the module where the variant
+        // is going to be added...
+        let Some(variant_module_import) = module
+            .ast
+            .definitions
+            .imports
+            .iter()
+            .find(|import_| import_.module == variant_module_name)
+        else {
+            return;
+        };
+        // ...and then check if any of the variants of the type where the variant
+        // is going to be added have already been imported in an unqualified way.
+        let constructors_for_this_type_are_unqualified = variant_module_import
+            .unqualified_values
+            .iter()
+            .any(|value| constructors_names.contains(&value.name));
+
+        if constructors_for_this_type_are_unqualified {
+            // We need to add an unqualified import!
+            let (insert_positions, new_text) = edits::insert_unqualified_import(
+                variant_module_import,
+                &self.module.code,
+                variant_name.into(),
+            );
+            current_module_edits.insert(insert_positions, new_text);
+        } else {
+            // We need to qualify the variant that triggered the code action!
+            current_module_edits.insert(variant_start, format!("{variant_module_name}."))
+        }
     }
 }
 
@@ -7013,7 +7201,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
     ) {
         let invalid_range = src_span_to_lsp_range(*location, self.line_numbers);
         if within(self.params.range, invalid_range) {
-            self.try_save_variant_to_generate(*location, type_, None);
+            self.try_save_variant_to_generate(false, *location, type_, None);
         }
         ast::visit::visit_typed_expr_invalid(self, location, type_, extra_information);
     }
@@ -7032,6 +7220,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
         if within(self.params.range, fun_range) && fun.is_invalid() {
             if labels_are_correct(arguments) {
                 self.try_save_variant_to_generate(
+                    fun.is_module_select(),
                     fun.location(),
                     &fun.type_(),
                     Some(Arguments::Expressions(arguments)),
@@ -7052,7 +7241,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
     fn visit_typed_pattern_invalid(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
         let invalid_range = src_span_to_lsp_range(*location, self.line_numbers);
         if within(self.params.range, invalid_range) {
-            self.try_save_variant_to_generate(*location, type_, None);
+            self.try_save_variant_to_generate(false, *location, type_, None);
         }
         ast::visit::visit_typed_pattern_invalid(self, location, type_);
     }
@@ -7072,6 +7261,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
         if within(self.params.range, pattern_range) {
             if labels_are_correct(arguments) {
                 self.try_save_variant_to_generate(
+                    module.is_some(),
                     *name_location,
                     type_,
                     Some(Arguments::Patterns(arguments)),
