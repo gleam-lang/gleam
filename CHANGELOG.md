@@ -247,6 +247,10 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The "Generate variant" code action now automatically adds an import to use the
+  generated variant if it is generated in a module from the different one.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server no longer shows completions for deprecated values from
   dependencies.
   ([Andrey Kozhev](https://github.com/ankddev))
