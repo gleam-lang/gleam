@@ -2441,3 +2441,48 @@ fn wibble() -> Nil
 "#
     );
 }
+
+#[test]
+fn multiline_string() {
+    assert_parse!(r#""""hello\nworld""""
+"#);
+}
+
+#[test]
+fn multiline_string_with_actual_newlines() {
+    assert_parse!("\"\"\"hello\nworld\"\"\"");
+}
+
+#[test]
+fn multiline_string_empty() {
+    assert_parse!(r#""""""
+"#);
+}
+
+#[test]
+fn multiline_string_unterminated() {
+    assert_error!(
+        r#""""hello"#,
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::UnexpectedStringEnd,
+                    location: SrcSpan { start: 0, end: 0 },
+                }
+            },
+            location: SrcSpan { start: 0, end: 0 },
+        }
+    );
+}
+
+#[test]
+fn multiline_string_tokens() {
+    assert_eq!(
+        make_tokenizer("\"\"\"hi\nthere\"\"\"").collect_vec(),
+        [Ok((
+            0,
+            Token::String { value: "hi\nthere".into() },
+            14
+        ))]
+    );
+}

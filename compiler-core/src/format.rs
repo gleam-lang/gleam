@@ -1191,11 +1191,10 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn string<'a>(&self, string: &'a EcoString) -> Document<'a> {
-        let doc = string.to_doc().surround("\"", "\"");
         if string.contains('\n') {
-            doc.force_break()
+            string.to_doc().surround("\"\"\"", "\"\"\"").force_break()
         } else {
-            doc
+            string.to_doc().surround("\"", "\"")
         }
     }
 
@@ -1204,13 +1203,13 @@ impl<'comments> Formatter<'comments> {
         match lines.as_slice() {
             [] | [_] => string.to_doc().surround("\"", "\""),
             [first_line, lines @ ..] => {
-                let mut doc = docvec!["\"", first_line];
+                let mut doc = docvec!["\"\"\"", first_line];
                 for line in lines {
                     doc = doc
                         .append(pretty::line().set_nesting(0))
                         .append(line.to_doc())
                 }
-                doc.append("\"".to_doc()).group()
+                doc.append("\"\"\"".to_doc()).group()
             }
         }
     }

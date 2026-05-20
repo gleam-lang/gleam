@@ -1114,6 +1114,14 @@ where
         let start_pos = self.get_pos();
         // advance past the first quote
         let _ = self.next_char();
+
+        // Check for multiline string
+        if self.chr0 == Some('"') && self.chr1 == Some('"') {
+            let _ = self.next_char();
+            let _ = self.next_char();
+            return self.lex_multiline_string(start_pos);
+        }
+
         let mut string_content = String::new();
 
         loop {
@@ -1261,6 +1269,32 @@ where
         };
 
         Ok((start_pos, tok, end_pos))
+    }
+
+    fn lex_multiline_string(&mut self, start_pos: u32) -> LexResult {
+        let mut string_content = String::new();
+        loop {
+            match self.next_char() {
+                // We consumed one `"` and the next two are also `"` — closing `"""`.
+                Some('"') if self.chr0 == Some('"') && self.chr1 == Some('"') => {
+                    let _ = self.next_char();
+                    let _ = self.next_char();
+                    break;
+                }
+                Some(c) => string_content.push(c),
+                None => {
+                    return Err(LexicalError {
+                        error: LexicalErrorType::UnexpectedStringEnd,
+                        location: SrcSpan {
+                            start: start_pos,
+                            end: start_pos,
+                        },
+                    });
+                }
+            }
+        }
+        let end_pos = self.get_pos();
+        Ok((start_pos, Token::String { value: string_content.into() }, end_pos))
     }
 
     fn is_name_start(&self, c: char) -> bool {

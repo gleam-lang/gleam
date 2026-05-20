@@ -4,6 +4,18 @@
 
 ### Compiler
 
+- Gleam now supports multiline strings using triple-quote syntax. A multiline
+  string is opened and closed with `"""` and can span multiple lines without
+  needing escape sequences:
+
+  ```gleam
+  let query = """
+    SELECT *
+    FROM users
+    WHERE active = true
+  """
+  ```
+
 - The compiler now suggest public values from imported modules when the variable
   in unknown. These values are suggested based on name and arity.
 
