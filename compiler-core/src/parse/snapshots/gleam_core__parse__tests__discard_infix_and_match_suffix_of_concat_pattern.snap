@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "case \"\" {\n    \"prefix\" <> _ <> \"suffix\" -> Nil\n}"
+---
+----- SOURCE CODE
+case "" {
+    "prefix" <> _ <> "suffix" -> Nil
+}
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:19
+  │
+2 │     "prefix" <> _ <> "suffix" -> Nil
+  │                   ^^^^^^^^^^^ This pattern is not allowed
+
+A string pattern can only match on a literal string prefix.
+
+Matching on a literal suffix is not possible, because `_` would have an unknown size.

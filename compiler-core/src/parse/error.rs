@@ -110,7 +110,9 @@ pub enum ParseErrorType {
     ConcatPatternVariableLeftHandSide,
     /// A variable was assigned as infix between prefix and suffix string
     /// patterns using <>
-    ConcatPatternVariableInInfixPosition,
+    ConcatPatternVariableWithSuffix {
+        name: EcoString,
+    },
     ListSpreadWithoutTail,               // let x = [1, ..]
     ExpectedFunctionBody,                // let x = fn()
     RedundantInternalAttribute,          // for a private definition marked as internal
@@ -557,17 +559,15 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 extra_labels: vec![],
             },
 
-            ParseErrorType::ConcatPatternVariableInInfixPosition => ParseErrorDetails {
+            ParseErrorType::ConcatPatternVariableWithSuffix  { name}=> ParseErrorDetails {
                 text: [
-                    "We can't tell what size this infix should be so we don't know",
-                    "how to handle this pattern.",
+                    "A string pattern can only match on a literal string prefix.",
                     "",
-                    "If you want to match one character consider using `pop_grapheme`",
-                    "from the stdlib's `gleam/string` module.",
+                    &format!("Matching on a literal suffix is not possible, because `{}` would have an unknown size.", name),
                 ]
                 .join("\n"),
                 hint: None,
-                label_text: "This must be a string literal prefix".into(),
+                label_text: "This pattern is not allowed".into(),
                 extra_labels: vec![],
             },
 
