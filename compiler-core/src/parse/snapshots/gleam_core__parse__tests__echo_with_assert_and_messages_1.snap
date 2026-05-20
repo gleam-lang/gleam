@@ -15,10 +15,7 @@ expression: assert 1 == echo 2 as this_belongs_to_echo as this_belongs_to_assert
                     end: 42,
                 },
                 operator: Eq,
-                operator_location: SrcSpan {
-                    start: 9,
-                    end: 11,
-                },
+                operator_start: 9,
                 left: Int {
                     location: SrcSpan {
                         start: 7,

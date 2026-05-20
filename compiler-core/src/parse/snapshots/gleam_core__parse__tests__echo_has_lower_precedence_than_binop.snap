@@ -17,10 +17,7 @@ expression: echo 1 + 1
                         end: 10,
                     },
                     operator: AddInt,
-                    operator_location: SrcSpan {
-                        start: 7,
-                        end: 8,
-                    },
+                    operator_start: 7,
                     left: Int {
                         location: SrcSpan {
                             start: 5,

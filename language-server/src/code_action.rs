@@ -8697,8 +8697,9 @@ impl<'a> FixBinaryOperation<'a> {
         left: Arc<Type>,
         right: Arc<Type>,
         operator: ast::BinOp,
-        operator_location: SrcSpan,
+        operator_start: u32,
     ) {
+        let operator_location = SrcSpan::new(operator_start, operator_start + operator.size());
         if operator.is_int_operator() && left.is_float() && right.is_float() {
             self.fix = operator
                 .float_equivalent()
@@ -8733,7 +8734,7 @@ impl<'ast> ast::visit::Visit<'ast> for FixBinaryOperation<'ast> {
         left: &'ast TypedClauseGuard,
         right: &'ast TypedClauseGuard,
         operator: &'ast ast::BinOp,
-        operator_location: &'ast SrcSpan,
+        operator_start: &'ast u32,
         location: &'ast SrcSpan,
     ) {
         let binop_range = self.edits.src_span_to_lsp_range(*location);
@@ -8741,14 +8742,14 @@ impl<'ast> ast::visit::Visit<'ast> for FixBinaryOperation<'ast> {
             return;
         }
 
-        self.try_fix(left.type_(), right.type_(), *operator, *operator_location);
+        self.try_fix(left.type_(), right.type_(), *operator, *operator_start);
 
         ast::visit::visit_typed_clause_guard_bin_op(
             self,
             left,
             right,
             operator,
-            operator_location,
+            operator_start,
             location,
         );
     }
@@ -8758,7 +8759,7 @@ impl<'ast> ast::visit::Visit<'ast> for FixBinaryOperation<'ast> {
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         operator: &'ast ast::BinOp,
-        operator_location: &'ast SrcSpan,
+        operator_start: &'ast u32,
         left: &'ast TypedExpr,
         right: &'ast TypedExpr,
     ) {
@@ -8767,14 +8768,14 @@ impl<'ast> ast::visit::Visit<'ast> for FixBinaryOperation<'ast> {
             return;
         }
 
-        self.try_fix(left.type_(), right.type_(), *operator, *operator_location);
+        self.try_fix(left.type_(), right.type_(), *operator, *operator_start);
 
         ast::visit::visit_typed_expr_bin_op(
             self,
             location,
             type_,
             operator,
-            operator_location,
+            operator_start,
             left,
             right,
         );
@@ -9133,7 +9134,7 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveBlock<'ast> {
         _location: &'ast SrcSpan,
         _type_: &'ast Arc<Type>,
         _operator: &'ast ast::BinOp,
-        _operator_location: &'ast SrcSpan,
+        _operator_start: &'ast u32,
         left: &'ast TypedExpr,
         right: &'ast TypedExpr,
     ) {

@@ -78,20 +78,14 @@ expression: "\nlet my_string = \"hello \"\ncase my_string {\n    _ if my_string 
                                     end: 89,
                                 },
                                 operator: Eq,
-                                operator_location: SrcSpan {
-                                    start: 73,
-                                    end: 75,
-                                },
+                                operator_start: 73,
                                 left: BinaryOperator {
                                     location: SrcSpan {
                                         start: 52,
                                         end: 72,
                                     },
                                     operator: Concatenate,
-                                    operator_location: SrcSpan {
-                                        start: 62,
-                                        end: 64,
-                                    },
+                                    operator_start: 62,
                                     left: Var {
                                         location: SrcSpan {
                                             start: 52,

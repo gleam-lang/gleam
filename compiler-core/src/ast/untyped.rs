@@ -62,7 +62,7 @@ pub enum UntypedExpr {
     BinOp {
         location: SrcSpan,
         operator: BinOp,
-        operator_location: SrcSpan,
+        operator_start: u32,
         left: Box<Self>,
         right: Box<Self>,
     },
