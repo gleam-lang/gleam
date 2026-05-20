@@ -4344,7 +4344,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 return self.new_invalid_constant(location);
             }
 
-            // TODO: remove this clone. Could be an rc instead
             ValueConstructorVariant::ModuleConstant { .. } => {
                 unreachable!("module constant called as a record is a syntax error")
             }
