@@ -9,16 +9,14 @@
 
    ```
    error: Syntax error
-     ┌─ /src/match_string_end.gleam:8:13
+     ┌─ /src/parse/error.gleam:2:23
      │
-   8 │     "hi" <> b <> "c" -> todo
-     │             ^ This must be a string literal prefix
+   2 │     "prefix" <> infix <> "suffix" -> infix
+     │                       ^^^^^^^^^^^ This pattern is not allowed
 
-   We can't tell what size this infix should be so we don't know
-   how to handle this pattern.
+   A string pattern can only match on a literal string prefix.
 
-   If you want to match one character consider using `pop_grapheme`
-   from the stdlib's `gleam/string` module.
+   Matching on a literal suffix is not possible, because `infix` would have an unknown size.
    ```
 
    ([Gavin Morrow](https://github.com/gavinmorrow))
