@@ -635,7 +635,7 @@ fn assign_left_hand_side_of_concat_pattern() {
 }
 
 #[test]
-fn discard_infix_of_concat_pattern() {
+fn discard_infix_and_match_suffix_of_concat_pattern() {
     assert_error!(
         r#"case "" {
     "prefix" <> _ <> "suffix" -> Nil
@@ -644,10 +644,19 @@ fn discard_infix_of_concat_pattern() {
 }
 
 #[test]
-fn assign_infix_of_concat_pattern() {
+fn assign_infix_and_match_suffix_of_concat_pattern() {
     assert_error!(
         r#"case "" {
     "prefix" <> infix <> "suffix" -> infix
+}"#
+    );
+}
+
+#[test]
+fn incomplete_suffix_match_in_concat_pattern() {
+    assert_error!(
+        r#"case "" {
+    "prefix" <> wibble <> -> wibble
 }"#
     );
 }

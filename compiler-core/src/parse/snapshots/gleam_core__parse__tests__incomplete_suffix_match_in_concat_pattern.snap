@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "case \"\" {\n    \"prefix\" <> wibble <> -> wibble\n}"
+---
+----- SOURCE CODE
+case "" {
+    "prefix" <> wibble <> -> wibble
+}
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:24
+  │
+2 │     "prefix" <> wibble <> -> wibble
+  │                        ^^ This pattern is not allowed
+
+A string pattern can only match on a literal string prefix.
+
+Matching on a literal suffix is not possible, because `wibble` would have an unknown size.
