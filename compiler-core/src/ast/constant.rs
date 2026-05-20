@@ -499,6 +499,15 @@ impl TypedConstant {
 
     /// If the constant is a record or record update this returns its tag.
     /// It might return `None` if the record constructor couldn't be inferred.
+    /// For example, if someone wrote a variant that doesn't exist:
+    ///
+    /// ```gleam
+    /// pub const wibble = ThisIsNotDefinedAnywhere(1, 2)
+    /// ```
+    ///
+    /// In this case the record wouldn't have a constructor, as there's no
+    /// custom type defining it anywhere!
+    ///
     pub(crate) fn constant_record_tag(&self) -> Option<EcoString> {
         if let Constant::Record {
             record_constructor: Some(constructor),
