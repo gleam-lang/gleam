@@ -303,10 +303,10 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             UntypedExpr::BinOp {
                 location,
                 operator,
-                operator_location,
+                operator_start,
                 left,
                 right,
-            } => self.fold_bin_op(location, operator, operator_location, left, right),
+            } => self.fold_bin_op(location, operator, operator_start, left, right),
 
             UntypedExpr::PipeLine { expressions } => self.fold_pipe_line(expressions),
 
@@ -473,7 +473,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             UntypedExpr::BinOp {
                 location,
                 operator,
-                operator_location,
+                operator_start,
                 left,
                 right,
             } => {
@@ -482,7 +482,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 UntypedExpr::BinOp {
                     location,
                     operator,
-                    operator_location,
+                    operator_start,
                     left,
                     right,
                 }
@@ -804,14 +804,14 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         &mut self,
         location: SrcSpan,
         operator: BinOp,
-        operator_location: SrcSpan,
+        operator_start: u32,
         left: Box<UntypedExpr>,
         right: Box<UntypedExpr>,
     ) -> UntypedExpr {
         UntypedExpr::BinOp {
             location,
             operator,
-            operator_location,
+            operator_start,
             left,
             right,
         }

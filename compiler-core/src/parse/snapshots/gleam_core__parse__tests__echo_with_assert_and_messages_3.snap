@@ -22,10 +22,7 @@ expression: assert echo 1 == 2 as this_belongs_to_echo as this_belongs_to_assert
                             end: 18,
                         },
                         operator: Eq,
-                        operator_location: SrcSpan {
-                            start: 14,
-                            end: 16,
-                        },
+                        operator_start: 14,
                         left: Int {
                             location: SrcSpan {
                                 start: 12,

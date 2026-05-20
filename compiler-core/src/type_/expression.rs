@@ -512,10 +512,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             UntypedExpr::BinOp {
                 location,
                 operator,
-                operator_location,
+                operator_start,
                 left,
                 right,
-            } => Ok(self.infer_binop(operator, operator_location, *left, *right, location)),
+            } => Ok(self.infer_binop(operator, operator_start, *left, *right, location)),
 
             UntypedExpr::FieldAccess {
                 label_location,
@@ -1851,7 +1851,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_binop(
         &mut self,
         operator: BinOp,
-        operator_location: SrcSpan,
+        operator_start: u32,
         left: UntypedExpr,
         right: UntypedExpr,
         location: SrcSpan,
@@ -1875,7 +1875,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 return TypedExpr::BinOp {
                     location,
                     operator,
-                    operator_location,
+                    operator_start,
                     type_: bool(),
                     left: Box::new(left),
                     right: Box::new(right),
@@ -1921,18 +1921,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if operator.is_float_operator() && left.type_().is_int() && right.type_().is_int() {
             self.problems.error(Error::FloatOperatorOnInts {
                 operator,
-                location: operator_location,
+                location: SrcSpan::new(operator_start, operator_start + operator.size()),
             })
         } else if operator.is_int_operator() && left.type_().is_float() && right.type_().is_float()
         {
             self.problems.error(Error::IntOperatorOnFloats {
                 operator,
-                location: operator_location,
+                location: SrcSpan::new(operator_start, operator_start + operator.size()),
             })
         } else if operator == BinOp::AddInt && left.type_().is_string() && right.type_().is_string()
         {
             self.problems.error(Error::StringConcatenationWithAddInt {
-                location: operator_location,
+                location: SrcSpan::new(operator_start, operator_start + operator.size()),
             })
         } else {
             // In all other cases we just report an error for each of the operands.
@@ -1957,7 +1957,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         TypedExpr::BinOp {
             location,
             operator,
-            operator_location,
+            operator_start,
             type_: output_type,
             left: Box::new(left),
             right: Box::new(right),
@@ -2643,7 +2643,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             ClauseGuard::BinaryOperator {
                 location,
                 operator,
-                operator_location,
+                operator_start,
                 left,
                 right,
             } => {
@@ -2684,7 +2684,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         if left.type_().is_float() && right.type_().is_float() {
                             self.problems.error(Error::IntOperatorOnFloats {
                                 operator,
-                                location: operator_location,
+                                location: SrcSpan::new(
+                                    operator_start,
+                                    operator_start + operator.size(),
+                                ),
                             });
                         } else {
                             if let Err(error) = unify(int(), left.type_()) {
@@ -2713,7 +2716,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         if left.type_().is_int() && right.type_().is_int() {
                             self.problems.error(Error::FloatOperatorOnInts {
                                 operator,
-                                location: operator_location,
+                                location: SrcSpan::new(
+                                    operator_start,
+                                    operator_start + operator.size(),
+                                ),
                             });
                         } else {
                             if let Err(error) = unify(float(), left.type_()) {
@@ -2744,7 +2750,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ClauseGuard::BinaryOperator {
                     location,
                     operator,
-                    operator_location,
+                    operator_start,
                     left: Box::new(left),
                     right: Box::new(right),
                 }

@@ -4925,7 +4925,7 @@ fn reduce_bit_array_size((_, token, _): Spanned, estack: &mut Vec<BitArraySize<(
 }
 
 fn expr_op_reduction(
-    (token_start, token, token_end): Spanned,
+    (token_start, token, _token_end): Spanned,
     left: UntypedExpr,
     right: UntypedExpr,
 ) -> UntypedExpr {
@@ -4945,10 +4945,7 @@ fn expr_op_reduction(
                     end: right.location().end,
                 },
                 operator,
-                operator_location: SrcSpan {
-                    start: token_start,
-                    end: token_end,
-                },
+                operator_start: token_start,
                 left: Box::new(left),
                 right: Box::new(right),
             },
@@ -4960,7 +4957,7 @@ fn expr_op_reduction(
 }
 
 fn clause_guard_reduction(
-    (start, token, end): Spanned,
+    (start, token, _end): Spanned,
     left: UntypedClauseGuard,
     right: UntypedClauseGuard,
 ) -> UntypedClauseGuard {
@@ -4971,12 +4968,10 @@ fn clause_guard_reduction(
     let left = Box::new(left);
     let right = Box::new(right);
     let operator = tok_to_binop(&token).expect("Token could not be converted to binop.");
-    let operator_location = SrcSpan::new(start, end);
-
     UntypedClauseGuard::BinaryOperator {
         location,
         operator,
-        operator_location,
+        operator_start: start,
         left,
         right,
     }

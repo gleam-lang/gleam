@@ -85,7 +85,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         type_: Arc<Type>,
         operator: BinOp,
-        operator_location: SrcSpan,
+        operator_start: u32,
         left: Box<Self>,
         right: Box<Self>,
     },

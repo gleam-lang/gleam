@@ -33,10 +33,7 @@ expression: "echo wibble as { this <> complex }"
                                     end: 32,
                                 },
                                 operator: Concatenate,
-                                operator_location: SrcSpan {
-                                    start: 22,
-                                    end: 24,
-                                },
+                                operator_start: 22,
                                 left: Var {
                                     location: SrcSpan {
                                         start: 17,

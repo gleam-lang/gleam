@@ -1567,6 +1567,35 @@ impl BinOp {
             | BinOp::Concatenate => None,
         }
     }
+
+    /// This returns how many characters this operator takes.
+    pub fn size(&self) -> u32 {
+        match self {
+            BinOp::LtInt
+            | BinOp::GtInt
+            | BinOp::RemainderInt
+            | BinOp::MultInt
+            | BinOp::AddInt
+            | BinOp::SubInt
+            | BinOp::DivInt => 1,
+
+            BinOp::And
+            | BinOp::Or
+            | BinOp::Eq
+            | BinOp::NotEq
+            | BinOp::LtEqInt
+            | BinOp::GtEqInt
+            | BinOp::LtFloat
+            | BinOp::GtFloat
+            | BinOp::AddFloat
+            | BinOp::SubFloat
+            | BinOp::MultFloat
+            | BinOp::DivFloat
+            | BinOp::Concatenate => 2,
+
+            BinOp::LtEqFloat | BinOp::GtEqFloat => 3,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, serde::Serialize, serde::Deserialize)]
@@ -2260,12 +2289,12 @@ pub enum ClauseGuard<Type, RecordTag> {
     BinaryOperator {
         location: SrcSpan,
         operator: BinOp,
-        /// This is the span covering the operator itself. For example:
+        /// This is where the operator starts in the code. For example:
         /// ```gleam
-        /// _ if 1.0 +. 2.3 == 3.0 -> todo
-        /// //       ^^ This!
+        /// _ if 1.0 >=. 2.3 -> todo
+        /// //       ^ Here!
         /// ```
-        operator_location: SrcSpan,
+        operator_start: u32,
         left: Box<Self>,
         right: Box<Self>,
     },
