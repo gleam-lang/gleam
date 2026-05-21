@@ -94,7 +94,7 @@ fn compile_with_markdown_pages(
         .into_iter()
         .map(|(title, _)| DocsPage {
             title: (*title).into(),
-            path: format!("{title}.html"),
+            path: Utf8PathBuf::from(format!("{title}.html")),
             source: format!("{title}.md").into(),
         })
         .collect_vec();

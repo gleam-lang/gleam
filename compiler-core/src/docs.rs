@@ -148,16 +148,16 @@ pub fn generate_html<IO: FileSystemReader>(
     for page in docs_pages {
         let content = fs.read(&page.source).unwrap_or_default();
         let rendered_content = render_markdown(&content, MarkdownSource::Standalone);
-        let unnest = page_unnest(&page.path);
+        let unnest = page_unnest(page.path.as_str());
 
-        let page_path_without_ext = page.path.split('.').next().unwrap_or("");
-        let page_title = match page_path_without_ext {
+        let page_path_without_extension = page.path.with_extension("");
+        let page_title = match page_path_without_extension.as_str() {
             // The index page, such as README, should not push it's page title
             "index" => format!("{} · v{}", config.name, config.version),
             // Other page title's should say so
             _other => format!("{} · {} · v{}", page.title, config.name, config.version),
         };
-        let page_meta_description = match page_path_without_ext {
+        let page_meta_description = match page_path_without_extension.as_str() {
             "index" => config.description.to_string().clone(),
             _other => "".to_owned(),
         };
@@ -184,7 +184,11 @@ pub fn generate_html<IO: FileSystemReader>(
             content: Content::Text(temp.render().expect("Page template rendering")),
         });
 
-        search_items.push(search_item_for_page(&config.name, &page.path, content))
+        search_items.push(search_item_for_page(
+            &config.name,
+            page.path.as_str(),
+            content,
+        ))
     }
 
     // Generate module documentation pages
