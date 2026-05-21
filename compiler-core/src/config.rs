@@ -1013,28 +1013,13 @@ pub struct Docs {
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct DocsPage {
     pub title: String,
-    #[serde(default, deserialize_with = "non_ascending_path_string::deserialize")]
-    pub path: String,
-    #[serde(default, deserialize_with = "non_ascending_path_buf::deserialize")]
+    #[serde(default, deserialize_with = "package_scoped_path::deserialize")]
+    pub path: Utf8PathBuf,
+    #[serde(default, deserialize_with = "package_scoped_path::deserialize")]
     pub source: Utf8PathBuf,
 }
 
-mod non_ascending_path_string {
-    use serde::{Deserialize, Deserializer, de::Error as _};
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<String, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let path = String::deserialize(deserializer)?.replace('\\', "/");
-        if path.starts_with("../") || path.contains("/../") {
-            return Err(D::Error::custom("paths must not contain .. segments"));
-        }
-        Ok(path)
-    }
-}
-
-mod non_ascending_path_buf {
+mod package_scoped_path {
     use camino::{Utf8Component, Utf8PathBuf};
     use serde::{Deserialize, Deserializer, de::Error as _};
 
@@ -1043,6 +1028,9 @@ mod non_ascending_path_buf {
         D: Deserializer<'de>,
     {
         let path = Utf8PathBuf::deserialize(deserializer)?;
+        // Absolute paths are not permitted.
+        // On Windows paths starting with \\ are drive-relative, so absolute as
+        // far as we are concerned.
         if path.is_absolute() || (cfg!(windows) && path.starts_with("\\")) {
             return Err(D::Error::custom("paths must be relative"));
         }
@@ -1313,6 +1301,7 @@ pages = [{ title = "My Page", path = "something/../../secrets.txt", source = "./
     );
 }
 
+#[cfg(windows)]
 #[test]
 fn docs_windows_dot_dot_string_path() {
     let input = r#"
@@ -1330,6 +1319,7 @@ pages = [{ title = "My Page", path = "..\\secrets.txt", source = "./path/to/my-p
     );
 }
 
+#[cfg(windows)]
 #[test]
 fn docs_prefix_windows_dot_dot_string_path() {
     let input = r#"
