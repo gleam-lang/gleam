@@ -18,6 +18,7 @@ static ENTRYPOINT_TEMPLATE_POSIX_SHELL: &str =
     include_str!("../templates/erlang-shipment-entrypoint.sh");
 
 /// Generate a single file of precompiled Erlang, suitable for CLIs.
+///
 pub fn escript(paths: &ProjectPaths) -> Result<()> {
     let target = Target::Erlang;
     let mode = Mode::Prod;
@@ -95,9 +96,16 @@ pub fn escript(paths: &ProjectPaths) -> Result<()> {
     fs::write_to_open_file(&mut file, &escript_path, zip)?;
     fs::make_executable(&escript_path)?;
 
+    // Windows shells largely do not use shebangs, so for the escript to be
+    // directly executable a .cmd wrapper script is provided.
+    if cfg!(windows) {
+        let cmd_path = escript_path.with_extension("cmd");
+        fs::write(&cmd_path, "@echo off\r\nescript.exe \"%~dpn0\" %*\r\n")?;
+    }
+
     println!(
         "
-Your escript has been generated to ./{escript_path}.
+Your escript has been generated to {escript_path}.
 ",
     );
 
