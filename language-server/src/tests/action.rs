@@ -12221,6 +12221,133 @@ fn wibble() {
 }
 
 #[test]
+fn extract_function_first_statement_inside_of_use() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn wibble() {
+    use wobble <- result.map(todo)
+    echo wobble as "1"
+    echo wobble as "2"
+    echo wobble as "3"
+    echo wobble as "4"
+}
+"#,
+        find_position_of("echo").select_until(find_position_of("1\""))
+    );
+}
+
+#[test]
+fn extract_function_second_statement_inside_of_use() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn wibble() {
+    use wobble <- result.map(todo)
+    echo wobble as "1"
+    echo wobble as "2"
+    echo wobble as "3"
+    echo wobble as "4"
+}
+"#,
+        find_position_of("echo")
+            .nth_occurrence(2)
+            .select_until(find_position_of("2\""))
+    );
+}
+
+#[test]
+fn extract_function_last_statement_inside_of_use() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn wibble() {
+    use wobble <- result.map(todo)
+    echo wobble as "1"
+    echo wobble as "2"
+    echo wobble as "3"
+    echo wobble as "4"
+}
+"#,
+        find_position_of("echo")
+            .nth_occurrence(4)
+            .select_until(find_position_of("4\""))
+    );
+}
+
+#[test]
+fn extract_function_first_few_statements_inside_of_use() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn wibble() {
+    use wobble <- result.map(todo)
+    echo wobble as "1"
+    echo wobble as "2"
+    echo wobble as "3"
+    echo wobble as "4"
+}
+"#,
+        find_position_of("echo").select_until(find_position_of("2\""))
+    );
+}
+
+#[test]
+fn extract_function_middle_few_statements_inside_of_use() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn wibble() {
+    use wobble <- result.map(todo)
+    echo wobble as "1"
+    echo wobble as "2"
+    echo wobble as "3"
+    echo wobble as "4"
+}
+"#,
+        find_position_of("echo")
+            .nth_occurrence(2)
+            .select_until(find_position_of("3\""))
+    );
+}
+
+#[test]
+fn extract_function_last_few_statements_inside_of_use() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn wibble() {
+    use wobble <- result.map(todo)
+    echo wobble as "1"
+    echo wobble as "2"
+    echo wobble as "3"
+    echo wobble as "4"
+}
+"#,
+        find_position_of("echo")
+            .nth_occurrence(3)
+            .select_until(find_position_of("4\""))
+    );
+}
+
+#[test]
+fn extract_function_all_statements_inside_of_use() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn wibble() {
+    use wobble <- result.map(todo)
+    echo wobble as "1"
+    echo wobble as "2"
+    echo wobble as "3"
+    echo wobble as "4"
+}
+"#,
+        find_position_of("echo").select_until(find_position_of("4\""))
+    );
+}
+
+#[test]
 fn extract_function_from_statements() {
     assert_code_action!(
         EXTRACT_FUNCTION,

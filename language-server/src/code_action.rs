@@ -10466,7 +10466,18 @@ enum ExtractedValue<'a> {
     /// We're extracting a single use statement. We need this special case to
     /// properly handle the statements inside of them.
     Use {
+        /// This is the location of the entire use block, including the
+        /// statements in it.
         location: SrcSpan,
+        /// This is the location of the expression on the right hand side of the use
+        /// arrow.
+        ///
+        /// ```gleam
+        /// use a <- result.try(result)
+        ///          ^^^^^^^^^^^^^^^^^^
+        /// ```
+        ///
+        use_line_location: SrcSpan,
         type_: Arc<Type>,
     },
     PipelineSteps {
@@ -10699,7 +10710,11 @@ impl<'a> ExtractFunction<'a> {
                 end,
             ),
 
-            ExtractedValue::Use { location, type_ }
+            ExtractedValue::Use {
+                location,
+                use_line_location: _,
+                type_,
+            }
             | ExtractedValue::Statements {
                 location,
                 position: StatementPosition::Tail { type_ },
@@ -11361,6 +11376,24 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
         self.last_statement_location = last_statement_location;
     }
 
+    fn visit_typed_use(&mut self, use_: &'ast TypedUse) {
+        let last_statement_location = self.last_statement_location;
+        // The body must be visited first, before the desugared function
+        if let TypedExpr::Call { arguments, .. } = &*use_.call
+            && let Some(CallArg {
+                value: TypedExpr::Fn { body, .. },
+                ..
+            }) = arguments.last()
+        {
+            self.last_statement_location = Some(body.last().location());
+            for statement in body {
+                self.visit_typed_statement(statement);
+            }
+        }
+        ast::visit::visit_typed_use(self, use_);
+        self.last_statement_location = last_statement_location;
+    }
+
     fn visit_typed_expr(&mut self, expression: &'ast TypedExpr) {
         // If we have already determined what code we want to extract, we don't
         // want to extract this instead. This expression would be inside the
@@ -11424,18 +11457,44 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
                         TypedStatement::Use(use_) => {
                             Some(ExtractedFunction::new(ExtractedValue::Use {
                                 location: use_.call.location(),
+                                use_line_location: use_.location,
                                 type_: statement.type_(),
                             }))
                         }
-                    }
+                    };
                 }
 
-                // If we're extracting something that is withing a use expression
-                // we don't need to change anything
+                // If we're extracting something that is within a use expression
+                // we need to check whether to extract the whole use or just
+                // statements inside of it
                 Some(ExtractedFunction {
-                    value: ExtractedValue::Use { location, .. },
-                    ..
-                }) if location.contains_span(statement_location) => {}
+                    value:
+                        ExtractedValue::Use {
+                            location,
+                            use_line_location,
+                            ..
+                        },
+                    parameters,
+                    returned_variables,
+                }) if location.contains_span(statement_location) => {
+                    let use_line_range = self.edits.src_span_to_lsp_range(*use_line_location);
+
+                    // If the current statement is not a part of the use line,
+                    // and the current selection does not overlap the use line,
+                    // then the outer use is not the correct target.
+                    if !use_line_location.contains_span(statement_location)
+                        && !overlaps(use_line_range, self.params.range)
+                    {
+                        self.function = Some(ExtractedFunction {
+                            value: ExtractedValue::Statements {
+                                location: statement_location,
+                                position,
+                            },
+                            parameters: parameters.to_vec(),
+                            returned_variables: returned_variables.to_vec(),
+                        });
+                    }
+                }
                 // Otherwise it means we're extracting multiple statements
                 // _including_ some use expression, we fallback to extracting
                 // multiple statements
