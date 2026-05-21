@@ -45,6 +45,7 @@ macro_rules! wrap_format {
         wrap(&format!($($tts)*))
     }
 }
+pub(crate) use wrap_format;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct UnknownImportDetails {

@@ -1,6 +1,6 @@
 use crate::ast::{SrcSpan, TypeAst};
 use crate::diagnostic::{ExtraLabel, Label};
-use crate::error::wrap;
+use crate::error::{wrap, wrap_format};
 use crate::parse::Token;
 use ecow::EcoString;
 use itertools::Itertools;
@@ -559,11 +559,14 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 extra_labels: vec![],
             },
 
-            ParseErrorType::ConcatPatternVariableWithSuffix  { name}=> ParseErrorDetails {
+            ParseErrorType::ConcatPatternVariableWithSuffix { name } => ParseErrorDetails {
                 text: [
                     "A string pattern can only match on a literal string prefix.",
                     "",
-                    &format!("Matching on a literal suffix is not possible, because `{}` would have an unknown size.", name),
+                    &wrap_format!(
+                        "Matching on a literal suffix is not possible, because `{name}` \
+would have an unknown size."
+                    ),
                 ]
                 .join("\n"),
                 hint: None,

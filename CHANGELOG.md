@@ -16,7 +16,8 @@
 
    A string pattern can only match on a literal string prefix.
 
-   Matching on a literal suffix is not possible, because `infix` would have an unknown size.
+   Matching on a literal suffix is not possible, because `infix` would have an
+   unknown size.
    ```
 
    ([Gavin Morrow](https://github.com/gavinmorrow))
