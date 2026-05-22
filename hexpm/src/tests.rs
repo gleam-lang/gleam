@@ -76,6 +76,22 @@ fn revert_release_response_success() {
 }
 
 #[test]
+fn revert_release_response_late_modification() {
+    let resp_body = json!({
+        "errors": {"inserted_at": "can only modify a release up to one hour after publication"},
+        "message": "Validation error(s)",
+        "status": 422,
+    });
+    let response = make_json_response(422, resp_body);
+    let result = crate::api_revert_release_response(response);
+
+    match result {
+        Err(ApiError::LateModification) => (),
+        result => panic!("expected Err(ApiError::LateModification), got {result:?}"),
+    }
+}
+
+#[test]
 fn add_owner_request() {
     let key = WriteActionCredentials::OAuthAccessToken {
         access_token: EcoString::from("my-api-key-here"),
