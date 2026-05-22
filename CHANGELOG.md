@@ -139,6 +139,11 @@
   improves suggestions to push a tag, if it doesn't exists.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The error shown when the local Hex API key can't be decrypted no longer
+  prints the raw encryption library error, and now hints to check the
+  password.
+  ([Charlie Tonneslan](https://github.com/c-tonneslan))
+
 ### Language server
 
 - The language server now offers a "Fill labels" code action on constants to
