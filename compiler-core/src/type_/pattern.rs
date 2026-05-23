@@ -1238,7 +1238,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                         if let Some(type_) = return_.named_type_name() {
                             for arg in &pattern_arguments {
-                                if let Some(label) = &arg.label {
+                                if let Some(label) = &arg.label
+                                    && !arg.is_implicit()
+                                {
                                     self.environment.references.register_label_reference(
                                         type_.clone(),
                                         label.clone(),
