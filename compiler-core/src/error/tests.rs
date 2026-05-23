@@ -44,6 +44,12 @@ fn hex_session_revoked() {
 }
 
 #[test]
+fn failed_to_decrypt_local_hex_api_key() {
+    let err = Error::FailedToDecryptLocalHexApiKey.to_diagnostics();
+    assert_debug_snapshot!(err[0]);
+}
+
+#[test]
 fn hex_error_conversion() {
     assert_eq!(
         Error::hex(hexpm::ApiError::OAuthRefreshTokenRejected),

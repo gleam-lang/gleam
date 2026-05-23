@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/error/tests.rs
+expression: "err[0]"
+---
+Diagnostic {
+    title: "Failed to decrypt local Hex API key",
+    text: "Unable to decrypt the local Hex API key with the given password.",
+    level: Error,
+    location: None,
+    hint: Some(
+        "Check that you entered the correct local password and try again.",
+    ),
+}

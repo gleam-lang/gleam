@@ -402,7 +402,7 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     FailedToEncryptLocalHexApiKey { detail: String },
 
     #[error("Failed to decrypt local Hex API key")]
-    FailedToDecryptLocalHexApiKey { detail: String },
+    FailedToDecryptLocalHexApiKey,
 
     #[error("Cannot add a package with the same name as a dependency")]
     CannotAddSelfAsDependency { name: EcoString },
@@ -1767,21 +1767,15 @@ The error from the encryption library was:
                 }]
             }
 
-            Error::FailedToDecryptLocalHexApiKey { detail } => {
-                let text = wrap_format!(
-                    "Unable to decrypt the local Hex API key with the given password.
-The error from the encryption library was:
-
-    {detail}"
-                );
-                vec![Diagnostic {
-                    title: "Failed to decrypt local Hex API key".into(),
-                    text,
-                    hint: None,
-                    level: Level::Error,
-                    location: None,
-                }]
-            }
+            Error::FailedToDecryptLocalHexApiKey => vec![Diagnostic {
+                title: "Failed to decrypt local Hex API key".into(),
+                text: "Unable to decrypt the local Hex API key with the given password.".into(),
+                hint: Some(
+                    "Check that you entered the correct local password and try again.".into(),
+                ),
+                level: Level::Error,
+                location: None,
+            }],
 
             Error::NonUtf8Path { path } => {
                 let text = format!(
