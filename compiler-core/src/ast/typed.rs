@@ -1225,12 +1225,32 @@ impl TypedExpr {
     /// for a qualified `ModuleSelect`.
     ///
     pub fn record_constructor_name(&self) -> Option<EcoString> {
-        if let TypedExpr::Var { name, .. } = self {
-            Some(name.clone())
-        } else if let TypedExpr::ModuleSelect { label, .. } = self {
-            Some(label.clone())
-        } else {
-            None
+        match self {
+            TypedExpr::Var { name, .. } => Some(name.clone()),
+            TypedExpr::ModuleSelect { label, .. } => Some(label.clone()),
+
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => None,
         }
     }
 
