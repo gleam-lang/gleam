@@ -1,0 +1,41 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn main() {\n  0\n  |> case True {\n    True -> add_one |> identity\n    False -> add_one\n  }\n  |> add_one\n}\n\nfn identity(x) {\n  x\n}\n\nfn add_one(x) {\n  x + 1\n}"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  0
+  |> case True {
+    True -> add_one |> identity
+    False -> add_one
+  }
+  |> add_one
+}
+
+fn identity(x) {
+  x
+}
+
+fn add_one(x) {
+  x + 1
+}
+
+----- COMPILED JAVASCRIPT
+function add_one(x) {
+  return x + 1;
+}
+
+function identity(x) {
+  return x;
+}
+
+export function main() {
+  let _pipe = 0;
+  let _block;
+  let $ = true;
+  let _pipe$1 = add_one;
+  _block = identity(_pipe$1);
+  let _pipe$2 = _block(_pipe);
+  return add_one(_pipe$2);
+}

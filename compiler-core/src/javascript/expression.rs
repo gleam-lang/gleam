@@ -129,6 +129,82 @@ impl CurrentFunction {
     }
 }
 
+/// The variables in scope while generating the code for a function.
+///
+/// User variables are tracked in a map keyed by name, so a shadowed name can be
+/// given a unique JavaScript identifier. The compiler synthesised variables
+/// (the `$` case subject, `_pipe`, `_block`, ...) are held in their own fields
+/// instead. They can't be referenced by user code, and a branch that generates
+/// directly into its enclosing scope needs to restore the user variables while
+/// leaving the synthesised counters advanced, so that later code doesn't
+/// redeclare one of them.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Scope {
+    user_variables: im::HashMap<EcoString, usize>,
+    assignment: Option<usize>,
+    pipe: Option<usize>,
+    block: Option<usize>,
+    use_assignment: Option<usize>,
+    record_update: Option<usize>,
+    capture: Option<usize>,
+    assert_subject: Option<usize>,
+    assert_fail: Option<usize>,
+}
+
+impl Scope {
+    fn new(user_variables: im::HashMap<EcoString, usize>) -> Self {
+        Self {
+            user_variables,
+            ..Default::default()
+        }
+    }
+
+    /// The counter for a variable name, whether user or synthesised.
+    fn counter(&self, name: &str) -> Option<usize> {
+        match name {
+            ASSIGNMENT_VAR => self.assignment,
+            PIPE_VARIABLE => self.pipe,
+            BLOCK_VARIABLE => self.block,
+            USE_ASSIGNMENT_VARIABLE => self.use_assignment,
+            RECORD_UPDATE_VARIABLE => self.record_update,
+            CAPTURE_VARIABLE => self.capture,
+            ASSERT_SUBJECT_VARIABLE => self.assert_subject,
+            ASSERT_FAIL_VARIABLE => self.assert_fail,
+            _ => self.user_variables.get(name).copied(),
+        }
+    }
+
+    /// Set the counter for a variable name, whether user or synthesised.
+    pub(crate) fn set_counter(&mut self, name: &EcoString, value: usize) {
+        match name.as_str() {
+            ASSIGNMENT_VAR => self.assignment = Some(value),
+            PIPE_VARIABLE => self.pipe = Some(value),
+            BLOCK_VARIABLE => self.block = Some(value),
+            USE_ASSIGNMENT_VARIABLE => self.use_assignment = Some(value),
+            RECORD_UPDATE_VARIABLE => self.record_update = Some(value),
+            CAPTURE_VARIABLE => self.capture = Some(value),
+            ASSERT_SUBJECT_VARIABLE => self.assert_subject = Some(value),
+            ASSERT_FAIL_VARIABLE => self.assert_fail = Some(value),
+            _ => {
+                let _ = self.user_variables.insert(name.clone(), value);
+            }
+        }
+    }
+
+    /// The user variables currently in scope.
+    pub(crate) fn user_variables(&self) -> &im::HashMap<EcoString, usize> {
+        &self.user_variables
+    }
+
+    /// Restore previously saved user variables, reverting any counters advanced
+    /// during the branch to their earlier values. Variables introduced in the
+    /// branch with no earlier binding are kept, and the synthesised counters are
+    /// left untouched.
+    pub(crate) fn restore_user_variables(&mut self, previous: &im::HashMap<EcoString, usize>) {
+        self.user_variables.extend(previous.clone());
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct Generator<'module, 'ast> {
     module_name: EcoString,
@@ -137,7 +213,7 @@ pub(crate) struct Generator<'module, 'ast> {
     function_name: EcoString,
     function_arguments: Vec<Option<&'module EcoString>>,
     current_function: CurrentFunction,
-    pub current_scope_vars: im::HashMap<EcoString, usize>,
+    pub current_scope: Scope,
     pub function_position: Position,
     pub scope_position: Position,
     // We register whether these features are used within an expression so that
@@ -189,13 +265,14 @@ impl<'module, 'a> Generator<'module, 'a> {
         function_name: EcoString,
         function_arguments: Vec<Option<&'module EcoString>>,
         tracker: &'module mut UsageTracker,
-        mut current_scope_vars: im::HashMap<EcoString, usize>,
+        initial_scope_vars: im::HashMap<EcoString, usize>,
         source_map_builder: Option<Rc<RefCell<DebugIgnore<sourcemap::SourceMapBuilder>>>>,
     ) -> Self {
+        let mut current_scope = Scope::new(initial_scope_vars);
         let mut current_function = CurrentFunction::Module;
         for &name in function_arguments.iter().flatten() {
             // Initialise the function arguments
-            let _ = current_scope_vars.insert(name.clone(), 0);
+            current_scope.set_counter(name, 0);
 
             // If any of the function arguments shadow the current function then
             // recursion is no longer possible.
@@ -211,7 +288,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             function_name,
             function_arguments,
             tail_recursion_used: false,
-            current_scope_vars,
+            current_scope,
             current_function,
             function_position: Position::Tail,
             scope_position: Position::Tail,
@@ -222,9 +299,9 @@ impl<'module, 'a> Generator<'module, 'a> {
     }
 
     pub fn local_var(&mut self, name: &EcoString) -> EcoString {
-        match self.current_scope_vars.get(name) {
+        match self.current_scope.counter(name) {
             None => {
-                let _ = self.current_scope_vars.insert(name.clone(), 0);
+                self.current_scope.set_counter(name, 0);
                 maybe_escape_identifier(name)
             }
             Some(0) => maybe_escape_identifier(name),
@@ -234,8 +311,8 @@ impl<'module, 'a> Generator<'module, 'a> {
     }
 
     pub fn next_local_var(&mut self, name: &EcoString) -> EcoString {
-        let next = self.current_scope_vars.get(name).map_or(0, |i| i + 1);
-        let _ = self.current_scope_vars.insert(name.clone(), next);
+        let next = self.current_scope.counter(name).map_or(0, |i| i + 1);
+        self.current_scope.set_counter(name, next);
         self.local_var(name)
     }
 
@@ -687,7 +764,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         let statement_level = std::mem::take(&mut self.statement_level);
 
         // Set state for in this iife
-        let current_scope_vars = self.current_scope_vars.clone();
+        let current_scope = self.current_scope.clone();
 
         // Generate the expression
         let result = to_doc(self, statements);
@@ -695,7 +772,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         let doc = immediately_invoked_function_expression_document(doc);
 
         // Reset
-        self.current_scope_vars = current_scope_vars;
+        self.current_scope = current_scope;
         self.scope_position = scope_position;
         self.statement_level = statement_level;
 
@@ -855,12 +932,12 @@ impl<'module, 'a> Generator<'module, 'a> {
                 }),
             Position::Expression(Ordering::Loose) => self.wrap_block(|this| {
                 // Save previous scope
-                let current_scope_vars = this.current_scope_vars.clone();
+                let current_scope = this.current_scope.clone();
 
                 let document = this.block_document(statements);
 
                 // Restore previous state
-                this.current_scope_vars = current_scope_vars;
+                this.current_scope = current_scope;
 
                 document
             }),
@@ -1481,7 +1558,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                 if self.function_name == *name
                     && self.current_function.can_recurse()
                     && self.function_position.is_tail()
-                    && self.current_scope_vars.get(name) == Some(&0) =>
+                    && self.current_scope.counter(name) == Some(0) =>
             {
                 let mut docs = Vec::with_capacity(arguments.len() * 4);
                 // Record that tail recursion is happening so that we know to
@@ -1561,9 +1638,9 @@ impl<'module, 'a> Generator<'module, 'a> {
         let scope_position = std::mem::replace(&mut self.scope_position, Position::Tail);
 
         // And there's a new scope
-        let scope = self.current_scope_vars.clone();
+        let scope = self.current_scope.clone();
         for name in arguments.iter().flat_map(Arg::get_variable_name) {
-            let _ = self.current_scope_vars.insert(name.clone(), 0);
+            self.current_scope.set_counter(name, 0);
         }
 
         // This is a new function so track that so that we don't
@@ -1577,7 +1654,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         // Reset function name, scope, and tail position tracking
         self.function_position = function_position;
         self.scope_position = scope_position;
-        self.current_scope_vars = scope;
+        self.current_scope = scope;
         std::mem::swap(&mut self.current_function, &mut current_function);
 
         let mut docs = docvec![];
