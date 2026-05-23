@@ -988,6 +988,30 @@ pub fn go() {
     )
 }
 
+// https://github.com/gleam-lang/gleam/issues/5743
+#[test]
+fn no_duplicate_pipe_variable_with_case_in_pipeline() {
+    assert_js!(
+        r#"
+pub fn main() {
+  0
+  |> case True {
+    True -> add_one |> identity
+    False -> add_one
+  }
+  |> add_one
+}
+
+fn identity(x) {
+  x
+}
+
+fn add_one(x) {
+  x + 1
+}"#
+    )
+}
+
 #[test]
 fn list_with_tail_used_in_guard() {
     assert_js!(

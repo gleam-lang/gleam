@@ -1,3 +1,15 @@
+fn identity(x: a) -> a {
+  x
+}
+
+fn add_one(x: Int) -> Int {
+  x + 1
+}
+
+fn add_two(x: Int) -> Int {
+  x + 2
+}
+
 // github.com/gleam-lang/gleam/issues/5265
 pub fn directly_matching_case_subject_test() {
   let result = {
@@ -45,4 +57,16 @@ pub fn no_duplicate_let_after_case_with_same_named_variable_with_declaration_bef
   }
   let x = x
   assert x == 2
+}
+
+// https://github.com/gleam-lang/gleam/issues/5743
+pub fn no_duplicate_pipe_variable_with_case_in_pipeline_test() {
+  let result =
+    0
+    |> case True {
+      True -> add_one |> identity
+      False -> add_two
+    }
+    |> add_one
+  assert result == 2
 }

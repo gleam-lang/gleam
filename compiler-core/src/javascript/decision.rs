@@ -1,6 +1,6 @@
 use super::{
     INDENT, bit_array_segment_int_value_to_bytes,
-    expression::{self, Generator, Ordering, float, float_from_value},
+    expression::{self, Generator, Ordering, Scope, float, float_from_value},
 };
 use crate::{
     ast::{AssignmentKind, Endianness, SrcSpan, TypedClause, TypedExpr, TypedPattern},
@@ -23,7 +23,7 @@ use itertools::Itertools;
 use num_bigint::BigInt;
 use std::{collections::HashMap, sync::OnceLock};
 
-pub static ASSIGNMENT_VAR: &str = "$";
+pub const ASSIGNMENT_VAR: &str = "$";
 
 pub fn case<'a>(
     compiled_case: &'a CompiledCase,
@@ -427,14 +427,20 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
 
             // We can't use `inside_new_scope` here without care: the
             // code we generate goes directly into the enclosing scope
-            // (there's no wrapping if-else block), so the `$` variable
-            // counter must not be reset or later code could redeclare
-            // one of the `$N` variables introduced here.
-            let old_scope = match &self.kind {
+            // (there's no wrapping if-else block). User variables bound
+            // in the branch go out of scope at its end, so their counters
+            // are reset and later references resolve to the outer bindings.
+            // Compiler synthesised variables (the `$` case subjects, `_pipe`,
+            // `_block`, ...) can't be referenced by user code and their
+            // declarations leak into this scope. Restoring only the user-variable
+            // counters leaves the synthesised counters advanced, so later code
+            // can't redeclare one of them.
+            let old_user_variables = match &self.kind {
                 DecisionKind::Case { .. } => self
                     .variables
                     .expression_generator
-                    .current_scope_vars
+                    .current_scope
+                    .user_variables()
                     .clone(),
                 DecisionKind::LetAssert { .. } => Default::default(),
             };
@@ -446,18 +452,12 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
 
             match &self.kind {
                 DecisionKind::Case { .. } => {
-                    let assignment_var: EcoString = ASSIGNMENT_VAR.into();
-                    let counter = self
-                        .variables
-                        .expression_generator
-                        .current_scope_vars
-                        .get(&assignment_var)
-                        .copied();
-                    // Extend with variables from old scope
+                    // Restore the user variables that were in scope before the
+                    // branch. The synthesised counters are left advanced.
                     self.variables
                         .expression_generator
-                        .current_scope_vars
-                        .extend(old_scope.clone());
+                        .current_scope
+                        .restore_user_variables(&old_user_variables);
 
                     // For binded variables inside body we need to check if
                     // there is same-named variable in old scope. In this case
@@ -465,23 +465,15 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
                     // redeclaration occurs.
                     if let Decision::Run { body } = fallback {
                         for (variable, _) in body.bindings.iter() {
-                            if old_scope.get(variable).is_some() {
+                            if old_user_variables.get(variable).is_some() {
                                 let new_variable_name = self.variables.next_local_var(variable);
 
-                                let _ = self
-                                    .variables
+                                self.variables
                                     .expression_generator
-                                    .current_scope_vars
-                                    .insert(new_variable_name, 0);
+                                    .current_scope
+                                    .set_counter(&new_variable_name, 0);
                             }
                         }
-                    }
-                    if let Some(n) = counter {
-                        let _ = self
-                            .variables
-                            .expression_generator
-                            .current_scope_vars
-                            .insert(assignment_var, n);
                     }
                 }
                 DecisionKind::LetAssert { .. } => {}
@@ -705,12 +697,8 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
         // Since we use reassignment for `let assert`, we can't reset the scope
         // as it loses data about the assigned variables.
         let old_scope = match &self.kind {
-            DecisionKind::Case { .. } => self
-                .variables
-                .expression_generator
-                .current_scope_vars
-                .clone(),
-            DecisionKind::LetAssert { .. } => Default::default(),
+            DecisionKind::Case { .. } => self.variables.expression_generator.current_scope.clone(),
+            DecisionKind::LetAssert { .. } => Scope::default(),
         };
 
         let old_names = self.variables.scoped_variable_names.clone();
@@ -720,7 +708,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
 
         match &self.kind {
             DecisionKind::Case { .. } => {
-                self.variables.expression_generator.current_scope_vars = old_scope
+                self.variables.expression_generator.current_scope = old_scope
             }
             DecisionKind::LetAssert { .. } => {}
         }

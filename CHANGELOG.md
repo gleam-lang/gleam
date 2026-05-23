@@ -16,6 +16,11 @@
   function would throw an Error using the wrong class.
   ([John Downey](https://github.com/jtdowney))
 
+- Fixed a bug where the JavaScript code generator could produce duplicate `let`
+  declarations for internal variables when a `case` expression was used as a
+  step in a pipeline.
+  ([Eyup Can Akman](https://github.com/eyupcanakman))
+
 ## v1.17.0-rc1 - 2026-05-23
 
 ### Compiler
