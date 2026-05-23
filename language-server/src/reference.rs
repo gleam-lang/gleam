@@ -12,7 +12,7 @@ use gleam_core::{
         self, ArgNames, AssignName, BitArraySize, ClauseGuard, CustomType, Function,
         ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
     },
-    build::Located,
+    build::{LabelContainer, Located},
     type_::{
         ModuleInterface, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant,
         error::{Named, VariableOrigin},
@@ -383,7 +383,6 @@ pub fn reference_for_ast_node(
                 TypedExpr::RecordAccess {
                     record,
                     label,
-                    field_start,
                     location,
                     ..
                 },
@@ -395,15 +394,18 @@ pub fn reference_for_ast_node(
                 type_module,
                 type_name,
                 label: label.clone(),
-                location: SrcSpan::new(*field_start, location.end),
+                // `field_start` is the start of the whole `record.field`
+                // expression, not the field. The field label is the trailing
+                // part of the access, so we recover its span from the end.
+                location: SrcSpan::new(location.end - label.len() as u32, location.end),
             }),
 
         Located::Label {
-            container: Some((container_type, _)),
+            container: Some(LabelContainer::Usage { type_, .. }),
             label,
             location,
             ..
-        } => container_type
+        } => type_
             .named_type_name()
             .map(|(type_module, type_name)| Referenced::Label {
                 type_module,
@@ -411,6 +413,20 @@ pub fn reference_for_ast_node(
                 label: label.clone(),
                 location,
             }),
+
+        // A label at its declaration in a custom type, which lives in the
+        // current module.
+        Located::Label {
+            container: Some(LabelContainer::Definition { type_name, .. }),
+            label,
+            location,
+            ..
+        } => Some(Referenced::Label {
+            type_module: current_module.clone(),
+            type_name,
+            label: label.clone(),
+            location,
+        }),
 
         Located::Pattern(_)
         | Located::ClauseGuard(_)

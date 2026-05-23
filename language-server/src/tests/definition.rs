@@ -1032,6 +1032,17 @@ pub fn main() {
 }
 
 #[test]
+fn goto_definition_record_field_from_declaration() {
+    assert_goto!(
+        "
+pub type Person {
+  Person(name: String, age: Int)
+}",
+        find_position_of("name: String").under_char('n')
+    );
+}
+
+#[test]
 fn goto_definition_constructor_label() {
     assert_goto!(
         "

@@ -2950,3 +2950,21 @@ pub fn main() {
         find_position_of("value.wibble").under_char('i')
     );
 }
+
+#[test]
+fn rename_record_field_from_definition() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let value = Wibble(wibble: 1)
+  value.wibble
+}
+",
+        "wobble",
+        find_position_of("wibble: Int").under_char('w')
+    );
+}

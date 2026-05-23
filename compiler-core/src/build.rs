@@ -484,9 +484,9 @@ pub enum Located<'a> {
         /// The type of the labelled argument value (used for hover).
         type_: std::sync::Arc<Type>,
         label: EcoString,
-        /// The type being constructed/matched and the constructor name.
-        /// Used for go-to-definition.
-        container: Option<(std::sync::Arc<Type>, EcoString)>,
+        /// The record type the label belongs to, used for go-to-definition,
+        /// find-references and rename. `None` when it can't be determined.
+        container: Option<LabelContainer>,
     },
     ModuleName {
         location: SrcSpan,
@@ -503,6 +503,25 @@ pub enum Located<'a> {
     ModuleImport(&'a TypedImport),
     ModuleCustomType(&'a TypedCustomType),
     ModuleTypeAlias(&'a TypedTypeAlias),
+}
+
+/// The record type a field label belongs to. Used to resolve go-to-definition,
+/// find-references and rename for record fields.
+#[derive(Debug, Clone, PartialEq)]
+pub enum LabelContainer {
+    /// A label usage (`record.field`, a labelled argument or pattern, a record
+    /// update) where the value's type is known. The type carries the module
+    /// and name it belongs to.
+    Usage {
+        type_: std::sync::Arc<Type>,
+        constructor: EcoString,
+    },
+    /// A label at its declaration in a custom type. The type is being defined
+    /// in the current module, so only its name is needed.
+    Definition {
+        type_name: EcoString,
+        constructor: EcoString,
+    },
 }
 
 impl<'a> Located<'a> {
@@ -609,7 +628,10 @@ impl<'a> Located<'a> {
             Self::Arg(_) => None,
             Self::Annotation { type_, .. } => self.type_location(importable_modules, type_.clone()),
             Self::Label {
-                container: Some((container_type, constructor)),
+                container: Some(LabelContainer::Usage {
+                    type_: container_type,
+                    constructor,
+                }),
                 label,
                 ..
             } => self.label_definition_location(
@@ -618,6 +640,15 @@ impl<'a> Located<'a> {
                 label,
                 Some(constructor),
             ),
+            // Already at the declaration; go-to-definition jumps to itself.
+            Self::Label {
+                container: Some(LabelContainer::Definition { .. }),
+                location,
+                ..
+            } => Some(DefinitionLocation {
+                module: None,
+                span: *location,
+            }),
             Self::Label { .. } => None,
             Self::TypeVariable { .. } => None,
             Self::ModuleName { module_name, .. } => Some(DefinitionLocation {

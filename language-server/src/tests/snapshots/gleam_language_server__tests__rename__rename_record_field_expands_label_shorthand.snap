@@ -14,7 +14,7 @@ pub fn main() {
   let wibble = 1
   let value = Wibble(wibble:)
   value.wibble
-  ↑▔▔▔▔▔      
+        ↑▔▔▔▔▔
 }
 
 
