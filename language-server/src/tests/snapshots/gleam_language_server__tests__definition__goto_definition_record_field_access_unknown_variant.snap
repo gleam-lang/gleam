@@ -1,0 +1,29 @@
+---
+source: language-server/src/tests/definition.rs
+assertion_line: 983
+expression: output
+snapshot_kind: text
+---
+----- Jumping from `src/app.gleam`
+
+pub type Shape {
+  Circle(label: String, radius: Float)
+  Rectangle(label: String, width: Float, height: Float)
+}
+
+pub fn get_label(s: Shape) -> String {
+  s.label
+    ↑    
+}
+
+----- Jumped to `src/app.gleam`
+
+pub type Shape {
+  Circle(label: String, radius: Float)
+         ↑▔▔▔▔                        
+  Rectangle(label: String, width: Float, height: Float)
+}
+
+pub fn get_label(s: Shape) -> String {
+  s.label
+}

@@ -1,0 +1,39 @@
+---
+source: language-server/src/tests/definition.rs
+assertion_line: 1056
+expression: output
+snapshot_kind: text
+---
+----- Jumping from `src/app.gleam`
+
+pub type Inner {
+  Inner(b: String)
+}
+
+pub type Outer {
+  Outer(a: Inner)
+}
+
+pub fn main(x: Outer) {
+  case x {
+    Outer(a: Inner(b: y)) -> y
+                   ↑          
+  }
+}
+
+----- Jumped to `src/app.gleam`
+
+pub type Inner {
+  Inner(b: String)
+        ↑         
+}
+
+pub type Outer {
+  Outer(a: Inner)
+}
+
+pub fn main(x: Outer) {
+  case x {
+    Outer(a: Inner(b: y)) -> y
+  }
+}

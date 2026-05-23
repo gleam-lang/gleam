@@ -1,0 +1,36 @@
+---
+source: language-server/src/tests/rename.rs
+assertion_line: 2521
+expression: "\nimport wibble\n\npub fn main() {\n  let value = wibble.Wibble(wibble: 1)\n  value.wibble\n}\n"
+---
+----- BEFORE RENAME
+-- wibble.gleam
+pub type Wibble {
+  Wibble(wibble: Int)
+}
+
+-- app.gleam
+
+import wibble
+
+pub fn main() {
+  let value = wibble.Wibble(wibble: 1)
+  value.wibble
+  ↑▔▔▔▔▔      
+}
+
+
+----- AFTER RENAME
+-- wibble.gleam
+pub type Wibble {
+  Wibble(wobble: Int)
+}
+
+-- app.gleam
+
+import wibble
+
+pub fn main() {
+  let value = wibble.Wibble(wobble: 1)
+  value.wobble
+}

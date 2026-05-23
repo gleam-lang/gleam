@@ -177,6 +177,25 @@ pub enum ModuleNameReference {
 
 pub type ReferenceMap = HashMap<(EcoString, EcoString), Vec<Reference>>;
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct LabelReference {
+    /// The location of the label. For a shorthand (`label:`) this spans the
+    /// whole `label:`, mirroring how variable references record label
+    /// shorthands. For everything else it is just the label itself.
+    pub location: SrcSpan,
+    pub kind: ReferenceKind,
+    /// The constructor this label belongs to. `None` for usages where the
+    /// constructor is unknown (e.g. `record.field`).
+    pub constructor: Option<EcoString>,
+    /// Whether the label was written using the shorthand syntax (`label:`).
+    /// Renaming the field then has to expand it so the value keeps its name:
+    /// `wibble:` becomes `wobble: wibble`.
+    pub shorthand: bool,
+}
+
+/// Key: (type_module, type_name, label_name)
+pub type LabelReferenceMap = HashMap<(EcoString, EcoString, EcoString), Vec<LabelReference>>;
+
 #[derive(Debug, Clone)]
 pub struct EntityInformation {
     pub origin: SrcSpan,
@@ -248,6 +267,9 @@ pub struct ReferenceTracker {
     /// The locations of the references to each imported module, used for
     /// renaming and go-to reference.
     pub module_references: HashMap<EcoString, Vec<ModuleNameReference>>,
+    /// The locations of the references to each record field label in this
+    /// module, keyed by (type_module, type_name, label_name).
+    pub label_references: LabelReferenceMap,
 
     /// This map is used to access the nodes of modules that were not
     /// aliased, given their name.
@@ -607,6 +629,43 @@ impl ReferenceTracker {
             .entry(module)
             .or_default()
             .push(reference);
+    }
+
+    /// Registers a reference to a record field label.
+    ///
+    /// `type_` is the `(module, name)` of the type the label belongs to, as
+    /// returned by [`Type::named_type_name`].
+    ///
+    /// `argument_location` is the location of the whole labelled argument (or
+    /// just the label for definitions and field accesses). For a shorthand the
+    /// whole span is recorded; otherwise just the leading label is.
+    pub fn register_label_reference(
+        &mut self,
+        type_: (EcoString, EcoString),
+        label: EcoString,
+        argument_location: SrcSpan,
+        kind: ReferenceKind,
+        constructor: Option<EcoString>,
+        shorthand: bool,
+    ) {
+        let location = if shorthand {
+            argument_location
+        } else {
+            SrcSpan {
+                start: argument_location.start,
+                end: argument_location.start + label.len() as u32,
+            }
+        };
+        let (type_module, type_name) = type_;
+        self.label_references
+            .entry((type_module, type_name, label))
+            .or_default()
+            .push(LabelReference {
+                location,
+                kind,
+                constructor,
+                shorthand,
+            });
     }
 
     /// Like `register_type_reference`, but doesn't modify `self.type_references`.

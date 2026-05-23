@@ -1,0 +1,8 @@
+---
+source: language-server/src/tests/rename.rs
+assertion_line: 2538
+expression: "\ntype Wibble {\n  Wibble(wibble: Int)\n}\n\npub fn main() {\n  let value = Wibble(wibble: 1)\n  value.wibble\n}\n"
+---
+Error response message:
+
+Wobble is not a valid name

@@ -65,10 +65,13 @@ use super::{
     files::FileSystemProxy,
     progress::ProgressReporter,
     reference::{
-        FindVariableReferences, Referenced, VariableReferenceKind, find_module_references,
-        reference_for_ast_node,
+        FindVariableReferences, Referenced, VariableReferenceKind, find_label_references,
+        find_label_references_in_current_module, find_module_references, reference_for_ast_node,
     },
-    rename::{RenameOutcome, RenameTarget, Renamed, rename_local_variable, rename_module_entity},
+    rename::{
+        RenameOutcome, RenameTarget, Renamed, rename_label, rename_local_variable,
+        rename_module_entity,
+    },
     signature_help, src_span_to_lsp_range,
 };
 
@@ -407,7 +410,7 @@ where
 
                 Located::Annotation { .. } => Some(completer.completion_types()),
 
-                Located::Label(_, _) => None,
+                Located::Label { .. } => None,
 
                 Located::ModuleName {
                     layer: ast::Layer::Type,
@@ -856,6 +859,13 @@ where
 
                 Some(Referenced::TypeVariable { location, name: _ }) => success_response(location),
 
+                Some(Referenced::Label {
+                    location, label, ..
+                }) if location.contains(byte_index) => success_response(SrcSpan {
+                    start: location.start,
+                    end: location.start + label.len() as u32,
+                }),
+
                 _ => None,
             })
         })
@@ -956,6 +966,21 @@ where
                 Some(Referenced::TypeVariable { location, name }) => {
                     rename_type_variable(module, &lines, &params, location, name).into_result()
                 }
+
+                Some(Referenced::Label {
+                    type_module,
+                    type_name,
+                    label,
+                    ..
+                }) => rename_label(
+                    &params,
+                    &type_module,
+                    &type_name,
+                    &label,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
+                )
+                .into_result(),
 
                 None => RenameOutcome::NoRenames.into_result(),
             })
@@ -1059,6 +1084,31 @@ where
                         source_module,
                         source_information,
                         ast::Layer::Type,
+                    ))
+                }
+            },
+            Some(Referenced::Label {
+                type_module,
+                type_name,
+                label,
+                location,
+            }) if location.contains(byte_index) => match search_scope {
+                FindReferencesSearchScope::AllModules => Some(find_label_references(
+                    type_module,
+                    type_name,
+                    label,
+                    self.compiler.project_compiler.get_importable_modules(),
+                    &self.compiler.sources,
+                )),
+                FindReferencesSearchScope::CurrentModule => {
+                    let source_information = self.compiler.get_source(&source_module.name)?;
+                    let source_module = self.compiler.get_module_interface(&source_module.name)?;
+                    Some(find_label_references_in_current_module(
+                        type_module,
+                        type_name,
+                        label,
+                        source_module,
+                        source_information,
                     ))
                 }
             },
@@ -1287,9 +1337,9 @@ Unused labelled fields:
                         module,
                     ))
                 }
-                Located::Label(location, type_) => {
-                    Some(hover_for_label(location, type_, lines, module))
-                }
+                Located::Label {
+                    location, type_, ..
+                } => Some(hover_for_label(location, type_, lines, module)),
                 Located::ModuleName {
                     location,
                     module_name,
