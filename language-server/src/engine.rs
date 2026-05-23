@@ -941,7 +941,7 @@ where
     }
 
     /// Shared core of find references and document highlight.
-    fn find_references_in_modules(
+    fn find_references_in_scope(
         &mut self,
         position: &lsp_types::TextDocumentPositionParams,
         search_scope: FindReferencesSearchScope,
@@ -1050,7 +1050,7 @@ where
     ) -> Response<Option<Vec<lsp::Location>>> {
         self.respond(|this| {
             let position = &params.text_document_position_params;
-            Ok(this.find_references_in_modules(
+            Ok(this.find_references_in_scope(
                 position,
                 FindReferencesSearchScope::AllImportableModules,
             ))
@@ -1064,7 +1064,7 @@ where
         self.respond(|this| {
             let position = &params.text_document_position_params;
             Ok(this
-                .find_references_in_modules(position, FindReferencesSearchScope::CurrentModule)
+                .find_references_in_scope(position, FindReferencesSearchScope::CurrentModule)
                 .map(|references| {
                     references
                         .into_iter()
