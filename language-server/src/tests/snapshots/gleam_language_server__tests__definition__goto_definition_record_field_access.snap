@@ -1,0 +1,29 @@
+---
+source: language-server/src/tests/definition.rs
+assertion_line: 982
+expression: output
+snapshot_kind: text
+---
+----- Jumping from `src/app.gleam`
+
+pub type Person {
+  Person(name: String, age: Int)
+}
+
+pub fn main() {
+  let p = Person(name: "Lucy", age: 10)
+  p.name
+    ↑   
+}
+
+----- Jumped to `src/app.gleam`
+
+pub type Person {
+  Person(name: String, age: Int)
+         ↑▔▔▔                   
+}
+
+pub fn main() {
+  let p = Person(name: "Lucy", age: 10)
+  p.name
+}

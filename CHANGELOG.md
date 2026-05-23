@@ -43,6 +43,26 @@
 
 ### Language server
 
+- The language server now supports go-to-definition, find-references and rename
+  for record fields. These work on labelled arguments, on labelled patterns, on
+  record updates and on `record.field` accesses, both within a module and across
+  modules. For example:
+
+  ```gleam
+  pub type Person {
+    Person(name: String, age: Int)
+  }
+
+  pub fn main() {
+    let lucy = Person(name: "Lucy", age: 10)
+    lucy.name
+    //   ^ Go-to-definition jumps to the `name` field, and renaming it here
+    //     renames the field everywhere it is used.
+  }
+  ```
+
+  ([Alistair Smith](https://github.com/alii))
+
 - The "pattern match on value" code action can now be used to pattern match on
   values returned by function calls. For example:
 

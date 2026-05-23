@@ -1,0 +1,35 @@
+---
+source: language-server/src/tests/definition.rs
+assertion_line: 1018
+expression: output
+snapshot_kind: text
+---
+----- Jumping from `src/app.gleam`
+
+pub type Things {
+  A(a: Int)
+  B(a: String)
+}
+
+pub fn main(thing: Things) {
+  case thing {
+    A(a: x) -> x
+    B(a: y) -> y
+      ↑         
+  }
+}
+
+----- Jumped to `src/app.gleam`
+
+pub type Things {
+  A(a: Int)
+  B(a: String)
+    ↑         
+}
+
+pub fn main(thing: Things) {
+  case thing {
+    A(a: x) -> x
+    B(a: y) -> y
+  }
+}

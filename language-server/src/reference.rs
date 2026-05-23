@@ -53,6 +53,12 @@ pub enum Referenced {
         location: SrcSpan,
         name: EcoString,
     },
+    Label {
+        type_module: EcoString,
+        type_name: EcoString,
+        label: EcoString,
+        location: SrcSpan,
+    },
 }
 
 pub fn reference_for_ast_node(
@@ -372,6 +378,40 @@ pub fn reference_for_ast_node(
             target_kind: RenameTarget::Qualified,
         }),
 
+        Located::Expression {
+            expression:
+                TypedExpr::RecordAccess {
+                    record,
+                    label,
+                    field_start,
+                    location,
+                    ..
+                },
+            ..
+        } => record
+            .type_()
+            .named_type_name()
+            .map(|(type_module, type_name)| Referenced::Label {
+                type_module,
+                type_name,
+                label: label.clone(),
+                location: SrcSpan::new(*field_start, location.end),
+            }),
+
+        Located::Label {
+            container: Some((container_type, _)),
+            label,
+            location,
+            ..
+        } => container_type
+            .named_type_name()
+            .map(|(type_module, type_name)| Referenced::Label {
+                type_module,
+                type_name,
+                label: label.clone(),
+                location,
+            }),
+
         Located::Pattern(_)
         | Located::ClauseGuard(_)
         | Located::PatternSpread { .. }
@@ -379,7 +419,7 @@ pub fn reference_for_ast_node(
         | Located::Expression { .. }
         | Located::FunctionBody(_)
         | Located::UnqualifiedImport(_)
-        | Located::Label(..)
+        | Located::Label { .. }
         | Located::Constant(_)
         | Located::ModuleFunction(_)
         | Located::ModuleTypeAlias(_) => None,
@@ -434,6 +474,63 @@ pub fn find_module_references_in_module(
     );
 
     reference_locations
+}
+
+pub fn find_label_references(
+    type_module: EcoString,
+    type_name: EcoString,
+    label: EcoString,
+    modules: &im::HashMap<EcoString, ModuleInterface>,
+    sources: &HashMap<EcoString, ModuleSourceInformation>,
+) -> Vec<Location> {
+    let mut reference_locations = Vec::new();
+    let key = (type_module.clone(), type_name, label);
+
+    for module in modules.values() {
+        if module.name == type_module || module.references.imported_modules.contains(&type_module) {
+            let Some(source_information) = sources.get(&module.name) else {
+                continue;
+            };
+            find_label_references_in_module(&key, module, source_information, &mut reference_locations);
+        }
+    }
+
+    reference_locations
+}
+
+pub fn find_label_references_in_current_module(
+    type_module: EcoString,
+    type_name: EcoString,
+    label: EcoString,
+    module: &ModuleInterface,
+    source_information: &ModuleSourceInformation,
+) -> Vec<Location> {
+    let mut reference_locations = Vec::new();
+    let key = (type_module, type_name, label);
+    find_label_references_in_module(&key, module, source_information, &mut reference_locations);
+    reference_locations
+}
+
+fn find_label_references_in_module(
+    key: &(EcoString, EcoString, EcoString),
+    module: &ModuleInterface,
+    source_information: &ModuleSourceInformation,
+    reference_locations: &mut Vec<Location>,
+) {
+    let Some(uri) = url_from_path(source_information.path.as_str()) else {
+        return;
+    };
+
+    let Some(references) = module.references.label_references.get(key) else {
+        return;
+    };
+
+    for reference in references {
+        reference_locations.push(Location {
+            uri: uri.clone(),
+            range: src_span_to_lsp_range(reference.location, &source_information.line_numbers),
+        });
+    }
 }
 
 fn find_references_in_module(

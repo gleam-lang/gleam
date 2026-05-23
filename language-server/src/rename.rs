@@ -240,6 +240,94 @@ fn rename_references_in_module(
     }
 }
 
+/// Renames a record field label across the whole project.
+///
+/// Unlike module entities, labels are never imported or qualified, so every
+/// reference is simply replaced with the new name. The one special case is the
+/// label shorthand syntax (`wibble:`), which is expanded so the implicit value
+/// variable keeps its original name.
+///
+/// All the reference locations come from the reference graph that is built
+/// during analysis, exactly like the value and type renaming above.
+///
+pub fn rename_label(
+    params: &RenameParams,
+    type_module: &EcoString,
+    type_name: &EcoString,
+    label: &EcoString,
+    modules: &im::HashMap<EcoString, ModuleInterface>,
+    sources: &HashMap<EcoString, ModuleSourceInformation>,
+) -> RenameOutcome {
+    let new_name = EcoString::from(&params.new_name);
+    if name::check_name_case(SrcSpan::default(), &new_name, Named::Label).is_err() {
+        return RenameOutcome::InvalidName { name: new_name };
+    }
+
+    let mut workspace_edit = WorkspaceEdit {
+        changes: Some(HashMap::new()),
+        document_changes: None,
+        change_annotations: None,
+    };
+
+    let key = (type_module.clone(), type_name.clone(), label.clone());
+
+    for module in modules.values() {
+        if &module.name == type_module || module.references.imported_modules.contains(type_module) {
+            let Some(source_information) = sources.get(&module.name) else {
+                continue;
+            };
+
+            rename_label_references_in_module(
+                module,
+                source_information,
+                &mut workspace_edit,
+                &key,
+                label,
+                &params.new_name,
+            );
+        }
+    }
+
+    RenameOutcome::Renamed {
+        edit: workspace_edit,
+    }
+}
+
+fn rename_label_references_in_module(
+    module: &ModuleInterface,
+    source_information: &ModuleSourceInformation,
+    workspace_edit: &mut WorkspaceEdit,
+    key: &(EcoString, EcoString, EcoString),
+    label: &EcoString,
+    new_name: &str,
+) {
+    let Some(references) = module.references.label_references.get(key) else {
+        return;
+    };
+
+    let mut edits = TextEdits::new(&source_information.line_numbers);
+
+    for reference in references {
+        if reference.shorthand {
+            // A label written using shorthand syntax (`wibble:`) relies on the
+            // field and the variable sharing a name. Renaming the field alone
+            // would break that, so we expand the shorthand and keep the original
+            // name as the value: `wibble:` becomes `new_name: wibble`.
+            edits.replace(reference.location, format!("{new_name}: {label}"));
+        } else {
+            edits.replace(reference.location, new_name.to_string());
+        }
+    }
+
+    let Some(uri) = url_from_path(source_information.path.as_str()) else {
+        return;
+    };
+
+    if let Some(changes) = workspace_edit.changes.as_mut() {
+        _ = changes.insert(uri, edits.edits);
+    }
+}
+
 fn alias_references_in_module(
     params: &RenameParams,
     module: &Module,

@@ -2824,3 +2824,129 @@ pub fn main() -> wibble.Wibble {
 ",
     );
 }
+
+#[test]
+fn rename_record_field_from_access() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let value = Wibble(wibble: 1)
+  value.wibble
+}
+",
+        "wobble",
+        find_position_of("value.wibble").under_char('i')
+    );
+}
+
+#[test]
+fn rename_record_field_from_constructor_label() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let value = Wibble(wibble: 1)
+  value.wibble
+}
+",
+        "wobble",
+        find_position_of("wibble: 1").under_char('w')
+    );
+}
+
+#[test]
+fn rename_record_field_from_pattern_label() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main(w: Wibble) {
+  case w {
+    Wibble(wibble: value) -> value
+  }
+}
+",
+        "wobble",
+        find_position_of("wibble: value").under_char('w')
+    );
+}
+
+#[test]
+fn rename_record_field_expands_label_shorthand() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let wibble = 1
+  let value = Wibble(wibble:)
+  value.wibble
+}
+",
+        "wobble",
+        find_position_of("value.wibble").under_char('i')
+    );
+}
+
+#[test]
+fn rename_record_field_in_record_update() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main(w: Wibble) {
+  Wibble(..w, wibble: 2)
+}
+",
+        "wabble",
+        find_position_of("wibble: 2").under_char('w')
+    );
+}
+
+#[test]
+fn rename_record_field_across_modules() {
+    assert_rename!(
+        ("wibble", "pub type Wibble {\n  Wibble(wibble: Int)\n}"),
+        "
+import wibble
+
+pub fn main() {
+  let value = wibble.Wibble(wibble: 1)
+  value.wibble
+}
+",
+        "wobble",
+        find_position_of("value.wibble").under_char('i')
+    );
+}
+
+#[test]
+fn rename_record_field_with_invalid_name() {
+    assert_rename_error!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let value = Wibble(wibble: 1)
+  value.wibble
+}
+",
+        "Wobble",
+        find_position_of("value.wibble").under_char('i')
+    );
+}
