@@ -66,7 +66,7 @@ use super::{
     progress::ProgressReporter,
     reference::{
         FindVariableReferences, Referenced, VariableReferenceKind, find_label_references,
-        find_label_references_in_current_module, find_module_references, reference_for_ast_node,
+        find_label_references_in_module, find_module_references, reference_for_ast_node,
     },
     rename::{
         RenameOutcome, RenameTarget, Renamed, rename_label, rename_local_variable,
@@ -1103,7 +1103,7 @@ where
                 FindReferencesSearchScope::CurrentModule => {
                     let source_information = self.compiler.get_source(&source_module.name)?;
                     let source_module = self.compiler.get_module_interface(&source_module.name)?;
-                    Some(find_label_references_in_current_module(
+                    Some(find_label_references_in_module(
                         type_module,
                         type_name,
                         label,
