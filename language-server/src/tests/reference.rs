@@ -1217,3 +1217,40 @@ const wobble = todo as [wibble]
         find_position_of("wibble")
     );
 }
+
+#[test]
+fn references_for_record_field() {
+    assert_references!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let value = Wibble(wibble: 1)
+  value.wibble
+}
+",
+        find_position_of("value.wibble").under_char('i')
+    );
+}
+
+// A field elided by a `..` pattern spread is not a reference to that field, so
+// it must not show up in the results.
+#[test]
+fn references_for_record_field_ignored_by_pattern_spread() {
+    assert_references!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main(w: Wibble) {
+  case w {
+    Wibble(wibble: a, ..) -> a
+  }
+}
+",
+        find_position_of("wobble: Int").under_char('w')
+    );
+}

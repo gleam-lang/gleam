@@ -2968,3 +2968,45 @@ pub fn main() {
         find_position_of("wibble: Int").under_char('w')
     );
 }
+
+// A field elided by a `..` pattern spread must not be touched by renaming
+// that field: the spread is not a real label reference, just a synthetic
+// placeholder for the ignored fields.
+#[test]
+fn rename_record_field_ignored_by_pattern_spread() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main(w: Wibble) {
+  case w {
+    Wibble(wibble: a, ..) -> a
+  }
+}
+",
+        "wabble",
+        find_position_of("wobble: Int").under_char('w')
+    );
+}
+
+// A bare `..` eliding every field must likewise be left untouched.
+#[test]
+fn rename_record_field_ignored_by_bare_pattern_spread() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main(w: Wibble) {
+  case w {
+    Wibble(..) -> 1
+  }
+}
+",
+        "wabble",
+        find_position_of("wibble: Int").under_char('w')
+    );
+}
