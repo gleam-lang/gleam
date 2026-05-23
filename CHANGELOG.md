@@ -139,7 +139,7 @@
   improves suggestions to push a tag, if it doesn't exists.
   ([Andrey Kozhev](https://github.com/ankddev))
 
-- The `gleam export escript` command has been added for the creation
+- The `gleam export escript` command has been added for the creation of
   [escripts](https://www.erlang.org/doc/apps/erts/escript_cmd.html), BEAM
   programs bundled into a single file.
   ([Louis Pilfold](https://github.com/lpil))
