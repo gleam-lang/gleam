@@ -491,7 +491,12 @@ pub fn find_label_references(
             let Some(source_information) = sources.get(&module.name) else {
                 continue;
             };
-            find_label_references_in_module(&key, module, source_information, &mut reference_locations);
+            find_label_references_in_module(
+                &key,
+                module,
+                source_information,
+                &mut reference_locations,
+            );
         }
     }
 
