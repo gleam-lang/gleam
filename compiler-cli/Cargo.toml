@@ -34,7 +34,7 @@ fslock = "0"
 # Provides a way to determine if two files are the same using filesystem node ids
 same-file = "1"
 # Creation of zip files
-zip = { version = "8", features = ["deflate"] }
+zip = { version = "8", features = ["deflate"], default-features = false }
 
 async-trait.workspace = true
 base16.workspace = true
