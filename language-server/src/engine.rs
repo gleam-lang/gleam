@@ -996,7 +996,7 @@ where
                 location,
                 ..
             }) if location.contains(byte_index) => match search_scope {
-                FindReferencesSearchScope::AllImportableModules => Some(find_module_references(
+                FindReferencesSearchScope::AllModules => Some(find_module_references(
                     module,
                     name,
                     self.compiler.project_compiler.get_importable_modules(),
@@ -1021,7 +1021,7 @@ where
                 location,
                 ..
             }) if location.contains(byte_index) => match search_scope {
-                FindReferencesSearchScope::AllImportableModules => Some(find_module_references(
+                FindReferencesSearchScope::AllModules => Some(find_module_references(
                     module,
                     name,
                     self.compiler.project_compiler.get_importable_modules(),
@@ -1050,10 +1050,7 @@ where
     ) -> Response<Option<Vec<lsp::Location>>> {
         self.respond(|this| {
             let position = &params.text_document_position_params;
-            Ok(this.find_references_in_scope(
-                position,
-                FindReferencesSearchScope::AllImportableModules,
-            ))
+            Ok(this.find_references_in_scope(position, FindReferencesSearchScope::AllModules))
         })
     }
 
@@ -2131,6 +2128,6 @@ fn make_deprecated_symbol_tag(deprecation: &Deprecation) -> Option<Vec<SymbolTag
 }
 
 enum FindReferencesSearchScope {
-    AllImportableModules,
+    AllModules,
     CurrentModule,
 }
