@@ -486,7 +486,7 @@ pub enum Located<'a> {
         label: EcoString,
         /// The record type the label belongs to, used for go-to-definition,
         /// find-references and rename. `None` when it can't be determined.
-        container: Option<LabelContainer>,
+        owner: Option<LabelOwner>,
     },
     ModuleName {
         location: SrcSpan,
@@ -508,7 +508,7 @@ pub enum Located<'a> {
 /// The record type a field label belongs to. Used to resolve go-to-definition,
 /// find-references and rename for record fields.
 #[derive(Debug, Clone, PartialEq)]
-pub enum LabelContainer {
+pub enum LabelOwner {
     /// A label usage (`record.field`, a labelled argument or pattern, a record
     /// update) where the value's type is known. The type carries the module
     /// and name it belongs to.
@@ -628,21 +628,22 @@ impl<'a> Located<'a> {
             Self::Arg(_) => None,
             Self::Annotation { type_, .. } => self.type_location(importable_modules, type_.clone()),
             Self::Label {
-                container: Some(LabelContainer::Usage {
-                    type_: container_type,
-                    constructor,
-                }),
+                owner:
+                    Some(LabelOwner::Usage {
+                        type_: record_type,
+                        constructor,
+                    }),
                 label,
                 ..
             } => self.label_definition_location(
                 importable_modules,
-                container_type,
+                record_type,
                 label,
                 Some(constructor),
             ),
             // Already at the declaration; go-to-definition jumps to itself.
             Self::Label {
-                container: Some(LabelContainer::Definition { .. }),
+                owner: Some(LabelOwner::Definition { .. }),
                 location,
                 ..
             } => Some(DefinitionLocation {

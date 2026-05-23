@@ -17,7 +17,7 @@ pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 use crate::analyse::Inferred;
 use crate::ast::typed::pairwise_all;
 use crate::bit_array;
-use crate::build::{ExpressionPosition, LabelContainer, Located, Target, module_erlang_name};
+use crate::build::{ExpressionPosition, LabelOwner, Located, Target, module_erlang_name};
 use crate::exhaustiveness::CompiledCase;
 use crate::parse::{LiteralFloatValue, SpannedString};
 use crate::type_::error::VariableOrigin;
@@ -1159,7 +1159,7 @@ impl TypedCustomType {
                         location: *label_location,
                         type_: argument.type_.clone(),
                         label: label.clone(),
-                        container: Some(LabelContainer::Definition {
+                        owner: Some(LabelOwner::Definition {
                             type_name: self.name.clone(),
                             constructor: constructor.name.clone(),
                         }),
@@ -1735,14 +1735,14 @@ impl CallArg<TypedExpr> {
                 None => {
                     if self.location.contains(byte_index) && let Some(label) = &self.label {
                         let fn_type = called_function.type_();
-                        let container_type = fn_type.return_type().unwrap_or(fn_type);
+                        let record_type = fn_type.return_type().unwrap_or(fn_type);
                         Some(Located::Label {
                             location: self.location,
                             type_: self.value.type_(),
                             label: label.clone(),
-                            container: called_function.record_constructor_name().map(|c| {
-                                LabelContainer::Usage {
-                                    type_: container_type,
+                            owner: called_function.record_constructor_name().map(|c| {
+                                LabelOwner::Usage {
+                                    type_: record_type,
                                     constructor: c,
                                 }
                             }),
@@ -1800,7 +1800,7 @@ impl CallArg<TypedPattern> {
     pub fn find_node(
         &self,
         byte_index: u32,
-        container_type: &Arc<Type>,
+        record_type: &Arc<Type>,
         constructor: Option<&EcoString>,
     ) -> Option<Located<'_>> {
         match self.value.find_node(byte_index) {
@@ -1813,8 +1813,8 @@ impl CallArg<TypedPattern> {
                         location: self.location,
                         type_: self.value.type_(),
                         label: label.clone(),
-                        container: constructor.map(|c| LabelContainer::Usage {
-                            type_: container_type.clone(),
+                        owner: constructor.map(|c| LabelOwner::Usage {
+                            type_: record_type.clone(),
                             constructor: c.clone(),
                         }),
                     })
@@ -1830,7 +1830,7 @@ impl CallArg<TypedConstant> {
     pub fn find_node(
         &self,
         byte_index: u32,
-        container_type: &Arc<Type>,
+        record_type: &Arc<Type>,
         constructor: Option<&EcoString>,
     ) -> Option<Located<'_>> {
         match self.value.find_node(byte_index) {
@@ -1843,8 +1843,8 @@ impl CallArg<TypedConstant> {
                         location: self.location,
                         type_: self.value.type_(),
                         label: label.clone(),
-                        container: constructor.map(|c| LabelContainer::Usage {
-                            type_: container_type.clone(),
+                        owner: constructor.map(|c| LabelOwner::Usage {
+                            type_: record_type.clone(),
                             constructor: c.clone(),
                         }),
                     })
