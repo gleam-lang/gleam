@@ -17,7 +17,7 @@ pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 use crate::analyse::Inferred;
 use crate::ast::typed::pairwise_all;
 use crate::bit_array;
-use crate::build::{ExpressionPosition, Located, Target, module_erlang_name};
+use crate::build::{ExpressionPosition, LabelContainer, Located, Target, module_erlang_name};
 use crate::exhaustiveness::CompiledCase;
 use crate::parse::{LiteralFloatValue, SpannedString};
 use crate::type_::error::VariableOrigin;
@@ -1146,13 +1146,31 @@ impl TypedCustomType {
             .iter()
             .find(|constructor| constructor.location.contains(byte_index))
         {
-            if let Some(annotation) = constructor
+            if let Some(argument) = constructor
                 .arguments
                 .iter()
-                .find(|arg| arg.location.contains(byte_index))
-                .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
+                .find(|argument| argument.location.contains(byte_index))
             {
-                return Some(annotation);
+                // The cursor is on the field's label in its declaration.
+                if let Some((label_location, label)) = &argument.label
+                    && label_location.contains(byte_index)
+                {
+                    return Some(Located::Label {
+                        location: *label_location,
+                        type_: argument.type_.clone(),
+                        label: label.clone(),
+                        container: Some(LabelContainer::Definition {
+                            type_name: self.name.clone(),
+                            constructor: constructor.name.clone(),
+                        }),
+                    });
+                }
+
+                // The cursor is on the field's type annotation.
+                if let Some(annotation) = argument.ast.find_node(byte_index, argument.type_.clone())
+                {
+                    return Some(annotation);
+                }
             }
 
             return Some(Located::VariantConstructorDefinition(constructor));
@@ -1722,9 +1740,12 @@ impl CallArg<TypedExpr> {
                             location: self.location,
                             type_: self.value.type_(),
                             label: label.clone(),
-                            container: called_function
-                                .record_constructor_name()
-                                .map(|c| (container_type, c)),
+                            container: called_function.record_constructor_name().map(|c| {
+                                LabelContainer::Usage {
+                                    type_: container_type,
+                                    constructor: c,
+                                }
+                            }),
                         })
                     } else {
                         None
@@ -1792,7 +1813,10 @@ impl CallArg<TypedPattern> {
                         location: self.location,
                         type_: self.value.type_(),
                         label: label.clone(),
-                        container: constructor.map(|c| (container_type.clone(), c.clone())),
+                        container: constructor.map(|c| LabelContainer::Usage {
+                            type_: container_type.clone(),
+                            constructor: c.clone(),
+                        }),
                     })
                 } else {
                     None
@@ -1819,7 +1843,10 @@ impl CallArg<TypedConstant> {
                         location: self.location,
                         type_: self.value.type_(),
                         label: label.clone(),
-                        container: constructor.map(|c| (container_type.clone(), c.clone())),
+                        container: constructor.map(|c| LabelContainer::Usage {
+                            type_: container_type.clone(),
+                            constructor: c.clone(),
+                        }),
                     })
                 } else {
                     None

@@ -1,6 +1,6 @@
 ---
 source: language-server/src/tests/rename.rs
-assertion_line: 2430
+assertion_line: 2556
 expression: "\ntype Wibble {\n  Wibble(wibble: Int)\n}\n\npub fn main() {\n  let value = Wibble(wibble: 1)\n  value.wibble\n}\n"
 ---
 ----- BEFORE RENAME
@@ -8,12 +8,12 @@ expression: "\ntype Wibble {\n  Wibble(wibble: Int)\n}\n\npub fn main() {\n  let
 
 type Wibble {
   Wibble(wibble: Int)
+         ↑▔▔▔▔▔      
 }
 
 pub fn main() {
   let value = Wibble(wibble: 1)
   value.wibble
-        ↑▔▔▔▔▔
 }
 
 

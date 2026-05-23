@@ -44,9 +44,9 @@
 ### Language server
 
 - The language server now supports go-to-definition, find-references and rename
-  for record fields. These work on labelled arguments, on labelled patterns, on
-  record updates and on `record.field` accesses, both within a module and across
-  modules. For example:
+  for record fields. These work on the field declaration, on labelled arguments,
+  on labelled patterns, on record updates and on `record.field` accesses, both
+  within a module and across modules. For example:
 
   ```gleam
   pub type Person {

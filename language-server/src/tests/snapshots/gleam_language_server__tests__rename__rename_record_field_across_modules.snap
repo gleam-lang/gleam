@@ -16,7 +16,7 @@ import wibble
 pub fn main() {
   let value = wibble.Wibble(wibble: 1)
   value.wibble
-  ↑▔▔▔▔▔      
+        ↑▔▔▔▔▔
 }
 
 
