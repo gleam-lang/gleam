@@ -58,6 +58,17 @@ fn build(case: &str, target: Option<Target>) -> Result<Utf8PathBuf, gleam_cli::E
     .map(|_| build_directory)
 }
 
+fn export_erlang_shipment(case: &str) -> Result<Utf8PathBuf, gleam_cli::Error> {
+    let working_directory = Utf8PathBuf::from(&format!("./cases/{case}"));
+    let erlang_shipment_path = working_directory.join("build").join("erlang-shipment");
+    fs::delete_directory(&working_directory.join("build"))
+        .expect("must be able to reset test directory");
+
+    Command::Export(ExportTarget::ErlangShipment)
+        .run(working_directory)
+        .map(|_| erlang_shipment_path)
+}
+
 #[test]
 fn escript_success() {
     let escript = assert_escript_compile("escript_ok");
@@ -131,4 +142,39 @@ fn javascipt_prelude() {
     assert!(status.success(), "node should run OK");
 
     fs::delete_file(&prelude_path).expect("must be able to delete file");
+}
+
+#[test]
+fn erlang_shipment_no_dev_deps() {
+    let erlang_shipment_path = export_erlang_shipment("erlang_shipment_no_dev_deps")
+        .expect("should export erlang shipment successfully");
+
+    assert!(
+        erlang_shipment_path.exists() && erlang_shipment_path.is_dir(),
+        "erlang shipment should have been created"
+    );
+
+    let gleam_stdlib_path = erlang_shipment_path.join("gleam_stdlib");
+    assert!(
+        gleam_stdlib_path.exists() && gleam_stdlib_path.is_dir(),
+        "gleam_stdlib should be in the shipment"
+    );
+
+    let hpack_path = erlang_shipment_path.join("hpack");
+    assert!(
+        hpack_path.exists() && hpack_path.is_dir(),
+        "hpack from hpack_erl should be in the shipment"
+    );
+
+    let gleeunit_path = erlang_shipment_path.join("gleeunit");
+    assert!(
+        !gleeunit_path.exists(),
+        "test dependency gleeunit should not be in the shipment"
+    );
+
+    let root_path = erlang_shipment_path.join("shipment_test");
+    assert!(
+        root_path.exists() && root_path.is_dir(),
+        "root package shipment_test should be in the shipment"
+    );
 }
