@@ -506,10 +506,6 @@ jobs:
         run: make
         working-directory: ./test/subdir_ffi
 
-      - name: test/unicode_path
-        run: make
-        working-directory: ./test/unicode_path ⭐
-
       - name: test/assert
         run: make test-all
         working-directory: ./test/assert

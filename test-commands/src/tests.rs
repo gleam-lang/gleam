@@ -1,6 +1,8 @@
 use camino::Utf8PathBuf;
 use gleam_cli::{Command, ExportTarget, fs};
+use gleam_core::build::Target;
 use std::process;
+use strum::IntoEnumIterator;
 
 fn escript_compile(case: &str) -> Result<Utf8PathBuf, gleam_core::Error> {
     let working_directory = Utf8PathBuf::from(&format!("./cases/{case}"));
@@ -40,6 +42,20 @@ fn assert_make_hextarball(case: &str) -> Utf8PathBuf {
         "hex tarball should have been created"
     );
     tarball_path
+}
+
+fn build(case: &str, target: Option<Target>) -> Result<Utf8PathBuf, gleam_cli::Error> {
+    let working_directory = Utf8PathBuf::from(&format!("./cases/{case}"));
+    let build_directory = working_directory.join("build");
+    fs::delete_directory(&build_directory).expect("must be able to reset test directory");
+
+    Command::Build {
+        warnings_as_errors: false,
+        target,
+        no_print_progress: false,
+    }
+    .run(working_directory)
+    .map(|_| build_directory)
 }
 
 #[test]
@@ -91,4 +107,11 @@ fn escript_with_wrong_arity_main_function() {
 #[test]
 fn hextarball() {
     assert_make_hextarball("hextarball");
+}
+
+#[test]
+fn build_unicode_path() {
+    for target in Target::iter() {
+        build("unicode_path ⭐", Some(target)).expect("should build successfully");
+    }
 }
