@@ -115,3 +115,20 @@ fn build_unicode_path() {
         build("unicode_path ⭐", Some(target)).expect("should build successfully");
     }
 }
+
+#[test]
+fn javascipt_prelude() {
+    let working_directory = Utf8PathBuf::from("./cases/javascript_prelude");
+    let prelude_template_path = Utf8PathBuf::from("../compiler-core/templates/prelude.mjs");
+    let prelude_path = working_directory.join("prelude.mjs");
+    let main_path = working_directory.join("main.mjs");
+    fs::copy(prelude_template_path, &prelude_path).expect("must be able to copy prelude");
+
+    let status = process::Command::new("node")
+        .arg(main_path)
+        .status()
+        .expect("executable node");
+    assert!(status.success(), "node should run OK");
+
+    fs::delete_file(&prelude_path).expect("must be able to delete file");
+}
