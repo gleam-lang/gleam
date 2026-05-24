@@ -546,7 +546,7 @@ pub fn code_action_inexhaustive_let_to_case(
 
         let range = text_edits.src_span_to_lsp_range(location);
         if !within(params.range, range) {
-            return;
+            continue;
         }
 
         let Some(Located::Statement(TypedStatement::Assignment(assignment))) =
