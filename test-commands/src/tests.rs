@@ -23,6 +23,25 @@ fn assert_escript_compile(case: &str) -> Utf8PathBuf {
     escript_path
 }
 
+fn make_hextarball(case: &str) -> Result<Utf8PathBuf, gleam_cli::Error> {
+    let working_directory = Utf8PathBuf::from(&format!("./cases/{case}"));
+    let tarball_path = working_directory.join("build").join("hextarball-0.1.0.tar");
+    fs::delete_file(&tarball_path).expect("must be able to reset test directory");
+
+    Command::Export(ExportTarget::HexTarball)
+        .run(working_directory)
+        .map(|_| tarball_path)
+}
+
+fn assert_make_hextarball(case: &str) -> Utf8PathBuf {
+    let tarball_path = make_hextarball(case).expect("should make hex tarball successfully");
+    assert!(
+        tarball_path.exists() && tarball_path.is_file(),
+        "hex tarball should have been created"
+    );
+    tarball_path
+}
+
 #[test]
 fn escript_success() {
     let escript = assert_escript_compile("escript_ok");
@@ -67,4 +86,9 @@ fn escript_with_wrong_arity_main_function() {
         .expect_err("escripts require a main function")
         .pretty_string();
     insta::assert_snapshot!(error);
+}
+
+#[test]
+fn hextarball() {
+    assert_make_hextarball("hextarball");
 }

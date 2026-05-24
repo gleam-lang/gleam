@@ -490,10 +490,6 @@ jobs:
         run: make
         working-directory: ./test/javascript_prelude
 
-      - name: Test export of hex tarball
-        run: make test
-        working-directory: ./test/hextarball
-
       - name: test/running_modules
         run: make test-all
         working-directory: ./test/running_modules
