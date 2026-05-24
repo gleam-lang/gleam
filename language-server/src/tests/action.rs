@@ -5980,6 +5980,19 @@ fn outer_inexhaustive_let_to_case() {
 }
 
 #[test]
+fn second_sibling_inexhaustive_let_to_case() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        r#"pub fn main(a, b) {
+  let Ok(x) = a
+  let Ok(y) = b
+  #(x, y)
+}"#,
+        find_position_of("let Ok(y)").select_until(find_position_of("= b")),
+    );
+}
+
+#[test]
 fn no_code_action_for_exhaustive_let_to_case() {
     assert_no_code_actions!(
         CONVERT_TO_CASE,
