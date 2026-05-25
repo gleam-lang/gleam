@@ -303,3 +303,11 @@ fn publishing_empty_readme() {
         .pretty_string();
     insta::assert_snapshot!(error);
 }
+
+#[test]
+fn publishing_no_readme() {
+    let error = publish("publishing_no_readme")
+        .expect_err("should not publish anything")
+        .pretty_string();
+    insta::assert_snapshot!(error);
+}
