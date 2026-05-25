@@ -8,6 +8,10 @@
   every inexhaustive `let` assignment in a module other than the first one.
   ([John Downey](https://github.com/jtdowney))
 
+- Fixed a bug where bad error message would be shown when trying to publish
+  package with no README on Windows.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## v1.17.0-rc1 - 2026-05-23
 
 ### Compiler
