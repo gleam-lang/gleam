@@ -16,6 +16,12 @@
   been improved.
   ([Louis Pilfold](https://github.com/lpil))
 
+### Bug fixes
+
+- Fixed a bug where bad error message would be shown when trying to publish
+  package with no README on Windows.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## 1.19.0-rc1 - 2026-09-22
 
 ### Compiler
