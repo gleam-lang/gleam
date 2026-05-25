@@ -295,3 +295,11 @@ fn publishing_default_readme() {
         .pretty_string();
     insta::assert_snapshot!(error);
 }
+
+#[test]
+fn publishing_empty_readme() {
+    let error = publish("publishing_empty_readme")
+        .expect_err("should not publish anything")
+        .pretty_string();
+    insta::assert_snapshot!(error);
+}
