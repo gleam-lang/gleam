@@ -156,7 +156,9 @@ fn check_for_invalid_readme(config: &PackageConfig, paths: &ProjectPaths) -> Res
         Err(Error::FileIo {
             cause: FileIoCause::Other(message),
             ..
-        }) if message.contains("No such file or directory") => {
+        }) if message.contains("No such file or directory")
+            || message.contains("The system cannot find the file specified") =>
+        {
             return Err(Error::CannotPublishWithInvalidReadme {
                 reason: InvalidReadmeReason::Missing,
             });
