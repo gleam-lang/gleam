@@ -98,6 +98,18 @@ fn compile_package(
     .map(|_| output_directory)
 }
 
+fn publish(case: &str) -> Result<(), gleam_cli::Error> {
+    let working_directory = Utf8PathBuf::from(&format!("./cases/{case}"));
+    fs::delete_directory(&working_directory.join("build"))
+        .expect("should be able to reset test directory");
+
+    Command::Publish {
+        replace: false,
+        yes: false,
+    }
+    .run(working_directory)
+}
+
 #[test]
 fn escript_success() {
     let escript = assert_escript_compile("escript_ok");
@@ -266,4 +278,12 @@ fn compile_package1() {
         .status()
         .expect("should run successfully");
     assert!(status.success(), "erl should run OK");
+}
+
+#[test]
+fn publishing_default_main() {
+    let error = publish("publishing_default_main")
+        .expect_err("should not publish anything")
+        .pretty_string();
+    insta::assert_snapshot!(error);
 }
