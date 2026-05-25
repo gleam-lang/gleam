@@ -154,6 +154,10 @@
   duplicate module name when triggered on qualified values.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Fixed a bug where bad error message would be shown when trying to publish
+  package with no README on Windows.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## v1.19.1 - 2026-10-07
 
 ### Bug fixes
