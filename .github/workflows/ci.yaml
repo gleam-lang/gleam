@@ -471,10 +471,6 @@ jobs:
         run: make clean bun
         working-directory: ./test/language
 
-      - name: test/compile_package1
-        run: make
-        working-directory: ./test/compile_package1
-
       - name: test/running_modules
         run: make test-all
         working-directory: ./test/running_modules

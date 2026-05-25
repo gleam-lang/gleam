@@ -231,3 +231,39 @@ fn compile_package0() {
         .expect("should run successfully");
     assert!(status.success(), "erl should run OK");
 }
+
+#[test]
+fn compile_package1() {
+    let first_output_directory = compile_package(
+        "compile_package1",
+        Target::Erlang,
+        None,
+        Utf8PathBuf::from("app1"),
+        Utf8PathBuf::from("."),
+        Utf8PathBuf::from("out1"),
+    )
+    .expect("should compile successfully");
+
+    let second_output_directory = compile_package(
+        "compile_package1",
+        Target::Erlang,
+        None,
+        Utf8PathBuf::from("app2"),
+        Utf8PathBuf::from("."),
+        Utf8PathBuf::from("out2"),
+    )
+    .expect("should compile successfully");
+
+    let status = process::Command::new("erl")
+        .args([
+            "-pa",
+            &format!("{}/ebin", first_output_directory),
+            &format!("{}/ebin", second_output_directory),
+            "-noshell",
+            "-eval",
+            "erlang:display(two:main()),halt()",
+        ])
+        .status()
+        .expect("should run successfully");
+    assert!(status.success(), "erl should run OK");
+}
