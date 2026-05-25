@@ -13,7 +13,7 @@
 ### Compiler
 
 - The compiler now suggest public values from imported modules when the variable
-  in unknown. These values are suggested based on name and arity.
+  is unknown. These values are suggested based on name and arity.
 
   Considering this program:
 
