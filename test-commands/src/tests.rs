@@ -1,5 +1,5 @@
 use camino::Utf8PathBuf;
-use gleam_cli::{Command, ExportTarget, fs};
+use gleam_cli::{Command, CompilePackage, ExportTarget, fs};
 use gleam_core::build::Target;
 use std::process;
 use strum::IntoEnumIterator;
@@ -67,6 +67,35 @@ fn export_erlang_shipment(case: &str) -> Result<Utf8PathBuf, gleam_cli::Error> {
     Command::Export(ExportTarget::ErlangShipment)
         .run(working_directory)
         .map(|_| erlang_shipment_path)
+}
+
+/// All directories, except `javascript_prelude` that is reltive to `output_directory`, are reltive to case directory
+fn compile_package(
+    case: &str,
+    target: Target,
+    javascript_prelude: Option<Utf8PathBuf>,
+    package_directory: Utf8PathBuf,
+    libraries_directory: Utf8PathBuf,
+    output_directory: Utf8PathBuf,
+) -> Result<Utf8PathBuf, gleam_cli::Error> {
+    let working_directory = Utf8PathBuf::from(&format!("./cases/{case}"));
+
+    let package_directory = working_directory.join(package_directory);
+    let libraries_directory = working_directory.join(libraries_directory);
+    let output_directory = working_directory.join(output_directory);
+
+    fs::delete_directory(&output_directory).expect("must be able to reset test directory");
+
+    Command::CompilePackage(CompilePackage {
+        javascript_prelude,
+        target,
+        package_directory,
+        libraries_directory,
+        output_directory: output_directory.clone(),
+        skip_beam_compilation: false,
+    })
+    .run(working_directory)
+    .map(|_| output_directory)
 }
 
 #[test]
@@ -177,4 +206,28 @@ fn erlang_shipment_no_dev_deps() {
         root_path.exists() && root_path.is_dir(),
         "root package shipment_test should be in the shipment"
     );
+}
+
+#[test]
+fn compile_package0() {
+    let output_directory = compile_package(
+        "compile_package0",
+        Target::Erlang,
+        None,
+        Utf8PathBuf::from("."),
+        Utf8PathBuf::from("."),
+        Utf8PathBuf::from("out"),
+    )
+    .expect("should compile successfully");
+    let status = process::Command::new("erl")
+        .args([
+            "-pa",
+            &format!("{}/ebin", output_directory),
+            "-noshell",
+            "-eval",
+            "erlang:display(two:main()),erlang:display(three:test_()),halt()",
+        ])
+        .status()
+        .expect("should run successfully");
+    assert!(status.success(), "erl should run OK");
 }
