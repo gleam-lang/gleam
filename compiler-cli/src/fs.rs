@@ -681,12 +681,11 @@ pub fn symlink_dir(src: impl AsRef<Utf8Path>, dest: impl AsRef<Utf8Path>) -> Res
     let dest = dest.as_ref();
     tracing::debug!(src=?src, dest=?dest, "symlinking");
     let src = canonicalise(src)?;
-    let src = src.as_path();
 
     #[cfg(target_family = "windows")]
-    let result = std::os::windows::fs::symlink_dir(src, dest);
+    let result = std::os::windows::fs::symlink_dir(&src, dest);
     #[cfg(not(target_family = "windows"))]
-    let result = std::os::unix::fs::symlink(src, dest);
+    let result = std::os::unix::fs::symlink(&src, dest);
 
     result.map_err(|err| Error::FileIo {
         action: FileIoAction::Link(dest.to_path_buf()),

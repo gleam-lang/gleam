@@ -67,7 +67,7 @@ fn io_link_file_error() {
 fn io_copy_directory_error() {
     let error = Error::FileIo {
         kind: FileKind::Directory,
-        action: FileIoAction::Copy("/dest".into()),
+        action: FileIoAction::Copy(Some("/dest".into())),
         path: "/src".into(),
         err: Some("Critical error!".to_owned()),
     }
