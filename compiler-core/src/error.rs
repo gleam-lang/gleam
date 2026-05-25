@@ -726,7 +726,21 @@ impl FileIoAction {
     }
 
     fn is_link(&self) -> bool {
-        matches!(self, &FileIoAction::Link(..))
+        match self {
+            FileIoAction::Link(..) => true,
+
+            FileIoAction::Open
+            | FileIoAction::Copy(..)
+            | FileIoAction::Read
+            | FileIoAction::Parse
+            | FileIoAction::Delete
+            | FileIoAction::Create
+            | FileIoAction::WriteTo
+            | FileIoAction::Canonicalise
+            | FileIoAction::UpdatePermissions
+            | FileIoAction::FindParent
+            | FileIoAction::ReadMetadata => false,
+        }
     }
 
     /// Returns a destination path of action, if any
