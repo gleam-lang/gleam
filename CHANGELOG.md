@@ -17,6 +17,10 @@
   directory.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Fixed a bug where bad error message would be shown when trying to publish
+  package with no README on Windows.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## 1.19.0-rc2 - 2026-09-26
 
 ## Compiler
