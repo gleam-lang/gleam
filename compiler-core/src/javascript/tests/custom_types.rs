@@ -1070,3 +1070,101 @@ pub type Box {
 "#,
     );
 }
+
+#[test]
+fn singleton_for_two_aliased_variants() {
+    assert_js!(
+        ("wibble", "pub type Wibble { Wibble }"),
+        ("wobble", "pub type Wibble { Wibble }"),
+        "
+import wobble.{Wibble as Wobble}
+import wibble.{Wibble as Wubble}
+
+pub fn main() {
+  #(Wobble, Wubble)
+}
+"
+    );
+}
+
+#[test]
+fn fieldless_variant_still_imported_if_used_in_instanceof_comparison() {
+    assert_js!(
+        ("wibble", "pub type Wibble { Wibble Wobble }"),
+        "
+import wibble.{Wibble}
+
+pub fn main() {
+  let x = Wibble
+  x == Wibble
+}
+"
+    );
+}
+
+#[test]
+fn fieldless_variant_still_imported_if_used_in_instanceof_comparison_in_guard() {
+    assert_js!(
+        ("wibble", "pub type Wibble { Wibble Wobble }"),
+        "
+import wibble.{Wibble}
+
+pub fn main() {
+  let x = Wibble
+  case x {
+    _ if x == Wibble -> 1
+    _ -> 2
+  }
+}
+"
+    );
+}
+
+#[test]
+fn aliased_variant_still_imported_if_used_in_instanceof_comparison() {
+    assert_js!(
+        ("wibble", "pub type Wibble { Wibble Wobble }"),
+        "
+import wibble.{Wibble as Wobble}
+
+pub fn main() {
+  let x = Wobble
+  x == Wobble
+}
+"
+    );
+}
+
+#[test]
+fn aliased_variant_still_imported_if_used_in_instanceof_comparison_in_guard() {
+    assert_js!(
+        ("wibble", "pub type Wibble { Wibble Wobble }"),
+        "
+import wibble.{Wibble as Wobble}
+
+pub fn go(x) {
+  case x {
+    _ if x == Wobble -> Wobble
+    _ -> wibble.Wobble
+  }
+}
+"
+    );
+}
+
+#[test]
+fn aliased_variant_still_imported_if_used_in_pattern_matching() {
+    assert_js!(
+        ("wibble", "pub type Wibble { Wibble Wobble }"),
+        "
+import wibble.{Wibble as Wobble}
+
+pub fn go(x) {
+  case x {
+    Wobble -> wibble.Wobble
+    _ -> Wobble
+  }
+}
+"
+    );
+}

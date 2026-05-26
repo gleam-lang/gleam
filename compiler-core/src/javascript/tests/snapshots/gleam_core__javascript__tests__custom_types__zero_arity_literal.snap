@@ -19,16 +19,19 @@ pub fn go() {
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 export class This extends $CustomType {}
-export const Mine$This = () => new This();
+export const Mine$This$const = new This();
+export const Mine$This = () => Mine$This$const;
 export const Mine$isThis = (value) => value instanceof This;
 
 export class ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant extends $CustomType {}
-export const Mine$ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant = () =>
+export const Mine$ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant$const =
   new ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant();
+export const Mine$ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant = () =>
+  Mine$ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant$const;
 export const Mine$isThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant = (value) =>
   value instanceof ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant;
 
 export function go() {
-  new This();
-  return new ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant();
+  Mine$This$const;
+  return Mine$ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant$const;
 }

@@ -13,11 +13,11 @@ pub fn anything() -> a {
 
 
 ----- COMPILED JAVASCRIPT
-import { toList, Empty as $Empty } from "../gleam.mjs";
+import { Empty as $Empty, List$Empty$const as $List$Empty$const } from "../gleam.mjs";
 
 export function anything() {
   while (true) {
-    let $ = toList([]);
+    let $ = $List$Empty$const;
     if (!($ instanceof $Empty)) {
       let $1 = $.tail;
       if ($1 instanceof $Empty && false || true) {

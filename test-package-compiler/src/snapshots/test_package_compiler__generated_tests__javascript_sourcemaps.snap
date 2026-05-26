@@ -27,13 +27,14 @@ pub fn wobble() -> Wibble {
 import { CustomType as $CustomType } from "./gleam.mjs";
 
 export class Woo extends $CustomType {}
-export const Wibble$Woo = () => new Woo();
+export const Wibble$Woo$const = new Woo();
+export const Wibble$Woo = () => Wibble$Woo$const;
 export const Wibble$isWoo = (value) => value instanceof Woo;
 
 export function wobble() {
-  return new Woo();
+  return Wibble$Woo$const;
 }
 
 
 //// /out/lib/the_package/hello.mjs.map
-{"version":3,"file":"hello.mjs","sources":["hello.gleam"],"names":[],"mappings":";;;AAAA,AACE;AAAA;AAAA,4DACD;;AAED;EACE;CACD"}
+{"version":3,"file":"hello.mjs","sources":["hello.gleam"],"names":[],"mappings":";;;AAAA,AACE;AAAA;;AAAA,4DACD;;AAED;EACE;CACD"}

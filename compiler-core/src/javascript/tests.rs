@@ -173,7 +173,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
             importable_modules: &modules,
             warnings: &TypeWarningEmitter::null(),
             direct_dependencies: &HashMap::new(),
-            dev_dependencies: &std::collections::HashSet::new(),
+            dev_dependencies: &HashSet::new(),
             target_support: TargetSupport::Enforced,
             package_config: &dep_config,
         }
@@ -199,7 +199,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
         importable_modules: &modules,
         warnings: &TypeWarningEmitter::null(),
         direct_dependencies: &direct_dependencies,
-        dev_dependencies: &std::collections::HashSet::new(),
+        dev_dependencies: &HashSet::new(),
         target_support: TargetSupport::NotEnforced,
         package_config: &config,
     }

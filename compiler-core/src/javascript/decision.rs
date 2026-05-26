@@ -12,6 +12,7 @@ use crate::{
     },
     format::break_block,
     javascript::{
+        TypeVariant,
         expression::{eco_string_int, string},
         maybe_escape_property,
     },
@@ -274,7 +275,7 @@ enum BodyExpression<'a> {
 /// Here we will first need to check that the list is not empty:
 ///
 /// ```js
-/// if (value instanceOf $NonEmptyList) {
+/// if (value instanceof $NonEmptyList) {
 ///   // ...
 /// } else {
 ///   return [];
@@ -288,7 +289,7 @@ enum BodyExpression<'a> {
 /// first item of the list, so we need to actually create a variable for it:
 ///
 /// ```js
-/// if (value instanceOf $NonEmptyList) {
+/// if (value instanceof $NonEmptyList) {
 ///   let $ = value.head;
 ///   if ($ === 1) {
 ///     // ...
@@ -1338,13 +1339,18 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             // Some variants like `Bool` and `Result` are special cased and checked
             // in a different way from all other variants.
             RuntimeCheck::Variant { match_, .. } if variable.type_.is_bool() => {
-                match match_.name().as_str() {
+                match match_.used_name().as_str() {
                     "True" => value.to_doc(),
                     _ => docvec!["!", value],
                 }
             }
 
-            RuntimeCheck::Variant { match_, index, .. } => {
+            RuntimeCheck::Variant {
+                match_,
+                index,
+                fields,
+                ..
+            } => {
                 if variable.type_.is_result() && match_.module().is_none() {
                     if *index == 0 {
                         self.expression_generator.tracker.ok_used = true;
@@ -1358,7 +1364,25 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     .map(|module| eco_format!("${module}."))
                     .unwrap_or_default();
 
-                docvec![value, " instanceof ", qualification, match_.name()]
+                // If this variant has no fields, register it as being used
+                // so that we know to import it.
+                if fields.is_empty()
+                    && let Some((package, module, type_name)) =
+                        variable.type_.named_type_name_and_package()
+                {
+                    _ = self
+                        .expression_generator
+                        .tracker
+                        .variants_used_in_instanceof
+                        .insert(TypeVariant {
+                            package,
+                            module,
+                            type_name,
+                            name: match_.variant_name(),
+                        });
+                }
+
+                docvec![value, " instanceof ", qualification, match_.used_name()]
             }
 
             RuntimeCheck::NonEmptyList { .. } => {

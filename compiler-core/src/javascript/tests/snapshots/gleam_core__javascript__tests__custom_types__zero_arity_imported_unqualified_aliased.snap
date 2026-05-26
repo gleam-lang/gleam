@@ -14,8 +14,8 @@ pub fn main() {
 
 ----- COMPILED JAVASCRIPT
 import * as $other from "../other.mjs";
-import { Two as Three } from "../other.mjs";
+import { One$Two$const as One$Three$const } from "../other.mjs";
 
 export function main() {
-  return new Three();
+  return One$Three$const;
 }

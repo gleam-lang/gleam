@@ -12,7 +12,7 @@ fn id(x) { x }
 
 
 ----- COMPILED JAVASCRIPT
-import { Ok, toList, makeError, isEqual } from "../gleam.mjs";
+import { Ok, List$Empty$const as $List$Empty$const, makeError, isEqual } from "../gleam.mjs";
 
 const FILEPATH = "src/module.gleam";
 
@@ -21,10 +21,10 @@ function id(x) {
 }
 
 export function main() {
-  let $ = new Ok(toList([]));
+  let $ = new Ok($List$Empty$const);
   let $1 = new Ok(
     (() => {
-      let _pipe = toList([]);
+      let _pipe = $List$Empty$const;
       return id(_pipe);
     })(),
   );

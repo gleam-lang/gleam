@@ -16,5 +16,5 @@ pub fn main() {
 import * as $other from "../other.mjs";
 
 export function main() {
-  return new $other.Two();
+  return $other.One$Two$const;
 }

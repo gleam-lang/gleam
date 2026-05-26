@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\nimport wibble.{Wibble as Wobble}\n\npub fn go(x) {\n  case x {\n    Wobble -> wibble.Wobble\n    _ -> Wobble\n  }\n}\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+pub type Wibble { Wibble Wobble }
+
+-- main.gleam
+
+import wibble.{Wibble as Wobble}
+
+pub fn go(x) {
+  case x {
+    Wobble -> wibble.Wobble
+    _ -> Wobble
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $wibble from "../wibble.mjs";
+import { Wibble as Wobble, Wibble$Wibble$const as Wibble$Wobble$const } from "../wibble.mjs";
+
+export function go(x) {
+  if (x instanceof Wobble) {
+    return $wibble.Wibble$Wobble$const;
+  } else {
+    return Wibble$Wobble$const;
+  }
+}

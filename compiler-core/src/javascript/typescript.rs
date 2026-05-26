@@ -439,7 +439,7 @@ impl<'a> TypeScriptGenerator<'a> {
         let definition = if constructors.is_empty() {
             if let Some((module, external_name, _location)) = external_javascript {
                 let member = Member {
-                    name: external_name.to_doc(),
+                    name: external_name.clone(),
                     alias: Some(eco_format!("{name}$").to_doc()),
                 };
                 imports.register_export(eco_format!("{name}$"));
