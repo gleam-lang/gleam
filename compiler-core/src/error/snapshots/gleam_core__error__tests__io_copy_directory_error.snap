@@ -4,9 +4,13 @@ expression: error
 ---
 error: File IO failure
 
-An error occurred while trying to copy this directory to /dest:
+An error occurred while trying to copy this directory:
 
     /src
+
+To:
+
+    /dest
 
 The error message from the file IO library was:
 
