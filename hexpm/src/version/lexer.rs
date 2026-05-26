@@ -89,7 +89,7 @@ impl std::fmt::Display for Token<'_> {
             Gt => write!(f, ">"),
             Lt => write!(f, "<"),
             LtEq => write!(f, "<="),
-            GtEq => write!(f, "<="),
+            GtEq => write!(f, ">="),
             Pessimistic => write!(f, "~>"),
             Dot => write!(f, "."),
             Hyphen => write!(f, "-"),
@@ -328,5 +328,25 @@ mod tests {
             .collect();
 
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    pub fn token_display() {
+        assert_eq!(Eq.to_string(), "==");
+        assert_eq!(NotEq.to_string(), "!=");
+        assert_eq!(Gt.to_string(), ">");
+        assert_eq!(Lt.to_string(), "<");
+        assert_eq!(LtEq.to_string(), "<=");
+        assert_eq!(GtEq.to_string(), ">=");
+        assert_eq!(Pessimistic.to_string(), "~>");
+        assert_eq!(Dot.to_string(), ".");
+        assert_eq!(Hyphen.to_string(), "-");
+        assert_eq!(Plus.to_string(), "+");
+        assert_eq!(Or.to_string(), "or");
+        assert_eq!(And.to_string(), "and");
+        assert_eq!(Whitespace(0, 1).to_string(), " ");
+        assert_eq!(Numeric(42).to_string(), "42");
+        assert_eq!(AlphaNumeric("abc").to_string(), "abc");
+        assert_eq!(LeadingZero("012").to_string(), "012");
     }
 }
