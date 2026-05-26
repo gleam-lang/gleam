@@ -1827,19 +1827,23 @@ Erlang modules must have unique names regardless of the subfolders where their
                     None => "".into(),
                 };
                 let destination = if let Some(destination) = action.destination() {
-                    &format!(" to {destination}")
+                    format!(
+                        "\n\nTo:
+
+    {destination}"
+                    )
                 } else {
-                    ""
+                    "".into()
                 };
                 let mut text = format!(
-                    "An error occurred while trying to {} this {}{}:
+                    "An error occurred while trying to {} this {}:
 
-    {}
+    {}{}
 {}",
                     action.text(),
                     kind.text(),
-                    destination,
                     path,
+                    destination,
                     err,
                 );
                 if cfg!(target_family = "windows") && action.is_link() {
