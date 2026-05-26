@@ -51,8 +51,26 @@ fn hex_error_conversion() {
     );
 }
 
+// There are 2 separate tests for Windows and for Unix, because on Windows note
+// about inability to create symlinks without Developer Mode is shown, so
+// snapshots differ.
+
+#[cfg(windows)]
 #[test]
-fn io_link_file_error() {
+fn io_link_file_error_windows() {
+    let error = Error::FileIo {
+        kind: FileKind::File,
+        action: FileIoAction::Link("/dest".into()),
+        path: "/src".into(),
+        err: Some("Critical error!".to_owned()),
+    }
+    .pretty_string();
+    assert_snapshot!(error);
+}
+
+#[cfg(not(windows))]
+#[test]
+fn io_link_file_error_not_windows() {
     let error = Error::FileIo {
         kind: FileKind::File,
         action: FileIoAction::Link("/dest".into()),
