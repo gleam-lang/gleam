@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/javascript/tests/lists.rs
+expression: "\npub fn go(x) {\n  case x {\n    _ if x != [] && [] != x -> 1\n    _ -> 2\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    _ if x != [] && [] != x -> 1
+    _ -> 2
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { Empty as $Empty } from "../gleam.mjs";
+
+export function go(x) {
+  if ((!(x instanceof $Empty)) && (!(x instanceof $Empty))) {
+    return 1;
+  } else {
+    return 2;
+  }
+}

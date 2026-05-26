@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/lists.rs
+expression: "\npub fn go(x) {\n  x != [] && [] != x\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  x != [] && [] != x
+}
+
+
+----- COMPILED JAVASCRIPT
+import { Empty as $Empty } from "../gleam.mjs";
+
+export function go(x) {
+  return (!(x instanceof $Empty)) && (!(x instanceof $Empty));
+}

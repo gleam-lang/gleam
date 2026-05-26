@@ -12,11 +12,11 @@ pub fn func(x) {
     
 
 ----- COMPILED JAVASCRIPT
-import { Ok, toList, isEqual } from "../gleam.mjs";
+import { Ok, toList, Empty as $Empty } from "../gleam.mjs";
 
 export function func(x) {
   let $ = toList([]);
-  if (isEqual(toList([]), toList([(var0) => { return new Ok(var0); }]))) {
+  if (toList([(var0) => { return new Ok(var0); }]) instanceof $Empty) {
     return true;
   } else {
     return false;

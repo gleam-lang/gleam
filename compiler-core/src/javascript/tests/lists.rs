@@ -111,3 +111,53 @@ pub fn go(func) {
 "#,
     );
 }
+
+#[test]
+fn comparison_with_empty_list() {
+    assert_js!(
+        "
+pub fn go(x) {
+  x == [] && [] == x
+}
+"
+    );
+}
+
+#[test]
+fn negated_comparison_with_empty_list() {
+    assert_js!(
+        "
+pub fn go(x) {
+  x != [] && [] != x
+}
+"
+    );
+}
+
+#[test]
+fn comparison_with_empty_list_ing_guard() {
+    assert_js!(
+        "
+pub fn go(x) {
+  case x {
+    _ if x == [] && [] == x -> 1
+    _ -> 2
+  }
+}
+"
+    );
+}
+
+#[test]
+fn negated_comparison_with_empty_list_ing_guard() {
+    assert_js!(
+        "
+pub fn go(x) {
+  case x {
+    _ if x != [] && [] != x -> 1
+    _ -> 2
+  }
+}
+"
+    );
+}
