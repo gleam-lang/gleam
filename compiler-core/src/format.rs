@@ -2894,9 +2894,9 @@ impl<'comments> Formatter<'comments> {
             UntypedExpr::BinOp { .. } => break_("{", "")
                 .append(self.expr(expression))
                 .nest(INDENT)
-                .group()
                 .append(break_("", ""))
-                .append(break_("}", "")),
+                .append(break_("}", ""))
+                .group(),
 
             UntypedExpr::Int { .. }
             | UntypedExpr::Float { .. }
