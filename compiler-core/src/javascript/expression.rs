@@ -1889,6 +1889,15 @@ impl<'module, 'a> Generator<'module, 'a> {
                 });
                 Some(self.singleton_equal(left_doc, Some(module_alias), name, should_be_equal))
             }
+            // Empty lists are implemented as a variant with no fields, so we can
+            // use `instanceof` for a faster check.
+            TypedExpr::List { elements, .. } if elements.is_empty() => {
+                let left_doc = self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                    this.wrap_expression(left)
+                });
+                self.tracker.list_empty_class_used = true;
+                Some(self.singleton_equal(left_doc, None, "$Empty".into(), should_be_equal))
+            }
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
             | TypedExpr::String { .. }
@@ -2409,9 +2418,6 @@ impl<'module, 'a> Generator<'module, 'a> {
                 operator,
                 ..
             } => {
-                let left_document = self.wrapped_guard(left);
-                let right_document = self.wrapped_guard(right);
-
                 let operator = match operator {
                     BinOp::Eq if is_js_scalar(left.type_()) => "===",
                     BinOp::NotEq if is_js_scalar(left.type_()) => "!==",
@@ -2447,9 +2453,10 @@ impl<'module, 'a> Generator<'module, 'a> {
 
                     BinOp::DivFloat => {
                         self.tracker.float_division_used = true;
+
                         return docvec![
                             "divideFloat",
-                            wrap_arguments([left_document, right_document])
+                            wrap_arguments([self.guard(left), self.guard(right)])
                         ];
                     }
 
@@ -2457,7 +2464,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                         self.tracker.int_division_used = true;
                         return docvec![
                             "divideInt",
-                            wrap_arguments([left_document, right_document])
+                            wrap_arguments([self.guard(left), self.guard(right)])
                         ];
                     }
 
@@ -2465,13 +2472,16 @@ impl<'module, 'a> Generator<'module, 'a> {
                         self.tracker.int_remainder_used = true;
                         return docvec![
                             "remainderInt",
-                            wrap_arguments([left_document, right_document])
+                            wrap_arguments([self.guard(left), self.guard(right)])
                         ];
                     }
 
                     BinOp::And => "&&",
                     BinOp::Or => "||",
                 };
+
+                let left_document = self.wrapped_guard(left);
+                let right_document = self.wrapped_guard(right);
 
                 docvec![left_document, " ", operator, " ", right_document]
             }
@@ -2504,23 +2514,32 @@ impl<'module, 'a> Generator<'module, 'a> {
         right: &'a TypedClauseGuard,
         should_be_equal: bool,
     ) -> Option<Document<'a>> {
-        if let ClauseGuard::Constant(Constant::Record {
-            record_constructor: Some(constructor),
-            module,
-            name,
-            ..
-        }) = right
-            && let ValueConstructorVariant::Record { arity: 0, .. } = constructor.variant
-        {
-            let left_doc = self.guard(left);
-            return Some(self.singleton_equal(
-                left_doc,
-                module.as_ref().map(|(module, _)| module.as_str()),
+        match right {
+            ClauseGuard::Constant(Constant::Record {
+                record_constructor: Some(constructor),
+                module,
                 name,
-                should_be_equal,
-            ));
+                ..
+            }) if let ValueConstructorVariant::Record { arity: 0, .. } = constructor.variant => {
+                let left_doc = self.guard(left);
+                Some(self.singleton_equal(
+                    left_doc,
+                    module.as_ref().map(|(module, _)| module.as_str()),
+                    name,
+                    should_be_equal,
+                ))
+            }
+            ClauseGuard::Constant(Constant::List {
+                elements,
+                tail: None,
+                ..
+            }) if elements.is_empty() => {
+                let left_doc = self.guard(left);
+                self.tracker.list_empty_class_used = true;
+                Some(self.singleton_equal(left_doc, None, "$Empty", should_be_equal))
+            }
+            _ => None,
         }
-        None
     }
 
     fn wrapped_guard(&mut self, guard: &'a TypedClauseGuard) -> Document<'a> {
