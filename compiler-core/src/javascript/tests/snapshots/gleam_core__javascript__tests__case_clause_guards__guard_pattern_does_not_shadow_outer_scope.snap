@@ -38,7 +38,8 @@ export const Option$isSome = (value) => value instanceof Some;
 export const Option$Some$0 = (value) => value[0];
 
 export class None extends $CustomType {}
-export const Option$None = () => new None();
+export const Option$None$const = new None();
+export const Option$None = () => Option$None$const;
 export const Option$isNone = (value) => value instanceof None;
 
 export class Container extends $CustomType {
@@ -57,7 +58,7 @@ export function main() {
   let $ = new Some(1);
   let x$1 = $[0];
   if (x$1 < 0) {
-    return new Container(new None());
+    return new Container(Option$None$const);
   } else {
     return new Container(x);
   }

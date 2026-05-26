@@ -35,11 +35,13 @@ import * as $wibble from "../wibble.mjs";
 import { Active as WibbleActive } from "../wibble.mjs";
 
 export class Active extends $CustomType {}
-export const WobbleStatus$Active = () => new Active();
+export const WobbleStatus$Active$const = new Active();
+export const WobbleStatus$Active = () => WobbleStatus$Active$const;
 export const WobbleStatus$isActive = (value) => value instanceof Active;
 
 export class Disabled extends $CustomType {}
-export const WobbleStatus$Disabled = () => new Disabled();
+export const WobbleStatus$Disabled$const = new Disabled();
+export const WobbleStatus$Disabled = () => WobbleStatus$Disabled$const;
 export const WobbleStatus$isDisabled = (value) => value instanceof Disabled;
 
 export function is_wibble_active(s) {

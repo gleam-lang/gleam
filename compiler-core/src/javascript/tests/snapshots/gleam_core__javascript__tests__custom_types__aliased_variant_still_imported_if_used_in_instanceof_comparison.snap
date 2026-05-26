@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\nimport wibble.{Wibble as Wobble}\n\npub fn main() {\n  let x = Wobble\n  x == Wobble\n}\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+pub type Wibble { Wibble Wobble }
+
+-- main.gleam
+
+import wibble.{Wibble as Wobble}
+
+pub fn main() {
+  let x = Wobble
+  x == Wobble
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $wibble from "../wibble.mjs";
+import { Wibble as Wobble, Wibble$Wibble$const as Wibble$Wobble$const } from "../wibble.mjs";
+
+export function main() {
+  let x = Wibble$Wobble$const;
+  return x instanceof Wobble;
+}

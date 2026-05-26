@@ -29,7 +29,8 @@ export const Result$Ok$value = (value) => value.value;
 export const Result$Ok$0 = (value) => value.value;
 
 export class Error extends $CustomType {}
-export const Result$Error = () => new Error();
+export const Result$Error$const = new Error();
+export const Result$Error = () => Result$Error$const;
 export const Result$isError = (value) => value instanceof Error;
 
 export function is_error(r) {

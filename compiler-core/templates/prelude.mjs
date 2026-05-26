@@ -73,8 +73,9 @@ class ListIterator {
   }
 }
 
-export class Empty extends List {}
-export const List$Empty = () => new Empty();
+export class Empty extends List { }
+export const List$Empty$const = new Empty();
+export const List$Empty = () => List$Empty$const;
 export const List$isEmpty = (value) => value instanceof Empty;
 
 export class NonEmpty extends List {
@@ -575,7 +576,7 @@ export function toBitArray(segments) {
       return new BitArray(segment);
     }
 
-    return new BitArray(new Uint8Array(/** @type {number[]} */ (segments)));
+    return new BitArray(new Uint8Array(/** @type {number[]} */(segments)));
   }
 
   // Count the total number of bits and check if all segments are numbers, i.e.
@@ -597,7 +598,7 @@ export function toBitArray(segments) {
   // If all segments are numbers then pass the segments array directly to the
   // Uint8Array constructor
   if (areAllSegmentsNumbers) {
-    return new BitArray(new Uint8Array(/** @type {number[]} */ (segments)));
+    return new BitArray(new Uint8Array(/** @type {number[]} */(segments)));
   }
 
   // Pack the segments into a Uint8Array
@@ -1458,7 +1459,7 @@ export function isEqual(x, y) {
       try {
         if (a.equals(b)) continue;
         else return false;
-      } catch {}
+      } catch { }
     }
 
     let [keys, get] = getters(a);

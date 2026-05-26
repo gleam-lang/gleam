@@ -38,7 +38,8 @@ export type A$ = A;
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 export class A extends $CustomType {}
-export const A$A = () => new A();
+export const A$A$const = new A();
+export const A$A = () => A$A$const;
 export const A$isA = (value) => value instanceof A;
 
 

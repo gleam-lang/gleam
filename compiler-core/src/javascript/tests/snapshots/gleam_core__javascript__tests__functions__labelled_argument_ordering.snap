@@ -41,12 +41,12 @@ function wibble(a, b, c, d) {
 }
 
 export function main() {
-  wibble(new A(), new B(), new C(), new D());
-  wibble(new A(), new B(), new C(), new D());
-  wibble(new A(), new B(), new C(), new D());
-  wibble(new A(), new B(), new C(), new D());
-  wibble(new A(), new B(), new C(), new D());
-  wibble(new A(), new B(), new C(), new D());
-  wibble(new A(), new B(), new C(), new D());
-  return wibble(new A(), new B(), new C(), new D());
+  wibble(A$A$const, B$B$const, C$C$const, D$D$const);
+  wibble(A$A$const, B$B$const, C$C$const, D$D$const);
+  wibble(A$A$const, B$B$const, C$C$const, D$D$const);
+  wibble(A$A$const, B$B$const, C$C$const, D$D$const);
+  wibble(A$A$const, B$B$const, C$C$const, D$D$const);
+  wibble(A$A$const, B$B$const, C$C$const, D$D$const);
+  wibble(A$A$const, B$B$const, C$C$const, D$D$const);
+  return wibble(A$A$const, B$B$const, C$C$const, D$D$const);
 }

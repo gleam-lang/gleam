@@ -355,6 +355,19 @@ impl Type {
         }
     }
 
+    pub fn named_type_name_and_package(&self) -> Option<(EcoString, EcoString, EcoString)> {
+        match self {
+            Self::Named {
+                package,
+                module,
+                name,
+                ..
+            } => Some((package.clone(), module.clone(), name.clone())),
+            Self::Var { type_ } => type_.borrow().named_type_name_and_package(),
+            Self::Fn { .. } | Self::Tuple { .. } => None,
+        }
+    }
+
     pub fn set_custom_type_variant(&mut self, index: u16) {
         match self {
             Type::Named {
@@ -1416,6 +1429,13 @@ impl TypeVar {
     pub fn named_type_name(&self) -> Option<(EcoString, EcoString)> {
         match self {
             Self::Link { type_ } => type_.named_type_name(),
+            Self::Unbound { .. } | Self::Generic { .. } => None,
+        }
+    }
+
+    pub fn named_type_name_and_package(&self) -> Option<(EcoString, EcoString, EcoString)> {
+        match self {
+            Self::Link { type_ } => type_.named_type_name_and_package(),
             Self::Unbound { .. } | Self::Generic { .. } => None,
         }
     }

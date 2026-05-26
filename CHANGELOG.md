@@ -26,6 +26,10 @@
   functions, constants, module names, and `as` patterns.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now generates singleton values for variants with no fields on the
+  JavaScript target, allowing for faster comparison in most cases.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - The build tool now generates Hexdocs URLs using the new format of

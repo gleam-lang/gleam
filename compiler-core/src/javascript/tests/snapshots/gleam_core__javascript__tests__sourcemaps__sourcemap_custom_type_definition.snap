@@ -22,35 +22,36 @@ expression: "\n/// my custom type\npub type Wibble {\n  /// Wibble\n  Wibble\n  
 4 | * Wibble
 5 | */
 6 |export class Wibble extends $CustomType {}
-7 |export const Wibble$Wibble = () => new Wibble();
-8 |export const Wibble$isWibble = (value) => value instanceof Wibble;
-9 |
-10 |/**
-11 | * Wobble
-12 | */
-13 |export class Wobble extends $CustomType {
-14 |  constructor(field) {
-15 |    super();
-16 |    this.field = field;
-17 |  }
-18 |}
-19 |export const Wibble$Wobble = (field) => new Wobble(field);
-20 |export const Wibble$isWobble = (value) => value instanceof Wobble;
-21 |export const Wibble$Wobble$field = (value) => value.field;
-22 |export const Wibble$Wobble$0 = (value) => value.field;
-23 |
-24 |/**
-25 | * Wabble
-26 | */
-27 |export class Wabble extends $CustomType {
-28 |  constructor($0) {
-29 |    super();
-30 |    this[0] = $0;
-31 |  }
-32 |}
-33 |export const Wibble$Wabble = ($0) => new Wabble($0);
-34 |export const Wibble$isWabble = (value) => value instanceof Wabble;
-35 |export const Wibble$Wabble$0 = (value) => value[0];
+7 |export const Wibble$Wibble$const = new Wibble();
+8 |export const Wibble$Wibble = () => Wibble$Wibble$const;
+9 |export const Wibble$isWibble = (value) => value instanceof Wibble;
+10 |
+11 |/**
+12 | * Wobble
+13 | */
+14 |export class Wobble extends $CustomType {
+15 |  constructor(field) {
+16 |    super();
+17 |    this.field = field;
+18 |  }
+19 |}
+20 |export const Wibble$Wobble = (field) => new Wobble(field);
+21 |export const Wibble$isWobble = (value) => value instanceof Wobble;
+22 |export const Wibble$Wobble$field = (value) => value.field;
+23 |export const Wibble$Wobble$0 = (value) => value.field;
+24 |
+25 |/**
+26 | * Wabble
+27 | */
+28 |export class Wabble extends $CustomType {
+29 |  constructor($0) {
+30 |    super();
+31 |    this[0] = $0;
+32 |  }
+33 |}
+34 |export const Wibble$Wabble = ($0) => new Wabble($0);
+35 |export const Wibble$isWabble = (value) => value instanceof Wabble;
+36 |export const Wibble$Wabble$0 = (value) => value[0];
 
 ----- SOURCE MAP
 File: my/mod.mjs
@@ -83,7 +84,8 @@ Wibble
   
 ⏷
 export class Wibble extends $CustomType {}
-export const Wibble$Wibble = () => new Wibble();
+export const Wibble$Wibble$const = new Wibble();
+export const Wibble$Wibble = () => Wibble$Wibble$const;
 export const Wibble$isWibble = (value) => value instanceof Wibble;
 
 

@@ -21,7 +21,8 @@ pub fn process(e: Thing) -> String {
 import { CustomType as $CustomType, isEqual } from "../gleam.mjs";
 
 export class Variant extends $CustomType {}
-export const Thing$Variant = () => new Variant();
+export const Thing$Variant$const = new Variant();
+export const Thing$Variant = () => Thing$Variant$const;
 export const Thing$isVariant = (value) => value instanceof Variant;
 
 export class Other extends $CustomType {

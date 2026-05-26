@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\nimport wobble.{Wibble as Wobble}\nimport wibble.{Wibble as Wubble}\n\npub fn main() {\n  #(Wobble, Wubble)\n}\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+pub type Wibble { Wibble }
+
+-- wobble.gleam
+pub type Wibble { Wibble }
+
+-- main.gleam
+
+import wobble.{Wibble as Wobble}
+import wibble.{Wibble as Wubble}
+
+pub fn main() {
+  #(Wobble, Wubble)
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $wibble from "../wibble.mjs";
+import { Wibble$Wibble$const as Wibble$Wubble$const } from "../wibble.mjs";
+import * as $wobble from "../wobble.mjs";
+import { Wibble$Wibble$const as Wibble$Wobble$const } from "../wobble.mjs";
+
+export function main() {
+  return [Wibble$Wobble$const, Wibble$Wubble$const];
+}

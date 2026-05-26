@@ -46,7 +46,7 @@ impl<'a> Imports<'a> {
             self.imports
                 .into_values()
                 .sorted_by(|a, b| a.path.cmp(&b.path))
-                .map(|import| Import::into_doc(import, codegen_target)),
+                .map(|import| import.into_doc(codegen_target)),
         );
 
         if self.exports.is_empty() {
@@ -81,6 +81,25 @@ impl<'a> Imports<'a> {
 
     pub fn is_empty(&self) -> bool {
         self.imports.is_empty() && self.exports.is_empty()
+    }
+
+    /// Remove variants which are imported in Gleam code, but not needed to be
+    /// imported because singleton constants are used instead.
+    ///
+    pub fn filter_unused_variants<I>(&mut self, unused: I)
+    where
+        I: Iterator<Item = (EcoString, EcoString)>,
+    {
+        for (path, name) in unused {
+            if let Some(import_) = self.imports.get_mut(&path)
+                && let Some(index) = import_
+                    .unqualified
+                    .iter()
+                    .position(|member| member.name == name)
+            {
+                _ = import_.unqualified.remove(index);
+            }
+        }
     }
 }
 
@@ -146,14 +165,14 @@ impl<'a> Import<'a> {
 
 #[derive(Debug)]
 pub struct Member<'a> {
-    pub name: Document<'a>,
+    pub name: EcoString,
     pub alias: Option<Document<'a>>,
 }
 
 impl<'a> Member<'a> {
     fn into_doc(self) -> Document<'a> {
         match self.alias {
-            None => self.name,
+            None => self.name.to_doc(),
             Some(alias) => docvec![self.name, " as ", alias],
         }
     }
@@ -173,7 +192,7 @@ fn into_doc() {
         "./multiple/times".into(),
         [],
         [Member {
-            name: "one".to_doc(),
+            name: "one".into(),
             alias: None,
         }],
     );
@@ -183,15 +202,15 @@ fn into_doc() {
         [],
         [
             Member {
-                name: "one".to_doc(),
+                name: "one".into(),
                 alias: None,
             },
             Member {
-                name: "one".to_doc(),
+                name: "one".into(),
                 alias: Some("onee".to_doc()),
             },
             Member {
-                name: "two".to_doc(),
+                name: "two".into(),
                 alias: Some("twoo".to_doc()),
             },
         ],
@@ -202,11 +221,11 @@ fn into_doc() {
         [],
         [
             Member {
-                name: "three".to_doc(),
+                name: "three".into(),
                 alias: None,
             },
             Member {
-                name: "four".to_doc(),
+                name: "four".into(),
                 alias: None,
             },
         ],
@@ -217,11 +236,11 @@ fn into_doc() {
         [],
         [
             Member {
-                name: "one".to_doc(),
+                name: "one".into(),
                 alias: None,
             },
             Member {
-                name: "two".to_doc(),
+                name: "two".into(),
                 alias: None,
             },
         ],

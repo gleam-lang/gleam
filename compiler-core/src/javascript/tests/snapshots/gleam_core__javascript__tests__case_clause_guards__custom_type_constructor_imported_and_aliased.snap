@@ -14,10 +14,10 @@ pub fn func() {
 
 ----- COMPILED JAVASCRIPT
 import * as $other_module from "../../package/other_module.mjs";
-import { A as B } from "../../package/other_module.mjs";
+import { A as B, T$A$const as T$B$const } from "../../package/other_module.mjs";
 
 export function func() {
-  let $ = new B();
+  let $ = T$B$const;
   let x = $;
   if (x instanceof B) {
     return true;

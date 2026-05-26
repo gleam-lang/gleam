@@ -479,6 +479,7 @@ pub enum Pattern {
     },
     Variant {
         index: usize,
+        used_name: EcoString,
         name: EcoString,
         module: Option<EcoString>,
         fields: Vec<Id<Pattern>>,
@@ -736,6 +737,9 @@ pub enum RuntimeCheckKind {
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum VariantMatch {
     ExplicitlyMatchedOn {
+        /// The locally used name, including any alias
+        used_name: EcoString,
+        /// The original name of the variant
         name: EcoString,
         module: Option<EcoString>,
     },
@@ -745,16 +749,23 @@ pub enum VariantMatch {
 }
 
 impl VariantMatch {
-    pub(crate) fn name(&self) -> EcoString {
+    pub(crate) fn used_name(&self) -> EcoString {
         match self {
-            VariantMatch::ExplicitlyMatchedOn { name, module: _ } => name.clone(),
+            VariantMatch::ExplicitlyMatchedOn { used_name, .. } => used_name.clone(),
+            VariantMatch::NeverExplicitlyMatchedOn { name } => name.clone(),
+        }
+    }
+
+    pub(crate) fn variant_name(&self) -> EcoString {
+        match self {
+            VariantMatch::ExplicitlyMatchedOn { name, .. } => name.clone(),
             VariantMatch::NeverExplicitlyMatchedOn { name } => name.clone(),
         }
     }
 
     pub(crate) fn module(&self) -> Option<EcoString> {
         match self {
-            VariantMatch::ExplicitlyMatchedOn { name: _, module } => module.clone(),
+            VariantMatch::ExplicitlyMatchedOn { module, .. } => module.clone(),
             VariantMatch::NeverExplicitlyMatchedOn { name: _ } => None,
         }
     }
@@ -2954,7 +2965,13 @@ impl BranchSplitter {
         // Then we have to update all variant checks with any new name/module
         // we might have discovered from the pattern to make sure we're using
         // the correct qualification to refer to each constructor.
-        if let Pattern::Variant { name, module, .. } = pattern {
+        if let Pattern::Variant {
+            used_name,
+            name,
+            module,
+            ..
+        } = pattern
+        {
             for index in indices_of_overlapping_checks {
                 let (check, _) = self
                     .choices
@@ -2963,6 +2980,7 @@ impl BranchSplitter {
                 if let RuntimeCheck::Variant { match_, .. } = check {
                     *match_ = VariantMatch::ExplicitlyMatchedOn {
                         module: module.clone(),
+                        used_name: used_name.clone(),
                         name: name.clone(),
                     }
                 }
@@ -3412,14 +3430,16 @@ impl CaseToCompile {
                 module,
                 ..
             } => {
-                let index = constructor.expect_ref("must be inferred").constructor_index as usize;
+                let constructor = constructor.expect_ref("must be inferred");
+                let index = constructor.constructor_index as usize;
                 let module = module.as_ref().map(|(module, _)| module.clone());
                 let fields = arguments
                     .iter()
                     .map(|argument| self.register(&argument.value))
                     .collect_vec();
                 self.insert(Pattern::Variant {
-                    name: name.clone(),
+                    used_name: name.clone(),
+                    name: constructor.name.clone(),
                     module,
                     index,
                     fields,
