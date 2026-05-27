@@ -1866,9 +1866,10 @@ impl<'module, 'a> Generator<'module, 'a> {
     ) -> Option<Document<'a>> {
         match right {
             TypedExpr::Var {
+                name,
                 constructor:
                     ValueConstructor {
-                        variant: ValueConstructorVariant::Record { arity: 0, name, .. },
+                        variant: ValueConstructorVariant::Record { arity: 0, .. },
                         ..
                     },
                 ..

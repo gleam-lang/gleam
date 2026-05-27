@@ -43,7 +43,7 @@ export const WobbleStatus$Disabled = () => new Disabled();
 export const WobbleStatus$isDisabled = (value) => value instanceof Disabled;
 
 export function is_wibble_active(s) {
-  return s instanceof Active;
+  return s instanceof WibbleActive;
 }
 
 export function is_wobble_active(s) {

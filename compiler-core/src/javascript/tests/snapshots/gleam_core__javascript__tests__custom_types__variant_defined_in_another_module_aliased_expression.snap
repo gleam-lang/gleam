@@ -20,5 +20,5 @@ import * as $other_module from "../other_module.mjs";
 import { Variant as Aliased } from "../other_module.mjs";
 
 export function check(x) {
-  return x instanceof Variant;
+  return x instanceof Aliased;
 }
