@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\nimport wibble.{type WibbleStatus, Active as WibbleActive}\n\npub fn is_wibble_active(s: WibbleStatus) -> Bool {\n  s == WibbleActive\n}\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+
+pub type WibbleStatus {
+  Active
+  Inactive
+}
+
+
+-- main.gleam
+
+import wibble.{type WibbleStatus, Active as WibbleActive}
+
+pub fn is_wibble_active(s: WibbleStatus) -> Bool {
+  s == WibbleActive
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $wibble from "../wibble.mjs";
+import { Active as WibbleActive } from "../wibble.mjs";
+
+export function is_wibble_active(s) {
+  return s instanceof Active;
+}

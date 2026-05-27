@@ -992,3 +992,58 @@ pub type Wibble(value, error) {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5757
+#[test]
+fn zero_arity_type_with_import_alias() {
+    assert_js!(
+        (
+            "wibble",
+            r#"
+pub type WibbleStatus {
+  Active
+  Inactive
+}
+"#
+        ),
+        r#"
+import wibble.{type WibbleStatus, Active as WibbleActive}
+
+pub fn is_wibble_active(s: WibbleStatus) -> Bool {
+  s == WibbleActive
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5757
+#[test]
+fn zero_arity_type_with_import_alias_and_same_named_local_type() {
+    assert_js!(
+        (
+            "wibble",
+            r#"
+pub type WibbleStatus {
+  Active
+  Inactive
+}
+"#
+        ),
+        r#"
+import wibble.{type WibbleStatus, Active as WibbleActive}
+
+pub type WobbleStatus {
+  Active
+  Disabled
+}
+
+pub fn is_wibble_active(s: WibbleStatus) -> Bool {
+  s == WibbleActive
+}
+
+pub fn is_wobble_active(s: WobbleStatus) -> Bool {
+  s == Active
+}
+"#,
+    );
+}

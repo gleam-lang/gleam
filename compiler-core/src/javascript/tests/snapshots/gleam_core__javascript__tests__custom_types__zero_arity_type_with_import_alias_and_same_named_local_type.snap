@@ -1,0 +1,51 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\nimport wibble.{type WibbleStatus, Active as WibbleActive}\n\npub type WobbleStatus {\n  Active\n  Disabled\n}\n\npub fn is_wibble_active(s: WibbleStatus) -> Bool {\n  s == WibbleActive\n}\n\npub fn is_wobble_active(s: WobbleStatus) -> Bool {\n  s == Active\n}\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+
+pub type WibbleStatus {
+  Active
+  Inactive
+}
+
+
+-- main.gleam
+
+import wibble.{type WibbleStatus, Active as WibbleActive}
+
+pub type WobbleStatus {
+  Active
+  Disabled
+}
+
+pub fn is_wibble_active(s: WibbleStatus) -> Bool {
+  s == WibbleActive
+}
+
+pub fn is_wobble_active(s: WobbleStatus) -> Bool {
+  s == Active
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+import * as $wibble from "../wibble.mjs";
+import { Active as WibbleActive } from "../wibble.mjs";
+
+export class Active extends $CustomType {}
+export const WobbleStatus$Active = () => new Active();
+export const WobbleStatus$isActive = (value) => value instanceof Active;
+
+export class Disabled extends $CustomType {}
+export const WobbleStatus$Disabled = () => new Disabled();
+export const WobbleStatus$isDisabled = (value) => value instanceof Disabled;
+
+export function is_wibble_active(s) {
+  return s instanceof Active;
+}
+
+export function is_wobble_active(s) {
+  return s instanceof Active;
+}
