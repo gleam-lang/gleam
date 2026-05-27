@@ -1170,7 +1170,7 @@ impl<'comments> Formatter<'comments> {
             } => {
                 let segment_docs = segments
                     .iter()
-                    .map(|segment| bit_array_segment(segment, |e| self.bit_array_segment_expr(e)))
+                    .map(|segment| bit_array_segment(segment, |e| self.expr(e)))
                     .collect_vec();
 
                 let packing = self.items_sequence_packing(
@@ -2886,38 +2886,6 @@ impl<'comments> Formatter<'comments> {
         match packing {
             ItemsPacking::FitOnePerLine | ItemsPacking::FitMultiplePerLine => doc.group(),
             ItemsPacking::BreakOnePerLine => doc.force_break(),
-        }
-    }
-
-    fn bit_array_segment_expr<'a>(&mut self, expression: &'a UntypedExpr) -> Document<'a> {
-        match expression {
-            UntypedExpr::BinOp { .. } => break_("{", "")
-                .append(self.expr(expression))
-                .nest(INDENT)
-                .append(break_("", ""))
-                .append(break_("}", ""))
-                .group(),
-
-            UntypedExpr::Int { .. }
-            | UntypedExpr::Float { .. }
-            | UntypedExpr::String { .. }
-            | UntypedExpr::Var { .. }
-            | UntypedExpr::Fn { .. }
-            | UntypedExpr::List { .. }
-            | UntypedExpr::Call { .. }
-            | UntypedExpr::PipeLine { .. }
-            | UntypedExpr::Case { .. }
-            | UntypedExpr::FieldAccess { .. }
-            | UntypedExpr::Tuple { .. }
-            | UntypedExpr::TupleIndex { .. }
-            | UntypedExpr::Todo { .. }
-            | UntypedExpr::Panic { .. }
-            | UntypedExpr::Echo { .. }
-            | UntypedExpr::BitArray { .. }
-            | UntypedExpr::RecordUpdate { .. }
-            | UntypedExpr::NegateBool { .. }
-            | UntypedExpr::NegateInt { .. }
-            | UntypedExpr::Block { .. } => self.expr(expression),
         }
     }
 
