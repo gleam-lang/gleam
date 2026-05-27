@@ -21,6 +21,11 @@
   step in a pipeline.
   ([Eyup Can Akman](https://github.com/eyupcanakman))
 
+- Fixed a bug where the JavaScript code generator would use wrong constructor
+  name in equality comparisons for imported variant with zero arguments and
+  import alias.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## v1.17.0-rc1 - 2026-05-23
 
 ### Compiler
