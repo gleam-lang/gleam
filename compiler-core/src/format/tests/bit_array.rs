@@ -510,7 +510,7 @@ fn simple_single_line_bit_array_with_no_trailing_comma_is_split_one_item_per_lin
 
 // https://github.com/gleam-lang/gleam/issues/5606
 #[test]
-fn dont_insert_parentheses_with_binary_operators_when_line_is_short() {
+fn dont_insert_curly_braces_with_binary_operators_when_line_is_short() {
     assert_format!(
         "pub fn main() {
   let wubble = <<bits:bits-size(wibble * wobble)-unit(8)>>
@@ -521,7 +521,7 @@ fn dont_insert_parentheses_with_binary_operators_when_line_is_short() {
 
 // https://github.com/gleam-lang/gleam/issues/5606
 #[test]
-fn dont_insert_parentheses_with_binary_operators_when_line_is_long() {
+fn dont_insert_curly_braces_with_binary_operators_when_line_is_long() {
     assert_format_rewrite!(
         "pub fn main() {
   let some_long_variable_name = <<bits:bits-size(some_other_long_variable_name * and_some_other_long_variable_name)-unit(8)>>
@@ -539,7 +539,7 @@ fn dont_insert_parentheses_with_binary_operators_when_line_is_long() {
 
 // https://github.com/gleam-lang/gleam/issues/5606
 #[test]
-fn preserve_user_inserted_parentheses_with_binary_operators_when_line_is_short() {
+fn preserve_user_inserted_curly_braces_with_binary_operators_when_line_is_short() {
     assert_format!(
         "pub fn main() {
   let some_variable = <<bits:bits-size({ some * other })>>
@@ -550,7 +550,7 @@ fn preserve_user_inserted_parentheses_with_binary_operators_when_line_is_short()
 
 // https://github.com/gleam-lang/gleam/issues/5606
 #[test]
-fn preserve_user_inserted_parentheses_with_binary_operators_when_line_is_long() {
+fn preserve_user_inserted_curly_braces_with_binary_operators_when_line_is_long() {
     assert_format_rewrite!(
         "pub fn main() {
   let some_long_variable_name = <<bits:bits-size({ some_other_long_variable_name * and_some_other_long_variable_name })>>
