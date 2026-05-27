@@ -1188,6 +1188,15 @@ async fn lookup_package(
             let config = hexpm::Config::new();
             let release =
                 hex::get_package_release(&name, &version, &config, &HttpClient::new()).await?;
+            // Warn the user if the resolved version is retired.
+            if let Some(status) = &release.retirement_status {
+                cli::print_warning_retired_dependency(
+                    &name,
+                    &version.to_string(),
+                    status.reason.to_str(),
+                    &status.message,
+                );
+            }
             let build_tools = release
                 .meta
                 .build_tools
