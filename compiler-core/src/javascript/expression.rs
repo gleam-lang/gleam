@@ -1832,7 +1832,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         //    Wibble
         //    Wobble
         //  }
-
+        //
         //  pub fn is_wibble(w: Wibble) -> Bool {
         //    w == Wibble
         //  }
