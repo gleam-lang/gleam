@@ -495,7 +495,7 @@
 - Fixed a bug where cli would fail to complete https connections from behind a
   proxy with self-signed certificates. The cli now defaults to using system
   trust stores for trusted CAs, allowing use in proxied network environments.
-  ([apsoras][https://github.com/apsoras])
+  ([apsoras](https://github.com/apsoras))
 
 - Fixed a bug where the language server's "add missing patterns" code action
   would not be offered when the cursor was on an inexhaustive `case` expression
