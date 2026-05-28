@@ -152,7 +152,7 @@
   ([Louis Pilfold](https://github.com/lpil))
 
 - `gleam publish` will now better discover Git repository in monorepos. This
-  improves suggestions to push a tag, if it doesn't exists.
+  improves suggestions to push a tag, if it doesn't exist.
   ([Andrey Kozhev](https://github.com/ankddev))
 
 - The `gleam export escript` command has been added for the creation of
