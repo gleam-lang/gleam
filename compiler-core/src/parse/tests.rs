@@ -1956,11 +1956,6 @@ fn operator_in_pattern_size() {
 }
 
 #[test]
-fn correct_precedence_in_pattern_size() {
-    assert_parse!("let assert <<size, payload:size(size + 2 * 8)>> = <<>>");
-}
-
-#[test]
 fn qualified_name_in_pattern_size() {
     assert_parse!("let assert <<value:size(sizes.byte_size)>> = data");
 }

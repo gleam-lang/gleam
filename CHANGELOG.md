@@ -2,7 +2,13 @@
 
 ## Unreleased
 
-## Bug Fixes
+### Compiler
+
+- Qualified constants can now be referenced inside a bit array size segment
+  pattern.
+  ([Leo Oliveira](https://github.com/13dev))
+
+### Bug Fixes
 
 - Fixed a bug where the "Convert to case" code action would silently fail for
   every inexhaustive `let` assignment in a module other than the first one.
