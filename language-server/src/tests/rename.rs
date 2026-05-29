@@ -2424,3 +2424,20 @@ pub fn main() {
         find_position_of("mod.wibble").under_char('w')
     );
 }
+
+#[test]
+fn rename_module_constant_in_bit_array_size_pattern() {
+    assert_rename!(
+        ("sizes", "pub const byte_size = 8"),
+        "
+import sizes
+
+pub fn main() {
+  let assert <<value:size(sizes.byte_size)>> = <<1>>
+  value
+}
+",
+        "bit_size",
+        find_position_of("sizes.byte_size").under_char('b')
+    );
+}

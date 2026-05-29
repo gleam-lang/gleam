@@ -1472,6 +1472,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         }
                     })?;
 
+                // Calculate the location of just the name part (after "module.")
+                let name_location = SrcSpan::new(module_location.end + 1, location.end);
+
                 match &constructor.variant {
                     ValueConstructorVariant::LocalVariable { .. } => (),
                     ValueConstructorVariant::ModuleConstant {
@@ -1492,7 +1495,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         module.clone(),
                         canonical.clone(),
                         &name,
-                        location,
+                        name_location,
                         ReferenceKind::Qualified,
                     ),
                 };
