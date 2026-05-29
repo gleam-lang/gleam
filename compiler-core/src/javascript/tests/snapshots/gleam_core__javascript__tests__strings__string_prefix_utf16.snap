@@ -33,30 +33,30 @@ export function go(x) {
   let $ = "Θ wibble wobble";
   if ($.charCodeAt(0) === 920) {
     let rest = $.slice(1);
-    rest
+    rest;
   } else {
-    ""
+    "";
   }
   let $1 = "🫥 is neutral dotted";
   if ($1.startsWith("🫥")) {
     let rest = $1.slice(2);
-    rest
+    rest;
   } else {
-    ""
+    "";
   }
   let $2 = "🇺🇸 is a cluster";
   if ($2.startsWith("🇺🇸")) {
     let rest = $2.slice(4);
-    rest
+    rest;
   } else {
-    ""
+    "";
   }
   let $3 = "\" is a an escaped quote";
   if ($3.charCodeAt(0) === 34) {
     let rest = $3.slice(1);
-    rest
+    rest;
   } else {
-    ""
+    "";
   }
   let $4 = "\\ is a an escaped backslash";
   if ($4.charCodeAt(0) === 92) {

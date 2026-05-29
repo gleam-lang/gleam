@@ -23,7 +23,7 @@ export function main() {
   let b = 20;
   {
     let _inline_a_0 = 7;
-    (a + b) + _inline_a_0
-  };
+    (a + b) + _inline_a_0;
+  }
   return a;
 }

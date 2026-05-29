@@ -23,9 +23,9 @@ import { bitArraySlice } from "../gleam.mjs";
 export function go(x) {
   if (x.bitSize >= 8 && x.bitSize === 24) {
     let a = bitArraySlice(x, 8, 24);
-    a
+    a;
   } else {
-    x
+    x;
   }
   if (x.bitSize >= 8 && x.bitSize === 24) {
     let b = bitArraySlice(x, 8, 24);

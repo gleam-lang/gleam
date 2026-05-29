@@ -26,6 +26,6 @@ export function sum() {
   let $1 = 8;
   let _inline_a_0 = $;
   let _inline_b_1 = $1;
-  (_inline_a_0 + _inline_b_1) + (a + b)
+  (_inline_a_0 + _inline_b_1) + (a + b);
   return a + b;
 }
