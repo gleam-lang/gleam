@@ -24,8 +24,8 @@ export function go() {
     1;
     {
       2;
-      3
-    };
+      3;
+    }
     _block = 4;
   }
   let x = _block;

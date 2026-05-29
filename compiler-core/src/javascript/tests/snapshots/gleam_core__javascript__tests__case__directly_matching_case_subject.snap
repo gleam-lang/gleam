@@ -24,6 +24,6 @@ export function go() {
   let x = "ABC";
   let $ = true;
   let x$1 = 79;
-  0
+  0;
   return x;
 }

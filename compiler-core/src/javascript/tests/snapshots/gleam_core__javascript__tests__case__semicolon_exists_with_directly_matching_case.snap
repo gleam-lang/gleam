@@ -15,6 +15,6 @@ pub fn go() {
 export function go() {
   let $ = [1, 2];
   let a = $[0];
-  a
+  a;
   return (2 + 4) * 2;
 }

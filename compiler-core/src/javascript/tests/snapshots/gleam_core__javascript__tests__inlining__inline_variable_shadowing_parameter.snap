@@ -18,7 +18,7 @@ pub fn sum(a, b) {
 export function sum(a, b) {
   {
     let _inline_a_0 = 7;
-    (a + b) + _inline_a_0
-  };
+    (a + b) + _inline_a_0;
+  }
   return a;
 }

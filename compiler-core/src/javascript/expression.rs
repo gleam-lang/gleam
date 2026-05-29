@@ -296,7 +296,7 @@ impl<'module, 'a> Generator<'module, 'a> {
     }
 
     pub fn expression(&mut self, expression: &'a TypedExpr) -> Document<'a> {
-        let document = match expression {
+        let mut document = match expression {
             TypedExpr::String { value, .. } => string(value),
 
             TypedExpr::Int { value, .. } => int(value),
@@ -415,6 +415,11 @@ impl<'module, 'a> Generator<'module, 'a> {
                 panic!("invalid expressions should not reach code generation")
             }
         };
+        if let Position::Statement = self.scope_position
+            && expression_requires_semicolon(expression)
+        {
+            document = document.append(";");
+        }
         if expression.handles_own_return() {
             docvec![
                 self.source_map_tracker(expression.location().start),
@@ -803,18 +808,6 @@ impl<'module, 'a> Generator<'module, 'a> {
         } else {
             let finally_doc = self.expression(finally);
             documents.push(self.add_statement_level(finally_doc));
-
-            // Add a semicolon if needed, to ensure the pipeline is properly
-            // delimited
-            match &self.scope_position {
-                Position::Statement if expression_requires_semicolon(finally) => {
-                    documents.push(";".to_doc())
-                }
-                Position::Statement
-                | Position::Expression(_)
-                | Position::Tail
-                | Position::Assign(_) => {}
-            }
         }
 
         documents.to_doc().force_break()
@@ -897,9 +890,6 @@ impl<'module, 'a> Generator<'module, 'a> {
                 self.function_position = function_position;
                 self.scope_position = scope_position;
 
-                if requires_semicolon(statement) {
-                    documents.push(";".to_doc());
-                }
                 documents.push(line());
             } else {
                 documents.push(self.statement(statement));
@@ -2822,16 +2812,6 @@ pub fn is_js_scalar(t: Arc<Type>) -> bool {
     t.is_int() || t.is_float() || t.is_bool() || t.is_nil() || t.is_string()
 }
 
-fn requires_semicolon(statement: &TypedStatement) -> bool {
-    match statement {
-        Statement::Expression(expression) => expression_requires_semicolon(expression),
-
-        Statement::Assignment(_) => false,
-        Statement::Use(_) => false,
-        Statement::Assert(_) => false,
-    }
-}
-
 fn expression_requires_semicolon(expression: &TypedExpr) -> bool {
     match expression {
         TypedExpr::Int { .. }
@@ -2850,15 +2830,15 @@ fn expression_requires_semicolon(expression: &TypedExpr) -> bool {
         | TypedExpr::NegateBool { .. }
         | TypedExpr::RecordAccess { .. }
         | TypedExpr::PositionalAccess { .. }
-        | TypedExpr::ModuleSelect { .. }
-        | TypedExpr::Block { .. } => true,
+        | TypedExpr::ModuleSelect { .. } => true,
 
         TypedExpr::Todo { .. }
         | TypedExpr::Case { .. }
         | TypedExpr::Panic { .. }
         | TypedExpr::Pipeline { .. }
         | TypedExpr::RecordUpdate { .. }
-        | TypedExpr::Invalid { .. } => false,
+        | TypedExpr::Invalid { .. }
+        | TypedExpr::Block { .. } => false,
     }
 }
 

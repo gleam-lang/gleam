@@ -19,18 +19,18 @@ export function go() {
   let $1 = $[0];
   if ($1 === 2) {
     let b = $[1];
-    b
+    b;
   } else if ($1 === 1) {
     let $2 = $[1];
     if ($2 === 3) {
-      2
+      2;
     } else {
       let a = $1;
-      a
+      a;
     }
   } else {
     let a = $1;
-    a
+    a;
   }
   return (2 + 4) * 2;
 }

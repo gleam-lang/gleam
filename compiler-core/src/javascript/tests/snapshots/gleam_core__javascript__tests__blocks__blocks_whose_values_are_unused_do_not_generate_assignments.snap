@@ -36,13 +36,13 @@ import {
 export function main() {
   {
     let x = 10;
-    echo(x, undefined, "src/module.gleam", 5)
-  };
+    echo(x, undefined, "src/module.gleam", 5);
+  }
   {
     let a = 1;
     let b = 2;
-    a + b
-  };
+    a + b;
+  }
   return undefined;
 }
 

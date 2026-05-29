@@ -25,9 +25,9 @@ export function sum(a, b) {
     let _inline_a_0 = 7;
     {
       let _inline_a_1 = 10;
-      ((a + b) + _inline_a_0) - _inline_a_1
-    };
-    _inline_a_0
-  };
+      ((a + b) + _inline_a_0) - _inline_a_1;
+    }
+    _inline_a_0;
+  }
   return a;
 }
