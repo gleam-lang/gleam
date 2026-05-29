@@ -732,6 +732,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
     fn visit_typed_bit_array_size_variable(
         &mut self,
         location: &'ast SrcSpan,
+        _module: &'ast Option<(EcoString, SrcSpan)>,
         _name: &'ast EcoString,
         constructor: &'ast Option<Box<ValueConstructor>>,
         _type_: &'ast std::sync::Arc<Type>,

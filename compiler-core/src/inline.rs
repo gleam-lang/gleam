@@ -1361,6 +1361,7 @@ impl<'ast> Visit<'ast> for FindInlinableParameters {
     fn visit_typed_bit_array_size_variable(
         &mut self,
         _location: &'ast SrcSpan,
+        _module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
         constructor: &'ast Option<Box<ValueConstructor>>,
         _type_: &'ast Arc<Type>,

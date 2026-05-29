@@ -11531,6 +11531,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
     fn visit_typed_bit_array_size_variable(
         &mut self,
         location: &'ast SrcSpan,
+        _module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
         constructor: &'ast Option<Box<ValueConstructor>>,
         type_: &'ast Arc<Type>,
