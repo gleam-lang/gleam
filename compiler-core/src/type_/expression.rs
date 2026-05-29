@@ -1232,13 +1232,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if fun.is_record_constructor_function()
             && let Some(type_name) = type_.named_type_name()
         {
-            let constructor_name = fun.record_constructor_name();
+            let constructor_name = fun.name();
             for arg in &arguments {
-                if let Some(label) = &arg.label {
+                if let (Some(label), Some(label_location)) = (&arg.label, arg.label_location()) {
                     self.environment.references.register_label_reference(
                         type_name.clone(),
                         label.clone(),
-                        arg.location,
+                        label_location,
                         ReferenceKind::Unqualified,
                         constructor_name.clone(),
                         arg.uses_label_shorthand(),
@@ -3299,7 +3299,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     self.environment.references.register_label_reference(
                         type_,
                         label.clone(),
-                        *location,
+                        argument.label_location(),
                         ReferenceKind::Unqualified,
                         Some(variant.constructor_name.clone()),
                         argument.uses_label_shorthand(),
@@ -4129,9 +4129,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                 let mut final_arguments = base_arguments;
                 for argument in arguments {
-                    // Captured before `argument.value` is moved below, so it is
-                    // still available when we register the label reference.
+                    // Captured before `argument.value` is moved below, so they
+                    // are still available when we register the label reference.
                     let shorthand = argument.uses_label_shorthand();
+                    let label_location = argument.label_location();
                     if shorthand {
                         self.track_feature_usage(
                             FeatureKind::LabelShorthandSyntax,
@@ -4174,7 +4175,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         self.environment.references.register_label_reference(
                             type_,
                             label.clone(),
-                            argument.location,
+                            label_location,
                             ReferenceKind::Unqualified,
                             Some(constructor_tag.clone()),
                             shorthand,
@@ -4521,11 +4522,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // synthetic placeholders without a real value.
         if let Some(type_) = expected_return.named_type_name() {
             for argument in &typed_arguments {
-                if let Some(label) = &argument.label {
+                if let (Some(label), Some(label_location)) =
+                    (&argument.label, argument.label_location())
+                {
                     self.environment.references.register_label_reference(
                         type_.clone(),
                         label.clone(),
-                        argument.location,
+                        label_location,
                         ReferenceKind::Unqualified,
                         Some(name.clone()),
                         argument.uses_label_shorthand(),

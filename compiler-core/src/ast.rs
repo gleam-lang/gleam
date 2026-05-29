@@ -1740,7 +1740,7 @@ impl CallArg<TypedExpr> {
                             location: self.location,
                             type_: self.value.type_(),
                             label: label.clone(),
-                            owner: called_function.record_constructor_name().map(|c| {
+                            owner: called_function.name().map(|c| {
                                 LabelOwner::Usage {
                                     type_: record_type,
                                     constructor: c,
@@ -1903,6 +1903,22 @@ where
             None
         }
     }
+
+    /// The location of this argument's label, if it has one. For the label
+    /// shorthand syntax this spans the whole `label:`, otherwise it is just
+    /// the label itself.
+    ///
+    pub fn label_location(&self) -> Option<SrcSpan> {
+        let label = self.label.as_ref()?;
+        if self.uses_label_shorthand() {
+            Some(self.location)
+        } else {
+            Some(SrcSpan {
+                start: self.location.start,
+                end: self.location.start + label.len() as u32,
+            })
+        }
+    }
 }
 
 impl<T> HasLocation for CallArg<T> {
@@ -1936,6 +1952,20 @@ impl<A: HasLocation> RecordUpdateArg<A> {
     #[must_use]
     pub fn uses_label_shorthand(&self) -> bool {
         self.value.location() == self.location
+    }
+
+    /// The location of this argument's label. For the label shorthand syntax
+    /// this spans the whole `label:`, otherwise it is just the label itself.
+    ///
+    pub fn label_location(&self) -> SrcSpan {
+        if self.uses_label_shorthand() {
+            self.location
+        } else {
+            SrcSpan {
+                start: self.location.start,
+                end: self.location.start + self.label.len() as u32,
+            }
+        }
     }
 }
 

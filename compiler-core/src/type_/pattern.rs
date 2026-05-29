@@ -1238,13 +1238,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                         if let Some(type_) = return_.named_type_name() {
                             for arg in &pattern_arguments {
-                                if let Some(label) = &arg.label
+                                if let (Some(label), Some(label_location)) =
+                                    (&arg.label, arg.label_location())
                                     && !arg.is_implicit()
                                 {
                                     self.environment.references.register_label_reference(
                                         type_.clone(),
                                         label.clone(),
-                                        arg.location,
+                                        label_location,
                                         ReferenceKind::Unqualified,
                                         Some(name.clone()),
                                         arg.uses_label_shorthand(),

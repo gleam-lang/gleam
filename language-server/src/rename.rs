@@ -12,7 +12,7 @@ use gleam_core::{
     ast::{self, SrcSpan},
     build::Module,
     line_numbers::LineNumbers,
-    reference::{ModuleNameReference, ReferenceKind},
+    reference::{ModuleNameReference, RecordLabel, ReferenceKind},
     type_::{ModuleInterface, error::Named},
 };
 
@@ -269,7 +269,11 @@ pub fn rename_label(
         change_annotations: None,
     };
 
-    let key = (type_module.clone(), type_name.clone(), label.clone());
+    let key = RecordLabel {
+        type_module: type_module.clone(),
+        type_name: type_name.clone(),
+        label: label.clone(),
+    };
 
     for module in modules.values() {
         if &module.name == type_module || module.references.imported_modules.contains(type_module) {
@@ -297,7 +301,7 @@ fn rename_label_references_in_module(
     module: &ModuleInterface,
     source_information: &ModuleSourceInformation,
     workspace_edit: &mut WorkspaceEdit,
-    key: &(EcoString, EcoString, EcoString),
+    key: &RecordLabel,
     label: &EcoString,
     new_name: &str,
 ) {

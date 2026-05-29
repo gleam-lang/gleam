@@ -3010,3 +3010,29 @@ pub fn main(w: Wibble) {
         find_position_of("wibble: Int").under_char('w')
     );
 }
+
+// When multiple variants share a field with the same name, renaming it on one
+// variant renames it on every variant: an accessor like `shape.colour` only
+// works while all the variants share the field, so renaming just one of them
+// would break the others.
+#[test]
+fn rename_record_field_shared_between_variants() {
+    assert_rename!(
+        "
+pub type Shape {
+  Square(colour: Int, width: Int)
+  Circle(colour: Int, radius: Int)
+}
+
+pub fn main() {
+  let shape = Square(colour: 1, width: 10)
+  case shape {
+    Circle(colour:, ..) -> colour
+    Square(..) -> shape.colour
+  }
+}
+",
+        "shade",
+        find_position_of("colour: Int, width").under_char('c')
+    );
+}
