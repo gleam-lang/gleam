@@ -548,7 +548,11 @@ impl<'a> Located<'a> {
     ) -> Option<DefinitionLocation> {
         let (module_name, type_name) = record_type.named_type_name()?;
         let module = importable_modules.get(&module_name)?;
-        let key = (module_name.clone(), type_name, label.clone());
+        let key = reference::RecordLabel {
+            type_module: module_name.clone(),
+            type_name,
+            label: label.clone(),
+        };
         let references = module.references.label_references.get(&key)?;
         let definition = references.iter().find(|r| {
             r.kind == reference::ReferenceKind::Definition

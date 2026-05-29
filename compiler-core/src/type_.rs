@@ -35,7 +35,7 @@ use crate::{
     build::{Origin, Target},
     inline::InlinableFunction,
     line_numbers::LineNumbers,
-    reference::{LabelReferenceMap, ModuleNameReference, ReferenceMap},
+    reference::{LabelReference, ModuleNameReference, RecordLabel, ReferenceMap},
     type_::expression::Implementations,
 };
 use error::*;
@@ -1057,7 +1057,7 @@ pub struct References {
     pub value_references: ReferenceMap,
     pub type_references: ReferenceMap,
     pub module_references: HashMap<EcoString, Vec<ModuleNameReference>>,
-    pub label_references: LabelReferenceMap,
+    pub label_references: HashMap<RecordLabel, Vec<LabelReference>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

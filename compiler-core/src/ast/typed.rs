@@ -1220,11 +1220,11 @@ impl TypedExpr {
         }
     }
 
-    /// If this expression refers to a record constructor, returns the name of
-    /// that constructor. This is the unqualified name for `Var` and the label
-    /// for a qualified `ModuleSelect`.
+    /// The name of the value this expression refers to, if any. This is the
+    /// unqualified name for `Var` and the label for a qualified
+    /// `ModuleSelect`.
     ///
-    pub fn record_constructor_name(&self) -> Option<EcoString> {
+    pub fn name(&self) -> Option<EcoString> {
         match self {
             TypedExpr::Var { name, .. } => Some(name.clone()),
             TypedExpr::ModuleSelect { label, .. } => Some(label.clone()),

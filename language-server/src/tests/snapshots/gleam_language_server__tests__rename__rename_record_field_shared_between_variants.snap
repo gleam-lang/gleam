@@ -1,0 +1,37 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\npub type Shape {\n  Square(colour: Int, width: Int)\n  Circle(colour: Int, radius: Int)\n}\n\npub fn main() {\n  let shape = Square(colour: 1, width: 10)\n  case shape {\n    Circle(colour:, ..) -> colour\n    Square(..) -> shape.colour\n  }\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+pub type Shape {
+  Square(colour: Int, width: Int)
+         ↑▔▔▔▔▔                  
+  Circle(colour: Int, radius: Int)
+}
+
+pub fn main() {
+  let shape = Square(colour: 1, width: 10)
+  case shape {
+    Circle(colour:, ..) -> colour
+    Square(..) -> shape.colour
+  }
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+pub type Shape {
+  Square(shade: Int, width: Int)
+  Circle(shade: Int, radius: Int)
+}
+
+pub fn main() {
+  let shape = Square(shade: 1, width: 10)
+  case shape {
+    Circle(shade: colour, ..) -> colour
+    Square(..) -> shape.shade
+  }
+}

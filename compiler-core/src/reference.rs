@@ -193,8 +193,16 @@ pub struct LabelReference {
     pub shorthand: bool,
 }
 
-/// Key: (type_module, type_name, label_name)
-pub type LabelReferenceMap = HashMap<(EcoString, EcoString, EcoString), Vec<LabelReference>>;
+/// Identifies a record field label within a custom type, used to look up the
+/// references to that label.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub struct RecordLabel {
+    /// The module the type this label belongs to is defined in.
+    pub type_module: EcoString,
+    /// The name of the type this label belongs to.
+    pub type_name: EcoString,
+    pub label: EcoString,
+}
 
 #[derive(Debug, Clone)]
 pub struct EntityInformation {
@@ -268,8 +276,8 @@ pub struct ReferenceTracker {
     /// renaming and go-to reference.
     pub module_references: HashMap<EcoString, Vec<ModuleNameReference>>,
     /// The locations of the references to each record field label in this
-    /// module, keyed by (type_module, type_name, label_name).
-    pub label_references: LabelReferenceMap,
+    /// module, used for renaming and go-to reference.
+    pub label_references: HashMap<RecordLabel, Vec<LabelReference>>,
 
     /// This map is used to access the nodes of modules that were not
     /// aliased, given their name.
@@ -635,30 +643,22 @@ impl ReferenceTracker {
     ///
     /// `type_` is the `(module, name)` of the type the label belongs to, as
     /// returned by [`Type::named_type_name`].
-    ///
-    /// `argument_location` is the location of the whole labelled argument (or
-    /// just the label for definitions and field accesses). For a shorthand the
-    /// whole span is recorded; otherwise just the leading label is.
     pub fn register_label_reference(
         &mut self,
         type_: (EcoString, EcoString),
         label: EcoString,
-        argument_location: SrcSpan,
+        location: SrcSpan,
         kind: ReferenceKind,
         constructor: Option<EcoString>,
         shorthand: bool,
     ) {
-        let location = if shorthand {
-            argument_location
-        } else {
-            SrcSpan {
-                start: argument_location.start,
-                end: argument_location.start + label.len() as u32,
-            }
-        };
         let (type_module, type_name) = type_;
         self.label_references
-            .entry((type_module, type_name, label))
+            .entry(RecordLabel {
+                type_module,
+                type_name,
+                label,
+            })
             .or_default()
             .push(LabelReference {
                 location,
