@@ -12,6 +12,10 @@
   after some expressions.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Fixed a bug where the JavaScript prelude's `BitArray$BitArray$data` FFI
+  function would throw an Error using the wrong class.
+  ([John Downey](https://github.com/jtdowney))
+
 ## v1.17.0-rc1 - 2026-05-23
 
 ### Compiler

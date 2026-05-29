@@ -299,7 +299,9 @@ export const BitArray$BitArray = (buffer, bitSize, bitOffset) =>
 export const BitArray$isBitArray = (value) => value instanceof BitArray;
 export const BitArray$BitArray$data = (bitArray) => {
   if (bitArray.bitSize % 8 !== 0)
-    throw new Error("BitArray$BitArray$data called on un-aligned bit array");
+    throw new globalThis.Error(
+      "BitArray$BitArray$data called on un-aligned bit array",
+    );
   const array = bitArray.rawBuffer;
   return new DataView(array.buffer, array.byteOffset, bitArray.byteSize);
 };
