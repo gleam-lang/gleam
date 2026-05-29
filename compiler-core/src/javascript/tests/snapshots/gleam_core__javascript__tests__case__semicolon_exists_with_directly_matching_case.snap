@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn go() {\n  case #(1, 2) {\n    #(a, _) -> a\n  }\n  {2 + 4} * 2\n}"
+---
+----- SOURCE CODE
+
+pub fn go() {
+  case #(1, 2) {
+    #(a, _) -> a
+  }
+  {2 + 4} * 2
+}
+
+----- COMPILED JAVASCRIPT
+export function go() {
+  let $ = [1, 2];
+  let a = $[0];
+  a
+  return (2 + 4) * 2;
+}

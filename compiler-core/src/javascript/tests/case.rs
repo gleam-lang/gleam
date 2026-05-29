@@ -1033,3 +1033,31 @@ pub fn go() {
 }"#
     )
 }
+
+#[test]
+fn semicolon_exists_with_directly_matching_case() {
+    assert_js!(
+        r#"
+pub fn go() {
+  case #(1, 2) {
+    #(a, _) -> a
+  }
+  {2 + 4} * 2
+}"#
+    )
+}
+
+#[test]
+fn semicolon_exists_with_case() {
+    assert_js!(
+        r#"
+pub fn go() {
+  case #(1, 2) {
+    #(2, b) -> b
+    #(1, 3) -> 2
+    #(a, _) -> a
+  }
+  {2 + 4} * 2
+}"#
+    )
+}
