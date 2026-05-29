@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  let a = {\n    let b = 10\n    b + 1\n  }\n}\n"
 ---
 ----- BEFORE ACTION

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-assertion_line: 49
 expression: "\npub fn go() {\n  \"Hello, Gleam!\"\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

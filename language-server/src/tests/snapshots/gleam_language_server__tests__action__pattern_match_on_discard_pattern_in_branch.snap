@@ -1,0 +1,22 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn main(x: Result(List(a), Nil)) {\n  case x {\n    Error(Nil) -> todo\n    Ok(_) -> todo\n  }\n}"
+---
+----- BEFORE ACTION
+pub fn main(x: Result(List(a), Nil)) {
+  case x {
+    Error(Nil) -> todo
+    Ok(_) -> todo
+       ↑         
+  }
+}
+
+
+----- AFTER ACTION
+pub fn main(x: Result(List(a), Nil)) {
+  case x {
+    Error(Nil) -> todo
+    Ok([]) -> todo
+    Ok([first, ..rest]) -> todo
+  }
+}

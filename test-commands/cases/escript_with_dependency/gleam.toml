@@ -1,0 +1,10 @@
+name = "escript_with_dependency"
+version = "1.0.0"
+
+[dependencies]
+# This is the smallest dependency I know of. A few lines of code, and it
+# doesn't have any dependencies of its own. It was selected to make the code of
+# compilation as small as possible.
+argv = ">= 1.1.0 and < 2.0.0"
+
+[dev_dependencies]

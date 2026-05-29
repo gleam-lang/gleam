@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1476
 expression: "\nlet my_string = \"hello \"\ncase my_string {\n    _ if my_string <> \"world\" == \"hello world\" -> io.debug(\"ok\")\n}"
-snapshot_kind: text
 ---
 [
     Assignment(
@@ -80,12 +78,14 @@ snapshot_kind: text
                                     end: 89,
                                 },
                                 operator: Eq,
+                                operator_start: 73,
                                 left: BinaryOperator {
                                     location: SrcSpan {
                                         start: 52,
                                         end: 72,
                                     },
                                     operator: Concatenate,
+                                    operator_start: 62,
                                     left: Var {
                                         location: SrcSpan {
                                             start: 52,

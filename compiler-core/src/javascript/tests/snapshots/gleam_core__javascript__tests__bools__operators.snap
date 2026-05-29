@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-assertion_line: 40
 expression: "\npub fn go() {\n    True && True\n    False || False\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

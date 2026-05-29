@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\nimport wibble\n\npub fn main() {\n  wibble.divide(10, b)\n}\n"
 ---
+
 import wibble
 
 pub fn main() {

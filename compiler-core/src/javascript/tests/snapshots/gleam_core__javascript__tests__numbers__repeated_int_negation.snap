@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 239
 expression: "\npub fn go() {\n  let a = 3\n  let b = --a\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

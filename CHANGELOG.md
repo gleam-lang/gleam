@@ -2,440 +2,494 @@
 
 ## Unreleased
 
-### Bug fixes
+## Bug Fixes
 
-- Fix the bug where qualified constants cannot be referenced inside a bit array
-  size segment pattern.
-  ([Leo Oliveira](https://github.com/13dev))
+- Fixed a bug where the "Convert to case" code action would silently fail for
+  every inexhaustive `let` assignment in a module other than the first one.
+  ([John Downey](https://github.com/jtdowney))
 
-## v1.16.0-rc2 - 2026-04-14
-
-### Bug fixes
-
-- `manifest.toml` files with invalid packge names now raise an error
-  immediately when the file is parsed.
-  ([Louis Pilfold](https://github.com/lpil))
-
-- Fixed a bug where the "Wrap in anonymous function" code action could be used
-  in the body of a `use` expression
-  ([Giovanni Maria Zanchetta](https://github.com/GioMaz))
-
-- Added `mts`, `cts`, `jsx`, `tsx` to native file extensions so you can use
-  external JavaScript code from files with these file extensions.
-  ([Niklas Kirschall](https://github.com/nkxxll))
-
-## v1.16.0-rc1 - 2026-04-10
+## v1.17.0-rc1 - 2026-05-23
 
 ### Compiler
 
-- The compiler now reports all errors and warnings it can find in modules that
-  do not depend on each other, while previously it would always stop at the
-  first module with an error.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+- The compiler now suggest public values from imported modules when the variable
+  is unknown. These values are suggested based on name and arity.
 
-- The compiler now supports list prepending in constants. For example:
+  Considering this program:
 
   ```gleam
-  pub const viviparous_mammals = ["dog", "cat", "human"]
+  import gleam/io
 
-  pub const all_mammals = ["platypus", "echidna", ..viviparous_mammals]
-  ```
-
-  ([Surya Rose](https://github.com/GearsDatapacks))
-
-- The analysis of record update expressions is now fault tolerant, meaning the
-  compiler will no longer stop reporting errors at the first invalid field it
-  finds.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- The compiler now shows a better error message when trying to use the record
-  update syntax with variants that have no labelled fields.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- The error message for invalid deprecated attributes with no deprecation
-  message has been improved. For example, the following code:
-
-  ```gleam
-  pub type HashAlgorithm {
-    @deprecated
-    Md5
-    Sha224
-    Sha512
+  pub fn main() -> Nil {
+    println("Hello, World!")
   }
   ```
 
-  Will raise the following error:
+  The compiler will display this error message:
 
-  ```txt
-  error: Syntax error
-    ┌─ /src/parse/error.gleam:3:3
+  ```text
+    error: Unknown variable
+    ┌─ /path/to/project/src/project.gleam:4:3
     │
-  3 │   @deprecated
-    │   ^^^^^^^^^^^ A deprecation attribute must have a string message.
+  4 │   println("Hello, World!")
+    │   ^^^^^^^
 
-  See: https://tour.gleam.run/functions/deprecations/
+  The name `println` is not in scope here.
+  Did you mean one of these:
+
+      - io.println
   ```
 
+  ([raphrous](https://github.com/realraphrous))
+
+- The inference of record update expressions is now more fault tolerant: if
+  there's an error in the record being updated, the compiler can still able to
+  analyse the fields that are being provided.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The compiler now raises a warning on the JavaScript target when defining an
-  integer segment with a size higher than 52 bits. For example, this code:
+- The inference of clause guards is now more fault tolerant: if there's an error
+  in a part of the guard expression, the compiler can still able to analyse the
+  rest of the guard rather than stopping at the first error.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- It is now possible to use the `todo` keyword in constants, this will result in
+  an helpful error message rather than a syntax error.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The compiler now prints correctly qualified or aliased type names when
+  printing warnings. For example:
 
   ```gleam
-  pub fn go(sha: BitArray) {
-      let <<_, number:152>> = sha
-      number
+  import user
+
+  pub fn main() {
+    user.to_string(todo)
+    |> io.println
   }
   ```
 
-  Will result in the following warning:
+  Will produce the following warning:
 
-  ```txt
-  warning: Truncated bit array segment
-    ┌─ /src/warning/wrn.gleam:3:20
+  ```
+  warning: Todo found
+    ┌─ /src/warning/wrn.gleam:4:19
     │
-  3 │     let <<_, number:152>> = sha
-    │                     ^^^
+  4 │     user.to_string(todo)
+    │                    ^^^^ This code is incomplete
 
-  This segment is a 152-bit long integer, but on the JavaScript target
-  numbers have at most 52 bits. It would be truncated to its first 52 bits.
-  Hint: Did you mean to use the `bytes` segment option?
+  This code will crash if it is run. Be sure to finish it before
+  running your program.
+
+  Hint: I think its type is `user.User`.
   ```
 
+  Notice how the type hint is correctly qualified for the module the warning is
+  raised in.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The compiler now emits a helpful error message when source code contains an
-  invalid unicode character that looks similar to a correct character.
+- When writing a constant record with an empty arguments list the compiler will
+  no longer stop to analyse the entire module.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-  ```
-  error: Syntax error
-    ┌─ /src/parse/error.gleam:1:20
-    │
-  1 │ pub fn main() { #(1‚ 2) }
-    │                    ^ Unexpected character
+- The compiler now normalizes remaining-bytes bit-array checks for the
+  JavaScript backend so `(bitSize - c) % 8 === 0` becomes `bitSize % 8 === 0`
+  when the constant offset `c` is congruent modulo 8. This produces more uniform
+  generated code for byte-aligned patterns.
+  ([Daniele Scaratti](https://github.com/lupodevelop))
 
-  This looks like ascii comma, but it is actually the unicode low single
-  comma quotation mark.
-  ```
+- The code generated for destructuring exhaustive patterns with `let` is now
+  less verbose on the JavaScript target.
 
-  ([Louis Pilfold](https://github.com/lpil))
-
-- The compiler now emits more efficient code when matching on single-character
-  string prefixes on the JavaScript target. For example, the `glance` package
-  is now nearly 30% faster on the JavaScript target:
-
-  ```
-  # before:
-  min: 10.8ms, max: 365.82ms, median: 14.74ms, mean: 14.76ms
-  warmup: 100/1.5s, total post-warmup: 1000/14.76s
-
-  # after:
-  min: 8.96ms, max: 143.76ms, median: 10.72ms, mean: 11.06ms
-  warmup: 100/1.24s, total post-warmup: 1000/11.06s
-  ```
-
-  ([Surya Rose](https://github.com/GearsDatapacks))
-
-- Compiler can now emit source maps when targeting JavaScript. This can be enabled
-  in the gleam.toml with the `source_maps` setting under the `javascript` section.
-  ([Ameen Radwan](https://github.com/Acepie))
+  ([Gavin Morrow](https://github.com/gavinmorrow))
 
 ### Build tool
 
-- The `gleam hex owner add` command has been added, which allows adding
-  owners to the package.
-  ([Niklas Kirschall](https://github.com/nkxxll))
-
-- When publishing, the package manager now uses the full term instead of the
-  shorthand "MFA" in the prompt and error message.
-  ([Luka Ivanović](https://github.com/luka-hash))
-
-- When Hex rejects publish with error 422, show error message instead of
-  defaulting to "can only modify a release up to one hour after publication"
-  ([David Matz](https://github.com/d-matz))
-
-- The `gleam publish` command now has documentation for its options.
+- The `gleam dev` command now accepts the `--no-print-progress` flag. When this
+  flag is passed, no progress information is printed.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The `gleam hex retire` command now accepts three flags `--package`,
-  `--version`, and `--reason` instead of positional arguments.
+- Tables in the generated docs now look better on smaller screens.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The `gleam hex unretire` command now accepts two flags `--package`, and
-  `--version` instead of positional arguments.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+- The comment in `manifest.toml` now instructs the user to include it in their
+  source control repository.
+  ([Louis Pilfold](https://github.com/lpil))
 
-- The `gleam hex owner transfer` command now accepts a flag `--package` instead
-  of a positional argument.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- The `gleam docs build` command no longer recompiles all the project's
-  dependencies every single time it is run.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- The build tool now produces a nicer error message when trying to add a
-  package's version that doesn't exist. For example, running `gleam add wisp@11`
-  will now produce:
+- The `gleam deps outdated` command now always prints a summary showing how many
+  packages have newer versions available. For example:
 
   ```txt
-  error: Dependency resolution failed
+  $ gleam deps outdated
+  1 of 12 packages have newer versions available.
 
-  The package `wisp` has no versions in the range >= 11.0.0 and < 12.0.0.
+  Package       Current  Latest
+  -------       -------  ------
+  gleam_stdlib  0.70.0   0.71.0
   ```
 
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+  When no packages are outdated, only the summary line is printed:
 
-- The build tool will now suggest to create a module in the `dev` or `test`
-  directory, if that missing module is a dev module or a test module
-  respectively.
-  ([Andrey Kozhev](https://github.com/ankddev))
+  ```txt
+  $ gleam deps outdated
+  0 of 12 packages have newer versions available.
+  ```
 
-- Now all options with declared variants have consistent representation of
-  possible values.
-  ([Andrey Kozhev](https://github.com/ankddev))
+  ([Daniele Scaratti](https://github.com/lupodevelop))
 
-- New Gleam packages are generated requiring >= 0.70.0 of `gleam_stdlib`.
+- The package manager now has a specific error and automatic re-authentication
+  flow for when a Hex session has been revoked or has expired.
+  ([Sahil Upasane](https://github.com/404salad))
+
+- New packages are created requesting Erlang/OTP version 29 on GitHub actions.
   ([Louis Pilfold](https://github.com/lpil))
 
-- `gleam.toml` files with invalid dependency names now raise an error
-  immediately when the file is parsed.
-  ([Louis Pilfold](https://github.com/lpil))
-
-- Documentation for `--target` option has been improved to include more
-  details.
+- `gleam publish` will now better discover Git repository in monorepos. This
+  improves suggestions to push a tag, if it doesn't exists.
   ([Andrey Kozhev](https://github.com/ankddev))
+
+- The `gleam export escript` command has been added for the creation of
+  [escripts](https://www.erlang.org/doc/apps/erts/escript_cmd.html), BEAM
+  programs bundled into a single file.
+  ([Louis Pilfold](https://github.com/lpil))
 
 ### Language server
 
-- The language server will now show a diagnostic if you have a file open that
-  could not be analysed due to its dependencies failing to compile.
+- The language server now offers a "Fill labels" code action on constants to
+  automatically fill in the missing labelled arguments from a record
+  constructor. For example:
+
+  ```gleam
+  pub type Pokemon {
+    Pokemon(number: Int, name: String, hp: Int)
+  }
+
+  pub const cleffa = Pokemon(number: 173)
+  ```
+
+  In this code snippet we haven't specified the `name` and `hp` fields, that's
+  an error! Triggering the "Fill labels" code action will result in the
+  following:
+
+  ```gleam
+  pub const cleffa = Pokemon(number: 173, name: todo, hp: todo)
+  ```
+
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The language server now offers code actions to wrap a function reference in an
-  anonymous function, or to remove a trivial anonymous function, leaving its
-  contents. For example:
+- When hovering a record update expression, the language server can now show the
+  fields that are not being updated. For example:
+
+  ```gleam
+  pub type Person {
+    Person(name: String, age: Int)
+  }
+
+  pub fn happy_birthday_mom() {
+    let mom = Person(name: "Antonella", age: 60)
+    Person(..mom, age: 61)
+    //     ^^^^^ Hovering this will show:
+    //           Unchanged fields:
+    //           - name
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The language server can now help with completions when typing a list's tail:
 
   ```gleam
   pub fn main() {
-    [-1, -2, -3] |> list.map(fn(a) { int.absolute_value(a) })
-                          // ^^ Activating the "Remove anonymous function"
-                          // code action here
+    let things_i_like = ["Gleam", "Ice Cream"]
+    ["Dogs", ..t|]
+    //          ^ Can now suggest a completion for `things_i_like`
   }
   ```
 
-  would result in:
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The language server can now help with completions when typing a record update:
 
   ```gleam
+  pub type User {
+    User(name: String, likes: List(String))
+  }
+
+  pub fn set_name(user: User, name: String) -> User {
+    User(..u|)
+    //      ^ Can now suggest a completion for `user`
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The language server now has a code action to remove a redundant record update.
+  For example:
+
+  ```gleam
+  pub type User {
+    User(name: String, likes: List(String))
+  }
+
   pub fn main() {
-    [-1, -2, -3] |> list.map(int.absolute_value)
+    let lucy = User(name: "Lucy", likes: ["Gleam", "Ice Cream"])
+    let jak = User(..lucy, name: "Jak", likes: ["Gleam", "Dogs"])
+    //             ^^^^^^ This record update is not needed!
   }
   ```
 
-  while the other action would reverse the change.
-  ([Eli Treuherz](http.github.com/treuherz))
-
-- The "extract function" code action can now be used in pipelines to extract a
-  part of one into a function. For example, triggering it here:
+  This record update is not actually needed and will raise a warning, all fields
+  are already specified. Triggering the code action anywhere on the expression
+  will remove the unnecessary update:
 
   ```gleam
-  pub fn words() {
-    string
-    |> string.lowercase
-    // ^^^
-    |> string.replace(each: "jak", with: "lucy")
-    // ^^^ selecting these two steps of the pipeline
-    |> string.split(on: " ")
-  }
-  ```
-
-  Would result in the following code:
-
-  ```gleam
-  pub fn words() {
-    string
-    |> function
-    |> string.split(on: " ")
+  pub type User {
+    User(name: String, likes: List(String))
   }
 
-  fn function(string: String) -> String {
-    string
-    |> string.lowercase
-    |> string.replace(each: "jak", with: "lucy")
+  pub fn main() {
+    let lucy = User(name: "Lucy", likes: ["Gleam", "Ice Cream"])
+    let jak = User(name: "Jak", likes: ["Gleam", "Dogs"])
   }
   ```
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The "extract function" code action can now be used to extract the right hand
-  side of an assignment into its own function. For example, triggering it here:
+- When using the wrong operator in a guard, the language server can now suggest
+  and apply an automatic fix. For example:
 
   ```gleam
-  pub fn personal_blog() {
-    let introduction =
-      html.main([], [
-        html.h1([], [html.text("Hello, world!")]),
-        html.p([], [html.text("Gleam is cool")])
-      ])
-    //^^^ Triggering "extract function" on this expression
-
-    html.body([introduction, blog_posts()])
+  pub fn categorise() {
+    case pokemon {
+      Pokemon(name:, ..) if name == "rai" + "chu" -> todo
+      _ -> todo
+    }
   }
   ```
 
-  Would result in the following code:
-
-  ```gleam
-  pub fn personal_blog() {
-    let introduction = function()
-    html.body([introduction, blog_posts()])
-  }
-
-  pub fn function() {
-    html.main([], [
-      html.h1([], [html.text("Hello, world!")]),
-      html.p([], [html.text("Gleam is cool")])
-    ])
-  }
-  ```
-
+  Gleam has no operator overloading, and the operator used to join strings is
+  `<>`, not `+`. The language server can automatically fix this common mistake.
+  Triggering the code action on the guard will replace `+` with `<>`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The "extract variable" code action can now pick better names for variables in
-  case branches and blocks, ignoring unrelated names of variables in other
-  branches.
+- The language server now presents quick fix code actions before refactoring
+  ones.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The language server now has a code action to replace a `_` in a type
-  annotation with the corresponding type. For example:
+- The language server now allows to further pattern match on a discard by
+  replacing it with the patterns it is discarding.
+  For example:
 
   ```gleam
-  pub fn load_user(id: Int) -> Result(_, Error) {
-    //                                ^
-    //      Triggering the code action here
-    sql.find_by_id(id)
-    |> result.map_error(CannotLoadUser)
+  pub fn list_names(x: Result(List(String), Nil)) {
+    case x {
+      Error(Nil) -> io.println("no names")
+      Ok(_) -> todo
+      // ^ Triggering the code action here
+    }
   }
   ```
 
-  Triggering the code action over the `_` will result in the following code:
+  Triggering the code action will result in the following code:
 
   ```gleam
-  pub fn load_user(id: Int) -> Result(User, Error) {
-    sql.find_by_id(id)
-    |> result.map_error(CannotLoadUser)
+  pub fn list_names(x: Result(List(String), Nil)) {
+    case x {
+      Error(Nil) -> io.println("no names")
+      Ok([]) -> todo
+      Ok([first, ..rest]) -> todo
+    }
   }
   ```
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The language server now shows completions for the labelled argument of a
-  record when writing a record update.
+- The "Generate variant" code action now automatically adds an import to use the
+  generated variant if it is generated in a module from the different one.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The language server no longer shows completions for values when editing a
-  qualified type.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+- The language server no longer shows completions for deprecated values from
+  dependencies.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+- The language server now offers a code action to create unknown modules
+  when an import is added for a module that doesn't exist.
+  For example, if `import wobble/woo` is added to `src/wiggle.gleam`,
+  then a code action to create `src/wobble/woo.gleam` will be presented
+  when triggered over `import wobble/woo`.
+  ([Cory Forsstrom](https://github.com/tarkah))
+
+- The language server now supports finding references when triggered on an
+  aliased import. For example, in the following snippet, moving the cursor
+  over `log` and triggering "find references" will show all references of
+  `io.println()`.
+
+  ```gleam
+  import gleam/io.{println as log}
+  fn main() {
+    log("Hello, world!")
+  //^^^ trigger here
+  }
+  ```
+
+  ([Gavin Morrow](https://github.com/gavinmorrow))
+
+- The language server now supports `textDocument/documentHighlight` anywhere
+  that `textDocument/references` is available.
+
+  For example, triggering it with the cursor over any instance of `vec` will
+  result in all of the instances of it being highlighted.
+
+  ```gleam
+  fn to_cartesian(vec) {
+  //              ^^^
+    let x = vec.rho * cos(vec.theta)
+    //      ^^^           ^^^
+    let y = vec.rho * sin(vec.theta)
+    //      ^^^           ^^^
+    #(x, y)
+  }
+  ```
+
+  ([Gavin Morrow](https://github.com/gavinmorrow))
 
 ### Formatter
 
-- The formatter no longer moves comments out of type annotations.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+### Releases
 
-- The formatting of long nested tuples has been improved.
-  Previously the formatter would split only the last tuple:
-
-  ```gleam
-  #(#(wibble, wobble), #(some_long_tuple, passed_as_last_argument))
-  // after format:
-  #(#(wibble, wobble), #(
-    some_long_tuple,
-    passed_as_last_argument
-  ))
-  ```
-
-  But now it favours first splitting each element onto its own line:
-
-  ```gleam
-  #(#(wibble, wobble), #(some_long_tuple, passed_as_last_argument))
-  // after format:
-  #(
-    #(wibble, wobble),
-    #(some_long_tuple, passed_as_last_argument)
-  )
-  ```
-
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+- A `gleam-licences.html` is now included with each release, detailing the
+  licences of the used dependencies.
+  ([Louis Pilfold](https://github.com/lpil))
 
 ### Bug fixes
 
-- Fixed a bug where some functions could be formatted to be longer than 80
-  characters.
+- Fixed a bug where `gleam remove` would fail with a confusing File IO error
+  if `manifest.toml` didn't exist yet (e.g. in a freshly-created project or
+  after the manifest had been deleted).
+  ([Charlie Tonneslan](https://github.com/c-tonneslan))
+
+- Fixed a bug where the build tool would check for new major versions of a local
+  or git dependency on Hex when running `gleam update`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Fixed a bug that would result in not being able to publish a package if some
-  non-ASCII characters were used in field names other than `description`.
-  ([Niklas Kirschall](https://github.com/nkxxll))
+- Fixed a bug where the "pattern match on value" code action would generate
+  invalid code when used on a `let` assignment on the right hand side of another
+  `let` assignment.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Fixed a bug where arithmetic operators in bit array size expressions were
-  not left-associative, causing `a - b - c` to be evaluated as
-  `a - (b - c)` instead of `(a - b) - c`.
-  ([Daniele Scaratti](https://github.com/lupodevelop))
+- Fixed a bug where the compiler wouldn't track the minimum required version
+  when using list prepending in constants.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Fixed a bug where the compiler would crash when trying to read the cache for
-  modules containing large constants.
+- Fixed a bug where the language server wouldn't let one extract record
+  constructors as variables.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server would suggest completions for values
+  from the language's prelude, even though their types were incompatible with
+  the current context.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server would suggest the "wrap in anonymous"
+  code action even when not hovering directly over a function.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server would suggest the "wrap in anonymous"
+  code action when hovering over a record update.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler would generate invalid code for guards using
+  lists with a tail.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server would suggest the "convert to case" code
+  action even when not explicitly hovering an inexhaustive let assignment.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server would suggest the "add missing pattern"
+  code action even when not explicitly hovering an inexhaustive case expression.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server would suggest the "unqualify" code
+  action even when not explicitly hovering a qualified value.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server would suggest the "qualify" code
+  action even when not explicitly hovering an unqualified type or constructor.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server would suggest the "generate dynamic
+  decoder" code action even when not explicitly hovering a custom type.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server would suggest the "generate json
+  encoder" code action even when not explicitly hovering a custom type.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server would suggest the "missing type
+  parameter" code action even when not explicitly hovering a custom type.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server would suggest the "unwrap anonymous
+  function" code action even when not explicitly hovering a custom type.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server would suggest the "extract function"
+  code action even when selecting multiple branches of a case expression, or
+  patterns and guards of a case arm.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler would not warn for ints over the safe
+  JavaScript limit in `BitArray` segments with a unit option.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler would incorrectly warn for ints over the
+  safe JavaScript limit in `BitArray` byte segments that aren't ints.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a confusing error message when writing a constant bit array with a size
+  that is not a literal number.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a confusing error message when writing bit arrays with an invalid unit.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a confusing error message when writing a constant bit array with an
+  invalid segment.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a confusing error message when writing `@external` or `@deprecated`
+  annotations with arguments that are not string.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where enabling `javascript.typescript_declarations` or
+  `javascript.source_maps` wouldn't generate their additional files unless the
+  build directory was manually deleted. The compiler now automatically rebuilds
+  the project when this configuration changes.
+  ([daniellionel01](https://github.com/daniellionel01))
+
+- Fixed a bug where using the `bytes` and `unit` options together on a bit array
+  segment could generate incorrect code on the JavaScript target.
   ([Surya Rose](https://github.com/GearsDatapacks))
-
-- Fixed a bug where `BitArray$BitArray$data` constructed a `DataView` with
-  incorrect byte length instead of the slice's actual size, causing sliced bit
-  arrays to include extra bytes from the underlying buffer on JavaScript.
-  ([John Downey](https://github.com/jtdowney))
-
-- The compiler now parses UTF-8 source files with a byte-order mark correctly,
-  instead of raising an error.
-  ([Lucy McPhail](https://github.com/lucymcphail))
-
-- Fixed a bug where semicolons would not be properly added to pipelines in
-  generated JavaScript code, leading to runtime errors in certain circumstances.
-  ([Surya Rose](https://github.com/GearsDatapacks))
-
-- Fixed a bug where the compiler would not generate the correct code on the
-  Erlang target for bit array string segments with the `utf16` and `utf32`
-  option.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- Fixed the formatting of some errors' hints to properly wrap.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- Fixed a bug where box drawing characters would not use the same monospace font
-  as all other characters inside code blocks in the generated documentation.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- Fixed a bug where the "Add missing type parameter" code action could be
-  triggered on types that do not exist instead of type variables.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- Fixed a bug where the "Add missing patterns" code action could end up deleting
-  comments inside an incomplete case expression.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- Fixed a bug where the "Extract function" could generate invalid code when
-  triggered on a use statement inside a block.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- Fixed a bug where constants referenced in a bit-array pattern's size option
-  would report as unused.
-  ([Louis Pilfold](https://github.com/lpil))
 
 - Fixed a bug where the JavaScript code generator could produce duplicate `let`
   declarations for internal variables after a `case` expression whose subject
-  directly matches one of the branches.
-  ([Eyup Can Akman](https://github.com/eyupcanakman))
+  directly matches branch when existing variables with same exist in outer
+  scope.
+  ([Andrey Kozhev](https://github.com/ankddev))
 
-## v1.15.1 - 2026-03-17
+- Fixed a bug where `gleam publish` wrote the wrong application name into the
+  published package metadata for dependencies whose Hex package name differs
+  from their internal OTP application name. This caused Mix-based projects to
+  fail to build when they depended on Gleam packages with transitive
+  dependencies.
+  ([Logan Bresnahan](https://github.com/LoganBresnahan))
 
-### Bug fixes
+- Fixed a bug where cli would fail to complete https connections from behind a
+  proxy with self-signed certificates. The cli now defaults to using system
+  trust stores for trusted CAs, allowing use in proxied network environments.
+  ([apsoras][https://github.com/apsoras])
 
-- Fixed a bug where `BitArray$BitArray$data` constructed a `DataView` with
-  offset 0 instead of the slice's actual byte offset, causing sliced bit arrays
-  to read from the wrong position in the underlying buffer on JavaScript.
+- Fixed a bug where the language server's "add missing patterns" code action
+  would not be offered when the cursor was on an inexhaustive `case` expression
+  if another inexhaustive `case` appeared earlier in the same module.
   ([John Downey](https://github.com/jtdowney))

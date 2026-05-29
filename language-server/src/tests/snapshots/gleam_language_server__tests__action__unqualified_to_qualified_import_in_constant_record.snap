@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport option.{Some}\n\nconst some = Some(1)\n"
 ---
 ----- BEFORE ACTION

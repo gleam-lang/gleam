@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "pub fn wibble() {\n  <<1:unit(Upname)>>\n}"
+---
+----- SOURCE CODE
+pub fn wibble() {
+  <<1:unit(Upname)>>
+}
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:12
+  │
+2 │   <<1:unit(Upname)>>
+  │            ^^^^^^ I was not expecting this
+
+Found a name, expected one of: 
+- A positive int

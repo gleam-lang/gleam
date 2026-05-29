@@ -19,6 +19,37 @@ fn todo_warning_test() {
     assert_warning!("pub fn main() { 1 == todo }");
 }
 
+// https://github.com/gleam-lang/gleam/issues/4164
+#[test]
+fn todo_uses_the_appropriate_type_name() {
+    assert_warning!(
+        "
+pub fn curry(_f: fn(a, b) -> c) -> fn(a) -> fn(b) -> c {
+  fn(_a: a) {
+    todo
+  }
+}"
+    );
+}
+
+#[test]
+fn todo_uses_the_appropriate_type_name_2() {
+    assert_warning!(
+        (
+            "wibble",
+            "
+            pub type Wibble
+            pub fn consume(wibble: Wibble) -> Nil { todo }
+        "
+        ),
+        "
+import wibble
+pub fn main() {
+  wibble.consume(todo)
+}"
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/1669
 #[test]
 fn todo_warning_correct_location() {
@@ -460,17 +491,17 @@ pub const make_two = one.Two
 
 // https://github.com/gleam-lang/gleam/issues/2050
 #[test]
-fn double_unary_integer_literal() {
+fn double_unary_int_literal() {
     assert_warning!("pub fn main() { let _ = --7 }");
 }
 
 #[test]
-fn even_number_of_multiple_integer_negations_raise_a_single_warning() {
+fn even_number_of_multiple_int_negations_raise_a_single_warning() {
     assert_warning!("pub fn main() { let _ = ----7 }");
 }
 
 #[test]
-fn odd_number_of_multiple_integer_negations_raise_a_single_warning_that_highlights_the_unnecessary_ones()
+fn odd_number_of_multiple_int_negations_raise_a_single_warning_that_highlights_the_unnecessary_ones()
  {
     assert_warning!("pub fn main() { let _ = -----7 }");
 }
@@ -488,7 +519,7 @@ fn odd_number_of_multiple_bool_negations_raise_a_single_warning_that_highlights_
 
 // https://github.com/gleam-lang/gleam/issues/2050
 #[test]
-fn double_unary_integer_variable() {
+fn double_unary_int_variable() {
     assert_warning!(
         r#"
         pub fn main() {
@@ -1945,13 +1976,28 @@ fn doesnt_warn_twice_for_unreachable_code_if_has_already_warned_in_a_block_2() {
 }
 
 #[test]
-fn unreachable_use_after_panic() {
+fn unreachable_use_after_panic_1() {
     assert_warning!(
         r#"
         pub fn wibble(_) { 1 }
         pub fn main() {
             panic
             use <- wibble
+            1
+        }
+        "#
+    );
+}
+
+#[test]
+fn unreachable_use_after_panic_2() {
+    assert_warning!(
+        ("package", "module", r#"pub fn wibble(_) { 1 }"#),
+        r#"
+        import module
+        pub fn a() {
+            panic
+            use <- module.wibble
             1
         }
         "#
@@ -4549,7 +4595,7 @@ pub fn main() {
 }
 
 #[test]
-fn impossible_to_reach_integer_segment() {
+fn impossible_to_reach_int_segment() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -4562,7 +4608,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn impossible_to_reach_integer_segment_2() {
+fn impossible_to_reach_int_segment_2() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -4575,7 +4621,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn impossible_to_reach_integer_segment_3() {
+fn impossible_to_reach_int_segment_3() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -4588,7 +4634,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn impossible_to_reach_integer_segment_4() {
+fn impossible_to_reach_int_segment_4() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -4601,7 +4647,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn multiple_impossible_to_reach_integer_segments() {
+fn multiple_impossible_to_reach_int_segments() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -4614,7 +4660,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn assert_on_impossible_to_reach_integer_segment() {
+fn assert_on_impossible_to_reach_int_segment() {
     assert_warning!(
         "
 pub fn main(x) {
@@ -4832,6 +4878,32 @@ pub fn main(x) {
 }
 
 #[test]
+fn constant_list_prepending_requires_v1_16_warning() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub const one = []
+pub const other = [1, 2, ..one]
+",
+    );
+}
+
+#[test]
+fn constant_list_prepending_in_guard_requires_v1_16_warning() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+fn go(x) {
+  case x {
+    [1, ..] if [1, ..x] == x -> Nil
+    _ -> Nil
+  }
+}
+",
+    );
+}
+
+#[test]
 fn record_update_with_all_wrong_fields_produces_no_warnings_1() {
     assert_no_warnings!(
         "
@@ -4880,7 +4952,7 @@ pub fn main() {
 }
 
 #[test]
-fn bit_array_match_on_integer_over_js_limit() {
+fn bit_array_match_on_int_over_js_limit() {
     assert_js_warning!(
         "
 pub fn go(x: BitArray) {
@@ -4892,13 +4964,41 @@ pub fn go(x: BitArray) {
 }
 
 #[test]
-fn bit_array_match_on_integer_over_js_limit_1() {
+fn bit_array_match_on_int_over_js_limit_1() {
     assert_js_warning!(
         "
 pub fn go(x: BitArray) {
   case x {
     <<n:size(53)>> -> n
     _ -> 1
+  }
+}
+"
+    );
+}
+
+#[test]
+fn bit_array_match_on_int_over_js_limit_with_unit() {
+    assert_js_warning!(
+        "
+pub fn go(x: BitArray) {
+  case x {
+    <<n:2-unit(250)>> -> n
+    _ -> 1
+  }
+}
+"
+    );
+}
+
+#[test]
+fn bit_array_match_on_bytes_does_not_complain_about_int_size() {
+    assert_js_no_warnings!(
+        "
+pub fn go(x: BitArray) {
+  case x {
+    <<n:150-bytes>> -> n
+    _ -> <<>>
   }
 }
 "
@@ -4919,5 +5019,15 @@ pub fn run(data) {
   }
 }
         "#
+    );
+}
+
+#[test]
+fn constant_used_in_todo_message_counts_as_used() {
+    assert_no_warnings!(
+        "
+const wibble = 1
+pub const wobble = todo as wibble
+"
     );
 }

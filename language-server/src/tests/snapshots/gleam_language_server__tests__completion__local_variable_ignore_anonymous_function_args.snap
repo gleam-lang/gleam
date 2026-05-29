@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\npub fn main() {\n  let add_one = fn(wibble: Int) { wibble + 1 }\n  let wobble = 1\n  w\n}\n"
 ---
+
 pub fn main() {
   let add_one = fn(wibble: Int) { wibble + 1 }
   let wobble = 1

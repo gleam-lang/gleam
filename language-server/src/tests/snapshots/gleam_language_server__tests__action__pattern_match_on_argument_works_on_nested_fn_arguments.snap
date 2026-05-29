@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  map([[#(1, 2)]], fn(list) {\n    map(list, fn(tuple) {\n      todo\n    })\n  })\n}\n\nfn map(list: List(a), fun: fn(a) -> b) { todo }\n"
 ---
 ----- BEFORE ACTION

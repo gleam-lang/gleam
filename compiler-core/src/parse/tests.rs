@@ -1509,6 +1509,22 @@ case my_string {
 }
 
 #[test]
+fn constant_record_with_empty_arguments_is_record() {
+    assert_parse_module!("pub const wibble = Wibble()");
+}
+
+#[test]
+fn calling_module_constant_as_constructor() {
+    assert_module_error!(
+        "
+pub type Wibble { Wibble(Int) }
+pub const wibble = Wibble
+pub const a = wibble(1)
+"
+    );
+}
+
+#[test]
 fn invalid_label_shorthand() {
     assert_module_error!(
         "
@@ -1775,20 +1791,6 @@ pub fn main() {
   }
 }
 "#
-    );
-}
-
-// https://github.com/gleam-lang/gleam/issues/3730
-#[test]
-fn missing_constructor_arguments() {
-    assert_module_error!(
-        "
-pub type A {
-  A(Int)
-}
-
-const a = A()
-"
     );
 }
 
@@ -2364,4 +2366,90 @@ fn unicode_fullwidth_caret() {
 #[test]
 fn unicode_fullwidth_colon() {
     assert_module_error!("pub fn wibble(x\u{FF1A} Int) { x }");
+}
+
+#[test]
+fn missing_todo_constant_message() {
+    assert_module_error!("pub const wibble = todo as");
+}
+
+#[test]
+fn missing_todo_constant_message_2() {
+    assert_module_error!(
+        "pub const wibble = todo as
+pub fn wibble() {}"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5711
+#[test]
+fn parsing_bit_array_constant_with_non_integer_size() {
+    assert_module_error!("pub const wibble = <<1:size(something)>>");
+}
+
+#[test]
+fn parsing_bit_array_constant_with_non_integer_unit() {
+    assert_module_error!("pub const wibble = <<1:unit(something)>>");
+}
+
+#[test]
+fn parsing_bit_array_expression_with_invalid_size() {
+    assert_module_error!(
+        "pub fn wibble() {
+  let assert <<1:size(Upname)>> = todo
+}"
+    );
+}
+
+#[test]
+fn parsing_bit_array_expression_with_invalid_unit() {
+    assert_module_error!(
+        "pub fn wibble() {
+  <<1:unit(Upname)>>
+}"
+    );
+}
+
+#[test]
+fn parsing_bit_array_pattern_with_invalid_unit() {
+    assert_module_error!(
+        "pub fn wibble() {
+  let assert <<1:unit(Upname)>> = todo
+}"
+    );
+}
+
+#[test]
+fn parsing_bit_array_constant_with_invalid_segment_type() {
+    assert_module_error!("pub const wibble = <<1:Upname>>");
+}
+
+#[test]
+fn parsing_invalid_external_module_name() {
+    assert_module_error!(
+        "
+@external(erlang, Upname, [])
+fn wibble() -> Nil
+"
+    );
+}
+
+#[test]
+fn parsing_invalid_external_function_name() {
+    assert_module_error!(
+        r#"
+@external(erlang, "module", Upname)
+fn wibble() -> Nil
+"#
+    );
+}
+
+#[test]
+fn parsing_invalid_deprecation_message() {
+    assert_module_error!(
+        r#"
+@deprecated(Upname)
+fn wibble() -> Nil
+"#
+    );
 }

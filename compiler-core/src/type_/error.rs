@@ -7,10 +7,9 @@ use crate::{
     build::Target,
     exhaustiveness::ImpossibleBitArraySegmentPattern,
     parse::LiteralFloatValue,
-    type_::{Type, expression::ComparisonOutcome},
+    type_::{Type, expression::ComparisonOutcome, printer::Names},
 };
 
-use camino::Utf8PathBuf;
 use ecow::EcoString;
 use hexpm::version::Version;
 use num_bigint::BigInt;
@@ -167,6 +166,9 @@ pub enum Error {
         /// this will contain its location.
         discarded_location: Option<SrcSpan>,
         type_with_name_in_scope: bool,
+        /// Filled with the name of imported modules when the module has public value
+        /// with the same name as this variable
+        possible_modules: Vec<EcoString>,
     },
 
     UnknownType {
@@ -702,6 +704,12 @@ pub enum Error {
     RecordUpdateVariantWithNoFields {
         location: SrcSpan,
     },
+    /// When a constant contains a todo.
+    /// Unlike todo _expressions_, todo constants are a compile time error: we
+    /// want the developer to take care of them before they can run their code.
+    TodoConstant {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -862,6 +870,7 @@ pub enum Warning {
         kind: TodoKind,
         location: SrcSpan,
         type_: Arc<Type>,
+        names: Names,
     },
 
     ImplicitlyDiscardedResult {
@@ -880,7 +889,20 @@ pub enum Warning {
     },
 
     AllFieldsRecordUpdate {
+        /// The location of the entire redundant record expression.
         location: SrcSpan,
+        /// The location covering the record spread, including any comma that
+        /// might come after it:
+        ///
+        /// ```gleam
+        /// Wibble(..wibble, a: 1)
+        /// //     ^^^^^^^^^ This!
+        /// ```
+        ///
+        /// You might wonder why include the comma location as well, that's
+        /// what's most handy for the language server to suggest automatic
+        /// fixes to remove the record!
+        record_location: SrcSpan,
     },
 
     UnusedType {
@@ -1010,23 +1032,6 @@ pub enum Warning {
     ///
     OpaqueExternalType {
         location: SrcSpan,
-    },
-
-    /// This happens when an internal type is accidentally exposed in the public
-    /// API. Since internal types are excluded from documentation, completions
-    /// and the package interface, this would lead to poor developer experience.
-    ///
-    /// ```gleam
-    /// @internal type Wibble
-    ///
-    /// pub fn wibble(thing: Wibble) { todo }
-    /// //            ^^^^^^^^^^^^^ There would be no documentation
-    /// //                          explaining what `Wibble` is in the
-    /// //                          package's doc site.
-    /// ```
-    InternalTypeLeak {
-        location: SrcSpan,
-        leaked: Type,
     },
 
     RedundantAssertAssignment {
@@ -1213,6 +1218,7 @@ pub enum FeatureKind {
     ExternalCustomType,
     ConstantRecordUpdate,
     ExpressionInSegmentSize,
+    ConstantListWithTail,
 }
 
 impl FeatureKind {
@@ -1251,6 +1257,8 @@ impl FeatureKind {
             FeatureKind::ExternalCustomType | FeatureKind::ConstantRecordUpdate => {
                 Version::new(1, 14, 0)
             }
+
+            FeatureKind::ConstantListWithTail => Version::new(1, 16, 0),
         }
     }
 }
@@ -1371,6 +1379,7 @@ impl Error {
             | Error::ExternalTypeWithConstructors { location, .. }
             | Error::RecordUpdateVariantWithNoFields { location }
             | Error::QualifiedTypeMissingName { location }
+            | Error::TodoConstant { location }
             | Error::LowercaseBoolPattern { location } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
@@ -1394,14 +1403,6 @@ impl Error {
 }
 
 impl Warning {
-    pub fn into_warning(self, path: Utf8PathBuf, src: EcoString) -> crate::Warning {
-        crate::Warning::Type {
-            path,
-            src,
-            warning: self,
-        }
-    }
-
     pub(crate) fn location(&self) -> SrcSpan {
         match self {
             Warning::Todo { location, .. }
@@ -1427,7 +1428,6 @@ impl Warning {
             | Warning::CaseMatchOnLiteralCollection { location, .. }
             | Warning::CaseMatchOnLiteralValue { location, .. }
             | Warning::OpaqueExternalType { location, .. }
-            | Warning::InternalTypeLeak { location, .. }
             | Warning::RedundantAssertAssignment { location, .. }
             | Warning::AssertAssignmentOnImpossiblePattern { location, .. }
             | Warning::TodoOrPanicUsedAsFunction { location, .. }
@@ -1459,6 +1459,7 @@ pub enum UnknownValueConstructorError {
         name: EcoString,
         variables: Vec<EcoString>,
         type_with_name_in_scope: bool,
+        possible_modules: Vec<EcoString>,
     },
 
     Module {
@@ -1484,12 +1485,14 @@ pub fn convert_get_value_constructor_error(
             name,
             variables,
             type_with_name_in_scope,
+            possible_modules,
         } => Error::UnknownVariable {
             location,
             name,
             variables,
             discarded_location: None,
             type_with_name_in_scope,
+            possible_modules,
         },
 
         UnknownValueConstructorError::Module { name, suggestions } => Error::UnknownModule {

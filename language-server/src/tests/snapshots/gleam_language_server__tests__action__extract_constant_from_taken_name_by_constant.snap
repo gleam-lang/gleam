@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "const ints = [1, 2]\n\npub fn main() {\n  [5, 50]\n}"
 ---
 ----- BEFORE ACTION

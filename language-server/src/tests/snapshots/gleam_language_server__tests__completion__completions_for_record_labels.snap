@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\npub type Wibble {\n  Wibble(wibble: String, wobble: Int)\n}\n\nfn fun() { // completion inside parens below includes labels\n  let wibble = Wibble()\n}\n"
 ---
+
 pub type Wibble {
   Wibble(wibble: String, wobble: Int)
 }

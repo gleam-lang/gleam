@@ -1,0 +1,19 @@
+---
+source: test-project-compiler/src/generated_tests.rs
+expression: "./cases/erlang_typescript_declarations"
+---
+//// erlang_typescript_declarations/build/prod/erlang/example/_gleam_artefacts/example@@main.erl
+<erlang entrypoint>
+
+//// erlang_typescript_declarations/build/prod/erlang/example/ebin/example.app
+{application, example, [
+    {vsn, "1.0.0"},
+    {applications, []},
+    {description, ""},
+    {modules, []},
+    {registered, []}
+]}.
+
+
+//// erlang_typescript_declarations/build/prod/erlang/fingerprint
+<gleam compiler version string> 0

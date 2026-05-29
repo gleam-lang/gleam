@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\npub fn wibble(\n  _: String,\n) -> Nil {\n  Nil\n}\n"
 ---
+
 pub fn wibble(
   _: String,
 ) -> Ni|l {

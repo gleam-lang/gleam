@@ -204,7 +204,7 @@ pub fn parse_statement_sequence(src: &str) -> Result<Vec1<UntypedStatement>, Par
 // Test Interface
 //
 #[cfg(test)]
-pub fn parse_const_value(src: &str) -> Result<Constant<(), ()>, ParseError> {
+pub fn parse_const_value(src: &str) -> Result<UntypedConstant, ParseError> {
     let lex = lexer::make_tokenizer(src);
     let mut parser = Parser::new(lex);
     let expr = parser.parse_const_value();
@@ -983,6 +983,7 @@ where
 
                                 expr = UntypedExpr::RecordUpdate {
                                     location: SrcSpan { start, end },
+                                    spread_start: dot_s,
                                     constructor: Box::new(expr),
                                     record,
                                     arguments,
@@ -1077,6 +1078,26 @@ where
         let message = if self.maybe_one(&Token::As).is_some() {
             let expression = self.expect_expression_unit(ExpressionUnitContext::Other)?;
             Some(Box::new(expression))
+        } else {
+            None
+        };
+
+        Ok(message)
+    }
+
+    fn maybe_parse_constant_as_message(
+        &mut self,
+    ) -> Result<Option<Box<UntypedConstant>>, ParseError> {
+        let message = if let Some((as_start, as_end)) = self.maybe_one(&Token::As) {
+            match self.parse_const_value_unit()? {
+                Some(constant) => Some(Box::new(constant)),
+                None => {
+                    return Err(ParseError {
+                        error: ParseErrorType::MissingConstantAsMessage,
+                        location: SrcSpan::new(as_start, as_end),
+                    });
+                }
+            }
         } else {
             None
         };
@@ -3193,6 +3214,19 @@ where
 
     fn parse_const_value_unit(&mut self) -> Result<Option<UntypedConstant>, ParseError> {
         match self.tok0.take() {
+            Some((start, Token::Todo, end)) => {
+                self.advance();
+                let message = self.maybe_parse_constant_as_message()?;
+                let end = message
+                    .as_ref()
+                    .map_or(end, |message| message.location().end);
+                Ok(Some(Constant::Todo {
+                    location: SrcSpan { start, end },
+                    type_: (),
+                    message,
+                }))
+            }
+
             Some((start, Token::String { value }, end)) => {
                 self.advance();
                 Ok(Some(Constant::String {
@@ -3341,9 +3375,8 @@ where
                 self.advance();
                 let segments = Parser::series_of(
                     self,
-                    &|s| {
-                        Parser::parse_bit_array_segment(
-                            s,
+                    &|this| {
+                        this.parse_bit_array_segment(
                             &Parser::parse_const_value,
                             &Parser::expect_const_int,
                             &bit_array_const_int,
@@ -3490,10 +3523,10 @@ where
     ) -> Result<Option<UntypedConstant>, ParseError> {
         match self.maybe_one(&Token::LeftParen) {
             Some((par_s, _)) => {
-                if self.maybe_one(&Token::DotDot).is_some() {
+                if let Some((dot_dot_start, _)) = self.maybe_one(&Token::DotDot) {
                     let record = match self.parse_const_value()? {
                         Some(value) => RecordBeingUpdated {
-                            location: value.location(),
+                            location: SrcSpan::new(dot_dot_start, value.location().end),
                             base: Box::new(value),
                         },
                         None => {
@@ -3527,7 +3560,6 @@ where
                         name,
                         record,
                         arguments: update_arguments,
-                        tag: (),
                         type_: (),
                         field_map: Inferred::Unknown,
                     }))
@@ -3543,19 +3575,11 @@ where
                         "a constant record argument",
                     )?;
 
-                    if arguments.is_empty() {
-                        return parse_error(
-                            ParseErrorType::ConstantRecordConstructorNoArguments,
-                            SrcSpan::new(par_s, par_e),
-                        );
-                    }
-
                     Ok(Some(Constant::Record {
                         location: SrcSpan { start, end: par_e },
                         module,
                         name,
-                        arguments,
-                        tag: (),
+                        arguments: Some(arguments),
                         type_: (),
                         field_map: Inferred::Unknown,
                         record_constructor: None,
@@ -3566,8 +3590,7 @@ where
                 location: SrcSpan { start, end },
                 module,
                 name,
-                arguments: vec![],
-                tag: (),
+                arguments: None,
                 type_: (),
                 field_map: Inferred::Unknown,
                 record_constructor: None,
@@ -3731,7 +3754,7 @@ where
                 let options = if self.maybe_one(&Token::Colon).is_some() {
                     Parser::series_of(
                         self,
-                        &|s| Parser::parse_bit_array_option(s, &arg_parser, &to_int_segment),
+                        &|this| this.parse_bit_array_option(&arg_parser, &to_int_segment),
                         Some(&Token::Minus),
                     )?
                 } else {
@@ -3739,7 +3762,7 @@ where
                 };
                 let end = options
                     .last()
-                    .map(|o| o.location().end)
+                    .map(|option| option.location().end)
                     .unwrap_or_else(|| value.location().end);
                 Ok(Some(BitArraySegment {
                     location: SrcSpan {
@@ -3765,14 +3788,16 @@ where
         arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
         to_int_segment: &impl Fn(EcoString, BigInt, u32, u32) -> A,
     ) -> Result<Option<BitArrayOption<A>>, ParseError> {
-        match self.next_tok() {
+        match self.tok0.take() {
             // named segment
             Some((start, Token::Name { name }, end)) => {
+                self.advance();
                 if self.maybe_one(&Token::LeftParen).is_some() {
                     // named function segment
                     match name.as_str() {
-                        "unit" => match self.next_tok() {
+                        "unit" => match self.tok0.take() {
                             Some((int_s, Token::Int { value, .. }, int_e)) => {
+                                self.advance();
                                 let (_, end) = self.expect_one(&Token::RightParen)?;
                                 let v = value.replace("_", "");
                                 match u8::from_str(&v) {
@@ -3790,7 +3815,10 @@ where
                                     }),
                                 }
                             }
-                            _ => self.next_tok_unexpected(vec!["positive integer".into()]),
+                            tok0 => {
+                                self.tok0 = tok0;
+                                self.next_tok_unexpected(vec!["A positive int".into()])
+                            }
                         },
 
                         "size" => {
@@ -3817,16 +3845,22 @@ where
                 }
             }
             // int segment
-            Some((start, Token::Int { value, int_value }, end)) => Ok(Some(BitArrayOption::Size {
-                location: SrcSpan { start, end },
-                value: Box::new(to_int_segment(value, int_value, start, end)),
-                short_form: true,
-            })),
+            Some((start, Token::Int { value, int_value }, end)) => {
+                self.advance();
+                Ok(Some(BitArrayOption::Size {
+                    location: SrcSpan { start, end },
+                    value: Box::new(to_int_segment(value, int_value, start, end)),
+                    short_form: true,
+                }))
+            }
             // invalid
-            _ => self.next_tok_unexpected(vec![
-                "A valid bit array segment type".into(),
-                "See: https://tour.gleam.run/data-types/bit-arrays/".into(),
-            ]),
+            tok0 => {
+                self.tok0 = tok0;
+                self.next_tok_unexpected(vec![
+                    "A valid bit array segment type".into(),
+                    "See: https://tour.gleam.run/data-types/bit-arrays/".into(),
+                ])
+            }
         }
     }
 
@@ -3904,13 +3938,19 @@ where
     }
 
     fn expect_const_int(&mut self) -> Result<UntypedConstant, ParseError> {
-        match self.next_tok() {
-            Some((start, Token::Int { value, int_value }, end)) => Ok(Constant::Int {
-                location: SrcSpan { start, end },
-                value,
-                int_value,
-            }),
-            _ => self.next_tok_unexpected(vec!["A variable name or an integer".into()]),
+        match self.tok0.take() {
+            Some((start, Token::Int { value, int_value }, end)) => {
+                self.advance();
+                Ok(Constant::Int {
+                    location: SrcSpan { start, end },
+                    value,
+                    int_value,
+                })
+            }
+            tok0 => {
+                self.tok0 = tok0;
+                self.next_tok_unexpected(vec!["An int".into()])
+            }
         }
     }
 
@@ -4244,9 +4284,15 @@ functions are declared separately from types.";
 
     // Expect a String else error
     fn expect_string(&mut self) -> Result<(u32, EcoString, u32), ParseError> {
-        match self.next_tok() {
-            Some((start, Token::String { value }, end)) => Ok((start, value, end)),
-            _ => self.next_tok_unexpected(vec!["a string".into()]),
+        match self.tok0.take() {
+            Some((start, Token::String { value }, end)) => {
+                self.advance();
+                Ok((start, value, end))
+            }
+            tok0 => {
+                self.tok0 = tok0;
+                self.next_tok_unexpected(vec!["a string".into()])
+            }
         }
     }
 
@@ -4869,32 +4915,29 @@ fn reduce_bit_array_size((_, token, _): Spanned, estack: &mut Vec<BitArraySize<(
 }
 
 fn expr_op_reduction(
-    (token_start, token, token_end): Spanned,
-    l: UntypedExpr,
-    r: UntypedExpr,
+    (token_start, token, _token_end): Spanned,
+    left: UntypedExpr,
+    right: UntypedExpr,
 ) -> UntypedExpr {
     if token == Token::Pipe {
-        let expressions = if let UntypedExpr::PipeLine { mut expressions } = l {
-            expressions.push(r);
+        let expressions = if let UntypedExpr::PipeLine { mut expressions } = left {
+            expressions.push(right);
             expressions
         } else {
-            vec1![l, r]
+            vec1![left, right]
         };
         UntypedExpr::PipeLine { expressions }
     } else {
         match tok_to_binop(&token) {
-            Some(bin_op) => UntypedExpr::BinOp {
+            Some(operator) => UntypedExpr::BinOp {
                 location: SrcSpan {
-                    start: l.location().start,
-                    end: r.location().end,
+                    start: left.location().start,
+                    end: right.location().end,
                 },
-                name: bin_op,
-                name_location: SrcSpan {
-                    start: token_start,
-                    end: token_end,
-                },
-                left: Box::new(l),
-                right: Box::new(r),
+                operator,
+                operator_start: token_start,
+                left: Box::new(left),
+                right: Box::new(right),
             },
             _ => {
                 panic!("Token could not be converted to binop.")
@@ -4904,21 +4947,21 @@ fn expr_op_reduction(
 }
 
 fn clause_guard_reduction(
-    (_, token, _): Spanned,
-    l: UntypedClauseGuard,
-    r: UntypedClauseGuard,
+    (start, token, _end): Spanned,
+    left: UntypedClauseGuard,
+    right: UntypedClauseGuard,
 ) -> UntypedClauseGuard {
     let location = SrcSpan {
-        start: l.location().start,
-        end: r.location().end,
+        start: left.location().start,
+        end: right.location().end,
     };
-    let left = Box::new(l);
-    let right = Box::new(r);
+    let left = Box::new(left);
+    let right = Box::new(right);
     let operator = tok_to_binop(&token).expect("Token could not be converted to binop.");
-
     UntypedClauseGuard::BinaryOperator {
         location,
         operator,
+        operator_start: start,
         left,
         right,
     }

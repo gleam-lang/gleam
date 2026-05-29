@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\nfn main(value: Result(ok, error)) {\n  let v = value\n  v\n}\n"
 ---
+
 fn main(value: Result(ok, error)) {
   let v = value
       ↑        

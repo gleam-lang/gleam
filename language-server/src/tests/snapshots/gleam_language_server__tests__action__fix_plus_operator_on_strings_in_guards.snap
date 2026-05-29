@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  let name = \"jak\"\n  case todo {\n    _ if \"hello, \" + name -> todo\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let name = "jak"
+  case todo {
+    _ if "hello, " + name -> todo
+          ▔▔▔▔▔▔▔▔▔▔▔↑           
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let name = "jak"
+  case todo {
+    _ if "hello, " <> name -> todo
+  }
+}

@@ -122,8 +122,7 @@ pub enum ParseErrorType {
     },
     CallInClauseGuard, // case x { _ if f() -> 1 }
     IfExpression,
-    ConstantRecordConstructorNoArguments, // const x = Record()
-    TypeDefinitionNoArguments,            // pub type Wibble() { ... }
+    TypeDefinitionNoArguments,     // pub type Wibble() { ... }
     UnknownAttributeRecordVariant, // an attribute was used that is not know for a custom type variant
     // a Python-like import was written, such as `import gleam.io`, instead of `import gleam/io`
     IncorrectImportModuleSeparator {
@@ -147,6 +146,8 @@ pub enum ParseErrorType {
         name: EcoString,
         arguments: Vec<EcoString>,
     },
+    // `const x = todo as` with no message after the `as`.
+    MissingConstantAsMessage,
 }
 
 pub(crate) struct ParseErrorDetails {
@@ -676,13 +677,6 @@ See: https://tour.gleam.run/flow-control/case-expressions/"
                 extra_labels: vec![],
             },
 
-            ParseErrorType::ConstantRecordConstructorNoArguments => ParseErrorDetails {
-                text: "A record must be passed arguments when constructed.".into(),
-                hint: None,
-                label_text: "I was expecting arguments here".into(),
-                extra_labels: vec![],
-            },
-
             ParseErrorType::TypeDefinitionNoArguments => ParseErrorDetails {
                 text: "A generic type must have at least a generic parameter.".into(),
                 hint: Some("If a type is not generic you should omit the `()`.".into()),
@@ -714,6 +708,13 @@ See: https://tour.gleam.run/flow-control/case-expressions/"
                 text: "".into(),
                 hint: None,
                 label_text: "A clause guard block cannot be empty".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::MissingConstantAsMessage => ParseErrorDetails {
+                text: "".into(),
+                hint: None,
+                label_text: "I was expecting to see a constant expression after this `as`".into(),
                 extra_labels: vec![],
             },
 

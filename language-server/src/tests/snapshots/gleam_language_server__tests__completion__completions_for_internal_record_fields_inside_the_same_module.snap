@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\n@internal\npub type Wibble {\n    Wibble(wibble: String, wobble: Int)\n}\n\nfn fun(wibble: Wibble) {\n  wibble.\n  //     ^ We should see some completions here!\n}\n"
 ---
+
 @internal
 pub type Wibble {
     Wibble(wibble: String, wobble: Int)

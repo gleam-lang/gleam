@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "pub type Box { Box(Int) }\npub fn main() {\n    let Box(innerValue) = Box(203)\n}"
 ---
 ----- BEFORE ACTION

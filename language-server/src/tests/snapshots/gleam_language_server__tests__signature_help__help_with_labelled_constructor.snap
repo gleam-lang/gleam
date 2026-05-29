@@ -1,7 +1,8 @@
 ---
-source: compiler-core/src/language_server/tests/signature_help.rs
+source: language-server/src/tests/signature_help.rs
 expression: "\npub type Pokemon {\n    Pokemon(name: String, types: List(String), moves: List(String))\n}\n\npub fn main() {\n    Pokemon(name: \"Jirachi\",)\n}\n    "
 ---
+
 pub type Pokemon {
     Pokemon(name: String, types: List(String), moves: List(String))
 }

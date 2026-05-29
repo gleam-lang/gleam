@@ -335,7 +335,6 @@ impl RemapIds {
                 module,
                 name,
                 arguments,
-                tag,
                 type_,
                 field_map,
                 record_constructor,
@@ -343,23 +342,24 @@ impl RemapIds {
                 location,
                 module,
                 name,
-                arguments: arguments
-                    .into_iter()
-                    .map(
-                        |CallArg {
-                             label,
-                             location,
-                             value,
-                             implicit,
-                         }| CallArg {
-                            label,
-                            location,
-                            value: self.constant(value),
-                            implicit,
-                        },
-                    )
-                    .collect(),
-                tag,
+                arguments: arguments.map(|arguments| {
+                    arguments
+                        .into_iter()
+                        .map(
+                            |CallArg {
+                                 label,
+                                 location,
+                                 value,
+                                 implicit,
+                             }| CallArg {
+                                label,
+                                location,
+                                value: self.constant(value),
+                                implicit,
+                            },
+                        )
+                        .collect()
+                }),
                 type_: self.type_(type_),
                 field_map,
                 record_constructor: record_constructor
@@ -376,7 +376,6 @@ impl RemapIds {
                         location: record_location,
                     },
                 arguments,
-                tag,
                 type_,
                 field_map,
             } => Constant::RecordUpdate {
@@ -402,7 +401,6 @@ impl RemapIds {
                         },
                     )
                     .collect(),
-                tag,
                 type_: self.type_(type_),
                 field_map,
             },
@@ -444,6 +442,15 @@ impl RemapIds {
                 location,
                 type_: self.type_(type_),
                 extra_information,
+            },
+            Constant::Todo {
+                location,
+                type_,
+                message,
+            } => Constant::Todo {
+                location,
+                type_: self.type_(type_),
+                message: message.map(|message| Box::new(self.constant(*message))),
             },
         }
     }

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/generics.rs
-assertion_line: 15
 expression: "pub type Animal(t) {\n  Cat(type_: t)\n  Dog(type_: t)\n}\n\npub fn main() {\n  Cat(type_: 6)\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub type Animal(t) {

@@ -22,7 +22,6 @@ pub enum Which {
     Dev,
 }
 
-// TODO: test
 pub fn command(
     paths: &ProjectPaths,
     arguments: Vec<String>,

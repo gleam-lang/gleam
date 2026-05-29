@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "fn ignore(thisIsALabel _ignore: Int) { 25 }"
 ---
 ----- BEFORE ACTION

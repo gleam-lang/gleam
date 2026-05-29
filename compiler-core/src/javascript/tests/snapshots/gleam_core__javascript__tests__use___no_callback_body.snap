@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/use_.rs
-assertion_line: 56
 expression: "\npub fn main() {\n  let thingy = fn(f) { f() }\n  use <- thingy()\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-assertion_line: 71
 expression: "\npub fn go(a) {\n  a == \"ok\"\n  a != \"ok\"\n  a == a\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/rename.rs
+source: language-server/src/tests/rename.rs
 expression: "\npub type Wibble {\n  Constructor(Int)\n}\n"
 ---
 Error response message:

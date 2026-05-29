@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn main() {\n  let assert <<x:unit(2)-bytes-size(3)>> = <<1:6>>\n  x\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let assert <<x:unit(2)-bytes-size(3)>> = <<1:6>>
+  x
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, toBitArray, bitArraySlice, sizedInt } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function main() {
+  let $ = toBitArray([sizedInt(1, 6, true)]);
+  let x;
+  if ($.bitSize === 6) {
+    x = bitArraySlice($, 0, 6);
+  } else {
+    throw makeError(
+      "let_assert",
+      FILEPATH,
+      "my/mod",
+      3,
+      "main",
+      "Pattern match failed, no pattern matched the value.",
+      { value: $, start: 19, end: 67, pattern_start: 30, pattern_end: 57 }
+    )
+  }
+  return x;
+}

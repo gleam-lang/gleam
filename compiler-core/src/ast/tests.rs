@@ -612,7 +612,7 @@ fn subtraction_is_left_associative_in_ast() {
     let expr = get_bare_expression(&statement);
 
     let TypedExpr::BinOp {
-        name: BinOp::SubInt,
+        operator: BinOp::SubInt,
         left,
         right,
         ..
@@ -630,7 +630,7 @@ fn subtraction_is_left_associative_in_ast() {
     assert_eq!(right_val, "3");
 
     let TypedExpr::BinOp {
-        name: BinOp::SubInt,
+        operator: BinOp::SubInt,
         left: ll,
         right: lr,
         ..

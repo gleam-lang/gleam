@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub const answer: Int = 42\npub const another_answer = 43\n\npub fn add_two(thing) -> Int {\n  thing + 2\n}\n\npub fn add_one(thing: Int) {\n  thing + 1\n}\n"
 ---
 ----- BEFORE ACTION

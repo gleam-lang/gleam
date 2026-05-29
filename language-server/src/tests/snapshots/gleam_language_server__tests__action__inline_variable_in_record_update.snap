@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\ntype Couple {\n  Couple(l: Int, r: Int)\n}\n\npub fn main() {\n  let c1 = Couple(l: 1, r: 1)\n  let c2 = Couple(..c1, r: 1)\n}\n"
 ---
 ----- BEFORE ACTION

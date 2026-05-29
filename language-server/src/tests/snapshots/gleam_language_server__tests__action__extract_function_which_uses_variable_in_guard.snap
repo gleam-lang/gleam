@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn do_things(a, b) {\n  let result = case Nil {\n    _ if a > b -> 17\n    _ if a < b -> 12\n    _ -> panic\n  }\n\n  result % 4\n}\n"
 ---
 ----- BEFORE ACTION

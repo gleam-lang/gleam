@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport option\n\nconst a = option.None\nconst b = option.Some(option.None)\n"
 ---
 ----- BEFORE ACTION

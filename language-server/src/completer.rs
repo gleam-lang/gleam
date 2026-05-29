@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use lsp_types::{
-    CompletionItem, CompletionItemKind, CompletionItemLabelDetails, CompletionTextEdit,
+    CompletionItem, CompletionItemKind, CompletionItemLabelDetails, CompletionItemTextEdit,
     Documentation, MarkupContent, MarkupKind, Position, Range, TextDocumentPositionParams,
     TextEdit,
 };
@@ -20,9 +20,9 @@ use gleam_core::{
     line_numbers::LineNumbers,
     parse::{LiteralFloatValue, parse_int_value},
     type_::{
-        self, FieldMap, ModuleInterface, PRELUDE_MODULE_NAME, PreludeType, RecordAccessor, Type,
-        TypeConstructor, ValueConstructorVariant, collapse_links, error::VariableOrigin,
-        pretty::Printer,
+        self, Deprecation, FieldMap, ModuleInterface, PRELUDE_MODULE_NAME, PreludeType,
+        RecordAccessor, Type, TypeConstructor, ValueConstructorVariant, collapse_links,
+        error::VariableOrigin, pretty::Printer,
     },
 };
 
@@ -146,6 +146,7 @@ enum TypeCompletionContext {
 /// wibble.w|ob
 /// //      ^ cursor here
 /// ```
+#[derive(Debug)]
 struct CursorSurroundings {
     /// The text surrounding the cursor. For example:
     ///
@@ -207,7 +208,7 @@ impl CursorSurroundings {
     /// > This could also return `None` as sometimes no further edit is actually
     /// > needed!
     ///
-    fn to_text_edit(&self, new_text: String) -> Option<CompletionTextEdit> {
+    fn to_text_edit(&self, new_text: String) -> Option<CompletionItemTextEdit> {
         // We need to check if the new text we're adding could actually be
         // a simple addition in the middle of something that is already being
         // typed.
@@ -246,14 +247,14 @@ impl CursorSurroundings {
             // This is one of the cases (like the one in the example above) were
             // the label is a more complete version of the text surrounding the
             // cursor. So we replace the entire range.
-            Some(_) => Some(CompletionTextEdit::Edit(TextEdit {
+            Some(_) => Some(CompletionItemTextEdit::TextEdit(TextEdit {
                 range: self.surrounding_text_range,
                 new_text,
             })),
             // In all other cases the completion is never meant to replace text
             // that comes after the cursor.
             // We only replace what comes before it with the new text.
-            None => Some(CompletionTextEdit::Edit(TextEdit {
+            None => Some(CompletionItemTextEdit::TextEdit(TextEdit {
                 range: self.text_before_cursor_range,
                 new_text,
             })),
@@ -301,10 +302,10 @@ impl<'a, IO> Completer<'a, IO> {
         }
     }
 
-    // Gets the current range around the cursor to place a completion
-    // and the phrase surrounding the cursor to use for completion.
-    // This method takes in a helper to determine what qualifies as
-    // a phrase depending on context.
+    /// Gets the current range around the cursor to place a completion
+    /// and the phrase surrounding the cursor to use for completion.
+    /// The `valid_phrase_char` is a function that returns true if a character
+    /// should be included in the phrase surrounding the cursor.
     fn get_phrase_surrounding_for_completion(
         &'a self,
         valid_phrase_char: &impl Fn(char) -> bool,
@@ -315,14 +316,20 @@ impl<'a, IO> Completer<'a, IO> {
         let before = self
             .src
             .get(..cursor as usize)
-            .and_then(|line| line.rsplit_once(valid_phrase_char).map(|r| r.1))
+            .and_then(|line| {
+                line.rsplit_once(|char| !valid_phrase_char(char))
+                    .map(|(_, suffix)| suffix)
+            })
             .unwrap_or("");
 
         // Get part of phrase following cursor
         let after = self
             .src
             .get(cursor as usize..)
-            .and_then(|line| line.split_once(valid_phrase_char).map(|r| r.0))
+            .and_then(|line| {
+                line.split_once(|char| !valid_phrase_char(char))
+                    .map(|(prefix, _)| prefix)
+            })
             .unwrap_or("");
 
         let text_before_cursor_range = Range {
@@ -358,10 +365,60 @@ impl<'a, IO> Completer<'a, IO> {
     // A continuous phrase in this case is a name or typename that may have a dot in it.
     // This is used to match the exact location to fill in the completion.
     fn get_phrase_surrounding_completion(&'a self) -> CursorSurroundings {
-        self.get_phrase_surrounding_for_completion(&|c: char| {
-            // Checks if a character is not a valid name/upname character or a dot.
-            !c.is_ascii_alphanumeric() && c != '.' && c != '_'
-        })
+        let cursor_surroundings = self.get_phrase_surrounding_for_completion(&|c: char| {
+            // Checks if a character is not a valid name/upname character or a
+            // dot.
+            c.is_ascii_alphanumeric() || c == '.' || c == '_'
+        });
+
+        // While a single `.` is ok to be in the cursor sentence, there's a
+        // special case where always accepting `.` is not ok: in list tails and
+        // record updates!
+        // In those case accepting a `.` means we would end up with a phrase
+        // surrounding the cursor that looks like this: `..wibble` and so we
+        // won't be able to show completions for that because it doesn't look
+        // like a module access or a name!
+        //
+        // So we need to do some final massaging of the cursor surroundings if
+        // we realise we have captures a `..` at the beginning of the sentence.
+        // This will allow the language server to provide good completions for
+        // list tails and record updates as well.
+        if cursor_surroundings.text_before_cursor.starts_with("..") {
+            let CursorSurroundings {
+                surrounding_text,
+                surrounding_text_range,
+                text_before_cursor,
+                text_before_cursor_range,
+                text_after_cursor,
+            } = cursor_surroundings;
+            let (_, text_before_cursor) = text_before_cursor.split_at(2);
+            let text_before_cursor_range = Range {
+                start: Position {
+                    character: text_before_cursor_range.start.character + 2,
+                    ..text_before_cursor_range.start
+                },
+                ..text_before_cursor_range
+            };
+
+            let (_, surrounding_text) = surrounding_text.split_at(2);
+            let surrounding_text_range = Range {
+                start: Position {
+                    character: surrounding_text_range.start.character + 2,
+                    ..surrounding_text_range.start
+                },
+                ..surrounding_text_range
+            };
+
+            CursorSurroundings {
+                surrounding_text: EcoString::from(surrounding_text),
+                surrounding_text_range,
+                text_before_cursor: EcoString::from(text_before_cursor),
+                text_before_cursor_range,
+                text_after_cursor,
+            }
+        } else {
+            cursor_surroundings
+        }
     }
 
     // Gets the current range around the cursor to place a completion.
@@ -371,11 +428,11 @@ impl<'a, IO> Completer<'a, IO> {
         self.get_phrase_surrounding_for_completion(&|c: char| {
             // Checks if a character is not a valid name/upname character or whitespace.
             // The newline character is not included as well.
-            !c.is_ascii_alphanumeric() && c != '_' && c != ' ' && c != '\t'
+            c.is_ascii_alphanumeric() || c == '_' || c == ' ' || c == '\t'
         })
     }
 
-    /// Checks if the line being editted is an import line and provides completions if it is.
+    /// Checks if the line being edited is an import line and provides completions if it is.
     /// If the line includes a dot then it provides unqualified import completions.
     /// Otherwise it provides direct module import completions.
     pub fn import_completions(&'a self) -> Option<Result<Option<Vec<CompletionItem>>>> {
@@ -458,6 +515,7 @@ impl<'a, IO> Completer<'a, IO> {
             // Skip types that should not be suggested
             if !self.is_suggestable_import(
                 &type_.publicity,
+                &type_.deprecation,
                 module_being_imported_from.package.as_str(),
             ) {
                 continue;
@@ -487,6 +545,7 @@ impl<'a, IO> Completer<'a, IO> {
             // Skip values that should not be suggested
             if !self.is_suggestable_import(
                 &value.publicity,
+                &value.deprecation,
                 module_being_imported_from.package.as_str(),
             ) {
                 continue;
@@ -575,8 +634,8 @@ impl<'a, IO> Completer<'a, IO> {
             .iter()
             .map(|(name, _)| CompletionItem {
                 label: name.to_string(),
-                kind: Some(CompletionItemKind::MODULE),
-                text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                kind: Some(CompletionItemKind::Module),
+                text_edit: Some(CompletionItemTextEdit::TextEdit(TextEdit {
                     range: Range { start, end },
                     new_text: name.to_string(),
                 })),
@@ -590,7 +649,7 @@ impl<'a, IO> Completer<'a, IO> {
     // be really hard to understand or use a lot of trait magic.
     // For now I've left it as is but might be worth revisiting.
 
-    /// Provides completions for when the context being editted is a type.
+    /// Provides completions for when the context being edited is a type.
     pub fn completion_types(&'a self) -> Vec<CompletionItem> {
         let cursor_surroundings = self.get_phrase_surrounding_completion();
         let selected_module = cursor_surroundings.selected_module();
@@ -623,7 +682,7 @@ impl<'a, IO> Completer<'a, IO> {
                 completions.push(CompletionItem {
                     label,
                     detail: Some("Type".into()),
-                    kind: Some(CompletionItemKind::CLASS),
+                    kind: Some(CompletionItemKind::Class),
                     sort_text,
                     ..Default::default()
                 });
@@ -642,7 +701,11 @@ impl<'a, IO> Completer<'a, IO> {
             };
 
             for (name, type_) in &module.types {
-                if !self.is_suggestable_import(&type_.publicity, module.package.as_str()) {
+                if !self.is_suggestable_import(
+                    &type_.publicity,
+                    &type_.deprecation,
+                    module.package.as_str(),
+                ) {
                     continue;
                 }
 
@@ -673,7 +736,7 @@ impl<'a, IO> Completer<'a, IO> {
             // unqualified module types are no longer relevant.
             if selected_module.is_none() {
                 for unqualified in &import.unqualified_types {
-                    if let Some(type_) = module.get_public_type(&unqualified.name) {
+                    if let Some(type_) = module.get_importable_type(&unqualified.name) {
                         completions.push(type_completion(
                             None,
                             unqualified.used_name(),
@@ -720,7 +783,11 @@ impl<'a, IO> Completer<'a, IO> {
 
             // Qualified types
             for (name, type_) in &module.types {
-                if !self.is_suggestable_import(&type_.publicity, module.package.as_str()) {
+                if !self.is_suggestable_import(
+                    &type_.publicity,
+                    &type_.deprecation,
+                    module.package.as_str(),
+                ) {
                     continue;
                 }
 
@@ -745,7 +812,7 @@ impl<'a, IO> Completer<'a, IO> {
         completions
     }
 
-    /// Provides completions for when the context being editted is a value.
+    /// Provides completions for when the context being edited is a value.
     pub fn completion_values(&'a self) -> Vec<CompletionItem> {
         let cursor_surroundings = self.get_phrase_surrounding_completion();
         let selected_module = cursor_surroundings.selected_module();
@@ -785,9 +852,10 @@ impl<'a, IO> Completer<'a, IO> {
         }
 
         // Module and prelude values
-        // Do not complete direct module values if the user has already started typing a module select.
-        // e.x. when the user has typed mymodule.| we know local module and prelude values are no longer
-        // relevant.
+        // Do not complete direct module values if the user has already started
+        // typing a module select.
+        // e.x. when the user has typed mymodule.| we know local module and
+        // prelude values are no longer relevant.
         if selected_module.is_none() {
             // Find the function that the cursor is in and push completions for
             // its arguments and local variables.
@@ -827,6 +895,11 @@ impl<'a, IO> Completer<'a, IO> {
             }
 
             let mut push_prelude_completion = |label: &str, kind, type_: Arc<Type>| {
+                match match_type(&self.expected_type, &type_) {
+                    TypeMatch::Incompatible => return,
+                    TypeMatch::Matching | TypeMatch::Unknown => (),
+                };
+
                 let label = label.to_string();
                 let sort_text = Some(sort_text(
                     CompletionKind::Prelude,
@@ -847,31 +920,31 @@ impl<'a, IO> Completer<'a, IO> {
                     PreludeType::Bool => {
                         push_prelude_completion(
                             "True",
-                            CompletionItemKind::ENUM_MEMBER,
+                            CompletionItemKind::EnumMember,
                             type_::bool(),
                         );
                         push_prelude_completion(
                             "False",
-                            CompletionItemKind::ENUM_MEMBER,
+                            CompletionItemKind::EnumMember,
                             type_::bool(),
                         );
                     }
                     PreludeType::Nil => {
                         push_prelude_completion(
                             "Nil",
-                            CompletionItemKind::ENUM_MEMBER,
+                            CompletionItemKind::EnumMember,
                             type_::nil(),
                         );
                     }
                     PreludeType::Result => {
                         push_prelude_completion(
                             "Ok",
-                            CompletionItemKind::CONSTRUCTOR,
+                            CompletionItemKind::Constructor,
                             type_::result(type_::unbound_var(0), type_::unbound_var(0)),
                         );
                         push_prelude_completion(
                             "Error",
-                            CompletionItemKind::CONSTRUCTOR,
+                            CompletionItemKind::Constructor,
                             type_::result(type_::unbound_var(0), type_::unbound_var(0)),
                         );
                     }
@@ -895,13 +968,19 @@ impl<'a, IO> Completer<'a, IO> {
 
             // Qualified values
             for (name, value) in &module.values {
-                if !self.is_suggestable_import(&value.publicity, module.package.as_str()) {
+                if !self.is_suggestable_import(
+                    &value.publicity,
+                    &value.deprecation,
+                    module.package.as_str(),
+                ) {
                     continue;
                 }
 
                 if let Some(module) = import.used_name() {
-                    // If the user has already started a module select then don't show irrelevant modules.
-                    // e.x. when the user has typed mymodule.| we should only show items from mymodule.
+                    // If the user has already started a module select then
+                    // don't show irrelevant modules.
+                    // e.x. when the user has typed mymodule.| we should only
+                    // show items from mymodule.
                     if let Some(input_mod_name) = &selected_module
                         && &module != input_mod_name
                     {
@@ -919,11 +998,13 @@ impl<'a, IO> Completer<'a, IO> {
             }
 
             // Unqualified values
-            // Do not complete unqualified values if the user has already started typing a module select.
-            // e.x. when the user has typed mymodule.| we know unqualified module values are no longer relevant.
+            // Do not complete unqualified values if the user has already
+            // started typing a module select.
+            // e.x. when the user has typed mymodule.| we know unqualified
+            // module values are no longer relevant.
             if selected_module.is_none() {
                 for unqualified in &import.unqualified_values {
-                    if let Some(value) = module.get_public_value(&unqualified.name) {
+                    if let Some(value) = module.get_importable_value(&unqualified.name) {
                         let name = unqualified.used_name();
                         completions.push(self.value_completion(
                             None,
@@ -959,8 +1040,10 @@ impl<'a, IO> Completer<'a, IO> {
                 .next_back()
                 .unwrap_or(module_full_name);
 
-            // If the user has already started a module select then don't show irrelevant modules.
-            // e.x. when the user has typed mymodule.| we should only show items from mymodule.
+            // If the user has already started a module select then don't show
+            // irrelevant modules.
+            // e.x. when the user has typed mymodule.| we should only show items
+            // from mymodule.
             if let Some(selected_module) = &selected_module
                 && qualifier != selected_module
             {
@@ -969,7 +1052,11 @@ impl<'a, IO> Completer<'a, IO> {
 
             // Qualified values
             for (name, value) in &module.values {
-                if !self.is_suggestable_import(&value.publicity, module.package.as_str()) {
+                if !self.is_suggestable_import(
+                    &value.publicity,
+                    &value.deprecation,
+                    module.package.as_str(),
+                ) {
                     continue;
                 }
 
@@ -1010,15 +1097,17 @@ impl<'a, IO> Completer<'a, IO> {
                 ..
             } => importable_modules
                 .get(module)
-                .and_then(|i| i.accessors.get(name))
-                .filter(|a| a.publicity.is_importable() || module == &self.module.name)
-                .map(|a| a.accessors_for_variant(*inferred_variant)),
+                .and_then(|interface| interface.accessors.get(name))
+                .filter(|accessor| {
+                    accessor.publicity.is_importable() || module == &self.module.name
+                })
+                .map(|accessor| accessor.accessors_for_variant(*inferred_variant)),
 
             Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => None,
         }
     }
 
-    /// Provides completions for field accessors when the context being editted
+    /// Provides completions for field accessors when the context being edited
     /// is a custom type instance
     pub fn completion_field_accessors(&'a self, type_: Arc<Type>) -> Vec<CompletionItem> {
         if let Type::Named {
@@ -1087,7 +1176,7 @@ impl<'a, IO> Completer<'a, IO> {
         }
     }
 
-    /// Provides completions for labels when the context being editted is a call
+    /// Provides completions for labels when the context being edited is a call
     /// that has labelled arguments that can be passed
     pub fn completion_labels(
         &'a self,
@@ -1130,7 +1219,7 @@ impl<'a, IO> Completer<'a, IO> {
                 CompletionItem {
                     label,
                     detail,
-                    kind: Some(CompletionItemKind::FIELD),
+                    kind: Some(CompletionItemKind::Field),
                     sort_text,
                     ..Default::default()
                 }
@@ -1142,8 +1231,19 @@ impl<'a, IO> Completer<'a, IO> {
         self.compiler.project_compiler.config.name.as_str()
     }
 
-    // checks based on the publicity if something should be suggested for import from root package
-    fn is_suggestable_import(&self, publicity: &Publicity, package: &str) -> bool {
+    // Checks based on the publicity and deprecation if something should be
+    // suggested for import from root package
+    fn is_suggestable_import(
+        &self,
+        publicity: &Publicity,
+        deprecation: &Deprecation,
+        package: &str,
+    ) -> bool {
+        // We always skip deprecated values
+        if deprecation.is_deprecated() {
+            return false;
+        }
+
         match publicity {
             // We skip private types as we never want those to appear in
             // completions.
@@ -1166,7 +1266,7 @@ impl<'a, IO> Completer<'a, IO> {
 
         CompletionItem {
             label: label.clone(),
-            kind: Some(CompletionItemKind::KEYWORD),
+            kind: Some(CompletionItemKind::Keyword),
             detail: None,
             label_details: None,
             documentation: None,
@@ -1198,11 +1298,11 @@ impl<'a, IO> Completer<'a, IO> {
         let type_ = Printer::new().pretty_print(&value.type_, 0);
 
         let kind = Some(match value.variant {
-            ValueConstructorVariant::LocalVariable { .. } => CompletionItemKind::VARIABLE,
-            ValueConstructorVariant::ModuleConstant { .. } => CompletionItemKind::CONSTANT,
-            ValueConstructorVariant::ModuleFn { .. } => CompletionItemKind::FUNCTION,
-            ValueConstructorVariant::Record { arity: 0, .. } => CompletionItemKind::ENUM_MEMBER,
-            ValueConstructorVariant::Record { .. } => CompletionItemKind::CONSTRUCTOR,
+            ValueConstructorVariant::LocalVariable { .. } => CompletionItemKind::Variable,
+            ValueConstructorVariant::ModuleConstant { .. } => CompletionItemKind::Constant,
+            ValueConstructorVariant::ModuleFn { .. } => CompletionItemKind::Function,
+            ValueConstructorVariant::Record { arity: 0, .. } => CompletionItemKind::EnumMember,
+            ValueConstructorVariant::Record { .. } => CompletionItemKind::Constructor,
         });
 
         let documentation = value.get_documentation().map(|documentation| {
@@ -1233,7 +1333,7 @@ impl<'a, IO> Completer<'a, IO> {
 
         CompletionItem {
             label: label.into(),
-            kind: Some(CompletionItemKind::FIELD),
+            kind: Some(CompletionItemKind::Field),
             detail: Some(type_),
             sort_text: Some(sort_text(CompletionKind::FieldAccessor, label, type_match)),
             ..Default::default()
@@ -1268,9 +1368,9 @@ fn type_completion(
     };
 
     let kind = Some(if type_.type_.is_variable() {
-        CompletionItemKind::VARIABLE
+        CompletionItemKind::Variable
     } else {
-        CompletionItemKind::CLASS
+        CompletionItemKind::Class
     });
 
     let completion_text = match type_completion_context {
@@ -1396,7 +1496,7 @@ impl<'a> LocalCompletion<'a> {
 
         CompletionItem {
             label: label.clone(),
-            kind: Some(CompletionItemKind::VARIABLE),
+            kind: Some(CompletionItemKind::Variable),
             detail: Some(type_),
             label_details: Some(CompletionItemLabelDetails {
                 detail: None,
@@ -1408,7 +1508,7 @@ impl<'a> LocalCompletion<'a> {
                 &label,
                 type_match,
             )),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+            text_edit: Some(CompletionItemTextEdit::TextEdit(TextEdit {
                 range: insert_range,
                 new_text: label.clone(),
             })),

@@ -1,0 +1,42 @@
+---
+source: language-server/src/tests/completion.rs
+expression: import dep
+---
+|import dep
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   5_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   5_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   5_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   5_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   5_True
+dep.Wobble
+  kind:   EnumMember
+  detail: Wobble
+  sort:   4_dep.Wobble
+  desc:   app
+  edits:
+    [1:0-1:0]: "dep.Wobble"
+dep.wobble
+  kind:   Function
+  detail: fn() -> a
+  sort:   4_dep.wobble
+  desc:   app
+  edits:
+    [1:0-1:0]: "dep.wobble"

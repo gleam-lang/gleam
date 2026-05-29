@@ -2,6 +2,8 @@
 source: language-server/src/tests/completion.rs
 expression: ""
 ---
+
+
 ----- Completion content -----
 Error
   kind:   Constructor

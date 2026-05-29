@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 110
 expression: "\npub fn go() {\n  <<1.1:float-32-little>>\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

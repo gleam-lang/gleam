@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/lists.rs
-assertion_line: 31
 expression: "\npub fn go(x) {\n    [{True 1}]\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

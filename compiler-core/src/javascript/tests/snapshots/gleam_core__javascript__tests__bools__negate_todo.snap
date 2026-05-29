@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-assertion_line: 207
 expression: "pub fn negate(x) {\n  !todo\n}"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn negate(x) {

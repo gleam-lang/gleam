@@ -17,6 +17,8 @@ expression: "\npub fn go(x) {\n  <<256:int>>\n}\n"
 5 |}
 
 ----- SOURCE MAP
+File: my/mod.mjs
+Sources: mod.gleam
 Mappings:
 ----- 
 

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/panic.rs
-assertion_line: 51
 expression: "\npub fn go(f) {\n  f |> panic\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 297
 expression: "\npub fn go(x) {\n  case x {\n    <<\"\\\"\\\\\\r\\n\\t\\f\\u{1f600}\">> -> 1\n    _ -> 2\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

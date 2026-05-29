@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-assertion_line: 5
 expression: "\npub fn go() {\n    True\n    False\n    Nil\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

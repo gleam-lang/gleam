@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport option\nimport wobble\n\npub fn main() {\n  option.Some(2)\n  wobble.Wibble(1)\n}\n"
 ---
 ----- BEFORE ACTION

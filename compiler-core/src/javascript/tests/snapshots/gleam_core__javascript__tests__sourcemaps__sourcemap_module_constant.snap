@@ -24,6 +24,8 @@ expression: "\n/// my constant\npub const wibble = 1\n/// wobble\nconst wobble =
 9 |export const wabble = 3;
 
 ----- SOURCE MAP
+File: my/mod.mjs
+Sources: mod.gleam
 Mappings:
 ----- 
 

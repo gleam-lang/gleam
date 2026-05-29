@@ -1031,8 +1031,8 @@ impl TypedImport {
     }
 }
 
-pub type UntypedModuleConstant = ModuleConstant<(), ()>;
-pub type TypedModuleConstant = ModuleConstant<Arc<Type>, EcoString>;
+pub type UntypedModuleConstant = ModuleConstant<()>;
+pub type TypedModuleConstant = ModuleConstant<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A certain fixed value that can be used in multiple places
@@ -1043,7 +1043,7 @@ pub type TypedModuleConstant = ModuleConstant<Arc<Type>, EcoString>;
 /// pub const start_year = 2101
 /// pub const end_year = 2111
 /// ```
-pub struct ModuleConstant<T, ConstantRecordTag> {
+pub struct ModuleConstant<T> {
     pub documentation: Option<(u32, EcoString)>,
     /// The location of the constant, starting at the "(pub) const" keywords and
     /// ending after the ": Type" annotation, or (without an annotation) after its name.
@@ -1052,7 +1052,7 @@ pub struct ModuleConstant<T, ConstantRecordTag> {
     pub name: EcoString,
     pub name_location: SrcSpan,
     pub annotation: Option<TypeAst>,
-    pub value: Box<Constant<T, ConstantRecordTag>>,
+    pub value: Box<Constant<T>>,
     pub type_: T,
     pub deprecation: Deprecation,
     pub implementations: Implementations,
@@ -1195,18 +1195,18 @@ impl TypedTypeAlias {
     }
 }
 
-pub type UntypedDefinition = Definition<(), UntypedExpr, (), ()>;
+pub type UntypedDefinition = Definition<(), UntypedExpr, ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Definition<T, Expr, ConstantRecordTag, PackageName> {
+pub enum Definition<T, Expr, PackageName> {
     Function(Function<T, Expr>),
     TypeAlias(TypeAlias<T>),
     CustomType(CustomType<T>),
     Import(Import<PackageName>),
-    ModuleConstant(ModuleConstant<T, ConstantRecordTag>),
+    ModuleConstant(ModuleConstant<T>),
 }
 
-impl<A, B, C, E> Definition<A, B, C, E> {
+impl<A, B, C> Definition<A, B, C> {
     pub fn location(&self) -> SrcSpan {
         match self {
             Definition::Function(Function { location, .. })
@@ -1567,6 +1567,35 @@ impl BinOp {
             | BinOp::Concatenate => None,
         }
     }
+
+    /// This returns how many characters this operator takes.
+    pub fn size(&self) -> u32 {
+        match self {
+            BinOp::LtInt
+            | BinOp::GtInt
+            | BinOp::RemainderInt
+            | BinOp::MultInt
+            | BinOp::AddInt
+            | BinOp::SubInt
+            | BinOp::DivInt => 1,
+
+            BinOp::And
+            | BinOp::Or
+            | BinOp::Eq
+            | BinOp::NotEq
+            | BinOp::LtEqInt
+            | BinOp::GtEqInt
+            | BinOp::LtFloat
+            | BinOp::GtFloat
+            | BinOp::AddFloat
+            | BinOp::SubFloat
+            | BinOp::MultFloat
+            | BinOp::DivFloat
+            | BinOp::Concatenate => 2,
+
+            BinOp::LtEqFloat | BinOp::GtEqFloat => 3,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, serde::Serialize, serde::Deserialize)]
@@ -1834,20 +1863,20 @@ pub type MultiPattern<Type> = Vec<Pattern<Type>>;
 pub type UntypedMultiPattern = MultiPattern<()>;
 pub type TypedMultiPattern = MultiPattern<Arc<Type>>;
 
-pub type TypedClause = Clause<TypedExpr, Arc<Type>, EcoString>;
+pub type TypedClause = Clause<TypedExpr, Arc<Type>>;
 
-pub type UntypedClause = Clause<UntypedExpr, (), ()>;
+pub type UntypedClause = Clause<UntypedExpr, ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Clause<Expr, Type, RecordTag> {
+pub struct Clause<Expr, Type> {
     pub location: SrcSpan,
     pub pattern: MultiPattern<Type>,
     pub alternative_patterns: Vec<MultiPattern<Type>>,
-    pub guard: Option<ClauseGuard<Type, RecordTag>>,
+    pub guard: Option<ClauseGuard<Type>>,
     pub then: Expr,
 }
 
-impl<A, B, C> Clause<A, B, C> {
+impl<A, B> Clause<A, B> {
     pub fn pattern_count(&self) -> usize {
         1 + self.alternative_patterns.len()
     }
@@ -2044,7 +2073,7 @@ fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &Type
                 ..
             },
             TypedExpr::BinOp {
-                name: BinOp::Concatenate,
+                operator: BinOp::Concatenate,
                 left,
                 right,
                 ..
@@ -2247,19 +2276,25 @@ fn pattern_and_expression_are_the_same(pattern: &TypedPattern, expression: &Type
     }
 }
 
-pub type UntypedClauseGuard = ClauseGuard<(), ()>;
-pub type TypedClauseGuard = ClauseGuard<Arc<Type>, EcoString>;
+pub type UntypedClauseGuard = ClauseGuard<()>;
+pub type TypedClauseGuard = ClauseGuard<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ClauseGuard<Type, RecordTag> {
+pub enum ClauseGuard<Type> {
     Block {
         location: SrcSpan,
-        value: Box<ClauseGuard<Type, RecordTag>>,
+        value: Box<ClauseGuard<Type>>,
     },
 
     BinaryOperator {
         location: SrcSpan,
         operator: BinOp,
+        /// This is where the operator starts in the code. For example:
+        /// ```gleam
+        /// _ if 1.0 >=. 2.3 -> todo
+        /// //       ^ Here!
+        /// ```
+        operator_start: u32,
         left: Box<Self>,
         right: Box<Self>,
     },
@@ -2300,13 +2335,18 @@ pub enum ClauseGuard<Type, RecordTag> {
         label: EcoString,
         module_name: EcoString,
         module_alias: EcoString,
-        literal: Constant<Type, RecordTag>,
+        literal: Constant<Type>,
     },
 
-    Constant(Constant<Type, RecordTag>),
+    Constant(Constant<Type>),
+
+    Invalid {
+        location: SrcSpan,
+        type_: Type,
+    },
 }
 
-impl<A, B> ClauseGuard<A, B> {
+impl<A> ClauseGuard<A> {
     pub fn location(&self) -> SrcSpan {
         match self {
             ClauseGuard::Constant(constant) => constant.location(),
@@ -2315,6 +2355,7 @@ impl<A, B> ClauseGuard<A, B> {
             | ClauseGuard::Var { location, .. }
             | ClauseGuard::TupleIndex { location, .. }
             | ClauseGuard::ModuleSelect { location, .. }
+            | ClauseGuard::Invalid { location, .. }
             | ClauseGuard::Block { location, .. } => *location,
             ClauseGuard::FieldAccess {
                 label_location,
@@ -2337,6 +2378,7 @@ impl<A, B> ClauseGuard<A, B> {
             ClauseGuard::BinaryOperator { operator, .. } => Some(*operator),
 
             ClauseGuard::Constant(_)
+            | ClauseGuard::Invalid { .. }
             | ClauseGuard::Var { .. }
             | ClauseGuard::Not { .. }
             | ClauseGuard::TupleIndex { .. }
@@ -2356,6 +2398,7 @@ impl TypedClauseGuard {
             ClauseGuard::ModuleSelect { type_, .. } => type_.clone(),
             ClauseGuard::Constant(constant) => constant.type_(),
             ClauseGuard::Block { value, .. } => value.type_(),
+            ClauseGuard::Invalid { type_, .. } => type_.clone(),
 
             ClauseGuard::Not { .. } => type_::bool(),
 
@@ -2426,6 +2469,7 @@ impl TypedClauseGuard {
             | ClauseGuard::Block { value, .. } => value.find_node(byte_index),
             ClauseGuard::Constant(constant) => constant.find_node(byte_index),
             ClauseGuard::Var { .. } => Some(Located::ClauseGuard(self)),
+            ClauseGuard::Invalid { .. } => Some(Located::ClauseGuard(self)),
         }
     }
 
@@ -2439,6 +2483,7 @@ impl TypedClauseGuard {
             ClauseGuard::FieldAccess { container, .. } => container.referenced_variables(),
             ClauseGuard::Constant(constant) => constant.referenced_variables(),
             ClauseGuard::ModuleSelect { .. } => im::HashSet::new(),
+            ClauseGuard::Invalid { .. } => im::HashSet::new(),
 
             ClauseGuard::BinaryOperator { left, right, .. } => left
                 .referenced_variables()
@@ -2523,6 +2568,9 @@ impl TypedClauseGuard {
                 one.syntactically_eq(other)
             }
             (ClauseGuard::Constant(_), _) => false,
+
+            // An invalid guard is never the same as another one
+            (ClauseGuard::Invalid { .. }, _) => false,
         }
     }
 
@@ -2532,6 +2580,7 @@ impl TypedClauseGuard {
             | ClauseGuard::BinaryOperator { .. }
             | ClauseGuard::Not { .. }
             | ClauseGuard::TupleIndex { .. }
+            | ClauseGuard::Invalid { .. }
             | ClauseGuard::FieldAccess { .. } => None,
             ClauseGuard::Constant(constant) => constant.definition_location(),
             ClauseGuard::Var {
@@ -3662,12 +3711,16 @@ impl<Value, Type> BitArraySegment<Value, Type> {
         })
     }
 
+    /// Returns the unit of `size` in the bit array segment. The `unit` option
+    /// overrides the `bytes` option, so if a segment has both, the unit is what
+    /// is specified in `unit`, not 8.
     pub fn unit(&self) -> u8 {
-        self.options
-            .iter()
-            .find_map(|option| match option {
-                BitArrayOption::Unit { value, .. } => Some(*value),
-                BitArrayOption::Bytes { .. } => Some(8),
+        let mut has_bytes_option = false;
+
+        for option in self.options.iter() {
+            match option {
+                BitArrayOption::Unit { value, .. } => return *value,
+                BitArrayOption::Bytes { .. } => has_bytes_option = true,
                 BitArrayOption::Int { .. }
                 | BitArrayOption::Float { .. }
                 | BitArrayOption::Bits { .. }
@@ -3682,9 +3735,11 @@ impl<Value, Type> BitArraySegment<Value, Type> {
                 | BitArrayOption::Big { .. }
                 | BitArrayOption::Little { .. }
                 | BitArrayOption::Native { .. }
-                | BitArrayOption::Size { .. } => None,
-            })
-            .unwrap_or(1)
+                | BitArrayOption::Size { .. } => {}
+            }
+        }
+
+        if has_bytes_option { 8 } else { 1 }
     }
 
     pub(crate) fn has_bits_option(&self) -> bool {

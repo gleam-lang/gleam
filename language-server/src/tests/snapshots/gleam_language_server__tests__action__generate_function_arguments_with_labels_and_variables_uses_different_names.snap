@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  let list = [2, 4, 5]\n  let value = 1\n  find(each: value, in: list)\n}\n"
 ---
 ----- BEFORE ACTION

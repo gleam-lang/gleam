@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\nconst bits = <<1:2, 3:4>>\n"
 ---
+
 const bits = <<1:2, 3:4>>
                  ▔↑      
 

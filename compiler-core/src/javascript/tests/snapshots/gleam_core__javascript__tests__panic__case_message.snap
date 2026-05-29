@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/panic.rs
-assertion_line: 88
 expression: "\npub fn crash(message) {\n  panic as case message {\n    Ok(message) -> message\n    Error(_) -> \"No message provided\"\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\nimport wibble\n\npub fn main(w: wibble.Wibble) {\n  todo\n}\n"
 ---
+
 import wibble
 
 pub fn main(w: wibble.Wibble) {

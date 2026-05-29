@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub type Example {\n  Example(sum: Int, nil: Nil)\n}\n\npub fn main() {\n  let sum = 1 + 1\n\n  Example(Nil, sum:)\n}\n"
 ---
 ----- BEFORE ACTION

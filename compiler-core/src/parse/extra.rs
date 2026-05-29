@@ -185,7 +185,7 @@ mod tests {
     fn first_comment_between_at_end_of_range() {
         let extra = set_up_extra();
         assert!(matches!(
-            dbg!(extra.first_comment_between(55, 60)),
+            extra.first_comment_between(55, 60),
             Some(SrcSpan { start: 60, end: 70 })
         ));
     }

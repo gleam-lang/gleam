@@ -76,10 +76,6 @@ export function go() {
   return new Cat("Nubi", 3);
 }
 
-export function access(cat) {
-  return cat.cuteness;
-}
-
 export function new_cat() {
   return new Cat("Beau", 11);
 }
@@ -92,4 +88,8 @@ export function update(cat) {
   let box = new Box(cat);
   let _record$1 = box.occupant;
   return new Cat(_record$1.name, box.occupant.cuteness + 1);
+}
+
+export function access(cat) {
+  return cat.cuteness;
 }

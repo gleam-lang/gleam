@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 276
 expression: "\npub const x = 09_179\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

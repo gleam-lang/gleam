@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
-assertion_line: 114
 expression: "\npub fn go() {\n  \"one\"\n  \"two\"\n  \"three\"\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "const number = 123\n\npub fn main() {\n  use x <- result.try(todo)\n  Ok(number)\n}"
 ---
 ----- BEFORE ACTION

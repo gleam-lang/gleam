@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 242
 expression: "\npub fn go(x, y) {\n  <<x:size(y)>>\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\nimport wibble/wobble\n\ntype Wubble = wobble.Wibble\n\nfn main(wibble: Wubble) {\n  wibble\n}\n"
 ---
+
 import wibble/wobble
 
 type Wubble = wobble.Wibble

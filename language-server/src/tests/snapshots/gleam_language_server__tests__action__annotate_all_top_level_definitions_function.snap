@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn add_two(thing) {\n  thing + 2\n}\n\npub fn add_one(thing) {\n  thing + 1\n}\n"
 ---
 ----- BEFORE ACTION

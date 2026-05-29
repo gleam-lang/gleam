@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\npub fn main() {\n  let add_one = fn(wibble: Int) { wibble + 1 }\n  add_one(1)\n}\n"
 ---
+
 pub fn main() {
   let add_one = fn(wibble: Int) { wibble| + 1 }
   add_one(1)
@@ -9,26 +10,6 @@ pub fn main() {
 
 
 ----- Completion content -----
-Error
-  kind:   Constructor
-  detail: gleam
-  sort:   5_Error
-False
-  kind:   EnumMember
-  detail: gleam
-  sort:   5_False
-Nil
-  kind:   EnumMember
-  detail: gleam
-  sort:   5_Nil
-Ok
-  kind:   Constructor
-  detail: gleam
-  sort:   5_Ok
-True
-  kind:   EnumMember
-  detail: gleam
-  sort:   5_True
 main
   kind:   Function
   detail: fn() -> Int

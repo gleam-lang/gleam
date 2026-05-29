@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\npub type Wibble {\n  Wibble(\n    /// This is some documentation about the wibble field.\n    wibble: Int\n  )\n  Wobble(\n    /// Here's some documentation explaining a field of Wobble\n    wibble: Int\n  )\n}\n\npub fn wibble(w: Wibble) {\n  w.wibble\n}\n"
 ---
+
 pub type Wibble {
   Wibble(
     /// This is some documentation about the wibble field.

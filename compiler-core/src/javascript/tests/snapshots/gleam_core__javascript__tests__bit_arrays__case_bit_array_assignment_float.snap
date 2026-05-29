@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
 expression: "\npub fn go(x) {\n case x {\n    <<3.14 as pi:float>>\n    | <<1.1 as pi:float, _:bytes>> -> pi\n    _ -> 1.1\n }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -23,7 +24,7 @@ export function go(x) {
       return pi;
     } else if (
       bitArraySliceToFloat(x, 0, 64, true) === 1.1 &&
-      (x.bitSize - 64) % 8 === 0
+      x.bitSize % 8 === 0
     ) {
       let pi = 1.1;
       return pi;
@@ -33,7 +34,7 @@ export function go(x) {
   } else if (
     x.bitSize >= 64 &&
     bitArraySliceToFloat(x, 0, 64, true) === 1.1 &&
-    (x.bitSize - 64) % 8 === 0
+    x.bitSize % 8 === 0
   ) {
     let pi = 1.1;
     return pi;

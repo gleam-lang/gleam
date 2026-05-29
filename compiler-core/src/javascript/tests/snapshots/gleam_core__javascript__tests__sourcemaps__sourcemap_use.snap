@@ -24,6 +24,8 @@ expression: "\nfn add_3_to_result(i, f) {\n    f(i) + 3\n}\n\npub fn go(x) {\n  
 7 |}
 
 ----- SOURCE MAP
+File: my/mod.mjs
+Sources: mod.gleam
 Mappings:
 ----- 
 

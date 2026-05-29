@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\nimport dep.{}\n\npub fn main() {\n  0\n}"
 ---
+
 import dep.{|}
 
 pub fn main() {

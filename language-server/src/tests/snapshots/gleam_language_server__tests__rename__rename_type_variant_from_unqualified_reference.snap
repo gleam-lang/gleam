@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/rename.rs
+source: language-server/src/tests/rename.rs
 expression: "\nimport mod.{Constructor}\n\npub fn main() {\n  #(Constructor(75), mod.Constructor(57))\n}\n"
 ---
 ----- BEFORE RENAME

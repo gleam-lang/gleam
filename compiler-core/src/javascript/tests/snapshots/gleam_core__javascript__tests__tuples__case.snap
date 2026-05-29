@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/tuples.rs
-assertion_line: 122
 expression: "\npub fn go(a) {\n  case a {\n    #(2, a) -> a\n    #(1, 1) -> 1\n    #(a, b) -> a + b\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

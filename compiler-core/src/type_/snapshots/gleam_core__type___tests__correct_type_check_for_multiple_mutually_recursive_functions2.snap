@@ -1,0 +1,85 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "\npub fn main() {\n  let _ = step(Leaf, Leaf)\n  Nil\n}\n\ntype Tree {\n  Leaf\n  Node(List(Tree))\n}\n\nfn step(left: Tree, right: Tree) -> Int {\n  sum(diff(left, right, []))\n}\n\nfn sum(xs: List(Int)) -> Int {\n  case xs {\n    [] -> 0\n    [first, ..rest] -> first + sum(rest)\n  }\n}\n\nfn diff(left, right, effect) {\n  case left, right {\n    Node(olds), Node(news) -> diff_batch(olds, news, effect)\n    _, _ -> start(right, effect)\n  }\n}\n\nfn diff_batch(left, right, effect) {\n  case left, right {\n    [old, ..left], [new, ..right] ->\n      diff_batch(left, right, diff(old, new, effect))\n    _, _ -> effect\n  }\n}\n\nfn start(node, effect) {\n  case node {\n    Leaf -> \"wat\"\n    Node(children) -> start_batch(children, effect)\n  }\n}\n\nfn start_batch(children, effect) {\n  case children {\n    [] -> effect\n    [child, ..rest] -> start_batch(rest, start(child, effect))\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let _ = step(Leaf, Leaf)
+  Nil
+}
+
+type Tree {
+  Leaf
+  Node(List(Tree))
+}
+
+fn step(left: Tree, right: Tree) -> Int {
+  sum(diff(left, right, []))
+}
+
+fn sum(xs: List(Int)) -> Int {
+  case xs {
+    [] -> 0
+    [first, ..rest] -> first + sum(rest)
+  }
+}
+
+fn diff(left, right, effect) {
+  case left, right {
+    Node(olds), Node(news) -> diff_batch(olds, news, effect)
+    _, _ -> start(right, effect)
+  }
+}
+
+fn diff_batch(left, right, effect) {
+  case left, right {
+    [old, ..left], [new, ..right] ->
+      diff_batch(left, right, diff(old, new, effect))
+    _, _ -> effect
+  }
+}
+
+fn start(node, effect) {
+  case node {
+    Leaf -> "wat"
+    Node(children) -> start_batch(children, effect)
+  }
+}
+
+fn start_batch(children, effect) {
+  case children {
+    [] -> effect
+    [child, ..rest] -> start_batch(rest, start(child, effect))
+  }
+}
+
+
+----- ERROR
+error: Type mismatch
+   ┌─ /src/one/two.gleam:13:7
+   │
+13 │   sum(diff(left, right, []))
+   │       ^^^^^^^^^^^^^^^^^^^^^
+
+Expected type:
+
+    List(Int)
+
+Found type:
+
+    String
+
+error: Type mismatch
+   ┌─ /src/one/two.gleam:13:25
+   │
+13 │   sum(diff(left, right, []))
+   │                         ^^
+
+Expected type:
+
+    String
+
+Found type:
+
+    List(a)

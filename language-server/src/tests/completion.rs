@@ -29,7 +29,7 @@ fn apply_completion(src: &str, completions: Vec<CompletionItem>, value: &str) ->
         .unwrap_or_else(|| panic!("no completion with value `{value}`"));
 
     let mut edits = vec![];
-    if let Some(lsp_types::CompletionTextEdit::Edit(edit)) = &completion.text_edit {
+    if let Some(lsp_types::CompletionItemTextEdit::TextEdit(edit)) = &completion.text_edit {
         edits.push(edit.clone());
     }
     apply_code_edit(src, edits)
@@ -98,6 +98,7 @@ fn format_completion_results(completions: Vec<CompletionItem>) -> EcoString {
         kind,
         detail,
         documentation,
+        #[allow(deprecated)]
         deprecated,
         preselect,
         sort_text,
@@ -111,6 +112,7 @@ fn format_completion_results(completions: Vec<CompletionItem>) -> EcoString {
         commit_characters,
         data,
         tags,
+        text_edit_text,
     } in completions
     {
         assert!(deprecated.is_none());
@@ -123,6 +125,7 @@ fn format_completion_results(completions: Vec<CompletionItem>) -> EcoString {
         assert!(commit_characters.is_none());
         assert!(data.is_none());
         assert!(tags.is_none());
+        assert!(text_edit_text.is_none());
 
         buffer.push_str(&label);
 
@@ -167,7 +170,7 @@ fn format_completion_results(completions: Vec<CompletionItem>) -> EcoString {
         };
 
         if let Some(text_edit) = text_edit {
-            let lsp_types::CompletionTextEdit::Edit(e) = text_edit else {
+            let lsp_types::CompletionItemTextEdit::TextEdit(e) = text_edit else {
                 panic!("unexpected text edit in test {text_edit:?}");
             };
             buffer.push_str("\n  edits:");
@@ -2487,5 +2490,206 @@ pub fn main() {
         )
         .add_dep_module("option", OPTION_MODULE),
         Position::new(3, 16)
+    );
+}
+
+#[test]
+fn completions_when_typing_list_tail() {
+    assert_completion!(
+        TestProject::for_source(
+            "
+pub fn main() {
+  let wibble = [1, 2]
+  [3, 4, ..w]
+}
+"
+        ),
+        Position::new(3, 12)
+    );
+}
+
+#[test]
+fn completions_when_typing_record_update() {
+    assert_completion!(
+        TestProject::for_source(
+            "
+pub type Wibble { Wibble(a: Int, b: String) }
+
+pub fn main() {
+  let wibble = todo
+  Wibble(..w)
+}
+"
+        ),
+        Position::new(5, 12)
+    );
+}
+
+#[test]
+fn do_not_show_completions_for_deprecated_values_in_dep() {
+    let code = "import dep";
+    let dep = r#"
+@deprecated("Reason")
+pub fn wibble() {
+    todo
+}
+
+pub fn wobble() {
+    todo
+}
+
+@deprecated("Reason")
+pub type Wibble {
+    Wibble
+}
+
+pub type Wobble {
+    Wobble
+}
+"#;
+
+    assert_completion!(TestProject::for_source(code).add_module("dep", dep));
+}
+
+#[test]
+fn do_not_show_completions_for_deprecated_values_in_dep_import() {
+    let code = "import dep.{}";
+    let dep = r#"
+@deprecated("Reason")
+pub fn wibble() {
+    todo
+}
+
+pub fn wobble() {
+    todo
+}
+
+@deprecated("Reason")
+pub type Wibble {
+    Wibble
+}
+
+pub type Wobble {
+    Wobble
+}
+"#;
+
+    assert_completion!(
+        TestProject::for_source(code).add_module("dep", dep),
+        Position::new(0, 12)
+    );
+}
+
+#[test]
+fn show_completions_for_local_deprecated_values() {
+    let code = r#"
+@deprecated("Reason")
+fn wibble() {
+    todo
+}
+
+@deprecated("Reason")
+type Wibble {
+    Wibble
+}
+"#;
+
+    assert_completion!(TestProject::for_source(code));
+}
+
+#[test]
+fn do_not_show_completions_for_deprecated_function_in_dep_while_typing() {
+    let code = "
+import dep
+
+pub fn wobble() {
+    dep.wibb
+}
+";
+    let dep = r#"
+@deprecated("Reason")
+pub fn wibble() {
+    todo
+}
+"#;
+
+    assert_completion!(
+        TestProject::for_source(code).add_module("dep", dep),
+        Position::new(4, 12)
+    );
+}
+
+#[test]
+fn do_not_show_completions_for_deprecated_value_in_dep_while_typing() {
+    let code = "
+import dep
+
+pub fn wobble() {
+    dep.Wibb
+}
+";
+    let dep = r#"
+@deprecated("Reason")
+pub type Wibble {
+    Wibble
+}
+"#;
+
+    assert_completion!(
+        TestProject::for_source(code).add_module("dep", dep),
+        Position::new(4, 12)
+    );
+}
+
+#[test]
+fn do_not_show_completions_for_deprecated_values_in_dep_after_dot() {
+    let code = "
+import dep
+
+pub fn wobble() {
+    dep.
+}
+";
+    let dep = r#"
+@deprecated("Reason")
+pub fn wibble() {
+    todo
+}
+
+@deprecated("Reason")
+pub type Wibble {
+    Wibble
+}
+"#;
+
+    assert_completion!(
+        TestProject::for_source(code).add_module("dep", dep),
+        Position::new(4, 8)
+    );
+}
+
+#[test]
+fn do_not_show_completions_for_deprecated_types_in_dep() {
+    let code = "
+import dep
+
+pub fn wobble() -> W {
+    todo
+}
+";
+    let dep = r#"
+pub type Wobble {
+    Wobble
+}
+
+@deprecated("Reason")
+pub type Wibble {
+    Wibble
+}
+"#;
+
+    assert_completion!(
+        TestProject::for_source(code).add_module("dep", dep),
+        Position::new(3, 20)
     );
 }

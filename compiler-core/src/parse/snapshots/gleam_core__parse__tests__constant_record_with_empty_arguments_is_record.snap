@@ -1,0 +1,71 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: pub const wibble = Wibble()
+---
+Parsed {
+    module: Module {
+        name: "",
+        documentation: [],
+        type_info: (),
+        definitions: [
+            TargetedDefinition {
+                definition: ModuleConstant(
+                    ModuleConstant {
+                        documentation: None,
+                        location: SrcSpan {
+                            start: 0,
+                            end: 16,
+                        },
+                        publicity: Public,
+                        name: "wibble",
+                        name_location: SrcSpan {
+                            start: 10,
+                            end: 16,
+                        },
+                        annotation: None,
+                        value: Record {
+                            location: SrcSpan {
+                                start: 19,
+                                end: 27,
+                            },
+                            module: None,
+                            name: "Wibble",
+                            arguments: Some(
+                                [],
+                            ),
+                            type_: (),
+                            field_map: Unknown,
+                            record_constructor: None,
+                        },
+                        type_: (),
+                        deprecation: NotDeprecated,
+                        implementations: Implementations {
+                            gleam: true,
+                            can_run_on_erlang: true,
+                            can_run_on_javascript: true,
+                            uses_erlang_externals: false,
+                            uses_javascript_externals: false,
+                        },
+                    },
+                ),
+                target: None,
+            },
+        ],
+        names: Names {
+            local_types: {},
+            imported_modules: {},
+            type_variables: {},
+            local_value_constructors: {},
+            reexport_aliases: {},
+        },
+        unused_definition_positions: {},
+    },
+    extra: ModuleExtra {
+        module_comments: [],
+        doc_comments: [],
+        comments: [],
+        empty_lines: [],
+        new_lines: [],
+        trailing_commas: [],
+    },
+}

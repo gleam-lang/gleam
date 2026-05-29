@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nfn function() { todo }\nfn function_2() { todo }\nfn function_3() { todo }\nfn function_4() { todo }\n\npub fn do_things(a, b) {\n  let result = {\n    let a = 10 + a\n    let b = 10 + b\n    a * b\n  }\n  result + 3\n}\n"
 ---
 ----- BEFORE ACTION

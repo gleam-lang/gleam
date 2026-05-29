@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport option.{type Option, None}\n\ntype Result(a) {\n  Result(expected: a, actual: Option(a))\n}\n\nconst zero = Result(0, None)\n"
 ---
 ----- BEFORE ACTION

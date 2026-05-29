@@ -1,0 +1,11 @@
+---
+source: compiler-cli/src/dependencies/tests.rs
+expression: output
+---
+3 of 12 packages have newer versions available.
+
+Package                 Current   Latest
+-------                 -------   ------
+gleam_stdlib            0.45.0    0.46.0
+very_long_package_name  12.12.12  120.12.12
+wisp                    2.1.0     2.1.1

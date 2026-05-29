@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 205
 expression: "\npub fn go() {\n  2.4 *. { 3.5 +. 6.0 }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

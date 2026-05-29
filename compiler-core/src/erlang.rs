@@ -782,6 +782,7 @@ fn const_string_concatenate_argument<'a>(
         | Constant::RecordUpdate { .. }
         | Constant::BitArray { .. }
         | Constant::Var { .. }
+        | Constant::Todo { .. }
         | Constant::Invalid { .. } => const_inline(value, env),
     }
 }
@@ -823,7 +824,7 @@ fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> D
         } => docvec![env.local_var_name(name), "/binary"],
 
         TypedExpr::BinOp {
-            name: BinOp::Concatenate,
+            operator: BinOp::Concatenate,
             ..
         } => docvec![expr(value, env), "/binary"],
 
@@ -884,6 +885,7 @@ fn const_segment<'a>(
             | Constant::RecordUpdate { .. }
             | Constant::Var { .. }
             | Constant::StringConcatenation { .. }
+            | Constant::Todo { .. }
             | Constant::Invalid { .. } => const_inline(value, env).surround("(", ")"),
         }
     };
@@ -1587,6 +1589,16 @@ fn let_assert<'a>(
     ]
 }
 
+/// Generates an the document for assigning to a pattern, for example:
+///
+/// ```erl
+/// {A, B} = Value
+/// Something = fun(atom)
+/// ```
+///
+/// This takes care of the left hand side being any kind of pattern.
+/// If you need to generate an assignment and you know the left hand side to be
+/// a variable name, then you can use the `simple_variable_let` function!
 fn let_<'a>(
     value: &'a TypedExpr,
     pattern: &'a TypedPattern,
@@ -1597,6 +1609,23 @@ fn let_<'a>(
         .print(pattern)
         .append(" = ")
         .append(body)
+}
+
+/// This is used to render a simple variable assignment in Erlang, there's cases
+/// when the left hand side of an assignment is known to be a variable with a
+/// simple name. In that case we don't have to go through `let_` which needs a
+/// whole pattern.
+///
+/// If you need to deal with a complex `let` where the left hand side is a
+/// generic pattern use the `let_` function.
+fn simple_variable_let<'a>(
+    name: &'a EcoString,
+    value: &'a TypedExpr,
+    environment: &mut Env<'a>,
+) -> Document<'a> {
+    let body = maybe_block_expr(value, environment).group();
+    let name = environment.next_local_var_name(name.as_str());
+    docvec![name, " = ", body]
 }
 
 fn float<'a>(value: &str) -> Document<'a> {
@@ -1726,18 +1755,36 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
         }
 
         Constant::List { elements, tail, .. } => {
-            let tail_elements = tail
-                .as_deref()
-                .and_then(|tail| tail.list_elements())
-                .unwrap_or_default();
-
-            join(
-                elements
-                    .iter()
-                    .chain(tail_elements)
-                    .map(|element| const_inline(element, env)),
-                break_(",", ", "),
-            )
+            match tail {
+                // There's no tail in the list, we join all the elements and
+                // call it a day.
+                None => join(
+                    elements.iter().map(|element| const_inline(element, env)),
+                    break_(",", ", "),
+                ),
+                Some(tail) => match tail.list_elements() {
+                    // There's a tail in the list whose elements are all known at
+                    // compile time. In this case we replace the tail with those
+                    // elements and create a single flat list.
+                    Some(tail_elements) => join(
+                        elements
+                            .iter()
+                            .chain(tail_elements)
+                            .map(|element| const_inline(element, env)),
+                        break_(",", ", "),
+                    ),
+                    // There's a tail in the list but we can't really tell what its
+                    // elements are at compile time. This means we have to use
+                    // erlang's syntax to append to a list.
+                    None => {
+                        let elements = join(
+                            elements.iter().map(|element| const_inline(element, env)),
+                            break_(",", ", "),
+                        );
+                        docvec![elements, " | ", const_inline(tail, env)]
+                    }
+                },
+            }
             .nest(INDENT)
             .surround("[", "]")
             .group()
@@ -1750,23 +1797,31 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
         ),
 
         Constant::Record {
-            tag,
-            type_,
-            arguments,
-            ..
-        } if arguments.is_empty() => match type_.deref() {
-            Type::Fn { arguments, .. } => record_constructor_function(tag, arguments.len()),
-            Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
-                atom_string(to_snake_case(tag))
-            }
-        },
+            type_, arguments, ..
+        } if arguments.is_none() => {
+            let tag = literal
+                .constant_record_tag()
+                .expect("record without inferred constructor made it to code generation");
 
-        Constant::Record { tag, arguments, .. } => {
+            match type_.deref() {
+                Type::Fn { arguments, .. } => record_constructor_function(tag, arguments.len()),
+                Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
+                    atom_string(to_snake_case(&tag))
+                }
+            }
+        }
+
+        Constant::Record { arguments, .. } => {
+            let tag = literal
+                .constant_record_tag()
+                .expect("record without inferred constructor made it to code generation");
+
             // Record updates are fully expanded during type checking, so we just handle arguments
             let arguments_doc = arguments
                 .iter()
+                .flatten()
                 .map(|argument| const_inline(&argument.value, env));
-            let tag = atom_string(to_snake_case(tag));
+            let tag = atom_string(to_snake_case(&tag));
             tuple(std::iter::once(tag).chain(arguments_doc))
         }
 
@@ -1785,17 +1840,18 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
         }
 
         Constant::RecordUpdate { .. } => panic!("record updates should not reach code generation"),
+        Constant::Todo { .. } => panic!("todo constants should not reach code generation"),
         Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
     }
 }
 
-fn record_constructor_function(tag: &EcoString, arity: usize) -> Document<'_> {
+fn record_constructor_function<'a>(tag: EcoString, arity: usize) -> Document<'a> {
     let chars = incrementing_arguments_list(arity);
     "fun("
         .to_doc()
         .append(chars.clone())
         .append(") -> {")
-        .append(atom_string(to_snake_case(tag)))
+        .append(atom_string(to_snake_case(&tag)))
         .append(", ")
         .append(chars)
         .append("} end")
@@ -1919,6 +1975,8 @@ fn bare_clause_guard<'a>(
     assignments: &HashMap<EcoString, &StringPatternAssignment<'a>>,
 ) -> Document<'a> {
     match guard {
+        ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to code generation"),
+
         ClauseGuard::Block { value, .. } => {
             bare_clause_guard(value, env, assignments).surround("(", ")")
         }
@@ -2001,6 +2059,8 @@ fn clause_guard_string_concatenate_argument<'a>(
     assignments: &HashMap<EcoString, &StringPatternAssignment<'a>>,
 ) -> Document<'a> {
     match guard {
+        ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to code generation"),
+
         ClauseGuard::Constant(Constant::String { value, .. }) => {
             docvec!['"', string_inner(value), "\"/utf8"]
         }
@@ -2022,6 +2082,7 @@ fn clause_guard_string_concatenate_argument<'a>(
             | Constant::RecordUpdate { .. }
             | Constant::BitArray { .. }
             | Constant::Var { .. }
+            | Constant::Todo { .. }
             | Constant::Invalid { .. } => docvec!["(", const_inline(literal, env), ")/binary"],
         },
 
@@ -2070,6 +2131,7 @@ fn clause_guard<'a>(
     assignments: &HashMap<EcoString, &StringPatternAssignment<'a>>,
 ) -> Document<'a> {
     match guard {
+        ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to code generation"),
         // Binary operators are wrapped in parens
         ClauseGuard::BinaryOperator { .. } => "("
             .to_doc()
@@ -2300,16 +2362,17 @@ fn docs_arguments_call<'a>(
 }
 
 fn record_update<'a>(
-    record: &'a Option<Box<TypedAssignment>>,
+    updated_record: &'a TypedExpr,
+    updated_record_assigned_name: &'a Option<EcoString>,
     constructor: &'a TypedExpr,
     arguments: &'a [TypedCallArg],
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let vars = env.current_scope_vars.clone();
 
-    let document = match record.as_ref() {
-        Some(record) => docvec![
-            assignment(record, env, Position::NotTail),
+    let document = match updated_record_assigned_name.as_ref() {
+        Some(name) => docvec![
+            simple_variable_let(name, updated_record, env),
             ",",
             line(),
             call(constructor, arguments, env)
@@ -2340,8 +2403,9 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
     match expression {
         // Record updates are 1 expression if there's no assignment, multiple otherwise.
         TypedExpr::RecordUpdate {
-            record_assignment, ..
-        } => record_assignment.is_some(),
+            updated_record_assigned_name,
+            ..
+        } => updated_record_assigned_name.is_some(),
 
         TypedExpr::Pipeline { .. } => true,
 
@@ -2516,7 +2580,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::ModuleSelect {
             constructor: ModuleValueConstructor::Record { name, arity, .. },
             ..
-        } => record_constructor_function(name, *arity as usize),
+        } => record_constructor_function(name.clone(), *arity as usize),
 
         TypedExpr::ModuleSelect {
             type_,
@@ -2533,19 +2597,29 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::PositionalAccess { record, index, .. } => tuple_index(record, index + 1, env),
 
         TypedExpr::RecordUpdate {
-            record_assignment,
+            updated_record_assigned_name,
+            updated_record,
             constructor,
             arguments,
             ..
-        } => record_update(record_assignment, constructor, arguments, env),
+        } => record_update(
+            updated_record,
+            updated_record_assigned_name,
+            constructor,
+            arguments,
+            env,
+        ),
 
         TypedExpr::Case {
             subjects, clauses, ..
         } => case(subjects, clauses, env),
 
         TypedExpr::BinOp {
-            name, left, right, ..
-        } => bin_op(name, left, right, env),
+            operator,
+            left,
+            right,
+            ..
+        } => bin_op(operator, left, right, env),
 
         TypedExpr::Tuple { elements, .. } => tuple(
             elements
@@ -2677,9 +2751,12 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
             assert_call(fun, arguments, &mut assignments, env)
         }
         TypedExpr::BinOp {
-            name, left, right, ..
+            operator,
+            left,
+            right,
+            ..
         } => {
-            let operator = match name {
+            let operator_document = match operator {
                 BinOp::And => {
                     return assert_and(left, right, message, *location, env);
                 }
@@ -2709,10 +2786,14 @@ fn assert<'a>(assert: &'a TypedAssert, env: &mut Env<'a>) -> Document<'a> {
             let left_document = assign_to_variable(left, &mut assignments, env);
             let right_document = assign_to_variable(right, &mut assignments, env);
             (
-                binop_documents(left_document.clone(), operator, right_document.clone()),
+                binop_documents(
+                    left_document.clone(),
+                    operator_document,
+                    right_document.clone(),
+                ),
                 vec![
                     ("kind", atom("binary_operator")),
-                    ("operator", atom(name.name())),
+                    ("operator", atom(operator.name())),
                     (
                         "left",
                         asserted_expression(
@@ -3545,6 +3626,7 @@ fn find_referenced_private_functions(
     already_found: &mut im::HashSet<EcoString>,
 ) {
     match constant {
+        Constant::Todo { .. } => panic!("todo constants should not reach code generation"),
         Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
         Constant::RecordUpdate { .. } => {
             panic!("record updates should not reach code generation")
@@ -3567,6 +3649,7 @@ fn find_referenced_private_functions(
 
         TypedConstant::Record { arguments, .. } => arguments
             .iter()
+            .flatten()
             .for_each(|argument| find_referenced_private_functions(&argument.value, already_found)),
 
         TypedConstant::StringConcatenation { left, right, .. } => {
@@ -3574,8 +3657,18 @@ fn find_referenced_private_functions(
             find_referenced_private_functions(right, already_found);
         }
 
-        Constant::Tuple { elements, .. } | Constant::List { elements, .. } => elements
+        Constant::Tuple { elements, .. } => elements
             .iter()
             .for_each(|element| find_referenced_private_functions(element, already_found)),
+
+        Constant::List { elements, tail, .. } => {
+            elements
+                .iter()
+                .for_each(|element| find_referenced_private_functions(element, already_found));
+
+            if let Some(tail) = tail {
+                find_referenced_private_functions(tail, already_found);
+            }
+        }
     }
 }

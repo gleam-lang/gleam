@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\n/// An example type.\npub type Wibble\n\npub fn main() {\n  fn(w: Wibble) { todo }\n}\n"
 ---
+
 /// An example type.
 pub type Wibble
 

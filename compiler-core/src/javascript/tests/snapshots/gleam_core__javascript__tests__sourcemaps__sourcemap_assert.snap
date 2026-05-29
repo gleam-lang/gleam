@@ -38,6 +38,8 @@ expression: "\npub fn main() {\n  let x = True\n  assert x\n}\n"
 25 |}
 
 ----- SOURCE MAP
+File: my/mod.mjs
+Sources: mod.gleam
 Mappings:
 ----- 
 

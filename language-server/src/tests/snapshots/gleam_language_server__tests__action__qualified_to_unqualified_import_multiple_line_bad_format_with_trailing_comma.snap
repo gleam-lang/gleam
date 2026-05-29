@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport option.{type Option,\n    None,\n\n}\n\npub fn main() {\n  option.Some(1)\n}\n"
 ---
 ----- BEFORE ACTION

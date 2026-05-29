@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\nimport wibble\npub fn main() {\n  wibble.consume(todo)\n}"
+---
+----- SOURCE CODE
+-- wibble.gleam
+
+            pub type Wibble
+            pub fn consume(wibble: Wibble) -> Nil { todo }
+        
+
+-- main.gleam
+
+import wibble
+pub fn main() {
+  wibble.consume(todo)
+}
+
+----- WARNING
+warning: Todo found
+  ┌─ /src/warning/wrn.gleam:4:18
+  │
+4 │   wibble.consume(todo)
+  │                  ^^^^ This code is incomplete
+
+This code will crash if it is run. Be sure to finish it before
+running your program.
+
+Hint: I think its type is `wibble.Wibble`.

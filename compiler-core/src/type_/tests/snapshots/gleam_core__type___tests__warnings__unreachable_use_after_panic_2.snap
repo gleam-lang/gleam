@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n        import module\n        pub fn a() {\n            panic\n            use <- module.wibble\n            1\n        }\n        "
+---
+----- SOURCE CODE
+-- module.gleam
+pub fn wibble(_) { 1 }
+
+-- main.gleam
+
+        import module
+        pub fn a() {
+            panic
+            use <- module.wibble
+            1
+        }
+        
+
+----- WARNING
+warning: Unreachable code
+  ┌─ /src/warning/wrn.gleam:5:13
+  │  
+5 │ ╭             use <- module.wibble
+6 │ │             1
+  │ ╰─────────────^
+
+This code is unreachable because it comes after a `panic`.

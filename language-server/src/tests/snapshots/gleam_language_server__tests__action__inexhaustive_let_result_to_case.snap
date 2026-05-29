@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "pub fn main(result) {\n  let Ok(value) = result\n}"
 ---
 ----- BEFORE ACTION

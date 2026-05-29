@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\nimport option\npub fn main() {\n  let a: option. = todo\n}\n"
 ---
+
 import option
 pub fn main() {
   let a: option.| = todo

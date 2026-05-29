@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  case wibble() {\n    Wobble(wibble: something) -> 1\n    _ -> 2\n  }\n}\n\ntype Wibble {\n  Wobble(wibble: Wibble)\n  Woo\n}\n\nfn new() { Wobble }\n\n"
 ---
 ----- BEFORE ACTION

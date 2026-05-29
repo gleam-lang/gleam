@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn do_things(a, b) {\n  let wibble = a + b\n  let wobble = a * b\n  wobble / wibble\n}\n"
 ---
 ----- BEFORE ACTION

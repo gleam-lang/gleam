@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\npub type Wibble {\n  Wibble(wibble: Int, wobble: Float)\n}\n\npub fn main() {\n  Wibble(w)\n}\n"
 ---
+
 pub type Wibble {
   Wibble(wibble: Int, wobble: Float)
 }

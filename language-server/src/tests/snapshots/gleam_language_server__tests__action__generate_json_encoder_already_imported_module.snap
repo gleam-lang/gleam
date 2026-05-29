@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport gleam/json as json_encoding\n\npub type Wibble {\n  Wibble(a: Int, b: Float, c: String)\n}\n"
 ---
 ----- BEFORE ACTION

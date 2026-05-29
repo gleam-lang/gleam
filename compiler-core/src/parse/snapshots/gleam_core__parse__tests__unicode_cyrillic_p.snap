@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 2247
 expression: "pub fn main() { р }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn main() { р }

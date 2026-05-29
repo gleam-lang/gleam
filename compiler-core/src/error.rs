@@ -213,6 +213,12 @@ pub enum Error {
     #[error("{0}")]
     TarFinish(String),
 
+    #[error("{error}")]
+    ZipAdd { path: String, error: String },
+
+    #[error("{0}")]
+    ZipFinish(String),
+
     #[error("{0}")]
     Gzip(String),
 
@@ -407,6 +413,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Cannot add a package with the same name as a dependency")]
     CannotAddSelfAsDependency { name: EcoString },
 
+    #[error("Hex session revoked")]
+    HexSessionRevoked,
+
     #[error("Incorrect Hex one-time-password")]
     IncorrectHexOneTimePassword,
 }
@@ -525,8 +534,9 @@ impl Error {
             | hexpm::ApiError::LateModification
             | hexpm::ApiError::OAuthTimeout
             | hexpm::ApiError::OAuthAccessDenied
-            | hexpm::ApiError::ExpiredToken
-            | hexpm::ApiError::OAuthRefreshTokenRejected => Self::Hex(error.to_string()),
+            | hexpm::ApiError::ExpiredToken => Self::Hex(error.to_string()),
+
+            hexpm::ApiError::OAuthRefreshTokenRejected => Self::HexSessionRevoked,
 
             hexpm::ApiError::IncorrectOneTimePassword => Self::IncorrectHexOneTimePassword,
         }
@@ -971,6 +981,17 @@ errors."
 
     pub fn to_diagnostics(&self) -> Vec<Diagnostic> {
         match self {
+            Error::HexSessionRevoked => vec![Diagnostic {
+                title: "Hex session revoked".into(),
+                text: "Your Hex session has been revoked or has expired.
+
+You'll need to re-authenticate to continue using Hex."
+                    .into(),
+                hint: Some("Run 'gleam hex authenticate' to log in again.".into()),
+                level: Level::Error,
+                location: None,
+            }],
+
             Error::IncorrectHexOneTimePassword => {
                 let text =
                     "That two-factor authentication code was rejected by Hex, please try again.
@@ -1133,7 +1154,7 @@ forward slash and must not end with a slash."
 
             Error::ModuleDoesNotHaveMainFunction { module, origin } => vec![Diagnostic {
                 title: "Module does not have a main function".into(),
-                text: format!(
+                text: wrap_format!(
                     "`{module}` does not have a main function so the module can not be run."
                 ),
                 level: Level::Error,
@@ -1171,11 +1192,13 @@ target, so it cannot be run.",
             Error::MainFunctionHasWrongArity { module, arity } => vec![Diagnostic {
                 title: "Main function has wrong arity".into(),
                 text: wrap_format!(
-                    "`{module}:main` should have an arity of 0 to be run but its arity is {arity}."
+                    "`{module}.main` should take no arguments, but it takes {arity}."
                 ),
                 level: Level::Error,
                 location: None,
-                hint: Some("Change the function signature of main to `pub fn main() {}`.".into()),
+                hint: Some(
+                    "Change the function signature of main to `pub fn main() -> Nil`.".into(),
+                ),
             }],
 
             Error::ProjectRootAlreadyExist { path } => vec![Diagnostic {
@@ -1532,8 +1555,8 @@ This was error from the gzip library:
             }
 
             Error::AddTar { path, err } => {
-                let text = format!(
-                    "There was a problem when attempting to add the file {path}
+                let text = wrap_format!(
+                    "There was a problem when attempting to add the file {path} \
 to a tar archive.
 
 This was error from the tar library:
@@ -1576,6 +1599,41 @@ This was error from the tar library:
                 );
                 vec![Diagnostic {
                     title: "Failure creating tar archive".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: None,
+                }]
+            }
+
+            Error::ZipAdd { path, error: err } => {
+                let text = wrap_format!(
+                    "There was a problem when attempting to add the file {path} \
+to a zip archive.
+
+This was error from the zip library:
+
+    {err}"
+                );
+                vec![Diagnostic {
+                    title: "Failure creating zip archive".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: None,
+                }]
+            }
+
+            Error::ZipFinish(detail) => {
+                let text = format!(
+                    "There was a problem when creating a zip archive.
+
+This was error from the zip library:
+
+    {detail}"
+                );
+                vec![Diagnostic {
+                    title: "Failure creating zip archive".into(),
                     text,
                     hint: None,
                     level: Level::Error,
@@ -3305,6 +3363,7 @@ but no type in scope with that name."
             discarded_location,
             name,
             type_with_name_in_scope,
+            possible_modules,
         } => {
             let title = String::from("Unknown variable");
 
@@ -3337,17 +3396,24 @@ but no type in scope with that name."
                 let text = if *type_with_name_in_scope {
                     wrap_format!("`{name}` is a type, it cannot be used as a value.")
                 } else {
-                    let is_first_char_uppercase =
-                        name.chars().next().is_some_and(char::is_uppercase);
-
-                    if is_first_char_uppercase {
+                    let mut text = if name.starts_with(char::is_uppercase) {
                         wrap_format!(
-                            "The custom type variant constructor \
-`{name}` is not in scope here."
+                            "The custom type variant constructor `{name}` is not in scope here."
                         )
                     } else {
                         wrap_format!("The name `{name}` is not in scope here.")
+                    };
+
+                    // If there are some suggestions about public values in imported
+                    // modules put a "did you mean" text after the main message
+                    if !possible_modules.is_empty() {
+                        text.push_str("\nDid you mean one of these:\n\n");
+                        for module_name in possible_modules {
+                            text.push_str(&format!("  - {module_name}.{name}\n"))
+                        }
                     }
+
+                    text
                 };
 
                 Diagnostic {
@@ -4863,6 +4929,25 @@ See: https://tour.gleam.run/basics/bools/"
             location: Some(Location {
                 label: Label {
                     text: Some("This is not a bool".into()),
+                    span: *location,
+                },
+                path: path.clone(),
+                src: src.clone(),
+                extra_labels: vec![],
+            }),
+        },
+
+        TypeError::TodoConstant { location } => Diagnostic {
+            title: "Constant todo found".to_string(),
+            text: wrap(
+                "This code will crash if it is run. \
+Be sure to finish it before running your program.",
+            ),
+            hint: None,
+            level: Level::Error,
+            location: Some(Location {
+                label: Label {
+                    text: Some("This code is incomplete".into()),
                     span: *location,
                 },
                 path: path.clone(),

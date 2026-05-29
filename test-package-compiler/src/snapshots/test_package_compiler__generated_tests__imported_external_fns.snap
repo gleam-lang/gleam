@@ -58,7 +58,27 @@ escaped_thing() ->
 -module(two).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -define(FILEPATH, "src/two.gleam").
--export([fn_reference_qualified/0, fn_reference_qualified_aliased/0, fn_reference_unqualified/0, fn_reference_unqualified_aliased/0, fn_call_qualified/0, fn_call_qualified_aliased/0, fn_call_unqualified/0, fn_call_unqualified_aliased/0, argument_reference_qualified/0, argument_reference_qualified_aliased/0, argument_reference_unqualified/0, argument_reference_unqualified_aliased/0, the_consts/0]).
+-export([the_consts/0, fn_reference_qualified/0, fn_reference_qualified_aliased/0, fn_reference_unqualified/0, fn_reference_unqualified_aliased/0, fn_call_qualified/0, fn_call_qualified_aliased/0, fn_call_unqualified/0, fn_call_unqualified_aliased/0, argument_reference_qualified/0, argument_reference_qualified_aliased/0, argument_reference_unqualified/0, argument_reference_unqualified_aliased/0]).
+
+-file("src/two.gleam", 24).
+-spec the_consts() -> nil.
+the_consts() ->
+    _ = fun thing:new/0,
+    _ = fun thing:new/0,
+    _ = fun thing:new/0,
+    _ = fun thing:new/0,
+    _ = fun 'the.thing':'make.new'/0,
+    _ = fun 'the.thing':'make.new'/0,
+    _ = fun 'the.thing':'make.new'/0,
+    _ = fun 'the.thing':'make.new'/0,
+    thing:new(),
+    thing:new(),
+    thing:new(),
+    thing:new(),
+    'the.thing':'make.new'(),
+    'the.thing':'make.new'(),
+    'the.thing':'make.new'(),
+    'the.thing':'make.new'().
 
 -file("src/two.gleam", 45).
 -spec fn_reference_qualified() -> fun(() -> nil).
@@ -124,26 +144,6 @@ argument_reference_unqualified() ->
 -spec argument_reference_unqualified_aliased() -> nil.
 argument_reference_unqualified_aliased() ->
     x(fun 'the.thing':'make.new'/0).
-
--file("src/two.gleam", 24).
--spec the_consts() -> nil.
-the_consts() ->
-    _ = fun thing:new/0,
-    _ = fun thing:new/0,
-    _ = fun thing:new/0,
-    _ = fun thing:new/0,
-    _ = fun 'the.thing':'make.new'/0,
-    _ = fun 'the.thing':'make.new'/0,
-    _ = fun 'the.thing':'make.new'/0,
-    _ = fun 'the.thing':'make.new'/0,
-    thing:new(),
-    thing:new(),
-    thing:new(),
-    thing:new(),
-    'the.thing':'make.new'(),
-    'the.thing':'make.new'(),
-    'the.thing':'make.new'(),
-    'the.thing':'make.new'().
 
 
 //// /out/lib/the_package/ebin/importy.app

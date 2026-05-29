@@ -592,15 +592,15 @@ impl Inliner<'_> {
             TypedExpr::BinOp {
                 location,
                 type_,
-                name,
-                name_location,
+                operator,
+                operator_start,
                 left,
                 right,
             } => TypedExpr::BinOp {
                 location,
                 type_,
-                name,
-                name_location,
+                operator,
+                operator_start,
                 left: self.boxed_expression(left),
                 right: self.boxed_expression(right),
             },
@@ -707,15 +707,18 @@ impl Inliner<'_> {
 
             TypedExpr::RecordUpdate {
                 location,
+                spread_start,
                 type_,
-                record_assignment,
+                updated_record,
+                updated_record_assigned_name,
                 constructor,
                 arguments,
             } => TypedExpr::RecordUpdate {
                 location,
+                spread_start,
                 type_,
-                record_assignment: record_assignment
-                    .map(|assignment| Box::new(self.assignment(*assignment))),
+                updated_record: Box::new(self.expression(*updated_record)),
+                updated_record_assigned_name,
                 constructor: self.boxed_expression(constructor),
                 arguments: self.arguments(arguments),
             },

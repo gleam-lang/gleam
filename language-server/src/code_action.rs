@@ -13,22 +13,26 @@ use gleam_core::{
         TypedExpr, TypedFunction, TypedModuleConstant, TypedPattern, TypedPipelineAssignment,
         TypedRecordConstructor, TypedStatement, TypedTailPattern, TypedUse, visit::Visit as _,
     },
-    build::{Located, Module},
+    build::{Located, Module, Origin},
     config::PackageConfig,
     exhaustiveness::CompiledCase,
     line_numbers::LineNumbers,
     parse::{extra::ModuleExtra, lexer::string_to_keyword},
+    paths::ProjectPaths,
     strings::to_snake_case,
     type_::{
-        self, FieldMap, ModuleValueConstructor, Opaque, Type, TypeVar, TypedCallArg,
-        ValueConstructor,
+        self, Error as TypeError, FieldMap, ModuleValueConstructor, Opaque, Type, TypeVar,
+        TypedCallArg, ValueConstructor,
         error::{ModuleSuggestion, VariableDeclaration, VariableOrigin},
         printer::Printer,
     },
 };
 use im::HashMap;
 use itertools::Itertools;
-use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Url};
+use lsp_types::{
+    CodeAction, CodeActionKind, CodeActionParams, CreateFile, CreateFileOptions, DocumentChange,
+    Position, Range, TextEdit, Uri as Url,
+};
 use vec1::{Vec1, vec1};
 
 use crate::engine::{completely_within, position_within};
@@ -50,7 +54,7 @@ pub struct CodeActionBuilder {
 }
 
 impl CodeActionBuilder {
-    pub fn new(title: &str) -> Self {
+    pub fn new(title: impl ToString) -> Self {
         Self {
             action: CodeAction {
                 title: title.to_string(),
@@ -61,6 +65,7 @@ impl CodeActionBuilder {
                 is_preferred: None,
                 disabled: None,
                 data: None,
+                tags: None,
             },
         }
     }
@@ -76,6 +81,15 @@ impl CodeActionBuilder {
         _ = changes.insert(uri, edits);
 
         edit.changes = Some(changes);
+        self.action.edit = Some(edit);
+        self
+    }
+
+    pub fn document_changes(mut self, changes: Vec<DocumentChange>) -> Self {
+        let mut edit = self.action.edit.take().unwrap_or_default();
+
+        edit.document_changes = Some(changes);
+
         self.action.edit = Some(edit);
         self
     }
@@ -257,7 +271,7 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
 
         let mut actions = vec![];
         CodeActionBuilder::new("Remove redundant tuples")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut actions);
@@ -417,7 +431,7 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
         let uri = &self.params.text_document.uri;
 
         CodeActionBuilder::new("Convert to case")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(uri.clone(), vec![TextEdit { range, new_text }])
             .preferred(false)
             .push_to(&mut self.actions);
@@ -531,8 +545,8 @@ pub fn code_action_inexhaustive_let_to_case(
         let mut text_edits = TextEdits::new(line_numbers);
 
         let range = text_edits.src_span_to_lsp_range(location);
-        if !overlaps(params.range, range) {
-            return;
+        if !within(params.range, range) {
+            continue;
         }
 
         let Some(Located::Statement(TypedStatement::Assignment(assignment))) =
@@ -599,7 +613,7 @@ pub fn code_action_inexhaustive_let_to_case(
         text_edits.replace(*location, new_text);
 
         CodeActionBuilder::new("Convert to case")
-            .kind(CodeActionKind::QUICKFIX)
+            .kind(CodeActionKind::QuickFix)
             .changes(uri.clone(), text_edits.edits)
             .preferred(true)
             .push_to(actions);
@@ -689,7 +703,7 @@ impl<'a> UseLabelShorthandSyntax<'a> {
         }
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Use label shorthand syntax")
-            .kind(CodeActionKind::REFACTOR)
+            .kind(CodeActionKind::Refactor)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -779,8 +793,7 @@ impl<'a> FillInMissingLabelledArgs<'a> {
 
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
-
-        if let Some(SelectedCall {
+        let Some(SelectedCall {
             location: call_location,
             field_map,
             arguments,
@@ -788,108 +801,109 @@ impl<'a> FillInMissingLabelledArgs<'a> {
             fun_type,
             enclosing_function,
         }) = self.selected_call
-        {
-            let is_use_call = arguments.iter().any(|arg| arg.is_use_implicit_callback());
-            let missing_labels = field_map.missing_labels(&arguments);
+        else {
+            return vec![];
+        };
 
-            // If we're applying the code action to a use call, then we know
-            // that the last missing argument is going to be implicitly inserted
-            // by the compiler, so in that case we don't want to also add that
-            // last label to the completions.
-            let missing_labels = missing_labels.iter().peekable();
-            let mut missing_labels = if is_use_call {
-                missing_labels.dropping_back(1)
-            } else {
-                missing_labels
-            };
+        let is_use_call = arguments.iter().any(|arg| arg.is_use_implicit_callback());
+        let missing_labels = field_map.missing_labels(&arguments);
 
-            // If we couldn't find any missing label to insert we just return.
-            if missing_labels.peek().is_none() {
-                return vec![];
-            }
+        // If we're applying the code action to a use call, then we know
+        // that the last missing argument is going to be implicitly inserted
+        // by the compiler, so in that case we don't want to also add that
+        // last label to the completions.
+        let missing_labels = missing_labels.iter().peekable();
+        let mut missing_labels = if is_use_call {
+            missing_labels.dropping_back(1)
+        } else {
+            missing_labels
+        };
 
-            // A pattern could have been written with no parentheses at all!
-            // So we need to check for the last character to see if parentheses
-            // are there or not before filling the arguments in
-            let has_parentheses = ")"
-                == code_at(
-                    self.module,
-                    SrcSpan::new(call_location.end - 1, call_location.end),
-                );
-            let label_insertion_start = if has_parentheses {
-                // If it ends with a parentheses we'll need to start inserting
-                // right before the closing one...
-                call_location.end - 1
-            } else {
-                // ...otherwise we just append the result
-                call_location.end
-            };
-
-            // Now we need to figure out if there's a comma at the end of the
-            // arguments list:
-            //
-            //   call(one, |)
-            //             ^ Cursor here, with a comma behind
-            //
-            //   call(one|)
-            //           ^ Cursor here, no comma behind, we'll have to add one!
-            //
-            let has_comma_after_last_argument =
-                if let Some(last_arg) = arguments.iter().rfind(|arg| !arg.is_implicit()) {
-                    self.module
-                        .code
-                        .get(last_arg.location.end as usize..=label_insertion_start as usize)
-                        .is_some_and(|text| text.contains(','))
-                } else {
-                    false
-                };
-
-            let variables_in_scope = enclosing_function
-                .map(|fun| {
-                    ScopeVariableCollector::new(call_location.start).collect_from_function(fun)
-                })
-                .unwrap_or_default();
-
-            let labels_list = missing_labels
-                .map(|label| {
-                    Self::format_label(label, &kind, &fun_type, field_map, &variables_in_scope)
-                })
-                .join(", ");
-
-            let has_no_explicit_arguments = arguments
-                .iter()
-                .filter(|arg| !arg.is_implicit())
-                .peekable()
-                .peek()
-                .is_none();
-
-            let labels_list = if has_no_explicit_arguments || has_comma_after_last_argument {
-                labels_list
-            } else {
-                format!(", {labels_list}")
-            };
-
-            let edit = if has_parentheses {
-                labels_list
-            } else {
-                // If the variant whose arguments we're filling in was written
-                // with no parentheses we need to add those as well to make it a
-                // valid constructor.
-                format!("({labels_list})")
-            };
-
-            self.edits.insert(label_insertion_start, edit);
-
-            let mut action = Vec::with_capacity(1);
-            CodeActionBuilder::new("Fill labels")
-                .kind(CodeActionKind::QUICKFIX)
-                .changes(self.params.text_document.uri.clone(), self.edits.edits)
-                .preferred(true)
-                .push_to(&mut action);
-            return action;
+        // If we couldn't find any missing label to insert we just return.
+        if missing_labels.peek().is_none() {
+            return vec![];
         }
 
-        vec![]
+        // A pattern could have been written with no parentheses at all!
+        // So we need to check for the last character to see if parentheses
+        // are there or not before filling the arguments in
+        let has_parentheses = ")"
+            == code_at(
+                self.module,
+                SrcSpan::new(call_location.end - 1, call_location.end),
+            );
+        let label_insertion_start = if has_parentheses {
+            // If it ends with a parentheses we'll need to start inserting
+            // right before the closing one...
+            call_location.end - 1
+        } else {
+            // ...otherwise we just append the result
+            call_location.end
+        };
+
+        // Now we need to figure out if there's a comma at the end of the
+        // arguments list:
+        //
+        //   call(one, |)
+        //             ^ Cursor here, with a comma behind
+        //
+        //   call(one|)
+        //           ^ Cursor here, no comma behind, we'll have to add one!
+        //
+        let has_comma_after_last_argument =
+            if let Some(last_arg) = arguments.iter().rfind(|arg| !arg.is_implicit()) {
+                self.module
+                    .code
+                    .get(last_arg.location.end as usize..=label_insertion_start as usize)
+                    .is_some_and(|text| text.contains(','))
+            } else {
+                false
+            };
+
+        let scope_variables =
+            ScopeVariableCollector::new(call_location.start, &self.module.ast.definitions);
+        let variables_in_scope = match enclosing_function {
+            Some(function) => scope_variables.collect_from_function(function),
+            None => scope_variables.variables,
+        };
+
+        let labels_list = missing_labels
+            .map(|label| {
+                Self::format_label(label, &kind, &fun_type, field_map, &variables_in_scope)
+            })
+            .join(", ");
+
+        let has_no_explicit_arguments = arguments
+            .iter()
+            .filter(|arg| !arg.is_implicit())
+            .peekable()
+            .peek()
+            .is_none();
+
+        let labels_list = if has_no_explicit_arguments || has_comma_after_last_argument {
+            labels_list
+        } else {
+            format!(", {labels_list}")
+        };
+
+        let edit = if has_parentheses {
+            labels_list
+        } else {
+            // If the variant whose arguments we're filling in was written
+            // with no parentheses we need to add those as well to make it a
+            // valid constructor.
+            format!("({labels_list})")
+        };
+
+        self.edits.insert(label_insertion_start, edit);
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Fill labels")
+            .kind(CodeActionKind::QuickFix)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(true)
+            .push_to(&mut action);
+        action
     }
 
     /// Formats a label for insertion. Uses `label:` syntax if there's a variable
@@ -950,6 +964,52 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         self.use_right_hand_side_location = Some(use_.right_hand_side_location);
         ast::visit::visit_typed_use(self, use_);
         self.use_right_hand_side_location = previous;
+    }
+
+    fn visit_typed_constant_record(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        arguments: &'ast Option<Vec<CallArg<ast::TypedConstant>>>,
+        type_: &'ast Arc<Type>,
+        field_map: &'ast Inferred<FieldMap>,
+        record_constructor: &'ast Option<Box<ValueConstructor>>,
+    ) {
+        let record_range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, record_range) {
+            return;
+        }
+
+        if let Some(arguments) = arguments
+            && let Inferred::Known(field_map) = field_map
+        {
+            self.selected_call = Some(SelectedCall {
+                location: *location,
+                field_map,
+                arguments: arguments.iter().map(Self::empty_argument).collect(),
+                kind: SelectedCallKind::Value,
+                fun_type: record_constructor
+                    .as_ref()
+                    .map(|constructor| constructor.type_.clone()),
+                enclosing_function: None,
+            })
+        }
+
+        // We only want to take into account the innermost function call
+        // containing the current selection so we can't stop at the first call
+        // we find (the outermost one) and have to keep traversing it in case
+        // we're inside a nested call.
+        ast::visit::visit_typed_constant_record(
+            self,
+            location,
+            module,
+            name,
+            arguments,
+            type_,
+            field_map,
+            record_constructor,
+        );
     }
 
     fn visit_typed_expr_call(
@@ -1031,15 +1091,24 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
 /// Collects variables that are in scope at a given cursor position.
 struct ScopeVariableCollector {
     cursor: u32,
-    variables: HashMap<EcoString, Arc<Type>>,
+    pub variables: HashMap<EcoString, Arc<Type>>,
 }
 
 impl ScopeVariableCollector {
-    fn new(cursor: u32) -> Self {
-        Self {
-            cursor,
-            variables: HashMap::new(),
-        }
+    fn new(cursor: u32, definitions: &TypedDefinitions) -> Self {
+        let TypedDefinitions { constants, .. } = definitions;
+
+        // When creating a collector, we add module constants to the variables
+        // that are in scope.
+        // These will always be available inside the body of any function we
+        // might want to analyse (unless they are shadowed and replaced in the
+        // map, that is)
+        let variables = constants
+            .iter()
+            .map(|constant| (constant.name.clone(), constant.type_.clone()))
+            .collect();
+
+        Self { cursor, variables }
     }
 
     fn collect_from_function(mut self, fun: &TypedFunction) -> HashMap<EcoString, Arc<Type>> {
@@ -1202,7 +1271,7 @@ pub fn code_action_import_module(
             };
 
             CodeActionBuilder::new(title)
-                .kind(CodeActionKind::QUICKFIX)
+                .kind(CodeActionKind::QuickFix)
                 .changes(uri.clone(), edits)
                 .preferred(true)
                 .push_to(actions);
@@ -1270,8 +1339,8 @@ pub fn code_action_add_missing_patterns(
     for (location, missing) in missing_patterns {
         let mut edits = TextEdits::new(line_numbers);
         let range = edits.src_span_to_lsp_range(location);
-        if !overlaps(params.range, range) {
-            return;
+        if !within(params.range, range) {
+            continue;
         }
 
         let Some(Located::Expression {
@@ -1353,7 +1422,7 @@ pub fn code_action_add_missing_patterns(
         }
 
         CodeActionBuilder::new("Add missing patterns")
-            .kind(CodeActionKind::QUICKFIX)
+            .kind(CodeActionKind::QuickFix)
             .changes(uri.clone(), edits.edits)
             .preferred(true)
             .push_to(actions);
@@ -1560,7 +1629,7 @@ impl<'a> AddAnnotations<'a> {
         };
 
         CodeActionBuilder::new(title)
-            .kind(CodeActionKind::REFACTOR)
+            .kind(CodeActionKind::Refactor)
             .changes(uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(actions);
@@ -1601,7 +1670,7 @@ impl<'a> AnnotateTopLevelDefinitions<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Annotate all top level definitions")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -1750,8 +1819,8 @@ impl<'a, IO> QualifiedToUnqualifiedImportFirstPass<'a, IO> {
                 // unqualify: we don't want to offer the action indiscriminately if
                 // it would generate invalid code!
                 let module_exports_constructor = match layer {
-                    ast::Layer::Value => module.get_public_value(constructor).is_some(),
-                    ast::Layer::Type => module.get_public_type(constructor).is_some(),
+                    ast::Layer::Value => module.get_importable_value(constructor).is_some(),
+                    ast::Layer::Type => module.get_importable_type(constructor).is_some(),
                 };
                 if module_exports_constructor {
                     matching_import = Some(import);
@@ -1801,7 +1870,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
         arguments_types: Option<Vec<Arc<Type>>>,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
-        if overlaps(self.params.range, range)
+        if within(self.params.range, range)
             && let Some(module_alias) = name.module_name()
             && let Some(name) = name.name()
             && let Some(import) = self.get_module_import(module_alias, name, ast::Layer::Type)
@@ -1832,7 +1901,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
         //  ↑
         // This allows us to offer a code action when hovering over the module name.
         let range = src_span_to_lsp_range(*location, self.line_numbers);
-        if overlaps(self.params.range, range)
+        if within(self.params.range, range)
             && let ModuleValueConstructor::Record {
                 name: constructor_name,
                 ..
@@ -1871,7 +1940,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
         type_: &'ast Arc<Type>,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
-        if overlaps(self.params.range, range)
+        if within(self.params.range, range)
             && let Some((module_alias, _)) = module
             && let Inferred::Known(_) = constructor
             && let Some(import) = self.get_module_import(module_alias, name, ast::Layer::Value)
@@ -1901,14 +1970,13 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
         location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
-        arguments: &'ast Vec<CallArg<ast::TypedConstant>>,
-        tag: &'ast EcoString,
+        arguments: &'ast Option<Vec<CallArg<ast::TypedConstant>>>,
         type_: &'ast Arc<Type>,
         field_map: &'ast Inferred<FieldMap>,
         record_constructor: &'ast Option<Box<ValueConstructor>>,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
-        if overlaps(self.params.range, range)
+        if within(self.params.range, range)
             && let Some((module_alias, _)) = module
             && let Some(import) = self.get_module_import(module_alias, name, ast::Layer::Value)
         {
@@ -1925,7 +1993,6 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
             module,
             name,
             arguments,
-            tag,
             type_,
             field_map,
             record_constructor,
@@ -1941,7 +2008,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass
         type_: &'ast Arc<Type>,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
-        if overlaps(self.params.range, range)
+        if within(self.params.range, range)
             && let Some((module_alias, _)) = module
             && let Some(constructor) = constructor
             && let type_::ValueConstructorVariant::Record { .. } = &constructor.variant
@@ -1987,11 +2054,11 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
         }
         self.edit_import();
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new(&format!(
+        CodeActionBuilder::new(format!(
             "Unqualify {}.{}",
             self.qualified_constructor.used_name, self.qualified_constructor.constructor
         ))
-        .kind(CodeActionKind::REFACTOR)
+        .kind(CodeActionKind::Refactor)
         .changes(self.params.text_document.uri.clone(), self.edits.edits)
         .preferred(false)
         .push_to(&mut action);
@@ -2138,8 +2205,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
         location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
-        arguments: &'ast Vec<CallArg<ast::TypedConstant>>,
-        tag: &'ast EcoString,
+        arguments: &'ast Option<Vec<CallArg<ast::TypedConstant>>>,
         type_: &'ast Arc<Type>,
         field_map: &'ast Inferred<FieldMap>,
         record_constructor: &'ast Option<Box<ValueConstructor>>,
@@ -2162,7 +2228,6 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
             module,
             name,
             arguments,
-            tag,
             type_,
             field_map,
             record_constructor,
@@ -2304,7 +2369,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
     ) {
         if !name.is_qualified()
             && let Some(name) = name.name()
-            && overlaps(
+            && within(
                 self.params.range,
                 src_span_to_lsp_range(*location, self.line_numbers),
             )
@@ -2322,7 +2387,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         name: &'ast EcoString,
     ) {
         let range = src_span_to_lsp_range(*location, self.line_numbers);
-        if overlaps(self.params.range, range)
+        if within(self.params.range, range)
             && let Some(module_name) = match &constructor.variant {
                 type_::ValueConstructorVariant::ModuleConstant { module, .. }
                 | type_::ValueConstructorVariant::ModuleFn { module, .. }
@@ -2348,7 +2413,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         type_: &'ast Arc<Type>,
     ) {
         if module.is_none()
-            && overlaps(
+            && within(
                 self.params.range,
                 src_span_to_lsp_range(*location, self.line_numbers),
             )
@@ -2375,14 +2440,13 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
-        arguments: &'ast Vec<CallArg<ast::TypedConstant>>,
-        _tag: &'ast EcoString,
-        _type_: &'ast Arc<Type>,
-        _field_map: &'ast Inferred<FieldMap>,
+        arguments: &'ast Option<Vec<CallArg<ast::TypedConstant>>>,
+        type_: &'ast Arc<Type>,
+        field_map: &'ast Inferred<FieldMap>,
         record_constructor: &'ast Option<Box<ValueConstructor>>,
     ) {
         if module.is_none()
-            && overlaps(
+            && within(
                 self.params.range,
                 src_span_to_lsp_range(*location, self.line_numbers),
             )
@@ -2403,9 +2467,8 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
             module,
             name,
             arguments,
-            _tag,
-            _type_,
-            _field_map,
+            type_,
+            field_map,
             record_constructor,
         );
     }
@@ -2419,7 +2482,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         type_: &'ast Arc<Type>,
     ) {
         if module.is_none()
-            && overlaps(
+            && within(
                 self.params.range,
                 src_span_to_lsp_range(*location, self.line_numbers),
             )
@@ -2488,13 +2551,13 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
             constructor,
             ..
         } = self.unqualified_constructor;
-        CodeActionBuilder::new(&format!(
+        CodeActionBuilder::new(format!(
             "Qualify {} as {}.{}",
             constructor.used_name(),
             module_name,
             constructor.name,
         ))
-        .kind(CodeActionKind::REFACTOR)
+        .kind(CodeActionKind::Refactor)
         .changes(self.params.text_document.uri.clone(), self.edits.edits)
         .preferred(false)
         .push_to(&mut action);
@@ -2610,8 +2673,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
         location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
-        arguments: &'ast Vec<CallArg<ast::TypedConstant>>,
-        tag: &'ast EcoString,
+        arguments: &'ast Option<Vec<CallArg<ast::TypedConstant>>>,
         type_: &'ast Arc<Type>,
         field_map: &'ast Inferred<FieldMap>,
         record_constructor: &'ast Option<Box<ValueConstructor>>,
@@ -2632,7 +2694,6 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
             module,
             name,
             arguments,
-            tag,
             type_,
             field_map,
             record_constructor,
@@ -2867,7 +2928,7 @@ impl<'a> ConvertFromUse<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Convert from `use`")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -3017,7 +3078,7 @@ impl<'a> ConvertToUse<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Convert to `use`")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -3304,7 +3365,7 @@ impl<'a> ExtractVariable<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Extract variable")
-            .kind(CodeActionKind::REFACTOR_EXTRACT)
+            .kind(CodeActionKind::RefactorExtract)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -3476,6 +3537,81 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         });
     }
 
+    fn visit_typed_expr_call(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        fun: &'ast TypedExpr,
+        arguments: &'ast [TypedCallArg],
+        open_parenthesis: &'ast Option<u32>,
+    ) {
+        // Function calls need some extra care. If we're inspecting a record
+        // call like this one: `Wibble(wobble, woo)` and the cursor is over the
+        // constructor itself we never want to allow extracting it, or it would
+        // result in the following code:
+        //
+        // ```gleam
+        // Wibble(wobble, woo)
+        // // ^^ Cursor here
+        //
+        // let wibble = Wibble
+        // wibble(wobble, woo)
+        // // That's a bit silly!
+        // ```
+        let fun_range = self.edits.src_span_to_lsp_range(fun.location());
+        if within(self.params.range, fun_range) && fun.is_record_constructor_function() {
+            return;
+        }
+
+        // Otherwise we just keep visiting like usual, no special handling is
+        // required.
+        ast::visit::visit_typed_expr_call(self, location, type_, fun, arguments, open_parenthesis);
+    }
+
+    fn visit_typed_expr_record_update(
+        &mut self,
+        location: &'ast SrcSpan,
+        spread_start: &'ast u32,
+        type_: &'ast Arc<Type>,
+        updated_record: &'ast TypedExpr,
+        updated_record_assigned_name: &'ast Option<EcoString>,
+        constructor: &'ast TypedExpr,
+        arguments: &'ast [TypedCallArg],
+    ) {
+        // Record updates need some extra care. If we're inspecting a record
+        // update like this one: `Wibble(..wobble, woo)` and the cursor is over
+        // the constructor itself we never want to allow extracting it, or it
+        // would result in the following code:
+        //
+        // ```gleam
+        // Wibble(..wobble, woo)
+        // // ^^ Cursor here
+        //
+        // let wibble = Wibble
+        // wibble(..wobble, woo)
+        // // That's a bit silly!
+        // ```
+        let constructor_range = self.edits.src_span_to_lsp_range(constructor.location());
+        if within(self.params.range, constructor_range)
+            && constructor.is_record_constructor_function()
+        {
+            return;
+        }
+
+        // Otherwise we just keep visiting like usual, no special handling is
+        // required.
+        ast::visit::visit_typed_expr_record_update(
+            self,
+            location,
+            spread_start,
+            type_,
+            updated_record,
+            updated_record_assigned_name,
+            constructor,
+            arguments,
+        );
+    }
+
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
         let expr_location = expr.location();
         let expr_range = self.edits.src_span_to_lsp_range(expr_location);
@@ -3531,15 +3667,6 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
                 return;
             }
 
-            // Expressions that don't make sense to extract
-            TypedExpr::Panic { .. }
-            | TypedExpr::Echo { .. }
-            | TypedExpr::Block { .. }
-            | TypedExpr::ModuleSelect { .. }
-            | TypedExpr::Invalid { .. }
-            | TypedExpr::PositionalAccess { .. }
-            | TypedExpr::Var { .. } => (),
-
             TypedExpr::Int { location, .. }
             | TypedExpr::Float { location, .. }
             | TypedExpr::String { location, .. }
@@ -3556,7 +3683,20 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
             | TypedExpr::BitArray { location, .. }
             | TypedExpr::RecordUpdate { location, .. }
             | TypedExpr::NegateBool { location, .. }
-            | TypedExpr::NegateInt { location, .. } => {
+            | TypedExpr::NegateInt { location, .. }
+            // It generally makes no sense to extract variables, the only
+            // exception is for records with no fields (like `True` and
+            // `False`): in the AST those are `Var`s with a `Record`
+            // constructor. Extracting them is allowed!
+            | TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: type_::ValueConstructorVariant::Record { .. },
+                        ..
+                    },
+                location,
+                ..
+            } => {
                 if let Some(ExtractVariablePosition::CallArg) = self.position {
                     // Don't update latest statement, we don't want to insert the extracted
                     // variable inside the parenthesis where the call argument is located.
@@ -3568,6 +3708,15 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
                     name: self.generate_candidate_name(expr.type_()),
                 });
             }
+
+            // Expressions that don't make sense to extract
+            TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Invalid { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::Var { .. } => (),
         }
 
         ast::visit::visit_typed_expr(self, expr);
@@ -3859,9 +4008,12 @@ fn can_be_constant(
 
         // Extract concat binary operation if both sides can be constants
         TypedExpr::BinOp {
-            name, left, right, ..
+            operator,
+            left,
+            right,
+            ..
         } => {
-            matches!(name, ast::BinOp::Concatenate)
+            matches!(operator, ast::BinOp::Concatenate)
                 && can_be_constant(module, left, Some(module_constants))
                 && can_be_constant(module, right, Some(module_constants))
         }
@@ -3970,7 +4122,7 @@ impl<'a> ExtractConstant<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Extract constant")
-            .kind(CodeActionKind::REFACTOR_EXTRACT)
+            .kind(CodeActionKind::RefactorExtract)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -4161,7 +4313,7 @@ impl<'a> ExpandFunctionCapture<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Expand function capture")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -4432,8 +4584,10 @@ impl<'a, IO> GenerateDynamicDecoder<'a, IO> {
 
 impl<'ast, IO> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast, IO> {
     fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
-        let range = self.edits.src_span_to_lsp_range(custom_type.location);
-        if !overlaps(self.params.range, range) {
+        let range = self
+            .edits
+            .src_span_to_lsp_range(custom_type.full_location());
+        if !within(self.params.range, range) {
             return;
         }
 
@@ -4472,7 +4626,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast, IO> {
         maybe_import(&mut self.edits, self.module, DECODE_MODULE);
 
         CodeActionBuilder::new("Generate dynamic decoder")
-            .kind(CodeActionKind::REFACTOR)
+            .kind(CodeActionKind::Refactor)
             .preferred(false)
             .changes(
                 self.params.text_document.uri.clone(),
@@ -5081,8 +5235,10 @@ fn is_nil_like(type_: &Type) -> bool {
 
 impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
     fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
-        let range = self.edits.src_span_to_lsp_range(custom_type.location);
-        if !overlaps(self.params.range, range) {
+        let range = self
+            .edits
+            .src_span_to_lsp_range(custom_type.full_location());
+        if !within(self.params.range, range) {
             return;
         }
 
@@ -5124,7 +5280,7 @@ fn {name}({record_name}: {type_}) -> {json_type} {{
         maybe_import(&mut self.edits, self.module, JSON_MODULE);
 
         CodeActionBuilder::new("Generate to-JSON function")
-            .kind(CodeActionKind::REFACTOR)
+            .kind(CodeActionKind::Refactor)
             .preferred(false)
             .changes(
                 self.params.text_document.uri.clone(),
@@ -5420,11 +5576,26 @@ pub enum PatternLocation {
         /// This location covers the entire list tail pattern, including the `..`
         location: SrcSpan,
     },
+    /// When the pattern being matched is a discard. For example:
+    /// ```gleam
+    /// case wibble {
+    ///   Ok(_) -> todo
+    /// //   ^ Hovering this!
+    /// }
+    /// ```
+    Discard { location: SrcSpan },
 }
 
 impl PatternLocation {
     fn regular(location: SrcSpan) -> Self {
         Self::Regular { location }
+    }
+
+    fn is_discard(&self) -> bool {
+        match self {
+            PatternLocation::Regular { .. } | PatternLocation::ListTail { .. } => false,
+            PatternLocation::Discard { .. } => true,
+        }
     }
 }
 
@@ -5479,13 +5650,20 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
                 clause_location,
                 bound_variables,
             }) => {
+                let title = if variable_location.is_discard() {
+                    "Pattern match on value"
+                } else {
+                    "Pattern match on variable"
+                };
+
                 self.match_on_clause_variable(
                     variable_type,
                     variable_location,
                     clause_location,
                     &bound_variables,
                 );
-                "Pattern match on variable"
+
+                title
             }
 
             None => return vec![],
@@ -5497,7 +5675,7 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new(action_title)
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -5637,8 +5815,9 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
         let nesting = " ".repeat(clause_range.start.character as usize);
 
         let variable_location = match variable_location {
-            PatternLocation::Regular { location } => location,
-            PatternLocation::ListTail { location } => location,
+            PatternLocation::Regular { location }
+            | PatternLocation::ListTail { location }
+            | PatternLocation::Discard { location } => location,
         };
 
         let variable_start = (variable_location.start - clause_location.start) as usize;
@@ -5923,7 +6102,18 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
         }
 
         ast::visit::visit_typed_assignment(self, assignment);
-        if let Some((name, _, ref type_)) = self.pattern_variable_under_cursor {
+        if let Some((name, _, ref type_)) = self.pattern_variable_under_cursor
+            // We must make sure that no other value was selected while visiting
+            // this. If it were `Some` that means that we have found _another_
+            // variable to match on inside the assignmemt itself. For example:
+            // ```gleam
+            // let a = {
+            //   let b = todo
+            //   //  ^ We're matching on this, not the outer one!
+            // }
+            // ```
+            && self.selected_value.is_none()
+        {
             self.selected_value = Some(PatternMatchedValue::LetVariable {
                 variable_name: name,
                 variable_type: type_.clone(),
@@ -5996,6 +6186,23 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
         }
 
         ast::visit::visit_typed_use(self, use_);
+    }
+
+    fn visit_typed_pattern_discard(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        type_: &'ast Arc<Type>,
+    ) {
+        if within(
+            self.params.range,
+            self.edits.src_span_to_lsp_range(*location),
+        ) {
+            let location = PatternLocation::Discard {
+                location: *location,
+            };
+            self.pattern_variable_under_cursor = Some((name, location, type_.clone()));
+        }
     }
 
     fn visit_typed_pattern_variable(
@@ -6328,7 +6535,7 @@ impl<'a> GenerateFunction<'a> {
         };
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Generate function")
-            .kind(CodeActionKind::QUICKFIX)
+            .kind(CodeActionKind::QuickFix)
             .changes(uri, self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
@@ -6532,8 +6739,37 @@ pub struct GenerateVariant<'a, IO> {
 
 struct VariantToGenerate<'a> {
     name: &'a str,
-    end_position: u32,
+
     arguments_types: Vec<Arc<Type>>,
+
+    /// The start of the variant where the code action was triggered.
+    /// For example:
+    ///
+    /// ```gleam
+    /// Wobble
+    ///     ^ Trigger here to generate `Wobble`
+    /// ^ The start is here!
+    /// ```
+    variant_start: u32,
+
+    /// If the variant where we triggered the code action is already qualified.
+    /// For example:
+    ///
+    /// ```gleam
+    /// wibble.Wobble // -> true
+    /// Wobble        // -> false
+    /// ```
+    ///
+    is_qualified: bool,
+
+    /// Where the custom type to add this variant to ends.
+    ///
+    end_position: u32,
+
+    /// The already existing constructors of the custom type this new variant is
+    /// going to be added to.
+    ///
+    constructors: &'a [RecordConstructor<Arc<Type>>],
 
     /// Wether the type we're adding the variant to is written with braces or
     /// not. We need this information to add braces when missing.
@@ -6617,6 +6853,16 @@ impl Argument<'_> {
     }
 }
 
+enum GenerateVariantEdits<'a> {
+    GenerateInCurrentModule {
+        current_module_edits: TextEdits<'a>,
+    },
+    GenerateInDifferentModule {
+        current_module_edits: TextEdits<'a>,
+        variant_module_edits: TextEdits<'a>,
+    },
+}
+
 impl<'a, IO> GenerateVariant<'a, IO> {
     pub fn new(
         module: &'a Module,
@@ -6638,33 +6884,99 @@ impl<'a, IO> GenerateVariant<'a, IO> {
 
         let Some(VariantToGenerate {
             name,
+            constructors,
             arguments_types,
             given_arguments,
             module_name,
             end_position,
             type_braces,
+            variant_start,
+            is_qualified,
         }) = &self.variant_to_generate
         else {
             return vec![];
         };
 
-        let Some((variant_module, variant_edits)) = self.edits_to_create_variant(
+        // Now we need to figure out if we're going to have to edit just the current
+        // module (because the variant will be added to a type that is defined there),
+        // or if we'll have to edit both the current module (to import the newly
+        // generated variant) and a different module (where the variant definition
+        // is going to end up).
+        let current_module_line_numbers = LineNumbers::new(&self.module.code);
+        let current_module_edits = TextEdits::new(&current_module_line_numbers);
+        let Some(variant_module) = self.compiler.modules.get(module_name) else {
+            return vec![];
+        };
+        let variant_module_line_numbers = LineNumbers::new(&variant_module.code);
+        let variant_module_edits = TextEdits::new(&variant_module_line_numbers);
+
+        let mut edits = if *module_name == self.module.name {
+            GenerateVariantEdits::GenerateInCurrentModule {
+                current_module_edits,
+            }
+        } else {
+            GenerateVariantEdits::GenerateInDifferentModule {
+                current_module_edits,
+                variant_module_edits,
+            }
+        };
+
+        self.edits_to_create_variant(
+            &mut edits,
             name,
             arguments_types,
             given_arguments,
-            module_name,
             *end_position,
             *type_braces,
-        ) else {
-            return vec![];
+        );
+        // If the variant is qualified already we don't have to do anything,
+        // otherwise we need to import it in the current module.
+        if !is_qualified {
+            self.edits_to_import_variant(
+                &mut edits,
+                module_name,
+                name,
+                *variant_start,
+                self.module,
+                constructors,
+            );
+        }
+
+        let mut builder = CodeActionBuilder::new("Generate variant")
+            .kind(CodeActionKind::QuickFix)
+            .preferred(true);
+
+        match edits {
+            GenerateVariantEdits::GenerateInCurrentModule {
+                current_module_edits,
+            } => {
+                builder = builder.changes(
+                    self.params.text_document.uri.clone(),
+                    current_module_edits.edits,
+                )
+            }
+            GenerateVariantEdits::GenerateInDifferentModule {
+                current_module_edits,
+                variant_module_edits,
+            } => {
+                let Some(variant_module_path) = url_from_path(variant_module.input_path.as_str())
+                else {
+                    return vec![];
+                };
+
+                if !current_module_edits.edits.is_empty() {
+                    builder = builder.changes(
+                        self.params.text_document.uri.clone(),
+                        current_module_edits.edits,
+                    );
+                }
+
+                builder = builder.changes(variant_module_path, variant_module_edits.edits)
+            }
         };
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new("Generate variant")
-            .kind(CodeActionKind::QUICKFIX)
-            .changes(variant_module, variant_edits)
-            .preferred(true)
-            .push_to(&mut action);
+        builder.push_to(&mut action);
         action
     }
 
@@ -6673,13 +6985,13 @@ impl<'a, IO> GenerateVariant<'a, IO> {
     ///
     fn edits_to_create_variant(
         &self,
+        edits: &mut GenerateVariantEdits<'_>,
         variant_name: &str,
         arguments_types: &[Arc<Type>],
         given_arguments: &Option<Arguments<'_>>,
-        module_name: &EcoString,
         end_position: u32,
         type_braces: TypeBraces,
-    ) -> Option<(Url, Vec<TextEdit>)> {
+    ) {
         let mut label_names = NameGenerator::new();
         let mut printer = Printer::new(&self.module.ast.names);
         let arguments = arguments_types
@@ -6711,36 +7023,30 @@ impl<'a, IO> GenerateVariant<'a, IO> {
             TypeBraces::NoBraces => (format!(" {{\n  {variant}\n}}"), end_position),
         };
 
-        if *module_name == self.module.name {
-            // If we're editing the current module we can use the line numbers that
-            // were already computed before-hand without wasting any time to add the
-            // new edit.
-            let mut edits = TextEdits::new(self.line_numbers);
-            edits.insert(insert_at, new_text);
-            Some((self.params.text_document.uri.clone(), edits.edits))
-        } else {
-            // Otherwise we're changing a different module and we need to get its
-            // code and line numbers to properly apply the new edit.
-            let module = self
-                .compiler
-                .modules
-                .get(module_name)
-                .expect("module to exist");
-            let line_numbers = LineNumbers::new(&module.code);
-            let mut edits = TextEdits::new(&line_numbers);
-            edits.insert(insert_at, new_text);
-            Some((url_from_path(module.input_path.as_str())?, edits.edits))
+        match edits {
+            GenerateVariantEdits::GenerateInCurrentModule {
+                current_module_edits,
+            } => current_module_edits.insert(insert_at, new_text),
+            GenerateVariantEdits::GenerateInDifferentModule {
+                variant_module_edits,
+                ..
+            } => variant_module_edits.insert(insert_at, new_text),
         }
     }
 
     fn try_save_variant_to_generate(
         &mut self,
+        is_qualified: bool,
         function_name_location: SrcSpan,
         function_type: &Arc<Type>,
         given_arguments: Option<Arguments<'a>>,
     ) {
-        let variant_to_generate =
-            self.variant_to_generate(function_name_location, function_type, given_arguments);
+        let variant_to_generate = self.variant_to_generate(
+            is_qualified,
+            function_name_location,
+            function_type,
+            given_arguments,
+        );
         if variant_to_generate.is_some() {
             self.variant_to_generate = variant_to_generate;
         }
@@ -6748,6 +7054,7 @@ impl<'a, IO> GenerateVariant<'a, IO> {
 
     fn variant_to_generate(
         &mut self,
+        is_qualified: bool,
         function_name_location: SrcSpan,
         type_: &Arc<Type>,
         given_arguments: Option<Arguments<'a>>,
@@ -6765,35 +7072,123 @@ impl<'a, IO> GenerateVariant<'a, IO> {
 
         let (module_name, type_name, _) = custom_type.named_type_information()?;
         let module = self.compiler.modules.get(&module_name)?;
-        let (end_position, type_braces) = (module.ast.definitions.custom_types.iter())
-            .filter(|custom_type| custom_type.name == type_name)
-            .find_map(|custom_type| {
-                // If there's already a variant with this name then we definitely
-                // don't want to generate a new variant with the same name!
-                let variant_with_this_name_already_exists = custom_type
-                    .constructors
-                    .iter()
-                    .map(|constructor| &constructor.name)
-                    .any(|existing_constructor_name| existing_constructor_name == name);
-                if variant_with_this_name_already_exists {
-                    return None;
-                }
-                let type_braces = if custom_type.end_position == custom_type.location.end {
-                    TypeBraces::NoBraces
-                } else {
-                    TypeBraces::HasBraces
-                };
-                Some((custom_type.end_position, type_braces))
-            })?;
+        let (end_position, type_braces, constructors) =
+            (module.ast.definitions.custom_types.iter())
+                .filter(|custom_type| custom_type.name == type_name)
+                .find_map(|custom_type| {
+                    // If there's already a variant with this name then we definitely
+                    // don't want to generate a new variant with the same name!
+                    let variant_with_this_name_already_exists = custom_type
+                        .constructors
+                        .iter()
+                        .map(|constructor| &constructor.name)
+                        .any(|existing_constructor_name| existing_constructor_name == name);
+                    if variant_with_this_name_already_exists {
+                        return None;
+                    }
+                    let type_braces = if custom_type.end_position == custom_type.location.end {
+                        TypeBraces::NoBraces
+                    } else {
+                        TypeBraces::HasBraces
+                    };
+                    Some((
+                        custom_type.end_position,
+                        type_braces,
+                        &custom_type.constructors,
+                    ))
+                })?;
 
         Some(VariantToGenerate {
             name,
+            is_qualified,
+            constructors,
             arguments_types,
             given_arguments,
             module_name,
             end_position,
             type_braces,
+            variant_start: function_name_location.start,
         })
+    }
+
+    /// If the variant is generated in a module different from the current one,
+    /// this will add the edits needed to correctly import the variant so that
+    /// it's readily available.
+    /// It will also respect the developer's choice of how variants for the type
+    /// are imported:
+    ///
+    /// ```diff
+    /// - import wibble.{ Wibble }
+    /// + import wibble.{ Wibble, Wobble }
+    /// // If generating `Wobble`, and other variants of that type are
+    /// // unqualified already the new variant is imported unqualified as well.
+    /// ```
+    ///
+    /// ```diff
+    /// import wibble
+    ///
+    /// pub fn main() {
+    /// -  let assert Wobble = todo
+    /// +  let assert wibble.Wobble = todo
+    /// }
+    /// // If no variant is used in an unqualified manner, than the variant
+    /// // that triggered the generation is also qualified!
+    /// ```
+    fn edits_to_import_variant(
+        &self,
+        edits: &mut GenerateVariantEdits<'_>,
+        variant_module_name: &str,
+        variant_name: &str,
+        variant_start: u32,
+        module: &'a Module,
+        constructors: &[RecordConstructor<Arc<Type>>],
+    ) {
+        let GenerateVariantEdits::GenerateInDifferentModule {
+            current_module_edits,
+            ..
+        } = edits
+        else {
+            // If the variant is added to the current module, then no further
+            // edits are needed. The variant is already available in the current
+            // module!
+            return;
+        };
+
+        let constructors_names: HashSet<_> = constructors
+            .iter()
+            .map(|constructor| &constructor.name)
+            .collect();
+
+        // We start by getting the import for the module where the variant
+        // is going to be added...
+        let Some(variant_module_import) = module
+            .ast
+            .definitions
+            .imports
+            .iter()
+            .find(|import_| import_.module == variant_module_name)
+        else {
+            return;
+        };
+        // ...and then check if any of the variants of the type where the variant
+        // is going to be added have already been imported in an unqualified way.
+        let constructors_for_this_type_are_unqualified = variant_module_import
+            .unqualified_values
+            .iter()
+            .any(|value| constructors_names.contains(&value.name));
+
+        if constructors_for_this_type_are_unqualified {
+            // We need to add an unqualified import!
+            let (insert_positions, new_text) = edits::insert_unqualified_import(
+                variant_module_import,
+                &self.module.code,
+                variant_name.into(),
+            );
+            current_module_edits.insert(insert_positions, new_text);
+        } else {
+            // We need to qualify the variant that triggered the code action!
+            current_module_edits.insert(variant_start, format!("{variant_module_name}."))
+        }
     }
 }
 
@@ -6806,7 +7201,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
     ) {
         let invalid_range = src_span_to_lsp_range(*location, self.line_numbers);
         if within(self.params.range, invalid_range) {
-            self.try_save_variant_to_generate(*location, type_, None);
+            self.try_save_variant_to_generate(false, *location, type_, None);
         }
         ast::visit::visit_typed_expr_invalid(self, location, type_, extra_information);
     }
@@ -6825,6 +7220,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
         if within(self.params.range, fun_range) && fun.is_invalid() {
             if labels_are_correct(arguments) {
                 self.try_save_variant_to_generate(
+                    fun.is_module_select(),
                     fun.location(),
                     &fun.type_(),
                     Some(Arguments::Expressions(arguments)),
@@ -6845,7 +7241,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
     fn visit_typed_pattern_invalid(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
         let invalid_range = src_span_to_lsp_range(*location, self.line_numbers);
         if within(self.params.range, invalid_range) {
-            self.try_save_variant_to_generate(*location, type_, None);
+            self.try_save_variant_to_generate(false, *location, type_, None);
         }
         ast::visit::visit_typed_pattern_invalid(self, location, type_);
     }
@@ -6865,6 +7261,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
         if within(self.params.range, pattern_range) {
             if labels_are_correct(arguments) {
                 self.try_save_variant_to_generate(
+                    module.is_some(),
                     *name_location,
                     type_,
                     Some(Arguments::Patterns(arguments)),
@@ -7233,7 +7630,7 @@ impl<'a> ConvertToFunctionCall<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Convert to function call")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -7365,7 +7762,7 @@ impl<'a> InlineVariable<'a> {
         self.edits.delete(location);
 
         CodeActionBuilder::new("Inline variable")
-            .kind(CodeActionKind::REFACTOR_INLINE)
+            .kind(CodeActionKind::RefactorInline)
             .changes(
                 self.params.text_document.uri.clone(),
                 std::mem::take(&mut self.edits.edits),
@@ -7562,8 +7959,8 @@ impl<'a> ConvertToPipe<'a> {
         // If the expression being piped is a binary operation with
         // precedence lower than pipes then we have to wrap it in curly
         // braces to not mess with the order of operations.
-        let arg_text = if let TypedExpr::BinOp { name, .. } = arg.value
-            && name.precedence() < PIPE_PRECEDENCE
+        let arg_text = if let TypedExpr::BinOp { operator, .. } = arg.value
+            && operator.precedence() < PIPE_PRECEDENCE
         {
             &format!("{{ {arg_text} }}")
         } else {
@@ -7603,7 +8000,7 @@ impl<'a> ConvertToPipe<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Convert to pipe")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -7832,7 +8229,7 @@ impl<'a> InterpolateString<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Interpolate string")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -8057,7 +8454,7 @@ impl<'a> FillUnusedFields<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Fill unused fields")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -8155,7 +8552,7 @@ impl<'a> RemoveEchos<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Remove all `echo`s from this module")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -8416,7 +8813,7 @@ impl<'a> WrapInBlock<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Wrap in block")
-            .kind(CodeActionKind::REFACTOR_EXTRACT)
+            .kind(CodeActionKind::RefactorExtract)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -8524,22 +8921,82 @@ impl<'a> FixBinaryOperation<'a> {
         self.edits.replace(location, replacement.name().into());
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new(&format!("Use `{}`", replacement.name()))
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+        CodeActionBuilder::new(format!("Use `{}`", replacement.name()))
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
         action
     }
+
+    fn try_fix(
+        &mut self,
+        left: Arc<Type>,
+        right: Arc<Type>,
+        operator: ast::BinOp,
+        operator_start: u32,
+    ) {
+        let operator_location = SrcSpan::new(operator_start, operator_start + operator.size());
+        if operator.is_int_operator() && left.is_float() && right.is_float() {
+            self.fix = operator
+                .float_equivalent()
+                .map(|fix| (operator_location, fix));
+        } else if operator.is_float_operator() && left.is_int() && right.is_int() {
+            self.fix = operator
+                .int_equivalent()
+                .map(|fix| (operator_location, fix))
+        } else if operator == ast::BinOp::AddInt && left.is_string() && right.is_string() {
+            self.fix = Some((operator_location, ast::BinOp::Concatenate))
+        }
+    }
 }
 
 impl<'ast> ast::visit::Visit<'ast> for FixBinaryOperation<'ast> {
+    fn visit_typed_expr_case(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        subjects: &'ast [TypedExpr],
+        clauses: &'ast [ast::TypedClause],
+        compiled_case: &'ast CompiledCase,
+    ) {
+        ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
+    }
+    fn visit_typed_clause_guard(&mut self, guard: &'ast TypedClauseGuard) {
+        ast::visit::visit_typed_clause_guard(self, guard);
+    }
+
+    fn visit_typed_clause_guard_bin_op(
+        &mut self,
+        left: &'ast TypedClauseGuard,
+        right: &'ast TypedClauseGuard,
+        operator: &'ast ast::BinOp,
+        operator_start: &'ast u32,
+        location: &'ast SrcSpan,
+    ) {
+        let binop_range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, binop_range) {
+            return;
+        }
+
+        self.try_fix(left.type_(), right.type_(), *operator, *operator_start);
+
+        ast::visit::visit_typed_clause_guard_bin_op(
+            self,
+            left,
+            right,
+            operator,
+            operator_start,
+            location,
+        );
+    }
+
     fn visit_typed_expr_bin_op(
         &mut self,
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
-        name: &'ast ast::BinOp,
-        name_location: &'ast SrcSpan,
+        operator: &'ast ast::BinOp,
+        operator_start: &'ast u32,
         left: &'ast TypedExpr,
         right: &'ast TypedExpr,
     ) {
@@ -8548,23 +9005,14 @@ impl<'ast> ast::visit::Visit<'ast> for FixBinaryOperation<'ast> {
             return;
         }
 
-        if name.is_int_operator() && left.type_().is_float() && right.type_().is_float() {
-            self.fix = name.float_equivalent().map(|fix| (*name_location, fix));
-        } else if name.is_float_operator() && left.type_().is_int() && right.type_().is_int() {
-            self.fix = name.int_equivalent().map(|fix| (*name_location, fix))
-        } else if *name == ast::BinOp::AddInt
-            && left.type_().is_string()
-            && right.type_().is_string()
-        {
-            self.fix = Some((*name_location, ast::BinOp::Concatenate))
-        }
+        self.try_fix(left.type_(), right.type_(), *operator, *operator_start);
 
         ast::visit::visit_typed_expr_bin_op(
             self,
             location,
             type_,
-            name,
-            name_location,
+            operator,
+            operator_start,
             left,
             right,
         );
@@ -8607,8 +9055,8 @@ impl<'a> FixTruncatedBitArraySegment<'a> {
             .replace(truncation.value_location, replacement.clone());
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new(&format!("Replace with `{replacement}`"))
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+        CodeActionBuilder::new(format!("Replace with `{replacement}`"))
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
@@ -8739,7 +9187,6 @@ impl<'a> RemoveUnusedImports<'a> {
                 | type_::Warning::CaseMatchOnLiteralCollection { .. }
                 | type_::Warning::CaseMatchOnLiteralValue { .. }
                 | type_::Warning::OpaqueExternalType { .. }
-                | type_::Warning::InternalTypeLeak { .. }
                 | type_::Warning::RedundantAssertAssignment { .. }
                 | type_::Warning::AssertAssignmentOnImpossiblePattern { .. }
                 | type_::Warning::TodoOrPanicUsedAsFunction { .. }
@@ -8859,7 +9306,7 @@ impl<'a> RemoveUnusedImports<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Remove unused imports")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
@@ -8910,7 +9357,7 @@ impl<'a> RemoveBlock<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Remove block")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
@@ -8923,8 +9370,8 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveBlock<'ast> {
         &mut self,
         _location: &'ast SrcSpan,
         _type_: &'ast Arc<Type>,
-        _name: &'ast ast::BinOp,
-        _name_location: &'ast SrcSpan,
+        _operator: &'ast ast::BinOp,
+        _operator_start: &'ast u32,
         left: &'ast TypedExpr,
         right: &'ast TypedExpr,
     ) {
@@ -9027,7 +9474,7 @@ impl<'a> RemovePrivateOpaque<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Remove opaque from private type")
-            .kind(CodeActionKind::QUICKFIX)
+            .kind(CodeActionKind::QuickFix)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
@@ -9364,7 +9811,7 @@ impl<'a> CollapseNestedCase<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Collapse nested case")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -9568,7 +10015,7 @@ impl<'a> RemoveUnreachableCaseClauses<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Remove unreachable clauses")
-            .kind(CodeActionKind::QUICKFIX)
+            .kind(CodeActionKind::QuickFix)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
@@ -9608,6 +10055,73 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveUnreachableCaseClauses<'ast> {
         // keep visiting the case expression as the unreachable branch might be
         // in one of the nested cases.
         ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
+    }
+}
+
+/// Code action to remove a record update when all of its fields have been
+/// provided already:
+///
+/// ```gleam
+/// pub type Wibble { Wibble(one: Int, two: Int) }
+///
+/// wibble(..wibble, one:, two:)
+/// //     ^^^^^^^^ This is not needed and raises a warning!
+/// ```
+///
+pub struct RemoveRedundantRecordUpdate<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+}
+
+impl<'a> RemoveRedundantRecordUpdate<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        let spread_to_remove = self
+            .module
+            .ast
+            .type_info
+            .warnings
+            .iter()
+            .find_map(|warning| {
+                if let type_::Warning::AllFieldsRecordUpdate {
+                    location,
+                    record_location,
+                } = warning
+                    && within(
+                        self.params.range,
+                        self.edits.src_span_to_lsp_range(*location),
+                    )
+                {
+                    Some(*record_location)
+                } else {
+                    None
+                }
+            });
+
+        let Some(spread_to_remove) = spread_to_remove else {
+            return vec![];
+        };
+        self.edits.delete(spread_to_remove);
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Remove redundant record update")
+            .kind(CodeActionKind::QuickFix)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(true)
+            .push_to(&mut action);
+        action
     }
 }
 
@@ -9669,7 +10183,7 @@ impl<'a> AddOmittedLabels<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Add omitted labels")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -10126,7 +10640,7 @@ impl<'a> ExtractFunction<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Extract function")
-            .kind(CodeActionKind::REFACTOR_EXTRACT)
+            .kind(CodeActionKind::RefactorExtract)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -10962,6 +11476,58 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
         self.register_referenced_variable(name, type_, *location, *definition_location);
     }
 
+    fn visit_typed_expr_case(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        subjects: &'ast [TypedExpr],
+        clauses: &'ast [ast::TypedClause],
+        compiled_case: &'ast CompiledCase,
+    ) {
+        let was_extracting_already = self.function.is_some();
+
+        // We first visit as usual...
+        ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
+
+        // But then we need to check we're in a situation where it actually makes
+        // sense to extract: if the cursor is entirely within the case (so it's
+        // not part of a bigger extracted chunk) and it spans over one of the
+        // branches' pattern or guard, then we don't want to allow extracting
+        // anything. Popping up the action would be confusing.
+        // For example:
+        //
+        // ```gleam
+        // case wibble {
+        //   Ok(_) -> todo
+        // //^^^^^^^^^^^^^ If I'm selecting this whole branch it makes no sense
+        //                 to propose extracting it as a function
+        //   _ if wibble -> todo
+        // //        ^^^^^^^^^^^ If I'm selecting this it makes no sense to
+        // //                    propose extracting it as a function
+        // }
+        // ```
+
+        // We were already extracting something, we don't want to render that
+        // choice null, this is just a part of a bigger piece being extracted.
+        if was_extracting_already {
+            return;
+        }
+
+        for clause in clauses {
+            let left_hand_side_location = SrcSpan {
+                start: clause.pattern_location().start,
+                end: clause.then.location().start - 1,
+            };
+            let left_hand_side_range = self.edits.src_span_to_lsp_range(left_hand_side_location);
+            // If there's any overlapping with one of the patterns, then we
+            // don't want to extract anything.
+            if overlaps(self.params.range, left_hand_side_range) {
+                self.function = None;
+                break;
+            }
+        }
+    }
+
     fn visit_typed_bit_array_size_variable(
         &mut self,
         location: &'ast SrcSpan,
@@ -11095,7 +11661,7 @@ impl<'a> MergeCaseBranches<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Merge case branches")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
@@ -11331,7 +11897,7 @@ impl<'a> AddMissingTypeParameter<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Add missing type parameter")
-            .kind(CodeActionKind::QUICKFIX)
+            .kind(CodeActionKind::QuickFix)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
@@ -11346,7 +11912,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddMissingTypeParameter<'ast> {
             .src_span_to_lsp_range(custom_type.full_location());
 
         // Only continue, if the action was selected anywhere within the custom type definition.
-        if !overlaps(self.params.range, custom_type_range) {
+        if !within(self.params.range, custom_type_range) {
             return;
         }
 
@@ -11428,7 +11994,7 @@ impl<'a> ReplaceUnderscoreWithType<'a> {
             .replace(location, format!("{}", printer.print_type(&type_)));
 
         CodeActionBuilder::new("Replace `_` with type")
-            .kind(CodeActionKind::QUICKFIX)
+            .kind(CodeActionKind::QuickFix)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
             .push_to(&mut action);
@@ -11478,9 +12044,9 @@ impl<'ast> ast::visit::Visit<'ast> for ReplaceUnderscoreWithType<'ast> {
 /// ```
 pub struct WrapInAnonymousFunction<'a> {
     module: &'a Module,
-    line_numbers: &'a LineNumbers,
     params: &'a CodeActionParams,
     functions: Vec<FunctionToWrap>,
+    edits: TextEdits<'a>,
 }
 
 /// Helper struct, a target for [WrapInAnonymousFunction].
@@ -11498,8 +12064,8 @@ impl<'a> WrapInAnonymousFunction<'a> {
     ) -> Self {
         Self {
             module,
-            line_numbers,
             params,
+            edits: TextEdits::new(line_numbers),
             functions: vec![],
         }
     }
@@ -11514,16 +12080,20 @@ impl<'a> WrapInAnonymousFunction<'a> {
             let arguments = target
                 .arguments
                 .iter()
-                .map(|t| name_generator.generate_name_from_type(t))
+                .map(|type_| name_generator.generate_name_from_type(type_))
                 .join(", ");
 
-            let mut edits = TextEdits::new(self.line_numbers);
-            edits.insert(target.location.start, format!("fn({arguments}) {{ "));
-            edits.insert(target.location.end, format!("({arguments}) }}"));
+            self.edits
+                .insert(target.location.start, format!("fn({arguments}) {{ "));
+            self.edits
+                .insert(target.location.end, format!("({arguments}) }}"));
 
             CodeActionBuilder::new("Wrap in anonymous function")
-                .kind(CodeActionKind::REFACTOR_REWRITE)
-                .changes(self.params.text_document.uri.clone(), edits.edits)
+                .kind(CodeActionKind::RefactorRewrite)
+                .changes(
+                    self.params.text_document.uri.clone(),
+                    self.edits.edits.drain(..).collect(),
+                )
                 .push_to(&mut actions);
         }
         actions
@@ -11532,8 +12102,8 @@ impl<'a> WrapInAnonymousFunction<'a> {
 
 impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
     fn visit_typed_expr(&mut self, expression: &'ast TypedExpr) {
-        let expression_range = src_span_to_lsp_range(expression.location(), self.line_numbers);
-        if !overlaps(self.params.range, expression_range) {
+        let expression_range = self.edits.src_span_to_lsp_range(expression.location());
+        if !within(self.params.range, expression_range) {
             return;
         }
 
@@ -11567,7 +12137,7 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
     ) {
         // We only need to do this interception for explicit calls, so if any
         // of our arguments are explicit we re-enter the visitor as usual.
-        if arguments.iter().any(|a| a.is_implicit()) {
+        if arguments.iter().any(|argument| argument.is_implicit()) {
             self.visit_typed_expr(fun);
         } else {
             // We still want to visit other nodes nested in the function being
@@ -11578,6 +12148,45 @@ impl<'ast> ast::visit::Visit<'ast> for WrapInAnonymousFunction<'ast> {
         for argument in arguments {
             self.visit_typed_call_arg(argument);
         }
+    }
+
+    /// We don't want to apply this to record constructors used in a record
+    /// update.
+    fn visit_typed_expr_record_update(
+        &mut self,
+        location: &'ast SrcSpan,
+        spread_start: &'ast u32,
+        type_: &'ast Arc<Type>,
+        updated_record: &'ast TypedExpr,
+        updated_record_assigned_name: &'ast Option<EcoString>,
+        constructor: &'ast TypedExpr,
+        arguments: &'ast [TypedCallArg],
+    ) {
+        // If we're hovering the record constructor of an update and that is a
+        // simple record constructor, we don't want to offer the wrap in
+        // anonymous function code action:
+        //
+        // ```gleam
+        // Wibble(..wibble, a: 1)
+        // // ^^^ Wrap in anonymous function makes no sense on this!
+        // ```
+        let constructor_range = self.edits.src_span_to_lsp_range(constructor.location());
+        if within(self.params.range, constructor_range)
+            && constructor.is_record_constructor_function()
+        {
+            return;
+        }
+
+        ast::visit::visit_typed_expr_record_update(
+            self,
+            location,
+            spread_start,
+            type_,
+            updated_record,
+            updated_record_assigned_name,
+            constructor,
+            arguments,
+        );
     }
 }
 
@@ -11665,7 +12274,7 @@ impl<'a> UnwrapAnonymousFunction<'a> {
             });
 
             CodeActionBuilder::new("Remove anonymous function wrapper")
-                .kind(CodeActionKind::REFACTOR_REWRITE)
+                .kind(CodeActionKind::RefactorRewrite)
                 .changes(self.params.text_document.uri.clone(), edits.edits)
                 .push_to(&mut actions);
         }
@@ -11688,7 +12297,7 @@ impl<'a> UnwrapAnonymousFunction<'a> {
         body: &'a Vec1<TypedStatement>,
     ) {
         let function_range = src_span_to_lsp_range(*location, self.line_numbers);
-        if !overlaps(self.params.range, function_range) {
+        if !within(self.params.range, function_range) {
             return;
         }
 
@@ -11758,7 +12367,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnwrapAnonymousFunction<'ast> {
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
         let function_range = src_span_to_lsp_range(*location, self.line_numbers);
-        if !overlaps(self.params.range, function_range) {
+        if !within(self.params.range, function_range) {
             return;
         }
 
@@ -11773,5 +12382,119 @@ impl<'ast> ast::visit::Visit<'ast> for UnwrapAnonymousFunction<'ast> {
             body,
             return_annotation,
         )
+    }
+}
+
+/// Code action to create unknown modules when an import is added for a
+/// module that doesn't exist.
+///
+/// For example, if `import wobble/woo` is added to `src/wiggle.gleam`,
+/// then a code action to create `src/wobble/woo.gleam` will be presented
+/// when triggered over `import wobble/woo`.
+pub struct CreateUnknownModule<'a, IO> {
+    module: &'a Module,
+    compiler: &'a LspProjectCompiler<FileSystemProxy<IO>>,
+    lines: &'a LineNumbers,
+    params: &'a CodeActionParams,
+    paths: &'a ProjectPaths,
+    error: &'a Option<Error>,
+}
+
+impl<'a, IO> CreateUnknownModule<'a, IO> {
+    pub fn new(
+        module: &'a Module,
+        compiler: &'a LspProjectCompiler<FileSystemProxy<IO>>,
+        lines: &'a LineNumbers,
+        params: &'a CodeActionParams,
+        paths: &'a ProjectPaths,
+        error: &'a Option<Error>,
+    ) -> Self {
+        Self {
+            module,
+            compiler,
+            lines,
+            params,
+            paths,
+            error,
+        }
+    }
+
+    pub fn code_actions(self) -> Vec<CodeAction> {
+        // This code action can be derived from `UnknownModule` type errors.
+        // If those errors don't exist for the current module, then we will not
+        // suggest this action.
+        let Some(Error::Type { failed_modules, .. }) = self.error else {
+            return vec![];
+        };
+        let Some(failed_module) = failed_modules.get(&self.module.name) else {
+            return vec![];
+        };
+
+        let mut unknown_module_name = None;
+        // We then need to find the `UnknownModule` error that is under the
+        // cursor (if any, otherwise there's no action to suggest)!
+        for error in &failed_module.errors {
+            let TypeError::UnknownModule { location, name, .. } = error else {
+                continue;
+            };
+            let error_range = src_span_to_lsp_range(*location, self.lines);
+            if !within(self.params.range, error_range) {
+                continue;
+            }
+            // We've found the unknown module error!!
+            unknown_module_name = Some(name);
+        }
+
+        let Some(unknown_module_name) = unknown_module_name else {
+            return vec![];
+        };
+
+        // Now we need to check the module actually doesn't exist among the
+        // importable ones! Imagine we've written `timestamp.to_string` and
+        // `timestamp` is unknown: if there's any importable module in the form
+        // `.../timestamp` then the most likely scenario is that the programmer
+        // wanted to import that and not create a new `src/timestamp.gleam`
+        // file!
+        // So we check if any of the importable modules ends with the unknown
+        // name and if that's the case we don't suggest this action.
+        let importable_modules = self.compiler.project_compiler.get_importable_modules();
+        let unknown_module_can_be_imported = importable_modules
+            .keys()
+            .find(|module_name| module_name.split('/').next_back() == Some(unknown_module_name))
+            .is_some();
+        if unknown_module_can_be_imported {
+            return vec![];
+        }
+
+        // We've made sure the module is not among the importable ones, so now
+        // we figure out if the generated module needs to go under `src`,
+        // `test`, or `dev` and we're good to actually generate it!
+        let origin_directory = match self.module.origin {
+            Origin::Src => self.paths.src_directory(),
+            Origin::Test => self.paths.test_directory(),
+            Origin::Dev => self.paths.dev_directory(),
+        };
+
+        let uri = url_from_path(&format!("{origin_directory}/{}.gleam", unknown_module_name))
+            .expect("origin directory is absolute");
+
+        let mut actions = vec![];
+        CodeActionBuilder::new(format!(
+            "Create {}/{}.gleam",
+            self.module.origin.folder_name(),
+            unknown_module_name
+        ))
+        .kind(CodeActionKind::QuickFix)
+        .document_changes(vec![DocumentChange::CreateFile(CreateFile {
+            uri,
+            options: Some(CreateFileOptions {
+                overwrite: Some(false),
+                ignore_if_exists: Some(true),
+            }),
+            annotation_id: None,
+        })])
+        .push_to(&mut actions);
+
+        actions
     }
 }

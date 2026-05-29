@@ -1,10 +1,13 @@
+use crate::fs::{self, ZipArchive};
 use camino::Utf8PathBuf;
 use gleam_core::{
     Result,
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Target},
     paths::ProjectPaths,
+    type_::ModuleFunction,
 };
+use std::io::Cursor;
 
 static ENTRYPOINT_FILENAME_POWERSHELL: &str = "entrypoint.ps1";
 static ENTRYPOINT_FILENAME_POSIX_SHELL: &str = "entrypoint.sh";
@@ -14,8 +17,100 @@ static ENTRYPOINT_TEMPLATE_POWERSHELL: &str =
 static ENTRYPOINT_TEMPLATE_POSIX_SHELL: &str =
     include_str!("../templates/erlang-shipment-entrypoint.sh");
 
-// TODO: start in embedded mode
-// TODO: test
+/// Generate a single file of precompiled Erlang, suitable for CLIs.
+///
+pub fn escript(paths: &ProjectPaths) -> Result<()> {
+    let target = Target::Erlang;
+    let mode = Mode::Prod;
+    let build = paths.build_directory_for_target(mode, target);
+
+    // Reset the directories to ensure we have a clean slate and no old code
+    fs::delete_directory(&build)?;
+
+    let manifest = crate::build::download_dependencies(paths, crate::cli::Reporter::new())?;
+
+    // Build project in production mode
+    let build_options = Options {
+        root_target_support: TargetSupport::Enforced,
+        warnings_as_errors: false,
+        codegen: Codegen::All,
+        compile: Compile::All,
+        mode,
+        target: Some(target),
+        no_print_progress: false,
+    };
+    let built = crate::build::main(paths, build_options, manifest)?;
+    let package_name = &built.root_package.config.name;
+
+    // The main function must exist for the escript to call. This will return an
+    // error if it could not be found.
+    let _: ModuleFunction = built.get_main_function(package_name, target)?;
+
+    // Create the zip archive for the code
+    let mut zip = ZipArchive::new(Cursor::new(Vec::new()));
+
+    for entry in fs::read_dir(&build)?.filter_map(Result::ok) {
+        let ebin = entry.path().join("ebin");
+
+        // We want the ebin code directories for each package
+        if !ebin.is_dir() {
+            continue;
+        }
+
+        for entry in fs::read_dir(&ebin)?.filter_map(Result::ok) {
+            let path = entry.path();
+            let extension = path.extension().unwrap_or_default();
+
+            let Some(name) = path.file_name() else {
+                continue;
+            };
+
+            if !path.is_file() {
+                continue;
+            }
+
+            // We want to copy compiled BEAM bytecode and app configuration files
+            if extension != "beam" && extension != "app" {
+                continue;
+            }
+
+            zip.add_file_from_disc(path, name)?;
+        }
+    }
+
+    let zip = zip.finish()?.into_inner();
+
+    let escript_path = paths.root().join(package_name.as_str());
+    let mut file = fs::open_file(&escript_path)?;
+
+    // The -escript flag in the header instructs the BEAM `escript` program
+    // to run the regular Gleam entrypoint module when running this escript.
+    let header = format!(
+        "#!/usr/bin/env escript
+%%
+%%!-escript main {package_name}@@main
+"
+    );
+
+    fs::write_to_open_file(&mut file, &escript_path, header)?;
+    fs::write_to_open_file(&mut file, &escript_path, zip)?;
+    fs::make_executable(&escript_path)?;
+
+    // Windows shells largely do not use shebangs, so for the escript to be
+    // directly executable a .cmd wrapper script is provided.
+    if cfg!(windows) {
+        let cmd_path = escript_path.with_extension("cmd");
+        fs::write(&cmd_path, "@echo off\r\nescript.exe \"%~dpn0\" %*\r\n")?;
+    }
+
+    println!(
+        "
+Your escript has been generated to {escript_path}.
+",
+    );
+
+    Ok(())
+}
 
 /// Generate a directory of precompiled Erlang along with a start script.
 /// Suitable for deployment to a server.
@@ -31,11 +126,11 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
     let build = paths.build_directory_for_target(mode, target);
     let out = paths.erlang_shipment_directory();
 
-    crate::fs::mkdir(&out)?;
+    fs::mkdir(&out)?;
 
     // Reset the directories to ensure we have a clean slate and no old code
-    crate::fs::delete_directory(&build)?;
-    crate::fs::delete_directory(&out)?;
+    fs::delete_directory(&build)?;
+    fs::delete_directory(&out)?;
 
     // Build project in production mode
     let built = crate::build::main(
@@ -52,7 +147,7 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
         crate::build::download_dependencies(paths, crate::cli::Reporter::new())?,
     )?;
 
-    for entry in crate::fs::read_dir(&build)?.filter_map(Result::ok) {
+    for entry in fs::read_dir(&build)?.filter_map(Result::ok) {
         let path = entry.path();
 
         // We are only interested in package directories
@@ -63,15 +158,15 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
         let name = path.file_name().expect("Directory name");
         let build = build.join(name);
         let out = out.join(name);
-        crate::fs::mkdir(&out)?;
+        fs::mkdir(&out)?;
 
         // Copy desired package subdirectories
         for subdirectory in ["ebin", "priv", "include"] {
             let source = build.join(subdirectory);
             if source.is_dir() {
-                let source = crate::fs::canonicalise(&source)?;
+                let source = fs::canonicalise(&source)?;
                 let out = out.join(subdirectory);
-                crate::fs::copy_dir(source, &out)?;
+                fs::copy_dir(source, &out)?;
             }
         }
     }
@@ -112,8 +207,8 @@ fn write_entrypoint_script(
     package_name: &str,
 ) -> Result<()> {
     let text = entrypoint_template_path.replace("$PACKAGE_NAME_FROM_GLEAM", package_name);
-    crate::fs::write(entrypoint_output_path, &text)?;
-    crate::fs::make_executable(entrypoint_output_path)?;
+    fs::write(entrypoint_output_path, &text)?;
+    fs::make_executable(entrypoint_output_path)?;
     Ok(())
 }
 
@@ -122,7 +217,7 @@ pub fn hex_tarball(paths: &ProjectPaths) -> Result<()> {
     let data: Vec<u8> = crate::publish::build_hex_tarball(paths, &mut config)?;
 
     let path = paths.build_export_hex_tarball(&config.name, &config.version.to_string());
-    crate::fs::write_bytes(&path, &data)?;
+    fs::write_bytes(&path, &data)?;
     println!(
         "
 Your hex tarball has been generated in {}.
@@ -164,13 +259,13 @@ pub fn package_interface(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
         &built.root_package,
         &built.module_interfaces,
     );
-    crate::fs::write_outputs_under(&[out], paths.root())?;
+    fs::write_outputs_under(&[out], paths.root())?;
     Ok(())
 }
 
 pub fn package_information(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
     let config = crate::config::root_config(paths)?;
     let out = gleam_core::docs::generate_json_package_information(out, config);
-    crate::fs::write_outputs_under(&[out], paths.root())?;
+    fs::write_outputs_under(&[out], paths.root())?;
     Ok(())
 }

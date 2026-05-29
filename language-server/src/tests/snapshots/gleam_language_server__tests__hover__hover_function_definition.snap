@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\nfn add_2(x) {\n  x + 2\n}\n"
 ---
+
 fn add_2(x) {
 ▔▔▔↑▔▔▔▔▔▔▔  
   x + 2

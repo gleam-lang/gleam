@@ -1,0 +1,29 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  let outcome = apply(#(Ok(1), Nil), fn(pair) {\n    let #(result, nil) = pair\n  })\n}\n\nfn apply(a, f) { f(a) }\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let outcome = apply(#(Ok(1), Nil), fn(pair) {
+    let #(result, nil) = pair
+          ↑                  
+  })
+}
+
+fn apply(a, f) { f(a) }
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let outcome = apply(#(Ok(1), Nil), fn(pair) {
+    let #(result, nil) = pair
+    case result {
+      Ok(value) -> todo
+      Error(value) -> todo
+    }
+  })
+}
+
+fn apply(a, f) { f(a) }

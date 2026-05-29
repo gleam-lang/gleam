@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main(res) {\n  case res {\n    result.Ok(_) -> Nil\n    result.Error(_) -> Nil\n  }\n}\n"
 ---
 ----- BEFORE ACTION

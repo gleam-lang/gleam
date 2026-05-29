@@ -24,6 +24,8 @@ expression: "\nfn add_2(x) {\n  x + 2\n}\n\npub fn go(x) {\n  x |> add_2\n}\n"
 8 |}
 
 ----- SOURCE MAP
+File: my/mod.mjs
+Sources: mod.gleam
 Mappings:
 ----- 
 

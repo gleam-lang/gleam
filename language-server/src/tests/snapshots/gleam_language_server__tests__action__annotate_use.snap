@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn wibble(wobble: fn(Int, Int) -> Int) {\n  wobble(1, 2)\n}\n\npub fn main() {\n  use a, b <- wibble\n  a + b\n}\n"
 ---
 ----- BEFORE ACTION

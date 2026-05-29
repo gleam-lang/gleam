@@ -1,0 +1,13 @@
+---
+source: test-project-compiler/src/generated_tests.rs
+expression: "./cases/javascript_source_maps"
+---
+//// javascript_source_maps/build/prod/javascript/example/gleam.mjs
+export * from "../prelude.mjs";
+
+
+//// javascript_source_maps/build/prod/javascript/fingerprint
+<gleam compiler version string> 2
+
+//// javascript_source_maps/build/prod/javascript/prelude.mjs
+<javascript prelude>

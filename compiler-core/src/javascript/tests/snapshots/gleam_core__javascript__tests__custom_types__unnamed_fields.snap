@@ -50,7 +50,6 @@ export function go() {
 }
 
 export function destructure(x) {
-  let raw;
-  raw = x[0];
+  let raw = x[0];
   return raw;
 }

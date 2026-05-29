@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 2139
 expression: "\nfn codepoint() -> UtfCodepoint { todo }\n\npub fn main() {\n  let my_codepoint = codepoint()\n  <<my_codepoint:utf32_codepoint>>\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 157
 expression: "\npub fn go() {\n  1 != 2\n  1 == 2\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

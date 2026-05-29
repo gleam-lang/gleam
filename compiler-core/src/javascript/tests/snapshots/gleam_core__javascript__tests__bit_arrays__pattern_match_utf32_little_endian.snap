@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
 expression: "\npub fn go(x) {\n  let assert <<\"Hello\":utf32-little, _rest:bytes>> = x\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -37,7 +38,7 @@ export function go(x) {
       x.byteAt(17) === 0 &&
       x.byteAt(18) === 0 &&
       x.byteAt(19) === 0 &&
-    (x.bitSize - 160) % 8 === 0
+    x.bitSize % 8 === 0
   )) {
     throw makeError(
       "let_assert",

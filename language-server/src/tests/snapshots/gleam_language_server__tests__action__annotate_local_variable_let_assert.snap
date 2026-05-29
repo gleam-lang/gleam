@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn fallible() -> Result(Int, Nil) {\n  todo\n}\n\npub fn main() {\n  let assert Ok(value) = fallible()\n}\n"
 ---
 ----- BEFORE ACTION

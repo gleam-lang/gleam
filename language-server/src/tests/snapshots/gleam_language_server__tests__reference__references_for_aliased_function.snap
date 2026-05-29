@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/reference.rs
+source: language-server/src/tests/reference.rs
 expression: "\npub fn wibble() {\n  123\n}\n\npub fn main() {\n  wibble()\n}\n"
 ---
 -- mod.gleam

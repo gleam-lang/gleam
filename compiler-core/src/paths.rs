@@ -124,12 +124,14 @@ impl ProjectPaths {
             .join("ebin")
     }
 
-    /// A path to a special file that contains the version of gleam that last built
-    /// the artifacts. If this file does not match the current version of gleam we
+    /// A path to a special file that contains the version of gleam
+    /// that last built the artifacts along with build-impacting
+    /// configuration, such as whether to generate source maps. If
+    /// this file does not match the current version of gleam we
     /// will rebuild from scratch
-    pub fn build_gleam_version(&self, mode: Mode, target: Target) -> Utf8PathBuf {
+    pub fn build_configuration_fingerprint(&self, mode: Mode, target: Target) -> Utf8PathBuf {
         self.build_directory_for_target(mode, target)
-            .join("gleam_version")
+            .join("fingerprint")
     }
 
     /// The path to the source gleam.toml file for a path dependency.

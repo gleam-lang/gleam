@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport option\n\nconst default = option.None\n\npub fn get_or_default(value: a) {\n  case value {\n    option.Some(x) -> x\n    option.None -> value\n  }\n}\n"
 ---
 ----- BEFORE ACTION

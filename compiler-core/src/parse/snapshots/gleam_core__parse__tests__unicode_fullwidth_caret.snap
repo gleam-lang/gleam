@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 2322
 expression: "pub fn main() { 0b1 ＾ 0b1 }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn main() { 0b1 ＾ 0b1 }

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "pub fn main() {\n  [1, 2, 3]\n  |> map(add(_, 1))\n}\n\npub fn map(l: List(a), f: fn(a) -> b) -> List(b) { todo }\npub fn add(n, m) { n + m }\n"
 ---
 ----- BEFORE ACTION

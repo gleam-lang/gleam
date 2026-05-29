@@ -1,0 +1,51 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "\n@deprecated(\"Reason\")\nfn wibble() {\n    todo\n}\n\n@deprecated(\"Reason\")\ntype Wibble {\n    Wibble\n}\n"
+---
+|
+@deprecated("Reason")
+fn wibble() {
+    todo
+}
+
+@deprecated("Reason")
+type Wibble {
+    Wibble
+}
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   5_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   5_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   5_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   5_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   5_True
+Wibble
+  kind:   EnumMember
+  detail: Wibble
+  sort:   3_Wibble
+  desc:   app
+  edits:
+    [1:0-1:0]: "Wibble"
+wibble
+  kind:   Function
+  detail: fn() -> a
+  sort:   3_wibble
+  desc:   app
+  edits:
+    [1:0-1:0]: "wibble"

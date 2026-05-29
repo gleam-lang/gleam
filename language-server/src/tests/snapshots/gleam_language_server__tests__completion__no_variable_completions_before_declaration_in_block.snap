@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\npub fn main() {\n  {\n    s\n    let something = 10\n  }\n}\n"
 ---
+
 pub fn main() {
   {
     s|

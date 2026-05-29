@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "pub fn main() {\n  case todo {\n    Ok(_) -> #(Ok(1), Error(\"s\"))\n    Error(_) -> panic\n  }\n}"
 ---
 ----- BEFORE ACTION

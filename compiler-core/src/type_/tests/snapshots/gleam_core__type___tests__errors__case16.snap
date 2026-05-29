@@ -19,3 +19,16 @@ Expected type:
 Found type:
 
     List(Int)
+
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:1:1
+  │
+1 │ case [3], 1.1 { x, y if x <=. y -> 1 }
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    _, _

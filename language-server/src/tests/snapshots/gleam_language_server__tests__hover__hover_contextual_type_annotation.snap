@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\nimport wibble/wobble\n\nfn make_wibble() -> wobble.Wibble { wobble.Wibble }\n"
 ---
+
 import wibble/wobble
 
 fn make_wibble() -> wobble.Wibble { wobble.Wibble }

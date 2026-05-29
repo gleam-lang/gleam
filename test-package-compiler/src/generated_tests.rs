@@ -311,6 +311,17 @@ fn javascript_import() {
 
 #[rustfmt::skip]
 #[test]
+fn javascript_sourcemaps() {
+    let output = crate::prepare("./cases/javascript_sourcemaps");
+    insta::assert_snapshot!(
+        "javascript_sourcemaps",
+        output,
+        "./cases/javascript_sourcemaps",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
 fn not_overwriting_erlang_module() {
     let output = crate::prepare("./cases/not_overwriting_erlang_module");
     insta::assert_snapshot!(

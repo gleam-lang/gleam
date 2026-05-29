@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  use a <- wibble(two: 2, three: 3)\n  todo\n}\n\nfn wibble(one f, two _, three _) {\n    f(1)\n}\n"
 ---
 ----- BEFORE ACTION

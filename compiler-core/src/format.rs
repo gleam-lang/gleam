@@ -469,9 +469,13 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn const_expr<'a, A, B>(&mut self, value: &'a Constant<A, B>) -> Document<'a> {
+    fn const_expr<'a, A>(&mut self, value: &'a Constant<A>) -> Document<'a> {
         let comments = self.pop_comments(value.location().start);
         let document = match value {
+            Constant::Todo { message, .. } => {
+                self.append_as_message_constant("todo".to_doc(), message.as_deref())
+            }
+
             Constant::Int { value, .. } => self.int(value),
 
             Constant::Float { value, .. } => self.float(value),
@@ -494,7 +498,9 @@ impl<'comments> Formatter<'comments> {
             } => {
                 let segment_docs = segments
                     .iter()
-                    .map(|segment| bit_array_segment(segment, |e| self.const_expr(e)))
+                    .map(|segment| {
+                        bit_array_segment(segment, |expression| self.const_expr(expression))
+                    })
                     .collect_vec();
 
                 let packing = self.items_sequence_packing(
@@ -509,21 +515,21 @@ impl<'comments> Formatter<'comments> {
 
             Constant::Record {
                 name,
-                arguments,
+                arguments: None,
                 module: None,
                 ..
-            } if arguments.is_empty() => name.to_doc(),
+            } => name.to_doc(),
 
             Constant::Record {
                 name,
-                arguments,
+                arguments: None,
                 module: Some((module, _)),
                 ..
-            } if arguments.is_empty() => module.to_doc().append(".").append(name.as_str()),
+            } => module.to_doc().append(".").append(name.as_str()),
 
             Constant::Record {
                 name,
-                arguments,
+                arguments: Some(arguments),
                 module: None,
                 location,
                 ..
@@ -539,7 +545,7 @@ impl<'comments> Formatter<'comments> {
 
             Constant::Record {
                 name,
-                arguments,
+                arguments: Some(arguments),
                 module: Some((module, _)),
                 location,
                 ..
@@ -587,11 +593,11 @@ impl<'comments> Formatter<'comments> {
         commented(document, comments)
     }
 
-    fn const_list<'a, A, B>(
+    fn const_list<'a, A>(
         &mut self,
-        elements: &'a [Constant<A, B>],
+        elements: &'a [Constant<A>],
         location: &SrcSpan,
-        tail: &'a Option<Box<Constant<A, B>>>,
+        tail: &'a Option<Box<Constant<A>>>,
     ) -> Document<'a> {
         if elements.is_empty() {
             // We take all comments that come _before_ the end of the list,
@@ -686,9 +692,9 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    pub fn const_tuple<'a, A, B>(
+    pub fn const_tuple<'a, A>(
         &mut self,
-        elements: &'a [Constant<A, B>],
+        elements: &'a [Constant<A>],
         location: &SrcSpan,
     ) -> Document<'a> {
         if elements.is_empty() {
@@ -1056,7 +1062,7 @@ impl<'comments> Formatter<'comments> {
             .append(self.assigned_value(value));
 
         commented(
-            self.append_as_message(doc, PrecedingAs::Expression, message),
+            self.append_as_message_expression(doc, PrecedingAs::Expression, message),
             comments,
         )
     }
@@ -1065,13 +1071,17 @@ impl<'comments> Formatter<'comments> {
         let comments = self.pop_comments(expression.start_byte_index());
 
         let document = match expression {
-            UntypedExpr::Panic { message, .. } => {
-                self.append_as_message("panic".to_doc(), PrecedingAs::Keyword, message.as_deref())
-            }
+            UntypedExpr::Panic { message, .. } => self.append_as_message_expression(
+                "panic".to_doc(),
+                PrecedingAs::Keyword,
+                message.as_deref(),
+            ),
 
-            UntypedExpr::Todo { message, .. } => {
-                self.append_as_message("todo".to_doc(), PrecedingAs::Keyword, message.as_deref())
-            }
+            UntypedExpr::Todo { message, .. } => self.append_as_message_expression(
+                "todo".to_doc(),
+                PrecedingAs::Keyword,
+                message.as_deref(),
+            ),
 
             UntypedExpr::Echo {
                 expression,
@@ -1137,8 +1147,11 @@ impl<'comments> Formatter<'comments> {
             } => self.call(fun, arguments, location),
 
             UntypedExpr::BinOp {
-                name, left, right, ..
-            } => self.bin_op(name, left, right, false),
+                operator,
+                left,
+                right,
+                ..
+            } => self.bin_op(operator, left, right, false),
 
             UntypedExpr::Case {
                 subjects,
@@ -1527,12 +1540,12 @@ impl<'comments> Formatter<'comments> {
         )
     }
 
-    pub fn const_record_update<'a, A, B>(
+    pub fn const_record_update<'a, A>(
         &mut self,
         module: &Option<(EcoString, SrcSpan)>,
         name: &'a EcoString,
-        record: &'a RecordBeingUpdated<Constant<A, B>>,
-        arguments: &'a [RecordUpdateArg<Constant<A, B>>],
+        record: &'a RecordBeingUpdated<Constant<A>>,
+        arguments: &'a [RecordUpdateArg<Constant<A>>],
         location: &SrcSpan,
     ) -> Document<'a> {
         let constructor_doc = match module {
@@ -1611,8 +1624,11 @@ impl<'comments> Formatter<'comments> {
         let side_doc = match side {
             UntypedExpr::String { value, .. } => self.bin_op_string(value),
             UntypedExpr::BinOp {
-                name, left, right, ..
-            } => self.bin_op(name, left, right, nest_steps),
+                operator,
+                left,
+                right,
+                ..
+            } => self.bin_op(operator, left, right, nest_steps),
             UntypedExpr::Int { .. }
             | UntypedExpr::Float { .. }
             | UntypedExpr::Block { .. }
@@ -2437,10 +2453,13 @@ impl<'comments> Formatter<'comments> {
         // Othewise we just print the expression as a normal expr.
         match expression {
             UntypedExpr::BinOp {
-                name, left, right, ..
+                operator,
+                left,
+                right,
+                ..
             } if siblings > 1 => {
                 let comments = self.pop_comments(expression.start_byte_index());
-                let doc = self.bin_op(name, left, right, true).group();
+                let doc = self.bin_op(operator, left, right, true).group();
                 commented(doc, comments)
             }
             UntypedExpr::PipeLine { expressions } if siblings > 1 => {
@@ -2669,6 +2688,8 @@ impl<'comments> Formatter<'comments> {
 
     fn clause_guard<'a>(&mut self, clause_guard: &'a UntypedClauseGuard) -> Document<'a> {
         match clause_guard {
+            ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to formatting"),
+
             ClauseGuard::BinaryOperator {
                 operator,
                 left,
@@ -2702,10 +2723,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn constant_call_arg<'a, A, B>(
-        &mut self,
-        argument: &'a CallArg<Constant<A, B>>,
-    ) -> Document<'a> {
+    fn constant_call_arg<'a, A>(&mut self, argument: &'a CallArg<Constant<A>>) -> Document<'a> {
         self.format_call_arg(argument, constant_call_arg_formatting, |this, value| {
             this.const_expr(value)
         })
@@ -2807,8 +2825,11 @@ impl<'comments> Formatter<'comments> {
             self.expr(&assert.value)
         };
 
-        let doc =
-            self.append_as_message(expression, PrecedingAs::Expression, assert.message.as_ref());
+        let doc = self.append_as_message_expression(
+            expression,
+            PrecedingAs::Expression,
+            assert.message.as_ref(),
+        );
         commented(docvec!["assert ", doc], comments)
     }
 
@@ -3102,7 +3123,7 @@ impl<'comments> Formatter<'comments> {
         Some(doc.force_break())
     }
 
-    fn append_as_message<'a>(
+    fn append_as_message_expression<'a>(
         &mut self,
         doc: Document<'a>,
         preceding_as: PrecedingAs,
@@ -3159,13 +3180,47 @@ impl<'comments> Formatter<'comments> {
         doc.group()
     }
 
+    fn append_as_message_constant<'a, A>(
+        &mut self,
+        doc: Document<'a>,
+        message: Option<&'a Constant<A>>,
+    ) -> Document<'a> {
+        let Some(message) = message else { return doc };
+
+        let comments = self.pop_comments(message.location().start);
+        let comments = printed_comments(comments, false);
+
+        let doc = match comments {
+            // If there's comments between the document and the message we want
+            // the `as` bit to be on the same line as the original document and
+            // go on a new indented line with the message and comments:
+            // ```gleam
+            // todo as
+            //   // comment!
+            //   "wibble"
+            // ```
+            Some(comments) => docvec![
+                doc.group(),
+                " as",
+                docvec![line(), comments, line(), self.const_expr(message).group()].nest(INDENT)
+            ],
+
+            None => {
+                let message = self.const_expr(message).group().nest(INDENT);
+                docvec![doc.group(), " as ", message]
+            }
+        };
+
+        doc.group()
+    }
+
     fn echo<'a>(
         &mut self,
         expression: &'a Option<Box<UntypedExpr>>,
         message: &'a Option<Box<UntypedExpr>>,
     ) -> Document<'a> {
         let Some(expression) = expression else {
-            return self.append_as_message(
+            return self.append_as_message_expression(
                 "echo".to_doc(),
                 PrecedingAs::Keyword,
                 message.as_deref(),
@@ -3193,7 +3248,7 @@ impl<'comments> Formatter<'comments> {
         //
         let doc = self.expr(expression);
         if expression.is_binop() || expression.is_pipeline() {
-            let doc = self.append_as_message(
+            let doc = self.append_as_message_expression(
                 doc.nest(INDENT),
                 PrecedingAs::Expression,
                 message.as_deref(),
@@ -3202,7 +3257,7 @@ impl<'comments> Formatter<'comments> {
         } else {
             docvec![
                 "echo ",
-                self.append_as_message(doc, PrecedingAs::Expression, message.as_deref())
+                self.append_as_message_expression(doc, PrecedingAs::Expression, message.as_deref())
             ]
         }
     }
@@ -3614,9 +3669,9 @@ fn pattern_call_arg_formatting(
     }
 }
 
-fn constant_call_arg_formatting<A, B>(
-    argument: &CallArg<Constant<A, B>>,
-) -> CallArgFormatting<'_, Constant<A, B>> {
+fn constant_call_arg_formatting<A>(
+    argument: &CallArg<Constant<A>>,
+) -> CallArgFormatting<'_, Constant<A>> {
     match argument {
         // An argument supplied using label shorthand syntax.
         _ if argument.uses_label_shorthand() => CallArgFormatting::ShorthandLabelled(

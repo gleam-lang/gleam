@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 1448
 expression: "\npub fn go(x) {\n  case <<1, 2, 3>> {\n    <<_, b:bytes>> -> b\n    _ -> x\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -19,7 +17,7 @@ import { toBitArray, bitArraySlice } from "../gleam.mjs";
 
 export function go(x) {
   let $ = toBitArray([1, 2, 3]);
-  if ($.bitSize >= 8 && ($.bitSize - 8) % 8 === 0) {
+  if ($.bitSize >= 8 && $.bitSize % 8 === 0) {
     let b = bitArraySlice($, 8);
     return b;
   } else {

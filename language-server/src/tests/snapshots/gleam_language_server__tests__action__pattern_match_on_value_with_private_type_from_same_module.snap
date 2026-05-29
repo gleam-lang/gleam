@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\ntype Wibble {\n  Wobble(Int, String)\n}\n\npub fn main() {\n  let wibble = Wobble(1, \"Hello\")\n  todo\n}\n"
 ---
 ----- BEFORE ACTION

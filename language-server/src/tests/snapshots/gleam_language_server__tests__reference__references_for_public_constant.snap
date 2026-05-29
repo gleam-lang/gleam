@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/reference.rs
+source: language-server/src/tests/reference.rs
 expression: "\npub const wibble = 10\n\npub fn main() {\n  wibble\n}\n"
 ---
 -- mod.gleam

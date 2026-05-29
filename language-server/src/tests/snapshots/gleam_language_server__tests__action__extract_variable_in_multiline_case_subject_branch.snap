@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "pub fn main() {\n    case\n        list.map(\n          [1, 2, 3],\n          int.add(1, _)\n        )\n    {\n      _ -> todo\n    }\n}"
 ---
 ----- BEFORE ACTION

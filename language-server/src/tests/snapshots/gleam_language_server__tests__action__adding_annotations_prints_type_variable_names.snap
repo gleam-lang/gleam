@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn do_generic_things(a: type_a, b: type_b) {\n  let a_value = a\n  let b_value = b\n  let other_value = a_value\n}\n"
 ---
 ----- BEFORE ACTION

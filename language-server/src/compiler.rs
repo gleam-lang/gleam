@@ -106,7 +106,10 @@ where
         // Verify that the build directory was created using the same version of
         // Gleam as we are running. If it is not then we discard the build
         // directory as the cache files may be in a different format.
-        if let Err(e) = self.project_compiler.check_gleam_version() {
+        if let Err(e) = self
+            .project_compiler
+            .check_gleam_version_and_build_configuration()
+        {
             return e.into();
         }
 

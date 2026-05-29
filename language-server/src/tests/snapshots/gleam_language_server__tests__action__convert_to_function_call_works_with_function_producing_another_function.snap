@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  1 |> wibble(2)\n}\n\nfn wibble(c) -> fn(a) -> Nil {\n  fn(_) { Nil }\n}\n"
 ---
 ----- BEFORE ACTION

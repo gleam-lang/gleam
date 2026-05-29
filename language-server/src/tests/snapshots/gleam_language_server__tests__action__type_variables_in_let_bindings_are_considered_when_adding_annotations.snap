@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nfn wibble(a, b, c) {\n  let x: a = todo\n  fn(a: b, b: c) -> d {\n    todo\n  }\n}\n"
 ---
 ----- BEFORE ACTION

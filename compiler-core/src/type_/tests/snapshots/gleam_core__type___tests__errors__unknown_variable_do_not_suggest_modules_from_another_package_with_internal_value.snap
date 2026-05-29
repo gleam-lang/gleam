@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\n// Internal value from another modules in another package should not be\n// suggested.\n\nimport module\npub fn main() {\n    one\n}"
+---
+----- SOURCE CODE
+-- module.gleam
+
+@internal
+pub const one = 1
+
+-- main.gleam
+
+// Internal value from another modules in another package should not be
+// suggested.
+
+import module
+pub fn main() {
+    one
+}
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:7:5
+  │
+7 │     one
+  │     ^^^
+
+The name `one` is not in scope here.

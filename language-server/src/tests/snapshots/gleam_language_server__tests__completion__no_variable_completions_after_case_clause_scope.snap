@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\npub fn main() {\n  case todo {\n    something -> Nil\n    something_else -> s\n  }\n  s\n}\n"
 ---
+
 pub fn main() {
   case todo {
     something -> Nil
@@ -12,26 +13,10 @@ pub fn main() {
 
 
 ----- Completion content -----
-Error
-  kind:   Constructor
-  detail: gleam
-  sort:   5_Error
-False
-  kind:   EnumMember
-  detail: gleam
-  sort:   5_False
 Nil
   kind:   EnumMember
   detail: gleam
   sort:   05_Nil
-Ok
-  kind:   Constructor
-  detail: gleam
-  sort:   5_Ok
-True
-  kind:   EnumMember
-  detail: gleam
-  sort:   5_True
 main
   kind:   Function
   detail: fn() -> a

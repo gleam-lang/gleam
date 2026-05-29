@@ -11,7 +11,7 @@ use crate::{
             TodoOrPanic, UnreachablePatternReason,
         },
         expression::ComparisonOutcome,
-        pretty::Printer,
+        printer::Printer,
     },
 };
 use camino::Utf8PathBuf;
@@ -149,7 +149,7 @@ impl TypeWarningEmitter {
         self.emitter.emit(Warning::Type {
             path: self.module_path.clone(),
             src: self.module_src.clone(),
-            warning,
+            warning: Box::new(warning),
         });
     }
 }
@@ -159,7 +159,7 @@ pub enum Warning {
     Type {
         path: Utf8PathBuf,
         src: EcoString,
-        warning: type_::Warning,
+        warning: Box<type_::Warning>,
     },
 
     InvalidSource {
@@ -430,11 +430,12 @@ comment so it is not attached to any definition.",
                 hint: Some("Move the comment above the doc comment".into()),
             },
 
-            Warning::Type { path, warning, src } => match warning {
+            Warning::Type { path, warning, src } => match warning.as_ref() {
                 type_::Warning::Todo {
                     kind,
                     location,
                     type_,
+                    names,
                 } => {
                     let mut text = String::new();
                     text.push_str(
@@ -465,7 +466,7 @@ A use expression must always be followed by at least one expression.",
                     let hint = if !type_.is_variable() {
                         Some(format!(
                             "I think its type is `{}`.\n",
-                            Printer::new().pretty_print(type_, 0)
+                            Printer::new(names).print_type(type_)
                         ))
                     } else {
                         None
@@ -540,7 +541,7 @@ A use expression must always be followed by at least one expression.",
                     }),
                 },
 
-                type_::Warning::AllFieldsRecordUpdate { location } => Diagnostic {
+                type_::Warning::AllFieldsRecordUpdate { location, .. } => Diagnostic {
                     title: "Redundant record update".into(),
                     text: "".into(),
                     hint: Some("It is better style to use the record creation syntax.".into()),
@@ -1021,39 +1022,6 @@ variable, or delete the expression entirely if it's not needed.",
                     }),
                 },
 
-                type_::Warning::InternalTypeLeak { location, leaked } => {
-                    let mut printer = Printer::new();
-
-                    // TODO: be more precise.
-                    // - is being returned by this public function
-                    // - is taken as an argument by this public function
-                    // - is taken as an argument by this public enum constructor
-                    // etc
-                    let text = wrap_format!(
-                        "The following type is internal, but is being used by this public export.
-
-{}
-
-Internal types should not be used in a public facing function since they are \
-hidden from the package's documentation.",
-                        printer.pretty_print(leaked, 4),
-                    );
-                    Diagnostic {
-                        title: "Internal type used in public interface".into(),
-                        text,
-                        hint: None,
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            label: diagnostic::Label {
-                                text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
                 type_::Warning::RedundantAssertAssignment { location } => Diagnostic {
                     title: "Redundant assertion".into(),
                     text: wrap(
@@ -1274,6 +1242,7 @@ See: https://tour.gleam.run/functions/pipelines/",
                         FeatureKind::ConstantRecordUpdate => {
                             "The record update syntax for constants was"
                         }
+                        FeatureKind::ConstantListWithTail => "Prepending to a constant list was",
                     };
 
                     Diagnostic {
@@ -1383,7 +1352,7 @@ resulting in the value {truncated_into}."
 
                 type_::Warning::JavaScriptBitArrayUnsafeInt { location, size } => {
                     let text = wrap_format!(
-                        "This segment is a {size}-bit long integer, but on the \
+                        "This segment is a {size}-bit long int, but on the \
 JavaScript target numbers have at most 52 bits. It would be truncated to its \
 first 52 bits."
                     );

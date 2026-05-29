@@ -1,7 +1,6 @@
 ---
 source: language-server/src/tests/folding_range.rs
 expression: "import one\nimport two\n\npub type W {\n  W(Int)\n}\n\npub const xs = [\n  1,\n  2,\n]\n\npub fn main() {\n  1\n}"
-snapshot_kind: text
 ---
 ----- Code -----
 import one

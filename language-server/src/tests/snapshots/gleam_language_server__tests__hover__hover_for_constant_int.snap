@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\nconst ten = 10\n"
 ---
+
 const ten = 10
             ↑▔
 

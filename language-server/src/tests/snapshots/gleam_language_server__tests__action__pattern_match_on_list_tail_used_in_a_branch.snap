@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "pub fn main(a_list: List(a)) {\n  case a_list {\n    [] -> todo\n    [first, ..rest] -> rest\n  }\n}"
 ---
 ----- BEFORE ACTION

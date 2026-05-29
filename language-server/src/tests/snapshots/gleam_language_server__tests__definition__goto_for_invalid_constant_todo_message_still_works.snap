@@ -1,0 +1,15 @@
+---
+source: language-server/src/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+const wibble = 1
+const wobble = todo as wibble
+                       ↑     
+
+----- Jumped to `src/app.gleam`
+
+const wibble = 1
+↑▔▔▔▔▔▔▔▔▔▔▔    
+const wobble = todo as wibble

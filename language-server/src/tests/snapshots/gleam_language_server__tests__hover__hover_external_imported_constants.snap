@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\nimport example_module\nfn main() {\n  example_module.my_const\n}\n"
 ---
+
 import example_module
 fn main() {
   example_module.my_const

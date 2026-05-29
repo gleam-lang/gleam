@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 104
 expression: "import other\npub const x = other.Two\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 -- other.gleam

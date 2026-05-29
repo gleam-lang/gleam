@@ -1,0 +1,10 @@
+---
+source: test-commands/src/tests.rs
+expression: error
+---
+error: Main function has wrong arity
+
+`escript_with_wrong_arity_main_function.main` should take no arguments, but
+it takes 1.
+
+Hint: Change the function signature of main to `pub fn main() -> Nil`.

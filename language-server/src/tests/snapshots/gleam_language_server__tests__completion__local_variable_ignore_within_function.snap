@@ -1,7 +1,8 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\nfn main(a, b, z) {\n    Nil\n}\n"
 ---
+
 fn main(a, b, |z) {
     Nil
 }

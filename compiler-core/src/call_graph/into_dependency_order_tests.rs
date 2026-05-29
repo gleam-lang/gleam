@@ -191,7 +191,7 @@ fn tuple() {
     ];
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
-        vec![vec!["b"], vec!["c"], vec!["a"]]
+        vec![vec!["c"], vec!["b"], vec!["a"]]
     );
 }
 
@@ -204,7 +204,7 @@ fn pipeline() {
     ];
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
-        vec![vec!["b"], vec!["c"], vec!["a"]]
+        vec![vec!["c"], vec!["b"], vec!["a"]]
     );
 }
 
@@ -217,7 +217,7 @@ fn list() {
     ];
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
-        vec![vec!["b"], vec!["c"], vec!["a"]]
+        vec![vec!["c"], vec!["b"], vec!["a"]]
     );
 }
 
@@ -230,7 +230,7 @@ fn list_spread() {
     ];
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
-        vec![vec!["b"], vec!["c"], vec!["a"]]
+        vec![vec!["c"], vec!["b"], vec!["a"]]
     );
 }
 
@@ -269,7 +269,7 @@ fn bit_arrays() {
     ];
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
-        vec![vec!["b"], vec!["c"], vec!["a"]]
+        vec![vec!["c"], vec!["b"], vec!["a"]]
     );
 }
 
@@ -295,7 +295,7 @@ fn record_update() {
     ];
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
-        vec![vec!["b"], vec!["c"], vec!["a"]]
+        vec![vec!["c"], vec!["b"], vec!["a"]]
     );
 }
 
@@ -308,7 +308,7 @@ fn negate() {
     ];
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
-        vec![vec!["b"], vec!["c"], vec!["a"]]
+        vec![vec!["c"], vec!["a"], vec!["b"]]
     );
 }
 
@@ -321,7 +321,7 @@ fn use_() {
     ];
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
-        vec![vec!["b"], vec!["c"], vec!["a"]]
+        vec![vec!["c"], vec!["a"], vec!["b"]]
     );
 }
 
@@ -347,7 +347,7 @@ fn fn_argument_shadowing() {
     ];
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
-        vec![vec!["b"], vec!["c"], vec!["a"]]
+        vec![vec!["c"], vec!["a"], vec!["b"]]
     );
 }
 
@@ -491,7 +491,7 @@ fn pattern_assign() {
     ];
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
-        vec![vec!["b"], vec!["c"], vec!["a"]]
+        vec![vec!["c"], vec!["a"], vec!["b"]]
     );
 }
 
@@ -504,7 +504,7 @@ fn pattern_constructor() {
     ];
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
-        vec![vec!["b"], vec!["c"], vec!["a"]]
+        vec![vec!["c"], vec!["a"], vec!["b"]]
     );
 }
 
@@ -543,7 +543,7 @@ fn case_subjects() {
     ];
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
-        vec![vec!["b"], vec!["c"], vec!["a"]]
+        vec![vec!["c"], vec!["b"], vec!["a"]]
     );
 }
 
@@ -653,7 +653,7 @@ fn more_complex_cycle() {
     ];
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
-        vec![vec!["a2", "a3", "a1"]]
+        vec![vec!["a3", "a2", "a1"]]
     );
 }
 
@@ -728,5 +728,21 @@ fn assert_message() {
     assert_eq!(
         parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
         vec![vec!["b", "a"]]
+    );
+}
+
+#[test]
+fn multiple_two_cycles() {
+    let functions = [
+        ("a", [].as_slice(), r#"{ b }"#),
+        ("b", [].as_slice(), r#"{ c1 }"#),
+        ("c1", [].as_slice(), r#"{ c2 }"#),
+        ("c2", [].as_slice(), r#"{ c1 d1 }"#),
+        ("d1", [].as_slice(), r#"{ d2 }"#),
+        ("d2", [].as_slice(), r#"{ d1 }"#),
+    ];
+    assert_eq!(
+        parse_and_order(functions.as_slice(), [].as_slice()).unwrap(),
+        vec![vec!["d2", "d1"], vec!["c2", "c1"], vec!["b"], vec!["a"]]
     );
 }

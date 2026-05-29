@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assert.rs
-assertion_line: 62
 expression: "\nfn bool() {\n  True\n}\n\npub fn main() {\n  assert bool()\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

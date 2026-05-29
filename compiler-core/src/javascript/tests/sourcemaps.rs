@@ -133,11 +133,23 @@ pub fn main() {
 #[test]
 fn sourcemap_let_assert() {
     assert_source_map!(
-        r#"
+        "
+pub fn unwrap_or_panic(result) {
+    let assert Ok(value) = result
+    value
+}
+"
+    )
+}
+
+#[test]
+fn sourcemap_let_assert_that_always_succeeds() {
+    assert_source_map!(
+        "
 pub fn go(x) {
   let assert #(wibble, wobble) = x
 }
-"#
+"
     )
 }
 

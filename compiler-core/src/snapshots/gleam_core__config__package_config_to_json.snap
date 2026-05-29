@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/config.rs
-assertion_line: 1177
 expression: output
 ---
 --- GLEAM.TOML

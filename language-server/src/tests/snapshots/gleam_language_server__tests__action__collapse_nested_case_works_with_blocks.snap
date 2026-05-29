@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "pub fn main(x) {\n  case x {\n    Ok(var) -> {\n      case var {\n        1 -> 2\n        2 -> 4\n        _ -> -1\n      }\n    }\n    _ -> todo\n  }\n}"
 ---
 ----- BEFORE ACTION

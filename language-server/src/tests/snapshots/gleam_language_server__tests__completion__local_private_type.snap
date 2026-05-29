@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\ntype Zoo = Int\n\npub fn wibble(\n  x: String,\n) -> String {\n  \"ok\"\n}\n"
 ---
+
 type Zoo = Int
 
 pub fn wibble(

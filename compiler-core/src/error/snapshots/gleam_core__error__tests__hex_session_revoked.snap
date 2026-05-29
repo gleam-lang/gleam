@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/error/tests.rs
+expression: "err[0]"
+---
+Diagnostic {
+    title: "Hex session revoked",
+    text: "Your Hex session has been revoked or has expired.\n\nYou'll need to re-authenticate to continue using Hex.",
+    level: Error,
+    location: None,
+    hint: Some(
+        "Run 'gleam hex authenticate' to log in again.",
+    ),
+}

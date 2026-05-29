@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "pub fn go(result) {\n  case result {\n    [Ok(value), ..] -> todo\n    [_, Error(value)] -> todo\n    _ -> todo\n  }\n}"
 ---
 ----- BEFORE ACTION

@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\npub fn main() -> Result(Int, Nil) {\n  let result = Ok(12)\n  let result2 = Error(True)\n  r\n}\n"
 ---
+
 pub fn main() -> Result(Int, Nil) {
   let result = Ok(12)
   let result2 = Error(True)
@@ -14,22 +15,10 @@ Error
   kind:   Constructor
   detail: gleam
   sort:   05_Error
-False
-  kind:   EnumMember
-  detail: gleam
-  sort:   5_False
-Nil
-  kind:   EnumMember
-  detail: gleam
-  sort:   5_Nil
 Ok
   kind:   Constructor
   detail: gleam
   sort:   05_Ok
-True
-  kind:   EnumMember
-  detail: gleam
-  sort:   5_True
 main
   kind:   Function
   detail: fn() -> Result(Int, Nil)

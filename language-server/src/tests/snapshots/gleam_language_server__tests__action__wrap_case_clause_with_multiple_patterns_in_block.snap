@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "pub type PokemonType {\n  Air\n  Water\n  Fire\n}\n\n  pub fn f(pokemon_type: PokemonType) {\n    case pokemon_type {\n      Water | Air -> soak()\n      Fire -> burn()\n    }\n  }"
 ---
 ----- BEFORE ACTION

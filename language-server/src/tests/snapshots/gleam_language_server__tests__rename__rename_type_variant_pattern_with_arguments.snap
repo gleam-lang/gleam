@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/rename.rs
+source: language-server/src/tests/rename.rs
 expression: "\npub type Wibble {\n  Wibble(Int)\n  Wobble(Float)\n}\n\nfn wibble() {\n  case Wibble(10) {\n    Wibble(20) -> todo\n    Wibble(_) -> panic\n  }\n}\n"
 ---
 ----- BEFORE RENAME

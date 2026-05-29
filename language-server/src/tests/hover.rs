@@ -1,4 +1,4 @@
-use lsp_types::{Hover, HoverContents, HoverParams, MarkedString, Position, Range};
+use lsp_types::{Contents, Hover, HoverParams, MarkedString, Position, Range};
 
 use super::*;
 
@@ -49,17 +49,17 @@ pub fn show_hover(code: &str, range: Range, position: Position) -> String {
     buffer
 }
 
-fn pretty_hover_contents(contents: HoverContents) -> String {
+fn pretty_hover_contents(contents: Contents) -> String {
     let (kind, content) = match contents {
-        HoverContents::Scalar(marked_string) => ("markdown", pretty_marked_string(marked_string)),
-        HoverContents::Array(marked_strings) => (
+        Contents::MarkedString(marked_string) => ("markdown", pretty_marked_string(marked_string)),
+        Contents::MarkedStringList(marked_strings) => (
             "markdown array",
             marked_strings
                 .into_iter()
                 .map(pretty_marked_string)
                 .join("\n\n"),
         ),
-        HoverContents::Markup(lsp_types::MarkupContent { kind, value }) => match kind {
+        Contents::MarkupContent(lsp_types::MarkupContent { kind, value }) => match kind {
             lsp_types::MarkupKind::PlainText => ("plaintext", value),
             lsp_types::MarkupKind::Markdown => ("markdown", value),
         },
@@ -70,7 +70,11 @@ fn pretty_hover_contents(contents: HoverContents) -> String {
 fn pretty_marked_string(marked_string: MarkedString) -> String {
     match marked_string {
         MarkedString::String(string) => string,
-        MarkedString::LanguageString(lsp_types::LanguageString { language, value }) => {
+        #[allow(deprecated)]
+        MarkedString::MarkedStringWithLanguage(lsp_types::MarkedStringWithLanguage {
+            language,
+            value,
+        }) => {
             format!("```{language}\n{value}\n```")
         }
     }
@@ -2100,6 +2104,38 @@ pub fn go(x: mod.Wibble) {
 }
 
 #[test]
+fn hover_on_record_dot_of_record_update_shows_ignored_fields() {
+    assert_hover!(
+        "
+type Wibble {
+  Wibble(a: Int, b: Bool)
+}
+
+pub fn go(wibble: Wibble) {
+    Wibble(..wibble, a: 1)
+}
+",
+        find_position_of("..")
+    );
+}
+
+#[test]
+fn hover_on_record_being_updated_shows_ignored_fields() {
+    assert_hover!(
+        "
+type Wibble {
+  Wibble(a: Int, b: Bool)
+}
+
+pub fn go(wibble: Wibble) {
+    Wibble(..wibble, a: 1)
+}
+",
+        find_position_of("..wibble").under_last_char()
+    );
+}
+
+#[test]
 fn hover_for_invalid_record_update_1() {
     assert_hover!(
         "
@@ -2144,5 +2180,126 @@ pub fn go(wibble: Wibble) {
 }
 ",
         find_position_of("Wibble").nth_occurrence(4)
+    );
+}
+
+#[test]
+fn hover_on_constant_todo() {
+    assert_hover!(
+        "
+const wibble = todo
+",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_1() {
+    assert_hover!(
+        "
+const wibble = todo
+",
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_in_list() {
+    assert_hover!(
+        "
+const wibble = [todo, 1]
+",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_in_list_2() {
+    assert_hover!(
+        "
+const wibble = [todo, 1]
+",
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_in_bit_array() {
+    assert_hover!(
+        "
+const wibble = <<todo:utf8>>
+",
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_in_bit_array_2() {
+    assert_hover!(
+        "
+const wibble = <<todo>>
+",
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_in_constructor() {
+    assert_hover!(
+        "
+const wibble = Ok(todo)
+",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_in_annotated_constructor() {
+    assert_hover!(
+        "
+const wibble: Result(String, Int) = Ok(todo)
+",
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_in_constructor_2() {
+    assert_hover!(
+        "
+const wibble = Ok(todo)
+",
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn hover_on_constant_annotated_todo() {
+    assert_hover!(
+        "
+const wibble: String = todo
+",
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_message() {
+    assert_hover!(
+        r#"
+const wibble = todo as "wobble"
+"#,
+        find_position_of("wobble")
+    );
+}
+
+#[test]
+fn hover_on_constant_todo_invalid_message_still_works() {
+    assert_hover!(
+        r#"
+const wobble = 1
+const wibble = todo as [wobble]
+"#,
+        find_position_of("wobble").nth_occurrence(2)
     );
 }

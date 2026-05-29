@@ -1463,6 +1463,39 @@ fn test_pretty_print_version_updates() {
 }
 
 #[test]
+fn test_pretty_print_outdated_versions() {
+    let versions = vec![
+        (
+            "gleam_stdlib".to_string(),
+            (Version::new(0, 45, 0), Version::new(0, 46, 0)),
+        ),
+        (
+            "wisp".to_string(),
+            (Version::new(2, 1, 0), Version::new(2, 1, 1)),
+        ),
+        (
+            "very_long_package_name".to_string(),
+            (Version::new(12, 12, 12), Version::new(120, 12, 12)),
+        ),
+    ]
+    .into_iter()
+    .collect();
+
+    let output = pretty_print_outdated_versions(12, versions);
+
+    insta::assert_snapshot!(output);
+}
+
+#[test]
+fn test_pretty_print_outdated_versions_no_updates() {
+    let versions: HashMap<String, (Version, Version)> = HashMap::new();
+
+    let output = pretty_print_outdated_versions(12, versions);
+
+    insta::assert_snapshot!(output);
+}
+
+#[test]
 fn test_ensure_packages_exist_locally_all_present() {
     let manifest = Manifest {
         requirements: HashMap::new(),

@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn go(x: List(Int), y: List(Int)) {\n  case x {\n    [1, ..x] if [1, 2, ..x] == y -> True\n    _ -> False\n  }\n}"
+---
+----- SOURCE CODE
+
+pub fn go(x: List(Int), y: List(Int)) {
+  case x {
+    [1, ..x] if [1, 2, ..x] == y -> True
+    _ -> False
+  }
+}
+
+----- COMPILED JAVASCRIPT
+import { toList, Empty as $Empty, prepend as listPrepend, isEqual } from "../gleam.mjs";
+
+export function go(x, y) {
+  if (x instanceof $Empty) {
+    return false;
+  } else {
+    let $ = x.head;
+    if ($ === 1) {
+      let x$1 = x.tail;
+      if (isEqual(listPrepend(1, listPrepend(2, x$1)), y)) {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
+}

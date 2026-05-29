@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assert.rs
-assertion_line: 40
 expression: "\npub fn eq(a, b) {\n  assert a == b\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

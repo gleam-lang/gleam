@@ -1,6 +1,6 @@
 [package]
 name = "gleam-cli"
-version = "1.16.0-rc2"
+version = "1.17.0-rc1"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2024"
 license = "Apache-2.0"
@@ -20,9 +20,9 @@ rpassword = "7"
 tokio = { version = "1", features = ["rt", "rt-multi-thread"] }
 # Further file system functions (i.e. copy directory)
 fs_extra = "1"
-tracing-subscriber = { version = "0.3.20", features = ["fmt", "env-filter"] }
+tracing-subscriber = { version = "0.3.23", features = ["fmt", "env-filter"] }
 # HTTP client
-reqwest = { version = "0", default-features = false, features = ["rustls-tls"] }
+reqwest = { version = "^0.13", default-features = false, features = ["rustls"] }
 # Checksums
 sha2 = "0"
 # Getting hostname
@@ -33,6 +33,8 @@ toml_edit = "0"
 fslock = "0"
 # Provides a way to determine if two files are the same using filesystem node ids
 same-file = "1"
+# Creation of zip files
+zip = { version = "8", features = ["deflate"], default-features = false }
 
 async-trait.workspace = true
 base16.workspace = true

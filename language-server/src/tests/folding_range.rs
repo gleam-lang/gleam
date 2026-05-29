@@ -15,11 +15,12 @@ fn folding_ranges(tester: TestProject<'_>) -> Vec<FoldingRange> {
     })
 }
 
-fn kind_name(kind: &Option<FoldingRangeKind>) -> &'static str {
+fn kind_name(kind: &Option<FoldingRangeKind>) -> &str {
     match kind {
         Some(FoldingRangeKind::Imports) => "imports",
         Some(FoldingRangeKind::Comment) => "comment",
         Some(FoldingRangeKind::Region) => "region",
+        Some(FoldingRangeKind::Custom(any)) => &any,
         None => "none",
     }
 }

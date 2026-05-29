@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  1.3 * wobble()\n}\n\nfn wobble() { 3.2 }\n"
 ---
 ----- BEFORE ACTION

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\npub fn main() {\n  fold(0, over: [], with: fn (a, b) { todo })\n}\n\nfn fold(over list: List(a), from acc: acc, with fun: fn(acc, a) -> acc) -> acc {\n  todo\n}\n"
 ---
 ----- BEFORE ACTION

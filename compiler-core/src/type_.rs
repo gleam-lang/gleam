@@ -714,7 +714,7 @@ pub enum ValueConstructorVariant {
         location: SrcSpan,
         module: EcoString,
         name: EcoString,
-        literal: Constant<Arc<Type>, EcoString>,
+        literal: Constant<Arc<Type>>,
         implementations: Implementations,
     },
 
@@ -884,6 +884,16 @@ impl ValueConstructorVariant {
             ValueConstructorVariant::Record { field_map, .. } => field_map.as_ref(),
         }
     }
+
+    fn is_record_constructor_function(&self) -> bool {
+        match self {
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::ModuleFn { .. }
+            | ValueConstructorVariant::ModuleConstant { .. } => false,
+            // If it has an arity of zero then it can't be used as a function!
+            ValueConstructorVariant::Record { arity, .. } => *arity > 0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1016,6 +1026,10 @@ pub struct ModuleInterface {
 }
 
 impl ModuleInterface {
+    pub fn is_prelude(&self) -> bool {
+        self.name == "gleam"
+    }
+
     pub fn contains_todo(&self) -> bool {
         self.warnings.iter().any(|warning| warning.is_todo())
     }
@@ -1105,7 +1119,42 @@ pub struct TypeValueConstructorField {
 }
 
 impl ModuleInterface {
+    /// Search for a public value that matches the given `name`
+    ///
     pub fn get_public_value(&self, name: &str) -> Option<&ValueConstructor> {
+        let value = self.values.get(name)?;
+        if value.publicity.is_public() {
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    /// Search for a public value that matches the given `name` and `arity`
+    ///
+    pub fn get_public_function(&self, name: &str, arity: usize) -> Option<&ValueConstructor> {
+        self.get_public_value(name).filter(|value_constructor| {
+            match value_constructor.type_.fn_types() {
+                Some((fn_arguments_type, _)) => fn_arguments_type.len() == arity,
+                None => false,
+            }
+        })
+    }
+
+    /// Search for an importable type that matches the given `name`
+    ///
+    pub fn get_public_type(&self, name: &str) -> Option<&TypeConstructor> {
+        let type_ = self.types.get(name)?;
+        if type_.publicity.is_public() {
+            Some(type_)
+        } else {
+            None
+        }
+    }
+
+    /// Search for an importable value that matches the given `name`
+    ///
+    pub fn get_importable_value(&self, name: &str) -> Option<&ValueConstructor> {
         let value = self.values.get(name)?;
         if value.publicity.is_importable() {
             Some(value)
@@ -1114,7 +1163,20 @@ impl ModuleInterface {
         }
     }
 
-    pub fn get_public_type(&self, name: &str) -> Option<&TypeConstructor> {
+    /// Search for an importable function that matches the given `name` and `arity`
+    ///
+    pub fn get_importable_function(&self, name: &str, arity: usize) -> Option<&ValueConstructor> {
+        self.get_importable_value(name).filter(|value_constructor| {
+            match value_constructor.type_.fn_types() {
+                Some((fn_arguments_type, _)) => fn_arguments_type.len() == arity,
+                None => false,
+            }
+        })
+    }
+
+    /// Search for an importable type that matches the given `name`
+    ///
+    pub fn get_importable_type(&self, name: &str) -> Option<&TypeConstructor> {
         let type_ = self.types.get(name)?;
         if type_.publicity.is_importable() {
             Some(type_)
@@ -1701,6 +1763,15 @@ pub enum FieldAccessUsage {
     ///
     RecordUpdate,
     /// Used as `thing.field`
+    Other,
+}
+
+/// This is used to know when a value is used as a call or not.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum ValueUsage {
+    /// Used as `function(..)`, `Record(..)`, `left |> right` or `left |> right(..)`
+    Call { arity: usize },
+    /// Used as `variable`
     Other,
 }
 

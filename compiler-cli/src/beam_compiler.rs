@@ -150,5 +150,46 @@ impl Drop for BeamCompiler {
 }
 
 fn escape_path<T: AsRef<str>>(path: T) -> String {
-    path.as_ref().replace("\\", "\\\\")
+    path.as_ref().replace('\\', "\\\\").replace('"', "\\\"")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::escape_path;
+
+    #[test]
+    fn escape_path_plain() {
+        assert_eq!(
+            escape_path("/build/packages/foo/src/bar.erl"),
+            "/build/packages/foo/src/bar.erl"
+        );
+    }
+
+    #[test]
+    fn escape_path_backslash() {
+        assert_eq!(
+            escape_path("C:\\Users\\foo\\bar.erl"),
+            "C:\\\\Users\\\\foo\\\\bar.erl"
+        );
+    }
+
+    #[test]
+    fn escape_path_double_quote() {
+        assert_eq!(
+            escape_path(r#"a", "/tmp/other.erl"#),
+            r#"a\", \"/tmp/other.erl"#
+        );
+    }
+
+    #[test]
+    fn escape_path_double_quote_does_not_break_erlang_string() {
+        // A double-quote in a path must not close the surrounding Erlang string
+        // literal and produce extra elements in the module list.
+        let path = r#"a", "/tmp/other"#;
+        let escaped = escape_path(path);
+        assert!(
+            !escaped.contains("\", \""),
+            "unescaped quote still present: {escaped}"
+        );
+    }
 }

@@ -1,0 +1,22 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn main(a, b) {\n  let Ok(x) = a\n  let Ok(y) = b\n  #(x, y)\n}"
+---
+----- BEFORE ACTION
+pub fn main(a, b) {
+  let Ok(x) = a
+  let Ok(y) = b
+  ▔▔▔▔▔▔▔▔▔▔↑  
+  #(x, y)
+}
+
+
+----- AFTER ACTION
+pub fn main(a, b) {
+  let Ok(x) = a
+  let y = case b {
+    Ok(y) -> y
+    Error(_) -> todo
+  }
+  #(x, y)
+}

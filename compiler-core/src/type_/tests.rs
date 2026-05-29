@@ -2908,7 +2908,7 @@ fn infer_label_shorthand_in_record_update_arg() {
 #[test]
 fn public_type_from_internal_module_has_internal_publicity() {
     let module = compile_module("thepackage/internal", "pub type Wibble", None, vec![]).unwrap();
-    let type_ = module.type_info.get_public_type("Wibble").unwrap();
+    let type_ = module.type_info.get_importable_type("Wibble").unwrap();
     assert!(type_.publicity.is_internal());
 }
 
@@ -2921,14 +2921,14 @@ fn internal_type_from_internal_module_has_internal_publicity() {
         vec![],
     )
     .unwrap();
-    let type_ = module.type_info.get_public_type("Wibble").unwrap();
+    let type_ = module.type_info.get_importable_type("Wibble").unwrap();
     assert!(type_.publicity.is_internal());
 }
 
 #[test]
 fn private_type_from_internal_module_is_not_exposed_as_internal() {
     let module = compile_module("thepackage/internal", "type Wibble", None, vec![]).unwrap();
-    assert!(module.type_info.get_public_type("Wibble").is_none());
+    assert!(module.type_info.get_importable_type("Wibble").is_none());
 }
 
 #[test]
@@ -3517,6 +3517,64 @@ pub fn final(id) {
 pub fn main() {
   wibble(#("a", "b"))
   wibble(2)
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5618
+#[test]
+fn correct_type_check_for_multiple_mutually_recursive_functions2() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  let _ = step(Leaf, Leaf)
+  Nil
+}
+
+type Tree {
+  Leaf
+  Node(List(Tree))
+}
+
+fn step(left: Tree, right: Tree) -> Int {
+  sum(diff(left, right, []))
+}
+
+fn sum(xs: List(Int)) -> Int {
+  case xs {
+    [] -> 0
+    [first, ..rest] -> first + sum(rest)
+  }
+}
+
+fn diff(left, right, effect) {
+  case left, right {
+    Node(olds), Node(news) -> diff_batch(olds, news, effect)
+    _, _ -> start(right, effect)
+  }
+}
+
+fn diff_batch(left, right, effect) {
+  case left, right {
+    [old, ..left], [new, ..right] ->
+      diff_batch(left, right, diff(old, new, effect))
+    _, _ -> effect
+  }
+}
+
+fn start(node, effect) {
+  case node {
+    Leaf -> "wat"
+    Node(children) -> start_batch(children, effect)
+  }
+}
+
+fn start_batch(children, effect) {
+  case children {
+    [] -> effect
+    [child, ..rest] -> start_batch(rest, start(child, effect))
+  }
 }
 "#
     );

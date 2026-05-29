@@ -1,0 +1,5 @@
+---
+source: compiler-cli/src/dependencies/tests.rs
+expression: output
+---
+0 of 12 packages have newer versions available.

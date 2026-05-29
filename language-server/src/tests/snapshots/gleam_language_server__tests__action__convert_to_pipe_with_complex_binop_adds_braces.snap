@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nfn bug() {\n    bool.guard(1 == 2 || 2 == 3, Nil, fn() { Nil })\n}\n"
 ---
 ----- BEFORE ACTION

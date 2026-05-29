@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 369
 expression: "\npub fn go(x) {\n  <<<<0xAB>>:bits-4>>\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

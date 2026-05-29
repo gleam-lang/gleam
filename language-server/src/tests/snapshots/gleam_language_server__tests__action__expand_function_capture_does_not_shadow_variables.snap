@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "pub fn main() {\n  let value = 1\n  let value_2 = 2\n  wibble(value, _, value_2)\n}"
 ---
 ----- BEFORE ACTION

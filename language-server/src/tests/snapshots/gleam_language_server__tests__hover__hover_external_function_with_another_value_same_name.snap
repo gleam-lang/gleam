@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\nimport a/example_module.{my_const as discarded}\nimport b/example_module.{my_const} as _\nfn main() {\n    my_const\n}\n"
 ---
+
 import a/example_module.{my_const as discarded}
 import b/example_module.{my_const} as _
 fn main() {

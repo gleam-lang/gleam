@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport option\n\npub fn main() {\n    option.map(option.Some(1), fn(x) { x + 1 })\n}\n"
 ---
 ----- BEFORE ACTION

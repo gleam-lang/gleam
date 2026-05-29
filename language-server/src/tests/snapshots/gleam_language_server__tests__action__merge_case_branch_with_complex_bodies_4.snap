@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "pub fn go(n: Int) {\n  case n {\n    1 -> {\n      let a = go(n - 1)\n      a * 10\n    }\n    2 -> {\n      let a = go(n - 1)\n      a * 10\n    }\n    _ -> 10\n  }\n}"
 ---
 ----- BEFORE ACTION

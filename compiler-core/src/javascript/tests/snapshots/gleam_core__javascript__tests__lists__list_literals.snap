@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/lists.rs
-assertion_line: 5
 expression: "\npub fn go(x) {\n  []\n  [1]\n  [1, 2]\n  [1, 2, ..x]\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

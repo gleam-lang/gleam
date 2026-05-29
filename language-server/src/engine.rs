@@ -26,14 +26,15 @@ use itertools::Itertools;
 use lsp::CodeAction;
 use lsp_server::ResponseError;
 use lsp_types::{
-    self as lsp, DocumentSymbol, FoldingRange, FoldingRangeKind, Hover, HoverContents,
-    MarkedString, Position, PrepareRenameResponse, Range, SignatureHelp, SymbolKind, SymbolTag,
-    TextEdit, Url, WorkspaceEdit,
+    self as lsp, Contents, DocumentSymbol, FoldingRange, FoldingRangeKind, Hover, MarkedString,
+    MarkupContent, Position, PrepareRenameResult, Range, SignatureHelp, SymbolKind, SymbolTag,
+    TextEdit, Uri as Url, WorkspaceEdit,
 };
 use std::{collections::HashSet, sync::Arc};
 
 use crate::{
-    code_action::{ReplaceUnderscoreWithType, type_errors_for_module},
+    code_action::{RemoveRedundantRecordUpdate, ReplaceUnderscoreWithType, type_errors_for_module},
+    reference::find_module_references_in_module,
     rename::rename_module_alias,
 };
 
@@ -42,12 +43,12 @@ use super::{
     code_action::{
         AddAnnotations, AddMissingTypeParameter, AddOmittedLabels, AnnotateTopLevelDefinitions,
         CodeActionBuilder, CollapseNestedCase, ConvertFromUse, ConvertToFunctionCall,
-        ConvertToPipe, ConvertToUse, ExpandFunctionCapture, ExtractConstant, ExtractFunction,
-        ExtractVariable, FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
-        FixTruncatedBitArraySegment, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
-        GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase, MergeCaseBranches,
-        PatternMatchOnValue, RedundantTupleInCaseSubject, RemoveBlock, RemoveEchos,
-        RemovePrivateOpaque, RemoveUnreachableCaseClauses, RemoveUnusedImports,
+        ConvertToPipe, ConvertToUse, CreateUnknownModule, ExpandFunctionCapture, ExtractConstant,
+        ExtractFunction, ExtractVariable, FillInMissingLabelledArgs, FillUnusedFields,
+        FixBinaryOperation, FixTruncatedBitArraySegment, GenerateDynamicDecoder, GenerateFunction,
+        GenerateJsonEncoder, GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase,
+        MergeCaseBranches, PatternMatchOnValue, RedundantTupleInCaseSubject, RemoveBlock,
+        RemoveEchos, RemovePrivateOpaque, RemoveUnreachableCaseClauses, RemoveUnusedImports,
         UnwrapAnonymousFunction, UseLabelShorthandSyntax, WrapInAnonymousFunction, WrapInBlock,
         code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
@@ -191,11 +192,9 @@ where
         self.compiler.take_warnings()
     }
 
-    // TODO: implement unqualified imported module functions
-    //
     pub fn goto_definition(
         &mut self,
-        params: lsp::GotoDefinitionParams,
+        params: lsp::DefinitionParams,
     ) -> Response<Option<lsp::Location>> {
         self.respond(|this| {
             let params = params.text_document_position_params;
@@ -216,7 +215,7 @@ where
 
     pub(crate) fn goto_type_definition(
         &mut self,
-        params: lsp_types::GotoDefinitionParams,
+        params: lsp_types::TypeDefinitionParams,
     ) -> Response<Vec<lsp::Location>> {
         self.respond(|this| {
             let params = params.text_document_position_params;
@@ -269,7 +268,7 @@ where
     ) -> Response<Option<Vec<lsp::CompletionItem>>> {
         self.respond(|this| {
             let module = match this.module_for_uri(&params.text_document.uri) {
-                Some(m) => m,
+                Some(module) => module,
                 None => return Ok(None),
             };
 
@@ -303,6 +302,7 @@ where
                     ..
                 }
                 | Located::Constant(Constant::String { .. }) => None,
+
                 Located::Expression {
                     expression:
                         TypedExpr::Call { fun, arguments, .. }
@@ -318,6 +318,7 @@ where
                     completions.append(&mut completer.completion_labels(fun, arguments));
                     Some(completions)
                 }
+
                 Located::Expression {
                     expression: TypedExpr::RecordAccess { record, type_, .. },
                     ..
@@ -328,6 +329,7 @@ where
                     completions.append(&mut completer.completion_field_accessors(record.type_()));
                     Some(completions)
                 }
+
                 Located::Expression {
                     position:
                         ExpressionPosition::ArgumentOrLabel {
@@ -343,10 +345,33 @@ where
                     );
                     Some(completions)
                 }
+
+                // If we're typing inside an expression body (and not being any
+                // more specific than this, meaning we're not editing some
+                // specific value inside it) we don't want to set the expected
+                // type to the type of the entire anonymous function, otherwise
+                // the language server would start recommending the wrong
+                // values:
+                //
+                // ```
+                // fn(x: Int) -> String {
+                //   | // <- Typing here
+                //     //    We don't want the language server to suggest values
+                //     //    of type `fn(Int) -> String`!
+                //   todo
+                // }
+                // ```
+                //
+                Located::Expression {
+                    position: ExpressionPosition::Expression,
+                    expression: TypedExpr::Fn { .. },
+                } => Some(completer.completion_values()),
+
                 Located::Expression { expression, .. } => {
                     completer.expected_type = Some(expression.type_());
                     Some(completer.completion_values())
                 }
+
                 Located::ModuleFunction(_) => Some(completer.completion_types()),
 
                 Located::Statement(_) => Some(completer.completion_values()),
@@ -408,6 +433,19 @@ where
 
             code_action_unused_values(module, &lines, &params, &mut actions);
             actions.extend(RemoveUnusedImports::new(module, &lines, &params).code_actions());
+            code_action_fix_names(module, &lines, &params, &this.error, &mut actions);
+            code_action_import_module(module, &lines, &params, &this.error, &mut actions);
+            code_action_add_missing_patterns(module, &lines, &params, &this.error, &mut actions);
+            actions
+                .extend(RemoveUnreachableCaseClauses::new(module, &lines, &params).code_actions());
+            actions
+                .extend(RemoveRedundantRecordUpdate::new(module, &lines, &params).code_actions());
+            actions.extend(CollapseNestedCase::new(module, &lines, &params).code_actions());
+            actions.extend(FixBinaryOperation::new(module, &lines, &params).code_actions());
+            actions
+                .extend(FixTruncatedBitArraySegment::new(module, &lines, &params).code_actions());
+            actions.extend(RemovePrivateOpaque::new(module, &lines, &params).code_actions());
+            actions.extend(AddMissingTypeParameter::new(module, &lines, &params).code_actions());
             code_action_convert_qualified_constructor_to_unqualified(
                 module,
                 &this.compiler,
@@ -421,12 +459,6 @@ where
                 &params,
                 &mut actions,
             );
-            code_action_fix_names(module, &lines, &params, &this.error, &mut actions);
-            code_action_import_module(module, &lines, &params, &this.error, &mut actions);
-            code_action_add_missing_patterns(module, &lines, &params, &this.error, &mut actions);
-            actions
-                .extend(RemoveUnreachableCaseClauses::new(module, &lines, &params).code_actions());
-            actions.extend(CollapseNestedCase::new(module, &lines, &params).code_actions());
             code_action_inexhaustive_let_to_case(
                 module,
                 &lines,
@@ -435,14 +467,11 @@ where
                 &mut actions,
             );
             actions.extend(MergeCaseBranches::new(module, &lines, &params).code_actions());
-            actions.extend(FixBinaryOperation::new(module, &lines, &params).code_actions());
-            actions
-                .extend(FixTruncatedBitArraySegment::new(module, &lines, &params).code_actions());
             actions.extend(LetAssertToCase::new(module, &lines, &params).code_actions());
             actions
                 .extend(RedundantTupleInCaseSubject::new(module, &lines, &params).code_actions());
-            actions.extend(UseLabelShorthandSyntax::new(module, &lines, &params).code_actions());
             actions.extend(FillInMissingLabelledArgs::new(module, &lines, &params).code_actions());
+            actions.extend(UseLabelShorthandSyntax::new(module, &lines, &params).code_actions());
             actions.extend(ConvertFromUse::new(module, &lines, &params).code_actions());
             actions.extend(RemoveEchos::new(module, &lines, &params).code_actions());
             actions.extend(ConvertToUse::new(module, &lines, &params).code_actions());
@@ -467,7 +496,6 @@ where
             actions.extend(InlineVariable::new(module, &lines, &params).code_actions());
             actions.extend(WrapInBlock::new(module, &lines, &params).code_actions());
             actions.extend(RemoveBlock::new(module, &lines, &params).code_actions());
-            actions.extend(RemovePrivateOpaque::new(module, &lines, &params).code_actions());
             actions.extend(ExtractFunction::new(module, &lines, &params).code_actions());
             GenerateDynamicDecoder::new(module, &lines, &params, &mut actions, &this.compiler)
                 .code_actions();
@@ -484,8 +512,39 @@ where
             AddAnnotations::new(module, &lines, &params).code_action(&mut actions);
             actions
                 .extend(AnnotateTopLevelDefinitions::new(module, &lines, &params).code_actions());
-            actions.extend(AddMissingTypeParameter::new(module, &lines, &params).code_actions());
             actions.extend(ReplaceUnderscoreWithType::new(module, &lines, &params).code_actions());
+            actions.extend(
+                CreateUnknownModule::new(
+                    module,
+                    &this.compiler,
+                    &lines,
+                    &params,
+                    &this.paths,
+                    &this.error,
+                )
+                .code_actions(),
+            );
+
+            actions.sort_by_key(|one| {
+                let preferred_key = if one.is_preferred == Some(true) { 0 } else { 1 };
+                let kind_key = match &one.kind {
+                    Some(lsp_types::CodeActionKind::QuickFix) => 1,
+                    Some(lsp_types::CodeActionKind::Refactor) => 2,
+                    Some(lsp_types::CodeActionKind::RefactorExtract) => 2,
+                    Some(lsp_types::CodeActionKind::RefactorInline) => 2,
+                    Some(lsp_types::CodeActionKind::RefactorMove) => 2,
+                    Some(lsp_types::CodeActionKind::RefactorRewrite) => 2,
+                    Some(lsp_types::CodeActionKind::Source) => 3,
+                    Some(lsp_types::CodeActionKind::SourceOrganizeImports) => 3,
+                    Some(lsp_types::CodeActionKind::SourceFixAll) => 3,
+                    Some(lsp_types::CodeActionKind::Custom(_)) => 4,
+                    Some(lsp_types::CodeActionKind::Notebook) => 5,
+                    Some(lsp_types::CodeActionKind::Empty) => 6,
+                    None => 7,
+                };
+                (preferred_key, kind_key)
+            });
+
             Ok(if actions.is_empty() {
                 None
             } else {
@@ -541,7 +600,7 @@ where
                             .print_type(&get_function_type(function))
                             .to_string(),
                     ),
-                    kind: SymbolKind::FUNCTION,
+                    kind: SymbolKind::Function,
                     tags: make_deprecated_symbol_tag(&function.deprecation),
                     deprecated: None,
                     range: src_span_to_lsp_range(full_function_span, &line_numbers),
@@ -573,7 +632,7 @@ where
                             .print_type_without_aliases(&alias.type_)
                             .to_string(),
                     ),
-                    kind: SymbolKind::CLASS,
+                    kind: SymbolKind::Class,
                     tags: make_deprecated_symbol_tag(&alias.deprecation),
                     deprecated: None,
                     range: src_span_to_lsp_range(full_alias_span, &line_numbers),
@@ -613,7 +672,7 @@ where
                             .print_type(&constant.type_)
                             .to_string(),
                     ),
-                    kind: SymbolKind::CONSTANT,
+                    kind: SymbolKind::Constant,
                     tags: make_deprecated_symbol_tag(&constant.deprecation),
                     deprecated: None,
                     range: src_span_to_lsp_range(full_constant_span, &line_numbers),
@@ -707,25 +766,28 @@ where
 
     pub fn prepare_rename(
         &mut self,
-        params: lsp::TextDocumentPositionParams,
-    ) -> Response<Option<PrepareRenameResponse>> {
+        params: lsp::PrepareRenameParams,
+    ) -> Response<Option<PrepareRenameResult>> {
         self.respond(|this| {
-            let (lines, found) = match this.node_at_position(&params) {
+            let (lines, found) = match this.node_at_position(&params.text_document_position_params)
+            {
                 Some(value) => value,
                 None => return Ok(None),
             };
 
-            let Some(current_module) = this.module_for_uri(&params.text_document.uri) else {
+            let Some(current_module) =
+                this.module_for_uri(&params.text_document_position_params.text_document.uri)
+            else {
                 return Ok(None);
             };
 
             let success_response = |location| {
-                Some(PrepareRenameResponse::Range(src_span_to_lsp_range(
+                Some(PrepareRenameResult::Range(src_span_to_lsp_range(
                     location, &lines,
                 )))
             };
 
-            let byte_index = lines.byte_index(params.position);
+            let byte_index = lines.byte_index(params.text_document_position_params.position);
 
             let referenced = reference_for_ast_node(found, &current_module.name);
 
@@ -783,7 +845,7 @@ where
         params: lsp::RenameParams,
     ) -> Response<Result<Option<WorkspaceEdit>, ResponseError>> {
         self.respond(|this| {
-            let position = &params.text_document_position;
+            let position = &params.text_document_position_params;
 
             let (lines, found) = match this.node_at_position(position) {
                 Some(value) => value,
@@ -878,89 +940,137 @@ where
         })
     }
 
+    /// Shared core of find references and document highlight.
+    fn find_references_in_scope(
+        &mut self,
+        position: &lsp_types::TextDocumentPositionParams,
+        search_scope: FindReferencesSearchScope,
+    ) -> Option<Vec<lsp::Location>> {
+        let (lines, found) = self.node_at_position(position)?;
+
+        let uri = position.text_document.uri.clone();
+
+        let source_module = self.module_for_uri(&uri)?;
+
+        let byte_index = lines.byte_index(position.position);
+
+        let referenced = reference_for_ast_node(found, &source_module.name);
+
+        match referenced {
+            Some(Referenced::LocalVariable {
+                origin,
+                definition_location,
+                location,
+                name,
+            }) if location.contains(byte_index) => match origin.map(|origin| origin.syntax) {
+                Some(VariableSyntax::Generated) => None,
+                Some(
+                    VariableSyntax::LabelShorthand(_)
+                    | VariableSyntax::AssignmentPattern
+                    | VariableSyntax::Variable { .. },
+                )
+                | None => {
+                    let variable_references =
+                        FindVariableReferences::new(definition_location, name)
+                            .find_in_module(&source_module.ast);
+
+                    let mut reference_locations = Vec::with_capacity(variable_references.len() + 1);
+                    reference_locations.push(lsp::Location {
+                        uri: uri.clone(),
+                        range: src_span_to_lsp_range(definition_location, &lines),
+                    });
+
+                    for reference in variable_references {
+                        reference_locations.push(lsp::Location {
+                            uri: uri.clone(),
+                            range: src_span_to_lsp_range(reference.location, &lines),
+                        })
+                    }
+
+                    Some(reference_locations)
+                }
+            },
+            Some(Referenced::ModuleValue {
+                module,
+                name,
+                location,
+                ..
+            }) if location.contains(byte_index) => match search_scope {
+                FindReferencesSearchScope::AllModules => Some(find_module_references(
+                    module,
+                    name,
+                    self.compiler.project_compiler.get_importable_modules(),
+                    &self.compiler.sources,
+                    ast::Layer::Value,
+                )),
+                FindReferencesSearchScope::CurrentModule => {
+                    let source_information = self.compiler.get_source(&source_module.name)?;
+                    let source_module = self.compiler.get_module_interface(&source_module.name)?;
+                    Some(find_module_references_in_module(
+                        module,
+                        name,
+                        source_module,
+                        source_information,
+                        ast::Layer::Value,
+                    ))
+                }
+            },
+            Some(Referenced::ModuleType {
+                module,
+                name,
+                location,
+                ..
+            }) if location.contains(byte_index) => match search_scope {
+                FindReferencesSearchScope::AllModules => Some(find_module_references(
+                    module,
+                    name,
+                    self.compiler.project_compiler.get_importable_modules(),
+                    &self.compiler.sources,
+                    ast::Layer::Type,
+                )),
+                FindReferencesSearchScope::CurrentModule => {
+                    let source_information = self.compiler.get_source(&source_module.name)?;
+                    let source_module = self.compiler.get_module_interface(&source_module.name)?;
+                    Some(find_module_references_in_module(
+                        module,
+                        name,
+                        source_module,
+                        source_information,
+                        ast::Layer::Type,
+                    ))
+                }
+            },
+            _ => None,
+        }
+    }
+
     pub fn find_references(
         &mut self,
         params: lsp::ReferenceParams,
     ) -> Response<Option<Vec<lsp::Location>>> {
         self.respond(|this| {
-            let position = &params.text_document_position;
+            let position = &params.text_document_position_params;
+            Ok(this.find_references_in_scope(position, FindReferencesSearchScope::AllModules))
+        })
+    }
 
-            let (lines, found) = match this.node_at_position(position) {
-                Some(value) => value,
-                None => return Ok(None),
-            };
-
-            let uri = position.text_document.uri.clone();
-
-            let Some(module) = this.module_for_uri(&uri) else {
-                return Ok(None);
-            };
-
-            let byte_index = lines.byte_index(position.position);
-
-            let referenced = reference_for_ast_node(found, &module.name);
-
-            Ok(match referenced {
-                Some(Referenced::LocalVariable {
-                    origin,
-                    definition_location,
-                    location,
-                    name,
-                }) if location.contains(byte_index) => match origin.map(|origin| origin.syntax) {
-                    Some(VariableSyntax::Generated) => None,
-                    Some(
-                        VariableSyntax::LabelShorthand(_)
-                        | VariableSyntax::AssignmentPattern
-                        | VariableSyntax::Variable { .. },
-                    )
-                    | None => {
-                        let variable_references =
-                            FindVariableReferences::new(definition_location, name)
-                                .find_in_module(&module.ast);
-
-                        let mut reference_locations =
-                            Vec::with_capacity(variable_references.len() + 1);
-                        reference_locations.push(lsp::Location {
-                            uri: uri.clone(),
-                            range: src_span_to_lsp_range(definition_location, &lines),
-                        });
-
-                        for reference in variable_references {
-                            reference_locations.push(lsp::Location {
-                                uri: uri.clone(),
-                                range: src_span_to_lsp_range(reference.location, &lines),
-                            })
-                        }
-
-                        Some(reference_locations)
-                    }
-                },
-                Some(Referenced::ModuleValue {
-                    module,
-                    name,
-                    location,
-                    ..
-                }) if location.contains(byte_index) => Some(find_module_references(
-                    module,
-                    name,
-                    this.compiler.project_compiler.get_importable_modules(),
-                    &this.compiler.sources,
-                    ast::Layer::Value,
-                )),
-                Some(Referenced::ModuleType {
-                    module,
-                    name,
-                    location,
-                    ..
-                }) if location.contains(byte_index) => Some(find_module_references(
-                    module,
-                    name,
-                    this.compiler.project_compiler.get_importable_modules(),
-                    &this.compiler.sources,
-                    ast::Layer::Type,
-                )),
-                _ => None,
-            })
+    pub fn document_highlight(
+        &mut self,
+        params: lsp::DocumentHighlightParams,
+    ) -> Response<Option<Vec<lsp::DocumentHighlight>>> {
+        self.respond(|this| {
+            let position = &params.text_document_position_params;
+            Ok(this
+                .find_references_in_scope(position, FindReferencesSearchScope::CurrentModule)
+                .map(|references| {
+                    references
+                        .into_iter()
+                        .map(|loc| lsp::DocumentHighlight {
+                            range: loc.range,
+                            kind: None,
+                        })
+                        .collect()
+                }))
         })
     }
 
@@ -1090,15 +1200,22 @@ Unused labelled fields:
                     };
 
                     Some(Hover {
-                        contents: HoverContents::Scalar(MarkedString::from_markdown(content)),
+                        contents: Contents::MarkupContent(MarkupContent {
+                            value: content,
+                            kind: lsp_types::MarkupKind::Markdown,
+                        }),
                         range,
                     })
                 }
                 Located::StringPrefixPatternVariable { location, .. } => Some(
                     hover_for_string_prefix_pattern_variable(location, &lines, module),
                 ),
-                Located::Expression { expression, .. } => Some(hover_for_expression(
+                Located::Expression {
                     expression,
+                    position,
+                } => Some(hover_for_expression(
+                    expression,
+                    position,
                     lines,
                     module,
                     &this.hex_deps,
@@ -1313,7 +1430,7 @@ fn custom_type_symbol(
                             .print_type(&argument.type_)
                             .to_string(),
                     ),
-                    kind: SymbolKind::FIELD,
+                    kind: SymbolKind::Field,
                     tags: None,
                     deprecated: None,
                     range: src_span_to_lsp_range(full_arg_span, line_numbers),
@@ -1343,9 +1460,9 @@ fn custom_type_symbol(
                 name: constructor.name.to_string(),
                 detail: None,
                 kind: if constructor.arguments.is_empty() {
-                    SymbolKind::ENUM_MEMBER
+                    SymbolKind::EnumMember
                 } else {
-                    SymbolKind::CONSTRUCTOR
+                    SymbolKind::Constructor
                 },
                 tags: make_deprecated_symbol_tag(&constructor.deprecation),
                 deprecated: None,
@@ -1381,7 +1498,7 @@ fn custom_type_symbol(
     DocumentSymbol {
         name: type_.name.to_string(),
         detail: None,
-        kind: SymbolKind::CLASS,
+        kind: SymbolKind::Class,
         tags: make_deprecated_symbol_tag(&type_.deprecation),
         deprecated: None,
         range: src_span_to_lsp_range(full_type_span, line_numbers),
@@ -1406,7 +1523,7 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers, module: 
 {documentation}"
     );
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(pattern.location(), &line_numbers)),
     }
 }
@@ -1442,7 +1559,7 @@ fn hover_for_function_head(
 {documentation}"
     );
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(fun.location, &line_numbers)),
     }
 }
@@ -1455,7 +1572,7 @@ fn hover_for_function_argument(
     let type_ = Printer::new(&module.ast.names).print_type(&argument.type_);
     let contents = format!("```gleam\n{type_}\n```");
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(argument.location, &line_numbers)),
     }
 }
@@ -1483,7 +1600,7 @@ fn hover_for_annotation(
 {documentation}"
     );
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(location, &line_numbers)),
     }
 }
@@ -1497,13 +1614,13 @@ fn hover_for_label(
     let type_ = Printer::new(&module.ast.names).print_type(&type_);
     let contents = format!("```gleam\n{type_}\n```");
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(location, &line_numbers)),
     }
 }
 
 fn hover_for_module_constant(
-    constant: &ModuleConstant<Arc<Type>, EcoString>,
+    constant: &ModuleConstant<Arc<Type>>,
     line_numbers: LineNumbers,
     module: &Module,
 ) -> Hover {
@@ -1516,7 +1633,7 @@ fn hover_for_module_constant(
         .unwrap_or(&empty_str);
     let contents = format!("```gleam\n{type_}\n```\n{documentation}");
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(constant.location, &line_numbers)),
     }
 }
@@ -1529,7 +1646,7 @@ fn hover_for_constant(
     let type_ = Printer::new(&module.ast.names).print_type(&constant.type_());
     let contents = format!("```gleam\n{type_}\n```");
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(constant.location(), &line_numbers)),
     }
 }
@@ -1542,7 +1659,7 @@ fn hover_for_clause_guard(
     let type_ = Printer::new(&module.ast.names).print_type(&guard.type_());
     let contents = format!("```gleam\n{type_}\n```");
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(guard.location(), &line_numbers)),
     }
 }
@@ -1555,13 +1672,14 @@ fn hover_for_string_prefix_pattern_variable(
     let type_ = Printer::new(&module.ast.names).print_type(&type_::string());
     let contents = format!("```gleam\n{type_}\n```");
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(location, lines)),
     }
 }
 
-fn hover_for_expression(
-    expression: &TypedExpr,
+fn hover_for_expression<'a>(
+    expression: &'a TypedExpr,
+    position: ExpressionPosition<'a>,
     line_numbers: LineNumbers,
     module: &Module,
     hex_deps: &HashSet<EcoString>,
@@ -1575,15 +1693,40 @@ fn hover_for_expression(
         .unwrap_or("".to_string());
 
     // Show the type of the hovered node to the user
-    let type_ = Printer::new(&module.ast.names).print_type(expression.type_().as_ref());
+    let mut printer = Printer::new(&module.ast.names);
+    let type_ = printer.print_type(expression.type_().as_ref());
+
+    // If the expression is a record update and there's record fields that are
+    // begin implicitly updated, then we want to list them in the hover.
+    let unchanged_record_update_fields = match position {
+        ExpressionPosition::Expression | ExpressionPosition::ArgumentOrLabel { .. } => "",
+
+        ExpressionPosition::UpdatedRecord {
+            unchanged_record_fields,
+        } if !unchanged_record_fields.is_empty() => &format!(
+            "Unchanged record fields:\n{}",
+            unchanged_record_fields
+                .iter()
+                .map(|(label, type_)| format!("- `{}: {}`", label, printer.print_type(type_)))
+                .join("\n")
+        ),
+        ExpressionPosition::UpdatedRecord { .. } => "",
+    };
+
+    let description = [documentation, unchanged_record_update_fields, &link_section]
+        .iter()
+        .filter(|string| !string.is_empty())
+        .join("\n\n");
+
     let contents = format!(
         "```gleam
 {type_}
 ```
-{documentation}{link_section}"
+{description}"
     );
+
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(expression.location(), &line_numbers)),
     }
 }
@@ -1611,7 +1754,7 @@ fn hover_for_imported_value(
 {documentation}{link_section}"
     );
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(*location, &line_numbers)),
     }
 }
@@ -1639,7 +1782,7 @@ fn hover_for_module(
 {link_section}",
     );
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(location, line_numbers)),
     }
 }
@@ -1654,7 +1797,7 @@ fn hover_for_custom_type(type_: &CustomType<Arc<Type>>, line_numbers: LineNumber
 
     let contents = format!("```gleam\n{name}\n```\n{documentation}");
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(type_.full_location(), &line_numbers)),
     }
 }
@@ -1689,7 +1832,7 @@ fn hover_for_constructor(
 
     let contents = format!("```gleam\n{constructor_doc}\n```\n{documentation}");
     Hover {
-        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(constructor.location, &line_numbers)),
     }
 }
@@ -1819,7 +1962,7 @@ fn code_action_unused_values(
         };
 
         CodeActionBuilder::new("Assign unused Result value to `_`")
-            .kind(lsp_types::CodeActionKind::QUICKFIX)
+            .kind(lsp_types::CodeActionKind::QuickFix)
             .changes(uri.clone(), vec![edit])
             .preferred(true)
             .push_to(actions);
@@ -1881,8 +2024,8 @@ fn code_action_fix_names(
                 new_text: correction.to_string(),
             };
 
-            CodeActionBuilder::new(&format!("Rename to {correction}"))
-                .kind(lsp_types::CodeActionKind::QUICKFIX)
+            CodeActionBuilder::new(format!("Rename to {correction}"))
+                .kind(lsp_types::CodeActionKind::QuickFix)
                 .changes(uri.clone(), vec![edit])
                 .preferred(true)
                 .push_to(actions);
@@ -1981,5 +2124,10 @@ fn get_doc_marker_position(content_pos: u32) -> u32 {
 fn make_deprecated_symbol_tag(deprecation: &Deprecation) -> Option<Vec<SymbolTag>> {
     deprecation
         .is_deprecated()
-        .then(|| vec![SymbolTag::DEPRECATED])
+        .then(|| vec![SymbolTag::Deprecated])
+}
+
+enum FindReferencesSearchScope {
+    AllModules,
+    CurrentModule,
 }

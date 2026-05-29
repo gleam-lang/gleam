@@ -1848,7 +1848,7 @@ where
 }
 
 fn generalise_module_constant(
-    constant: ModuleConstant<Arc<Type>, EcoString>,
+    constant: ModuleConstant<Arc<Type>>,
     environment: &mut Environment<'_>,
     module_name: &EcoString,
 ) -> TypedModuleConstant {

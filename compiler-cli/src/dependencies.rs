@@ -222,14 +222,21 @@ fn list_dependencies_tree(
 pub fn outdated(paths: &ProjectPaths) -> Result<()> {
     let (_, manifest) = get_manifest_details(paths)?;
 
+    let total_packages = manifest
+        .packages
+        .iter()
+        .filter(|package| matches!(package.source, ManifestPackageSource::Hex { .. }))
+        .count();
+
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let package_fetcher = PackageFetcher::new(runtime.handle().clone());
 
     let version_updates = dependency::check_for_version_updates(&manifest, &package_fetcher);
 
-    if !version_updates.is_empty() {
-        print!("{}", pretty_print_version_updates(version_updates));
-    }
+    print!(
+        "{}",
+        pretty_print_outdated_versions(total_packages, version_updates)
+    );
 
     Ok(())
 }
@@ -434,6 +441,23 @@ fn pretty_print_major_versions_available(versions: dependency::PackageVersionDif
 fn pretty_print_version_updates(versions: dependency::PackageVersionDiffs) -> EcoString {
     let versions = format_versions_and_extract_longest_parts(versions);
     space_table(&["Package", "Current", "Latest"], &versions)
+}
+
+fn pretty_print_outdated_versions(
+    total_packages: usize,
+    versions: dependency::PackageVersionDiffs,
+) -> EcoString {
+    let summary = eco_format!(
+        "{} of {} packages have newer versions available.",
+        versions.len(),
+        total_packages
+    );
+
+    if versions.is_empty() {
+        eco_format!("{}\n", summary)
+    } else {
+        eco_format!("{}\n\n{}", summary, pretty_print_version_updates(versions))
+    }
 }
 
 async fn add_missing_packages<Telem: Telemetry>(

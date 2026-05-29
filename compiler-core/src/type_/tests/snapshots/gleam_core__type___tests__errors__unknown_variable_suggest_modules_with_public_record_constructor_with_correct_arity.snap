@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\n// Public record constructor with correct arity from another module should be\n// suggested.\n\nimport moduleone\nimport moduletwo\npub fn main() {\n    MyRecord(1)\n}"
+---
+----- SOURCE CODE
+-- moduleone.gleam
+
+pub type MyType {
+    MyRecord(x: Int, y: Int)
+}
+
+-- moduletwo.gleam
+
+pub type AnotherType {
+    MyRecord(x: Int)
+}
+
+-- main.gleam
+
+// Public record constructor with correct arity from another module should be
+// suggested.
+
+import moduleone
+import moduletwo
+pub fn main() {
+    MyRecord(1)
+}
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:8:5
+  │
+8 │     MyRecord(1)
+  │     ^^^^^^^^
+
+The custom type variant constructor `MyRecord` is not in scope here.
+Did you mean one of these:
+
+  - moduletwo.MyRecord

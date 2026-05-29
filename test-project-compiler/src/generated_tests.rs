@@ -5,6 +5,138 @@ use gleam_core::build::Mode;
 
 #[rustfmt::skip]
 #[test]
+fn erlang_source_maps_dev() {
+    let output = crate::prepare("./cases/erlang_source_maps", Mode::Dev);
+    insta::assert_snapshot!(
+        "erlang_source_maps_dev",
+        output,
+        "./cases/erlang_source_maps",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
+fn erlang_source_maps_prod() {
+    let output = crate::prepare("./cases/erlang_source_maps", Mode::Prod);
+    insta::assert_snapshot!(
+        "erlang_source_maps_prod",
+        output,
+        "./cases/erlang_source_maps",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
+fn erlang_source_maps_lsp() {
+    let output = crate::prepare("./cases/erlang_source_maps", Mode::Lsp);
+    insta::assert_snapshot!(
+        "erlang_source_maps_lsp",
+        output,
+        "./cases/erlang_source_maps",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
+fn erlang_typescript_declarations_dev() {
+    let output = crate::prepare("./cases/erlang_typescript_declarations", Mode::Dev);
+    insta::assert_snapshot!(
+        "erlang_typescript_declarations_dev",
+        output,
+        "./cases/erlang_typescript_declarations",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
+fn erlang_typescript_declarations_prod() {
+    let output = crate::prepare("./cases/erlang_typescript_declarations", Mode::Prod);
+    insta::assert_snapshot!(
+        "erlang_typescript_declarations_prod",
+        output,
+        "./cases/erlang_typescript_declarations",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
+fn erlang_typescript_declarations_lsp() {
+    let output = crate::prepare("./cases/erlang_typescript_declarations", Mode::Lsp);
+    insta::assert_snapshot!(
+        "erlang_typescript_declarations_lsp",
+        output,
+        "./cases/erlang_typescript_declarations",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
+fn javascript_source_maps_dev() {
+    let output = crate::prepare("./cases/javascript_source_maps", Mode::Dev);
+    insta::assert_snapshot!(
+        "javascript_source_maps_dev",
+        output,
+        "./cases/javascript_source_maps",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
+fn javascript_source_maps_prod() {
+    let output = crate::prepare("./cases/javascript_source_maps", Mode::Prod);
+    insta::assert_snapshot!(
+        "javascript_source_maps_prod",
+        output,
+        "./cases/javascript_source_maps",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
+fn javascript_source_maps_lsp() {
+    let output = crate::prepare("./cases/javascript_source_maps", Mode::Lsp);
+    insta::assert_snapshot!(
+        "javascript_source_maps_lsp",
+        output,
+        "./cases/javascript_source_maps",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
+fn javascript_typescript_declarations_dev() {
+    let output = crate::prepare("./cases/javascript_typescript_declarations", Mode::Dev);
+    insta::assert_snapshot!(
+        "javascript_typescript_declarations_dev",
+        output,
+        "./cases/javascript_typescript_declarations",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
+fn javascript_typescript_declarations_prod() {
+    let output = crate::prepare("./cases/javascript_typescript_declarations", Mode::Prod);
+    insta::assert_snapshot!(
+        "javascript_typescript_declarations_prod",
+        output,
+        "./cases/javascript_typescript_declarations",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
+fn javascript_typescript_declarations_lsp() {
+    let output = crate::prepare("./cases/javascript_typescript_declarations", Mode::Lsp);
+    insta::assert_snapshot!(
+        "javascript_typescript_declarations_lsp",
+        output,
+        "./cases/javascript_typescript_declarations",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
 fn with_dep_dev() {
     let output = crate::prepare("./cases/with_dep", Mode::Dev);
     insta::assert_snapshot!(

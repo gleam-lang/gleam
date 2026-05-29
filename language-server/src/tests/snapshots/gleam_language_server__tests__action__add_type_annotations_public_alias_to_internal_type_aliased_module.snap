@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\nimport package as pkg\n\npub fn main() {\n  pkg.make_wibble()\n}\n"
 ---
 ----- BEFORE ACTION

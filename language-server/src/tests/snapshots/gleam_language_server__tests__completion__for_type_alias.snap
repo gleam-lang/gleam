@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\npub type Wibble = Result(\n  String,\n  String\n)\n"
 ---
+
 pub type Wibble = Result(
 |  String,
   String

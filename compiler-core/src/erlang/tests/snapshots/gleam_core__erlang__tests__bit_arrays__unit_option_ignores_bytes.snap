@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/erlang/tests/bit_arrays.rs
+expression: "\npub fn main() {\n  let assert <<x:unit(2)-bytes-size(3)>> = <<1:6>>\n  x\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let assert <<x:unit(2)-bytes-size(3)>> = <<1:6>>
+  x
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> bitstring().
+main() ->
+    X@1 = case <<1:6>> of
+        <<X:3/binary-unit:2>> -> X;
+        _assert_fail ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
+                        file => <<?FILEPATH/utf8>>,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"main"/utf8>>,
+                        line => 3,
+                        value => _assert_fail,
+                        start => 19,
+                        'end' => 67,
+                        pattern_start => 30,
+                        pattern_end => 57})
+    end,
+    X@1.

@@ -140,40 +140,41 @@ Parsed {
                             },
                             module: None,
                             name: "Person",
-                            arguments: [
-                                CallArg {
-                                    label: None,
-                                    location: SrcSpan {
-                                        start: 72,
-                                        end: 79,
-                                    },
-                                    value: String {
+                            arguments: Some(
+                                [
+                                    CallArg {
+                                        label: None,
                                         location: SrcSpan {
                                             start: 72,
                                             end: 79,
                                         },
-                                        value: "Alice",
+                                        value: String {
+                                            location: SrcSpan {
+                                                start: 72,
+                                                end: 79,
+                                            },
+                                            value: "Alice",
+                                        },
+                                        implicit: None,
                                     },
-                                    implicit: None,
-                                },
-                                CallArg {
-                                    label: None,
-                                    location: SrcSpan {
-                                        start: 81,
-                                        end: 83,
-                                    },
-                                    value: Int {
+                                    CallArg {
+                                        label: None,
                                         location: SrcSpan {
                                             start: 81,
                                             end: 83,
                                         },
-                                        value: "30",
-                                        int_value: 30,
+                                        value: Int {
+                                            location: SrcSpan {
+                                                start: 81,
+                                                end: 83,
+                                            },
+                                            value: "30",
+                                            int_value: 30,
+                                        },
+                                        implicit: None,
                                     },
-                                    implicit: None,
-                                },
-                            ],
-                            tag: (),
+                                ],
+                            ),
                             type_: (),
                             field_map: Unknown,
                             record_constructor: None,
@@ -229,12 +230,11 @@ Parsed {
                                     type_: (),
                                 },
                                 location: SrcSpan {
-                                    start: 106,
+                                    start: 104,
                                     end: 111,
                                 },
                             },
                             arguments: [],
-                            tag: (),
                             type_: (),
                             field_map: Unknown,
                         },

@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\npub fn main() {\n  case True {\n    True as wibble -> { todo }\n    False -> { todo }\n  }\n}\n"
 ---
+
 pub fn main() {
   case True {
     True as wibble -> { t|odo }

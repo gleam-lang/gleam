@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/rename.rs
+source: language-server/src/tests/rename.rs
 expression: "\ntype Wibble {\n  Wibble(wibble: Int)\n}\n\npub fn main() {\n  let Wibble(wibble:) = todo\n  wibble + 1\n}\n"
 ---
 ----- BEFORE RENAME

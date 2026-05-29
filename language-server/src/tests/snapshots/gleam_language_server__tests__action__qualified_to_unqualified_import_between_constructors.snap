@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/action.rs
+source: language-server/src/tests/action.rs
 expression: "\n\npub fn main() {\n  option.Some(1)\n}\n\nimport option\n\npub fn identity(x: option.Option(Int)) -> option.Option(Int) {\n    option.Some(1)\n    x\n}\n"
 ---
 ----- BEFORE ACTION

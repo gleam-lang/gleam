@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 567
 expression: "pub opaque type Animal {\n  Cat(goes_outside: Bool)\n  Dog(plays_fetch: Bool)\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub opaque type Animal {

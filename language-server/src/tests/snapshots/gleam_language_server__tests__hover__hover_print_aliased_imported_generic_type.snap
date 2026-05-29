@@ -2,6 +2,7 @@
 source: language-server/src/tests/hover.rs
 expression: "\nimport gleam/option.{type Option as Maybe}\n\nconst none: Maybe(Int) = option.None\n"
 ---
+
 import gleam/option.{type Option as Maybe}
 
 const none: Maybe(Int) = option.None

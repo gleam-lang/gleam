@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/rename.rs
+source: language-server/src/tests/rename.rs
 expression: "\nimport gleam.{Error}\n\npub fn main() {\n  Ok(Error(10))\n}\n"
 ---
 ----- BEFORE RENAME

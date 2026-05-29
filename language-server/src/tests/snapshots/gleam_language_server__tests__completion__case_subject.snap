@@ -1,7 +1,8 @@
 ---
-source: compiler-core/src/language_server/tests/completion.rs
+source: language-server/src/tests/completion.rs
 expression: "\npub fn main(something: Bool) {\n  case so\n}\n"
 ---
+
 pub fn main(something: Bool) {
   case so|
 }

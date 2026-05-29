@@ -2,6 +2,7 @@
 source: language-server/src/tests/completion.rs
 expression: "\nfn wibble() {\n  let b as c = 5\n\n}\n"
 ---
+
 fn wibble() {
   let b as c = 5
 |

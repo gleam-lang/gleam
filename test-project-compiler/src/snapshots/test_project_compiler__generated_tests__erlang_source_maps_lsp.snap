@@ -1,0 +1,19 @@
+---
+source: test-project-compiler/src/generated_tests.rs
+expression: "./cases/erlang_source_maps"
+---
+//// erlang_source_maps/build/lsp/erlang/example/_gleam_artefacts/example@@main.erl
+<erlang entrypoint>
+
+//// erlang_source_maps/build/lsp/erlang/example/ebin/example.app
+{application, example, [
+    {vsn, "1.0.0"},
+    {applications, []},
+    {description, ""},
+    {modules, []},
+    {registered, []}
+]}.
+
+
+//// erlang_source_maps/build/lsp/erlang/fingerprint
+<gleam compiler version string> 0

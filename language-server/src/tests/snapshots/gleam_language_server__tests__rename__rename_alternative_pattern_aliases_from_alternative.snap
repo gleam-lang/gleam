@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/language_server/tests/rename.rs
+source: language-server/src/tests/rename.rs
 expression: "\npub fn main(x) {\n  case x {\n    [] as list | [_] as list -> list\n    _ -> []\n  }\n}\n"
 ---
 ----- BEFORE RENAME

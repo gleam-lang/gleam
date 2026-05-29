@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 2227
 expression: "pub fn main() { let​x = 1\n  x }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn main() { let​x = 1

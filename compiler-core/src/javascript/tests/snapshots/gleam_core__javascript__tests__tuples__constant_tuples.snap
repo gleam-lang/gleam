@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/tuples.rs
-assertion_line: 85
 expression: "\npub const a = \"Hello\"\npub const b = 1\npub const c = 2.0\npub const e = #(\"bob\", \"dug\")\n        "
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

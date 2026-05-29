@@ -151,6 +151,10 @@ where
     fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, Error> {
         self.io.canonicalise(path)
     }
+
+    fn is_same_file(&self, _left: &Utf8Path, _right: &Utf8Path) -> Result<bool, Error> {
+        unreachable!("is_same_file unimplemented")
+    }
 }
 
 impl<IO> CommandExecutor for FileSystemProxy<IO>
