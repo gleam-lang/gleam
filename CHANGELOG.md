@@ -34,6 +34,9 @@
   making the cache files noticeably smaller.
   ([Andrey Kozhev](httos://github.com/ankddev))
 
+- Added support for installing Git dependencies via `gleam add`.
+  ([Hari Mohan](https://github.com/seafoamteal))
+
 ### Language server
 
 - The "Generate dynamic decoder" code action is now only offered when the

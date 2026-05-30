@@ -8,6 +8,7 @@ use gleam_core::{
     Error, Result,
     error::{FileIoAction, FileKind},
     paths::ProjectPaths,
+    requirement::Requirement,
 };
 use hexpm::version::{Identifier, Version};
 
@@ -17,16 +18,60 @@ use crate::{
     fs,
 };
 
-pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) -> Result<()> {
-    let config = crate::config::root_config(paths)?;
-    if packages_to_add.iter().any(|name| name == &config.name) {
-        return Err(Error::CannotAddSelfAsDependency { name: config.name });
-    }
+pub enum PackagesToAdd {
+    Hex(Vec<String>),
+    Git {
+        repository: String,
+        ref_: Option<String>,
+        path: Option<Utf8PathBuf>,
+    },
+}
 
-    let mut new_package_requirements = Vec::with_capacity(packages_to_add.len());
-    for specifier in packages_to_add {
-        new_package_requirements.push(parse_gleam_add_specifier(&specifier)?);
-    }
+pub fn command(paths: &ProjectPaths, packages_to_add: PackagesToAdd, dev: bool) -> Result<()> {
+    let config = crate::config::root_config(paths)?;
+
+    let new_package_requirements = match &packages_to_add {
+        PackagesToAdd::Hex(packages_to_add) => {
+            if packages_to_add.iter().any(|name| name == &config.name) {
+                return Err(Error::CannotAddSelfAsDependency { name: config.name });
+            }
+
+            let mut new_package_requirements = Vec::with_capacity(packages_to_add.len());
+            for specifier in packages_to_add {
+                new_package_requirements.push(parse_gleam_add_specifier(specifier)?);
+            }
+
+            new_package_requirements
+        }
+        PackagesToAdd::Git {
+            repository,
+            ref_,
+            path,
+        } => {
+            // When a user adds a git dependency, we do NOT know its name! The rest
+            // of this dependency resolution code path needs to know the names of the
+            // packages it's working with, and we don't want to maintain a second,
+            // near-identical copy. Instead, we fetch the repo and resolve the name
+            // of the package upfront, letting us continue as usual from here.
+            //
+            // When we get to the bit where we actually download and provide the package,
+            // we can simply reuse the clone from here. A second small request will be made
+            // to fetch the refs, but since they (almost certainly) haven't changed, no more
+            // deltas will be downloaded.
+            let (package_to_add, requirement) = dependencies::resolve_git_requirement(
+                repository,
+                ref_.as_deref(),
+                path.as_deref(),
+                paths,
+            )?;
+
+            if package_to_add == config.name {
+                return Err(Error::CannotAddSelfAsDependency { name: config.name });
+            }
+
+            vec![(package_to_add, requirement)]
+        }
+    };
 
     // Insert the new packages into the manifest and perform dependency
     // resolution to determine suitable versions
@@ -43,10 +88,9 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
 
     // Read gleam.toml and manifest.toml so we can insert new deps into it
     let mut gleam_toml = read_toml_edit(&paths.root_config())?;
-    let mut manifest_toml = read_toml_edit(&paths.manifest())?;
 
     // Insert the new deps
-    for (added_package, _) in new_package_requirements {
+    for (added_package, requirement) in new_package_requirements {
         let added_package = added_package.to_string();
 
         // Pull the selected version out of the new manifest so we know what it is
@@ -59,13 +103,63 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
 
         tracing::info!(version=%version, "new_package_version_resolved");
 
-        // Produce a version requirement locked to the major version.
-        // i.e. if 1.2.3 is selected we want >= 1.2.3 and < 2.0.0
-        let range = format!(
-            ">= {} and < {}.0.0",
-            version_to_string(version),
-            version.major + 1
-        );
+        // The manifest.toml file has already been updated on disk by
+        // `resolve_and_download`; we just have to update `gleam.toml` now.
+        let specifier: toml_edit::Item = match &requirement {
+            Requirement::Hex { .. } => {
+                // Produce a version requirement locked to the major version.
+                // i.e. if 1.2.3 is selected we want >= 1.2.3 and < 2.0.0
+                toml_edit::value(format!(
+                    ">= {} and < {}.0.0",
+                    version_to_string(version),
+                    version.major + 1
+                ))
+            }
+
+            Requirement::Git {
+                git,
+                path,
+                ref_: commit_hash,
+            } => {
+                // The manifest's ref will always be a fully resolved commit-SHA, even if the
+                // user provides a branch as the ref. This will pin the dep to the tip of the
+                // branch at the moment the command was run, which is not the user's intent:
+                // they most likely want to TRACK the branch.
+                //
+                // At this point, we know that their ref resolved correctly and the dep has
+                // been added, so we can safely use the value they explicitly provided via --ref
+                // as the ref to insert into gleam.toml.
+                let PackagesToAdd::Git {
+                    ref_: ref explicit_arg_ref,
+                    ..
+                } = packages_to_add
+                else {
+                    unreachable!(
+                        "new_package_requirements can only contain a Git requirement if packages_to_add is Git"
+                    )
+                };
+
+                let ref_: String = if let Some(ref_) = explicit_arg_ref {
+                    ref_.into()
+                } else {
+                    commit_hash.into()
+                };
+
+                let mut git_specifier = toml_edit::InlineTable::new();
+                let _ = git_specifier.insert("git", git.to_string().into());
+                let _ = git_specifier.insert("ref", ref_.into());
+
+                if let Some(path) = path {
+                    let _ = git_specifier.insert("path", path.to_string().into());
+                }
+
+                git_specifier.into()
+            }
+
+            Requirement::Path { .. } => {
+                unreachable!("Adding path deps via gleam add is not supported yet")
+            }
+        };
 
         // False positive. This package doesn't use the indexing API correctly.
         #[allow(clippy::indexing_slicing)]
@@ -83,20 +177,18 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
                 } else {
                     canonical_name
                 };
-                gleam_toml[name][&added_package] = toml_edit::value(range.clone());
+                gleam_toml[name][&added_package] = specifier.clone();
             } else {
                 if !gleam_toml.as_table().contains_key("dependencies") {
                     gleam_toml["dependencies"] = toml_edit::table();
                 }
-                gleam_toml["dependencies"][&added_package] = toml_edit::value(range.clone());
+                gleam_toml["dependencies"][&added_package] = specifier.clone();
             }
-            manifest_toml["requirements"][&added_package]["version"] = range.into();
         }
     }
 
     // Write the updated config
     fs::write(&paths.root_config(), &gleam_toml.to_string())?;
-    fs::write(&paths.manifest(), &manifest_toml.to_string())?;
 
     Ok(())
 }

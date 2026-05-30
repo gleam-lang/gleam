@@ -1048,7 +1048,6 @@ fn provide_local_package(
 /// Resolve a path dependency of a git package to its canonical filesystem
 /// location and its repository-relative path.
 fn resolve_git_path_package(
-    package_name: &EcoString,
     path: &Utf8Path,
     repo: &EcoString,
     parent_path: &Utf8Path,
@@ -1057,7 +1056,6 @@ fn resolve_git_path_package(
     let location = parent_path.join(path);
     if !location.is_dir() {
         return Err(Error::GitDependencyPathNotFound {
-            package: package_name.to_string(),
             path: path.to_string(),
             repo: repo.to_string(),
         });
@@ -1070,7 +1068,6 @@ fn resolve_git_path_package(
     let repo_path = package_path
         .strip_prefix(repo_root)
         .map_err(|_| Error::GitDependencyPathNotFound {
-            package: package_name.to_string(),
             path: path.to_string(),
             repo: repo.to_string(),
         })?
@@ -1145,23 +1142,22 @@ fn git_staging_path(project_paths: &ProjectPaths, repo: &str, package_name: &str
     ))
 }
 
-enum GitCheckout {
-    InPlace {
-        commit: EcoString,
-    },
-    Staged {
-        commit: EcoString,
-        staging_path: Utf8PathBuf,
-    },
+/// A temporary directory used to resolve the package name for a git dependency
+/// being added via `gleam add`
+fn git_name_resolution_path(project_paths: &ProjectPaths, repo: &str) -> Utf8PathBuf {
+    project_paths.build_git_repo(&format!("{}-name_resolution", git_repo_dir_name(repo)))
+}
+
+struct GitCheckout {
+    commit: EcoString,
+    staging_path: Utf8PathBuf,
 }
 
 impl GitCheckout {
     fn cleanup(self) -> Result<()> {
         // The clones dangling worktree registration is left for the next
         // download to prune before it re-adds the staging worktree.
-        if let Self::Staged { staging_path, .. } = self {
-            fs::delete_directory(&staging_path)?;
-        }
+        fs::delete_directory(&self.staging_path)?;
         Ok(())
     }
 }
@@ -1214,49 +1210,23 @@ impl GitCheckout {
 /// In the future we can optimise this more, for example first checking if we
 /// are already checked out to the commit stored in the manifest, or by only
 /// fetching the history without the objects to resolve partial commit hashes.
-/// For now though this is good enough until it become an actual performance
+/// For now though this is good enough until it becomes an actual performance
 /// problem.
 ///
 fn download_git_package(
     package_name: &str,
     repo: &str,
     ref_: &str,
-    path: Option<&Utf8Path>,
+    subdir: Option<&Utf8Path>,
     project_paths: &ProjectPaths,
-) -> Result<GitCheckout> {
-    match path {
-        None => download_git_package_in_place(package_name, repo, ref_, project_paths),
-        Some(subdir) => {
-            download_git_package_to_staged_path(package_name, repo, ref_, project_paths, subdir)
-        }
-    }
-}
-
-fn download_git_package_in_place(
-    package_name: &str,
-    repo: &str,
-    ref_: &str,
-    project_paths: &ProjectPaths,
-) -> Result<GitCheckout, Error> {
-    let clone_path = project_paths.build_packages_package(package_name);
-    prepare_git_clone(&clone_path, repo, CloneFormat::WorkTree)?;
-    let _ = execute_command(git_command(&clone_path).arg("checkout").arg(ref_))?;
-    let output = execute_command(git_command(&clone_path).arg("rev-parse").arg("HEAD"))?;
-    let commit = git_stdout(output);
-
-    Ok(GitCheckout::InPlace { commit })
-}
-
-fn download_git_package_to_staged_path(
-    package_name: &str,
-    repo: &str,
-    ref_: &str,
-    project_paths: &ProjectPaths,
-    subdir: &Utf8Path,
 ) -> Result<GitCheckout, Error> {
     let clone_path = project_paths.build_git_repo(&git_repo_dir_name(repo));
-    prepare_git_clone(&clone_path, repo, CloneFormat::Bare)?;
+    prepare_git_clone(&clone_path, repo)?;
 
+    // If the user runs `gleam add --git`, then `ref_` will be a fully resolved
+    // commit hash already. However, this requirement might be coming from them
+    // editing `gleam.toml` directly, in which case `ref_` might still be a
+    // branch name, tag, or partial hash.
     let commit = resolve_git_ref(&clone_path, repo, ref_)?;
 
     // Delete any staging worktree left behind by a previous crash, and prune
@@ -1279,55 +1249,120 @@ fn download_git_package_to_staged_path(
             .arg(commit.as_str()),
     )?;
 
-    let Some(subdir_source) = resolve_git_subdir(&staging_path, subdir) else {
-        return Err(Error::GitDependencyPathNotFound {
-            package: package_name.into(),
-            path: subdir.to_string(),
-            repo: repo.into(),
-        });
+    let src_path = if let Some(subdir) = subdir {
+        let Some(subdir_path) = resolve_git_subdir(&staging_path, subdir) else {
+            return Err(Error::GitDependencyPathNotFound {
+                path: subdir.to_string(),
+                repo: repo.into(),
+            });
+        };
+
+        subdir_path
+    } else {
+        staging_path.clone()
     };
 
     let package_path = project_paths.build_packages_package(package_name);
     fs::delete_directory(&package_path)?;
     fs::mkdir(&package_path)?;
-    fs::hardlink_dir(&subdir_source, &package_path)?;
+    fs::hardlink_dir(&src_path, &package_path)?;
 
-    Ok(GitCheckout::Staged {
+    Ok(GitCheckout {
         commit,
         staging_path,
     })
 }
 
-#[derive(Clone, Copy)]
-enum CloneFormat {
-    /// A regular clone with a checked-out work tree.
-    WorkTree,
-    /// A bare repository with no work tree.
-    Bare,
+/// Returns the package name and fully resolved `Requirement` of a Git dependency
+pub fn resolve_git_requirement(
+    repo: &str,
+    ref_: Option<&str>,
+    subdir: Option<&Utf8Path>,
+    project_paths: &ProjectPaths,
+) -> Result<(EcoString, Requirement), Error> {
+    let clone_path = project_paths.build_git_repo(&git_repo_dir_name(repo));
+    prepare_git_clone(&clone_path, repo)?;
+
+    let ref_ = match ref_ {
+        Some(ref_) => ref_.into(),
+        None => {
+            let output = execute_command(
+                git_command(&clone_path)
+                    .arg("symbolic-ref")
+                    .arg("refs/remotes/origin/HEAD")
+                    .arg("--short"),
+            )?;
+
+            let default_branch = git_stdout(output);
+            default_branch
+                .strip_prefix("origin/")
+                .unwrap_or("main")
+                .to_owned()
+        }
+    };
+
+    let commit = resolve_git_ref(&clone_path, repo, &ref_)?;
+
+    // Delete any name resolution worktree left behind by a previous crash,
+    // and prune its registration from the clone so `git worktree add` can
+    // reuse the path.
+    let name_resolution_path = git_name_resolution_path(project_paths, repo);
+    fs::delete_directory(&name_resolution_path)?;
+    let _ = git_command(&clone_path)
+        .arg("worktree")
+        .arg("prune")
+        .output();
+
+    let _ = execute_command(
+        git_command(&clone_path)
+            .arg("worktree")
+            .arg("add")
+            .arg("--force")
+            .arg("--detach")
+            .arg(&name_resolution_path)
+            .arg(commit.as_str()),
+    )?;
+
+    let src_path = match subdir {
+        Some(subdir) => {
+            let Some(subdir_path) = resolve_git_subdir(&name_resolution_path, subdir) else {
+                return Err(Error::GitDependencyPathNotFound {
+                    path: subdir.to_string(),
+                    repo: repo.into(),
+                });
+            };
+
+            subdir_path
+        }
+        None => name_resolution_path.clone(),
+    };
+
+    let config = crate::config::read(src_path.join("gleam.toml"))?;
+
+    let _ = fs::delete_directory(&name_resolution_path)?;
+
+    Ok((
+        config.name,
+        Requirement::Git {
+            git: repo.into(),
+            ref_: commit,
+            path: subdir.map(Utf8Path::to_path_buf),
+        },
+    ))
 }
 
 /// Initialise (or reuse) a git clone at the given path and fetch from the
 /// remote repository.
-fn prepare_git_clone(clone_path: &Utf8Path, repo: &str, format: CloneFormat) -> Result<()> {
+fn prepare_git_clone(clone_path: &Utf8Path, repo: &str) -> Result<()> {
     // If the clone path exists but is not the kind of git repo we expect, we
     // need to remove the directory.
-    let reusable = match format {
-        CloneFormat::Bare => fs::is_bare_git_repo_root(clone_path),
-        CloneFormat::WorkTree => fs::is_git_work_tree_root(clone_path),
-    };
-
-    if !reusable {
+    if !fs::is_bare_git_repo_root(clone_path) {
         fs::delete_directory(clone_path)?;
     }
 
     fs::mkdir(clone_path)?;
 
-    let mut init = git_command(clone_path);
-    let _ = init.arg("init");
-    if matches!(format, CloneFormat::Bare) {
-        let _ = init.arg("--bare");
-    }
-    let _ = execute_command(&mut init)?;
+    let _ = execute_command(git_command(clone_path).arg("init").arg("--bare"))?;
 
     // If this directory already exists, but the remote URL has been edited in
     // `gleam.toml` without a `gleam clean`, `git remote add` will fail, causing
@@ -1349,7 +1384,12 @@ fn prepare_git_clone(clone_path: &Utf8Path, repo: &str, format: CloneFormat) -> 
             .arg(repo),
     )?;
 
-    let _ = execute_command(git_command(clone_path).arg("fetch").arg("origin"))?;
+    let _ = execute_command(
+        git_command(clone_path)
+            .arg("fetch")
+            .arg("--tags")
+            .arg("origin"),
+    )?;
 
     Ok(())
 }
@@ -1421,27 +1461,15 @@ fn provide_git_package(
     parents: &mut Vec<EcoString>,
 ) -> Result<hexpm::version::Range> {
     let checkout = download_git_package(&package_name, repo, ref_, path.as_deref(), project_paths)?;
-    let (commit, staging_path) = match &checkout {
-        GitCheckout::InPlace { commit } => (commit, None),
-        GitCheckout::Staged {
-            commit,
-            staging_path,
-        } => (commit, Some(staging_path)),
-    };
 
     // Use the package's location in the staging worktree, where its gleam.toml
     // lives, not build/packages/. A `../sibling` path dep is resolved next to
     // that gleam.toml, and the sibling is only present in the worktree.
-    let (package_path, repo_root) = match (&path, staging_path) {
-        (Some(subdir), Some(staging_path)) => {
-            let repo_root = fs::canonicalise(staging_path)?;
-            (fs::canonicalise(&staging_path.join(subdir))?, repo_root)
-        }
-        _ => {
-            let package_path =
-                fs::canonicalise(&project_paths.build_packages_package(&package_name))?;
-            (package_path.clone(), package_path)
-        }
+    let repo_root = fs::canonicalise(&checkout.staging_path)?;
+
+    let package_path = match &path {
+        Some(subdir) => fs::canonicalise(&checkout.staging_path.join(subdir))?,
+        _ => checkout.staging_path.clone(),
     };
 
     let version = provide_package(
@@ -1449,7 +1477,7 @@ fn provide_git_package(
         package_path,
         SourceContext::Git {
             repo: repo.into(),
-            commit: commit.clone(),
+            commit: checkout.commit.clone(),
             path,
             repo_root: &repo_root,
         },
@@ -1509,7 +1537,7 @@ fn provide_package(
     if config.name != package_name {
         return Err(Error::WrongDependencyProvided {
             expected: package_name.into(),
-            path: package_path.to_path_buf(),
+            path: package_path,
             found: config.name.into(),
         });
     }
@@ -1530,7 +1558,7 @@ fn provide_package(
                     ..
                 } => {
                     let (child_path, child_repo_path) =
-                        resolve_git_path_package(&name, &path, repo, &package_path, repo_root)?;
+                        resolve_git_path_package(&path, repo, &package_path, repo_root)?;
                     // A path dependency resolving to the repository root has an
                     // empty repo-relative path. Normalise it to `None` so it
                     // matches a package declared directly as a git dependency

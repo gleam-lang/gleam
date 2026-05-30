@@ -90,8 +90,9 @@ pub use gleam_core::error::{Error, Result};
 
 use camino::Utf8PathBuf;
 use clap::{
-    Args, Parser, Subcommand,
+    Args, CommandFactory, Parser, Subcommand,
     builder::{Styles, styling},
+    error::ErrorKind,
 };
 use gleam_core::{
     analyse::TargetSupport,
@@ -100,6 +101,8 @@ use gleam_core::{
     paths::ProjectPaths,
     version::COMPILER_VERSION,
 };
+
+use crate::add::PackagesToAdd;
 
 #[derive(Args, Debug, Clone)]
 pub struct UpdateOptions {
@@ -423,19 +426,47 @@ pub enum Command {
     /// Add a package as a non-production dependency:
     ///     gleam add --dev wibble
     ///
+    /// Add a package from a Git source:
+    ///     gleam add --git https://github.com/gleam-lang/json
+    ///
+    /// Add a package from Git, referencing a specific branch, commit, or tag:
+    ///     gleam add --git git@github.com:gleam-lang/crypto --ref main
+    ///
+    /// Without `--ref`, the dependency will be pinned to the newest commit on
+    /// the repository's default branch. If you would like to _track_ a branch
+    /// instead, use `--ref <branch>`.
+    ///
     /// You can also edit `gleam.toml` directly, for further control over your
     /// package dependencies. Run `gleam help deps` for documentation on the
     /// format.
     ///
-    #[command(verbatim_doc_comment)]
+    #[command(
+        verbatim_doc_comment,
+        override_usage = "
+        gleam add [OPTIONS] [PACKAGES]
+        gleam add [OPTIONS] --git <URI> [--ref <REF>] [--path <PATH>]
+    "
+    )]
     Add {
         /// The names of Hex packages to add
-        #[arg(required = true)]
-        packages: Vec<String>,
+        #[arg()]
+        packages: Option<Vec<String>>,
 
         /// Add the packages as dev-only dependencies
         #[arg(long)]
         dev: bool,
+
+        /// Add a package from a remote git repository
+        #[arg(long, value_name = "URI", help_heading = "Git Dependencies")]
+        git: Option<String>,
+
+        /// The tag, branch, or commit to check out
+        #[arg(long, alias = "ref", help_heading = "Git Dependencies")]
+        ref_: Option<String>,
+
+        /// The path inside the git repo where the package is located
+        #[arg(long, help_heading = "Git Dependencies")]
+        path: Option<String>,
     },
 
     /// Remove project dependencies
@@ -622,9 +653,68 @@ impl Command {
                 username_or_email,
             })) => owner::transfer(package, username_or_email),
 
-            Self::Add { packages, dev } => {
+            Self::Add {
+                packages,
+                dev,
+                git: git_uri,
+                ref_: git_ref,
+                path,
+            } => {
+                let mut cmd = Self::command();
+
+                if packages.is_some() == git_uri.is_some() {
+                    cmd.error(
+                        ErrorKind::ArgumentConflict,
+                        "Exactly one of PACKAGES and --git must be provided",
+                    )
+                    .exit();
+                }
+
+                if git_ref.is_some() && git_uri.is_none() {
+                    cmd.error(
+                        ErrorKind::MissingRequiredArgument,
+                        "--git must be provided for --ref",
+                    )
+                    .exit();
+                }
+
+                match path {
+                    Some(path) if path.is_empty() => {
+                        cmd.error(
+                            ErrorKind::InvalidValue,
+                            "Git dependency path must not be empty",
+                        )
+                        .exit();
+                    }
+
+                    Some(_) if git_uri.is_none() => {
+                        cmd.error(
+                            ErrorKind::MissingRequiredArgument,
+                            "--git must be provided for --path",
+                        )
+                        .exit();
+                    }
+
+                    _ => (),
+                }
+
                 let paths = find_project_paths(directory)?;
-                add::command(&paths, packages, dev)
+
+                if let Some(packages) = packages {
+                    add::command(&paths, PackagesToAdd::Hex(packages), dev)
+                } else if let Some(git_uri) = git_uri {
+                    add::command(
+                        &paths,
+                        PackagesToAdd::Git {
+                            repository: git_uri,
+                            ref_: git_ref,
+                            path: path.map(Utf8PathBuf::from),
+                        },
+                        dev,
+                    )
+                } else {
+                    unreachable!("Exactly one of PACKAGES and --git must be provided")
+                }
             }
 
             Self::Remove { packages } => {
