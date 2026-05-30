@@ -16,6 +16,12 @@
   function would throw an Error using the wrong class.
   ([John Downey](https://github.com/jtdowney))
 
+- Fixed a bug where publishing a package without a README would show a raw
+  IO error on Windows instead of the friendly "Cannot publish with no README"
+  message, because the check matched on the OS-emitted error string which
+  differs between Unix and Windows.
+  ([Charlie Tonneslan](https://github.com/c-tonneslan))
+
 ## v1.17.0-rc1 - 2026-05-23
 
 ### Compiler

@@ -149,17 +149,13 @@ fn check_for_invalid_readme(config: &PackageConfig, paths: &ProjectPaths) -> Res
             .replace(" ", "")
     };
 
-    let project_readme = match fs::read(paths.readme()) {
-        Err(Error::FileIo {
-            err: Some(message), ..
-        }) if message.contains("No such file or directory") => {
-            return Err(Error::CannotPublishWithInvalidReadme {
-                reason: InvalidReadmeReason::Missing,
-            });
-        }
-        Err(error) => return Err(error),
-        Ok(project_readme) => project_readme,
-    };
+    let readme_path = paths.readme();
+    if !readme_path.exists() {
+        return Err(Error::CannotPublishWithInvalidReadme {
+            reason: InvalidReadmeReason::Missing,
+        });
+    }
+    let project_readme = fs::read(readme_path)?;
 
     let normalised_project_readme = normalise(project_readme);
     if normalised_project_readme.is_empty() {
