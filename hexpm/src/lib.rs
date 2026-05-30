@@ -592,6 +592,17 @@ pub fn api_revert_release_response(response: http::Response<Vec<u8>>) -> Result<
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
         StatusCode::UNAUTHORIZED => Err(unauthorised_response(&parts.headers)),
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
+        StatusCode::UNPROCESSABLE_ENTITY => {
+            let body = String::from_utf8_lossy(&body);
+            if body.contains("can only modify a release up to one hour after publication") {
+                Err(ApiError::LateModification)
+            } else {
+                Err(ApiError::UnexpectedResponse(
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    body.to_string(),
+                ))
+            }
+        }
         status => Err(ApiError::unexpected_response(status, body)),
     }
 }

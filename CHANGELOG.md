@@ -370,6 +370,10 @@
 
 ### Bug fixes
 
+- Fixed a bug where `gleam hex revert` printed a raw JSON error body when a
+  release was too old to be reverted, instead of a readable message.
+  ([Charlie Tonneslan](https://github.com/c-tonneslan))
+
 - Fixed a bug where `gleam remove` would fail with a confusing File IO error
   if `manifest.toml` didn't exist yet (e.g. in a freshly-created project or
   after the manifest had been deleted).
