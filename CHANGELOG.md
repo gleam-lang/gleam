@@ -38,6 +38,9 @@
   owner only (0600 on Unix), preventing other users from reading it.
   ([bala-bhargav](https://github.com/bala-bhargav))
 
+- Added support for installing Git dependencies via `gleam add`.
+  ([Hari Mohan](https://github.com/seafoamteal))
+
 ### Language server
 
 - The language server will now offer "Discard unused variable" on each of
