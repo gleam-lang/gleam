@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## Bug Fixes
+### Bug Fixes
 
 - Fixed a bug where the "Convert to case" code action would silently fail for
   every inexhaustive `let` assignment in a module other than the first one.
