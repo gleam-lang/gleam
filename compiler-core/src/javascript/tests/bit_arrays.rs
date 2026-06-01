@@ -2820,6 +2820,38 @@ pub fn run(data) {
     );
 }
 
+#[test]
+fn qualified_constant_in_pattern_size() {
+    assert_js!(
+        ("sizes", "pub const byte_size = 8"),
+        r#"
+import sizes
+
+pub fn go(data) {
+  let assert <<value:size(sizes.byte_size)>> = data
+  value
+}
+"#
+    );
+}
+
+#[test]
+fn qualified_constant_in_pattern_size_expression() {
+    assert_js!(
+        ("sizes", "pub const multiplier = 2"),
+        r#"
+import sizes
+
+const local_size = 4
+
+pub fn go(data) {
+  let assert <<value:size(sizes.multiplier * local_size)>> = data
+  value
+}
+"#
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/5208
 #[test]
 fn unit_option_ignores_bytes() {

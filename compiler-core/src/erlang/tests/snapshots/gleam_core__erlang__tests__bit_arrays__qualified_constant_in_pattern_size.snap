@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/erlang/tests/bit_arrays.rs
+expression: "\nimport sizes\n\npub fn go(data) {\n  let assert <<value:size(sizes.byte_size)>> = data\n  value\n}\n"
+---
+----- SOURCE CODE
+
+import sizes
+
+pub fn go(data) {
+  let assert <<value:size(sizes.byte_size)>> = data
+  value
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-define(FILEPATH, "project/test/my/mod.gleam").
+-export([go/1]).
+
+-file("project/test/my/mod.gleam", 4).
+-spec go(bitstring()) -> integer().
+go(Data) ->
+    Value@1 = case Data of
+        <<Value:8>> -> Value;
+        _assert_fail ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
+                        file => <<?FILEPATH/utf8>>,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"go"/utf8>>,
+                        line => 5,
+                        value => _assert_fail,
+                        start => 35,
+                        'end' => 84,
+                        pattern_start => 46,
+                        pattern_end => 77})
+    end,
+    Value@1.

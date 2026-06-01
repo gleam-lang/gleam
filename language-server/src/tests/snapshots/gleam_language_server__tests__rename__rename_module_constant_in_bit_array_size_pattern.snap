@@ -1,0 +1,31 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\nimport sizes\n\npub fn main() {\n  let assert <<value:size(sizes.byte_size)>> = <<1>>\n  value\n}\n"
+---
+----- BEFORE RENAME
+-- sizes.gleam
+pub const byte_size = 8
+
+-- app.gleam
+
+import sizes
+
+pub fn main() {
+  let assert <<value:size(sizes.byte_size)>> = <<1>>
+                                ↑▔▔▔▔▔▔▔▔           
+  value
+}
+
+
+----- AFTER RENAME
+-- sizes.gleam
+pub const bit_size = 8
+
+-- app.gleam
+
+import sizes
+
+pub fn main() {
+  let assert <<value:size(sizes.bit_size)>> = <<1>>
+  value
+}

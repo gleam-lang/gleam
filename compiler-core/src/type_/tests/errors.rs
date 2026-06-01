@@ -191,6 +191,18 @@ fn bit_array_size_not_int_variable() {
 }
 
 #[test]
+fn bit_array_size_not_int_qualified_constant() {
+    assert_module_error!(
+        ("sizes", "pub const byte_size = 2.0"),
+        "import sizes
+
+pub fn main() {
+  case <<1>> { <<_:size(sizes.byte_size)>> -> Nil }
+}"
+    );
+}
+
+#[test]
 fn bit_array_float_size() {
     // float given invalid size
     assert_error!("let x = <<1:8-float>> x");

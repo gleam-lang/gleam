@@ -9,10 +9,10 @@ pub fn wibble() {
 
 ----- ERROR
 error: Syntax error
-  ┌─ /src/parse/error.gleam:2:23
+  ┌─ /src/parse/error.gleam:2:29
   │
 2 │   let assert <<1:size(Upname)>> = todo
-  │                       ^^^^^^ I was not expecting this
+  │                             ^ I was not expecting this
 
-Found a name, expected one of: 
-- A variable name or an int
+Found `)`, expected one of: 
+- A variable name or an integer

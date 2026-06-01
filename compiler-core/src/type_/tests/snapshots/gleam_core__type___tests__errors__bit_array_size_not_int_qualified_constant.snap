@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "import sizes\n\npub fn main() {\n  case <<1>> { <<_:size(sizes.byte_size)>> -> Nil }\n}"
+---
+----- SOURCE CODE
+-- sizes.gleam
+pub const byte_size = 2.0
+
+-- main.gleam
+import sizes
+
+pub fn main() {
+  case <<1>> { <<_:size(sizes.byte_size)>> -> Nil }
+}
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:25
+  │
+4 │   case <<1>> { <<_:size(sizes.byte_size)>> -> Nil }
+  │                         ^^^^^^^^^^^^^^^
+
+Expected type:
+
+    Int
+
+Found type:
+
+    Float

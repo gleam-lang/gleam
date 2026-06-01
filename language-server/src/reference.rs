@@ -91,6 +91,7 @@ pub fn reference_for_ast_node(
             constructor,
             location,
             name,
+            module,
             ..
         })) => constructor
             .as_ref()
@@ -104,9 +105,59 @@ pub fn reference_for_ast_node(
                     origin: Some(origin.clone()),
                     name: name.clone(),
                 }),
-                ValueConstructorVariant::ModuleConstant { .. }
-                | ValueConstructorVariant::ModuleFn { .. }
-                | ValueConstructorVariant::Record { .. } => None,
+                ValueConstructorVariant::ModuleConstant {
+                    module: def_module,
+                    name: canonical_name,
+                    ..
+                }
+                | ValueConstructorVariant::ModuleFn {
+                    module: def_module,
+                    name: canonical_name,
+                    ..
+                } => {
+                    // For qualified references, calculate the name location by
+                    // skipping past the module and the dot
+                    let name_location = match module {
+                        Some((_, module_location)) => {
+                            SrcSpan::new(module_location.end + 1, location.end)
+                        }
+                        None => *location,
+                    };
+                    Some(Referenced::ModuleValue {
+                        module: def_module.clone(),
+                        name: canonical_name.clone(),
+                        location: name_location,
+                        name_kind: Named::Function,
+                        target_kind: if module.is_some() {
+                            RenameTarget::Qualified
+                        } else {
+                            RenameTarget::Unqualified
+                        },
+                    })
+                }
+                ValueConstructorVariant::Record {
+                    module: def_module,
+                    name: canonical_name,
+                    ..
+                } => {
+                    let name_location = match module {
+                        Some((_, module_location)) => {
+                            SrcSpan::new(module_location.end + 1, location.end)
+                        }
+                        None => *location,
+                    };
+                    Some(Referenced::ModuleValue {
+                        module: def_module.clone(),
+                        name: canonical_name.clone(),
+                        location: name_location,
+                        name_kind: Named::CustomTypeVariant,
+                        target_kind: if module.is_some() {
+                            RenameTarget::Qualified
+                        } else {
+                            RenameTarget::Unqualified
+                        },
+                    })
+                }
             }),
         Located::Pattern(Pattern::Assign { location, name, .. }) => {
             Some(Referenced::LocalVariable {
@@ -732,6 +783,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
     fn visit_typed_bit_array_size_variable(
         &mut self,
         location: &'ast SrcSpan,
+        _module: &'ast Option<(EcoString, SrcSpan)>,
         _name: &'ast EcoString,
         constructor: &'ast Option<Box<ValueConstructor>>,
         _type_: &'ast std::sync::Arc<Type>,

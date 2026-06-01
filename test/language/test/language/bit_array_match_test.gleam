@@ -150,3 +150,9 @@ pub fn unit_ignores_bytes_option_regardless_of_order() {
   let assert <<x:bytes-unit(2)-size(3)>> = <<1:6>>
   assert x == <<1:6>>
 }
+
+// Test qualified constant in bit array pattern size
+pub fn qualified_constant_in_pattern_size_test() {
+  let assert <<value:size(importable.byte_size)>> = <<42>>
+  assert value == 42
+}
