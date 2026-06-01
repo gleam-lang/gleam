@@ -176,11 +176,13 @@ jobs:
 }
 
 pub fn default_readme(project_name: &str) -> String {
+    let project_name_with_dashes = project_name.replace('_', "-");
+
     format!(
         r#"# {project_name}
 
 [![Package Version](https://img.shields.io/hexpm/v/{project_name})](https://hex.pm/packages/{project_name})
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/{project_name}/)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://{project_name_with_dashes}.hexdocs.pm/)
 
 ```sh
 gleam add {project_name}@1
@@ -193,7 +195,7 @@ pub fn main() -> Nil {{
 }}
 ```
 
-Further documentation can be found at <https://hexdocs.pm/{project_name}>.
+Further documentation can be found at <https://{project_name_with_dashes}.hexdocs.pm/>.
 
 ## Development
 

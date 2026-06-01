@@ -2087,9 +2087,10 @@ fn format_hexdocs_link_section(
     module_name: &str,
     name: Option<&str>,
 ) -> String {
+    let package_name = package_name.replace('_', "-");
     let link = match name {
-        Some(name) => format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}"),
-        None => format!("https://hexdocs.pm/{package_name}/{module_name}.html"),
+        Some(name) => format!("https://{package_name}.hexdocs.pm/{module_name}.html#{name}"),
+        None => format!("https://{package_name}.hexdocs.pm/{module_name}.html"),
     };
     format!("\nView on [HexDocs]({link})")
 }

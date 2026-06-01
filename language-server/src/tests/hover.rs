@@ -302,7 +302,7 @@ fn main() {
 
 #[test]
 fn hover_external_imported_function_nested_module() {
-    // Example of HexDocs link with nested modules: https://hexdocs.pm/lustre/lustre/element/svg.html
+    // Example of HexDocs link with nested modules: https://lustre.hexdocs.pm/lustre/element/svg.html
     let code = "
 import my/nested/example_module
 fn main() {
