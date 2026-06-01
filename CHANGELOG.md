@@ -156,6 +156,58 @@
 
   ([Daniele Scaratti](https://github.com/lupodevelop))
 
+- The language server now has "Discard unused variable" code action to discard
+  unused variables in different places. For example,
+
+  ```gleam
+  pub type Wibble {
+    Wibble(a: Int)
+  }
+
+  pub fn go(record: Wibble) -> Nil {
+    let wibble = 0
+    //  ^ Trigger code action here
+
+    case record {
+      Wibble(a:) -> Nil
+      //     ^ Trigger code action here
+    }
+
+    case [0, 1, 2] {
+      [_, ..] as wobble -> Nil
+      //         ^ Trigger code action here
+      [] -> Nil
+    }
+
+    Nil
+  }
+  ```
+
+  Triggering the code action in all of these places would produce following code:
+
+  ```gleam
+  pub type Wibble {
+    Wibble(a: Int)
+  }
+
+  pub fn go(record: Wibble) -> Nil {
+    let _wibble = 0
+
+    case record {
+      Wibble(a: _) -> Nil
+    }
+
+    case [0, 1, 2] {
+      [_, ..] -> Nil
+      [] -> Nil
+    }
+
+    Nil
+  }
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Formatter
 
 - Performance of the formatter has been improved.
