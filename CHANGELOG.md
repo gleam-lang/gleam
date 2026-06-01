@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.17.0-rc2 - 2026-06-01
 
 ### Bug Fixes
 
