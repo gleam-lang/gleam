@@ -1,0 +1,19 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn go() -> Nil {\n  let wibble = 0\n  let _wobble = 0\n  Nil\n}"
+---
+----- BEFORE ACTION
+pub fn go() -> Nil {
+  let wibble = 0
+      ↑         
+  let _wobble = 0
+  Nil
+}
+
+
+----- AFTER ACTION
+pub fn go() -> Nil {
+  let _wibble = 0
+  let _wobble = 0
+  Nil
+}

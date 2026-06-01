@@ -1,0 +1,27 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub type Wibble {\n  Wibble(a: Int)\n}\n\nfn wobble(wibble: Wibble) -> Int {\n  case wibble {\n    Wibble(a:) -> 0\n  }\n}"
+---
+----- BEFORE ACTION
+pub type Wibble {
+  Wibble(a: Int)
+}
+
+fn wobble(wibble: Wibble) -> Int {
+  case wibble {
+    Wibble(a:) -> 0
+           ↑       
+  }
+}
+
+
+----- AFTER ACTION
+pub type Wibble {
+  Wibble(a: Int)
+}
+
+fn wobble(wibble: Wibble) -> Int {
+  case wibble {
+    Wibble(a: _) -> 0
+  }
+}
