@@ -3,7 +3,7 @@
 ## Adding a New API Function
 
 1. Figure out what you want to do
-    - Go to https://hexdocs.pm/hex/Mix.Tasks.Hex.html and find what you want to do
+    - Go to https://hex.hexdocs.pm/Mix.Tasks.Hex.html and find what you want to do
 2. Once you find the page, click on the code icon on the top-right to go to the corresponding source code like so: https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.owner.ex#L125
 ```elixir
   defp transfer_owner(organization, package, owner) do

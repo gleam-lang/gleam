@@ -648,7 +648,10 @@ impl Printer<'_> {
                 kind: DependencyKind::Hex,
                 version,
             }) => self.link(
-                eco_format!("https://hexdocs.pm/{package}/{version}/{module}.html#{name}"),
+                eco_format!(
+                    "https://{package}.hexdocs.pm/{version}/{module}.html#{name}",
+                    package = package.replace('_', "-")
+                ),
                 qualified_name,
                 Some(title),
             ),

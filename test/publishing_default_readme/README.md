@@ -1,7 +1,7 @@
 # default_readme
 
 [![Package Version](https://img.shields.io/hexpm/v/default_readme)](https://hex.pm/packages/default_readme)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/default_readme/)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://default-readme.hexdocs.pm/)
 
 ```sh
 gleam add default_readme@1
@@ -14,7 +14,7 @@ pub fn main() -> Nil {
 }
 ```
 
-Further documentation can be found at <https://hexdocs.pm/default_readme>.
+Further documentation can be found at <https://default-readme.hexdocs.pm>.
 
 ## Development
 

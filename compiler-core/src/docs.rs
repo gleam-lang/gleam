@@ -110,8 +110,8 @@ pub fn generate_html<IO: FileSystemReader>(
             path,
         });
 
-    let host = if is_hex_publish == DocContext::HexPublish {
-        "https://hexdocs.pm"
+    let url = if is_hex_publish == DocContext::HexPublish {
+        &format!("https://{}.hexdocs.pm", config.name.replace("_", "-"))
     } else {
         ""
     };
@@ -175,7 +175,7 @@ pub fn generate_html<IO: FileSystemReader>(
             project_version: &config.version.to_string(),
             content: rendered_content,
             rendering_timestamp: &rendering_timestamp,
-            host,
+            url,
             unnest: &unnest,
         };
 
@@ -228,7 +228,7 @@ pub fn generate_html<IO: FileSystemReader>(
 
         let template = ModuleTemplate {
             gleam_version: COMPILER_VERSION,
-            host,
+            url,
             unnest,
             links: &links,
             pages: &pages,
@@ -652,7 +652,7 @@ struct DocsValues<'a> {
 struct PageTemplate<'a> {
     gleam_version: &'a str,
     unnest: &'a str,
-    host: &'a str,
+    url: &'a str,
     page_title: &'a str,
     page_meta_description: &'a str,
     file_path: &'a Utf8PathBuf,
@@ -670,7 +670,7 @@ struct PageTemplate<'a> {
 struct ModuleTemplate<'a> {
     gleam_version: &'a str,
     unnest: String,
-    host: &'a str,
+    url: &'a str,
     page_title: &'a str,
     page_meta_description: &'a str,
     file_path: &'a Utf8PathBuf,

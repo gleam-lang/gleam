@@ -24,4 +24,4 @@ pub fn do_thing(value: api.External) {
 ---- VALUES
 
 --- do_thing
-<pre><code>pub fn do_thing(value: <a href="https://hexdocs.pm/some_package/1.0.0/some_package/api.html#External" title="some_package/api.{type External}">api.External</a>) -> <a href="https://hexdocs.pm/some_package/1.0.0/some_package/api.html#External" title="some_package/api.{type External}">api.External</a></code></pre>
+<pre><code>pub fn do_thing(value: <a href="https://some-package.hexdocs.pm/1.0.0/some_package/api.html#External" title="some_package/api.{type External}">api.External</a>) -> <a href="https://some-package.hexdocs.pm/1.0.0/some_package/api.html#External" title="some_package/api.{type External}">api.External</a></code></pre>

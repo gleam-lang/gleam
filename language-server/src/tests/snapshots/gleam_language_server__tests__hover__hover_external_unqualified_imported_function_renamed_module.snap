@@ -15,4 +15,4 @@ fn main() {
 fn() -> Nil
 ```
 
-View on [HexDocs](https://hexdocs.pm/hex/example_module.html#my_fn)
+View on [HexDocs](https://hex.hexdocs.pm/example_module.html#my_fn)
