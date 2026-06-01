@@ -202,6 +202,7 @@ const REPLACE_UNDERSCORE_WITH_TYPE: &str = "Replace `_` with type";
 const WRAP_IN_ANONYMOUS_FUNCTION: &str = "Wrap in anonymous function";
 const UNWRAP_ANONYMOUS_FUNCTION: &str = "Remove anonymous function wrapper";
 const REMOVE_REDUNDANT_RECORD_UPDATE: &str = "Remove redundant record update";
+const DISCARD_UNUSED_VARIABLE: &str = "Discard unused variable";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range_selector:expr $(,)?) => {
@@ -14670,5 +14671,137 @@ pub const base = Wibble(a: 1, b: 2)
 pub type Wibble { Wibble(a: Int, b: Int) }
 ",
         find_position_of("base").to_selection()
+    );
+}
+
+#[test]
+fn discard_unused_variable_triggered_at_variable() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        "pub fn go() -> Nil {
+  let wibble = 0
+  Nil
+}",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn discard_unused_variable_triggered_at_variable_with_multiple_ones() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        "pub fn go() -> Nil {
+  let wibble = 0
+  let wobble = 0
+  Nil
+}",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn discard_unused_variable_triggered_at_variable_with_discarded_one() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        "pub fn go() -> Nil {
+  let wibble = 0
+  let _wobble = 0
+  Nil
+}",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn no_discard_unused_variable_triggered_at_discarded_variable() {
+    assert_no_code_actions!(
+        DISCARD_UNUSED_VARIABLE,
+        "pub fn go() -> Nil {
+  let _wibble = 0
+  Nil
+}",
+        find_position_of("_wibble").to_selection()
+    );
+}
+
+#[test]
+fn discard_unused_variable_triggered_at_pattern_assignment_shorthand() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        "pub type Wibble {
+  Wibble(a: Int)
+}
+
+fn wobble(wibble: Wibble) -> Int {
+  case wibble {
+    Wibble(a:) -> 0
+  }
+}",
+        find_position_of("a:").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn no_discard_unused_variable_triggered_at_discarded_pattern_assignment_shorthand() {
+    assert_no_code_actions!(
+        DISCARD_UNUSED_VARIABLE,
+        "pub type Wibble {
+  Wibble(a: Int)
+}
+
+fn wobble(wibble: Wibble) -> Int {
+  case wibble {
+    Wibble(a: _) -> 0
+  }
+}",
+        find_position_of("a:").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn discard_unused_variable_triggered_at_pattern_assignment() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        "pub type Wibble {
+  Wibble(a: Int)
+}
+
+fn wobble(wibble: Wibble) -> Int {
+  case wibble {
+    Wibble(a) -> 0
+  }
+}",
+        find_position_of("a").nth_occurrence(3).to_selection()
+    );
+}
+
+#[test]
+fn no_discard_unused_variable_triggered_at_discarded_pattern_assignment() {
+    assert_no_code_actions!(
+        DISCARD_UNUSED_VARIABLE,
+        "pub type Wibble {
+  Wibble(a: Int)
+}
+
+fn wobble(wibble: Wibble) -> Int {
+  case wibble {
+    Wibble(_a) -> 0
+  }
+}",
+        find_position_of("_a").to_selection()
+    );
+}
+
+#[test]
+fn discard_unused_variable_triggered_at_list_pattern_assignment() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        "fn wibble(wobble: List(Int)) -> Nil {
+  case wobble {
+    [_, ..] as tail -> Nil
+    [] -> Nil
+  }
+}",
+        find_position_of("tail").to_selection()
     );
 }
