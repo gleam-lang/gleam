@@ -1,0 +1,27 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\npub type Option(a) {\n  Some(a)\n  None\n}\n\npub type Maybe(some_type) =\n  Option(some_type)\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+pub type Option(a) {
+  Some(a)
+  None
+}
+
+pub type Maybe(some_type) =
+  Option(some_type)
+         ↑▔▔▔▔▔▔▔▔ 
+
+
+----- AFTER RENAME
+-- app.gleam
+
+pub type Option(a) {
+  Some(a)
+  None
+}
+
+pub type Maybe(something) =
+  Option(something)

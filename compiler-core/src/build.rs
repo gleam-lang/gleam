@@ -470,6 +470,10 @@ pub enum Located<'a> {
         ast: &'a TypeAst,
         type_: std::sync::Arc<Type>,
     },
+    TypeVariable {
+        name: EcoString,
+        location: SrcSpan,
+    },
     UnqualifiedImport(UnqualifiedImport<'a>),
     Label(SrcSpan, std::sync::Arc<Type>),
     ModuleName {
@@ -563,6 +567,7 @@ impl<'a> Located<'a> {
             Self::Arg(_) => None,
             Self::Annotation { type_, .. } => self.type_location(importable_modules, type_.clone()),
             Self::Label(_, _) => None,
+            Self::TypeVariable { .. } => None,
             Self::ModuleName { module_name, .. } => Some(DefinitionLocation {
                 module: Some(module_name.clone()),
                 span: SrcSpan::new(0, 0),
@@ -592,7 +597,8 @@ impl<'a> Located<'a> {
             | Located::VariantConstructorDefinition(_)
             | Located::FunctionBody(_)
             | Located::UnqualifiedImport(_)
-            | Located::ModuleName { .. } => None,
+            | Located::ModuleName { .. }
+            | Located::TypeVariable { .. } => None,
         }
     }
 

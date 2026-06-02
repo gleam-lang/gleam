@@ -35,7 +35,7 @@ use std::{collections::HashSet, sync::Arc};
 use crate::{
     code_action::{RemoveRedundantRecordUpdate, ReplaceUnderscoreWithType, type_errors_for_module},
     reference::find_module_references_in_module,
-    rename::rename_module_alias,
+    rename::{rename_module_alias, rename_type_variable},
 };
 
 use super::{
@@ -413,6 +413,8 @@ where
                 } => Some(completer.completion_values()),
 
                 Located::ClauseGuard(_) => Some(completer.completion_values()),
+
+                Located::TypeVariable { .. } => None,
             };
 
             Ok(completions)
@@ -835,6 +837,8 @@ where
                 }
                 Some(Referenced::ModuleName { location, .. }) => success_response(location),
 
+                Some(Referenced::TypeVariable { location, name: _ }) => success_response(location),
+
                 _ => None,
             })
         })
@@ -934,6 +938,10 @@ where
                     ..
                 }) => rename_module_alias(module, &lines, &params, &module_name, &module_alias)
                     .into_result(),
+
+                Some(Referenced::TypeVariable { location, name }) => {
+                    rename_type_variable(module, &lines, &params, location, name).into_result()
+                }
 
                 None => RenameOutcome::NoRenames.into_result(),
             })
@@ -1250,6 +1258,8 @@ Unused labelled fields:
                 }
 
                 Located::ClauseGuard(guard) => Some(hover_for_clause_guard(guard, lines, module)),
+
+                Located::TypeVariable { .. } => None,
             })
         })
     }

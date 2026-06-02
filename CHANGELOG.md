@@ -59,6 +59,26 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now permits renaming type variables in functions, types,
+  and constants. For example:
+
+  ```gleam
+  pub fn twice(value: a, f: fn(a) -> a) -> a {
+    //                ^ Rename to "anything"
+    f(f(value))
+  }
+  ```
+
+  Produces:
+
+  ```gleam
+  pub fn twice(value: anything, f: fn(anything) -> anything) -> anything {
+    f(f(value))
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 ### Bug fixes

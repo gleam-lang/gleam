@@ -47,6 +47,10 @@ pub enum Referenced {
         location: SrcSpan,
         target_kind: RenameTarget,
     },
+    TypeVariable {
+        location: SrcSpan,
+        name: EcoString,
+    },
 }
 
 pub fn reference_for_ast_node(
@@ -259,23 +263,17 @@ pub fn reference_for_ast_node(
                 name: name.clone(),
             })
         }
-        Located::Annotation { ast, type_ } => match type_.named_type_name() {
-            Some((module, name)) => {
-                let (target_kind, location) = match ast {
-                    ast::TypeAst::Constructor(constructor) => {
-                        let kind = if constructor.name.is_qualified() {
-                            RenameTarget::Qualified
-                        } else {
-                            RenameTarget::Unqualified
-                        };
-                        let name_location = constructor.name.name_location()?;
-                        (kind, name_location)
-                    }
-                    ast::TypeAst::Fn(_)
-                    | ast::TypeAst::Var(_)
-                    | ast::TypeAst::Tuple(_)
-                    | ast::TypeAst::Hole(_) => (RenameTarget::Unqualified, ast.location()),
+        Located::Annotation { ast, type_ } => match ast {
+            ast::TypeAst::Constructor(constructor)
+                if let Some((module, name)) = type_.named_type_name() =>
+            {
+                let target_kind = if constructor.name.is_qualified() {
+                    RenameTarget::Qualified
+                } else {
+                    RenameTarget::Unqualified
                 };
+                let location = constructor.name.name_location()?;
+
                 Some(Referenced::ModuleType {
                     module,
                     name,
@@ -283,8 +281,20 @@ pub fn reference_for_ast_node(
                     target_kind,
                 })
             }
-            None => None,
+
+            ast::TypeAst::Var(variable) => Some(Referenced::TypeVariable {
+                location: variable.location,
+                name: variable.name.clone(),
+            }),
+
+            ast::TypeAst::Constructor(_)
+            | ast::TypeAst::Fn(_)
+            | ast::TypeAst::Tuple(_)
+            | ast::TypeAst::Hole(_) => None,
         },
+        Located::TypeVariable { name, location } => {
+            Some(Referenced::TypeVariable { location, name })
+        }
         Located::ModuleCustomType(CustomType {
             name,
             name_location,
@@ -1072,5 +1082,69 @@ impl<'ast> Visit<'ast> for FindModuleNameReferences<'_> {
             spread,
             type_,
         );
+    }
+}
+
+pub struct FindTypeVariableReferences<'a> {
+    pub references: Vec<SrcSpan>,
+    pub name: &'a EcoString,
+    pub location: SrcSpan,
+}
+
+impl<'a> FindTypeVariableReferences<'a> {
+    pub fn find_in_module(
+        module: &TypedModule,
+        type_variable_location: SrcSpan,
+        type_variable_name: &'a EcoString,
+    ) -> Vec<SrcSpan> {
+        let mut finder = Self {
+            references: Vec::new(),
+            name: type_variable_name,
+            location: type_variable_location,
+        };
+        finder.visit_typed_module(module);
+        finder.references
+    }
+}
+
+impl<'ast> Visit<'ast> for FindTypeVariableReferences<'_> {
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        if fun.full_location().contains_span(self.location) {
+            ast::visit::visit_typed_function(self, fun);
+        }
+    }
+
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
+        if custom_type.full_location().contains_span(self.location) {
+            for (location, name) in custom_type.parameters.iter() {
+                if name == self.name {
+                    self.references.push(*location)
+                }
+            }
+            ast::visit::visit_typed_custom_type(self, custom_type);
+        }
+    }
+
+    fn visit_typed_module_constant(&mut self, constant: &'ast ast::TypedModuleConstant) {
+        if constant.location.contains_span(self.location) {
+            ast::visit::visit_typed_module_constant(self, constant);
+        }
+    }
+
+    fn visit_typed_type_alias(&mut self, type_alias: &'ast ast::TypedTypeAlias) {
+        if type_alias.location.contains_span(self.location) {
+            for (location, name) in type_alias.parameters.iter() {
+                if name == self.name {
+                    self.references.push(*location)
+                }
+            }
+            ast::visit::visit_typed_type_alias(self, type_alias);
+        }
+    }
+
+    fn visit_type_ast_var(&mut self, location: &'ast SrcSpan, name: &'ast EcoString) {
+        if name == self.name {
+            self.references.push(*location);
+        }
     }
 }

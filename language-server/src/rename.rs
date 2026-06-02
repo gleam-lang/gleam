@@ -13,7 +13,7 @@ use gleam_core::{
     type_::{ModuleInterface, error::Named},
 };
 
-use crate::reference::{self, ModuleNameReferenceKind};
+use crate::reference::{self, FindTypeVariableReferences, ModuleNameReferenceKind};
 
 use super::{
     TextEdits,
@@ -385,6 +385,36 @@ pub fn rename_module_alias(
                 edits.replace(reference.location, params.new_name.to_string())
             }
         }
+    }
+
+    RenameOutcome::Renamed {
+        edit: workspace_edit(uri, edits.edits),
+    }
+}
+
+pub fn rename_type_variable(
+    module: &Module,
+    line_numbers: &LineNumbers,
+    params: &RenameParams,
+    location: SrcSpan,
+    name: EcoString,
+) -> RenameOutcome {
+    let new_name = EcoString::from(&params.new_name);
+    if name::check_name_case(Default::default(), &new_name, Named::TypeVariable).is_err() {
+        return RenameOutcome::InvalidName { name: new_name };
+    }
+
+    let uri = params
+        .text_document_position_params
+        .text_document
+        .uri
+        .clone();
+    let mut edits = TextEdits::new(line_numbers);
+
+    let references = FindTypeVariableReferences::find_in_module(&module.ast, location, &name);
+
+    for reference in references {
+        edits.replace(reference, params.new_name.clone())
     }
 
     RenameOutcome::Renamed {

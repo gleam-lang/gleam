@@ -1,0 +1,21 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\npub type Option(anything) {\n  Some(anything)\n  None\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+pub type Option(anything) {
+  Some(anything)
+       ↑▔▔▔▔▔▔▔ 
+  None
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+pub type Option(something) {
+  Some(something)
+  None
+}
