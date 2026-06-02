@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn go() {\n  let n = 1\n  case True {\n    True -> {\n      let n = 99\n      n\n    }\n    False -> 0\n  }\n  let n = n + 5\n  n\n}"
+---
+----- SOURCE CODE
+
+pub fn go() {
+  let n = 1
+  case True {
+    True -> {
+      let n = 99
+      n
+    }
+    False -> 0
+  }
+  let n = n + 5
+  n
+}
+
+----- COMPILED JAVASCRIPT
+export function go() {
+  let n = 1;
+  let $ = true;
+  let n$1 = 99;
+  n$1;
+  let n$2 = n + 5;
+  return n$2;
+}
