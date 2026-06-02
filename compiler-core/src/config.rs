@@ -164,14 +164,14 @@ pub struct PackageConfig {
     #[serde(
         default,
         serialize_with = "ordered_map",
-        deserialize_with = "map_with_package_name_keys ::deserialize"
+        deserialize_with = "map_with_package_name_keys::deserialize"
     )]
     pub dependencies: HashMap<EcoString, Requirement>,
     #[serde(
         default,
         alias = "dev-dependencies",
         serialize_with = "ordered_map",
-        deserialize_with = "map_with_package_name_keys ::deserialize"
+        deserialize_with = "map_with_package_name_keys::deserialize"
     )]
     pub dev_dependencies: HashMap<EcoString, Requirement>,
     #[serde(default)]

@@ -13,7 +13,7 @@ use itertools::Itertools;
 pub struct Manifest {
     #[serde(
         serialize_with = "ordered_map",
-        deserialize_with = "super::config::map_with_package_name_keys ::deserialize"
+        deserialize_with = "super::config::map_with_package_name_keys::deserialize"
     )]
     pub requirements: HashMap<EcoString, Requirement>,
     #[serde(serialize_with = "sorted_vec")]
