@@ -544,7 +544,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
         Target::JavaScript => vec![],
     };
     let src_files = project_files(Utf8Path::new(""))?;
-    let contents_tar_gz = contents_tarball(&paths, &src_files, &generated_files)?;
+    let contents_tar_gz = contents_tarball(paths, &src_files, &generated_files)?;
     let version = "3";
     let metadata = metadata_config(
         &built.root_package.config,
