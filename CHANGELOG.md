@@ -117,3 +117,8 @@
 - Fixed a bug where the compiler would raise a warning for truncated int
   segments when compiling a function with a JavaScript external.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the JavaScript code generator could produce duplicate `let`
+  declarations when a variable was reassigned after being shadowed inside a
+  directly matching `case` branch.
+  ([Eyup Can Akman](https://github.com/eyupcanakman))
