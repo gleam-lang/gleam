@@ -2,8 +2,6 @@
 
 ## Unreleased
 
-### Bug Fixes
-
 ### Compiler
 
 ### Build tool
