@@ -1128,6 +1128,15 @@ impl<T> CustomType<T> {
 
 impl TypedCustomType {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        for (location, name) in self.parameters.iter() {
+            if location.contains(byte_index) {
+                return Some(Located::TypeVariable {
+                    name: name.clone(),
+                    location: *location,
+                });
+            }
+        }
+
         // Check if location is within the type of one of the arguments of a constructor.
         if let Some(constructor) = self
             .constructors
@@ -1182,6 +1191,15 @@ pub struct TypeAlias<T> {
 
 impl TypedTypeAlias {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        for (location, name) in self.parameters.iter() {
+            if location.contains(byte_index) {
+                return Some(Located::TypeVariable {
+                    name: name.clone(),
+                    location: *location,
+                });
+            }
+        }
+
         // Check if location is within the type being aliased.
         if let Some(located) = self.type_ast.find_node(byte_index, self.type_.clone()) {
             return Some(located);

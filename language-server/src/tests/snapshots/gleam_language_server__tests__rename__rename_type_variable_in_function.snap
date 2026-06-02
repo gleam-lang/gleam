@@ -1,0 +1,19 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\npub fn first(a: wibble, b: wobble) -> wibble {\n  a\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+pub fn first(a: wibble, b: wobble) -> wibble {
+                ↑▔▔▔▔▔                        
+  a
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+pub fn first(a: value, b: wobble) -> value {
+  a
+}

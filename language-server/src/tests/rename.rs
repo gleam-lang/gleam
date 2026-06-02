@@ -2424,3 +2424,180 @@ pub fn main() {
         find_position_of("mod.wibble").under_char('w')
     );
 }
+
+#[test]
+fn rename_type_variable_in_function() {
+    assert_rename!(
+        "
+pub fn first(a: wibble, b: wobble) -> wibble {
+  a
+}
+",
+        "value",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn rename_type_variable_in_function_from_return() {
+    assert_rename!(
+        "
+pub fn first(a: wibble, b: wobble) -> wibble {
+  a
+}
+",
+        "value",
+        find_position_of("-> wibble").under_char('l')
+    );
+}
+
+#[test]
+fn rename_type_variable_in_function_body_not_used_in_head() {
+    assert_rename!(
+        "
+pub fn something() {
+  let x: Result(a, b) = todo
+  let y: a = case x {
+    Ok(a) -> a
+    Error(_) -> panic
+  }
+}
+",
+        "ok",
+        find_position_of(": a").under_char('a')
+    );
+}
+
+#[test]
+fn rename_type_variable_in_function_used_in_body() {
+    assert_rename!(
+        "
+pub fn first(a: wibble, b: wobble) -> wibble {
+  let x: wibble = a
+  let f = fn(a: wibble) -> wibble { a }
+  f(x)
+}
+",
+        "value",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn rename_type_variable_in_function_from_body() {
+    assert_rename!(
+        "
+pub fn first(a: wibble, b: wobble) -> wibble {
+  let x: wibble = a
+  let f = fn(a: wibble) -> wibble { a }
+  f(x)
+}
+",
+        "value",
+        find_position_of("x: wibble").under_char('i')
+    );
+}
+
+#[test]
+fn type_variable_in_separate_function_is_not_renamed() {
+    assert_rename!(
+        "
+pub fn first(a: wibble, b: wobble) -> wibble {
+  a
+}
+
+pub fn an_unrelated_function(a: wibble, b: wibble) -> wibble {
+  a
+}
+",
+        "value",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn rename_type_variable_in_constant() {
+    assert_rename!(
+        "
+pub const empty: List(#(anything, anything)) = []
+",
+        "a",
+        find_position_of("anything")
+    );
+}
+
+#[test]
+fn rename_type_variable_in_type_alias() {
+    assert_rename!(
+        "
+pub type Option(a) {
+  Some(a)
+  None
+}
+
+pub type Maybe(some_type) =
+  Option(some_type)
+",
+        "something",
+        find_position_of("Option(some_type").under_char('_')
+    );
+}
+
+#[test]
+fn rename_type_variable_in_type_alias_from_head() {
+    assert_rename!(
+        "
+pub type Option(a) {
+  Some(a)
+  None
+}
+
+pub type Maybe(some_type) =
+  Option(some_type)
+",
+        "something",
+        find_position_of("some_type")
+    );
+}
+
+#[test]
+fn rename_type_variable_in_custom_type_from_head() {
+    assert_rename!(
+        "
+pub type Option(anything) {
+  Some(anything)
+  None
+}
+",
+        "something",
+        find_position_of("anything")
+    );
+}
+
+#[test]
+fn rename_type_variable_in_custom_type_from_constructor() {
+    assert_rename!(
+        "
+pub type Option(anything) {
+  Some(anything)
+  None
+}
+",
+        "something",
+        find_position_of("Some(anything").under_char('i')
+    );
+}
+
+#[test]
+fn invalid_type_variable_name() {
+    assert_rename_error!(
+        "
+pub type Option(anything) {
+  Some(anything)
+  None
+}
+",
+        "SomeType",
+        find_position_of("anything")
+    );
+}

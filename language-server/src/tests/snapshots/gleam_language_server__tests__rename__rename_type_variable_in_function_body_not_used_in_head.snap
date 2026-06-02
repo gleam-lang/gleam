@@ -1,0 +1,27 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\npub fn something() {\n  let x: Result(a, b) = todo\n  let y: a = case x {\n    Ok(a) -> a\n    Error(_) -> panic\n  }\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+pub fn something() {
+  let x: Result(a, b) = todo
+  let y: a = case x {
+         ↑           
+    Ok(a) -> a
+    Error(_) -> panic
+  }
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+pub fn something() {
+  let x: Result(ok, b) = todo
+  let y: ok = case x {
+    Ok(a) -> a
+    Error(_) -> panic
+  }
+}
