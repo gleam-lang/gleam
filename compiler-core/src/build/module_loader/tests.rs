@@ -82,6 +82,25 @@ fn cache_present_and_stale_but_source_is_the_same() {
 }
 
 #[test]
+fn cache_present_and_stale_with_older_mtime() {
+    let name = "package".into();
+    let artefact = Utf8Path::new("/artefact");
+    let fs = InMemoryFileSystem::new();
+    let warnings = WarningEmitter::null();
+    let incomplete_modules = HashSet::new();
+    let loader = make_loader(&warnings, &name, &fs, artefact, &incomplete_modules);
+
+    // The source mtime has moved backwards, but the contents have changed.
+    write_src(&fs, TEST_SOURCE_2, "/src/main.gleam", 0);
+    write_cache(&fs, TEST_SOURCE_1, "/artefact/main.cache_meta", 1, false);
+
+    let file = GleamFile::new("/src".into(), "/src/main.gleam".into());
+    let result = loader.load(file).unwrap();
+
+    assert!(result.is_new());
+}
+
+#[test]
 fn cache_present_and_stale_source_is_the_same_lsp_mode() {
     let name = "package".into();
     let artefact = Utf8Path::new("/artefact");
@@ -114,6 +133,26 @@ fn cache_present_and_stale_source_is_the_same_lsp_mode_and_invalidated() {
 
     // The mtime of the source is newer than that of the cache
     write_src(&fs, TEST_SOURCE_1, "/src/main.gleam", 2);
+    write_cache(&fs, TEST_SOURCE_1, "/artefact/main.cache_meta", 1, false);
+
+    let file = GleamFile::new("/src".into(), "/src/main.gleam".into());
+    let result = loader.load(file).unwrap();
+
+    assert!(result.is_new());
+}
+
+#[test]
+fn cache_present_and_same_mtime_lsp_mode_and_invalidated() {
+    let name = "package".into();
+    let artefact = Utf8Path::new("/artefact");
+    let fs = InMemoryFileSystem::new();
+    let warnings = WarningEmitter::null();
+    let mut incomplete_modules = HashSet::new();
+    let _ = incomplete_modules.insert("main".into());
+    let mut loader = make_loader(&warnings, &name, &fs, artefact, &incomplete_modules);
+    loader.mode = Mode::Lsp;
+
+    write_src(&fs, TEST_SOURCE_1, "/src/main.gleam", 1);
     write_cache(&fs, TEST_SOURCE_1, "/artefact/main.cache_meta", 1, false);
 
     let file = GleamFile::new("/src".into(), "/src/main.gleam".into());

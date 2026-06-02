@@ -66,15 +66,18 @@ where
             return read_source(name).map(Input::New);
         }
 
-        // If the timestamp of the source is newer than the cache entry and
-        // the hash of the source differs from the one in the cache entry,
-        // then we need to recompile.
-        if meta.mtime < source_mtime {
+        let lsp_incomplete_module =
+            self.mode == Mode::Lsp && self.incomplete_modules.contains(&name);
+
+        // If the timestamp of the source differs from the timestamp recorded
+        // in the cache then verify the source fingerprint. The mtime can move
+        // backwards, such as after a checkout or timestamp-preserving copy.
+        if meta.mtime != source_mtime || lsp_incomplete_module {
             let source_module = read_source(name.clone())?;
             if meta.fingerprint != SourceFingerprint::new(&source_module.code) {
                 tracing::debug!(?name, "cache_stale");
                 return Ok(Input::New(source_module));
-            } else if self.mode == Mode::Lsp && self.incomplete_modules.contains(&name) {
+            } else if lsp_incomplete_module {
                 // Since the lsp can have valid but incorrect intermediate code states between
                 // successful compilations, we need to invalidate the cache even if the fingerprint matches
                 tracing::debug!(?name, "cache_stale for lsp");
