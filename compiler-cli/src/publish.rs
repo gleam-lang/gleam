@@ -565,10 +565,10 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
     let mut tarball = Vec::new();
     {
         let mut tarball = tar::Builder::new(&mut tarball);
-        add_to_tar(&mut tarball, "VERSION", version.as_bytes())?;
-        add_to_tar(&mut tarball, "metadata.config", metadata.as_bytes())?;
-        add_to_tar(&mut tarball, "contents.tar.gz", contents_tar_gz.as_slice())?;
-        add_to_tar(&mut tarball, "CHECKSUM", checksum.as_bytes())?;
+        add_to_tar_from_memory(&mut tarball, "VERSION", version.as_bytes())?;
+        add_to_tar_from_memory(&mut tarball, "metadata.config", metadata.as_bytes())?;
+        add_to_tar_from_memory(&mut tarball, "contents.tar.gz", contents_tar_gz.as_slice())?;
+        add_to_tar_from_memory(&mut tarball, "CHECKSUM", checksum.as_bytes())?;
         tarball.finish().map_err(Error::finish_tar)?;
     }
     tracing::info!("Generated package Hex release tarball");
@@ -657,10 +657,10 @@ fn contents_tarball(
         let mut tarball =
             tar::Builder::new(GzEncoder::new(&mut contents_tar_gz, Compression::default()));
         for path in files {
-            add_path_to_tar(&mut tarball, paths, path)?;
+            add_to_tar_from_file_system(&mut tarball, paths, path)?;
         }
         for (path, contents) in data_files {
-            add_to_tar(&mut tarball, path, contents.as_bytes())?;
+            add_to_tar_from_memory(&mut tarball, path, contents.as_bytes())?;
         }
         tarball.finish().map_err(Error::finish_tar)?;
     }
@@ -740,13 +740,14 @@ fn generated_erlang_files(
     Ok(files)
 }
 
-fn add_to_tar<P, W>(tarball: &mut tar::Builder<W>, path: P, data: &[u8]) -> Result<()>
+fn add_to_tar_from_memory<P, W>(tarball: &mut tar::Builder<W>, path: P, data: &[u8]) -> Result<()>
 where
     P: AsRef<Utf8Path>,
     W: Write,
 {
     let path = path.as_ref();
-    tracing::info!(file=?path, "Adding file to tarball");
+    tracing::info!(file=?path, "Adding in memory file to tarball");
+
     let mut header = tar::Header::new_gnu();
     header.set_mode(0o600);
     header.set_size(data.len() as u64);
@@ -756,22 +757,27 @@ where
         .map_err(|e| Error::add_tar(path, e))
 }
 
-fn add_path_to_tar<P, W>(tarball: &mut tar::Builder<W>, paths: &ProjectPaths, path: P) -> Result<()>
+fn add_to_tar_from_file_system<P, W>(
+    tarball: &mut tar::Builder<W>,
+    paths: &ProjectPaths,
+    path: P,
+) -> Result<()>
 where
     P: AsRef<Utf8Path>,
     W: Write,
 {
     let path = path.as_ref();
+    tracing::info!(file=?&path, "Adding file system file to tarball");
+
     let path = fs::canonicalise(path)?;
 
-    if !path.starts_with(paths.root()) {
+    let Ok(path) = path.strip_prefix(paths.root()) else {
         return Err(Error::TarPathOutsideOfProjectRoot { path });
-    }
+    };
 
-    tracing::info!(file=?&path, "Adding file to tarball");
     tarball
-        .append_path(&path)
-        .map_err(|e| Error::add_tar(&path, e))
+        .append_path(path)
+        .map_err(|e| Error::add_tar(path, e))
 }
 
 #[test]
@@ -787,7 +793,7 @@ fn add_to_tar_symlink_rejection_test() {
     // not be possible to add it to the tar archive.
     let outside_path = path.join("outside.txt");
     std::fs::write(&outside_path, "Hello").unwrap();
-    match add_path_to_tar(&mut tarball, &paths, &outside_path).unwrap_err() {
+    match add_to_tar_from_file_system(&mut tarball, &paths, &outside_path).unwrap_err() {
         Error::TarPathOutsideOfProjectRoot { path } => assert_eq!(path, outside_path),
         other => panic!("Unexpected error {other:?}"),
     }
