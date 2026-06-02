@@ -1061,6 +1061,26 @@ pub fn go() {
     )
 }
 
+// https://github.com/gleam-lang/gleam/issues/5748
+#[test]
+fn no_duplicate_let_when_rebinding_variable_after_directly_matching_case() {
+    assert_js!(
+        r#"
+pub fn go() {
+  let n = 1
+  case True {
+    True -> {
+      let n = 99
+      n
+    }
+    False -> 0
+  }
+  let n = n + 5
+  n
+}"#
+    )
+}
+
 #[test]
 fn semicolon_exists_with_directly_matching_case() {
     assert_js!(

@@ -144,6 +144,10 @@ impl CurrentFunction {
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Scope {
     user_variables: im::HashMap<EcoString, usize>,
+    /// The highest suffix handed out for each user variable still declared in
+    /// the current JS scope, kept across a directly matching `case` branch so a
+    /// variable that leaked out of it is not redeclared by a later `let`.
+    high_water: im::HashMap<EcoString, usize>,
     assignment: Option<usize>,
     pipe: Option<usize>,
     block: Option<usize>,
@@ -191,6 +195,21 @@ impl Scope {
             _ => {
                 let _ = self.user_variables.insert(name.clone(), value);
             }
+        }
+    }
+
+    /// Advance the counter for a name to its next suffix, skipping any suffix
+    /// already handed out for it in the current scope so a name that leaked out
+    /// of a directly matching branch can't be redeclared.
+    fn advance_counter(&mut self, name: &EcoString) {
+        let in_scope = self.counter(name).map_or(0, |i| i + 1);
+        let high_water = self.high_water.get(name).map_or(0, |i| i + 1);
+        let next = in_scope.max(high_water);
+        self.set_counter(name, next);
+        // Only user variables leak out of a directly matching branch; the
+        // synthesised counters survive the restore on their own.
+        if self.user_variables.contains_key(name) {
+            let _ = self.high_water.insert(name.clone(), next);
         }
     }
 
@@ -314,8 +333,7 @@ impl<'module, 'a> Generator<'module, 'a> {
     }
 
     pub fn next_local_var(&mut self, name: &EcoString) -> EcoString {
-        let next = self.current_scope.counter(name).map_or(0, |i| i + 1);
-        self.current_scope.set_counter(name, next);
+        self.current_scope.advance_counter(name);
         self.local_var(name)
     }
 

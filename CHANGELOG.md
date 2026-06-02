@@ -243,3 +243,8 @@
   ```
 
   ([Gavin Morrow](https://github.com/gavinmorrow))
+
+- Fixed a bug where the JavaScript code generator could produce duplicate `let`
+  declarations when a variable was reassigned after being shadowed inside a
+  directly matching `case` branch.
+  ([Eyup Can Akman](https://github.com/eyupcanakman))
