@@ -114,6 +114,10 @@
 
   ([Gavin Morrow](https://github.com/gavinmorrow))
 
+- Fixed a bug where the language server would insert the wrong text when
+  triggering a completion on types that are halfway complete.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a bug where the compiler would raise a warning for truncated int
   segments when compiling a function with a JavaScript external.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

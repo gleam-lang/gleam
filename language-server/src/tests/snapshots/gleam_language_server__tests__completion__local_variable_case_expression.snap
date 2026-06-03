@@ -42,6 +42,8 @@ main
 todo
   kind:   Keyword
   sort:   00_todo
+  edits:
+    [3:24-3:28]: "todo"
 wibble
   kind:   Variable
   detail: Bool

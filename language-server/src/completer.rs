@@ -237,16 +237,11 @@ impl CursorSurroundings {
         let remaining_label = new_text
             .strip_prefix(self.text_before_cursor.as_str())
             .and_then(|rest| rest.strip_suffix(self.text_after_cursor.as_str()));
-
         match remaining_label {
-            // The entire existing text is already the same as the new text we
-            // might want to add.
-            // In that case there's no need to perform any edit at all!
-            Some("") => None,
-
-            // This is one of the cases (like the one in the example above) were
-            // the label is a more complete version of the text surrounding the
-            // cursor. So we replace the entire range.
+            // The entire existing label is already the same as the text we want
+            // to add or (like in the example above) a more complete version of
+            // the text surrounding the cursor.
+            // So we replace the entire range with the new suggestion.
             Some(_) => Some(CompletionItemTextEdit::TextEdit(TextEdit {
                 range: self.surrounding_text_range,
                 new_text,
