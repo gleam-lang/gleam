@@ -21,7 +21,6 @@ use std::time::{Duration, Instant};
 use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
-    fmt::Display,
     io::{BufReader, Read},
 };
 use thiserror::Error;
@@ -605,15 +604,6 @@ pub enum OwnerLevel {
     Full,
 }
 
-impl Display for OwnerLevel {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            OwnerLevel::Maintainer => write!(f, "maintainer"),
-            OwnerLevel::Full => write!(f, "full"),
-        }
-    }
-}
-
 /// API Docs:
 ///
 /// https://github.com/hexpm/hex/blob/main/lib/mix/tasks/hex.owner.ex#L107
@@ -627,7 +617,7 @@ pub fn api_add_owner_request(
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     let body = json!({
-        "level": level.to_string(),
+        "level": owner_level_to_json_string(level),
         "transfer": false,
     });
     let path = format!("packages/{package_name}/owners/{owner}");
@@ -636,6 +626,15 @@ pub fn api_add_owner_request(
         .write_credentials(credentials)
         .body(body.to_string().into_bytes())
         .expect("add_owner_request request")
+}
+
+/// Turns an `OwnerLevel` into a string that can be used with the json payload
+/// of requests to the Hex API expecting an owner level.
+fn owner_level_to_json_string(level: OwnerLevel) -> String {
+    match level {
+        OwnerLevel::Maintainer => String::from("maintainer"),
+        OwnerLevel::Full => String::from("full"),
+    }
 }
 
 pub fn api_add_owner_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
@@ -662,7 +661,7 @@ pub fn api_transfer_owner_request(
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     let body = json!({
-        "level": OwnerLevel::Full.to_string(),
+        "level": owner_level_to_json_string(OwnerLevel::Full),
         "transfer": true,
     });
     let path = format!("packages/{package_name}/owners/{owner}");
