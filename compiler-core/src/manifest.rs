@@ -90,7 +90,7 @@ impl Manifest {
             match source {
                 ManifestPackageSource::Hex { outer_checksum } => {
                     buffer.push_str(r#", source = "hex", outer_checksum = ""#);
-                    buffer.push_str(&outer_checksum.to_string());
+                    buffer.push_str(&outer_checksum.base_16_encoded_string());
                     buffer.push('"');
                 }
                 ManifestPackageSource::Git { repo, commit } => {
@@ -127,8 +127,8 @@ impl Manifest {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Base16Checksum(pub Vec<u8>);
 
-impl ToString for Base16Checksum {
-    fn to_string(&self) -> String {
+impl Base16Checksum {
+    pub fn base_16_encoded_string(&self) -> String {
         base16::encode_upper(&self.0)
     }
 }

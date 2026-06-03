@@ -146,7 +146,7 @@ impl ProjectPaths {
 }
 
 pub fn global_package_cache_package_tarball(checksum: &Base16Checksum) -> Utf8PathBuf {
-    global_packages_cache().join(format!("{}.tar", checksum.to_string()))
+    global_packages_cache().join(format!("{}.tar", checksum.base_16_encoded_string()))
 }
 
 pub fn global_hexpm_oauth_credentials_path() -> Utf8PathBuf {
