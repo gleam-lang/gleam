@@ -11290,7 +11290,17 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
                 )));
             }
         }
+
+        // If the expression is a function, then the last statement location
+        // needs to be updated accordingly
+        let last_statement_location = self.last_statement_location;
+        if let TypedExpr::Fn { body, .. } = expression {
+            self.last_statement_location = Some(body.last().location());
+        }
+
         ast::visit::visit_typed_expr(self, expression);
+
+        self.last_statement_location = last_statement_location;
     }
 
     fn visit_typed_statement(&mut self, statement: &'ast TypedStatement) {
