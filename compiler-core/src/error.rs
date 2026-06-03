@@ -23,7 +23,7 @@ use hexpm::version::Version;
 use itertools::Itertools;
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -453,12 +453,6 @@ pub struct SmallVersion {
     patch: u8,
 }
 
-impl Display for SmallVersion {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&format!("{}.{}.{}", self.major, self.minor, self.patch))
-    }
-}
-
 impl SmallVersion {
     pub fn from_hexpm(version: Version) -> Self {
         Self {
@@ -466,6 +460,10 @@ impl SmallVersion {
             minor: version.minor as u8,
             patch: version.patch as u8,
         }
+    }
+
+    pub fn to_semver_string(&self) -> String {
+        format!("{}.{}.{}", self.major, self.minor, self.patch)
     }
 }
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -1328,22 +1326,27 @@ Please remove them and try again.
             Error::CannotPublishWrongVersion {
                 minimum_required_version,
                 wrongfully_allowed_version,
-            } => vec![Diagnostic {
-                title: "Cannot publish package with wrong Gleam version range".into(),
-                text: wrap(&format!(
-                    "Your package uses features that require at least v{minimum_required_version}.
+            } => {
+                let minimum_required_version = minimum_required_version.to_semver_string();
+                let wrongfully_allowed_version = wrongfully_allowed_version.to_semver_string();
+
+                vec![Diagnostic {
+                    title: "Cannot publish package with wrong Gleam version range".into(),
+                    text: wrap(&format!(
+                        "Your package uses features that require at least v{minimum_required_version}.
 But the Gleam version range specified in your `gleam.toml` would allow this \
 code to run on an earlier version like v{wrongfully_allowed_version}, \
 resulting in compilation errors!"
-                )),
-                level: Level::Error,
-                hint: Some(format!(
-                    "Remove the version constraint from your `gleam.toml` or update it to be:
+                    )),
+                    level: Level::Error,
+                    hint: Some(format!(
+                        "Remove the version constraint from your `gleam.toml` or update it to be:
 
     gleam = \">= {minimum_required_version}\""
-                )),
-                location: None,
-            }],
+                    )),
+                    location: None,
+                }]
+            }
 
             Error::CannotPublishLeakedInternalType { unfinished } => vec![Diagnostic {
                 title: "Cannot publish unfinished code".into(),
