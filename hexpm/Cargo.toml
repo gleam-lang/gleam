@@ -17,7 +17,7 @@ url = "2.2"
 # Byte collections
 bytes = "1"
 # gzip (de)compression
-flate2 = "1.0"
+flate2 = "1.1"
 # RSA signature and SHA256 checksum verification
 ring = "0.17"
 # PEM -> DER conversion
