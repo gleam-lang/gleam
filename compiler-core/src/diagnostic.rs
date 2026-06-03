@@ -127,7 +127,7 @@ impl Diagnostic {
             .with_message(&self.title)
             .with_labels(labels);
         let config = codespan_reporting::term::Config::default();
-        codespan_reporting::term::emit(buffer, &config, &files, &diagnostic)
+        codespan_reporting::term::emit_to_write_style(buffer, &config, &files, &diagnostic)
             .expect("write_diagnostic");
     }
 
