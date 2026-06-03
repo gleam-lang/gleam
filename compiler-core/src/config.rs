@@ -39,12 +39,6 @@ pub struct SpdxLicense {
     pub licence: String,
 }
 
-impl ToString for SpdxLicense {
-    fn to_string(&self) -> String {
-        String::from(&self.licence)
-    }
-}
-
 impl<'de> Deserialize<'de> for SpdxLicense {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
