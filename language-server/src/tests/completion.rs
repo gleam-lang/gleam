@@ -2693,3 +2693,21 @@ pub type Wibble {
         Position::new(3, 20)
     );
 }
+
+#[test]
+fn _completions_for_deprecated_types_in_dep() {
+    let code = "
+import wibble
+
+pub fn wobble() -> wibble.Wobble {
+  todo
+}
+";
+    let dep = "pub type Wobble";
+
+    assert_apply_completion!(
+        TestProject::for_source(code).add_module("wibble", dep),
+        "wibble.Wobble",
+        Position::new(3, 25)
+    );
+}

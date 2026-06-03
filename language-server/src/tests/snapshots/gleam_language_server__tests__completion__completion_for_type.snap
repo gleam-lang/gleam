@@ -10,4 +10,6 @@ wibble.Wibble
   kind:   Class
   detail: Type
   sort:   6_wibble.Wibble
+  edits:
+    [0:16-0:29]: "wibble.Wibble"
     [0:0-0:0]: "import wibble\n\n"

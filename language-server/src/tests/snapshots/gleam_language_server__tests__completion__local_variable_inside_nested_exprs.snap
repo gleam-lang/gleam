@@ -42,3 +42,5 @@ wibble
   detail: fn() -> a
   sort:   3_wibble
   desc:   app
+  edits:
+    [5:4-5:10]: "wibble"

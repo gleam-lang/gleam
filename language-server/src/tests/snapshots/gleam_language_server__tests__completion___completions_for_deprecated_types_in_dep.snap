@@ -1,0 +1,19 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "\nimport wibble\n\npub fn wobble() -> wibble.Wobble {\n  todo\n}\n"
+---
+
+import wibble
+
+pub fn wobble() -> wibble|.Wobble {
+  todo
+}
+
+
+----- After applying completion -----
+
+import wibble
+
+pub fn wobble() -> wibble.Wobble {
+  todo
+}

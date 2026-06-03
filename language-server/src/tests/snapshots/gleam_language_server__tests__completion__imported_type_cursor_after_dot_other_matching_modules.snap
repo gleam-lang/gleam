@@ -17,3 +17,5 @@ dep.Zoo
   kind:   Class
   detail: Type
   sort:   4_dep.Zoo
+  edits:
+    [4:5-4:12]: "dep.Zoo"
