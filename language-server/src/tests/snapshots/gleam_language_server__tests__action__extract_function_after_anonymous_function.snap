@@ -1,0 +1,29 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\nfn wibble() {\n    let wobble = fn() {\n        let random_number = 4\n        random_number * 42\n    }\n    wobble() / 22\n}\n"
+---
+----- BEFORE ACTION
+
+fn wibble() {
+    let wobble = fn() {
+        let random_number = 4
+        random_number * 42
+    }
+    wobble() / 22
+    ▔▔▔▔▔▔▔▔▔▔▔▔↑
+}
+
+
+----- AFTER ACTION
+
+fn wibble() {
+    let wobble = fn() {
+        let random_number = 4
+        random_number * 42
+    }
+    function(wobble)
+}
+
+fn function(wobble: fn() -> Int) -> Int {
+  wobble() / 22
+}

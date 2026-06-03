@@ -12058,6 +12058,41 @@ pub fn do_things(a, b) {
 }
 
 #[test]
+fn extract_function_inside_anonymous_function_returning_value() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+fn wibble() {
+    let wobble = fn() {
+        let random_number = 4
+        random_number * 42
+    }
+}
+"#,
+        find_position_of("random_number")
+            .nth_occurrence(2)
+            .select_until(find_position_of("42")),
+    );
+}
+
+#[test]
+fn extract_function_after_anonymous_function() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+fn wibble() {
+    let wobble = fn() {
+        let random_number = 4
+        random_number * 42
+    }
+    wobble() / 22
+}
+"#,
+        find_position_of("wobble()").select_until(find_position_of("22").under_last_char()),
+    );
+}
+
+#[test]
 fn extract_function_from_statements() {
     assert_code_action!(
         EXTRACT_FUNCTION,
