@@ -12063,10 +12063,10 @@ fn extract_function_inside_anonymous_function_returning_value() {
         EXTRACT_FUNCTION,
         r#"
 fn wibble() {
-    let wobble = fn() {
-        let random_number = 4
-        random_number * 42
-    }
+  let wobble = fn() {
+    let random_number = 4
+    random_number * 42
+  }
 }
 "#,
         find_position_of("random_number")
@@ -12081,11 +12081,11 @@ fn extract_function_after_anonymous_function() {
         EXTRACT_FUNCTION,
         r#"
 fn wibble() {
-    let wobble = fn() {
-        let random_number = 4
-        random_number * 42
-    }
-    wobble() / 22
+  let wobble = fn() {
+    let random_number = 4
+    random_number * 42
+  }
+  wobble() / 22
 }
 "#,
         find_position_of("wobble()").select_until(find_position_of("22").under_last_char()),

@@ -1,25 +1,25 @@
 ---
 source: language-server/src/tests/action.rs
-expression: "\nfn wibble() {\n    let wobble = fn() {\n        let random_number = 4\n        random_number * 42\n    }\n}\n"
+expression: "\nfn wibble() {\n  let wobble = fn() {\n    let random_number = 4\n    random_number * 42\n  }\n}\n"
 ---
 ----- BEFORE ACTION
 
 fn wibble() {
-    let wobble = fn() {
-        let random_number = 4
-        random_number * 42
-        ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑ 
-    }
+  let wobble = fn() {
+    let random_number = 4
+    random_number * 42
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑ 
+  }
 }
 
 
 ----- AFTER ACTION
 
 fn wibble() {
-    let wobble = fn() {
-        let random_number = 4
-        function(random_number)
-    }
+  let wobble = fn() {
+    let random_number = 4
+    function(random_number)
+  }
 }
 
 fn function(random_number: Int) -> Int {
