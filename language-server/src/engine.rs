@@ -2024,7 +2024,7 @@ fn code_action_fix_names(
                 new_text: correction.to_string(),
             };
 
-            CodeActionBuilder::new(format!("Rename to {correction}"))
+            CodeActionBuilder::new(&format!("Rename to {correction}"))
                 .kind(lsp_types::CodeActionKind::QuickFix)
                 .changes(uri.clone(), vec![edit])
                 .preferred(true)

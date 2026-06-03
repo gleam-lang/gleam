@@ -54,7 +54,7 @@ pub struct CodeActionBuilder {
 }
 
 impl CodeActionBuilder {
-    pub fn new(title: impl ToString) -> Self {
+    pub fn new(title: &str) -> Self {
         Self {
             action: CodeAction {
                 title: title.to_string(),
@@ -2054,7 +2054,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
         }
         self.edit_import();
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new(format!(
+        CodeActionBuilder::new(&format!(
             "Unqualify {}.{}",
             self.qualified_constructor.used_name, self.qualified_constructor.constructor
         ))
@@ -2551,7 +2551,7 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
             constructor,
             ..
         } = self.unqualified_constructor;
-        CodeActionBuilder::new(format!(
+        CodeActionBuilder::new(&format!(
             "Qualify {} as {}.{}",
             constructor.used_name(),
             module_name,
@@ -8921,7 +8921,7 @@ impl<'a> FixBinaryOperation<'a> {
         self.edits.replace(location, replacement.name().into());
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new(format!("Use `{}`", replacement.name()))
+        CodeActionBuilder::new(&format!("Use `{}`", replacement.name()))
             .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
@@ -9055,7 +9055,7 @@ impl<'a> FixTruncatedBitArraySegment<'a> {
             .replace(truncation.value_location, replacement.clone());
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new(format!("Replace with `{replacement}`"))
+        CodeActionBuilder::new(&format!("Replace with `{replacement}`"))
             .kind(CodeActionKind::RefactorRewrite)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(true)
@@ -12489,7 +12489,7 @@ impl<'a, IO> CreateUnknownModule<'a, IO> {
             .expect("origin directory is absolute");
 
         let mut actions = vec![];
-        CodeActionBuilder::new(format!(
+        CodeActionBuilder::new(&format!(
             "Create {}/{}.gleam",
             self.module.origin.folder_name(),
             unknown_module_name
