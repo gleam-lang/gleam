@@ -18,19 +18,19 @@
   For example,
   ```gleam
   fn wibble() {
-      let wobble = fn() {
-          let random_number = 4
-          random_number * 42 // <- Extracting this line
-      }
+    let wobble = fn() {
+      let random_number = 4
+      random_number * 42 // <- Extracting this line
+    }
   }
   ```
   is turned into
   ```gleam
   fn wibble() {
-      let wobble = fn() {
-          let random_number = 4
-          function(random_number)
-      }
+    let wobble = fn() {
+      let random_number = 4
+      function(random_number)
+    }
   }
 
   fn function(random_number: Int) -> Int {
