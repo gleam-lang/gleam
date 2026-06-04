@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main() -> Nil {\n  panic\n  use <- fn(_) { Nil }\n  1\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() -> Nil {
+  panic
+  use <- fn(_) { Nil }
+  1
+}
+
+
+----- WARNING
+warning: Unreachable code
+  ┌─ /src/warning/wrn.gleam:4:3
+  │  
+4 │ ╭   use <- fn(_) { Nil }
+5 │ │   1
+  │ ╰───^
+
+This code is unreachable because it comes after a `panic`.
