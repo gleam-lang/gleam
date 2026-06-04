@@ -1,0 +1,29 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  wibble({\n    let match_on_me = wibble(todo)\n  })\n}\n\npub fn wibble(a) -> Result(Int, String) { todo }\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  wibble({
+    let match_on_me = wibble(todo)
+        ↑                         
+  })
+}
+
+pub fn wibble(a) -> Result(Int, String) { todo }
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  wibble({
+    let match_on_me = wibble(todo)
+    case match_on_me {
+      Ok(value) -> todo
+      Error(value) -> todo
+    }
+  })
+}
+
+pub fn wibble(a) -> Result(Int, String) { todo }

@@ -1,0 +1,25 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\nimport wibble\n\npub fn main() {\n  wibble.wobble\n}\n    "
+---
+----- BEFORE ACTION
+
+import wibble
+
+pub fn main() {
+  wibble.wobble
+  ↑            
+}
+    
+
+
+----- AFTER ACTION
+
+import wibble
+
+pub fn main() {
+  case wibble.wobble {
+    Ok(value) -> todo
+    Error(value) -> todo
+  }
+}

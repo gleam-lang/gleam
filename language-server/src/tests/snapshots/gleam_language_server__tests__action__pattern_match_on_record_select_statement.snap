@@ -1,0 +1,26 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  let wibble = Wibble(Ok(1))\n  wibble.wobble\n}\n\npub type Wibble { Wibble(wobble: Result(Int, Nil)) }\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let wibble = Wibble(Ok(1))
+  wibble.wobble
+  ↑            
+}
+
+pub type Wibble { Wibble(wobble: Result(Int, Nil)) }
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let wibble = Wibble(Ok(1))
+  case wibble.wobble {
+    Ok(value) -> todo
+    Error(value) -> todo
+  }
+}
+
+pub type Wibble { Wibble(wobble: Result(Int, Nil)) }
