@@ -22,6 +22,9 @@
 
    ([Gavin Morrow](https://github.com/gavinmorrow))
 
+- Gleam will now warn when running a deprecated or internal module main function
+  ([Kevin Chen](https://github.com/kfc35) & [Lioncat2002](https://github.com/Lioncat2002))
+
 ### Build tool
 
 - The build tool now generates Hexdocs URLs using the new format of
