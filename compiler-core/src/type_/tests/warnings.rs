@@ -1017,6 +1017,30 @@ pub fn a() {
 }
 
 #[test]
+fn use_callback_deprecation_warning_once() {
+    // https://github.com/gleam-lang/gleam/issues/3899
+    let warnings = get_warnings(
+        r#"
+@deprecated("Don't use this!")
+pub fn old() {
+  Nil
+}
+
+pub fn main() {
+  use <- fn(f) { f() }
+
+  old()
+}
+"#,
+        vec![],
+        Target::Erlang,
+        None,
+    );
+
+    assert_eq!(warnings.len(), 1, "{warnings:#?}");
+}
+
+#[test]
 fn deprecated_imported_unqualified_function() {
     assert_warning!(
         (

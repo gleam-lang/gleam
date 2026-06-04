@@ -4,6 +4,10 @@
 
 ### Compiler
 
+- The compiler no longer emits duplicate deprecation warnings for calls inside
+  `use` callbacks.
+  ([Puneet Dixit](https://github.com/puneetdixit200))
+
 - The compiler now issues a friendlier error when attempting to pattern match
   on both the prefix and suffix of a string:
 

@@ -4744,6 +4744,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         return_annotation: Option<TypeAst>,
         location: SrcSpan,
     ) -> TypedExpr {
+        let previous_warnings = self.problems.take_warnings();
+
         let typed_call_arguments: Vec<Arc<Type>> = call_arguments
             .iter()
             .map(|argument| {
@@ -4754,6 +4756,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .type_()
             })
             .collect_vec();
+
+        // These expressions are inferred again by the call inference, so ignore
+        // warnings emitted by this contextual pass to avoid reporting them twice.
+        drop(self.problems.take_warnings());
+        for warning in previous_warnings {
+            self.problems.warning(warning);
+        }
+
         self.infer_fn(
             arguments,
             &typed_call_arguments,
