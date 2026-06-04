@@ -71,6 +71,7 @@ use crate::ast::{
 use crate::build::Target;
 use crate::error::wrap;
 use crate::exhaustiveness::CompiledCase;
+use crate::parse::error::IncorrectNamePosition;
 use crate::parse::extra::ModuleExtra;
 use crate::type_::Deprecation;
 use crate::type_::error::{VariableDeclaration, VariableOrigin, VariableSyntax};
@@ -1135,7 +1136,9 @@ where
         })?;
         let value = self.parse_expression_inner(true)?.ok_or(match self.tok0 {
             Some((start, Token::DiscardName { .. }, end)) => ParseError {
-                error: ParseErrorType::IncorrectName,
+                error: ParseErrorType::IncorrectName {
+                    kind: IncorrectNamePosition::Variable,
+                },
                 location: SrcSpan { start, end },
             },
 
@@ -1353,7 +1356,8 @@ where
                     // or a full string matching: "Hello, World!" as greeting -> ...
                     Some((_, Token::As, _)) => {
                         self.advance();
-                        let (name_start, name, name_end) = self.expect_name()?;
+                        let (name_start, name, name_end) =
+                            self.expect_name(IncorrectNamePosition::AsPattern)?;
                         let name_span = SrcSpan {
                             start: name_start,
                             end: name_end,
@@ -1639,7 +1643,7 @@ where
         match self.tok0 {
             Some((_, Token::As, _)) => {
                 self.advance();
-                let (start, name, end) = self.expect_name()?;
+                let (start, name, end) = self.expect_name(IncorrectNamePosition::AsPattern)?;
                 Ok(Some(Pattern::Assign {
                     name,
                     location: SrcSpan { start, end },
@@ -1695,10 +1699,13 @@ where
                         guard,
                         then,
                     })),
-                    _ => match self.tok0 {
-                        Some((start, Token::DiscardName { .. }, end)) => {
-                            parse_error(ParseErrorType::IncorrectName, SrcSpan { start, end })
-                        }
+                    None => match self.tok0 {
+                        Some((start, Token::DiscardName { .. }, end)) => parse_error(
+                            ParseErrorType::IncorrectName {
+                                kind: IncorrectNamePosition::Variable,
+                            },
+                            SrcSpan { start, end },
+                        ),
                         _ => parse_error(
                             ParseErrorType::ExpectedExpr,
                             SrcSpan {
@@ -1925,7 +1932,9 @@ where
 
                         Some((start, _, end)) => {
                             return parse_error(
-                                ParseErrorType::IncorrectName,
+                                ParseErrorType::IncorrectName {
+                                    kind: IncorrectNamePosition::Variable,
+                                },
                                 SrcSpan { start, end },
                             );
                         }
@@ -2184,7 +2193,7 @@ where
         };
         let mut name = None;
         if !is_anon {
-            let (name_start, n, name_end) = self.expect_name()?;
+            let (name_start, n, name_end) = self.expect_name(IncorrectNamePosition::Function)?;
             name = Some((
                 SrcSpan {
                     start: name_start,
@@ -2999,7 +3008,7 @@ where
 
         // Gather module names
         loop {
-            let (s, name, e) = self.expect_name()?;
+            let (s, name, e) = self.expect_name(IncorrectNamePosition::Module)?;
             if module.is_empty() {
                 start = s;
             } else {
@@ -3115,7 +3124,8 @@ where
                         as_name: None,
                     };
                     if self.maybe_one(&Token::As).is_some() {
-                        let (_, as_name, end) = self.expect_name()?;
+                        let (_, as_name, end) =
+                            self.expect_name(IncorrectNamePosition::AsPattern)?;
                         import.as_name = Some(as_name);
                         import.location.end = end;
                     }
@@ -3187,7 +3197,7 @@ where
         public: bool,
         attributes: &Attributes,
     ) -> Result<Option<UntypedDefinition>, ParseError> {
-        let (name_start, name, name_end) = self.expect_name()?;
+        let (name_start, name, name_end) = self.expect_name(IncorrectNamePosition::Constant)?;
         let documentation = self.take_documentation(name_start);
 
         let annotation = self.parse_type_annotation(&Token::Colon)?;
@@ -4094,13 +4104,17 @@ functions are declared separately from types.";
     }
 
     // Expect a Name else a token dependent helpful error
-    fn expect_name(&mut self) -> Result<(u32, EcoString, u32), ParseError> {
+    fn expect_name(
+        &mut self,
+        kind: IncorrectNamePosition,
+    ) -> Result<(u32, EcoString, u32), ParseError> {
         let (start, token, end) = self.expect_assign_name()?;
         match token {
             AssignName::Variable(name) => Ok((start, name, end)),
-            AssignName::Discard(_) => {
-                parse_error(ParseErrorType::IncorrectName, SrcSpan { start, end })
-            }
+            AssignName::Discard(_) => parse_error(
+                ParseErrorType::IncorrectName { kind },
+                SrcSpan { start, end },
+            ),
         }
     }
 
@@ -4110,9 +4124,12 @@ functions are declared separately from types.";
             Some((start, tok, end)) => match tok {
                 Token::Name { name } => Ok((start, AssignName::Variable(name), end)),
                 Token::DiscardName { name, .. } => Ok((start, AssignName::Discard(name), end)),
-                Token::UpName { .. } => {
-                    parse_error(ParseErrorType::IncorrectName, SrcSpan { start, end })
-                }
+                Token::UpName { .. } => parse_error(
+                    ParseErrorType::IncorrectName {
+                        kind: IncorrectNamePosition::Variable,
+                    },
+                    SrcSpan { start, end },
+                ),
                 _ if tok.is_reserved_word() => parse_error(
                     ParseErrorType::UnexpectedReservedWord,
                     SrcSpan { start, end },
@@ -4571,7 +4588,7 @@ functions are declared separately from types.";
     ) -> Result<u32, ParseError> {
         // Parse the name of the attribute.
 
-        let (_, name, end) = self.expect_name()?;
+        let (_, name, end) = self.expect_name(IncorrectNamePosition::Attribute)?;
 
         let end = match name.as_str() {
             "external" => {
@@ -4612,9 +4629,9 @@ functions are declared separately from types.";
         end: u32,
         attributes: &mut Attributes,
     ) -> Result<u32, ParseError> {
-        let (_, name, _) = self.expect_name()?;
+        let (_, target, _) = self.expect_name(IncorrectNamePosition::Target)?;
 
-        let target = match name.as_str() {
+        let target = match target.as_str() {
             "erlang" => Target::Erlang,
             "javascript" => Target::JavaScript,
             _ => return parse_error(ParseErrorType::UnknownTarget, SrcSpan::new(start, end)),

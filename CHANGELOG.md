@@ -4,23 +4,27 @@
 
 ### Compiler
 
- - The compiler now issues a friendlier error when attempting to pattern match
-   on both the prefix and suffix of a string:
+- The compiler now issues a friendlier error when attempting to pattern match
+  on both the prefix and suffix of a string:
 
-   ```
-   error: Syntax error
-     ┌─ /src/parse/error.gleam:2:23
-     │
-   2 │     "prefix" <> infix <> "suffix" -> infix
-     │                       ^^^^^^^^^^^ This pattern is not allowed
+  ```
+  error: Syntax error
+    ┌─ /src/parse/error.gleam:2:23
+    │
+  2 │     "prefix" <> infix <> "suffix" -> infix
+    │                       ^^^^^^^^^^^ This pattern is not allowed
 
-   A string pattern can only match on a literal string prefix.
+  A string pattern can only match on a literal string prefix.
 
-   Matching on a literal suffix is not possible, because `infix` would have an
-   unknown size.
-   ```
+  Matching on a literal suffix is not possible, because `infix` would have an
+  unknown size.
+  ```
 
-   ([Gavin Morrow](https://github.com/gavinmorrow))
+  ([Gavin Morrow](https://github.com/gavinmorrow))
+
+- Improved the error message shown when using an invalid discard name for
+  functions, constants, module names, and `as` patterns.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Build tool
 
@@ -38,6 +42,7 @@
   function, the return value of the extracted function is respected.
 
   For example,
+
   ```gleam
   fn wibble() {
     let wobble = fn() {
@@ -46,7 +51,9 @@
     }
   }
   ```
+
   is turned into
+
   ```gleam
   fn wibble() {
     let wobble = fn() {
@@ -60,4 +67,4 @@
   }
   ```
 
-  [Gavin Morrow](https://github.com/gavinmorrow)
+  ([Gavin Morrow](https://github.com/gavinmorrow))

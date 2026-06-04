@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: import _wibble
+---
+----- SOURCE CODE
+import _wibble
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:8
+  │
+1 │ import _wibble
+  │        ^^^^^^^ I'm expecting a lowercase name here
+
+A module name must start with a lowercase letter, and can contain a-z, 0-9,
+or _.
