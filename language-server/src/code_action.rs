@@ -12508,3 +12508,81 @@ impl<'a, IO> CreateUnknownModule<'a, IO> {
         actions
     }
 }
+
+/// Code action to discard unused variable.
+pub struct DiscardUnusedVariable<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+}
+
+#[derive(Debug)]
+struct UnusedVariable<'a> {
+    location: &'a SrcSpan,
+    origin: &'a VariableOrigin,
+}
+
+impl<'a> DiscardUnusedVariable<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        let unused_variable = self
+            .module
+            .ast
+            .type_info
+            .warnings
+            .iter()
+            .find_map(|warning| {
+                if let type_::Warning::UnusedVariable { location, origin } = warning
+                    && within(
+                        self.params.range,
+                        self.edits.src_span_to_lsp_range(*location),
+                    )
+                {
+                    Some(UnusedVariable { location, origin })
+                } else {
+                    None
+                }
+            });
+
+        let Some(unused_variable) = unused_variable else {
+            return vec![];
+        };
+
+        match unused_variable.origin.syntax {
+            type_::error::VariableSyntax::Variable(_) => {
+                self.edits
+                    .insert(unused_variable.location.start, ("_").to_string());
+            }
+            type_::error::VariableSyntax::LabelShorthand(_) => {
+                self.edits
+                    .insert(unused_variable.location.end, (" _").to_string());
+            }
+            type_::error::VariableSyntax::AssignmentPattern(location) => {
+                self.edits.delete(SrcSpan {
+                    start: location.start,
+                    end: location.end,
+                });
+            }
+            type_::error::VariableSyntax::Generated => (),
+        }
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Discard unused variable")
+            .kind(CodeActionKind::QuickFix)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(true)
+            .push_to(&mut action);
+        action
+    }
+}

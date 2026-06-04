@@ -33,7 +33,10 @@ use lsp_types::{
 use std::{collections::HashSet, sync::Arc};
 
 use crate::{
-    code_action::{RemoveRedundantRecordUpdate, ReplaceUnderscoreWithType, type_errors_for_module},
+    code_action::{
+        DiscardUnusedVariable, RemoveRedundantRecordUpdate, ReplaceUnderscoreWithType,
+        type_errors_for_module,
+    },
     reference::find_module_references_in_module,
     rename::rename_module_alias,
 };
@@ -524,6 +527,7 @@ where
                 )
                 .code_actions(),
             );
+            actions.extend(DiscardUnusedVariable::new(module, &lines, &params).code_actions());
 
             actions.sort_by_key(|one| {
                 let preferred_key = if one.is_preferred == Some(true) { 0 } else { 1 };
@@ -806,7 +810,9 @@ where
                             .map(|len: u32| location.start + len)
                             .unwrap_or(location.end),
                     }),
-                    Some(VariableSyntax::AssignmentPattern) | None => success_response(location),
+                    Some(VariableSyntax::AssignmentPattern(..)) | None => {
+                        success_response(location)
+                    }
                 },
                 Some(
                     Referenced::ModuleValue {
@@ -873,7 +879,7 @@ where
                             VariableReferenceKind::LabelShorthand
                         }
                         Some(
-                            VariableSyntax::AssignmentPattern | VariableSyntax::Variable { .. },
+                            VariableSyntax::AssignmentPattern(..) | VariableSyntax::Variable { .. },
                         )
                         | None => VariableReferenceKind::Variable,
                     };
@@ -966,7 +972,7 @@ where
                 Some(VariableSyntax::Generated) => None,
                 Some(
                     VariableSyntax::LabelShorthand(_)
-                    | VariableSyntax::AssignmentPattern
+                    | VariableSyntax::AssignmentPattern(..)
                     | VariableSyntax::Variable { .. },
                 )
                 | None => {
