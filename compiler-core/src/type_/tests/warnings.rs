@@ -1809,6 +1809,35 @@ fn unreachable_warning_if_all_branches_panic() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/5683
+#[test]
+fn unreachable_use_statement_after_panic() {
+    assert_warning!(
+        "
+pub fn main() {
+  panic
+  use <- wibble
+  1
+}
+
+fn wibble(f) { f() }
+"
+    );
+}
+
+#[test]
+fn unreachable_use_fn_statement_after_panic() {
+    assert_warning!(
+        "
+pub fn main() -> Nil {
+  panic
+  use <- fn(_) { Nil }
+  1
+}
+"
+    );
+}
+
 #[test]
 fn unreachable_warning_if_all_branches_panic_2() {
     assert_warning!(
