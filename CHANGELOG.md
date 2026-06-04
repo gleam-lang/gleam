@@ -22,6 +22,19 @@
 
    ([Gavin Morrow](https://github.com/gavinmorrow))
 
+- Let bindings now continue to assume their annotated type after mismatches,
+  preventing misleading follow-up errors:
+
+  ```gleam
+  pub fn main() {
+    let x: String = 5 // type error: expected String, got Int
+    let y: String = x // valid
+    let z: Int = x    // type error: expected Int, got String
+  }
+  ```
+
+  ([Adi Salimgereyev](https://github.com/abs0luty))
+
 ### Build tool
 
 - The build tool now generates Hexdocs URLs using the new format of
