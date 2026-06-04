@@ -5005,6 +5005,24 @@ pub fn go(x: BitArray) {
     );
 }
 
+#[test]
+fn bit_array_match_on_bytes_for_erlang_does_not_complain_about_int_size() {
+    assert_js_no_warnings!(
+        r#"
+pub fn main() -> Nil {
+  echo wibble(<<1, 2, 3, 4, 5, 6, 7, 8>>)
+  Nil
+}
+
+@external(javascript, "./ffi.mjs", "wibble")
+fn wibble(bits: BitArray) -> Int {
+  let assert <<x:64>> = bits
+  x
+}
+"#
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/5599
 #[test]
 fn bit_array_size_constant() {

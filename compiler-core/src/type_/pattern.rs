@@ -1539,10 +1539,17 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     /// bigger would result in the number being truncated.
     ///
     fn check_matched_int_is_in_js_bounds(&mut self, segment: &TypedPatternBitArraySegment) {
-        // This only makes sense to check on the js target
+        // This only makes sense to check on the js target.
+        if self.environment.target != Target::JavaScript {
+            return;
+        }
+        // And if the current function doesn't have a JavaScript external.
+        if self.current_function.has_javascript_external {
+            return;
+        }
         // And if the segment actually defines a variable that would end up
         // being truncated and that is an int!
-        if self.environment.target != Target::JavaScript || !segment.type_.is_int() {
+        if !segment.type_.is_int() {
             return;
         }
         let (Pattern::Assign { .. } | Pattern::Variable { .. }) = segment.value.as_ref() else {
