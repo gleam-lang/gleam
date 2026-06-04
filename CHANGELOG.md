@@ -19,6 +19,7 @@
   Matching on a literal suffix is not possible, because `infix` would have an
   unknown size.
   ```
+
   ([Gavin Morrow](https://github.com/gavinmorrow))
 
 - Improved the error message shown when using an invalid discard name for
@@ -68,6 +69,6 @@
 
   ([Gavin Morrow](https://github.com/gavinmorrow))
 
-- Fixed a bug where the compiler would raise a warning for truncated integer
-  segments when compiling a function with a JavaScript external.
+- Fixed a bug where the compiler would raise a warning for truncated int
+segments when compiling a function with a JavaScript external.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
