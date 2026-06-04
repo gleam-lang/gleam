@@ -8175,6 +8175,134 @@ pub fn main() {
 }
 
 #[test]
+fn pattern_match_on_call_statement() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VALUE,
+        "
+pub fn main() {
+  wibble()
+}
+
+pub fn wibble() -> Result(Int, String) { todo }
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_record_select_statement() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VALUE,
+        "
+pub fn main() {
+  let wibble = Wibble(Ok(1))
+  wibble.wobble
+}
+
+pub type Wibble { Wibble(wobble: Result(Int, Nil)) }
+",
+        find_position_of("wibble").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_tuple_index_statement() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VALUE,
+        "
+pub fn main() {
+  let wibble = #(Ok(1), 2)
+  wibble.0
+}
+",
+        find_position_of("wibble").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_module_select_statement() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VALUE,
+        TestProject::for_source(
+            "
+import wibble
+
+pub fn main() {
+  wibble.wobble
+}
+    "
+        )
+        .add_module("wibble", "pub const wobble = Ok(1)"),
+        find_position_of("wibble").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_call_statement_returning_nil() {
+    assert_no_code_actions!(
+        PATTERN_MATCH_ON_VALUE,
+        "
+pub fn main() {
+  wibble()
+}
+
+pub fn wibble() -> Nil { todo }
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_call_statement_in_the_middle_of_a_function_body() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VALUE,
+        "
+pub fn main() {
+  wibble()
+  Nil
+}
+
+pub fn wibble() -> Result(Int, String) { todo }
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_value_picks_innermost_value_and_not_outer_call() {
+    assert_no_code_actions!(
+        PATTERN_MATCH_ON_VALUE,
+        "
+pub fn main() {
+  wibble({
+    let match_on_me = wibble(todo)
+  })
+}
+
+pub fn wibble(a) -> Result(Int, String) { todo }
+",
+        find_position_of("match_on_me").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_value_picks_innermost_value_and_not_outer_call_2() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  wibble({
+    let match_on_me = wibble(todo)
+  })
+}
+
+pub fn wibble(a) -> Result(Int, String) { todo }
+",
+        find_position_of("match_on_me").to_selection()
+    );
+}
+
+#[test]
 fn pattern_match_on_clause_variable() {
     assert_code_action!(
         PATTERN_MATCH_ON_VARIABLE,

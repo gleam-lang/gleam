@@ -34,6 +34,31 @@
 
 ### Language server
 
+- The "pattern match on value" code action can now be used to pattern match on
+  values returned by function calls. For example:
+
+  ```gleam
+  pub fn main() {
+    load_user()
+  // ^^ Triggering the code action over here
+  }
+
+  fn load_user() -> Result(User, Nil) { todo }
+  ```
+
+  Will produce the following code:
+
+  ```gleam
+  pub fn main() {
+    case load_user() {
+      Ok(value) -> todo
+      Error(value) -> todo
+    }
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Bug fixes
@@ -70,5 +95,5 @@
   ([Gavin Morrow](https://github.com/gavinmorrow))
 
 - Fixed a bug where the compiler would raise a warning for truncated int
-segments when compiling a function with a JavaScript external.
+  segments when compiling a function with a JavaScript external.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

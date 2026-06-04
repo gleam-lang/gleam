@@ -1,0 +1,22 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  let wibble = #(Ok(1), 2)\n  wibble.0\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let wibble = #(Ok(1), 2)
+  wibble.0
+  ↑       
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let wibble = #(Ok(1), 2)
+  case wibble.0 {
+    Ok(value) -> todo
+    Error(value) -> todo
+  }
+}

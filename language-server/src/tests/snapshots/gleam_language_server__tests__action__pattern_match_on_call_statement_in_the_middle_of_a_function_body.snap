@@ -1,0 +1,26 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  wibble()\n  Nil\n}\n\npub fn wibble() -> Result(Int, String) { todo }\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  wibble()
+  ↑       
+  Nil
+}
+
+pub fn wibble() -> Result(Int, String) { todo }
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  case wibble() {
+    Ok(value) -> todo
+    Error(value) -> todo
+  }
+  Nil
+}
+
+pub fn wibble() -> Result(Int, String) { todo }
