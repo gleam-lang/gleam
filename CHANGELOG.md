@@ -94,8 +94,8 @@
 
   ([Gavin Morrow](https://github.com/gavinmorrow))
 
-- Fixed a bug where the language server would insert the wrong text when
-  triggering a completion on types that are halfway complete.
+- Work around an ambiguity of the language server protocol that resulted in
+  editors like Zed inserting the wrong text when accepting type completions.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - Fixed a bug where the compiler would raise a warning for truncated int
