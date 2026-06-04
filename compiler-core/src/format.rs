@@ -2891,7 +2891,10 @@ impl<'comments> Formatter<'comments> {
 
     fn bit_array_segment_expr<'a>(&mut self, expression: &'a UntypedExpr) -> Document<'a> {
         match expression {
-            UntypedExpr::BinOp { .. } => wrap_block(self.expr(expression)),
+            UntypedExpr::BinOp { .. } => break_("", "")
+                .append(self.expr(expression))
+                .nest_if_broken(INDENT)
+                .append(break_("", "")),
 
             UntypedExpr::Int { .. }
             | UntypedExpr::Float { .. }
