@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "pub fn main() {\n  case todo {\n    wibble as _wobble -> todo\n  }\n}"
+---
+----- SOURCE CODE
+pub fn main() {
+  case todo {
+    wibble as _wobble -> todo
+  }
+}
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:15
+  │
+3 │     wibble as _wobble -> todo
+  │               ^^^^^^^ I'm expecting a lowercase name here
+
+A name after `as` must start with a lowercase letter, and can contain a-z,
+0-9, or _.

@@ -58,6 +58,25 @@ pub struct ParseError {
     pub location: SrcSpan,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Where we found an incorrect name.
+pub enum IncorrectNamePosition {
+    /// After `as`. For example: `as _wibble`.
+    AsPattern,
+    /// As a module in an import: `import _wibble`
+    Module,
+    /// As a function name: `fn _wibble()`
+    Function,
+    /// As an attribute name: `@_wibble`
+    Attribute,
+    /// As a constant name: `const _wibble = ...`
+    Constant,
+    /// As a target name: `@external(_wibble, ...)`
+    Target,
+    /// Used as a variable expression: `let a = _wibble`, `let a = _wibble(10)`
+    Variable,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseErrorType {
     ExpectedEqual,              // expect "="
@@ -73,12 +92,16 @@ pub enum ParseErrorType {
     ExpectedTargetName,         // after "@target("
     ExprLparStart,              // it seems "(" was used to start an expression
     ExtraSeparator,             // #(1,,) <- the 2nd comma is an extra separator
-    IncorrectName,              // UpName or DiscardName used when Name was expected
-    IncorrectUpName,            // Name or DiscardName used when UpName was expected
-    InvalidBitArraySegment,     // <<7:hello>> `hello` is an invalid BitArray segment
-    InvalidBitArrayUnit,        // in <<1:unit(x)>> x must be 1 <= x <= 256
-    InvalidTailPattern,         // only name and _name are allowed after ".." in list pattern
-    InvalidTupleAccess,         // only positive int literals for tuple access
+    // UpName or DiscardName used when Name was expected
+    IncorrectName {
+        // Where we found the incorrect name.
+        kind: IncorrectNamePosition,
+    },
+    IncorrectUpName,        // Name or DiscardName used when UpName was expected
+    InvalidBitArraySegment, // <<7:hello>> `hello` is an invalid BitArray segment
+    InvalidBitArrayUnit,    // in <<1:unit(x)>> x must be 1 <= x <= 256
+    InvalidTailPattern,     // only name and _name are allowed after ".." in list pattern
+    InvalidTupleAccess,     // only positive int literals for tuple access
     LexError {
         error: LexicalError,
     },
@@ -260,15 +283,26 @@ tuples are created with `#(` and `)`."
                 extra_labels: vec![],
             },
 
-            ParseErrorType::IncorrectName => ParseErrorDetails {
-                text: "".into(),
-                hint: Some(wrap(
-                    "Variable and module names start with a lowercase letter, \
-and can contain a-z, 0-9, or _.",
-                )),
-                label_text: "I'm expecting a lowercase name here".into(),
-                extra_labels: vec![],
-            },
+            ParseErrorType::IncorrectName { kind } => {
+                let subject = match kind {
+                    IncorrectNamePosition::AsPattern => "A name after `as`",
+                    IncorrectNamePosition::Module => "A module name",
+                    IncorrectNamePosition::Function => "A function name",
+                    IncorrectNamePosition::Attribute => "An attribute name",
+                    IncorrectNamePosition::Constant => "A constant name",
+                    IncorrectNamePosition::Target => "A target name",
+                    IncorrectNamePosition::Variable => "A variable name",
+                };
+                ParseErrorDetails {
+                    text: wrap_format!(
+                        "{subject} must start with a lowercase letter, and can \
+contain a-z, 0-9, or _.",
+                    ),
+                    hint: None,
+                    label_text: "I'm expecting a lowercase name here".into(),
+                    extra_labels: vec![],
+                }
+            }
 
             ParseErrorType::IncorrectUpName => ParseErrorDetails {
                 text: "".into(),

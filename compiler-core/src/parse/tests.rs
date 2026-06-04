@@ -2470,3 +2470,29 @@ fn wibble() -> Nil
 "#
     );
 }
+
+#[test]
+fn error_message_when_using_discard_pattern_for_function_name() {
+    assert_module_error!("fn _wibble() -> Nil");
+}
+
+#[test]
+fn error_message_when_using_discard_pattern_for_constant_name() {
+    assert_module_error!("const _wibble = 1");
+}
+
+#[test]
+fn error_message_when_using_discard_pattern_for_module_name() {
+    assert_module_error!("import _wibble");
+}
+
+#[test]
+fn error_message_when_using_discard_pattern_for_as_pattern() {
+    assert_module_error!(
+        "pub fn main() {
+  case todo {
+    wibble as _wobble -> todo
+  }
+}"
+    );
+}
