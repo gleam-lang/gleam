@@ -630,10 +630,10 @@ pub fn api_add_owner_request(
 
 /// Turns an `OwnerLevel` into a string that can be used with the json payload
 /// of requests to the Hex API expecting an owner level.
-fn owner_level_to_json_string(level: OwnerLevel) -> String {
+fn owner_level_to_json_string(level: OwnerLevel) -> &'static str {
     match level {
-        OwnerLevel::Maintainer => String::from("maintainer"),
-        OwnerLevel::Full => String::from("full"),
+        OwnerLevel::Maintainer => "maintainer",
+        OwnerLevel::Full => "full",
     }
 }
 
