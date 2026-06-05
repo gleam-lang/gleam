@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub type Box {\n  Box(constructor: Int)\n}\n"
+---
+----- SOURCE CODE
+
+pub type Box {
+  Box(constructor: Int)
+}
+
+
+----- TYPESCRIPT DEFINITIONS
+import type * as _ from "../gleam.d.mts";
+
+export class Box extends _.CustomType {
+  /** @deprecated */
+  constructor(constructor: number);
+  /** @deprecated */
+  constructor$: number;
+}
+export function Box$Box(constructor: number): Box$;
+export function Box$isBox(value: any): value is Box$;
+export function Box$Box$0(value: Box$): number;
+export function Box$Box$constructor(value: Box$): number;
+
+export type Box$ = Box;
