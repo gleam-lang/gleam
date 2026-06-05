@@ -121,6 +121,10 @@
   formatted incorrectly.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Fixed a bug where the compiler would generate invalid TypeScript type
+  definitions for records with a field named `constructor`.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a bug where the compiler would raise a warning for truncated int
   segments when compiling a function with a JavaScript external.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

@@ -1047,3 +1047,26 @@ pub fn is_wobble_active(s: WobbleStatus) -> Bool {
 "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5613
+#[test]
+pub fn type_with_constructor_as_field_is_properly_escaped() {
+    assert_js!(
+        "
+pub type Box {
+  Box(constructor: Int)
+}
+"
+    )
+}
+
+#[test]
+fn type_with_constructor_as_field_is_properly_escaped_in_ts_def() {
+    assert_ts_def!(
+        r#"
+pub type Box {
+  Box(constructor: Int)
+}
+"#,
+    );
+}

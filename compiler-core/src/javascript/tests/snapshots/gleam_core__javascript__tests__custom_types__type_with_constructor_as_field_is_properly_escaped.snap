@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub type Box {\n  Box(constructor: Int)\n}\n"
+---
+----- SOURCE CODE
+
+pub type Box {
+  Box(constructor: Int)
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Box extends $CustomType {
+  constructor(constructor) {
+    super();
+    this.constructor$ = constructor;
+  }
+}
+export const Box$Box = (constructor) => new Box(constructor);
+export const Box$isBox = (value) => value instanceof Box;
+export const Box$Box$constructor = (value) => value.constructor$;
+export const Box$Box$0 = (value) => value.constructor$;
