@@ -453,28 +453,13 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             match &self.kind {
                 DecisionKind::Case { .. } => {
                     // Restore the user variables that were in scope before the
-                    // branch. The synthesised counters are left advanced.
+                    // branch. The synthesised counters are left advanced, and
+                    // the high-water marks keep any user variable that leaked
+                    // out of the branch from being redeclared by a later `let`.
                     self.variables
                         .expression_generator
                         .current_scope
                         .restore_user_variables(&old_user_variables);
-
-                    // For binded variables inside body we need to check if
-                    // there is same-named variable in old scope. In this case
-                    // we need to register next available variable, so no
-                    // redeclaration occurs.
-                    if let Decision::Run { body } = fallback {
-                        for (variable, _) in body.bindings.iter() {
-                            if old_user_variables.get(variable).is_some() {
-                                let new_variable_name = self.variables.next_local_var(variable);
-
-                                self.variables
-                                    .expression_generator
-                                    .current_scope
-                                    .set_counter(&new_variable_name, 0);
-                            }
-                        }
-                    }
                 }
                 DecisionKind::LetAssert { .. } => {}
             }

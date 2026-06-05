@@ -70,3 +70,20 @@ pub fn no_duplicate_pipe_variable_with_case_in_pipeline_test() {
     |> add_one
   assert result == 2
 }
+
+// https://github.com/gleam-lang/gleam/issues/5748
+pub fn no_duplicate_let_when_rebinding_variable_after_directly_matching_case_test() {
+  let result = {
+    let n = 1
+    case True {
+      True -> {
+        let n = 99
+        n
+      }
+      False -> 0
+    }
+    let n = n + 5
+    n
+  }
+  assert result == 6
+}
