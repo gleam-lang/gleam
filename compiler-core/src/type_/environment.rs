@@ -583,6 +583,7 @@ impl Environment<'_> {
                 }
             })
             .cloned()
+            .sorted()
             .collect_vec()
     }
 
@@ -606,6 +607,7 @@ impl Environment<'_> {
                 }
             })
             .cloned()
+            .sorted()
             .collect_vec()
     }
 
