@@ -27,6 +27,6 @@ error: Unknown variable
   │     ^^^
 
 The name `add` is not in scope here.
-Did you mean one of these:
+Did you mean:
 
   - wibble.add

@@ -7,14 +7,14 @@ expression: "\n        import gleam/wibble.{wobble}\n        import gleam/wibble
 
             pub fn wobble() { 1 }
             pub fn zoo() { 1 }
-            
+
 
 -- main.gleam
 
         import gleam/wibble.{wobble}
         import gleam/wibble.{zoo}
         pub fn go() { wobble() + zoo() }
-        
+
 
 ----- ERROR
 error: Duplicate import
@@ -35,6 +35,6 @@ error: Unknown variable
   │                                  ^^^
 
 The name `zoo` is not in scope here.
-Did you mean one of these:
+Did you mean:
 
   - wibble.zoo
