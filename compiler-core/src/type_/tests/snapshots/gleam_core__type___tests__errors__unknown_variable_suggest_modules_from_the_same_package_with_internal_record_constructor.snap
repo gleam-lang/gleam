@@ -28,6 +28,6 @@ error: Unknown variable
   │     ^^^^^^^^
 
 The custom type variant constructor `MyRecord` is not in scope here.
-Did you mean one of these:
+Did you mean:
 
   - module.MyRecord
