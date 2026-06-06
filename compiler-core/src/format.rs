@@ -108,12 +108,12 @@ pub struct Formatter<'a> {
     trailing_commas: &'a [u32],
 }
 
-impl<'comments> Formatter<'comments> {
+impl<'a> Formatter<'a> {
     pub fn new() -> Self {
         Default::default()
     }
 
-    pub(crate) fn with_comments(extra: &'comments Intermediate<'comments>) -> Self {
+    pub(crate) fn with_comments(extra: &'a Intermediate<'a>) -> Self {
         Self {
             comments: &extra.comments,
             doc_comments: &extra.doc_comments,
@@ -159,7 +159,7 @@ impl<'comments> Formatter<'comments> {
     fn pop_comments_with_position(
         &mut self,
         limit: u32,
-    ) -> impl Iterator<Item = (u32, Option<&'comments str>)> + use<'comments> {
+    ) -> impl Iterator<Item = (u32, Option<&'a str>)> + use<'a> {
         let (popped, rest, empty_lines) =
             comments_before(self.comments, self.empty_lines, limit, true);
         self.comments = rest;
@@ -169,20 +169,14 @@ impl<'comments> Formatter<'comments> {
 
     /// Pop comments that occur before a byte-index in the source, consuming
     /// and retaining any empty lines contained within.
-    fn pop_comments(
-        &mut self,
-        limit: u32,
-    ) -> impl Iterator<Item = Option<&'comments str>> + use<'comments> {
+    fn pop_comments(&mut self, limit: u32) -> impl Iterator<Item = Option<&'a str>> + use<'a> {
         self.pop_comments_with_position(limit)
             .map(|(_position, comment)| comment)
     }
 
     /// Pop doc comments that occur before a byte-index in the source, consuming
     /// and dropping any empty lines contained within.
-    fn pop_doc_comments(
-        &mut self,
-        limit: u32,
-    ) -> impl Iterator<Item = Option<&'comments str>> + use<'comments> {
+    fn pop_doc_comments(&mut self, limit: u32) -> impl Iterator<Item = Option<&'a str>> + use<'a> {
         let (popped, rest, empty_lines) =
             comments_before(self.doc_comments, self.empty_lines, limit, false);
         self.doc_comments = rest;
@@ -208,7 +202,7 @@ impl<'comments> Formatter<'comments> {
         end != 0
     }
 
-    fn targeted_definition<'a>(&mut self, definition: &'a TargetedDefinition) -> Document<'a> {
+    fn targeted_definition(&mut self, definition: &'a TargetedDefinition) -> Document<'a> {
         let target = definition.target;
         let definition = &definition.definition;
         let start = definition.location().start;
@@ -225,7 +219,7 @@ impl<'comments> Formatter<'comments> {
         comments.to_doc().append(document.group())
     }
 
-    pub(crate) fn module<'a>(&mut self, module: &'a UntypedModule) -> Document<'a> {
+    pub(crate) fn module(&mut self, module: &'a UntypedModule) -> Document<'a> {
         let mut documents = vec![];
         let mut previous_was_a_definition = false;
 
@@ -309,7 +303,7 @@ impl<'comments> Formatter<'comments> {
     /// import wibble
     /// import wobble
     /// ```
-    fn imports<'a>(&mut self, imports: Vec<&'a TargetedDefinition>) -> Vec<Document<'a>> {
+    fn imports(&mut self, imports: Vec<&'a TargetedDefinition>) -> Vec<Document<'a>> {
         let mut import_groups_docs = vec![];
         let mut current_group = vec![];
         let mut current_group_delimiter = nil();
@@ -361,7 +355,7 @@ impl<'comments> Formatter<'comments> {
 
     /// Prints the imports as a single sorted group of import statements.
     ///
-    fn sorted_import_group<'a>(&mut self, imports: &[&'a TargetedDefinition]) -> Document<'a> {
+    fn sorted_import_group(&mut self, imports: &[&'a TargetedDefinition]) -> Document<'a> {
         let imports = imports
             .iter()
             .sorted_by(|one, other| match (&one.definition, &other.definition) {
@@ -381,7 +375,7 @@ impl<'comments> Formatter<'comments> {
             .to_doc()
     }
 
-    fn definition<'a>(&mut self, statement: &'a UntypedDefinition) -> Document<'a> {
+    fn definition(&mut self, statement: &'a UntypedDefinition) -> Document<'a> {
         match statement {
             Definition::Function(function) => self.statement_fn(function),
 
@@ -469,7 +463,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn const_expr<'a, A>(&mut self, value: &'a Constant<A>) -> Document<'a> {
+    fn const_expr<A>(&mut self, value: &'a Constant<A>) -> Document<'a> {
         let comments = self.pop_comments(value.location().start);
         let document = match value {
             Constant::Todo { message, .. } => {
@@ -593,7 +587,7 @@ impl<'comments> Formatter<'comments> {
         commented(document, comments)
     }
 
-    fn const_list<'a, A>(
+    fn const_list<A>(
         &mut self,
         elements: &'a [Constant<A>],
         location: &SrcSpan,
@@ -692,7 +686,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    pub fn const_tuple<'a, A>(
+    pub fn const_tuple<A>(
         &mut self,
         elements: &'a [Constant<A>],
         location: &SrcSpan,
@@ -736,12 +730,12 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn documented_definition<'a>(&mut self, definition: &'a UntypedDefinition) -> Document<'a> {
+    fn documented_definition(&mut self, definition: &'a UntypedDefinition) -> Document<'a> {
         let comments = self.doc_comments(definition.location().start);
         comments.append(self.definition(definition).group()).group()
     }
 
-    fn doc_comments<'a>(&mut self, limit: u32) -> Document<'a> {
+    fn doc_comments(&mut self, limit: u32) -> Document<'a> {
         let mut comments = self.pop_doc_comments(limit).peekable();
         match comments.peek() {
             None => nil(),
@@ -757,7 +751,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn type_ast_constructor<'a>(
+    fn type_ast_constructor(
         &mut self,
         name: &'a TypeAstConstructorName,
         arguments: &'a [TypeAst],
@@ -780,7 +774,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn type_ast<'a>(&mut self, type_: &'a TypeAst) -> Document<'a> {
+    fn type_ast(&mut self, type_: &'a TypeAst) -> Document<'a> {
         let comments = self.pop_comments(type_.location().start);
 
         let type_ = match type_ {
@@ -819,7 +813,7 @@ impl<'comments> Formatter<'comments> {
         commented(type_.group(), comments)
     }
 
-    fn type_arguments<'a>(&mut self, arguments: &'a [TypeAst], location: &SrcSpan) -> Document<'a> {
+    fn type_arguments(&mut self, arguments: &'a [TypeAst], location: &SrcSpan) -> Document<'a> {
         let arguments = arguments
             .iter()
             .map(|type_| self.type_ast(type_))
@@ -827,7 +821,7 @@ impl<'comments> Formatter<'comments> {
         self.wrap_arguments(arguments, location.end)
     }
 
-    pub fn type_alias<'a, A>(&mut self, alias: &'a TypeAlias<A>) -> Document<'a> {
+    pub fn type_alias<A>(&mut self, alias: &'a TypeAlias<A>) -> Document<'a> {
         let TypeAlias {
             alias: name,
             parameters: arguments,
@@ -857,7 +851,7 @@ impl<'comments> Formatter<'comments> {
             .append(line().append(self.type_ast(type_)).group().nest(INDENT))
     }
 
-    fn fn_arg<'a, A>(&mut self, argument: &'a Arg<A>) -> Document<'a> {
+    fn fn_arg<A>(&mut self, argument: &'a Arg<A>) -> Document<'a> {
         let comments = self.pop_comments(argument.location.start);
         let doc = match &argument.annotation {
             None => argument.names.to_doc(),
@@ -871,7 +865,7 @@ impl<'comments> Formatter<'comments> {
         commented(doc, comments)
     }
 
-    fn statement_fn<'a>(&mut self, function: &'a UntypedFunction) -> Document<'a> {
+    fn statement_fn(&mut self, function: &'a UntypedFunction) -> Document<'a> {
         let Function {
             location,
             body_start: _,
@@ -949,7 +943,7 @@ impl<'comments> Formatter<'comments> {
         docvec![attributes, function]
     }
 
-    fn expr_fn<'a>(
+    fn expr_fn(
         &mut self,
         arguments: &'a [UntypedArg],
         return_annotation: Option<&'a TypeAst>,
@@ -999,7 +993,7 @@ impl<'comments> Formatter<'comments> {
         header.append(" ").append(wrap_block(body)).group()
     }
 
-    fn statements<'a>(&mut self, statements: &'a [UntypedStatement]) -> Document<'a> {
+    fn statements(&mut self, statements: &'a [UntypedStatement]) -> Document<'a> {
         let mut previous_position = 0;
         let count = statements.len();
         let mut documents = Vec::with_capacity(count * 2);
@@ -1032,7 +1026,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn assignment<'a>(&mut self, assignment: &'a UntypedAssignment) -> Document<'a> {
+    fn assignment(&mut self, assignment: &'a UntypedAssignment) -> Document<'a> {
         let comments = self.pop_comments(assignment.location.start);
         let Assignment {
             pattern,
@@ -1067,7 +1061,7 @@ impl<'comments> Formatter<'comments> {
         )
     }
 
-    fn expr<'a>(&mut self, expression: &'a UntypedExpr) -> Document<'a> {
+    fn expr(&mut self, expression: &'a UntypedExpr) -> Document<'a> {
         let comments = self.pop_comments(expression.start_byte_index());
 
         let document = match expression {
@@ -1193,7 +1187,7 @@ impl<'comments> Formatter<'comments> {
         commented(document, comments)
     }
 
-    fn string<'a>(&self, string: &'a EcoString) -> Document<'a> {
+    fn string(&self, string: &'a EcoString) -> Document<'a> {
         let doc = string.to_doc().surround("\"", "\"");
         if string.contains('\n') {
             doc.force_break()
@@ -1202,7 +1196,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn bin_op_string<'a>(&self, string: &'a EcoString) -> Document<'a> {
+    fn bin_op_string(&self, string: &'a EcoString) -> Document<'a> {
         let lines = string.split('\n').collect_vec();
         match lines.as_slice() {
             [] | [_] => string.to_doc().surround("\"", "\""),
@@ -1218,7 +1212,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn float<'a>(&self, value: &'a str) -> Document<'a> {
+    fn float(&self, value: &'a str) -> Document<'a> {
         // Create parts
         let mut parts = value.split('.');
         let integer_part = parts.next().unwrap_or_default();
@@ -1248,7 +1242,7 @@ impl<'comments> Formatter<'comments> {
             .append(scientific_part)
     }
 
-    fn int<'a>(&self, value: &'a str) -> Document<'a> {
+    fn int(&self, value: &'a str) -> Document<'a> {
         if value.starts_with("0x") || value.starts_with("0b") || value.starts_with("0o") {
             return value.to_doc();
         }
@@ -1256,7 +1250,7 @@ impl<'comments> Formatter<'comments> {
         self.underscore_integer_string(value)
     }
 
-    fn underscore_integer_string<'a>(&self, value: &'a str) -> Document<'a> {
+    fn underscore_integer_string(&self, value: &'a str) -> Document<'a> {
         let underscore = '_';
         let minus = '-';
 
@@ -1283,7 +1277,7 @@ impl<'comments> Formatter<'comments> {
         new_value.chars().rev().collect::<EcoString>().to_doc()
     }
 
-    fn pattern_constructor<'a>(
+    fn pattern_constructor(
         &mut self,
         name: &'a str,
         arguments: &'a [CallArg<UntypedPattern>],
@@ -1343,7 +1337,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn call<'a>(
+    fn call(
         &mut self,
         function: &'a UntypedExpr,
         arguments: &'a [CallArg<UntypedExpr>],
@@ -1384,7 +1378,7 @@ impl<'comments> Formatter<'comments> {
         )
     }
 
-    fn tuple<'a>(&mut self, elements: &'a [UntypedExpr], location: &SrcSpan) -> Document<'a> {
+    fn tuple(&mut self, elements: &'a [UntypedExpr], location: &SrcSpan) -> Document<'a> {
         if elements.is_empty() {
             // We take all comments that come _before_ the end of the tuple,
             // that is all comments that are inside "#(" and ")", if there's
@@ -1420,7 +1414,7 @@ impl<'comments> Formatter<'comments> {
     // resulting document will try to first split that before splitting all the
     // other arguments.
     // This is used for function calls and tuples.
-    fn append_inlinable_wrapped_arguments<'a, 'b, T, Predicate, ToDoc>(
+    fn append_inlinable_wrapped_arguments<'b, T, Predicate, ToDoc>(
         &mut self,
         doc: Document<'a>,
         values: &'b [T],
@@ -1464,7 +1458,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    pub fn case<'a>(
+    pub fn case(
         &mut self,
         subjects: &'a [UntypedExpr],
         clauses: &'a [UntypedClause],
@@ -1507,7 +1501,7 @@ impl<'comments> Formatter<'comments> {
             .force_break()
     }
 
-    pub fn record_update<'a>(
+    pub fn record_update(
         &mut self,
         constructor: &'a UntypedExpr,
         record: &'a RecordBeingUpdated<UntypedExpr>,
@@ -1540,7 +1534,7 @@ impl<'comments> Formatter<'comments> {
         )
     }
 
-    pub fn const_record_update<'a, A>(
+    pub fn const_record_update<A>(
         &mut self,
         module: &Option<(EcoString, SrcSpan)>,
         name: &'a EcoString,
@@ -1591,7 +1585,7 @@ impl<'comments> Formatter<'comments> {
             .group()
     }
 
-    pub fn bin_op<'a>(
+    pub fn bin_op(
         &mut self,
         name: &'a BinOp,
         left: &'a UntypedExpr,
@@ -1615,7 +1609,7 @@ impl<'comments> Formatter<'comments> {
             .append(right_side)
     }
 
-    fn bin_op_side<'a>(
+    fn bin_op_side(
         &mut self,
         operator: &'a BinOp,
         side: &'a UntypedExpr,
@@ -1668,7 +1662,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    pub fn operator_side<'a>(&self, doc: Document<'a>, op: u8, side: u8) -> Document<'a> {
+    pub fn operator_side(&self, doc: Document<'a>, op: u8, side: u8) -> Document<'a> {
         if op > side {
             wrap_block(doc).group()
         } else {
@@ -1710,11 +1704,7 @@ impl<'comments> Formatter<'comments> {
             .is_ok()
     }
 
-    fn pipeline<'a>(
-        &mut self,
-        expressions: &'a Vec1<UntypedExpr>,
-        nest_pipe: bool,
-    ) -> Document<'a> {
+    fn pipeline(&mut self, expressions: &'a Vec1<UntypedExpr>, nest_pipe: bool) -> Document<'a> {
         let mut docs = Vec::with_capacity(expressions.len() * 3);
         let first = expressions.first();
         let first_precedence = first.bin_op_precedence();
@@ -1753,7 +1743,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn fn_capture<'a>(
+    fn fn_capture(
         &mut self,
         call: &'a [UntypedStatement],
         position: FnCapturePosition,
@@ -1833,10 +1823,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    pub fn record_constructor<'a, A>(
-        &mut self,
-        constructor: &'a RecordConstructor<A>,
-    ) -> Document<'a> {
+    pub fn record_constructor<A>(&mut self, constructor: &'a RecordConstructor<A>) -> Document<'a> {
         let comments = self.pop_comments(constructor.location.start);
         let doc_comments = self.doc_comments(constructor.location.start);
         let attributes = AttributesPrinter::new()
@@ -1890,7 +1877,7 @@ impl<'comments> Formatter<'comments> {
         commented(doc_comments.append(doc).group(), comments)
     }
 
-    pub fn custom_type<'a, A>(&mut self, type_: &'a CustomType<A>) -> Document<'a> {
+    pub fn custom_type<A>(&mut self, type_: &'a CustomType<A>) -> Document<'a> {
         let CustomType {
             location,
             end_position,
@@ -1960,13 +1947,13 @@ impl<'comments> Formatter<'comments> {
         doc.append(inner).append(line()).append("}")
     }
 
-    fn call_arg<'a>(&mut self, argument: &'a CallArg<UntypedExpr>, arity: usize) -> Document<'a> {
+    fn call_arg(&mut self, argument: &'a CallArg<UntypedExpr>, arity: usize) -> Document<'a> {
         self.format_call_arg(argument, expr_call_arg_formatting, |this, value| {
             this.comma_separated_item(value, arity)
         })
     }
 
-    fn format_call_arg<'a, A, F, G>(
+    fn format_call_arg<A, F, G>(
         &mut self,
         argument: &'a CallArg<A>,
         figure_formatting: F,
@@ -1992,7 +1979,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn record_update_arg<'a>(&mut self, argument: &'a UntypedRecordUpdateArg) -> Document<'a> {
+    fn record_update_arg(&mut self, argument: &'a UntypedRecordUpdateArg) -> Document<'a> {
         let comments = self.pop_comments(argument.location.start);
         match argument {
             // Argument supplied with a label shorthand.
@@ -2018,7 +2005,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn tuple_index<'a>(&mut self, tuple: &'a UntypedExpr, index: u64) -> Document<'a> {
+    fn tuple_index(&mut self, tuple: &'a UntypedExpr, index: u64) -> Document<'a> {
         // In case we have a block with a single variable tuple access we
         // remove that redundant wrapper:
         //
@@ -2044,7 +2031,7 @@ impl<'comments> Formatter<'comments> {
         .append(index)
     }
 
-    fn case_clause_value<'a>(&mut self, expression: &'a UntypedExpr) -> Document<'a> {
+    fn case_clause_value(&mut self, expression: &'a UntypedExpr) -> Document<'a> {
         match expression {
             UntypedExpr::Fn { .. }
             | UntypedExpr::List { .. }
@@ -2088,7 +2075,7 @@ impl<'comments> Formatter<'comments> {
         .group()
     }
 
-    fn assigned_value<'a>(&mut self, expression: &'a UntypedExpr) -> Document<'a> {
+    fn assigned_value(&mut self, expression: &'a UntypedExpr) -> Document<'a> {
         match expression {
             UntypedExpr::Case { .. } => " ".to_doc().append(self.expr(expression)).group(),
             UntypedExpr::Int { .. }
@@ -2114,7 +2101,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn clause<'a>(&mut self, clause: &'a UntypedClause, index: u32) -> Document<'a> {
+    fn clause(&mut self, clause: &'a UntypedClause, index: u32) -> Document<'a> {
         let space_before = self.pop_empty_lines(clause.location.start);
         let comments = self.pop_comments(clause.location.start);
 
@@ -2169,7 +2156,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn alternative_patterns<'a>(&mut self, clause: &'a UntypedClause) -> Document<'a> {
+    fn alternative_patterns(&mut self, clause: &'a UntypedClause) -> Document<'a> {
         let has_guard = clause.guard.is_some();
         let has_multiple_subjects = clause.pattern.len() > 1;
 
@@ -2232,7 +2219,7 @@ impl<'comments> Formatter<'comments> {
         join(alternative_patterns, alternatives_separator)
     }
 
-    fn list<'a>(
+    fn list(
         &mut self,
         elements: &'a [UntypedExpr],
         tail: Option<&'a UntypedExpr>,
@@ -2345,7 +2332,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn items_sequence_packing<'a, T: HasLocation>(
+    fn items_sequence_packing<T: HasLocation>(
         &self,
         items: &'a [T],
         tail: Option<&'a T>,
@@ -2421,7 +2408,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn has_items_on_the_same_line<'a, L: HasLocation + 'a, T: Iterator<Item = &'a L>>(
+    fn has_items_on_the_same_line<L: HasLocation + 'a, T: Iterator<Item = &'a L>>(
         &self,
         items: T,
     ) -> bool {
@@ -2442,7 +2429,7 @@ impl<'comments> Formatter<'comments> {
 
     /// Pretty prints an expression to be used in a comma separated list; for
     /// example as a list item, a tuple item or as an argument of a function call.
-    fn comma_separated_item<'a>(
+    fn comma_separated_item(
         &mut self,
         expression: &'a UntypedExpr,
         siblings: usize,
@@ -2491,7 +2478,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn pattern<'a>(&mut self, pattern: &'a UntypedPattern) -> Document<'a> {
+    fn pattern(&mut self, pattern: &'a UntypedPattern) -> Document<'a> {
         let comments = self.pop_comments(pattern.location().start);
         let doc = match pattern {
             Pattern::Int { value, .. } => self.int(value),
@@ -2570,7 +2557,7 @@ impl<'comments> Formatter<'comments> {
         commented(doc, comments)
     }
 
-    fn bit_array_size<'a>(&mut self, size: &'a BitArraySize<()>) -> Document<'a> {
+    fn bit_array_size(&mut self, size: &'a BitArraySize<()>) -> Document<'a> {
         match size {
             BitArraySize::Int { value, .. } => self.int(value),
             BitArraySize::Variable { name, .. } => name.to_doc(),
@@ -2598,7 +2585,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn list_pattern<'a>(
+    fn list_pattern(
         &mut self,
         elements: &'a [UntypedPattern],
         tail: &'a Option<Box<UntypedTailPattern>>,
@@ -2636,13 +2623,13 @@ impl<'comments> Formatter<'comments> {
         .group()
     }
 
-    fn pattern_call_arg<'a>(&mut self, argument: &'a CallArg<UntypedPattern>) -> Document<'a> {
+    fn pattern_call_arg(&mut self, argument: &'a CallArg<UntypedPattern>) -> Document<'a> {
         self.format_call_arg(argument, pattern_call_arg_formatting, |this, value| {
             this.pattern(value)
         })
     }
 
-    pub fn clause_guard_bin_op<'a>(
+    pub fn clause_guard_bin_op(
         &mut self,
         name: &'a BinOp,
         left: &'a UntypedClauseGuard,
@@ -2655,7 +2642,7 @@ impl<'comments> Formatter<'comments> {
             .append(self.clause_guard_bin_op_side(name, right, right.precedence() - 1))
     }
 
-    fn clause_guard_bin_op_side<'a>(
+    fn clause_guard_bin_op_side(
         &mut self,
         name: &BinOp,
         side: &'a UntypedClauseGuard,
@@ -2683,7 +2670,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn clause_guard<'a>(&mut self, clause_guard: &'a UntypedClauseGuard) -> Document<'a> {
+    fn clause_guard(&mut self, clause_guard: &'a UntypedClauseGuard) -> Document<'a> {
         match clause_guard {
             ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to formatting"),
 
@@ -2720,13 +2707,13 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn constant_call_arg<'a, A>(&mut self, argument: &'a CallArg<Constant<A>>) -> Document<'a> {
+    fn constant_call_arg<A>(&mut self, argument: &'a CallArg<Constant<A>>) -> Document<'a> {
         self.format_call_arg(argument, constant_call_arg_formatting, |this, value| {
             this.const_expr(value)
         })
     }
 
-    fn negate_bool<'a>(&mut self, expression: &'a UntypedExpr) -> Document<'a> {
+    fn negate_bool(&mut self, expression: &'a UntypedExpr) -> Document<'a> {
         match expression {
             UntypedExpr::NegateBool { value, .. } => self.expr(value),
             UntypedExpr::BinOp { .. } => "!".to_doc().append(wrap_block(self.expr(expression))),
@@ -2752,7 +2739,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn negate_int<'a>(&mut self, expression: &'a UntypedExpr) -> Document<'a> {
+    fn negate_int(&mut self, expression: &'a UntypedExpr) -> Document<'a> {
         match expression {
             UntypedExpr::NegateInt { value, .. } => self.expr(value),
             UntypedExpr::Int { value, .. } if value.starts_with('-') => self.int(&value[1..]),
@@ -2780,7 +2767,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn use_<'a>(&mut self, use_: &'a UntypedUse) -> Document<'a> {
+    fn use_(&mut self, use_: &'a UntypedUse) -> Document<'a> {
         let comments = self.pop_comments(use_.location.start);
 
         let call = if use_.call.is_call() {
@@ -2813,7 +2800,7 @@ impl<'comments> Formatter<'comments> {
         commented(doc, comments)
     }
 
-    fn assert<'a>(&mut self, assert: &'a UntypedAssert) -> Document<'a> {
+    fn assert(&mut self, assert: &'a UntypedAssert) -> Document<'a> {
         let comments = self.pop_comments(assert.location.start);
 
         let expression = if assert.value.is_binop() || assert.value.is_pipeline() {
@@ -2830,7 +2817,7 @@ impl<'comments> Formatter<'comments> {
         commented(docvec!["assert ", doc], comments)
     }
 
-    fn bit_array<'a>(
+    fn bit_array(
         &mut self,
         segments: Vec<Document<'a>>,
         packing: ItemsPacking,
@@ -2889,7 +2876,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn bit_array_segment_expr<'a>(&mut self, expression: &'a UntypedExpr) -> Document<'a> {
+    fn bit_array_segment_expr(&mut self, expression: &'a UntypedExpr) -> Document<'a> {
         match expression {
             UntypedExpr::BinOp { .. } => wrap_block(self.expr(expression)),
 
@@ -2916,7 +2903,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn statement<'a>(&mut self, statement: &'a UntypedStatement) -> Document<'a> {
+    fn statement(&mut self, statement: &'a UntypedStatement) -> Document<'a> {
         match statement {
             Statement::Expression(expression) => self.expr(expression),
             Statement::Assignment(assignment) => self.assignment(assignment),
@@ -2925,7 +2912,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn block<'a>(
+    fn block(
         &mut self,
         location: &SrcSpan,
         statements: &'a Vec1<UntypedStatement>,
@@ -2955,7 +2942,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    pub fn wrap_function_call_arguments<'a, I>(
+    pub fn wrap_function_call_arguments<I>(
         &mut self,
         arguments: I,
         location: &SrcSpan,
@@ -2991,7 +2978,7 @@ impl<'comments> Formatter<'comments> {
             .group()
     }
 
-    pub fn wrap_arguments<'a, I>(&mut self, arguments: I, comments_limit: u32) -> Document<'a>
+    pub fn wrap_arguments<I>(&mut self, arguments: I, comments_limit: u32) -> Document<'a>
     where
         I: IntoIterator<Item = Document<'a>>,
     {
@@ -3029,7 +3016,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    pub fn wrap_arguments_with_spread<'a, I>(
+    pub fn wrap_arguments_with_spread<I>(
         &mut self,
         arguments: I,
         comments_limit: u32,
@@ -3079,7 +3066,7 @@ impl<'comments> Formatter<'comments> {
     /// `wibble`'s doc comment, so when we run into comments like `// comment`
     /// we need to first print all documentation comments that come before it.
     ///
-    fn printed_documented_comments<'a, 'b>(
+    fn printed_documented_comments<'b>(
         &mut self,
         comments: impl IntoIterator<Item = (u32, Option<&'b str>)>,
     ) -> Option<Document<'a>> {
@@ -3120,7 +3107,7 @@ impl<'comments> Formatter<'comments> {
         Some(doc.force_break())
     }
 
-    fn append_as_message_expression<'a>(
+    fn append_as_message_expression(
         &mut self,
         doc: Document<'a>,
         preceding_as: PrecedingAs,
@@ -3177,7 +3164,7 @@ impl<'comments> Formatter<'comments> {
         doc.group()
     }
 
-    fn append_as_message_constant<'a, A>(
+    fn append_as_message_constant<A>(
         &mut self,
         doc: Document<'a>,
         message: Option<&'a Constant<A>>,
@@ -3211,7 +3198,7 @@ impl<'comments> Formatter<'comments> {
         doc.group()
     }
 
-    fn echo<'a>(
+    fn echo(
         &mut self,
         expression: &'a Option<Box<UntypedExpr>>,
         message: &'a Option<Box<UntypedExpr>>,
@@ -3478,12 +3465,12 @@ fn commented<'a, 'comments>(
     }
 }
 
-fn bit_array_segment<Value, Type, ToDoc>(
-    segment: &BitArraySegment<Value, Type>,
+fn bit_array_segment<'a, Value, Type, ToDoc>(
+    segment: &'a BitArraySegment<Value, Type>,
     mut to_doc: ToDoc,
-) -> Document<'_>
+) -> Document<'a>
 where
-    ToDoc: FnMut(&Value) -> Document<'_>,
+    ToDoc: FnMut(&'a Value) -> Document<'a>,
 {
     match segment {
         BitArraySegment { value, options, .. } if options.is_empty() => to_doc(value),
@@ -3491,15 +3478,18 @@ where
         BitArraySegment { value, options, .. } => to_doc(value).append(":").append(join(
             options
                 .iter()
-                .map(|option| segment_option(option, |value| to_doc(value))),
+                .map(|option| segment_option(option, &mut to_doc)),
             "-".to_doc(),
         )),
     }
 }
 
-fn segment_option<ToDoc, Value>(option: &BitArrayOption<Value>, mut to_doc: ToDoc) -> Document<'_>
+fn segment_option<'a, ToDoc, Value>(
+    option: &'a BitArrayOption<Value>,
+    mut to_doc: ToDoc,
+) -> Document<'a>
 where
-    ToDoc: FnMut(&Value) -> Document<'_>,
+    ToDoc: FnMut(&'a Value) -> Document<'a>,
 {
     match option {
         BitArrayOption::Bytes { .. } => "bytes".to_doc(),
