@@ -50,6 +50,11 @@
   now points to the attribute itself and explains that it is incomplete.
   ([Asish Kumar](https://github.com/officialasishkumar))
 
+- The "did you mean one of these:" hint is now phrased in singular when there
+  is only one suggestion, additionally multiple suggestions are listed
+  in a consistent alphabetical order.
+  ([Zbyněk Juřica](https://github.com/zbyju))
+
 ### Build tool
 
 - The build tool now generates Hexdocs URLs using the new format of
