@@ -4209,6 +4209,72 @@ pub fn main() {
 }
 
 #[test]
+fn unknown_variable_suggest_two_modules() {
+    assert_module_error!(
+        (
+            "wibble",
+            "
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        (
+            "wobble",
+            "
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+// When multiple modules export a matching value the suggestion should be
+// pluralised.
+
+import wibble
+import wobble
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
+fn unknown_variable_suggest_three_modules() {
+    assert_module_error!(
+        (
+            "wibble",
+            "
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        (
+            "wobble",
+            "
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        (
+            "wabble",
+            "
+pub fn add(x: Int, y: Int) {
+    x + y
+}"
+        ),
+        "
+// When multiple modules export a matching value the suggestion should be
+// pluralised.
+
+import wibble
+import wobble
+import wabble
+pub fn main() {
+    add(1, 1)
+}"
+    );
+}
+
+#[test]
 pub fn clause_guard_is_fault_tolerant() {
     assert_module_error!(
         r#"

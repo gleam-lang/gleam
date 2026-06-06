@@ -1,0 +1,48 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\n// When multiple modules export a matching value the suggestion should be\n// pluralised.\n\nimport wibble\nimport wobble\nimport wabble\npub fn main() {\n    add(1, 1)\n}"
+---
+----- SOURCE CODE
+-- wibble.gleam
+
+pub fn add(x: Int, y: Int) {
+    x + y
+}
+
+-- wobble.gleam
+
+pub fn add(x: Int, y: Int) {
+    x + y
+}
+
+-- wabble.gleam
+
+pub fn add(x: Int, y: Int) {
+    x + y
+}
+
+-- main.gleam
+
+// When multiple modules export a matching value the suggestion should be
+// pluralised.
+
+import wibble
+import wobble
+import wabble
+pub fn main() {
+    add(1, 1)
+}
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:9:5
+  │
+9 │     add(1, 1)
+  │     ^^^
+
+The name `add` is not in scope here.
+Did you mean one of these:
+
+  - wabble.add
+  - wibble.add
+  - wobble.add
