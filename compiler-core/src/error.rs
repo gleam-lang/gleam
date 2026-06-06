@@ -534,6 +534,7 @@ impl Error {
             | hexpm::ApiError::Forbidden
             | hexpm::ApiError::NotReplacing
             | hexpm::ApiError::LateModification
+            | hexpm::ApiError::ReleaseTooLarge
             | hexpm::ApiError::OAuthTimeout
             | hexpm::ApiError::OAuthAccessDenied
             | hexpm::ApiError::ExpiredToken => Self::Hex(error.to_string()),

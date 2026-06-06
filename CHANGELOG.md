@@ -32,6 +32,10 @@
   `package.hexdocs.pm` rather than `hexdocs.pm/package`.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The build tool now shows a clearer error message when publishing to Hex
+  fails because the release tarball is too large.
+  ([kyo5uke](https://github.com/kyo5uke))
+
 ### Language server
 
 - The "pattern match on value" code action can now be used to pattern match on
