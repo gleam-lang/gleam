@@ -1257,6 +1257,7 @@ dependencies = [
  "time",
  "toml 0.9.11+spec-1.1.0",
  "tracing",
+ "typed-arena",
  "unicode-segmentation",
  "vec1",
  "xxhash-rust",
@@ -3810,6 +3811,12 @@ checksum = "deb68604048ff8fa93347f02441e4487594adc20bb8a084f9e564d2b827a0a9f"
 dependencies = [
  "rustc-hash 1.1.0",
 ]
+
+[[package]]
+name = "typed-arena"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6af6ae20167a9ece4bcb41af5b80f8a1f1df981f6391189ce00fd257af04126a"
 
 [[package]]
 name = "typed-path"

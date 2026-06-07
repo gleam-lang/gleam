@@ -3,7 +3,8 @@
 
 use crate::{
     Error, Result,
-    format::{Formatter, Intermediate},
+    format::{Formatter, FormatterCache, Intermediate},
+    pretty_ref_arena::DocumentArena,
     warning::WarningEmitter,
 };
 use camino::Utf8Path;
@@ -25,8 +26,10 @@ pub fn parse_fix_and_format(src: &EcoString, path: &Utf8Path) -> Result<String> 
 
     // Format
     let mut buffer = String::new();
+    let arena = DocumentArena::new();
+    let cache = FormatterCache::allocate(&arena);
     Formatter::with_comments(&intermediate)
-        .module(&module)
+        .module(&arena, &cache, &module)
         .pretty_print(80, &mut buffer)?;
 
     Ok(buffer)
