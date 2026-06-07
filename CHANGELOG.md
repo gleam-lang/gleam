@@ -118,6 +118,10 @@
   editors like Zed inserting the wrong text when accepting type completions.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the post-publish message for pushing a git commit was
+  formatted incorrectly.
+  ([Louis Pilfold](https://github.com/lpil))
+
 - Fixed a bug where the compiler would raise a warning for truncated int
   segments when compiling a function with a JavaScript external.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

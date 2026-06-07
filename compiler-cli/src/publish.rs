@@ -127,12 +127,12 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         if !tag_exists {
             println!(
                 "
-    Please push a git tag for this release so source code links in the
-    HTML documentation will work:
+Please push a git tag for this release so source code links in the
+HTML documentation will work:
 
-        git tag {tag_name}
-        git push origin {tag_name}
-    "
+    git tag {tag_name}
+    git push origin {tag_name}
+"
             )
         }
     }
