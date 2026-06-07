@@ -331,7 +331,7 @@ impl<'string, 'doc> Document<'string, 'doc> {
 
     /// Returns true when the document contains no printable characters
     /// (whitespace and newlines are considered printable characters).
-    pub fn is_empty(&self, arena: &DocumentArena<'string, 'doc>) -> bool {
+    pub fn is_empty(&self) -> bool {
         match self.0 {
             PrintableDocument::Empty => true,
             PrintableDocument::Line(n) => *n == 0,
@@ -342,10 +342,8 @@ impl<'string, 'doc> Document<'string, 'doc> {
             PrintableDocument::ForceBroken(document)
             | PrintableDocument::Nest(_, _, _, document)
             | PrintableDocument::Group(document)
-            | PrintableDocument::NextBreakFits(document, _) => document.is_empty(arena),
-            PrintableDocument::Join(first, second) => {
-                first.is_empty(arena) && second.is_empty(arena)
-            }
+            | PrintableDocument::NextBreakFits(document, _) => document.is_empty(),
+            PrintableDocument::Join(first, second) => first.is_empty() && second.is_empty(),
             // Zero-width strings don't count towards line length, but they are
             // still printed and so are not empty. (Unless their string contents
             // is also empty)
@@ -555,6 +553,12 @@ impl<'string, 'doc> std::fmt::Debug for DocumentArena<'string, 'doc> {
     }
 }
 
+impl<'string, 'doc> Default for DocumentArena<'string, 'doc> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'string, 'doc> DocumentArena<'string, 'doc> {
     pub fn new() -> Self {
         let documents = Arena::new();
@@ -666,7 +670,7 @@ impl<'string, 'doc> DocumentArena<'string, 'doc> {
             return self.nil();
         };
 
-        while let Some(next) = documents.next() {
+        for next in documents {
             previous = Document(
                 self.documents
                     .alloc(PrintableDocument::Join(previous, next)),
@@ -689,7 +693,7 @@ impl<'string, 'doc> DocumentArena<'string, 'doc> {
             return self.nil();
         };
 
-        while let Some(next) = elements.next() {
+        for next in elements {
             let doc = Document(
                 self.documents
                     .alloc(PrintableDocument::Join(previous, separator)),
@@ -800,7 +804,7 @@ fn format<'string, 'doc>(
             // increased accordingly.
             PrintableDocument::EcoString { string, graphemes } => {
                 width += graphemes;
-                writer.str_write(&string)?;
+                writer.str_write(string)?;
             }
 
             PrintableDocument::Str { string, graphemes } => {
@@ -810,7 +814,7 @@ fn format<'string, 'doc>(
 
             PrintableDocument::ZeroWidthString { string } => {
                 // We write the string, but do not increment the length
-                writer.str_write(&string)?;
+                writer.str_write(string)?;
             }
 
             // If multiple documents need to be printed, then they are all
