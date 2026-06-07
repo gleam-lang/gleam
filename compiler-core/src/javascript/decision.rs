@@ -13,7 +13,6 @@ use crate::{
         FallbackCheck, MatchTest, Offset, ReadAction, ReadSize, ReadType, RuntimeCheck,
         SizeOperator, SizeTest, Variable, VariableUsage,
     },
-    format::break_block,
     javascript::{
         TypeVariant,
         expression::{eco_string_int, string},
@@ -2067,4 +2066,12 @@ fn let_doc(variable_name: EcoString, value: Document<'_>) -> Document<'_> {
 ///
 fn utf16_no_escape_len(str: &EcoString) -> usize {
     length_utf16(&convert_string_escape_chars(str))
+}
+
+pub fn break_block(doc: Document<'_>) -> Document<'_> {
+    "{".to_doc()
+        .append(line().append(doc).nest(INDENT))
+        .append(line())
+        .append("}")
+        .force_break()
 }

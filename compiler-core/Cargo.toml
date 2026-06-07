@@ -51,6 +51,8 @@ stacker = "0.1.21"
 bitvec = { version = "1", features = ["serde"] }
 # Sourcemap generation
 sourcemap = "9"
+# Reference arena
+typed-arena = "2.0.2"
 
 async-trait.workspace = true
 base16.workspace = true
