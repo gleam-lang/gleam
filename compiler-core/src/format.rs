@@ -31,12 +31,120 @@ const INDENT: isize = 2;
 pub struct FormatterCache<'doc, 'a> {
     nil: Document<'doc, 'a>,
     space: Document<'doc, 'a>,
-
     empty_break: Document<'doc, 'a>,
     breakable_space: Document<'doc, 'a>,
-
+    flex_comma: Document<'doc, 'a>,
+    comma_break: Document<'doc, 'a>,
+    trailing_comma_break: Document<'doc, 'a>,
     line: Document<'doc, 'a>,
     two_lines: Document<'doc, 'a>,
+    module_comment: Document<'doc, 'a>,
+    doc_comment: Document<'doc, 'a>,
+    comment: Document<'doc, 'a>,
+    const_space: Document<'doc, 'a>,
+    opaque_type_space: Document<'doc, 'a>,
+    type_space: Document<'doc, 'a>,
+    echo_space: Document<'doc, 'a>,
+    import_space: Document<'doc, 'a>,
+    assert_space: Document<'doc, 'a>,
+    as_: Document<'doc, 'a>,
+    space_as: Document<'doc, 'a>,
+    space_as_space: Document<'doc, 'a>,
+    space_equal_space: Document<'doc, 'a>,
+    todo: Document<'doc, 'a>,
+    concat: Document<'doc, 'a>,
+    use_: Document<'doc, 'a>,
+    use_and_arrow: Document<'doc, 'a>,
+    left_arrow: Document<'doc, 'a>,
+    minus_space: Document<'doc, 'a>,
+    exclamation_mark: Document<'doc, 'a>,
+    pipe_space: Document<'doc, 'a>,
+    colon: Document<'doc, 'a>,
+    dot: Document<'doc, 'a>,
+    hashtag: Document<'doc, 'a>,
+    dot_dot: Document<'doc, 'a>,
+    colon_space: Document<'doc, 'a>,
+    open_curly: Document<'doc, 'a>,
+    open_curly_break: Document<'doc, 'a>,
+    space_open_curly: Document<'doc, 'a>,
+    close_curly: Document<'doc, 'a>,
+    open_square: Document<'doc, 'a>,
+    open_square_break: Document<'doc, 'a>,
+    close_square: Document<'doc, 'a>,
+    open_close_square: Document<'doc, 'a>,
+    open_paren: Document<'doc, 'a>,
+    open_paren_break: Document<'doc, 'a>,
+    close_paren: Document<'doc, 'a>,
+    open_close_paren: Document<'doc, 'a>,
+    empty_tuple: Document<'doc, 'a>,
+    open_tuple: Document<'doc, 'a>,
+    open_tuple_break: Document<'doc, 'a>,
+    fn_: Document<'doc, 'a>,
+    fn_space: Document<'doc, 'a>,
+    panic: Document<'doc, 'a>,
+    if_space: Document<'doc, 'a>,
+    space_right_arrow: Document<'doc, 'a>,
+    space_right_arrow_space: Document<'doc, 'a>,
+    let_space: Document<'doc, 'a>,
+    let_assert_space: Document<'doc, 'a>,
+    space_equal: Document<'doc, 'a>,
+    underscore: Document<'doc, 'a>,
+    double_quote: Document<'doc, 'a>,
+    open_paren_dot_dot_close_paren: Document<'doc, 'a>,
+    vertical_bar_space: Document<'doc, 'a>,
+    space_concat_space: Document<'doc, 'a>,
+    space_plus_space: Document<'doc, 'a>,
+    space_minus_space: Document<'doc, 'a>,
+    space_times_space: Document<'doc, 'a>,
+    space_module_space: Document<'doc, 'a>,
+    space_slash_space: Document<'doc, 'a>,
+    space_close_curly: Document<'doc, 'a>,
+    open_curly_space: Document<'doc, 'a>,
+    close_bit_array: Document<'doc, 'a>,
+    open_bit_array_break: Document<'doc, 'a>,
+    echo: Document<'doc, 'a>,
+    empty_bit_array: Document<'doc, 'a>,
+    open_bit_array: Document<'doc, 'a>,
+    right_arrow: Document<'doc, 'a>,
+    pub_space: Document<'doc, 'a>,
+    value: Document<'doc, 'a>,
+    size: Document<'doc, 'a>,
+    bytes: Document<'doc, 'a>,
+    bits: Document<'doc, 'a>,
+    int: Document<'doc, 'a>,
+    float: Document<'doc, 'a>,
+    utf8: Document<'doc, 'a>,
+    utf16: Document<'doc, 'a>,
+    utf32: Document<'doc, 'a>,
+    utf8_codepoint: Document<'doc, 'a>,
+    utf16_codepoint: Document<'doc, 'a>,
+    utf32_codepoint: Document<'doc, 'a>,
+    signed: Document<'doc, 'a>,
+    unsigned: Document<'doc, 'a>,
+    big: Document<'doc, 'a>,
+    little: Document<'doc, 'a>,
+    native: Document<'doc, 'a>,
+    and: Document<'doc, 'a>,
+    or: Document<'doc, 'a>,
+    lt_int: Document<'doc, 'a>,
+    lt_eq_int: Document<'doc, 'a>,
+    lt_float: Document<'doc, 'a>,
+    lt_eq_float: Document<'doc, 'a>,
+    eq: Document<'doc, 'a>,
+    not_eq: Document<'doc, 'a>,
+    gt_eq_int: Document<'doc, 'a>,
+    gt_int: Document<'doc, 'a>,
+    gt_eq_float: Document<'doc, 'a>,
+    gt_float: Document<'doc, 'a>,
+    add_int: Document<'doc, 'a>,
+    add_float: Document<'doc, 'a>,
+    sub_int: Document<'doc, 'a>,
+    sub_float: Document<'doc, 'a>,
+    mult_int: Document<'doc, 'a>,
+    mult_float: Document<'doc, 'a>,
+    div_int: Document<'doc, 'a>,
+    div_float: Document<'doc, 'a>,
+    remainder_int: Document<'doc, 'a>,
 }
 
 impl<'doc, 'a> FormatterCache<'doc, 'a> {
@@ -46,8 +154,118 @@ impl<'doc, 'a> FormatterCache<'doc, 'a> {
             space: " ".to_doc(arena),
             empty_break: arena.break_("", ""),
             breakable_space: arena.break_("", " "),
+            flex_comma: arena.flex_break(",", ", "),
+            comma_break: arena.break_(",", ", "),
+            trailing_comma_break: arena.break_(",", ""),
             line: arena.line(),
             two_lines: arena.lines(2),
+            module_comment: "////".to_doc(arena),
+            doc_comment: "///".to_doc(arena),
+            const_space: "const ".to_doc(arena),
+            opaque_type_space: "opaque type ".to_doc(arena),
+            type_space: "type ".to_doc(arena),
+            import_space: "import ".to_doc(arena),
+            space_as_space: " as ".to_doc(arena),
+            space_equal_space: " = ".to_doc(arena),
+            todo: "todo".to_doc(arena),
+            concat: "<>".to_doc(arena),
+            dot: ".".to_doc(arena),
+            dot_dot: "..".to_doc(arena),
+            colon_space: ": ".to_doc(arena),
+            open_curly: "{".to_doc(arena),
+            open_curly_break: arena.break_("{", "{ "),
+            close_curly: "}".to_doc(arena),
+            open_square: "[".to_doc(arena),
+            open_square_break: arena.break_("[", "["),
+            close_square: "]".to_doc(arena),
+            open_close_square: "[]".to_doc(arena),
+            comment: "//".to_doc(arena),
+            echo_space: "echo ".to_doc(arena),
+            as_: "as".to_doc(arena),
+            space_as: " as".to_doc(arena),
+            open_paren: "(".to_doc(arena),
+            open_paren_break: arena.break_("(", "("),
+            close_paren: ")".to_doc(arena),
+            open_close_paren: "()".to_doc(arena),
+            use_: "use".to_doc(arena),
+            use_and_arrow: "use <-".to_doc(arena),
+            left_arrow: "<-".to_doc(arena),
+            minus_space: "- ".to_doc(arena),
+            exclamation_mark: "!".to_doc(arena),
+            assert_space: "assert ".to_doc(arena),
+            pipe_space: "|> ".to_doc(arena),
+            colon: ":".to_doc(arena),
+            hashtag: "#".to_doc(arena),
+            space_open_curly: " {".to_doc(arena),
+            empty_tuple: "#()".to_doc(arena),
+            open_tuple: "#(".to_doc(arena),
+            open_tuple_break: arena.break_("#(", "#("),
+            fn_: "fn".to_doc(arena),
+            fn_space: "fn ".to_doc(arena),
+            panic: "panic".to_doc(arena),
+            if_space: "if ".to_doc(arena),
+            space_right_arrow: " ->".to_doc(arena),
+            space_right_arrow_space: " -> ".to_doc(arena),
+            let_space: "let ".to_doc(arena),
+            let_assert_space: "let assert ".to_doc(arena),
+            space_equal: " =".to_doc(arena),
+            underscore: "_".to_doc(arena),
+            double_quote: "\"".to_doc(arena),
+            open_paren_dot_dot_close_paren: "(..)".to_doc(arena),
+            vertical_bar_space: "| ".to_doc(arena),
+            space_concat_space: " <> ".to_doc(arena),
+            space_plus_space: " + ".to_doc(arena),
+            space_minus_space: " - ".to_doc(arena),
+            space_times_space: " * ".to_doc(arena),
+            space_module_space: " % ".to_doc(arena),
+            space_slash_space: " / ".to_doc(arena),
+            space_close_curly: " }".to_doc(arena),
+            open_curly_space: "{ ".to_doc(arena),
+            close_bit_array: ">>".to_doc(arena),
+            open_bit_array_break: arena.break_("<<", "<<"),
+            echo: "echo".to_doc(arena),
+            empty_bit_array: "<<>>".to_doc(arena),
+            open_bit_array: "<<".to_doc(arena),
+            right_arrow: "->".to_doc(arena),
+            pub_space: "pub ".to_doc(arena),
+            value: "value".to_doc(arena),
+            size: "size".to_doc(arena),
+            bytes: "bytes".to_doc(arena),
+            bits: "bits".to_doc(arena),
+            int: "int".to_doc(arena),
+            float: "float".to_doc(arena),
+            utf8: "utf8".to_doc(arena),
+            utf16: "utf16".to_doc(arena),
+            utf32: "utf32".to_doc(arena),
+            utf8_codepoint: "utf8_codepoint".to_doc(arena),
+            utf16_codepoint: "utf16_codepoint".to_doc(arena),
+            utf32_codepoint: "utf32_codepoint".to_doc(arena),
+            signed: "signed".to_doc(arena),
+            unsigned: "unsigned".to_doc(arena),
+            big: "big".to_doc(arena),
+            little: "little".to_doc(arena),
+            native: "native".to_doc(arena),
+            and: "&&".to_doc(arena),
+            or: "||".to_doc(arena),
+            lt_int: "<".to_doc(arena),
+            lt_eq_int: "<=".to_doc(arena),
+            lt_float: "<.".to_doc(arena),
+            lt_eq_float: "<=.".to_doc(arena),
+            eq: "==".to_doc(arena),
+            not_eq: "!=".to_doc(arena),
+            gt_eq_int: ">=".to_doc(arena),
+            gt_int: ">".to_doc(arena),
+            gt_eq_float: ">=.".to_doc(arena),
+            gt_float: ">.".to_doc(arena),
+            add_int: "+".to_doc(arena),
+            add_float: "+.".to_doc(arena),
+            sub_int: "-".to_doc(arena),
+            sub_float: "-.".to_doc(arena),
+            mult_int: "*".to_doc(arena),
+            mult_float: "*.".to_doc(arena),
+            div_int: "/".to_doc(arena),
+            div_float: "/.".to_doc(arena),
+            remainder_int: "%".to_doc(arena),
         }
     }
 }
@@ -295,7 +513,8 @@ impl<'a, 'doc> Formatter<'a> {
         // with any statement, and are moved to the bottom of the module.
         let doc_comments = arena.join(
             self.doc_comments.iter().map(|comment| {
-                "///"
+                cache
+                    .doc_comment
                     .to_doc(arena)
                     .append(arena, EcoString::from(comment.content))
             }),
@@ -310,7 +529,8 @@ impl<'a, 'doc> Formatter<'a> {
 
         let module_comments = if !self.module_comments.is_empty() {
             let comments = self.module_comments.iter().map(|s| {
-                "////"
+                cache
+                    .module_comment
                     .to_doc(arena)
                     .append(arena, EcoString::from(s.content))
             });
@@ -455,27 +675,27 @@ impl<'a, 'doc> Formatter<'a> {
                     let unqualified_types = unqualified_types
                         .iter()
                         .sorted_by(|a, b| a.name.cmp(&b.name))
-                        .map(|type_| docvec_ref_arena![arena, "type ", type_]);
+                        .map(|type_| docvec_ref_arena![arena, cache.type_space, type_]);
                     let unqualified_values = unqualified_values
                         .iter()
                         .sorted_by(|a, b| a.name.cmp(&b.name))
                         .map(|value| value.to_doc(arena));
                     let unqualified = arena.join(
                         unqualified_types.chain(unqualified_values),
-                        arena.flex_break(",", ", "),
+                        cache.flex_comma,
                     );
-                    let unqualified = arena
-                        .break_("", "")
+                    let unqualified = cache
+                        .empty_break
                         .append(arena, unqualified)
                         .nest(arena, INDENT)
-                        .append(arena, arena.break_(",", ""))
+                        .append(arena, cache.trailing_comma_break)
                         .group(arena);
                     ".{".to_doc(arena)
                         .append(arena, unqualified)
-                        .append(arena, "}")
+                        .append(arena, cache.close_curly)
                 };
 
-                let doc = docvec_ref_arena![arena, "import ", module.as_str(), second];
+                let doc = docvec_ref_arena![arena, cache.import_space, module.as_str(), second];
                 let default_module_access_name = module.split('/').next_back().map(EcoString::from);
                 match (default_module_access_name, as_name) {
                     // If the `as name` is the same as the module name that would be
@@ -491,7 +711,7 @@ impl<'a, 'doc> Formatter<'a> {
                     }
                     (_, None) => doc,
                     (_, Some((AssignName::Variable(name) | AssignName::Discard(name), _))) => {
-                        doc.append(arena, " as ").append(arena, name)
+                        doc.append(arena, cache.space_as_space).append(arena, name)
                     }
                 }
             }
@@ -513,16 +733,16 @@ impl<'a, 'doc> Formatter<'a> {
                     .set_deprecation(deprecation)
                     .to_doc(arena);
                 let head = attributes
-                    .append(arena, pub_(arena, cache, *publicity))
-                    .append(arena, "const ")
+                    .append(arena, pub_(cache, *publicity))
+                    .append(arena, cache.const_space)
                     .append(arena, name.as_str());
                 let head = match annotation {
                     None => head,
                     Some(type_) => head
-                        .append(arena, ": ")
+                        .append(arena, cache.colon_space)
                         .append(arena, self.type_ast(arena, cache, type_)),
                 };
-                head.append(arena, " = ")
+                head.append(arena, cache.space_equal_space)
                     .append(arena, self.const_expr(arena, cache, value).group(arena))
             }
         }
@@ -536,12 +756,9 @@ impl<'a, 'doc> Formatter<'a> {
     ) -> Document<'a, 'doc> {
         let comments = self.pop_comments(value.location().start);
         let document = match value {
-            Constant::Todo { message, .. } => self.append_as_message_constant(
-                arena,
-                cache,
-                "todo".to_doc(arena),
-                message.as_deref(),
-            ),
+            Constant::Todo { message, .. } => {
+                self.append_as_message_constant(arena, cache, cache.todo, message.as_deref())
+            }
 
             Constant::Int { value, .. } => self.int(arena, cache, value),
 
@@ -596,7 +813,7 @@ impl<'a, 'doc> Formatter<'a> {
                 ..
             } => module
                 .to_doc(arena)
-                .append(arena, ".")
+                .append(arena, cache.dot)
                 .append(arena, name.as_str()),
 
             Constant::Record {
@@ -631,7 +848,7 @@ impl<'a, 'doc> Formatter<'a> {
                     .collect_vec();
                 module
                     .to_doc(arena)
-                    .append(arena, ".")
+                    .append(arena, cache.dot)
                     .append(arena, name.as_str())
                     .append(
                         arena,
@@ -648,14 +865,11 @@ impl<'a, 'doc> Formatter<'a> {
                 name,
                 module: Some((module, _)),
                 ..
-            } => docvec_ref_arena![arena, module, ".", name],
+            } => docvec_ref_arena![arena, module, cache.dot, name],
 
             Constant::StringConcatenation { left, right, .. } => self
                 .const_expr(arena, cache, left)
-                .append(
-                    arena,
-                    cache.breakable_space.append(arena, "<>".to_doc(arena)),
-                )
+                .append(arena, cache.breakable_space.append(arena, cache.concat))
                 .nest(arena, INDENT)
                 .append(arena, cache.space)
                 .append(arena, self.const_expr(arena, cache, right)),
@@ -688,13 +902,13 @@ impl<'a, 'doc> Formatter<'a> {
             // any comment we want to put it inside the empty list!
             let comments = self.pop_comments(location.end);
             return match printed_comments(arena, cache, comments, false) {
-                None => "[]".to_doc(arena),
-                Some(comments) => "["
-                    .to_doc(arena)
+                None => cache.open_close_square,
+                Some(comments) => cache
+                    .open_square
                     .append(arena, cache.empty_break.nest(arena, INDENT))
                     .append(arena, comments)
                     .append(arena, cache.empty_break)
-                    .append(arena, "]")
+                    .append(arena, cache.close_square)
                     // vvv We want to make sure the comments are on a separate
                     //     line from the opening and closing brackets so we
                     //     force the breaks to be split on newlines.
@@ -709,8 +923,8 @@ impl<'a, 'doc> Formatter<'a> {
             *location,
         );
         let comma = match list_packing {
-            ItemsPacking::FitMultiplePerLine => arena.flex_break(",", ", "),
-            ItemsPacking::FitOnePerLine | ItemsPacking::BreakOnePerLine => arena.break_(",", ", "),
+            ItemsPacking::FitMultiplePerLine => cache.flex_comma,
+            ItemsPacking::FitOnePerLine | ItemsPacking::BreakOnePerLine => cache.comma_break,
         };
 
         let mut elements_doc = cache.nil;
@@ -738,20 +952,20 @@ impl<'a, 'doc> Formatter<'a> {
         }
         elements_doc = elements_doc.next_break_fits(arena, NextBreakFitsMode::Disabled);
 
-        let doc = arena.break_("[", "[").append(arena, elements_doc);
+        let doc = cache.open_square_break.append(arena, elements_doc);
         let (doc, final_break) = match tail {
-            None => (doc.nest(arena, INDENT), arena.break_(",", "")),
+            None => (doc.nest(arena, INDENT), cache.trailing_comma_break),
             Some(tail) => {
                 let comments = self.pop_comments(tail.location().start);
 
                 let tail = commented(
                     arena,
                     cache,
-                    docvec_ref_arena![arena, "..", self.const_expr(arena, cache, tail)],
+                    docvec_ref_arena![arena, cache.dot_dot, self.const_expr(arena, cache, tail)],
                     comments,
                 );
                 (
-                    doc.append(arena, arena.break_(",", ", "))
+                    doc.append(arena, cache.comma_break)
                         .append(arena, tail)
                         .nest(arena, INDENT),
                     cache.empty_break,
@@ -766,7 +980,9 @@ impl<'a, 'doc> Formatter<'a> {
         // Otherwise those would be moved out of the list.
         let comments = self.pop_comments(location.end);
         let doc = match printed_comments(arena, cache, comments, false) {
-            None => doc.append(arena, final_break).append(arena, "]"),
+            None => doc
+                .append(arena, final_break)
+                .append(arena, cache.close_square),
             Some(comment) => doc
                 .append(arena, final_break.nest(arena, INDENT))
                 // ^ See how here we're adding the missing indentation to the
@@ -774,7 +990,7 @@ impl<'a, 'doc> Formatter<'a> {
                 //   list's items.
                 .append(arena, comment)
                 .append(arena, cache.line)
-                .append(arena, "]")
+                .append(arena, cache.close_square)
                 .force_break(arena),
         };
 
@@ -797,13 +1013,13 @@ impl<'a, 'doc> Formatter<'a> {
             // any comment we want to put it inside the empty list!
             let comments = self.pop_comments(location.end);
             return match printed_comments(arena, cache, comments, false) {
-                None => "#()".to_doc(arena),
-                Some(comments) => "#("
-                    .to_doc(arena)
+                None => cache.empty_tuple,
+                Some(comments) => cache
+                    .open_tuple
                     .append(arena, cache.empty_break.nest(arena, INDENT))
                     .append(arena, comments)
                     .append(arena, cache.empty_break)
-                    .append(arena, ")")
+                    .append(arena, cache.close_paren)
                     // vvv We want to make sure the comments are on a separate
                     //     line from the opening and closing parentheses so we
                     //     force the breaks to be split on newlines.
@@ -814,12 +1030,12 @@ impl<'a, 'doc> Formatter<'a> {
         let arguments_docs = elements
             .iter()
             .map(|element| self.const_expr(arena, cache, element));
-        let tuple_doc = arena
-            .break_("#(", "#(")
+        let tuple_doc = cache
+            .open_tuple_break
             .append(
                 arena,
                 arena
-                    .join(arguments_docs, arena.break_(",", ", "))
+                    .join(arguments_docs, cache.comma_break)
                     .next_break_fits(arena, NextBreakFitsMode::Disabled),
             )
             .nest(arena, INDENT);
@@ -827,14 +1043,14 @@ impl<'a, 'doc> Formatter<'a> {
         let comments = self.pop_comments(location.end);
         match printed_comments(arena, cache, comments, false) {
             None => tuple_doc
-                .append(arena, arena.break_(",", ""))
-                .append(arena, ")")
+                .append(arena, cache.trailing_comma_break)
+                .append(arena, cache.close_paren)
                 .group(arena),
             Some(comments) => tuple_doc
-                .append(arena, arena.break_(",", "").nest(arena, INDENT))
+                .append(arena, cache.trailing_comma_break.nest(arena, INDENT))
                 .append(arena, comments)
                 .append(arena, cache.line)
-                .append(arena, ")")
+                .append(arena, cache.close_paren)
                 .force_break(arena),
         }
     }
@@ -866,9 +1082,7 @@ impl<'a, 'doc> Formatter<'a> {
             Some(_) => arena
                 .join(
                     comments.map(|comment| match comment {
-                        Some(comment) => {
-                            "///".to_doc(arena).append(arena, EcoString::from(comment))
-                        }
+                        Some(comment) => cache.doc_comment.append(arena, EcoString::from(comment)),
                         None => unreachable!("empty lines dropped by pop_doc_comments"),
                     }),
                     cache.line,
@@ -889,7 +1103,7 @@ impl<'a, 'doc> Formatter<'a> {
         let head = match name {
             TypeAstConstructorName::Unqualified { name, .. } => name.to_doc(arena),
             TypeAstConstructorName::Qualified { module, name, .. } => {
-                module.to_doc(arena).append(arena, ".").append(
+                module.to_doc(arena).append(arena, cache.dot).append(
                     arena,
                     name.as_ref()
                         .map_or(cache.nil, |(name, _name_location)| name.to_doc(arena)),
@@ -929,14 +1143,14 @@ impl<'a, 'doc> Formatter<'a> {
                 arguments,
                 return_,
                 location,
-            }) => "fn"
-                .to_doc(arena)
+            }) => cache
+                .fn_
                 .append(
                     arena,
                     self.type_arguments(arena, cache, arguments, location),
                 )
                 .group(arena)
-                .append(arena, " ->")
+                .append(arena, cache.space_right_arrow)
                 .append(
                     arena,
                     cache
@@ -948,8 +1162,8 @@ impl<'a, 'doc> Formatter<'a> {
 
             TypeAst::Var(TypeAstVar { name, .. }) => name.to_doc(arena),
 
-            TypeAst::Tuple(TypeAstTuple { elements, location }) => "#"
-                .to_doc(arena)
+            TypeAst::Tuple(TypeAstTuple { elements, location }) => cache
+                .hashtag
                 .append(arena, self.type_arguments(arena, cache, elements, location)),
         };
 
@@ -996,8 +1210,8 @@ impl<'a, 'doc> Formatter<'a> {
         let head = docvec_ref_arena![
             arena,
             attributes,
-            pub_(arena, cache, *publicity),
-            "type ",
+            pub_(cache, *publicity),
+            cache.type_space,
             name
         ];
         let head = if arguments.is_empty() {
@@ -1033,7 +1247,7 @@ impl<'a, 'doc> Formatter<'a> {
             Some(type_) => argument
                 .names
                 .to_doc(arena)
-                .append(arena, ": ")
+                .append(arena, cache.colon_space)
                 .append(arena, self.type_ast(arena, cache, type_)),
         }
         .group(arena);
@@ -1076,8 +1290,8 @@ impl<'a, 'doc> Formatter<'a> {
             .iter()
             .map(|argument| self.fn_arg(arena, cache, argument))
             .collect_vec();
-        let signature = pub_(arena, cache, *publicity)
-            .append(arena, "fn ")
+        let signature = pub_(cache, *publicity)
+            .append(arena, cache.fn_space)
             .append(
                 arena,
                 &name
@@ -1102,7 +1316,7 @@ impl<'a, 'doc> Formatter<'a> {
         // Add return annotation
         let signature = match &return_annotation {
             Some(annotation) => signature
-                .append(arena, " -> ")
+                .append(arena, cache.space_right_arrow_space)
                 .append(arena, self.type_ast(arena, cache, annotation)),
             None => signature,
         };
@@ -1121,7 +1335,7 @@ impl<'a, 'doc> Formatter<'a> {
 
         // Stick it all together
         let function = signature
-            .append(arena, " {")
+            .append(arena, cache.space_open_curly)
             .group(arena)
             .append(
                 arena,
@@ -1132,7 +1346,7 @@ impl<'a, 'doc> Formatter<'a> {
                     .group(arena),
             )
             .append(arena, cache.line)
-            .append(arena, "}");
+            .append(arena, cache.close_curly);
 
         docvec_ref_arena![arena, attributes, function]
     }
@@ -1176,7 +1390,7 @@ impl<'a, 'doc> Formatter<'a> {
         let header = match return_annotation {
             None => header,
             Some(return_annotation) => header
-                .append(arena, " -> ")
+                .append(arena, cache.space_right_arrow_space)
                 .append(arena, self.type_ast(arena, cache, return_annotation)),
         };
 
@@ -1218,7 +1432,7 @@ impl<'a, 'doc> Formatter<'a> {
             // todo to make it explicit it has an unimplemented callback.
             if statement.is_use() && i == count - 1 {
                 documents.push(cache.line);
-                documents.push("todo".to_doc(arena));
+                documents.push(cache.todo);
             }
         }
 
@@ -1251,21 +1465,22 @@ impl<'a, 'doc> Formatter<'a> {
         let _ = self.pop_empty_lines(pattern.location().end);
 
         let (keyword, message) = match kind {
-            AssignmentKind::Let | AssignmentKind::Generated => ("let ", None),
-            AssignmentKind::Assert { message, .. } => ("let assert ", message.as_ref()),
+            AssignmentKind::Let | AssignmentKind::Generated => (cache.let_space, None),
+            AssignmentKind::Assert { message, .. } => (cache.let_assert_space, message.as_ref()),
         };
 
         let pattern = self.pattern(arena, cache, pattern);
 
         let annotation = annotation.as_ref().map(|annotation| {
-            ": ".to_doc(arena)
+            cache
+                .colon_space
                 .append(arena, self.type_ast(arena, cache, annotation))
         });
 
         let doc = keyword
             .to_doc(arena)
             .append(arena, pattern.append(arena, annotation).group(arena))
-            .append(arena, " =")
+            .append(arena, cache.space_equal)
             .append(arena, self.assigned_value(arena, cache, value));
 
         commented(
@@ -1288,7 +1503,7 @@ impl<'a, 'doc> Formatter<'a> {
             UntypedExpr::Panic { message, .. } => self.append_as_message_expression(
                 arena,
                 cache,
-                "panic".to_doc(arena),
+                cache.panic,
                 PrecedingAs::Keyword,
                 message.as_deref(),
             ),
@@ -1296,7 +1511,7 @@ impl<'a, 'doc> Formatter<'a> {
             UntypedExpr::Todo { message, .. } => self.append_as_message_expression(
                 arena,
                 cache,
-                "todo".to_doc(arena),
+                cache.todo,
                 PrecedingAs::Keyword,
                 message.as_deref(),
             ),
@@ -1324,7 +1539,7 @@ impl<'a, 'doc> Formatter<'a> {
                 ..
             } => self.block(arena, cache, location, statements, false),
 
-            UntypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => "_".to_doc(arena),
+            UntypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => cache.underscore,
 
             UntypedExpr::Var { name, .. } => name.to_doc(arena),
 
@@ -1393,7 +1608,7 @@ impl<'a, 'doc> Formatter<'a> {
                 label, container, ..
             } => self
                 .expr(arena, cache, container)
-                .append(arena, ".")
+                .append(arena, cache.dot)
                 .append(arena, label.as_str()),
 
             UntypedExpr::Tuple { elements, location } => {
@@ -1435,10 +1650,12 @@ impl<'a, 'doc> Formatter<'a> {
     fn string(
         &self,
         arena: &'doc DocumentArena<'a, 'doc>,
-        _cache: &'doc FormatterCache<'a, 'doc>,
+        cache: &'doc FormatterCache<'a, 'doc>,
         string: &'a EcoString,
     ) -> Document<'a, 'doc> {
-        let doc = string.to_doc(arena).surround(arena, "\"", "\"");
+        let doc = string
+            .to_doc(arena)
+            .surround(arena, cache.double_quote, cache.double_quote);
         if string.contains('\n') {
             doc.force_break(arena)
         } else {
@@ -1454,15 +1671,19 @@ impl<'a, 'doc> Formatter<'a> {
     ) -> Document<'a, 'doc> {
         let lines = string.split('\n').collect_vec();
         match lines.as_slice() {
-            [] | [_] => string.to_doc(arena).surround(arena, "\"", "\""),
+            [] | [_] => {
+                string
+                    .to_doc(arena)
+                    .surround(arena, cache.double_quote, cache.double_quote)
+            }
             [first_line, lines @ ..] => {
-                let mut doc = docvec_ref_arena![arena, "\"", *first_line];
+                let mut doc = docvec_ref_arena![arena, cache.double_quote, *first_line];
                 for line in lines {
                     doc = doc
                         .append(arena, cache.line.set_nesting(arena, 0))
                         .append(arena, line.to_doc(arena))
                 }
-                doc.append(arena, "\"".to_doc(arena)).group(arena)
+                doc.append(arena, cache.double_quote).group(arena)
             }
         }
     }
@@ -1478,8 +1699,6 @@ impl<'a, 'doc> Formatter<'a> {
         let integer_part = parts.next().unwrap_or_default();
         let floating_part = parts.next().unwrap_or_default();
         let integer_doc = self.underscore_integer_string(arena, cache, integer_part);
-        let dot_doc = ".".to_doc(arena);
-
         // Split fp_part into a regular fractional and maybe a scientific part
         let (fractional_part, scientific_part) = floating_part.split_at(
             floating_part
@@ -1497,7 +1716,7 @@ impl<'a, 'doc> Formatter<'a> {
         let float_doc = fractional_part.chars().collect::<EcoString>();
 
         integer_doc
-            .append(arena, dot_doc)
+            .append(arena, cache.dot)
             .append(arena, float_doc)
             .append(arena, scientific_part)
     }
@@ -1574,12 +1793,15 @@ impl<'a, 'doc> Formatter<'a> {
         }
 
         let name = match module {
-            Some((module, _)) => module.to_doc(arena).append(arena, ".").append(arena, name),
+            Some((module, _)) => module
+                .to_doc(arena)
+                .append(arena, cache.dot)
+                .append(arena, name),
             None => name.to_doc(arena),
         };
 
         if arguments.is_empty() && spread.is_some() {
-            name.append(arena, "(..)")
+            name.append(arena, cache.open_paren_dot_dot_close_paren)
         } else if arguments.is_empty() {
             name
         } else if spread.is_some() {
@@ -1595,9 +1817,9 @@ impl<'a, 'doc> Formatter<'a> {
         } else {
             match arguments {
                 [argument] if is_breakable(&argument.value) => name
-                    .append(arena, "(")
+                    .append(arena, cache.open_paren)
                     .append(arena, self.pattern_call_arg(arena, cache, argument))
-                    .append(arena, ")")
+                    .append(arena, cache.close_paren)
                     .group(arena),
 
                 _ => {
@@ -1674,13 +1896,13 @@ impl<'a, 'doc> Formatter<'a> {
             // that is all comments that are inside "#(" and ")", if there's
             // any comment we want to put it inside the empty tuple!
             return match printed_comments(arena, cache, self.pop_comments(location.end), false) {
-                None => "#()".to_doc(arena),
-                Some(comments) => "#("
-                    .to_doc(arena)
+                None => cache.empty_tuple,
+                Some(comments) => cache
+                    .open_tuple
                     .append(arena, cache.empty_break.nest(arena, INDENT))
                     .append(arena, comments)
                     .append(arena, cache.empty_break)
-                    .append(arena, ")")
+                    .append(arena, cache.close_paren)
                     // vvv We want to make sure the comments are on a separate
                     //     line from the opening and closing parentheses so we
                     //     force the breaks to be split on newlines.
@@ -1691,7 +1913,7 @@ impl<'a, 'doc> Formatter<'a> {
         self.append_inlinable_wrapped_arguments(
             arena,
             cache,
-            "#".to_doc(arena),
+            cache.hashtag,
             elements,
             location,
             |expression| {
@@ -1776,12 +1998,12 @@ impl<'a, 'doc> Formatter<'a> {
                     subjects
                         .iter()
                         .map(|subject| self.expr(arena, cache, subject).group(arena)),
-                    arena.break_(",", ", "),
+                    cache.comma_break,
                 ),
             )
             .nest(arena, INDENT)
             .append(arena, cache.breakable_space)
-            .append(arena, "{")
+            .append(arena, cache.open_curly)
             .next_break_fits(arena, NextBreakFitsMode::Disabled)
             .group(arena);
 
@@ -1798,11 +2020,11 @@ impl<'a, 'doc> Formatter<'a> {
         // Otherwise those would be moved out of the case expression.
         let comments = self.pop_comments(location.end);
         let closing_bracket = match printed_comments(arena, cache, comments, false) {
-            None => docvec_ref_arena![arena, cache.line, "}"],
+            None => docvec_ref_arena![arena, cache.line, cache.close_curly],
             Some(comment) => docvec_ref_arena![arena, cache.line, comment]
                 .nest(arena, INDENT)
                 .append(arena, cache.line)
-                .append(arena, "}"),
+                .append(arena, cache.close_curly),
         };
 
         subjects_doc
@@ -1850,7 +2072,8 @@ impl<'a, 'doc> Formatter<'a> {
                     commented(
                         arena,
                         cache,
-                        "..".to_doc(arena)
+                        cache
+                            .dot_dot
                             .append(arena, this.expr(arena, cache, &record.base)),
                         comments,
                     )
@@ -1872,7 +2095,7 @@ impl<'a, 'doc> Formatter<'a> {
         let constructor_doc = match module {
             Some((m, _)) => m
                 .to_doc(arena)
-                .append(arena, ".")
+                .append(arena, cache.dot)
                 .append(arena, name.as_str()),
             None => name.to_doc(arena),
         };
@@ -1887,14 +2110,16 @@ impl<'a, 'doc> Formatter<'a> {
                 RecordUpdatePiece::Argument(argument) => {
                     let comments = self.pop_comments(argument.location.start);
                     let doc = match argument {
-                        _ if argument.uses_label_shorthand() => {
-                            argument.label.as_str().to_doc(arena).append(arena, ":")
-                        }
+                        _ if argument.uses_label_shorthand() => argument
+                            .label
+                            .as_str()
+                            .to_doc(arena)
+                            .append(arena, cache.colon),
                         _ => argument
                             .label
                             .as_str()
                             .to_doc(arena)
-                            .append(arena, ": ")
+                            .append(arena, cache.colon_space)
                             .append(arena, self.const_expr(arena, cache, &argument.value))
                             .group(arena),
                     };
@@ -1905,7 +2130,8 @@ impl<'a, 'doc> Formatter<'a> {
                     commented(
                         arena,
                         cache,
-                        "..".to_doc(arena)
+                        cache
+                            .dot_dot
                             .append(arena, self.const_expr(arena, cache, &record.base)),
                         comments,
                     )
@@ -1930,9 +2156,10 @@ impl<'a, 'doc> Formatter<'a> {
         let left_side = self.bin_op_side(arena, cache, name, left, nest_steps);
 
         let comments = self.pop_comments(right.start_byte_index());
-        let name_doc = cache
-            .breakable_space
-            .append(arena, commented(arena, cache, name.to_doc(arena), comments));
+        let name_doc = cache.breakable_space.append(
+            arena,
+            commented(arena, cache, binop(*name, cache), comments),
+        );
 
         let right_side = self.bin_op_side(arena, cache, name, right, nest_steps);
 
@@ -1945,7 +2172,7 @@ impl<'a, 'doc> Formatter<'a> {
                     name_doc
                 },
             )
-            .append(arena, " ")
+            .append(arena, cache.space)
             .append(arena, right_side)
     }
 
@@ -2091,10 +2318,7 @@ impl<'a, 'doc> Formatter<'a> {
             } else {
                 cache.line
             };
-            let pipe = space.append(
-                arena,
-                commented(arena, cache, "|> ".to_doc(arena), comments),
-            );
+            let pipe = space.append(arena, commented(arena, cache, cache.pipe_space, comments));
             let pipe = if nest_pipe {
                 pipe.nest(arena, INDENT)
             } else {
@@ -2238,7 +2462,7 @@ impl<'a, 'doc> Formatter<'a> {
                         let argument = match label {
                             Some((_, label)) => label
                                 .to_doc(arena)
-                                .append(arena, ": ")
+                                .append(arena, cache.colon_space)
                                 .append(arena, self.type_ast(arena, cache, ast)),
                             None => self.type_ast(arena, cache, ast),
                         };
@@ -2304,8 +2528,15 @@ impl<'a, 'doc> Formatter<'a> {
             .to_doc(arena);
 
         let doc = attributes
-            .append(arena, pub_(arena, cache, *publicity))
-            .append(arena, if *opaque { "opaque type " } else { "type " })
+            .append(arena, pub_(cache, *publicity))
+            .append(
+                arena,
+                if *opaque {
+                    cache.opaque_type_space
+                } else {
+                    cache.type_space
+                },
+            )
             .append(
                 arena,
                 if parameters.is_empty() {
@@ -2331,7 +2562,7 @@ impl<'a, 'doc> Formatter<'a> {
         if constructors.is_empty() {
             return doc;
         }
-        let doc = doc.append(arena, " {");
+        let doc = doc.append(arena, cache.space_open_curly);
 
         let inner = arena.concat(constructors.iter().map(|c| {
             if self.pop_empty_lines(c.location.start) {
@@ -2352,7 +2583,7 @@ impl<'a, 'doc> Formatter<'a> {
 
         doc.append(arena, inner)
             .append(arena, cache.line)
-            .append(arena, "}")
+            .append(arena, cache.close_curly)
     }
 
     fn call_arg(
@@ -2387,12 +2618,15 @@ impl<'a, 'doc> Formatter<'a> {
             CallArgFormatting::Unlabelled(value) => format_value(self, value),
             CallArgFormatting::ShorthandLabelled(label) => {
                 let comments = self.pop_comments(argument.location.start);
-                let label = label.as_ref().to_doc(arena).append(arena, ":");
+                let label = label.as_ref().to_doc(arena).append(arena, cache.colon);
                 commented(arena, cache, label, comments)
             }
             CallArgFormatting::Labelled(label, value) => {
                 let comments = self.pop_comments(argument.location.start);
-                let label = label.as_ref().to_doc(arena).append(arena, ": ");
+                let label = label
+                    .as_ref()
+                    .to_doc(arena)
+                    .append(arena, cache.colon_space);
                 let value = format_value(self, value);
                 commented(arena, cache, label, comments).append(arena, value)
             }
@@ -2411,7 +2645,11 @@ impl<'a, 'doc> Formatter<'a> {
             _ if argument.uses_label_shorthand() => commented(
                 arena,
                 cache,
-                argument.label.as_str().to_doc(arena).append(arena, ":"),
+                argument
+                    .label
+                    .as_str()
+                    .to_doc(arena)
+                    .append(arena, cache.colon),
                 comments,
             ),
             // Labelled argument.
@@ -2420,7 +2658,7 @@ impl<'a, 'doc> Formatter<'a> {
                     .label
                     .as_str()
                     .to_doc(arena)
-                    .append(arena, ": ")
+                    .append(arena, cache.colon_space)
                     .append(arena, self.expr(arena, cache, &argument.value))
                     .group(arena);
 
@@ -2461,7 +2699,7 @@ impl<'a, 'doc> Formatter<'a> {
         } else {
             self.expr(arena, cache, tuple)
         }
-        .append(arena, ".")
+        .append(arena, cache.dot)
         .append(arena, index)
     }
 
@@ -2573,7 +2811,7 @@ impl<'a, 'doc> Formatter<'a> {
             Some(guard) => self
                 .alternative_patterns(arena, cache, clause)
                 .append(arena, cache.breakable_space.nest(arena, INDENT))
-                .append(arena, "if ")
+                .append(arena, cache.if_space)
                 .append(
                     arena,
                     self.clause_guard(arena, cache, guard)
@@ -2605,7 +2843,7 @@ impl<'a, 'doc> Formatter<'a> {
             cache.space
         };
 
-        let clause_doc = docvec_ref_arena![arena, clause_doc, arrow_break, "->"]
+        let clause_doc = docvec_ref_arena![arena, clause_doc, arrow_break, cache.right_arrow]
             .group(arena)
             .append(arena, self.case_clause_value(arena, cache, &clause.then))
             .group(arena);
@@ -2651,9 +2889,11 @@ impl<'a, 'doc> Formatter<'a> {
             cache
                 .breakable_space
                 .nest(arena, INDENT)
-                .append(arena, "| ")
+                .append(arena, cache.vertical_bar_space)
         } else {
-            cache.breakable_space.append(arena, "| ")
+            cache
+                .breakable_space
+                .append(arena, cache.vertical_bar_space)
         };
 
         let alternative_patterns = std::iter::once(&clause.pattern)
@@ -2691,7 +2931,7 @@ impl<'a, 'doc> Formatter<'a> {
                 // going to be nested) and make the subjects into a group to
                 // make sure the formatter tries to keep them on a single line.
                 arena
-                    .join(pattern_docs, arena.break_(",", ", ").nest(arena, INDENT))
+                    .join(pattern_docs, cache.comma_break.nest(arena, INDENT))
                     .group(arena)
             });
         arena.join(alternative_patterns, alternatives_separator)
@@ -2714,13 +2954,13 @@ impl<'a, 'doc> Formatter<'a> {
                 None => {
                     let comments = self.pop_comments(location.end);
                     match printed_comments(arena, cache, comments, false) {
-                        None => "[]".to_doc(arena),
-                        Some(comments) => "["
-                            .to_doc(arena)
+                        None => cache.open_close_square,
+                        Some(comments) => cache
+                            .open_square
                             .append(arena, cache.empty_break.nest(arena, INDENT))
                             .append(arena, comments)
                             .append(arena, cache.empty_break)
-                            .append(arena, "]")
+                            .append(arena, cache.close_square)
                             // vvv We want to make sure the comments are on a separate
                             //     line from the opening and closing brackets so we
                             //     force the breaks to be split on newlines.
@@ -2738,8 +2978,8 @@ impl<'a, 'doc> Formatter<'a> {
         );
 
         let comma = match list_packing {
-            ItemsPacking::FitMultiplePerLine => arena.flex_break(",", ", "),
-            ItemsPacking::FitOnePerLine | ItemsPacking::BreakOnePerLine => arena.break_(",", ", "),
+            ItemsPacking::FitMultiplePerLine => cache.flex_comma,
+            ItemsPacking::FitOnePerLine | ItemsPacking::BreakOnePerLine => cache.comma_break,
         };
 
         let list_size = elements.len()
@@ -2773,24 +3013,24 @@ impl<'a, 'doc> Formatter<'a> {
         }
         elements_doc = elements_doc.next_break_fits(arena, NextBreakFitsMode::Disabled);
 
-        let doc = arena.break_("[", "[").append(arena, elements_doc);
+        let doc = cache.open_square_break.append(arena, elements_doc);
         // We need to keep the last break aside and do not add it immediately
         // because in case there's a final comment before the closing square
         // bracket we want to add indentation (to just that break). Otherwise,
         // the final comment would be less indented than list's elements.
         let (doc, last_break) = match tail {
-            None => (doc.nest(arena, INDENT), arena.break_(",", "")),
+            None => (doc.nest(arena, INDENT), cache.trailing_comma_break),
 
             Some(tail) => {
                 let comments = self.pop_comments(tail.location().start);
                 let tail = commented(
                     arena,
                     cache,
-                    docvec_ref_arena![arena, "..", self.expr(arena, cache, tail)],
+                    docvec_ref_arena![arena, cache.dot_dot, self.expr(arena, cache, tail)],
                     comments,
                 );
                 (
-                    doc.append(arena, arena.break_(",", ", "))
+                    doc.append(arena, cache.comma_break)
                         .append(arena, tail)
                         .nest(arena, INDENT),
                     cache.empty_break,
@@ -2805,7 +3045,9 @@ impl<'a, 'doc> Formatter<'a> {
         // Otherwise those would be moved out of the list.
         let comments = self.pop_comments(location.end);
         let doc = match printed_comments(arena, cache, comments, false) {
-            None => doc.append(arena, last_break).append(arena, "]"),
+            None => doc
+                .append(arena, last_break)
+                .append(arena, cache.close_square),
             Some(comment) => doc
                 .append(arena, last_break.nest(arena, INDENT))
                 // ^ See how here we're adding the missing indentation to the
@@ -2813,7 +3055,7 @@ impl<'a, 'doc> Formatter<'a> {
                 //   list's items.
                 .append(arena, comment)
                 .append(arena, cache.line)
-                .append(arena, "]")
+                .append(arena, cache.close_square)
                 .force_break(arena),
         };
 
@@ -2996,7 +3238,7 @@ impl<'a, 'doc> Formatter<'a> {
                     name.to_doc(arena)
                 } else {
                     self.pattern(arena, cache, pattern)
-                        .append(arena, " as ")
+                        .append(arena, cache.space_as_space)
                         .append(arena, name.as_str())
                 }
             }
@@ -3063,9 +3305,16 @@ impl<'a, 'doc> Formatter<'a> {
                 };
                 match left_assign {
                     Some((name, _)) => {
-                        docvec_ref_arena![arena, left, " as ", name, " <> ", right]
+                        docvec_ref_arena![
+                            arena,
+                            left,
+                            cache.space_as_space,
+                            name,
+                            cache.space_concat_space,
+                            right
+                        ]
                     }
-                    None => docvec_ref_arena![arena, left, " <> ", right],
+                    None => docvec_ref_arena![arena, left, cache.space_concat_space, right],
                 }
             }
 
@@ -3090,11 +3339,11 @@ impl<'a, 'doc> Formatter<'a> {
                 ..
             } => {
                 let operator = match operator {
-                    IntOperator::Add => " + ",
-                    IntOperator::Subtract => " - ",
-                    IntOperator::Multiply => " * ",
-                    IntOperator::Divide => " / ",
-                    IntOperator::Remainder => " % ",
+                    IntOperator::Add => cache.space_plus_space,
+                    IntOperator::Subtract => cache.space_minus_space,
+                    IntOperator::Multiply => cache.space_times_space,
+                    IntOperator::Divide => cache.space_slash_space,
+                    IntOperator::Remainder => cache.space_module_space,
                 };
 
                 docvec_ref_arena![
@@ -3104,9 +3353,11 @@ impl<'a, 'doc> Formatter<'a> {
                     self.bit_array_size(arena, cache, right)
                 ]
             }
-            BitArraySize::Block { inner, .. } => self
-                .bit_array_size(arena, cache, inner)
-                .surround(arena, "{ ", " }"),
+            BitArraySize::Block { inner, .. } => self.bit_array_size(arena, cache, inner).surround(
+                arena,
+                cache.open_curly_space,
+                cache.space_close_curly,
+            ),
         }
     }
 
@@ -3120,29 +3371,31 @@ impl<'a, 'doc> Formatter<'a> {
         if elements.is_empty() {
             return match tail {
                 Some(tail) => self.pattern(arena, cache, &tail.pattern),
-                None => "[]".to_doc(arena),
+                None => cache.open_close_square,
             };
         }
         let elements = arena.join(
             elements
                 .iter()
                 .map(|element| self.pattern(arena, cache, element)),
-            arena.break_(",", ", "),
+            cache.comma_break,
         );
-        let doc = arena.break_("[", "[").append(arena, elements);
+        let doc = cache.open_square_break.append(arena, elements);
         match tail {
-            None => doc.nest(arena, INDENT).append(arena, arena.break_(",", "")),
+            None => doc
+                .nest(arena, INDENT)
+                .append(arena, cache.trailing_comma_break),
 
             Some(tail) => {
                 let tail = &tail.pattern;
                 let comments = self.pop_comments(tail.location().start);
                 let tail = if tail.is_discard() {
-                    "..".to_doc(arena)
+                    cache.dot_dot
                 } else {
-                    docvec_ref_arena![arena, "..", self.pattern(arena, cache, tail)]
+                    docvec_ref_arena![arena, cache.dot_dot, self.pattern(arena, cache, tail)]
                 };
                 let tail = commented(arena, cache, tail, comments);
-                doc.append(arena, arena.break_(",", ", "))
+                doc.append(arena, cache.comma_break)
                     .append(arena, tail)
                     .nest(arena, INDENT)
                     .append(arena, cache.empty_break)
@@ -3177,7 +3430,7 @@ impl<'a, 'doc> Formatter<'a> {
     ) -> Document<'a, 'doc> {
         self.clause_guard_bin_op_side(arena, cache, name, left, left.precedence())
             .append(arena, cache.breakable_space)
-            .append(arena, name.to_doc(arena))
+            .append(arena, binop(*name, cache))
             .append(arena, cache.space)
             .append(
                 arena,
@@ -3241,7 +3494,7 @@ impl<'a, 'doc> Formatter<'a> {
 
             ClauseGuard::TupleIndex { tuple, index, .. } => self
                 .clause_guard(arena, cache, tuple)
-                .append(arena, ".")
+                .append(arena, cache.dot)
                 .append(arena, *index)
                 .to_doc(arena),
 
@@ -3249,7 +3502,7 @@ impl<'a, 'doc> Formatter<'a> {
                 container, label, ..
             } => self
                 .clause_guard(arena, cache, container)
-                .append(arena, ".")
+                .append(arena, cache.dot)
                 .append(arena, label)
                 .to_doc(arena),
 
@@ -3257,14 +3510,18 @@ impl<'a, 'doc> Formatter<'a> {
                 module_name, label, ..
             } => module_name
                 .to_doc(arena)
-                .append(arena, ".")
+                .append(arena, cache.dot)
                 .append(arena, label)
                 .to_doc(arena),
 
             ClauseGuard::Constant(constant) => self.const_expr(arena, cache, constant),
 
             ClauseGuard::Not { expression, .. } => {
-                docvec_ref_arena![arena, "!", self.clause_guard(arena, cache, expression)]
+                docvec_ref_arena![
+                    arena,
+                    cache.exclamation_mark,
+                    self.clause_guard(arena, cache, expression)
+                ]
             }
 
             ClauseGuard::Block { value, .. } => {
@@ -3298,7 +3555,8 @@ impl<'a, 'doc> Formatter<'a> {
             UntypedExpr::NegateBool { value, .. } => self.expr(arena, cache, value),
             UntypedExpr::BinOp { .. } => {
                 let doc = self.expr(arena, cache, expression);
-                "!".to_doc(arena)
+                cache
+                    .exclamation_mark
                     .append(arena, wrap_block(arena, cache, doc))
             }
             UntypedExpr::Int { .. }
@@ -3320,7 +3578,11 @@ impl<'a, 'doc> Formatter<'a> {
             | UntypedExpr::BitArray { .. }
             | UntypedExpr::RecordUpdate { .. }
             | UntypedExpr::NegateInt { .. } => {
-                docvec_ref_arena![arena, "!", self.expr(arena, cache, expression)]
+                docvec_ref_arena![
+                    arena,
+                    cache.exclamation_mark,
+                    self.expr(arena, cache, expression)
+                ]
             }
         }
     }
@@ -3336,8 +3598,8 @@ impl<'a, 'doc> Formatter<'a> {
             UntypedExpr::Int { value, .. } if value.starts_with('-') => {
                 self.int(arena, cache, &value[1..])
             }
-            UntypedExpr::BinOp { .. } => "- "
-                .to_doc(arena)
+            UntypedExpr::BinOp { .. } => cache
+                .minus_space
                 .append(arena, self.expr(arena, cache, expression)),
 
             UntypedExpr::Int { .. }
@@ -3359,7 +3621,7 @@ impl<'a, 'doc> Formatter<'a> {
             | UntypedExpr::BitArray { .. }
             | UntypedExpr::RecordUpdate { .. }
             | UntypedExpr::NegateBool { .. } => {
-                docvec_ref_arena![arena, "-", self.expr(arena, cache, expression)]
+                docvec_ref_arena![arena, cache.sub_int, self.expr(arena, cache, expression)]
             }
         }
     }
@@ -3385,19 +3647,20 @@ impl<'a, 'doc> Formatter<'a> {
         .group(arena);
 
         let doc = if use_.assignments.is_empty() {
-            docvec_ref_arena![arena, "use <-", call]
+            docvec_ref_arena![arena, cache.use_and_arrow, call]
         } else {
             let assignments = use_.assignments.iter().map(|use_assignment| {
                 let pattern = self.pattern(arena, cache, &use_assignment.pattern);
                 let annotation = use_assignment.annotation.as_ref().map(|annotation| {
-                    ": ".to_doc(arena)
+                    cache
+                        .colon_space
                         .append(arena, self.type_ast(arena, cache, annotation))
                 });
 
                 pattern.append(arena, annotation).group(arena)
             });
-            let assignments = Itertools::intersperse(assignments, arena.break_(",", ", "));
-            let left = ["use".to_doc(arena), cache.breakable_space]
+            let assignments = Itertools::intersperse(assignments, cache.comma_break);
+            let left = [cache.use_, cache.breakable_space]
                 .into_iter()
                 .chain(assignments);
             let left = arena
@@ -3405,7 +3668,7 @@ impl<'a, 'doc> Formatter<'a> {
                 .nest(arena, INDENT)
                 .append(arena, cache.breakable_space)
                 .group(arena);
-            docvec_ref_arena![arena, left, "<-", call].group(arena)
+            docvec_ref_arena![arena, left, cache.left_arrow, call].group(arena)
         };
 
         commented(arena, cache, doc, comments)
@@ -3435,7 +3698,7 @@ impl<'a, 'doc> Formatter<'a> {
         commented(
             arena,
             cache,
-            docvec_ref_arena![arena, "assert ", doc],
+            docvec_ref_arena![arena, cache.assert_space, doc],
             comments,
         )
     }
@@ -3458,13 +3721,13 @@ impl<'a, 'doc> Formatter<'a> {
             // any comment we want to put it inside the empty bit array!
             // Refer to the `list` function for a similar procedure.
             return match comments_doc {
-                None => "<<>>".to_doc(arena),
-                Some(comments) => "<<"
-                    .to_doc(arena)
+                None => cache.empty_bit_array,
+                Some(comments) => cache
+                    .open_bit_array
                     .append(arena, cache.empty_break.nest(arena, INDENT))
                     .append(arena, comments)
                     .append(arena, cache.empty_break)
-                    .append(arena, ">>")
+                    .append(arena, cache.close_bit_array)
                     // vvv We want to make sure the comments are on a separate
                     //     line from the opening and closing angle brackets so
                     //     we force the breaks to be split on newlines.
@@ -3473,18 +3736,20 @@ impl<'a, 'doc> Formatter<'a> {
         }
 
         let comma = match packing {
-            ItemsPacking::FitMultiplePerLine => arena.flex_break(",", ", "),
-            ItemsPacking::FitOnePerLine | ItemsPacking::BreakOnePerLine => arena.break_(",", ", "),
+            ItemsPacking::FitMultiplePerLine => cache.flex_comma,
+            ItemsPacking::FitOnePerLine | ItemsPacking::BreakOnePerLine => cache.comma_break,
         };
 
-        let last_break = arena.break_(",", "");
-        let doc = arena
-            .break_("<<", "<<")
+        let last_break = cache.trailing_comma_break;
+        let doc = cache
+            .open_bit_array_break
             .append(arena, arena.join(segments, comma))
             .nest(arena, INDENT);
 
         let doc = match comments_doc {
-            None => doc.append(arena, last_break).append(arena, ">>"),
+            None => doc
+                .append(arena, last_break)
+                .append(arena, cache.close_bit_array),
             Some(comments) => doc
                 .append(arena, last_break.nest(arena, INDENT))
                 // ^ Notice how in this case we nest the final break before
@@ -3492,7 +3757,7 @@ impl<'a, 'doc> Formatter<'a> {
                 //   indented as the bit array items.
                 .append(arena, comments.nest(arena, INDENT))
                 .append(arena, cache.line)
-                .append(arena, ">>")
+                .append(arena, cache.close_bit_array)
                 .force_break(arena),
         };
 
@@ -3569,15 +3834,21 @@ impl<'a, 'doc> Formatter<'a> {
         let block_doc = match trailing_comments {
             Some(trailing_comments_doc) => docvec_ref_arena![
                 arena,
-                "{",
+                cache.open_curly,
                 statements_doc,
                 cache.line.nest(arena, INDENT),
                 trailing_comments_doc.nest(arena, INDENT),
                 cache.line,
-                "}"
+                cache.close_curly
             ]
             .force_break(arena),
-            None => docvec_ref_arena![arena, "{", statements_doc, cache.breakable_space, "}"],
+            None => docvec_ref_arena![
+                arena,
+                cache.open_curly,
+                statements_doc,
+                cache.breakable_space,
+                cache.close_curly
+            ],
         };
 
         if force_breaks {
@@ -3599,12 +3870,12 @@ impl<'a, 'doc> Formatter<'a> {
     {
         let mut arguments = arguments.into_iter().peekable();
         if arguments.peek().is_none() {
-            return "()".to_doc(arena);
+            return cache.open_close_paren;
         }
 
-        let arguments_doc = arena
-            .break_("", "")
-            .append(arena, arena.join(arguments, arena.break_(",", ", ")))
+        let arguments_doc = cache
+            .empty_break
+            .append(arena, arena.join(arguments, cache.comma_break))
             .nest_if_broken(arena, INDENT);
 
         // We get all remaining comments that come before the call's closing
@@ -3614,18 +3885,19 @@ impl<'a, 'doc> Formatter<'a> {
         // Otherwise those would be moved out of the call.
         let comments = self.pop_comments(location.end);
         let closing_parens = match printed_comments(arena, cache, comments, false) {
-            None => docvec_ref_arena![arena, arena.break_(",", ""), ")"],
+            None => docvec_ref_arena![arena, cache.trailing_comma_break, cache.close_paren],
             Some(comment) => docvec_ref_arena![
                 arena,
-                arena.break_(",", "").nest(arena, INDENT),
+                cache.trailing_comma_break.nest(arena, INDENT),
                 comment,
                 cache.line,
-                ")"
+                cache.close_paren
             ]
             .force_break(arena),
         };
 
-        "(".to_doc(arena)
+        cache
+            .open_paren
             .append(arena, arguments_doc)
             .append(arena, closing_parens)
             .group(arena)
@@ -3645,35 +3917,36 @@ impl<'a, 'doc> Formatter<'a> {
         if arguments.peek().is_none() {
             let comments = self.pop_comments(comments_limit);
             return match printed_comments(arena, cache, comments, false) {
-                Some(comments) => "("
+                Some(comments) => cache
+                    .open_paren
                     .to_doc(arena)
                     .append(arena, cache.empty_break)
                     .append(arena, comments)
                     .nest_if_broken(arena, INDENT)
                     .force_break(arena)
                     .append(arena, cache.empty_break)
-                    .append(arena, ")"),
-                None => "()".to_doc(arena),
+                    .append(arena, cache.close_paren),
+                None => cache.open_close_paren,
             };
         }
-        let doc = arena
-            .break_("(", "(")
-            .append(arena, arena.join(arguments, arena.break_(",", ", ")));
+        let doc = cache
+            .open_paren_break
+            .append(arena, arena.join(arguments, cache.comma_break));
 
         // Include trailing comments if there are any
         let comments = self.pop_comments(comments_limit);
         match printed_comments(arena, cache, comments, false) {
             Some(comments) => doc
-                .append(arena, arena.break_(",", ""))
+                .append(arena, cache.trailing_comma_break)
                 .append(arena, comments)
                 .nest_if_broken(arena, INDENT)
                 .force_break(arena)
                 .append(arena, cache.empty_break)
-                .append(arena, ")"),
+                .append(arena, cache.close_paren),
             None => doc
                 .nest_if_broken(arena, INDENT)
-                .append(arena, arena.break_(",", ""))
-                .append(arena, ")"),
+                .append(arena, cache.trailing_comma_break)
+                .append(arena, cache.close_paren),
         }
     }
 
@@ -3691,26 +3964,26 @@ impl<'a, 'doc> Formatter<'a> {
         if arguments.peek().is_none() {
             return self.wrap_arguments(arena, cache, arguments, comments_limit);
         }
-        let doc = arena
-            .break_("(", "(")
-            .append(arena, arena.join(arguments, arena.break_(",", ", ")))
-            .append(arena, arena.break_(",", ", "))
-            .append(arena, "..");
+        let doc = cache
+            .open_paren_break
+            .append(arena, arena.join(arguments, cache.comma_break))
+            .append(arena, cache.comma_break)
+            .append(arena, cache.dot_dot);
 
         // Include trailing comments if there are any
         let comments = self.pop_comments(comments_limit);
         match printed_comments(arena, cache, comments, false) {
             Some(comments) => doc
-                .append(arena, arena.break_(",", ""))
+                .append(arena, cache.trailing_comma_break)
                 .append(arena, comments)
                 .nest_if_broken(arena, INDENT)
                 .force_break(arena)
                 .append(arena, cache.empty_break)
-                .append(arena, ")"),
+                .append(arena, cache.close_paren),
             None => doc
                 .nest_if_broken(arena, INDENT)
-                .append(arena, arena.break_(",", ""))
-                .append(arena, ")"),
+                .append(arena, cache.trailing_comma_break)
+                .append(arena, cache.close_paren),
         }
     }
 
@@ -3750,7 +4023,7 @@ impl<'a, 'doc> Formatter<'a> {
                 }
                 (_, None) => continue,
             };
-            doc.push("//".to_doc(arena).append(arena, EcoString::from(comment)));
+            doc.push(cache.comment.append(arena, EcoString::from(comment)));
             match comments.peek() {
                 // Next line is a comment
                 Some((_, Some(_))) => doc.push(cache.line),
@@ -3787,9 +4060,9 @@ impl<'a, 'doc> Formatter<'a> {
         let comments = printed_comments(arena, cache, comments, false);
 
         let as_ = match preceding_as {
-            PrecedingAs::Keyword => " as".to_doc(arena),
+            PrecedingAs::Keyword => cache.space_as,
             PrecedingAs::Expression => {
-                docvec_ref_arena![arena, cache.breakable_space, "as"].nest(arena, INDENT)
+                docvec_ref_arena![arena, cache.breakable_space, cache.as_].nest(arena, INDENT)
             }
         };
 
@@ -3871,7 +4144,7 @@ impl<'a, 'doc> Formatter<'a> {
             Some(comments) => docvec_ref_arena![
                 arena,
                 doc.group(arena),
-                " as",
+                cache.space_as,
                 docvec_ref_arena![
                     arena,
                     cache.line,
@@ -3887,7 +4160,7 @@ impl<'a, 'doc> Formatter<'a> {
                     .const_expr(arena, cache, message)
                     .group(arena)
                     .nest(arena, INDENT);
-                docvec_ref_arena![arena, doc.group(arena), " as ", message]
+                docvec_ref_arena![arena, doc.group(arena), cache.space_as_space, message]
             }
         };
 
@@ -3905,7 +4178,7 @@ impl<'a, 'doc> Formatter<'a> {
             return self.append_as_message_expression(
                 arena,
                 cache,
-                "echo".to_doc(arena),
+                cache.echo,
                 PrecedingAs::Keyword,
                 message.as_deref(),
             );
@@ -3939,11 +4212,11 @@ impl<'a, 'doc> Formatter<'a> {
                 PrecedingAs::Expression,
                 message.as_deref(),
             );
-            docvec_ref_arena![arena, "echo ", doc]
+            docvec_ref_arena![arena, cache.echo_space, doc]
         } else {
             docvec_ref_arena![
                 arena,
-                "echo ",
+                cache.echo_space,
                 self.append_as_message_expression(
                     arena,
                     cache,
@@ -4017,33 +4290,30 @@ impl<'a, 'doc> Documentable<'a, 'doc> for &'a UnqualifiedImport {
     }
 }
 
-impl<'a, 'doc> Documentable<'a, 'doc> for &'a BinOp {
-    fn to_doc(self, arena: &'doc DocumentArena<'a, 'doc>) -> Document<'a, 'doc> {
-        match self {
-            BinOp::And => "&&",
-            BinOp::Or => "||",
-            BinOp::LtInt => "<",
-            BinOp::LtEqInt => "<=",
-            BinOp::LtFloat => "<.",
-            BinOp::LtEqFloat => "<=.",
-            BinOp::Eq => "==",
-            BinOp::NotEq => "!=",
-            BinOp::GtEqInt => ">=",
-            BinOp::GtInt => ">",
-            BinOp::GtEqFloat => ">=.",
-            BinOp::GtFloat => ">.",
-            BinOp::AddInt => "+",
-            BinOp::AddFloat => "+.",
-            BinOp::SubInt => "-",
-            BinOp::SubFloat => "-.",
-            BinOp::MultInt => "*",
-            BinOp::MultFloat => "*.",
-            BinOp::DivInt => "/",
-            BinOp::DivFloat => "/.",
-            BinOp::RemainderInt => "%",
-            BinOp::Concatenate => "<>",
-        }
-        .to_doc(arena)
+fn binop<'a, 'doc>(binop: BinOp, cache: &'doc FormatterCache<'a, 'doc>) -> Document<'a, 'doc> {
+    match binop {
+        BinOp::And => cache.and,
+        BinOp::Or => cache.or,
+        BinOp::LtInt => cache.lt_int,
+        BinOp::LtEqInt => cache.lt_eq_int,
+        BinOp::LtFloat => cache.lt_float,
+        BinOp::LtEqFloat => cache.lt_eq_float,
+        BinOp::Eq => cache.eq,
+        BinOp::NotEq => cache.not_eq,
+        BinOp::GtEqInt => cache.gt_eq_int,
+        BinOp::GtInt => cache.gt_int,
+        BinOp::GtEqFloat => cache.gt_eq_float,
+        BinOp::GtFloat => cache.gt_float,
+        BinOp::AddInt => cache.add_int,
+        BinOp::AddFloat => cache.add_float,
+        BinOp::SubInt => cache.sub_int,
+        BinOp::SubFloat => cache.sub_float,
+        BinOp::MultInt => cache.mult_int,
+        BinOp::MultFloat => cache.mult_float,
+        BinOp::DivInt => cache.div_int,
+        BinOp::DivFloat => cache.div_float,
+        BinOp::RemainderInt => cache.remainder_int,
+        BinOp::Concatenate => cache.concat,
     }
 }
 
@@ -4341,10 +4611,11 @@ pub fn break_block<'a, 'doc>(
     cache: &'doc FormatterCache<'a, 'doc>,
     doc: Document<'a, 'doc>,
 ) -> Document<'a, 'doc> {
-    "{".to_doc(arena)
+    cache
+        .open_curly
         .append(arena, cache.line.append(arena, doc).nest(arena, INDENT))
         .append(arena, cache.line)
-        .append(arena, "}")
+        .append(arena, cache.close_curly)
         .force_break(arena)
 }
 
@@ -4353,12 +4624,12 @@ pub fn wrap_block<'a, 'doc>(
     cache: &'doc FormatterCache<'a, 'doc>,
     doc: Document<'a, 'doc>,
 ) -> Document<'a, 'doc> {
-    arena
-        .break_("{", "{ ")
+    cache
+        .open_curly_break
         .append(arena, doc)
         .nest(arena, INDENT)
         .append(arena, cache.breakable_space)
-        .append(arena, "}")
+        .append(arena, cache.close_curly)
 }
 
 fn printed_comments<'a, 'doc>(
@@ -4432,13 +4703,13 @@ where
     match segment {
         BitArraySegment { value, options, .. } if options.is_empty() => to_doc(value),
 
-        BitArraySegment { value, options, .. } => to_doc(value).append(arena, ":").append(
+        BitArraySegment { value, options, .. } => to_doc(value).append(arena, cache.colon).append(
             arena,
             arena.join(
                 options
                     .iter()
                     .map(|option| segment_option(arena, cache, option, &mut to_doc)),
-                "-".to_doc(arena),
+                cache.sub_int,
             ),
         ),
     }
@@ -4446,7 +4717,7 @@ where
 
 fn segment_option<'a, 'doc, ToDoc, Value>(
     arena: &'doc DocumentArena<'a, 'doc>,
-    _cache: &'doc FormatterCache<'a, 'doc>,
+    cache: &'doc FormatterCache<'a, 'doc>,
     option: &'a BitArrayOption<Value>,
     mut to_doc: ToDoc,
 ) -> Document<'a, 'doc>
@@ -4454,31 +4725,31 @@ where
     ToDoc: FnMut(&'a Value) -> Document<'a, 'doc>,
 {
     match option {
-        BitArrayOption::Bytes { .. } => "bytes".to_doc(arena),
-        BitArrayOption::Bits { .. } => "bits".to_doc(arena),
-        BitArrayOption::Int { .. } => "int".to_doc(arena),
-        BitArrayOption::Float { .. } => "float".to_doc(arena),
-        BitArrayOption::Utf8 { .. } => "utf8".to_doc(arena),
-        BitArrayOption::Utf16 { .. } => "utf16".to_doc(arena),
-        BitArrayOption::Utf32 { .. } => "utf32".to_doc(arena),
-        BitArrayOption::Utf8Codepoint { .. } => "utf8_codepoint".to_doc(arena),
-        BitArrayOption::Utf16Codepoint { .. } => "utf16_codepoint".to_doc(arena),
-        BitArrayOption::Utf32Codepoint { .. } => "utf32_codepoint".to_doc(arena),
-        BitArrayOption::Signed { .. } => "signed".to_doc(arena),
-        BitArrayOption::Unsigned { .. } => "unsigned".to_doc(arena),
-        BitArrayOption::Big { .. } => "big".to_doc(arena),
-        BitArrayOption::Little { .. } => "little".to_doc(arena),
-        BitArrayOption::Native { .. } => "native".to_doc(arena),
+        BitArrayOption::Bytes { .. } => cache.bytes,
+        BitArrayOption::Bits { .. } => cache.bits,
+        BitArrayOption::Int { .. } => cache.int,
+        BitArrayOption::Float { .. } => cache.float,
+        BitArrayOption::Utf8 { .. } => cache.utf8,
+        BitArrayOption::Utf16 { .. } => cache.utf16,
+        BitArrayOption::Utf32 { .. } => cache.utf32,
+        BitArrayOption::Utf8Codepoint { .. } => cache.utf8_codepoint,
+        BitArrayOption::Utf16Codepoint { .. } => cache.utf16_codepoint,
+        BitArrayOption::Utf32Codepoint { .. } => cache.utf32_codepoint,
+        BitArrayOption::Signed { .. } => cache.signed,
+        BitArrayOption::Unsigned { .. } => cache.unsigned,
+        BitArrayOption::Big { .. } => cache.big,
+        BitArrayOption::Little { .. } => cache.little,
+        BitArrayOption::Native { .. } => cache.native,
 
         BitArrayOption::Size {
             value,
             short_form: false,
             ..
-        } => "size"
-            .to_doc(arena)
-            .append(arena, "(")
+        } => cache
+            .size
+            .append(arena, cache.open_paren)
             .append(arena, to_doc(value))
-            .append(arena, ")"),
+            .append(arena, cache.close_paren),
 
         BitArrayOption::Size {
             value,
@@ -4486,21 +4757,20 @@ where
             ..
         } => to_doc(value),
 
-        BitArrayOption::Unit { value, .. } => "unit"
-            .to_doc(arena)
-            .append(arena, "(")
+        BitArrayOption::Unit { value, .. } => cache
+            .value
+            .append(arena, cache.open_paren)
             .append(arena, eco_format!("{value}"))
-            .append(arena, ")"),
+            .append(arena, cache.close_paren),
     }
 }
 
 fn pub_<'a, 'doc>(
-    arena: &'doc DocumentArena<'a, 'doc>,
     cache: &'doc FormatterCache<'a, 'doc>,
     publicity: Publicity,
 ) -> Document<'a, 'doc> {
     match publicity {
-        Publicity::Public | Publicity::Internal { .. } => "pub ".to_doc(arena),
+        Publicity::Public | Publicity::Internal { .. } => cache.pub_space,
         Publicity::Private => cache.nil,
     }
 }
