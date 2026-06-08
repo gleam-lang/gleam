@@ -1247,6 +1247,7 @@ dependencies = [
  "tar",
  "termcolor",
  "thiserror 2.0.18",
+ "time",
  "toml 0.9.11+spec-1.1.0",
  "tracing",
  "unicode-segmentation",
