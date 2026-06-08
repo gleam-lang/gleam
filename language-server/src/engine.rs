@@ -410,7 +410,22 @@ where
 
                 Located::Annotation { .. } => Some(completer.completion_types()),
 
-                Located::Label { .. } => None,
+                Located::Label { .. }
+                | Located::RecordLabelDefinition { .. }
+                | Located::RecordLabelUsage { .. } => None,
+
+                Located::RecordAccessLabel {
+                    field_type,
+                    record_type,
+                    ..
+                } => {
+                    completer.expected_type = Some(field_type.clone());
+                    let mut completions = vec![];
+                    completions.append(&mut completer.completion_values());
+                    completions
+                        .append(&mut completer.completion_field_accessors(record_type.clone()));
+                    Some(completions)
+                }
 
                 Located::ModuleName {
                     layer: ast::Layer::Type,
@@ -859,9 +874,12 @@ where
 
                 Some(Referenced::TypeVariable { location, name: _ }) => success_response(location),
 
+                // For a label written using the shorthand syntax the location
+                // spans the whole `label:`, so we trim it down to just the
+                // label.
                 Some(Referenced::Label {
                     location, label, ..
-                }) if location.contains(byte_index) => success_response(SrcSpan {
+                }) => success_response(SrcSpan {
                     start: location.start,
                     end: location.start + label.len() as u32,
                 }),
@@ -1091,8 +1109,8 @@ where
                 type_module,
                 type_name,
                 label,
-                location,
-            }) if location.contains(byte_index) => match search_scope {
+                ..
+            }) => match search_scope {
                 FindReferencesSearchScope::AllModules => Some(find_label_references(
                     type_module,
                     type_name,
@@ -1338,8 +1356,31 @@ Unused labelled fields:
                     ))
                 }
                 Located::Label {
-                    location, type_, ..
-                } => Some(hover_for_label(location, type_, lines, module)),
+                    location,
+                    field_type,
+                }
+                | Located::RecordLabelDefinition {
+                    location,
+                    field_type,
+                    ..
+                }
+                | Located::RecordLabelUsage {
+                    location,
+                    field_type,
+                    ..
+                } => Some(hover_for_label(location, field_type, None, lines, module)),
+                Located::RecordAccessLabel {
+                    location,
+                    field_type,
+                    documentation,
+                    ..
+                } => Some(hover_for_label(
+                    location,
+                    field_type,
+                    documentation.as_ref(),
+                    lines,
+                    module,
+                )),
                 Located::ModuleName {
                     location,
                     module_name,
@@ -1722,11 +1763,15 @@ fn hover_for_annotation(
 fn hover_for_label(
     location: SrcSpan,
     type_: Arc<Type>,
+    documentation: Option<&EcoString>,
     line_numbers: LineNumbers,
     module: &Module,
 ) -> Hover {
     let type_ = Printer::new(&module.ast.names).print_type(&type_);
-    let contents = format!("```gleam\n{type_}\n```");
+    let contents = match documentation {
+        Some(documentation) => format!("```gleam\n{type_}\n```\n{documentation}"),
+        None => format!("```gleam\n{type_}\n```"),
+    };
     Hover {
         contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(location, &line_numbers)),

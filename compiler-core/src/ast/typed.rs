@@ -430,9 +430,34 @@ impl TypedExpr {
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
             Self::RecordAccess {
-                record: expression, ..
-            }
-            | Self::TupleIndex {
+                record,
+                label,
+                location,
+                type_,
+                documentation,
+                ..
+            } => record
+                .find_node(byte_index)
+                .or_else(|| {
+                    // The label is the final part of the access, so its span
+                    // ends where the whole `record.label` expression does.
+                    let label_location =
+                        SrcSpan::new(location.end - label.len() as u32, location.end);
+                    if label_location.contains(byte_index) {
+                        Some(Located::RecordAccessLabel {
+                            location: label_location,
+                            field_type: type_.clone(),
+                            label: label.clone(),
+                            record_type: record.type_(),
+                            documentation: documentation.clone(),
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .or_else(|| self.self_if_contains_location(byte_index)),
+
+            Self::TupleIndex {
                 tuple: expression, ..
             } => expression
                 .find_node(byte_index)
@@ -1220,20 +1245,30 @@ impl TypedExpr {
         }
     }
 
-    /// The name of the value this expression refers to, if any. This is the
-    /// unqualified name for `Var` and the label for a qualified
-    /// `ModuleSelect`.
+    /// If this expression is a record constructor function with non-zero
+    /// arity, returns the name of the variant it constructs.
     ///
-    pub fn name(&self) -> Option<EcoString> {
+    pub fn record_constructor_variant_name(&self) -> Option<&EcoString> {
         match self {
-            TypedExpr::Var { name, .. } => Some(name.clone()),
-            TypedExpr::ModuleSelect { label, .. } => Some(label.clone()),
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::Record { name, arity, .. },
+                        ..
+                    },
+                ..
+            }
+            | TypedExpr::ModuleSelect {
+                constructor: ModuleValueConstructor::Record { name, arity, .. },
+                ..
+            } if *arity > 0 => Some(name),
 
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
             | TypedExpr::String { .. }
             | TypedExpr::Block { .. }
             | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
             | TypedExpr::Fn { .. }
             | TypedExpr::List { .. }
             | TypedExpr::Call { .. }
@@ -1241,6 +1276,7 @@ impl TypedExpr {
             | TypedExpr::Case { .. }
             | TypedExpr::RecordAccess { .. }
             | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
             | TypedExpr::Tuple { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::Todo { .. }

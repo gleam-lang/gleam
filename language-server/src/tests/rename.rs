@@ -2934,6 +2934,28 @@ pub fn main() {
 }
 
 #[test]
+fn rename_record_field_in_module_not_importing_the_type_module() {
+    assert_rename!(
+        TestProject::for_source(
+            "
+import wobble
+
+pub fn main() {
+  wobble.make().wibble
+}
+"
+        )
+        .add_module("wibble", "pub type Wibble {\n  Wibble(wibble: Int)\n}")
+        .add_module(
+            "wobble",
+            "import wibble\n\npub fn make() -> wibble.Wibble {\n  wibble.Wibble(wibble: 1)\n}"
+        ),
+        "wabble",
+        find_position_of("().wibble").under_char('b')
+    );
+}
+
+#[test]
 fn rename_record_field_with_invalid_name() {
     assert_rename_error!(
         "
@@ -2969,9 +2991,23 @@ pub fn main() {
     );
 }
 
-// A field elided by a `..` pattern spread must not be touched by renaming
-// that field: the spread is not a real label reference, just a synthetic
-// placeholder for the ignored fields.
+#[test]
+fn rename_record_field_renames_labelled_arguments_of_call_with_incorrect_arity() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main() {
+  Wibble(wibble: 1)
+}
+",
+        "wabble",
+        find_position_of("wibble: Int").under_char('w')
+    );
+}
+
 #[test]
 fn rename_record_field_ignored_by_pattern_spread() {
     assert_rename!(
@@ -2991,7 +3027,6 @@ pub fn main(w: Wibble) {
     );
 }
 
-// A bare `..` eliding every field must likewise be left untouched.
 #[test]
 fn rename_record_field_ignored_by_bare_pattern_spread() {
     assert_rename!(
@@ -3011,10 +3046,6 @@ pub fn main(w: Wibble) {
     );
 }
 
-// When multiple variants share a field with the same name, renaming it on one
-// variant renames it on every variant: an accessor like `shape.colour` only
-// works while all the variants share the field, so renaming just one of them
-// would break the others.
 #[test]
 fn rename_record_field_shared_between_variants() {
     assert_rename!(

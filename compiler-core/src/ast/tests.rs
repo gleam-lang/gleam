@@ -70,6 +70,17 @@ fn get_bare_expression(statement: &TypedStatement) -> &TypedExpr {
     }
 }
 
+fn cat_type() -> Arc<Type> {
+    Arc::new(Type::Named {
+        publicity: Publicity::Public,
+        package: "mypackage".into(),
+        module: "mymod".into(),
+        name: "Cat".into(),
+        arguments: vec![],
+        inferred_variant: None,
+    })
+}
+
 fn compile_expression(src: &str) -> TypedStatement {
     let ast = crate::parse::parse_statement_sequence(src).expect("syntax error");
 
@@ -96,14 +107,7 @@ fn compile_expression(src: &str) -> TypedStatement {
     .build();
 
     // Insert a cat record to use in the tests
-    let cat_type = Arc::new(Type::Named {
-        publicity: Publicity::Public,
-        package: "mypackage".into(),
-        module: "mymod".into(),
-        name: "Cat".into(),
-        arguments: vec![],
-        inferred_variant: None,
-    });
+    let cat_type = cat_type();
     let variant = ValueConstructorVariant::Record {
         documentation: Some("wibble".into()),
         variants_count: 1,
@@ -921,27 +925,16 @@ fn find_node_record_access() {
             position: ExpressionPosition::Expression
         })
     );
-    assert_eq!(
-        access.find_node(15),
-        Some(Located::Expression {
-            expression: access,
-            position: ExpressionPosition::Expression
-        })
-    );
-    assert_eq!(
-        access.find_node(18),
-        Some(Located::Expression {
-            expression: access,
-            position: ExpressionPosition::Expression
-        })
-    );
-    assert_eq!(
-        access.find_node(19),
-        Some(Located::Expression {
-            expression: access,
-            position: ExpressionPosition::Expression
-        })
-    );
+    let label = Located::RecordAccessLabel {
+        location: SrcSpan { start: 15, end: 19 },
+        field_type: type_::string(),
+        label: "name".into(),
+        record_type: cat_type(),
+        documentation: None,
+    };
+    assert_eq!(access.find_node(15), Some(label.clone()));
+    assert_eq!(access.find_node(18), Some(label.clone()));
+    assert_eq!(access.find_node(19), Some(label));
 }
 
 #[test]

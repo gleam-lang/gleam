@@ -1,5 +1,6 @@
 ---
 source: language-server/src/tests/hover.rs
+assertion_line: 2320
 expression: "\ntype Wibble {\n  Wibble(wibble: Int, wobble: Int)\n}\n\npub fn main() {\n  let Wibble(wibble: _, wobble: _) = todo\n  todo\n}\n"
 ---
 
@@ -9,7 +10,7 @@ type Wibble {
 
 pub fn main() {
   let Wibble(wibble: _, wobble: _) = todo
-             ▔▔▔▔↑▔                      
+             ▔▔▔▔▔▔↑                     
   todo
 }
 
