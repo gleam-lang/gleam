@@ -80,6 +80,8 @@ pretty_assertions.workspace = true
 insta.workspace = true
 # Random value generation
 rand = "0.9"
+# Time types
+time = "0.3"
 
 [build-dependencies]
 # Data (de)serialisation
