@@ -1168,3 +1168,23 @@ pub fn go(x) {
 "
     );
 }
+
+#[test]
+fn opaque_variant_produces_private_singleton_constants() {
+    assert_js!(
+        "
+pub opaque type Wibble {
+  Wibble
+  Wobble(Int)
+}
+
+pub fn wibble() -> Wibble {
+  Wibble
+}
+
+pub fn wobble(x: Int) -> Wibble {
+  Wobble(x)
+}
+"
+    );
+}
