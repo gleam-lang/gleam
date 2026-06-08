@@ -59,25 +59,29 @@ fn load_cargo_deny_config() -> CargoDenyConfig {
 #[test]
 fn rust_advisories_ignore_deadlines() {
     let today = time::OffsetDateTime::now_utc().date();
-    let regex = regex::Regex::new(r"(?m)^FIX-DEADLINE:\s*(\d{4})-(\d{2})-(\d{2})$").unwrap();
+    let regex = regex::Regex::new(r"(?m)FIX-DEADLINE: (\d{4})-(\d{2})-(\d{2})").unwrap();
 
     for ignored in load_cargo_deny_config().advisories.ignore {
         let id = ignored.id;
-        let Some(deadline) = regex.captures(&ignored.reason).and_then(|caps| {
-            let year = caps[1].parse::<i32>().ok()?;
-            let month = caps[2].parse::<u8>().ok()?;
-            let day = caps[3].parse::<u8>().ok()?;
-            time::Date::from_calendar_date(year, month.try_into().ok()?, day).ok()
-        }) else {
+        let reason = ignored.reason;
+        let Some(captures) = regex.captures(&reason) else {
             panic!(
                 "
 deny.toml advisory missing deadline!
 Add a line to the `reason` property for {id} with this format:
 
     FIX-DEADLINE: 2026-01-05
+
+{reason:?}
 "
             )
         };
+
+        let year = captures[1].parse::<i32>().expect("parse year");
+        let month = captures[2].parse::<u8>().expect("parse month int");
+        let month = month.try_into().expect("parse month");
+        let day = captures[3].parse::<u8>().expect("parse day");
+        let deadline = time::Date::from_calendar_date(year, month, day).expect("construct date");
 
         assert!(
             today <= deadline,
