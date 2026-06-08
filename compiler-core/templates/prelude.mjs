@@ -9,11 +9,7 @@ export class CustomType {
 
 export class List {
   static fromArray(array, tail) {
-    let t = tail || new Empty();
-    for (let i = array.length - 1; i >= 0; --i) {
-      t = new NonEmpty(array[i], t);
-    }
-    return t;
+    return toList(array, tail)
   }
 
   [Symbol.iterator]() {
@@ -52,7 +48,11 @@ export function prepend(element, tail) {
 }
 
 export function toList(elements, tail) {
-  return List.fromArray(elements, tail);
+  let t = tail || List$Empty$const
+  for (let i = elements.length - 1; i >= 0; --i) {
+    t = new NonEmpty(elements[i], t);
+  }
+  return t;
 }
 
 class ListIterator {
