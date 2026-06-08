@@ -1,0 +1,40 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub opaque type Wibble {\n  Wibble\n  Wobble(Int)\n}\n\npub fn wibble() -> Wibble {\n  Wibble\n}\n\npub fn wobble(x: Int) -> Wibble {\n  Wobble(x)\n}\n"
+---
+----- SOURCE CODE
+
+pub opaque type Wibble {
+  Wibble
+  Wobble(Int)
+}
+
+pub fn wibble() -> Wibble {
+  Wibble
+}
+
+pub fn wobble(x: Int) -> Wibble {
+  Wobble(x)
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+class Wibble extends $CustomType {}
+const Wibble$Wibble$const = new Wibble();
+
+class Wobble extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+
+export function wibble() {
+  return Wibble$Wibble$const;
+}
+
+export function wobble(x) {
+  return new Wobble(x);
+}

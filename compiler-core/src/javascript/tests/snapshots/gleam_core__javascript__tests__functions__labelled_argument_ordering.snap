@@ -29,12 +29,16 @@ pub fn main() {
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 class A extends $CustomType {}
+const A$A$const = new A();
 
 class B extends $CustomType {}
+const B$B$const = new B();
 
 class C extends $CustomType {}
+const C$C$const = new C();
 
 class D extends $CustomType {}
+const D$D$const = new D();
 
 function wibble(a, b, c, d) {
   return undefined;

@@ -520,26 +520,32 @@ impl<'a> Generator<'a> {
     ) -> Document<'a> {
         let class_definition = self.variant_class_definition(constructor, publicity);
 
-        // If the custom type is private or opaque, we don't need to generate API
-        // functions for it.
-        if publicity.is_private() {
-            return class_definition;
-        }
-
+        // Singleton constants are used internally by the compiler, so they aren't
+        // part of the public JS API and need to be generated even for private
+        // types.
         let constructor_singleton = if constructor.arguments.is_empty() {
-            self.variant_constructor_constant(constructor, type_name)
-                .append(line())
+            docvec![
+                line(),
+                self.variant_constructor_constant(constructor, type_name, publicity)
+            ]
         } else {
             nil()
         };
+
+        // If the custom type is private or opaque, we don't need to generate API
+        // functions for it.
+        if publicity.is_private() {
+            return class_definition.append(constructor_singleton);
+        }
+
         let constructor_definition = self.variant_constructor_definition(constructor, type_name);
         let variant_check_definition = self.variant_check_definition(constructor, type_name);
         let fields_definition = self.variant_fields_definition(constructor, type_name);
 
         docvec![
             class_definition,
-            line(),
             constructor_singleton,
+            line(),
             constructor_definition,
             line(),
             variant_check_definition,
@@ -555,10 +561,16 @@ impl<'a> Generator<'a> {
         &self,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
+        publicity: Publicity,
     ) -> Document<'a> {
+        let keyword = if publicity.is_importable() {
+            "export const "
+        } else {
+            "const "
+        };
         docvec![
             self.source_map_tracker(constructor.location.start),
-            "export const ",
+            keyword,
             type_name,
             "$",
             constructor.name.as_str(),
