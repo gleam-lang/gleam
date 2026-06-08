@@ -12,7 +12,7 @@ use gleam_core::{
     ast::{self, SrcSpan},
     build::Module,
     line_numbers::LineNumbers,
-    reference::{ModuleNameReference, RecordLabel, ReferenceKind},
+    reference::{LabelSyntax, ModuleNameReference, RecordLabel, ReferenceKind},
     type_::{ModuleInterface, error::Named},
 };
 
@@ -247,9 +247,6 @@ fn rename_references_in_module(
 /// label shorthand syntax (`wibble:`), which is expanded so the implicit value
 /// variable keeps its original name.
 ///
-/// All the reference locations come from the reference graph that is built
-/// during analysis, exactly like the value and type renaming above.
-///
 pub fn rename_label(
     params: &RenameParams,
     type_module: &EcoString,
@@ -275,21 +272,23 @@ pub fn rename_label(
         label: label.clone(),
     };
 
+    // A label can be referenced in a module that doesn't import the type's
+    // defining module: a record value can be obtained transitively through
+    // another module and have its fields accessed. So every module has to be
+    // searched.
     for module in modules.values() {
-        if &module.name == type_module || module.references.imported_modules.contains(type_module) {
-            let Some(source_information) = sources.get(&module.name) else {
-                continue;
-            };
+        let Some(source_information) = sources.get(&module.name) else {
+            continue;
+        };
 
-            rename_label_references_in_module(
-                module,
-                source_information,
-                &mut workspace_edit,
-                &key,
-                label,
-                &params.new_name,
-            );
-        }
+        rename_label_references_in_module(
+            module,
+            source_information,
+            &mut workspace_edit,
+            &key,
+            label,
+            &params.new_name,
+        );
     }
 
     RenameOutcome::Renamed {
@@ -305,21 +304,32 @@ fn rename_label_references_in_module(
     label: &EcoString,
     new_name: &str,
 ) {
-    let Some(references) = module.references.label_references.get(key) else {
+    let definitions = module.references.label_definitions.get(key);
+    let references = module.references.label_references.get(key);
+    if definitions.is_none() && references.is_none() {
         return;
-    };
+    }
 
     let mut edits = TextEdits::new(&source_information.line_numbers);
 
-    for reference in references {
-        if reference.shorthand {
+    // The definitions of the field are renamed along with its references. A
+    // field shared between multiple variants has a definition in each, and
+    // they are all renamed together so that code accessing the shared field
+    // keeps compiling.
+    for definition in definitions.into_iter().flatten() {
+        edits.replace(definition.location, new_name.to_string());
+    }
+
+    for reference in references.into_iter().flatten() {
+        match reference.syntax {
             // A label written using shorthand syntax (`wibble:`) relies on the
             // field and the variable sharing a name. Renaming the field alone
             // would break that, so we expand the shorthand and keep the original
             // name as the value: `wibble:` becomes `new_name: wibble`.
-            edits.replace(reference.location, format!("{new_name}: {label}"));
-        } else {
-            edits.replace(reference.location, new_name.to_string());
+            LabelSyntax::Shorthand => {
+                edits.replace(reference.location, format!("{new_name}: {label}"))
+            }
+            LabelSyntax::Longhand => edits.replace(reference.location, new_name.to_string()),
         }
     }
 

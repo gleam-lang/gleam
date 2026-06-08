@@ -182,7 +182,7 @@ impl TypedConstant {
             } => arguments
                 .iter()
                 .flatten()
-                .find_map(|argument| argument.find_node(byte_index, type_, Some(name)))
+                .find_map(|argument| argument.find_node(byte_index, type_, name))
                 .unwrap_or(Located::Constant(self)),
             Constant::RecordUpdate {
                 record, arguments, ..

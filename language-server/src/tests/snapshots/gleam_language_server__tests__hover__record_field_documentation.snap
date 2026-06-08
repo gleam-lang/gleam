@@ -12,7 +12,7 @@ pub type Wibble {
 
 pub fn wibble(w: Wibble) {
   w.wibble
-  ▔▔▔▔▔▔↑▔
+    ▔▔▔▔↑▔
 }
 
 

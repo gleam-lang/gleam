@@ -12,7 +12,7 @@ use gleam_core::{
         self, ArgNames, AssignName, BitArraySize, ClauseGuard, CustomType, Function,
         ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
     },
-    build::{LabelOwner, Located},
+    build::Located,
     reference::RecordLabel,
     type_::{
         ModuleInterface, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant,
@@ -379,34 +379,18 @@ pub fn reference_for_ast_node(
             target_kind: RenameTarget::Qualified,
         }),
 
-        Located::Expression {
-            expression:
-                TypedExpr::RecordAccess {
-                    record,
-                    label,
-                    location,
-                    ..
-                },
-            ..
-        } => record
-            .type_()
-            .named_type_name()
-            .map(|(type_module, type_name)| Referenced::Label {
-                type_module,
-                type_name,
-                label: label.clone(),
-                // `field_start` is the start of the whole `record.field`
-                // expression, not the field. The field label is the trailing
-                // part of the access, so we recover its span from the end.
-                location: SrcSpan::new(location.end - label.len() as u32, location.end),
-            }),
-
-        Located::Label {
-            owner: Some(LabelOwner::Usage { type_, .. }),
+        Located::RecordLabelUsage {
+            record_type,
             label,
             location,
             ..
-        } => type_
+        }
+        | Located::RecordAccessLabel {
+            record_type,
+            label,
+            location,
+            ..
+        } => record_type
             .named_type_name()
             .map(|(type_module, type_name)| Referenced::Label {
                 type_module,
@@ -415,10 +399,10 @@ pub fn reference_for_ast_node(
                 location,
             }),
 
-        // A label at its declaration in a custom type, which lives in the
+        // A label at its definition in a custom type, which lives in the
         // current module.
-        Located::Label {
-            owner: Some(LabelOwner::Definition { type_name, .. }),
+        Located::RecordLabelDefinition {
+            type_name,
             label,
             location,
             ..
@@ -502,19 +486,21 @@ pub fn find_label_references(
 ) -> Vec<Location> {
     let mut reference_locations = Vec::new();
 
+    // Unlike values and types, a label can be referenced in a module that
+    // doesn't import the type's defining module: a record value can be
+    // obtained transitively through another module and have its fields
+    // accessed. So every module has to be searched.
     for module in modules.values() {
-        if module.name == type_module || module.references.imported_modules.contains(&type_module) {
-            let Some(source_information) = sources.get(&module.name) else {
-                continue;
-            };
-            reference_locations.extend(find_label_references_in_module(
-                type_module.clone(),
-                type_name.clone(),
-                label.clone(),
-                module,
-                source_information,
-            ));
-        }
+        let Some(source_information) = sources.get(&module.name) else {
+            continue;
+        };
+        reference_locations.extend(find_label_references_in_module(
+            type_module.clone(),
+            type_name.clone(),
+            label.clone(),
+            module,
+            source_information,
+        ));
     }
 
     reference_locations
@@ -538,14 +524,23 @@ pub fn find_label_references_in_module(
         type_name,
         label,
     };
-    let Some(references) = module.references.label_references.get(&key) else {
-        return reference_locations;
-    };
+    let definitions = module.references.label_definitions.get(&key);
+    let references = module.references.label_references.get(&key);
+    let locations = definitions
+        .into_iter()
+        .flatten()
+        .map(|definition| definition.location)
+        .chain(
+            references
+                .into_iter()
+                .flatten()
+                .map(|reference| reference.location),
+        );
 
-    for reference in references {
+    for location in locations {
         reference_locations.push(Location {
             uri: uri.clone(),
-            range: src_span_to_lsp_range(reference.location, &source_information.line_numbers),
+            range: src_span_to_lsp_range(location, &source_information.line_numbers),
         });
     }
 

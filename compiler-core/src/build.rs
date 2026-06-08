@@ -479,14 +479,45 @@ pub enum Located<'a> {
         location: SrcSpan,
     },
     UnqualifiedImport(UnqualifiedImport<'a>),
+    /// The label of a labelled argument in a function call.
     Label {
         location: SrcSpan,
-        /// The type of the labelled argument value (used for hover).
-        type_: std::sync::Arc<Type>,
+        /// The type of the labelled argument's value (used for hover).
+        field_type: std::sync::Arc<Type>,
+    },
+    /// A record field label at its definition in a custom type variant.
+    RecordLabelDefinition {
+        location: SrcSpan,
+        /// The type of the field (used for hover).
+        field_type: std::sync::Arc<Type>,
         label: EcoString,
-        /// The record type the label belongs to, used for go-to-definition,
-        /// find-references and rename. `None` when it can't be determined.
-        owner: Option<LabelOwner>,
+        /// The name of the custom type this field belongs to. The type is
+        /// being defined in the module being analysed, so only its name is
+        /// needed.
+        type_name: EcoString,
+    },
+    /// A record field label used in a record constructor call or pattern, or
+    /// in a record update.
+    RecordLabelUsage {
+        location: SrcSpan,
+        /// The type of the field's value (used for hover).
+        field_type: std::sync::Arc<Type>,
+        label: EcoString,
+        /// The record type the field belongs to.
+        record_type: std::sync::Arc<Type>,
+        /// The name of the variant the field was used with.
+        variant: EcoString,
+    },
+    /// The label of a record field access: `record.label`.
+    RecordAccessLabel {
+        location: SrcSpan,
+        /// The type of the field (used for hover).
+        field_type: std::sync::Arc<Type>,
+        label: EcoString,
+        /// The record type the field belongs to.
+        record_type: std::sync::Arc<Type>,
+        /// The documentation of the field (used for hover).
+        documentation: Option<EcoString>,
     },
     ModuleName {
         location: SrcSpan,
@@ -505,25 +536,6 @@ pub enum Located<'a> {
     ModuleTypeAlias(&'a TypedTypeAlias),
 }
 
-/// The record type a field label belongs to. Used to resolve go-to-definition,
-/// find-references and rename for record fields.
-#[derive(Debug, Clone, PartialEq)]
-pub enum LabelOwner {
-    /// A label usage (`record.field`, a labelled argument or pattern, a record
-    /// update) where the value's type is known. The type carries the module
-    /// and name it belongs to.
-    Usage {
-        type_: std::sync::Arc<Type>,
-        constructor: EcoString,
-    },
-    /// A label at its declaration in a custom type. The type is being defined
-    /// in the current module, so only its name is needed.
-    Definition {
-        type_name: EcoString,
-        constructor: EcoString,
-    },
-}
-
 impl<'a> Located<'a> {
     // Looks up the type constructor for the given type and then create the location.
     fn type_location(
@@ -537,14 +549,14 @@ impl<'a> Located<'a> {
         })
     }
 
-    /// Looks up the definition location of a record field label using
-    /// the pre-computed label reference map.
+    /// Looks up the location at which a record field label was defined, using
+    /// the label definitions gathered during analysis.
     fn label_definition_location(
         &self,
         importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
         record_type: &Arc<Type>,
         label: &EcoString,
-        constructor: Option<&EcoString>,
+        variant: Option<&EcoString>,
     ) -> Option<DefinitionLocation> {
         let (module_name, type_name) = record_type.named_type_name()?;
         let module = importable_modules.get(&module_name)?;
@@ -553,14 +565,18 @@ impl<'a> Located<'a> {
             type_name,
             label: label.clone(),
         };
-        let references = module.references.label_references.get(&key)?;
-        let definition = references.iter().find(|r| {
-            r.kind == reference::ReferenceKind::Definition
-                && match (&r.constructor, constructor) {
-                    (Some(a), Some(b)) => a == b,
-                    _ => true,
-                }
-        })?;
+        let definitions = module.references.label_definitions.get(&key)?;
+        // A label can be defined in multiple variants of the same type. If we
+        // know which variant the label was used with we jump to its
+        // definition in that variant. Otherwise the label comes from a
+        // `record.field` access, which works across all the variants defining
+        // it, so we jump to the first definition.
+        let definition = match variant {
+            Some(variant) => definitions
+                .iter()
+                .find(|definition| &definition.variant == variant)?,
+            None => definitions.first()?,
+        };
         Some(DefinitionLocation {
             module: Some(module_name),
             span: definition.location,
@@ -580,10 +596,6 @@ impl<'a> Located<'a> {
             }),
             Self::Statement(statement) => statement.definition_location(),
             Self::FunctionBody(statement) => None,
-            Self::Expression {
-                expression: TypedExpr::RecordAccess { record, label, .. },
-                ..
-            } => self.label_definition_location(importable_modules, &record.type_(), label, None),
             Self::Expression { expression, .. } => expression.definition_location(),
 
             Self::ModuleImport(import) => Some(DefinitionLocation {
@@ -631,30 +643,26 @@ impl<'a> Located<'a> {
             }),
             Self::Arg(_) => None,
             Self::Annotation { type_, .. } => self.type_location(importable_modules, type_.clone()),
-            Self::Label {
-                owner:
-                    Some(LabelOwner::Usage {
-                        type_: record_type,
-                        constructor,
-                    }),
+            Self::Label { .. } => None,
+            Self::RecordLabelUsage {
+                record_type,
                 label,
+                variant,
                 ..
             } => self.label_definition_location(
                 importable_modules,
                 record_type,
                 label,
-                Some(constructor),
+                Some(variant),
             ),
-            // Already at the declaration; go-to-definition jumps to itself.
-            Self::Label {
-                owner: Some(LabelOwner::Definition { .. }),
-                location,
-                ..
-            } => Some(DefinitionLocation {
+            Self::RecordAccessLabel {
+                record_type, label, ..
+            } => self.label_definition_location(importable_modules, record_type, label, None),
+            // Already at the definition; go-to-definition jumps to itself.
+            Self::RecordLabelDefinition { location, .. } => Some(DefinitionLocation {
                 module: None,
                 span: *location,
             }),
-            Self::Label { .. } => None,
             Self::TypeVariable { .. } => None,
             Self::ModuleName { module_name, .. } => Some(DefinitionLocation {
                 module: Some(module_name.clone()),
@@ -672,7 +680,11 @@ impl<'a> Located<'a> {
             Located::Statement(statement) => Some(statement.type_()),
             Located::Expression { expression, .. } => Some(expression.type_()),
             Located::Arg(arg) => Some(arg.type_.clone()),
-            Located::Label { type_, .. } | Located::Annotation { type_, .. } => Some(type_.clone()),
+            Located::Label { field_type, .. }
+            | Located::RecordLabelDefinition { field_type, .. }
+            | Located::RecordLabelUsage { field_type, .. }
+            | Located::RecordAccessLabel { field_type, .. } => Some(field_type.clone()),
+            Located::Annotation { type_, .. } => Some(type_.clone()),
             Located::Constant(constant) => Some(constant.type_()),
             Located::ClauseGuard(guard) => Some(guard.type_()),
 

@@ -1235,8 +1235,27 @@ pub fn main() {
     );
 }
 
-// A field elided by a `..` pattern spread is not a reference to that field, so
-// it must not show up in the results.
+#[test]
+fn references_for_record_field_in_module_not_importing_the_type_module() {
+    assert_references!(
+        TestProject::for_source(
+            "
+import wobble
+
+pub fn main() {
+  wobble.make().wibble
+}
+"
+        )
+        .add_module("wibble", "pub type Wibble {\n  Wibble(wibble: Int)\n}")
+        .add_module(
+            "wobble",
+            "import wibble\n\npub fn make() -> wibble.Wibble {\n  wibble.Wibble(wibble: 1)\n}"
+        ),
+        find_position_of("().wibble").under_char('b')
+    );
+}
+
 #[test]
 fn references_for_record_field_ignored_by_pattern_spread() {
     assert_references!(
