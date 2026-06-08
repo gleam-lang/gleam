@@ -10,7 +10,7 @@ db-urls = ["https://github.com/rustsec/advisory-db"]
 [[advisories.ignore]]
 id = "RUSTSEC-2026-0173"
 reason = """
-proc-macro-error is currently unmaintained.
+proc-macro-error2 is currently unmaintained.
 https://rustsec.org/advisories/RUSTSEC-2024-0370
 
 At time of writing, it is used by a single transitive dependency.
@@ -20,6 +20,8 @@ At time of writing, it is used by a single transitive dependency.
    └── i18n-embed-fl v0.9.2
        └── age v0.11.3
            └── gleam-core
+
+https://github.com/gleam-lang/gleam/issues/5829
 
 FIX-DEADLINE: 2026-10-08
 """
