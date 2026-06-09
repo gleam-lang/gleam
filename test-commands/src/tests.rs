@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 use camino::Utf8PathBuf;
 use gleam_cli::{Command, ExportTarget, fs};
 use std::process;

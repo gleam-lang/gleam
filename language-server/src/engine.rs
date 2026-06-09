@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 The Gleam contributors
+
 use camino::Utf8PathBuf;
 use ecow::{EcoString, eco_format};
 use gleam_core::{

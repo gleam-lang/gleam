@@ -3,6 +3,9 @@ source: test-output/src/tests/echo.rs
 expression: output
 ---
 --- main.gleam ----------------------
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 The Gleam contributors
+
 pub fn main() {
   echo #(to_atom("UP"), 1, 2)
   echo #(to_atom("down"), 12.34)
@@ -16,9 +19,9 @@ pub fn to_atom(string: String) -> Atom
 
 
 --- gleam run output ----------------
-[90msrc/main.gleam:2[39m
+[90msrc/main.gleam:5[39m
 #(atom.create("UP"), 1, 2)
-[90msrc/main.gleam:3[39m
+[90msrc/main.gleam:6[39m
 Down(12.34)
-[90msrc/main.gleam:4[39m
+[90msrc/main.gleam:7[39m
 #(atom.create("Both"), "ok")

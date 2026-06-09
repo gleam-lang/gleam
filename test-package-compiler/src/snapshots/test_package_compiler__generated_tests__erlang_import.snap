@@ -6,7 +6,7 @@ expression: "./cases/erlang_import"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<96 byte binary>
+<108 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -14,7 +14,7 @@ expression: "./cases/erlang_import"
 -define(FILEPATH, "src/one.gleam").
 -export([unbox/1]).
 
--file("src/one.gleam", 3).
+-file("src/one.gleam", 6).
 -spec unbox(two:box()) -> integer().
 unbox(X) ->
     {box, I} = X,
@@ -25,7 +25,7 @@ unbox(X) ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<65 byte binary>
+<77 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

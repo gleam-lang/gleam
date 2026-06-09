@@ -6,7 +6,7 @@ expression: "./cases/import_shadowed_name_warning"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<65 byte binary>
+<77 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -23,7 +23,7 @@ expression: "./cases/import_shadowed_name_warning"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<128 byte binary>
+<140 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
@@ -44,7 +44,7 @@ expression: "./cases/import_shadowed_name_warning"
 
 -type shadowing() :: port.
 
--file("src/two.gleam", 14).
+-file("src/two.gleam", 17).
 -spec use_type(one:port_()) -> nil.
 use_type(Port) ->
     wibble:wobble(Port).
@@ -63,10 +63,10 @@ use_type(Port) ->
 
 //// Warning
 warning: Unused private constructor
-  ┌─ src/two.gleam:9:3
-  │
-9 │   Port
-  │   ^ This private constructor is never used
+   ┌─ src/two.gleam:12:3
+   │
+12 │   Port
+   │   ^ This private constructor is never used
 
 Hint: You can safely remove it.
 
@@ -74,9 +74,9 @@ Hint: You can safely remove it.
 
 //// Warning
 warning: Unused private type
-  ┌─ src/two.gleam:7:1
-  │
-7 │ type Shadowing {
-  │ ^ This private type is never used
+   ┌─ src/two.gleam:10:1
+   │
+10 │ type Shadowing {
+   │ ^ This private type is never used
 
 Hint: You can safely remove it.

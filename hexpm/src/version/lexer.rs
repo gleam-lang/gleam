@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 //! Lexer for semver ranges.
 //!
 //! Breaks a string of input into an iterator of tokens that can be used with a parser.

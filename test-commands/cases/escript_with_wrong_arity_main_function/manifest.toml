@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 # Do not manually edit this file, it is managed by Gleam.
 #
 # This file locks the dependency versions used, to make your build

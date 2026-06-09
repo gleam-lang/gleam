@@ -6,7 +6,7 @@ expression: "./cases/erlang_escape_names"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<69 byte binary>
+<81 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -14,7 +14,7 @@ expression: "./cases/erlang_escape_names"
 -define(FILEPATH, "src/one.gleam").
 -export(['receive'/1]).
 
--file("src/one.gleam", 2).
+-file("src/one.gleam", 5).
 -spec 'receive'(I) -> I.
 'receive'(X) ->
     X.
@@ -24,7 +24,7 @@ expression: "./cases/erlang_escape_names"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<144 byte binary>
+<156 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
@@ -32,22 +32,22 @@ expression: "./cases/erlang_escape_names"
 -define(FILEPATH, "src/two.gleam").
 -export([qualified_call/0, qualified_value/0, unqualified_call/0, unqualified_value/0]).
 
--file("src/two.gleam", 4).
+-file("src/two.gleam", 7).
 -spec qualified_call() -> integer().
 qualified_call() ->
     one:'receive'(1).
 
--file("src/two.gleam", 8).
+-file("src/two.gleam", 11).
 -spec qualified_value() -> fun((Q) -> Q).
 qualified_value() ->
     fun one:'receive'/1.
 
--file("src/two.gleam", 12).
+-file("src/two.gleam", 15).
 -spec unqualified_call() -> integer().
 unqualified_call() ->
     one:'receive'(1).
 
--file("src/two.gleam", 16).
+-file("src/two.gleam", 19).
 -spec unqualified_value() -> fun((S) -> S).
 unqualified_value() ->
     fun one:'receive'/1.

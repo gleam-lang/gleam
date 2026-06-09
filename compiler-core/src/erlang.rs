@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2018 The Gleam contributors
+
 // TODO: Refactor this module to be methods on structs rather than free
 // functions with a load of arguments. See the JavaScript code generator and the
 // formatter for examples.

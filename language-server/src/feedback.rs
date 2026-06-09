@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 The Gleam contributors
+
 use gleam_core::{Error, Warning, diagnostic::Diagnostic};
 use std::collections::{HashMap, HashSet};
 

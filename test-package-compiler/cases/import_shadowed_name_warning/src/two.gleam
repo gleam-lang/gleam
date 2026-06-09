@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2022 The Gleam contributors
+
 //// https://github.com/gleam-lang/otp/pull/22
 
 // No warning should be emitted about this imported type. The compiler does not

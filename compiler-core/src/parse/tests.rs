@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021 The Gleam contributors
+
 use crate::ast::SrcSpan;
 use crate::parse::error::{
     InvalidUnicodeEscapeError, LexicalError, LexicalErrorType, ParseError, ParseErrorType,

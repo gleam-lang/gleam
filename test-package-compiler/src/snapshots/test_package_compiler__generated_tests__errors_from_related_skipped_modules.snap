@@ -3,9 +3,9 @@ source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/errors_from_related_skipped_modules"
 ---
 error: Type mismatch
-  ┌─ src/one.gleam:2:7
+  ┌─ src/one.gleam:5:7
   │
-2 │   1 + True
+5 │   1 + True
   │       ^
 
 The + operator expects arguments of this type:

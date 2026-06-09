@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 The Gleam contributors
+
 //! This module implements the function inlining optimisation. This allows
 //! function calls to be inlined at the callsite, and replaced with the contents
 //! of the function which is being called.

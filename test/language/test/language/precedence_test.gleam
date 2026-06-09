@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 pub fn precedence_1_test() {
   assert 7 == 1 + 2 * 3
 }

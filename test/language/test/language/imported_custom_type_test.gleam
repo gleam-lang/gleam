@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 import importable.{NoFields}
 
 pub fn no_fields_qualified_and_unqualified_test() {

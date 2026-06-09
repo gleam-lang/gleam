@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 The Gleam contributors
+
 use ecow::EcoString;
 use itertools::Itertools;
 use num_bigint::BigInt;

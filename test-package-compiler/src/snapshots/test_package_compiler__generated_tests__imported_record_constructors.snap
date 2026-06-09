@@ -6,7 +6,7 @@ expression: "./cases/imported_record_constructors"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@one.cache_meta
-<97 byte binary>
+<109 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@one.erl
 -module(one@one).
@@ -27,7 +27,7 @@ expression: "./cases/imported_record_constructors"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache_meta
-<97 byte binary>
+<109 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.erl
 -module(one@two).
@@ -48,7 +48,7 @@ expression: "./cases/imported_record_constructors"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<499 byte binary>
+<511 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
@@ -64,47 +64,47 @@ expression: "./cases/imported_record_constructors"
 -define(DOC(Str), -compile([])).
 -endif.
 
--file("src/two.gleam", 7).
+-file("src/two.gleam", 10).
 -spec qualified_fn_a() -> one@one:a().
 qualified_fn_a() ->
     a.
 
--file("src/two.gleam", 13).
+-file("src/two.gleam", 16).
 -spec qualified_fn_b() -> one@one:b().
 qualified_fn_b() ->
     {b, a, a}.
 
--file("src/two.gleam", 19).
+-file("src/two.gleam", 22).
 -spec qualified_aliased_fn_a() -> one@two:a().
 qualified_aliased_fn_a() ->
     a.
 
--file("src/two.gleam", 25).
+-file("src/two.gleam", 28).
 -spec qualified_aliased_fn_b() -> one@two:b().
 qualified_aliased_fn_b() ->
     {b, a, a}.
 
--file("src/two.gleam", 32).
+-file("src/two.gleam", 35).
 -spec unqualified_fn_a() -> one@one:a().
 unqualified_fn_a() ->
     a.
 
--file("src/two.gleam", 38).
+-file("src/two.gleam", 41).
 -spec unqualified_fn_b() -> one@one:b().
 unqualified_fn_b() ->
     {b, a, a}.
 
--file("src/two.gleam", 46).
+-file("src/two.gleam", 49).
 -spec aliased_fn_a() -> one@one:a().
 aliased_fn_a() ->
     a.
 
--file("src/two.gleam", 52).
+-file("src/two.gleam", 55).
 -spec aliased_fn_b() -> one@one:b().
 aliased_fn_b() ->
     {b, a, a}.
 
--file("src/two.gleam", 58).
+-file("src/two.gleam", 61).
 ?DOC(
     " For these statements we use the accessors for the record from the other\n"
     " module\n"
@@ -115,48 +115,48 @@ accessors(User) ->
     Score = erlang:element(3, User),
     {Name, Score}.
 
--file("src/two.gleam", 65).
+-file("src/two.gleam", 68).
 ?DOC(" For these statements we use destructure the record\n").
 -spec destructure_qualified(one@one:user()) -> {binary(), integer()}.
 destructure_qualified(User) ->
     {user, Name, Score} = User,
     {Name, Score}.
 
--file("src/two.gleam", 70).
+-file("src/two.gleam", 73).
 -spec destructure_qualified_aliased(one@two:user()) -> {binary(), integer()}.
 destructure_qualified_aliased(User) ->
     {user, Name, Score} = User,
     {Name, Score}.
 
--file("src/two.gleam", 75).
+-file("src/two.gleam", 78).
 -spec destructure_unqualified(one@one:user()) -> {binary(), integer()}.
 destructure_unqualified(User) ->
     {user, Name, Score} = User,
     {Name, Score}.
 
--file("src/two.gleam", 80).
+-file("src/two.gleam", 83).
 -spec destructure_aliased(one@one:user()) -> {binary(), integer()}.
 destructure_aliased(User) ->
     {user, Name, Score} = User,
     {Name, Score}.
 
--file("src/two.gleam", 86).
+-file("src/two.gleam", 89).
 ?DOC(" For these statements we use update the record\n").
 -spec update_qualified(one@one:user()) -> one@one:user().
 update_qualified(User) ->
     {user, <<"wibble"/utf8>>, erlang:element(3, User)}.
 
--file("src/two.gleam", 90).
+-file("src/two.gleam", 93).
 -spec update_qualified_aliased(one@two:user()) -> one@two:user().
 update_qualified_aliased(User) ->
     {user, <<"wibble"/utf8>>, erlang:element(3, User)}.
 
--file("src/two.gleam", 94).
+-file("src/two.gleam", 97).
 -spec update_unqualified(one@one:user()) -> one@one:user().
 update_unqualified(User) ->
     {user, <<"wibble"/utf8>>, erlang:element(3, User)}.
 
--file("src/two.gleam", 98).
+-file("src/two.gleam", 101).
 -spec update_aliased(one@one:user()) -> one@one:user().
 update_aliased(User) ->
     {user, <<"wibble"/utf8>>, erlang:element(3, User)}.

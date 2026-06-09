@@ -1,8 +1,11 @@
-import gleam/io
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021 The Gleam contributors
+
 import gleam/dynamic.{type Dynamic}
-import project
-import gleeunit
 import gleam/erlang/atom.{from_string as atom_from_string}
+import gleam/io
+import gleeunit
+import project
 
 pub fn main() {
   project.main()

@@ -3,6 +3,9 @@ source: test-output/src/tests/echo.rs
 expression: output
 ---
 --- main.gleam ----------------------
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2024 The Gleam contributors
+
 pub fn main() {
   echo "hello world"
   echo "multiline
@@ -12,9 +15,9 @@ string"
 
 
 --- gleam run output ----------------
-[90msrc/main.gleam:2[39m
-"hello world"
-[90msrc/main.gleam:3[39m
-"multiline\nstring"
 [90msrc/main.gleam:5[39m
+"hello world"
+[90msrc/main.gleam:6[39m
+"multiline\nstring"
+[90msrc/main.gleam:8[39m
 "string with\t\r\nescaped chars"

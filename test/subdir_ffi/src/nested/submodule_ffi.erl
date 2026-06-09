@@ -1,3 +1,6 @@
+%% SPDX-License-Identifier: Apache-2.0
+%% SPDX-FileCopyrightText: 2024 The Gleam contributors
+
 -module(submodule_ffi).
 
 -export([main/0, main2/0]).

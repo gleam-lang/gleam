@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 The Gleam contributors
+
 use super::{CompileCaseResult, Decision, FallbackCheck, RuntimeCheck, Variable, printer::Printer};
 use crate::type_::environment::Environment;
 use ecow::EcoString;

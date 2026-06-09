@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 The Gleam contributors
+
 use std::{io::Read, process::Stdio};
 
 use camino::{Utf8Path, Utf8PathBuf};

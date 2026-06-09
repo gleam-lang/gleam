@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2022 The Gleam contributors
+
 use crate::fs::{self, ZipArchive};
 use camino::Utf8PathBuf;
 use gleam_core::{

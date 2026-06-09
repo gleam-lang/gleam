@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 pub fn case_string_prefix_match_test() {
   let string = "12345"
   let string_2 = case string {

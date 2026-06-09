@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2022 The Gleam contributors
+
 import one.{
   escaped_thing, escaped_thing as xescaped_thing, thing, thing as xthing,
 }

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 pub fn unaligned_1_test() {
   let left = <<0xFF:6, 0:2>>
   let right = <<0xFC>>

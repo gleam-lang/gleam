@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021 The Gleam contributors
+
 export class CustomType {
   withFields(fields) {
     let properties = Object.keys(this).map((label) =>

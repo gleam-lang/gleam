@@ -6,7 +6,7 @@ expression: "./cases/erlang_nested"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache_meta
-<65 byte binary>
+<77 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.erl
 -module(one@two).
@@ -14,7 +14,7 @@ expression: "./cases/erlang_nested"
 -define(FILEPATH, "src/one/two.gleam").
 -export([main/0]).
 
--file("src/one/two.gleam", 1).
+-file("src/one/two.gleam", 4).
 -spec main() -> binary().
 main() ->
     <<"Hi there"/utf8>>.

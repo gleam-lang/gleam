@@ -1,3 +1,8 @@
+<!--
+  SPDX-License-Identifier: Apache-2.0
+  SPDX-FileCopyrightText: 2023 The Gleam contributors
+-->
+
 # Running Modules
 
 Tests running modules with the `gleam run -m` command on all targets and runtimes.

@@ -3,6 +3,9 @@ source: test-output/src/tests/echo.rs
 expression: output
 ---
 --- main.gleam ----------------------
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 The Gleam contributors
+
 pub fn main() {
   echo circular_reference()
   Nil
@@ -15,5 +18,5 @@ fn circular_reference() -> Thing
 
 
 --- gleam run output ----------------
-[90msrc/main.gleam:2[39m
+[90msrc/main.gleam:5[39m
 #(//js(circular reference))

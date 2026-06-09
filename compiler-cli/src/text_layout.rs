@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 The Gleam contributors
+
 use ecow::EcoString;
 
 /// Generates a string delimeted table with 2 spaces between each column, columns padded with

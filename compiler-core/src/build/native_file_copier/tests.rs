@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2022 The Gleam contributors
+
 use super::NativeFileCopier;
 use crate::{
     build::{native_file_copier::CopiedNativeFiles, package_compiler::CheckModuleConflicts},

@@ -1,3 +1,8 @@
+<!--
+  SPDX-License-Identifier: Apache-2.0
+  SPDX-FileCopyrightText: 2026 The Gleam contributors
+-->
+
 # default_readme
 
 [![Package Version](https://img.shields.io/hexpm/v/default_readme)](https://hex.pm/packages/default_readme)

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2020 The Gleam contributors
+
 use hexpm::version::Version;
 use strum::{EnumIter, IntoEnumIterator};
 

@@ -1,3 +1,8 @@
+<!--
+  SPDX-License-Identifier: Apache-2.0
+  SPDX-FileCopyrightText: 2020 The Gleam contributors
+-->
+
 <p align="center">
   <img src="images/lucy.png" alt="Lucy, Gleam's mascot">
 </p>

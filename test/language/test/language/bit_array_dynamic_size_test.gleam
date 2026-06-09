@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 pub fn dynamic_size_1_test() {
   let size = 8
   let assert <<value:size(size)>> = <<42>>

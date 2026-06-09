@@ -3,6 +3,9 @@ source: test-output/src/tests/echo.rs
 expression: output
 ---
 --- main.gleam ----------------------
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2024 The Gleam contributors
+
 pub type Wibble {
   Wibble(a: Int, b: String)
   Wobble(a: List(Float))
@@ -17,9 +20,9 @@ pub fn main() {
 
 
 --- gleam run output ----------------
-[90msrc/main.gleam:8[39m
+[90msrc/main.gleam:11[39m
 Wibble(a: 1, b: "hello")
-[90msrc/main.gleam:9[39m
+[90msrc/main.gleam:12[39m
 Wobble(a: [1, 1.1])
-[90msrc/main.gleam:10[39m
+[90msrc/main.gleam:13[39m
 Woo

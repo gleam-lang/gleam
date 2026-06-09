@@ -1,2 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2025 The Gleam contributors
+
 name = "echo_non_record_atom_tag"
 version = "1.0.0"

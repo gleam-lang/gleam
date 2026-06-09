@@ -6,7 +6,7 @@ expression: "./cases/imported_external_fns"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<77 byte binary>
+<89 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -14,12 +14,12 @@ expression: "./cases/imported_external_fns"
 -define(FILEPATH, "src/one.gleam").
 -export([thing/0, escaped_thing/0]).
 
--file("src/one.gleam", 2).
+-file("src/one.gleam", 5).
 -spec thing() -> nil.
 thing() ->
     thing:new().
 
--file("src/one.gleam", 6).
+-file("src/one.gleam", 9).
 -spec escaped_thing() -> nil.
 escaped_thing() ->
     'the.thing':'make.new'().
@@ -29,7 +29,7 @@ escaped_thing() ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/three.cache_meta
-<77 byte binary>
+<89 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/three.erl
 -module(three).
@@ -37,12 +37,12 @@ escaped_thing() ->
 -define(FILEPATH, "src/three.gleam").
 -export([thing/0, escaped_thing/0]).
 
--file("src/three.gleam", 2).
+-file("src/three.gleam", 5).
 -spec thing() -> nil.
 thing() ->
     thing:new().
 
--file("src/three.gleam", 6).
+-file("src/three.gleam", 9).
 -spec escaped_thing() -> nil.
 escaped_thing() ->
     'the.thing':'make.new'().
@@ -52,7 +52,7 @@ escaped_thing() ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<489 byte binary>
+<501 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
@@ -60,7 +60,7 @@ escaped_thing() ->
 -define(FILEPATH, "src/two.gleam").
 -export([the_consts/0, fn_reference_qualified/0, fn_reference_qualified_aliased/0, fn_reference_unqualified/0, fn_reference_unqualified_aliased/0, fn_call_qualified/0, fn_call_qualified_aliased/0, fn_call_unqualified/0, fn_call_unqualified_aliased/0, argument_reference_qualified/0, argument_reference_qualified_aliased/0, argument_reference_unqualified/0, argument_reference_unqualified_aliased/0]).
 
--file("src/two.gleam", 24).
+-file("src/two.gleam", 27).
 -spec the_consts() -> nil.
 the_consts() ->
     _ = fun thing:new/0,
@@ -80,67 +80,67 @@ the_consts() ->
     'the.thing':'make.new'(),
     'the.thing':'make.new'().
 
--file("src/two.gleam", 45).
+-file("src/two.gleam", 48).
 -spec fn_reference_qualified() -> fun(() -> nil).
 fn_reference_qualified() ->
     fun thing:new/0.
 
--file("src/two.gleam", 49).
+-file("src/two.gleam", 52).
 -spec fn_reference_qualified_aliased() -> fun(() -> nil).
 fn_reference_qualified_aliased() ->
     fun thing:new/0.
 
--file("src/two.gleam", 53).
+-file("src/two.gleam", 56).
 -spec fn_reference_unqualified() -> fun(() -> nil).
 fn_reference_unqualified() ->
     fun thing:new/0.
 
--file("src/two.gleam", 57).
+-file("src/two.gleam", 60).
 -spec fn_reference_unqualified_aliased() -> fun(() -> nil).
 fn_reference_unqualified_aliased() ->
     fun thing:new/0.
 
--file("src/two.gleam", 63).
+-file("src/two.gleam", 66).
 -spec fn_call_qualified() -> nil.
 fn_call_qualified() ->
     thing:new().
 
--file("src/two.gleam", 67).
+-file("src/two.gleam", 70).
 -spec fn_call_qualified_aliased() -> nil.
 fn_call_qualified_aliased() ->
     thing:new().
 
--file("src/two.gleam", 71).
+-file("src/two.gleam", 74).
 -spec fn_call_unqualified() -> nil.
 fn_call_unqualified() ->
     thing:new().
 
--file("src/two.gleam", 75).
+-file("src/two.gleam", 78).
 -spec fn_call_unqualified_aliased() -> nil.
 fn_call_unqualified_aliased() ->
     thing:new().
 
--file("src/two.gleam", 97).
+-file("src/two.gleam", 100).
 -spec x(any()) -> nil.
 x(_) ->
     nil.
 
--file("src/two.gleam", 81).
+-file("src/two.gleam", 84).
 -spec argument_reference_qualified() -> nil.
 argument_reference_qualified() ->
     x(fun 'the.thing':'make.new'/0).
 
--file("src/two.gleam", 85).
+-file("src/two.gleam", 88).
 -spec argument_reference_qualified_aliased() -> nil.
 argument_reference_qualified_aliased() ->
     x(fun 'the.thing':'make.new'/0).
 
--file("src/two.gleam", 89).
+-file("src/two.gleam", 92).
 -spec argument_reference_unqualified() -> nil.
 argument_reference_unqualified() ->
     x(fun 'the.thing':'make.new'/0).
 
--file("src/two.gleam", 93).
+-file("src/two.gleam", 96).
 -spec argument_reference_unqualified_aliased() -> nil.
 argument_reference_unqualified_aliased() ->
     x(fun 'the.thing':'make.new'/0).

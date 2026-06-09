@@ -1,2 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 name = "linked_process_exit"
 version = "1.0.0"

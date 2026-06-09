@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2020 The Gleam contributors
+
 use std::{collections::HashMap, time::SystemTime};
 
 use camino::{Utf8Path, Utf8PathBuf};

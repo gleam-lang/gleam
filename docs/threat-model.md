@@ -1,3 +1,8 @@
+<!--
+  SPDX-License-Identifier: Apache-2.0
+  SPDX-FileCopyrightText: 2026 The Gleam contributors
+-->
+
 # Public threat model
 
 Last updated: 2026-04-23

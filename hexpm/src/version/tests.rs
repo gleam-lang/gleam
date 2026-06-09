@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 use std::cmp::Ordering::{Equal, Greater, Less};
 use std::collections::HashMap;
 

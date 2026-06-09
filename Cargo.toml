@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2020 The Gleam contributors
+
 [workspace]
 resolver = "2"
 members = [
@@ -72,3 +75,5 @@ vec1 = "1"
 pubgrub = "0.3"
 # Open the user's web browser
 opener = "0"
+# Recursively traversing directories
+ignore = "0"

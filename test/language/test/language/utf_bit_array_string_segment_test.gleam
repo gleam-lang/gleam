@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 pub fn literal_utf8_string_segment_test() {
   let bit_array = <<"abc":utf8>>
   assert bit_array == <<97, 98, 99>>

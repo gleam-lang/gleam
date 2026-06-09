@@ -3,6 +3,9 @@ source: test-output/src/tests/echo.rs
 expression: output
 ---
 --- main.gleam ----------------------
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2024 The Gleam contributors
+
 pub fn main() {
   echo #()
   echo #(True, 1, "hello")
@@ -10,7 +13,7 @@ pub fn main() {
 
 
 --- gleam run output ----------------
-[90msrc/main.gleam:2[39m
+[90msrc/main.gleam:5[39m
 #()
-[90msrc/main.gleam:3[39m
+[90msrc/main.gleam:6[39m
 #(True, 1, "hello")

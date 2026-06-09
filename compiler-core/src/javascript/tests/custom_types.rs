@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021 The Gleam contributors
+
 use crate::javascript::tests::CURRENT_PACKAGE;
 use crate::{assert_js, assert_ts_def};
 
