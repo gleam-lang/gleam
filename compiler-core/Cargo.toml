@@ -37,7 +37,6 @@ pathdiff = { version = "0", features = ["camino"] }
 id-arena = "2"
 # Bijective (bi-directional) hashmap
 bimap = { version = "0.6.3", features = ["serde"] }
-num-traits = "0.2.19"
 # Encryption
 age = { version = "0.11", features = ["armor"] }
 radix_trie = "0.3"
@@ -50,6 +49,7 @@ sourcemap = "9"
 indexmap = "2.12.1"
 
 num-bigint.workspace = true
+num-traits.workspace = true
 async-trait.workspace = true
 base16.workspace = true
 camino = { workspace = true, features = ["serde1"] }
