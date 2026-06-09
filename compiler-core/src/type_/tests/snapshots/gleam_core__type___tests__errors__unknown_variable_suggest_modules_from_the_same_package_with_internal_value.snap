@@ -25,6 +25,6 @@ error: Unknown variable
   │     ^^^
 
 The name `one` is not in scope here.
-Did you mean one of these:
+Did you mean:
 
   - module.one
