@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 //! Functions for parsing and matching versions against requirements, based off
 //! and compatible with the Elixir Version module, which is used by Hex
 //! internally as well as be the Elixir build tool Hex client.

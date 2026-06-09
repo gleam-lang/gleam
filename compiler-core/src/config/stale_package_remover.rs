@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 The Gleam contributors
+
 use crate::manifest::Manifest;
 use crate::requirement::Requirement;
 use ecow::EcoString;

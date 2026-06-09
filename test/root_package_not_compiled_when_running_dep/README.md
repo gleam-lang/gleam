@@ -1,3 +1,8 @@
+<!--
+  SPDX-License-Identifier: Apache-2.0
+  SPDX-FileCopyrightText: 2024 The Gleam contributors
+-->
+
 # root_package_not_compiled_when_running_dep
 
 This package is used to check that the compiler can compile and run a dependency

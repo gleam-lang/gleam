@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2020 The Gleam contributors
+
 mod stale_package_remover;
 use crate::error::{FileIoAction, FileKind};
 use crate::io::FileSystemReader;

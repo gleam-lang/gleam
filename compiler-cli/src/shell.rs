@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2020 The Gleam contributors
+
 use gleam_core::{
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Target},

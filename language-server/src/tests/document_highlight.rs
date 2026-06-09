@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 The Gleam contributors
+
 use lsp_types::{
     DocumentHighlightParams, PartialResultParams, Position, Range, TextDocumentPositionParams,
     WorkDoneProgressParams,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 The Gleam contributors
+
 use insta::assert_debug_snapshot;
 use itertools::Itertools;
 use lsp_types::{CompletionItem, Position};

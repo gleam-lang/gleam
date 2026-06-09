@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2024 The Gleam contributors
+
 // This module is named "code".
 //
 // If you were to compile this and load it into the Erlang virtual machine it

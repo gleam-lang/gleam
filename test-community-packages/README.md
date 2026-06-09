@@ -1,3 +1,8 @@
+<!--
+  SPDX-License-Identifier: Apache-2.0
+  SPDX-FileCopyrightText: 2024 The Gleam contributors
+-->
+
 # test_community_packages
 
 [![Package Version](https://img.shields.io/hexpm/v/test_community_packages)](https://hex.pm/packages/test_community_packages)

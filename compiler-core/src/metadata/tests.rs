@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021 The Gleam contributors
+
 use hexpm::version::Version;
 use rand::Rng;
 use type_::{AccessorsMap, FieldMap, RecordAccessor};

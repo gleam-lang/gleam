@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 /// `prost_build` generates files in the output directory, which means that if we want
 /// to use it, we would need the protoc compiler as a build dependency.
 /// To get around this, we need run the build script and manually copy the generated files

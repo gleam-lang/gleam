@@ -1,2 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2021 The Gleam contributors
+
 name = "app2"
 version = "1.0.0"

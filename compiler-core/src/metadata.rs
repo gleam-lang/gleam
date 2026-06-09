@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2020 The Gleam contributors
+
 //! Seriaisation and deserialisation of Gleam compiler metadata into binary files
 //! using serde.
 

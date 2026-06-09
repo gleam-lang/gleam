@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2024 The Gleam contributors
+
 pub fn submodule_main() {
   parent_println(message())
   parent_println(elixir_message())

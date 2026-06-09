@@ -3,6 +3,9 @@ source: test-output/src/tests/echo.rs
 expression: output
 ---
 --- main.gleam ----------------------
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 The Gleam contributors
+
 import thing
 
 pub fn main() {
@@ -17,5 +20,5 @@ fn singleton() -> thing.Thing {
 
 
 --- gleam run output ----------------
-[90msrc/main.gleam:4[39m
+[90msrc/main.gleam:7[39m
 #(1, Thing, Thing)

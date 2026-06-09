@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 The Gleam contributors
+
 use std::{cell::RefCell, cmp::Reverse, collections::HashMap, rc::Rc};
 
 use crate::{Error, Result, manifest};

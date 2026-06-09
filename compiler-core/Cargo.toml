@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2020 The Gleam contributors
+
 [package]
 name = "gleam-core"
 version = "1.17.0"
@@ -82,6 +85,7 @@ insta.workspace = true
 rand = "0.9"
 # Time types
 time = "0.3"
+ignore.workspace = true
 
 [build-dependencies]
 # Data (de)serialisation

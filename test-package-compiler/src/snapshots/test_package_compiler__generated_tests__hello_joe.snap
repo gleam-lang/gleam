@@ -6,7 +6,7 @@ expression: "./cases/hello_joe"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/hello_joe.cache_meta
-<65 byte binary>
+<77 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/hello_joe.erl
 -module(hello_joe).
@@ -14,7 +14,7 @@ expression: "./cases/hello_joe"
 -define(FILEPATH, "src/hello_joe.gleam").
 -export([main/0]).
 
--file("src/hello_joe.gleam", 1).
+-file("src/hello_joe.gleam", 4).
 -spec main() -> binary().
 main() ->
     <<"Hello, Joe!"/utf8>>.

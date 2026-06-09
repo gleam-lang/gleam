@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 import mod_with_numbers_0123456789
 import shadowed_module.{ShadowPerson}
 

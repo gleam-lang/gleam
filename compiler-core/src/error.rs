@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2019 The Gleam contributors
+
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::ast::{self, SrcSpan};
 use crate::bit_array::UnsupportedOption;

@@ -1,3 +1,8 @@
+<!--
+  SPDX-License-Identifier: Apache-2.0
+  SPDX-FileCopyrightText: 2023 The Gleam contributors
+-->
+
 # Annoyances
 
 This document contains a list of issues and annoyances that we have writing

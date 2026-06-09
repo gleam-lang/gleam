@@ -1,3 +1,8 @@
+<!--
+  SPDX-License-Identifier: Apache-2.0
+  SPDX-FileCopyrightText: 2024 The Gleam contributors
+-->
+
 # subdir_ffi
 
 This package is used to check if the compiler properly supports FFI files (such

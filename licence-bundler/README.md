@@ -1,3 +1,8 @@
+<!--
+  SPDX-License-Identifier: Apache-2.0
+  SPDX-FileCopyrightText: 2026 The Gleam contributors
+-->
+
 # licence_bundler
 
 A small program that creates a `gleam-licences.html` which details all the

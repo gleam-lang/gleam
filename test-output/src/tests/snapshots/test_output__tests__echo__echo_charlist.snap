@@ -3,11 +3,14 @@ source: test-output/src/tests/echo.rs
 expression: output
 ---
 --- main.gleam ----------------------
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 The Gleam contributors
+
 pub fn main() {
   echo [72, 101, 108, 108, 111, 44, 32, 74, 111, 101, 33]
 }
 
 
 --- gleam run output ----------------
-[90msrc/main.gleam:2[39m
+[90msrc/main.gleam:5[39m
 charlist.from_string("Hello, Joe!")

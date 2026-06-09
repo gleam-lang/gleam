@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2024 The Gleam contributors
+
 use insta::assert_debug_snapshot;
 use lsp_types::{DocumentSymbol, DocumentSymbolParams};
 

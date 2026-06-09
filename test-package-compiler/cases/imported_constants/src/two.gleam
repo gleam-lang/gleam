@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2022 The Gleam contributors
+
 import one.{A, A as C, B, B as D, User, User as XUser}
 
 /// For these statements we use the records in a qualified fashion

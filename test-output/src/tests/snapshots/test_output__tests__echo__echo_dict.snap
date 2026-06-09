@@ -3,6 +3,9 @@ source: test-output/src/tests/echo.rs
 expression: output
 ---
 --- main.gleam ----------------------
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2024 The Gleam contributors
+
 import gleam/dict
 
 pub fn main() {
@@ -12,7 +15,7 @@ pub fn main() {
 
 
 --- gleam run output ----------------
-[90msrc/main.gleam:4[39m
+[90msrc/main.gleam:7[39m
 dict.from_list([])
-[90msrc/main.gleam:5[39m
+[90msrc/main.gleam:8[39m
 dict.from_list([#(1, "hello"), #(2, "world!")])

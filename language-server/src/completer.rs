@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2024 The Gleam contributors
+
 use std::{collections::HashMap, sync::Arc};
 
 use ecow::{EcoString, eco_format};

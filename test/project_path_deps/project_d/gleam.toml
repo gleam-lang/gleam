@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2023 The Gleam contributors
+
 name = "project_d"
 version = "1.0.0"
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 The Gleam contributors
+
 //! Graphs that represent the relationships between entities in a Gleam module,
 //! such as module functions or constants.
 

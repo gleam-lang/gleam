@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2022 The Gleam contributors
+
 //! This module is responsible for generating TypeScript type declaration files.
 //! This code is run during the code generation phase along side the normal
 //! Javascript code emission. Here we walk through the typed AST and translate

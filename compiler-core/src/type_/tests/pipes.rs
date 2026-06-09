@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2023 The Gleam contributors
+
 use crate::{assert_module_error, assert_module_infer, assert_no_warnings};
 
 // https://github.com/gleam-lang/gleam/issues/2392

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 pub fn unaligned_1_test() {
   let assert <<a:4, b:4, c:3, d:4, e:1>> = <<0xAB, 0b11010101>>
   assert #(a, b, c, d, e) == #(0xA, 0xB, 0b110, 0b1010, 0b1)

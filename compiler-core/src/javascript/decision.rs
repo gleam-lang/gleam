@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025 The Gleam contributors
+
 use super::{
     INDENT, bit_array_segment_int_value_to_bytes,
     expression::{self, Generator, Ordering, Scope, float, float_from_value},

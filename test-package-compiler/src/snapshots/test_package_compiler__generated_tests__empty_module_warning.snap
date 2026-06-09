@@ -6,7 +6,7 @@ expression: "./cases/empty_module_warning"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/empty.cache_meta
-<53 byte binary>
+<65 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/empty.erl
 -module(empty).
@@ -16,7 +16,7 @@ expression: "./cases/empty_module_warning"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/internal.cache_meta
-<69 byte binary>
+<81 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/internal.erl
 -module(internal).
@@ -32,7 +32,7 @@ expression: "./cases/empty_module_warning"
 -define(DOC(Str), -compile([])).
 -endif.
 
--file("src/internal.gleam", 2).
+-file("src/internal.gleam", 5).
 ?DOC(false).
 -spec private_function() -> nil.
 private_function() ->
@@ -43,7 +43,7 @@ private_function() ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/private.cache_meta
-<65 byte binary>
+<77 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/private.erl
 -module(private).
@@ -53,7 +53,7 @@ private_function() ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/public.cache_meta
-<65 byte binary>
+<77 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/public.erl
 -module(public).
@@ -61,7 +61,7 @@ private_function() ->
 -define(FILEPATH, "src/public.gleam").
 -export([main/0]).
 
--file("src/public.gleam", 1).
+-file("src/public.gleam", 4).
 -spec main() -> binary().
 main() ->
     <<"This module has public definitions"/utf8>>.
@@ -91,9 +91,9 @@ Hint: You can safely remove this module.
 
 //// Warning
 warning: Unused private function
-  ┌─ src/private.gleam:1:1
+  ┌─ src/private.gleam:4:1
   │
-1 │ fn private_function() -> Nil {
+4 │ fn private_function() -> Nil {
   │ ^ This private function is never used
 
 Hint: You can safely remove it.
