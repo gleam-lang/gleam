@@ -22,6 +22,7 @@ use crate::{
 };
 use camino::Utf8Path;
 use ecow::{EcoString, eco_format};
+use erlang_abstract_format::{Eaf, PrettyEaf};
 use itertools::Itertools;
 use num_bigint::BigInt;
 use num_traits::Signed;
@@ -99,7 +100,7 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn module_document(&mut self) -> Result<Document<'a>> {
+    fn module_document<Output>(&mut self, eaf: &mut impl Eaf<Output>) -> Result<Document<'a>> {
         let mut exports = vec![];
         let mut type_defs = vec![];
         let mut type_exports = vec![];
@@ -116,6 +117,20 @@ impl<'a> Generator<'a> {
         // would result in an error as it tries to reference this private function.
         let overridden_publicity =
             find_private_functions_referenced_in_importable_constants(self.module);
+
+        // We add an `-export` attribute for all the module's functions that
+        // need exporting.
+        eaf.export_attribute(
+            (self.module.definitions.functions.iter())
+                .filter_map(|function| function_export(function, &overridden_publicity)),
+        );
+
+        // We then do the same but with types. That is done with the
+        // `-export_type` attribute.
+        eaf.export_type_attribute(
+            (self.module.definitions.custom_types.iter())
+                .map(|custom_type| type_export(custom_type)),
+        );
 
         for function in &self.module.definitions.functions {
             register_function_exports(function, &mut exports, &overridden_publicity);
@@ -165,7 +180,7 @@ impl<'a> Generator<'a> {
         let mut statements = vec![];
         for function in &self.module.definitions.functions {
             let mut generator = FunctionGenerator::new(function, self);
-            if let Some(function_doc) = generator.module_function(function) {
+            if let Some(function_doc) = generator.module_function(eaf, function) {
                 statements.push(function_doc);
             }
         }
@@ -224,10 +239,7 @@ impl<'a> Generator<'a> {
 }
 
 impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
-    pub fn new(
-        function: &'a TypedFunction,
-        module_generator: &'generator mut Generator<'a>,
-    ) -> Self {
+    fn new(function: &'a TypedFunction, module_generator: &'generator mut Generator<'a>) -> Self {
         let function_name = match function.name.as_ref() {
             Some((_, function_name)) => function_name,
             None => panic!("Module functions should have a name"),
@@ -248,7 +260,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     /// ## Panics
     /// This will panic if the variable is not in scope as that is most likely
     /// the result of a bug in the compiler.
-    pub fn local_var_name(&self, name: &str) -> Document<'a> {
+    fn local_var_name(&self, name: &str) -> Document<'a> {
         match self.current_scope_vars.get(name) {
             None => panic!("variable name is not in scope"),
             Some(0) => variable_name(name).to_doc(),
@@ -259,18 +271,47 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     /// Add the given variable to the current scope also adding a suffix if it
     /// would be shadowing an existing variable.
     /// This returns the document with this newly generated name.
-    pub fn next_local_var_name(&mut self, name: &str) -> Document<'a> {
+    fn next_local_var_name(&mut self, name: &str) -> Document<'a> {
         let next = self.erl_function_scope_vars.get(name).map_or(0, |i| i + 1);
         let _ = self.erl_function_scope_vars.insert(name.to_string(), next);
         let _ = self.current_scope_vars.insert(name.to_string(), next);
         self.local_var_name(name)
     }
 
+    /// Given a variable name this returns a document with the name used to
+    /// reference such variable (names can change if a variable were to shadow
+    /// something with the same name!).
+    ///
+    /// ## Panics
+    /// This will panic if the variable is not in scope as that is most likely
+    /// the result of a bug in the compiler.
+    fn local_var_name_str(&self, name: &str) -> EcoString {
+        match self.current_scope_vars.get(name) {
+            None => panic!("variable name is not in scope"),
+            Some(0) => variable_name(name),
+            Some(n) => eco_format!("{}@{n}", variable_name(name)),
+        }
+    }
+
+    /// Add the given variable to the current scope also adding a suffix if it
+    /// would be shadowing an existing variable.
+    /// This returns the document with this newly generated name.
+    fn next_local_var_name_str(&mut self, name: &str) -> EcoString {
+        let next = self.erl_function_scope_vars.get(name).map_or(0, |i| i + 1);
+        let _ = self.erl_function_scope_vars.insert(name.to_string(), next);
+        let _ = self.current_scope_vars.insert(name.to_string(), next);
+        self.local_var_name_str(name)
+    }
+
     /// Generates code for an Erlang module function. This might return None
     /// if there's no code to be generated at all!
     /// For example if the function is unused, or if the function is a private
     /// Erlang external (in which case, it would be inlined instead).
-    fn module_function(&mut self, function: &'a TypedFunction) -> Option<Document<'a>> {
+    fn module_function<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        function: &'a TypedFunction,
+    ) -> Option<Document<'a>> {
         // We don't generate any code for unused functions.
         if self
             .module_generator
@@ -291,6 +332,30 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // nothing to generate for it.
         if !function.implementations.supports(Target::Erlang) {
             return None;
+        }
+
+        {
+            let function_name =
+                escape_atom_string(escape_erlang_existing_name(self.function_name).into());
+
+            let spec = eaf.start_function_spec(&function_name, function.arguments.len());
+            let function_type = eaf.start_function_type();
+            eaf.int_type();
+            eaf.int_type();
+            let function_type = eaf.end_function_type_arguments(function_type);
+            eaf.int_type();
+            eaf.end_function_type(function_type);
+            eaf.end_function_spec(spec);
+
+            let function = eaf.start_function(
+                &function_name,
+                function.arguments.len(),
+                self.function_arguments_names(function),
+            );
+            // Here we would generate the function body, but for now we just
+            // generate a placeholder expression.
+            eaf.string("Hello!");
+            eaf.end_function(function);
         }
 
         let (arguments, body) = match function.external_erlang.as_ref() {
@@ -320,6 +385,30 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             docvec![line(), body].nest(INDENT).group(),
             ".",
         ])
+    }
+
+    /// Given a function, this will return the names of the arguments to be used
+    /// in this function's definition. This will also update the current scope
+    /// to add those names to the available local variables.
+    fn function_arguments_names(
+        &mut self,
+        function: &'a Function<Arc<Type>, TypedExpr>,
+    ) -> impl Iterator<Item = EcoString> {
+        function.arguments.iter().map(|argument| {
+            self.next_local_var_name_str(match &argument.names {
+                ArgNames::Discard { name, .. } | ArgNames::LabelledDiscard { name, .. }
+                    if function.external_erlang.is_some() =>
+                {
+                    if name.chars().all(|char| char == '_') {
+                        "argument"
+                    } else {
+                        name
+                    }
+                }
+                ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_",
+                ArgNames::Named { name, .. } | ArgNames::NamedLabelled { name, .. } => name,
+            })
+        })
     }
 
     /// Generates all the attributes that need to go before a function, like
@@ -2644,9 +2733,13 @@ pub fn module<'a>(
     line_numbers: &'a LineNumbers,
     root: &'a Utf8Path,
 ) -> Result<String> {
-    Ok(Generator::new(module, line_numbers, root)
-        .module_document()?
-        .to_pretty_string(MAX_COLUMNS))
+    let mut generator = Generator::new(module, line_numbers, root);
+    let mut eaf = PrettyEaf::new(&module.erlang_name());
+    let _document = generator
+        .module_document(&mut eaf)?
+        .to_pretty_string(MAX_COLUMNS);
+
+    Ok(eaf.into_output())
 }
 
 fn register_function_exports(
@@ -2676,6 +2769,43 @@ fn register_function_exports(
                 .append(arguments.len()),
         )
     }
+}
+
+/// If the given function should be exported from the current Erlang module then
+/// this function will return its name and arity to be used when exporting it.
+/// For example: `pub fn wibble(a, b)` will produce `Some(("wibble", 2))`, so
+/// we can export `wibble/2`.
+fn function_export<'a>(
+    function: &'a TypedFunction,
+    overridden_publicity: &im::HashSet<EcoString>,
+) -> Option<(&'a str, usize)> {
+    let (_, name) = function
+        .name
+        .as_ref()
+        .expect("module function with no name");
+
+    // If the function is not implemented for this target, don't attempt to
+    // export it.
+    if !function.implementations.supports(Target::Erlang) {
+        return None;
+    }
+
+    // If the function is not importable and it's publicity has not been
+    // overridden, don't attempt to export it.
+    if !function.publicity.is_importable() && !overridden_publicity.contains(name) {
+        return None;
+    }
+
+    Some((name, function.arguments.len()))
+}
+
+/// Given a custom type this returns the name it should be used to export it and
+/// its arity. For example: `pub type Wibble(a, b)` will produce `("wibble", 2)`,
+/// so we can export `wibble/2`.
+fn type_export<'a>(custom_type: &'a TypedCustomType) -> (EcoString, usize) {
+    let name = erl_safe_type_name(to_snake_case(&custom_type.name));
+    let arity = custom_type.typed_parameters.len();
+    (name, arity)
 }
 
 fn register_custom_type_exports<'a>(
