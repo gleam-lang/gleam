@@ -50,7 +50,7 @@ We do not accept contributions from AI agents.
 
 Open source software development is a social exercise as much as a technical
 one. Bug reports, pull request descriptions, and comments must be written by a
-human, not by AI. We want your knowledge and opinions in your tone of voice, we
+human, not by AI. We want your knowledge and opinions in your tone of voice; we
 do not want generated text or AI summaries.
 
 You may use software to help you with your English spelling and grammar. If
