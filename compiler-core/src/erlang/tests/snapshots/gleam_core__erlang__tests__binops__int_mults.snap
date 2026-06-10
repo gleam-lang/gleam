@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/erlang/tests/binops.rs
+expression: "pub fn main(a, b) { 1 * 2 * a * b }"
+---
+----- SOURCE CODE
+pub fn main(a, b) { 1 * 2 * a * b }
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([main/2]).
+
+-spec main(integer(), integer()) -> integer().
+main(A, B) ->
+    ((1 * 2) * A) * B.

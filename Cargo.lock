@@ -864,6 +864,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
+name = "erlang-abstract-format"
+version = "1.0.0"
+dependencies = [
+ "erlang-term-format",
+ "itertools",
+ "num-bigint",
+ "num-traits",
+ "regex",
+]
+
+[[package]]
 name = "erlang-term-format"
 version = "1.0.0"
 dependencies = [
@@ -1231,6 +1242,7 @@ dependencies = [
  "debug-ignore",
  "dirs-next",
  "ecow",
+ "erlang-abstract-format",
  "flate2",
  "futures",
  "gen-lsp-types",

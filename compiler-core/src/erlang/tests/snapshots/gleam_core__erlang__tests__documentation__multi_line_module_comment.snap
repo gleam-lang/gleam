@@ -13,24 +13,11 @@ pub fn main() { 1 }
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
 -export([main/0]).
+-moduledoc(~" Hello! This is a multi-
+ line module comment.
+").
 
--if(?OTP_RELEASE >= 27).
--define(MODULEDOC(Str), -moduledoc(Str)).
--define(DOC(Str), -doc(Str)).
--else.
--define(MODULEDOC(Str), -compile([])).
--define(DOC(Str), -compile([])).
--endif.
-
-?MODULEDOC(
-    " Hello! This is a multi-\n"
-    " line module comment.\n"
-    "\n"
-).
-
--file("project/test/my/mod.gleam", 6).
 -spec main() -> integer().
 main() ->
     1.

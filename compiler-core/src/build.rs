@@ -415,8 +415,8 @@ impl Module {
     }
 }
 
-pub fn module_erlang_name(gleam_name: &EcoString) -> EcoString {
-    gleam_name.replace("/", "@")
+pub fn module_erlang_name(gleam_name: &str) -> EcoString {
+    gleam_name.replace("/", "@").into()
 }
 
 #[derive(Debug, Clone, PartialEq)]
