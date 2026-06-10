@@ -11,8 +11,7 @@ pub fn fdiv(x, y) { x /. y }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export(['and'/2, 'or'/2, remainder/2, fdiv/2]).
 
 -file("project/test/my/mod.gleam", 1).
@@ -29,15 +28,23 @@ pub fn fdiv(x, y) { x /. y }
 -spec remainder(integer(), integer()) -> integer().
 remainder(X, Y) ->
     case Y of
-        0 -> 0;
-        Gleam@denominator -> X rem Gleam@denominator
+        0 ->
+            0;
+
+        _value ->
+            X rem _value
     end.
 
 -file("project/test/my/mod.gleam", 4).
 -spec fdiv(float(), float()) -> float().
 fdiv(X, Y) ->
     case Y of
-        +0.0 -> +0.0;
-        -0.0 -> -0.0;
-        Gleam@denominator -> X / Gleam@denominator
+        +0.0 ->
+            +0.0;
+
+        -0.0 ->
+            -0.0;
+
+        _value ->
+            X / _value
     end.

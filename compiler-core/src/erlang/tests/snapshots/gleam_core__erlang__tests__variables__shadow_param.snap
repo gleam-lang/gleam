@@ -10,12 +10,13 @@ fn(board) { board }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/1]).
 
 -file("project/test/my/mod.gleam", 1).
 -spec main(I) -> I.
 main(Board) ->
-    fun(Board@1) -> Board@1 end,
+    fun(Board@1) ->
+        Board@1
+    end,
     Board.

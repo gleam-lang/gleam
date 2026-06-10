@@ -472,11 +472,11 @@ fn field_access() {
         pub type Person {
           Person(username: String, name: String, age: Int)
         }
-        
+
         pub fn main() {
           let given_name = "jack"
           let raiden = Person("raiden", "jack", 31)
-        
+
           case given_name {
             name if name == raiden.name -> "It's jack"
             _ -> "It's not jack"
@@ -634,5 +634,31 @@ fn module_nested_access() {
             }
           }
         "#
+    );
+}
+
+#[test]
+fn aliased_discard_pattern_in_bit_array_later_used_in_guard() {
+    assert_erl!(
+        r#"
+pub fn main(x) {
+  case x {
+    <<_ as b>> if b == 1 -> b + 2
+    _ -> 0
+  }
+}"#
+    );
+}
+
+#[test]
+fn aliased_discard_pattern_in_bit_array_later_used_in_guard_2() {
+    assert_erl!(
+        r#"
+pub fn main(x) {
+  case x {
+    <<_ as b>> | <<1 as b>> | <<b>> if b == 1 -> b + 2
+    _ -> 0
+  }
+}"#
     );
 }

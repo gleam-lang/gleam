@@ -61,6 +61,20 @@ pub fn assert_answer(x) {
 }
 
 #[test]
+fn assert_on_consts() {
+    assert_erl!(
+        "
+pub const wibble = [1, 2, 3]
+pub const wobble = [1, 2]
+
+pub fn assert_answer(x) {
+  assert wibble == wobble
+}
+"
+    );
+}
+
+#[test]
 fn assert_function_call() {
     assert_erl!(
         "

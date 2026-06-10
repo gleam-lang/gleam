@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 The Gleam contributors
+
+[package]
+name = "erlang-abstract-format"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+# Encoding values in the erlang term format
+erlang-term-format = { path = "../erlang-term-format" }
+itertools.workspace = true
+num-bigint.workspace = true
+num-traits.workspace = true
+regex.workspace = true
+ecow.workspace = true

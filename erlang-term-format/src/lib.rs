@@ -1,4 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 use num_bigint::{BigInt, Sign};
+use num_traits::ToPrimitive;
 
 #[cfg(test)]
 #[macro_use]
@@ -7,16 +11,35 @@ extern crate pretty_assertions;
 /// A data structure used to encode values into the Erlang Term Format:
 /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html.
 ///
-/// Hello!!
-///
+#[derive(Debug)]
 pub struct Etf {
     bytes: Vec<u8>,
 }
 
+impl Default for Etf {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[must_use]
+#[derive(Debug)]
 pub struct List {
     size_index: usize,
     used: bool,
+}
+
+impl List {
+    pub fn new(size_index: usize) -> Self {
+        Self {
+            size_index,
+            used: false,
+        }
+    }
+
+    pub fn consume(mut self) {
+        self.used = true;
+    }
 }
 
 impl Drop for List {
@@ -43,6 +66,83 @@ impl Etf {
         self.bytes.extend(bytes);
     }
 
+    /// Pushes a single raw byte.
+    ///
+    pub fn raw_byte(&mut self, byte: u8) {
+        self.push(byte);
+    }
+
+    /// Pushes the etf of an empty list.
+    /// - If you need to build lists with a number of items that is not known in
+    ///   advance you can use `start_list` and `end_list`.
+    ///
+    /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#nil_ext
+    pub fn empty_list(&mut self) {
+        self.nil()
+    }
+
+    /// Start building a list with a number of item that is not known in
+    /// advance.
+    ///
+    /// Once you've then pushed all the items, you _must_ complete the list by
+    /// calling `end_list` with the number of items that were pushed.
+    ///
+    /// ```ignore
+    /// // [1, 2, 3]
+    /// let list = etf.start_list()
+    /// etf.small_integer(1);
+    /// etf.small_integer(2);
+    /// etf.small_integer(3);
+    /// etf.end_list(list, 3)
+    /// ```
+    ///
+    /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#list_ext
+    pub fn start_list(&mut self) -> List {
+        self.push(108);
+        let size_index = self.bytes.len();
+        self.push(0);
+        self.push(0);
+        self.push(0);
+        self.push(0);
+        List::new(size_index)
+    }
+
+    pub fn end_list(&mut self, list: List, items: u32) {
+        self.nil();
+        self.bytes[list.size_index..list.size_index + 4].copy_from_slice(&items.to_be_bytes());
+        list.consume();
+    }
+
+    /// Pushes the most compact etf representation of the given atom.
+    pub fn atom(&mut self, atom: &str) {
+        if atom.len() <= 255 {
+            self.small_atom_utf8(atom);
+        } else {
+            self.atom_utf8(atom);
+        }
+    }
+
+    /// Pushes the most compact etf representation of the given bigint number.
+    pub fn bigint(&mut self, value: BigInt) {
+        if let Some(value) = value.to_u8() {
+            self.small_integer(value);
+        } else if let Some(value) = value.to_i32() {
+            self.integer(value);
+        } else {
+            self.small_big(value);
+        }
+    }
+
+    /// Pushes the most compact etf representation of the given usize number.
+    ///
+    pub fn usize(&mut self, value: usize) {
+        if let Some(value) = value.to_u8() {
+            self.small_integer(value);
+        } else {
+            self.integer(value as i32);
+        }
+    }
+
     /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#small_integer_ext
     fn small_integer(&mut self, value: u8) {
         self.push(97);
@@ -56,7 +156,7 @@ impl Etf {
     }
 
     /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#new_float_ext
-    fn new_float(&mut self, value: f64) {
+    pub fn new_float(&mut self, value: f64) {
         self.push(70);
         self.extend(value.to_be_bytes());
     }
@@ -78,30 +178,10 @@ impl Etf {
         self.push(106);
     }
 
-    /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#list_ext
-    fn start_list(&mut self) -> List {
-        self.push(108);
-        let size_index = self.bytes.len();
-        self.push(0);
-        self.push(0);
-        self.push(0);
-        self.push(0);
-        List {
-            size_index,
-            used: false,
-        }
-    }
-
-    fn end_list(&mut self, mut list: List, items: u32) {
-        self.nil();
-        self.bytes[list.size_index..list.size_index + 4].copy_from_slice(&items.to_be_bytes());
-        list.used = true;
-    }
-
     /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#binary_ext
-    fn binary(&mut self, bytes: Vec<u8>) {
+    pub fn binary(&mut self, bytes_count: u32, bytes: impl IntoIterator<Item = u8>) {
         self.push(109);
-        self.extend((bytes.len() as u32).to_be_bytes());
+        self.extend(bytes_count.to_be_bytes());
         self.extend(bytes);
     }
 
@@ -118,7 +198,7 @@ impl Etf {
     }
 
     /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#large_big_ext
-    fn large_big(&mut self, number: BigInt) {
+    pub fn large_big(&mut self, number: BigInt) {
         let (sign, bytes) = number.to_bytes_le();
         self.push(111);
         self.extend((bytes.len() as u32).to_be_bytes());
@@ -155,14 +235,14 @@ mod tests {
     #[test]
     fn small_atom() {
         let mut etf = Etf::new();
-        etf.small_atom_utf8("atom");
+        etf.atom("atom");
         assert_eq!(etf.into_vec(), [131, 119, 4, 97, 116, 111, 109])
     }
 
     #[test]
     fn small_atom_utf8() {
         let mut etf = Etf::new();
-        etf.small_atom_utf8("ksiąskę");
+        etf.atom("ksiąskę");
         assert_eq!(
             etf.into_vec(),
             [131, 119, 9, 107, 115, 105, 196, 133, 115, 107, 196, 153]
@@ -172,7 +252,7 @@ mod tests {
     #[test]
     fn atom() {
         let mut etf = Etf::new();
-        etf.atom_utf8(&"ą".repeat(128));
+        etf.atom(&"ą".repeat(128));
         assert_eq!(
             etf.into_vec(),
             [
@@ -279,13 +359,13 @@ mod tests {
     #[test]
     fn empty_binary() {
         let mut etf = Etf::new();
-        etf.binary(vec![]);
+        etf.binary(0, vec![]);
         assert_eq!(etf.into_vec(), [131, 109, 0, 0, 0, 0])
     }
     #[test]
     fn binary() {
         let mut etf = Etf::new();
-        etf.binary(vec![1, 2, 3]);
+        etf.binary(3, vec![1, 2, 3]);
         assert_eq!(etf.into_vec(), [131, 109, 0, 0, 0, 3, 1, 2, 3])
     }
 

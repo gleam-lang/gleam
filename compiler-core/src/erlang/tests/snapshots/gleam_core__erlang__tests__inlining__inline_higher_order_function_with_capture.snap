@@ -20,22 +20,27 @@ fn divide(a: Int, b: Int) -> Result(Int, Nil) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 8).
 -spec divide(integer(), integer()) -> {ok, integer()} | {error, nil}.
 divide(A, B) ->
     case case B of
-        0 -> 0;
-        Gleam@denominator -> A rem Gleam@denominator
+        0 ->
+            0;
+
+        _value ->
+            A rem _value
     end of
         0 ->
             {ok, case B of
-                    0 -> 0;
-                    Gleam@denominator@1 -> A div Gleam@denominator@1
-                end};
+                0 ->
+                    0;
+
+                _value@1 ->
+                    A div _value@1
+            end};
 
         _ ->
             {error, nil}

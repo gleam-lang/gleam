@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/erlang/tests/functions.rs
+expression: "\npub fn main() {\n  fn(wibble) {\n    fn(wobble) {\n      wibble + wobble\n    }\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  fn(wibble) {
+    fn(wobble) {
+      wibble + wobble
+    }
+  }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> fun((integer()) -> fun((integer()) -> integer())).
+main() ->
+    fun(Wibble) ->
+        fun(Wobble) ->
+            Wibble + Wobble
+        end
+    end.

@@ -16,8 +16,7 @@ fn name() { "Giacomo" }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 9).
@@ -29,11 +28,11 @@ name() ->
 -spec main() -> integer().
 main() ->
     echo(1, case name() of
-            <<"Giacomo"/utf8>> ->
-                <<"hello Jak!"/utf8>>;
+        <<"Giacomo"/utf8>> ->
+            <<"hello Jak!"/utf8>>;
 
-            _ ->
-                <<"hello!"/utf8>>
-        end, 3).
+        _ ->
+            <<"hello!"/utf8>>
+    end, <<"project/test/my/mod.gleam"/utf8>>, 3).
 
 % ...omitted code from `templates/echo.erl`...

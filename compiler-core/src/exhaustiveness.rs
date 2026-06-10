@@ -4172,9 +4172,6 @@ mod representable_with_bits_test {
 
     #[test]
     fn zero_representable_with_bits_test() {
-        for i in 0..12 {
-            println!("{i}: {}", BigInt::from(i).bits());
-        }
         assert!(!representable_with_bits(&BigInt::ZERO, 0, false));
         assert!(!representable_with_bits(&BigInt::ZERO, 0, true));
 

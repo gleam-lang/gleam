@@ -17,8 +17,7 @@ pub fn main(a: A) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/1]).
 -export_type([a/0, b/0, c/0]).
 
@@ -31,12 +30,10 @@ pub fn main(a: A) {
 -file("project/test/my/mod.gleam", 5).
 -spec main(a()) -> a().
 main(A) ->
-    {a,
-        begin
-            _record = erlang:element(2, A),
-            {b,
-                begin
-                    _record@1 = erlang:element(2, erlang:element(2, A)),
-                    {c, 0}
-                end}
-        end}.
+    {a, begin
+        _record = erlang:element(2, A),
+        {b, begin
+            _record@1 = erlang:element(2, erlang:element(2, A)),
+            {c, 0}
+        end}
+    end}.

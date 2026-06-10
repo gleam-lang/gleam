@@ -10,8 +10,7 @@ expression: "./cases/imported_record_constructors"
 
 //// /out/lib/the_package/_gleam_artefacts/one@one.erl
 -module(one@one).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "src/one/one.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export_type([a/0, b/0, user/0]).
 
 -type a() :: a.
@@ -19,7 +18,6 @@ expression: "./cases/imported_record_constructors"
 -type b() :: {b, a(), a()}.
 
 -type user() :: {user, binary(), integer()}.
-
 
 
 
@@ -31,8 +29,7 @@ expression: "./cases/imported_record_constructors"
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.erl
 -module(one@two).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "src/one/two.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export_type([a/0, b/0, user/0]).
 
 -type a() :: a.
@@ -40,7 +37,6 @@ expression: "./cases/imported_record_constructors"
 -type b() :: {b, a(), a()}.
 
 -type user() :: {user, binary(), integer()}.
-
 
 
 
@@ -52,17 +48,8 @@ expression: "./cases/imported_record_constructors"
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "src/two.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([qualified_fn_a/0, qualified_fn_b/0, qualified_aliased_fn_a/0, qualified_aliased_fn_b/0, unqualified_fn_a/0, unqualified_fn_b/0, aliased_fn_a/0, aliased_fn_b/0, accessors/1, destructure_qualified/1, destructure_qualified_aliased/1, destructure_unqualified/1, destructure_aliased/1, update_qualified/1, update_qualified_aliased/1, update_unqualified/1, update_aliased/1]).
-
--if(?OTP_RELEASE >= 27).
--define(MODULEDOC(Str), -moduledoc(Str)).
--define(DOC(Str), -doc(Str)).
--else.
--define(MODULEDOC(Str), -compile([])).
--define(DOC(Str), -compile([])).
--endif.
 
 -file("src/two.gleam", 10).
 -spec qualified_fn_a() -> one@one:a().
@@ -105,19 +92,17 @@ aliased_fn_b() ->
     {b, a, a}.
 
 -file("src/two.gleam", 61).
-?DOC(
-    " For these statements we use the accessors for the record from the other\n"
-    " module\n"
-).
 -spec accessors(one@one:user()) -> {binary(), integer()}.
+-doc(<<" For these statements we use the accessors for the record from the other
+ module"/utf8>>).
 accessors(User) ->
     Name = erlang:element(2, User),
     Score = erlang:element(3, User),
     {Name, Score}.
 
 -file("src/two.gleam", 68).
-?DOC(" For these statements we use destructure the record\n").
 -spec destructure_qualified(one@one:user()) -> {binary(), integer()}.
+-doc(<<" For these statements we use destructure the record"/utf8>>).
 destructure_qualified(User) ->
     {user, Name, Score} = User,
     {Name, Score}.
@@ -141,8 +126,8 @@ destructure_aliased(User) ->
     {Name, Score}.
 
 -file("src/two.gleam", 89).
-?DOC(" For these statements we use update the record\n").
 -spec update_qualified(one@one:user()) -> one@one:user().
+-doc(<<" For these statements we use update the record"/utf8>>).
 update_qualified(User) ->
     {user, <<"wibble"/utf8>>, erlang:element(3, User)}.
 
@@ -162,6 +147,7 @@ update_aliased(User) ->
     {user, <<"wibble"/utf8>>, erlang:element(3, User)}.
 
 
+
 //// /out/lib/the_package/ebin/importy.app
 {application, importy, [
     {vsn, "0.1.0"},
@@ -175,8 +161,14 @@ update_aliased(User) ->
 
 
 //// /out/lib/the_package/include/one@one_User.hrl
--record(user, {name :: binary(), score :: integer()}).
+-record(user, {
+    name :: binary(),
+    score :: integer()
+}).
 
 
 //// /out/lib/the_package/include/one@two_User.hrl
--record(user, {name :: binary(), score :: integer()}).
+-record(user, {
+    name :: binary(),
+    score :: integer()
+}).

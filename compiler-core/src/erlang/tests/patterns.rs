@@ -125,3 +125,16 @@ fn string_prefix_as_pattern_with_assertion() {
 }"
     );
 }
+
+#[test]
+fn aliased_discard_pattern_in_bit_array_later_used() {
+    assert_erl!(
+        r#"
+pub fn main(x) {
+  case x {
+    <<_ as b>> -> b + 2
+    _ -> 0
+  }
+}"#
+    );
+}

@@ -19,8 +19,7 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([factory/2, main/0]).
 -export_type([box/0]).
 
@@ -34,4 +33,6 @@ factory(F, I) ->
 -file("project/test/my/mod.gleam", 10).
 -spec main() -> box().
 main() ->
-    factory(fun(Field@0) -> {box, Field@0} end, 0).
+    factory(fun(_value) ->
+        {box, _value}
+    end, 0).

@@ -11,14 +11,13 @@ pub fn x(f) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([x/1]).
 
 -file("project/test/my/mod.gleam", 1).
 -spec x(fun((integer()) -> L)) -> list(L).
 x(F) ->
     [begin
-            _pipe = 1,
-            F(_pipe)
-        end].
+        _pipe = 1,
+        F(_pipe)
+    end].

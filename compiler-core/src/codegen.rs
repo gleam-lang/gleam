@@ -61,7 +61,7 @@ impl<'a> Erlang<'a> {
         let line_numbers = LineNumbers::new(&module.code);
         let output = erlang::module(&module.ast, &line_numbers, root);
         tracing::debug!(name = ?name, "Generated Erlang module");
-        writer.write(&path, &output?)
+        writer.write(&path, &output)
     }
 
     fn erlang_record_headers<Writer: FileSystemWriter>(

@@ -16,8 +16,7 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/0]).
 -export_type([thing/0]).
 
@@ -26,10 +25,7 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 5).
 -spec main() -> integer().
 main() ->
-    erlang:element(
-        2,
-        begin
-            Thing = {thing, 1, 2},
-            Thing
-        end
-    ).
+    erlang:element(2, begin
+        Thing = {thing, 1, 2},
+        Thing
+    end).

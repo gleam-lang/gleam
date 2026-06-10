@@ -252,3 +252,31 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn string_constant_from_another_module_is_concatenated_correctly() {
+    assert_erl!(
+        ("dep", "mod", "pub const wibble = \"wibble!\""),
+        r#"
+import mod
+
+pub fn go(x) {
+  x <> "-" <> mod.wibble
+}
+"#
+    );
+}
+
+#[test]
+fn string_constant_from_another_module_is_concatenated_correctly_2() {
+    assert_erl!(
+        ("dep", "mod", "pub const wibble = \"wibble!\""),
+        r#"
+import mod.{wibble}
+
+pub fn go(x) {
+  x <> "-" <> wibble
+}
+"#
+    );
+}

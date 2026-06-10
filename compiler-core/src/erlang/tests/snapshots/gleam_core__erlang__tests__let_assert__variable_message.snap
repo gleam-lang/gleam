@@ -12,26 +12,28 @@ pub fn expect(value, message) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([expect/2]).
 
 -file("project/test/my/mod.gleam", 2).
 -spec expect({ok, L} | {error, any()}, binary()) -> L.
 expect(Value, Message) ->
-    Inner@1 = case Value of
-        {ok, Inner} -> Inner;
-        _assert_fail ->
-            erlang:error(#{gleam_error => let_assert,
-                        message => Message,
-                        file => <<?FILEPATH/utf8>>,
-                        module => <<"my/mod"/utf8>>,
-                        function => <<"expect"/utf8>>,
-                        line => 3,
-                        value => _assert_fail,
-                        start => 35,
-                        'end' => 63,
-                        pattern_start => 46,
-                        pattern_end => 55})
-    end,
-    Inner@1.
+    case Value of
+        {ok, Inner} ->
+            Inner;
+
+        _value ->
+            erlang:error(#{
+                gleam_error => let_assert,
+                message => Message,
+                file => <<"project/test/my/mod.gleam"/utf8>>,
+                module => <<"my/mod"/utf8>>,
+                function => <<"expect"/utf8>>,
+                line => 3,
+                value => _value,
+                start => 35,
+                'end' => 63,
+                pattern_start => 46,
+                pattern_end => 55
+            })
+    end.

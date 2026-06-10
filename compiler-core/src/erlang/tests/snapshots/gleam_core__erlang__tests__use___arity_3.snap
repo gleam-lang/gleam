@@ -17,8 +17,7 @@ fn trip(x, y, f) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 7).
@@ -30,4 +29,6 @@ trip(X, Y, F) ->
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> {float(), binary(), integer()}.
 main() ->
-    trip(1.0, <<""/utf8>>, fun() -> 123 end).
+    trip(1.0, <<""/utf8>>, fun() ->
+        123
+    end).

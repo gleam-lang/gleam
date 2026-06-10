@@ -17,13 +17,11 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 2).
--spec split_once(binary(), binary()) -> {ok, {binary(), binary()}} |
-    {error, binary()}.
+-spec split_once(binary(), binary()) -> {ok, {binary(), binary()}} | {error, binary()}.
 split_once(X, Y) ->
     {ok, {X, Y}}.
 
@@ -31,19 +29,22 @@ split_once(X, Y) ->
 -spec main() -> {ok, {binary(), binary()}} | {error, binary()}.
 main() ->
     String = <<"Hello, world!"/utf8>>,
-    _assert_subject = split_once(String, <<"\n"/utf8>>),
-    case _assert_subject of
-        {ok, {Prefix, String@1}} -> _assert_subject;
-        _assert_fail ->
-            erlang:error(#{gleam_error => let_assert,
-                        message => (<<"Failed to split: "/utf8, String/binary>>),
-                        file => <<?FILEPATH/utf8>>,
-                        module => <<"my/mod"/utf8>>,
-                        function => <<"main"/utf8>>,
-                        line => 8,
-                        value => _assert_fail,
-                        start => 148,
-                        'end' => 207,
-                        pattern_start => 159,
-                        pattern_end => 180})
+    case split_once(String, <<"\n"/utf8>>) of
+        {ok, {Prefix, String@1}} = _value ->
+            _value;
+
+        _value@1 ->
+            erlang:error(#{
+                gleam_error => let_assert,
+                message => <<"Failed to split: "/utf8, String/binary>>,
+                file => <<"project/test/my/mod.gleam"/utf8>>,
+                module => <<"my/mod"/utf8>>,
+                function => <<"main"/utf8>>,
+                line => 8,
+                value => _value@1,
+                start => 148,
+                'end' => 207,
+                pattern_start => 159,
+                pattern_end => 180
+            })
     end.

@@ -16,8 +16,7 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/0]).
 -export_type([car/0, person/0]).
 
@@ -28,10 +27,7 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 5).
 -spec main() -> person().
 main() ->
-    Car = {car,
-        <<"Amphicar"/utf8>>,
-        <<"Model 770"/utf8>>,
-        {person, <<"John Doe"/utf8>>, 27}},
+    Car = {car, <<"Amphicar"/utf8>>, <<"Model 770"/utf8>>, {person, <<"John Doe"/utf8>>, 27}},
     New_p = begin
         _record = erlang:element(4, Car),
         {person, erlang:element(2, _record), 28}
