@@ -15,8 +15,7 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 2).
@@ -27,26 +26,33 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 6).
 -spec main() -> nil.
 main() ->
-    _assert_subject = 'and'(true, false),
-    case 'and'(_assert_subject, true) of
-        true -> nil;
-        false -> erlang:error(#{gleam_error => assert,
+    _value = 'and'(true, false),
+    case 'and'(_value, true) of
+        true ->
+            nil;
+
+        false ->
+            erlang:error(#{
+                gleam_error => assert,
                 message => <<"Assertion failed."/utf8>>,
-                file => <<?FILEPATH/utf8>>,
+                file => <<"project/test/my/mod.gleam"/utf8>>,
                 module => <<"my/mod"/utf8>>,
                 function => <<"main"/utf8>>,
                 line => 7,
                 kind => function_call,
-                arguments => [#{kind => expression,
-                        value => _assert_subject,
-                        start => 57,
-                        'end' => 73
-                        }, #{kind => literal,
-                        value => true,
-                        start => 75,
-                        'end' => 79
-                        }],
+                arguments => [#{
+                    kind => expression,
+                    value => _value,
+                    start => 57,
+                    'end' => 73
+                }, #{
+                    kind => literal,
+                    value => true,
+                    start => 75,
+                    'end' => 79
+                }],
                 start => 46,
                 'end' => 80,
-                expression_start => 53})
+                expression_start => 53
+            })
     end.

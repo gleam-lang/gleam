@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/erlang/tests/tuples.rs
+expression: "\npub type Wibble { Wibble (a: Int, b: Int) }\npub fn main() {\n  let base = Wibble(1, 2)\n  #(Wibble(..base, a: 2), False)\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble { Wibble (a: Int, b: Int) }
+pub fn main() {
+  let base = Wibble(1, 2)
+  #(Wibble(..base, a: 2), False)
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([main/0]).
+-export_type([wibble/0]).
+
+-type wibble() :: {wibble, integer(), integer()}.
+
+-file("project/test/my/mod.gleam", 3).
+-spec main() -> {wibble(), boolean()}.
+main() ->
+    Base = {wibble, 1, 2},
+    {{wibble, 2, erlang:element(3, Base)}, false}.

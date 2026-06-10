@@ -7,8 +7,7 @@ pub type Dynamic
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export_type([dynamic_/0]).
 
 -type dynamic_() :: any().

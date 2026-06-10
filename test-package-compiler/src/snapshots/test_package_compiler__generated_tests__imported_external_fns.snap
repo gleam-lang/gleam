@@ -10,8 +10,7 @@ expression: "./cases/imported_external_fns"
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "src/one.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([thing/0, escaped_thing/0]).
 
 -file("src/one.gleam", 5).
@@ -25,6 +24,7 @@ escaped_thing() ->
     'the.thing':'make.new'().
 
 
+
 //// /out/lib/the_package/_gleam_artefacts/three.cache
 <.cache binary>
 
@@ -33,8 +33,7 @@ escaped_thing() ->
 
 //// /out/lib/the_package/_gleam_artefacts/three.erl
 -module(three).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "src/three.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([thing/0, escaped_thing/0]).
 
 -file("src/three.gleam", 5).
@@ -48,6 +47,7 @@ escaped_thing() ->
     'the.thing':'make.new'().
 
 
+
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>
 
@@ -56,8 +56,7 @@ escaped_thing() ->
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "src/two.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([the_consts/0, fn_reference_qualified/0, fn_reference_qualified_aliased/0, fn_reference_unqualified/0, fn_reference_unqualified_aliased/0, fn_call_qualified/0, fn_call_qualified_aliased/0, fn_call_unqualified/0, fn_call_unqualified_aliased/0, argument_reference_qualified/0, argument_reference_qualified_aliased/0, argument_reference_unqualified/0, argument_reference_unqualified_aliased/0]).
 
 -file("src/two.gleam", 27).
@@ -144,6 +143,7 @@ argument_reference_unqualified() ->
 -spec argument_reference_unqualified_aliased() -> nil.
 argument_reference_unqualified_aliased() ->
     x(fun 'the.thing':'make.new'/0).
+
 
 
 //// /out/lib/the_package/ebin/importy.app

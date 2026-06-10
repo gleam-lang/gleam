@@ -26,7 +26,7 @@
 -define(grey, "\e[90m").
 -define(reset_color, "\e[39m").
 
-echo(Value, Message, Line) ->
+echo(Value, Message, Filepath, Line) ->
     StringLine = erlang:integer_to_list(Line),
     StringValue = echo@inspect(Value),
     StringMessage =
@@ -38,7 +38,7 @@ echo(Value, Message, Line) ->
     io:put_chars(
       standard_error,
       [
-        ?grey, ?FILEPATH, $:, StringLine, ?reset_color, StringMessage, $\n,
+        ?grey, Filepath, $:, StringLine, ?reset_color, StringMessage, $\n,
         StringValue, $\n
       ]
     ),

@@ -4,6 +4,22 @@
 use crate::assert_erl;
 
 #[test]
+fn simple_variable() {
+    assert_erl!(
+        r#"
+pub fn wibble() {
+  let x = 1
+  let y = {
+    let a = 1
+    a
+  }
+  y
+}
+"#
+    );
+}
+
+#[test]
 fn shadow_let() {
     // https://github.com/gleam-lang/gleam/issues/333
     assert_erl!(

@@ -17,8 +17,7 @@ pub fn use_compound() { compound.1(compound.0) }
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([use_int_alias/0, use_int_identity_alias/0, use_compound/0]).
 
 -file("project/test/my/mod.gleam", 3).
@@ -39,6 +38,4 @@ use_int_identity_alias() ->
 -file("project/test/my/mod.gleam", 10).
 -spec use_compound() -> integer().
 use_compound() ->
-    (erlang:element(2, {42, fun int_identity/1, fun int_identity/1}))(
-        erlang:element(1, {42, fun int_identity/1, fun int_identity/1})
-    ).
+    (erlang:element(2, {42, fun int_identity/1, fun int_identity/1}))(erlang:element(1, {42, fun int_identity/1, fun int_identity/1})).

@@ -20,6 +20,7 @@ use crate::{
 use camino::Utf8Path;
 
 mod assert;
+mod binops;
 mod bit_arrays;
 mod case;
 mod conditional_compilation;
@@ -32,6 +33,7 @@ mod functions;
 mod guards;
 mod inlining;
 mod let_assert;
+mod lists;
 mod numbers;
 mod panic;
 mod patterns;
@@ -40,6 +42,7 @@ mod records;
 mod reserved;
 mod strings;
 mod todo;
+mod tuples;
 mod type_params;
 mod use_;
 mod variables;
@@ -131,12 +134,10 @@ pub fn compile_test_project(
     built_module.attach_doc_and_module_comments();
 
     let line_numbers = LineNumbers::new(src);
-    module(&built_module.ast, &line_numbers, root)
-        .unwrap()
-        .replace(
-            std::include_str!("../../templates/echo.erl"),
-            "% ...omitted code from `templates/echo.erl`...",
-        )
+    module(&built_module.ast, &line_numbers, root).replace(
+        std::include_str!("../../templates/echo.erl"),
+        "% ...omitted code from `templates/echo.erl`...",
+    )
 }
 
 #[macro_export]
@@ -995,7 +996,7 @@ pub fn main() {
 // https://github.com/gleam-lang/gleam/issues/3648
 #[test]
 fn windows_file_escaping_bug() {
-    let src = "pub fn main() { Nil }";
+    let src = "pub fn main() { panic }";
     let path = "C:\\root\\project\\test\\my\\mod.gleam";
     let output = compile_test_project(src, path, Vec::new());
     insta::assert_snapshot!(insta::internals::AutoName, output, src);

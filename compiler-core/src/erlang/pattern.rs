@@ -1,192 +1,283 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021 The Gleam contributors
 
-use ecow::eco_format;
+use erlang_abstract_format::BitArraySegmentSpecifier;
 
-use crate::analyse::Inferred;
+use crate::{analyse::Inferred, parse::LiteralFloatValue};
 
 use super::*;
 
-pub(super) struct PatternPrinter<'a, 'generator, 'module> {
+/// This is used to generate the code for a pattern.
+/// Most Gleam patterns can be translated to Erlang in a pretty straightforward
+/// way but there's notable exceptions that require some extra bookeping, this
+/// helps with that.
+pub(super) struct PatternGenerator<'a, 'generator, 'module> {
     pub generator: &'generator mut FunctionGenerator<'a, 'module>,
-    pub variables: Vec<&'a str>,
-    pub guards: Vec<Document<'a>>,
-    /// In case we're dealing with string patterns, we might have something like
-    /// this: `"a" as letter <> rest`. In this case we want to compile it to
-    /// `<<"a"/utf8, rest/binary>>` and then bind a variable to `"a"`.
-    /// This way it's easier for the erlang compiler to optimise the pattern
-    /// matching.
-    ///
-    /// Here we store a list of gleam variable name to its name used in the
-    /// Erlang code and its literal value.
-    pub assignments: Vec<StringPatternAssignment<'a>>,
-}
 
-/// This is used to hold data about string patterns with an alias like:
-/// `"a" as letter <> _`
-pub struct StringPatternAssignment<'a> {
-    /// The name assigned to the pattern in the Gleam code:
+    /// Not all Gleam patterns can be cleanly (or efficiently!) translated to
+    /// Erlang ones. In particular, we allow aliasing almost all patterns like:
     ///
     /// ```gleam
-    /// "a" as letter <> _
-    /// //     ^^^^^^ This one
+    /// "a" as letter <> _ -> todo
+    /// //  ^^^^^^^^^ This...
+    /// <<1 as number, _:bits>> -> todo
+    /// //  ^^^^^^^^^ ...or this!
     /// ```
     ///
-    pub gleam_name: EcoString,
-    /// The name we're using for that same variable in the generated Erlang
-    /// code, could have numbers added to it to make sure it's unique, like
-    /// `Letter@1`.
+    /// In those cases we generate a pattern matching on the literal value and
+    /// keep track of the fact we'll have to define such variable in the
+    /// following case branch.
     ///
-    pub erlang_name: Document<'a>,
-    /// The document representing the literal value of that variable. For
-    /// example, if we had this pattern `"a" <> letter` it's literal value in
-    /// Erlang is going to be a document with the following string
-    /// `<<"a"/utf8>>`.
-    ///
-    pub literal_value: Document<'a>,
+    /// This map maps the name of those Gleam variables that have been
+    /// introduced with an alias to their constant value and position.
+    /// You can check the docs of `AliasedValue` for some more examples and a
+    /// more in depth explanation.
+    pub variables_to_add_later: HashMap<EcoString, AliasedLiteral>,
 }
 
-impl<'a> StringPatternAssignment<'a> {
-    pub fn to_assignment_doc(&self) -> Document<'a> {
-        docvec![self.erlang_name.clone(), " = ", self.literal_value.clone()]
-    }
+/// This is used to hold data about string prefix pattern with an alias like:
+/// `"a" as letter <> _`.
+///
+/// This pattern cannot be easily translated to Erlang since it doesn't allow to
+/// write something like this in a bitstring: `<<"a" = Letter, _:bits>>`.
+/// So what the generator will do is it will generate the following simpler
+/// pattern:
+///
+/// ```erl
+/// <<"a", _:bits>>
+/// % ^^^ Notice how this isn't bound to a `Letter` variable
+/// ```
+///
+/// And it will return this data structure so we can then generate the needed
+/// variable assignment later in the case body. So, overall, this:
+///
+/// ```gleam
+/// "a" as letter <> _ -> ...
+/// ```
+///
+/// Will become:
+///
+/// ```erl
+/// <<"a", _:bits>> ->
+///   Letter = "a",
+///   ...
+/// ```
+///
+/// > Note: We could have also generated slightly different code, where we use
+/// > a guard `<<Letter, _:bits>> when Letter =:= "a"`. That would mean we don't
+/// > have to add that additional variable binding; the problem is that the
+/// > Erlang compiler doesn't seem to be able to optimise that as well as the
+/// > one with the literal value in the pattern!
+///
+#[derive(Debug)]
+pub enum AliasedLiteral {
+    String {
+        /// The location of the name given to the alias:
+        ///
+        /// ```gleam
+        /// "a" as letter <> _
+        /// //     ^^^^^^ This span here
+        ///
+        /// <<"a" as letter>>
+        /// //       ^^^^^^ or, if we're dealing with bit arrays this span here
+        /// ```
+        ///
+        location: SrcSpan,
+
+        /// This is the content of the literal string.
+        ///
+        /// ```gleam
+        ///   "książka" as word <> _
+        /// // ^^^^^^^  This right here
+        /// ```
+        ///
+        value: EcoString,
+    },
+    Int {
+        /// The location of the name given to the alias:
+        ///
+        /// ```gleam
+        /// <<1 as digit>>
+        /// //     ^^^^^ This span here
+        /// ```
+        location: SrcSpan,
+
+        /// The value of the literal int being aliased.
+        value: BigInt,
+    },
+    Float {
+        /// The location of the name given to the alias:
+        ///
+        /// ```gleam
+        /// <<1.1 as number>>
+        /// //       ^^^^^^ This span here
+        /// ```
+        location: SrcSpan,
+
+        /// The value of the literal float being aliased.
+        value: LiteralFloatValue,
+    },
 }
 
-impl<'a, 'generator, 'module> PatternPrinter<'a, 'generator, 'module> {
+impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
     pub(super) fn new(generator: &'generator mut FunctionGenerator<'a, 'module>) -> Self {
         Self {
             generator,
-            variables: vec![],
-            guards: vec![],
-            assignments: vec![],
+            variables_to_add_later: HashMap::new(),
         }
     }
 
-    pub(super) fn reset_variables(&mut self) {
-        self.variables = vec![];
-    }
-
-    pub(super) fn print(&mut self, pattern: &'a TypedPattern) -> Document<'a> {
+    pub(super) fn pattern<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        pattern: &'a TypedPattern,
+    ) {
         match pattern {
-            Pattern::Assign { name, pattern, .. } => {
-                self.variables.push(name);
-                self.print(pattern)
-                    .append(" = ")
-                    .append(self.generator.next_local_var_name(name))
+            Pattern::Discard { .. } => eaf.discard_pattern(),
+            Pattern::Float { float_value, .. } => eaf.float_pattern(float_value.value()),
+            Pattern::Int { int_value, .. } => eaf.int_pattern(int_value.clone()),
+            Pattern::String { value, .. } => eaf.string_pattern(value),
+            Pattern::Variable { name, location, .. } => {
+                eaf.variable_pattern(&self.generator.new_erlang_variable(name, *location))
             }
 
-            Pattern::List { elements, tail, .. } => self.pattern_list(elements, tail.as_deref()),
-
-            Pattern::Discard { .. } => "_".to_doc(),
-
-            Pattern::BitArraySize(size) => match size {
-                BitArraySize::Int { .. }
-                | BitArraySize::Variable { .. }
-                | BitArraySize::Block { .. } => self.bit_array_size(size),
-                BitArraySize::BinaryOperator { .. } => self.bit_array_size(size).surround("(", ")"),
-            },
-
-            Pattern::Variable { name, .. } => {
-                self.variables.push(name);
-                self.generator.next_local_var_name(name)
-            }
-
-            Pattern::Int { value, .. } => int(value),
-            Pattern::Float { value, .. } => float(value),
-            Pattern::String { value, .. } => string(value),
-
-            Pattern::Constructor {
-                arguments,
-                constructor: Inferred::Known(PatternConstructor { name, .. }),
-                ..
-            } => self.tag_tuple_pattern(name, arguments),
-
-            Pattern::Constructor {
-                constructor: Inferred::Unknown,
-                ..
+            Pattern::Assign {
+                name,
+                pattern,
+                location,
             } => {
-                panic!("Erlang generation performed with uninferred pattern constructor")
+                eaf.match_pattern();
+                self.pattern(eaf, pattern);
+                eaf.variable_pattern(&self.generator.new_erlang_variable(name, *location));
             }
 
             Pattern::Tuple { elements, .. } => {
-                tuple(elements.iter().map(|pattern| self.print(pattern)))
+                let tuple = eaf.start_tuple_pattern();
+                for element in elements {
+                    self.pattern(eaf, element);
+                }
+                eaf.end_tuple_pattern(tuple);
             }
 
-            Pattern::BitArray { segments, .. } => bit_array(
-                segments
-                    .iter()
-                    .map(|s| self.pattern_segment(&s.value, &s.options)),
-            ),
+            Pattern::List { elements, tail, .. } => {
+                for element in elements {
+                    eaf.cons_list_pattern();
+                    self.pattern(eaf, element);
+                }
+                if let Some(tail) = tail {
+                    self.pattern(eaf, &tail.pattern);
+                } else {
+                    eaf.empty_list_pattern();
+                }
+            }
+
+            Pattern::Constructor {
+                arguments,
+                constructor,
+                ..
+            } => {
+                let Inferred::Known(PatternConstructor { name, .. }) = constructor else {
+                    panic!("uninferred constructor made it to codegen ")
+                };
+
+                if arguments.is_empty() {
+                    eaf.atom_pattern(&to_snake_case(name));
+                } else {
+                    let tuple = eaf.start_tuple_pattern();
+                    eaf.atom_pattern(&to_snake_case(name));
+                    for argument in arguments {
+                        self.pattern(eaf, &argument.value);
+                    }
+                    eaf.end_tuple_pattern(tuple);
+                }
+            }
 
             Pattern::StringPrefix {
                 left_side_string,
-                right_side_assignment,
                 left_side_assignment,
+                right_side_assignment,
+                right_location,
                 ..
             } => {
-                let right = match right_side_assignment {
-                    AssignName::Variable(right) => {
-                        self.variables.push(right);
-                        self.generator.next_local_var_name(right)
-                    }
-                    AssignName::Discard(_) => "_".to_doc(),
-                };
-
-                if let Some((left_name, _)) = left_side_assignment {
-                    // "wibble" as prefix <> rest
-                    //             ^^^^^^^^^ In case the left prefix of the pattern matching is given an alias
-                    //                       we bind it to a local variable so that it can be correctly
-                    //                       referenced inside the case branch.
-                    //
-                    // So we will end up with something that looks like this:
-                    //
-                    // <<"wibble"/binary, Rest/binary>> ->
-                    //     Prefix = "wibble",
-                    //     ...
-                    //
-                    self.variables.push(left_name);
-
-                    self.assignments.push(StringPatternAssignment {
-                        gleam_name: left_name.clone(),
-                        erlang_name: self.generator.next_local_var_name(left_name),
-                        literal_value: string(left_side_string),
-                    });
+                // If the constant string prefix is being aliased we need to add
+                // that value to the variables that are going to be generated
+                // later:
+                if let Some((prefix_name, prefix_location)) = left_side_assignment {
+                    let _ = self.variables_to_add_later.insert(
+                        prefix_name.clone(),
+                        AliasedLiteral::String {
+                            location: *prefix_location,
+                            value: left_side_string.clone(),
+                        },
+                    );
                 }
 
-                docvec![
-                    "<<\"",
-                    string_inner(left_side_string),
-                    "\"/utf8",
-                    ", ",
-                    right,
-                    "/binary>>"
-                ]
+                let bit_array = eaf.start_bit_array_pattern();
+
+                // We first generate a segment matching on the literal prefix.
+                eaf.bit_array_segment();
+                eaf.string_pattern(left_side_string);
+                eaf.atom("deafult");
+                eaf.bit_array_segment_specifiers([BitArraySegmentSpecifier::Utf8]);
+
+                // We then add a segment matching on the rest of the string.
+                eaf.bit_array_segment();
+                match right_side_assignment {
+                    AssignName::Variable(name) => eaf.variable_pattern(
+                        &self.generator.new_erlang_variable(name, *right_location),
+                    ),
+                    AssignName::Discard(_) => eaf.discard_pattern(),
+                }
+                eaf.atom("default");
+                eaf.bit_array_segment_specifiers([BitArraySegmentSpecifier::Binary]);
+
+                eaf.end_bit_array_pattern(bit_array);
             }
 
-            Pattern::Invalid { .. } => panic!("invalid patterns should not reach code generation"),
+            Pattern::BitArray { segments, .. } => {
+                let bit_array = eaf.start_bit_array_pattern();
+                for segment in segments {
+                    eaf.bit_array_segment();
+                    self.bit_array_pattern_segment_value(eaf, segment);
+                    self.bit_array_pattern_segment_size(eaf, segment);
+                    self.generator.bit_array_segment_specifiers(eaf, segment);
+                }
+                eaf.end_bit_array_pattern(bit_array);
+            }
+
+            Pattern::BitArraySize(size) => self.bit_array_size(eaf, size),
+
+            Pattern::Invalid { .. } => {
+                panic!("invalid patterns should not reach code generation")
+            }
         }
     }
 
-    fn bit_array_size(&mut self, size: &'a TypedBitArraySize) -> Document<'a> {
+    fn bit_array_size<Output>(&mut self, eaf: &mut impl Eaf<Output>, size: &'a TypedBitArraySize) {
         match size {
-            BitArraySize::Int { value, .. } => int(value),
-            BitArraySize::Block { inner, .. } => self.bit_array_size(inner).surround("(", ")"),
+            BitArraySize::Int { int_value, .. } => eaf.int(int_value.clone()),
+            BitArraySize::Block { inner, .. } => self.bit_array_size(eaf, inner),
+
             BitArraySize::Variable {
-                name, constructor, ..
-            } => {
-                let variant = &constructor
-                    .as_ref()
-                    .expect("Constructor not found for variable usage")
-                    .variant;
-                match variant {
-                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                        self.generator.const_inline(literal)
+                constructor, name, ..
+            } => match self.variables_to_add_later.get(name) {
+                Some(AliasedLiteral::Int { value, .. }) => eaf.int(value.clone()),
+                Some(_) => panic!("segment size that is not int made it through type checking"),
+                None => {
+                    let constructor = constructor.as_ref().expect("variable with no constructor");
+                    match &constructor.variant {
+                        ValueConstructorVariant::ModuleConstant { literal, .. } => {
+                            self.generator.inlined_constant(eaf, literal)
+                        }
+                        ValueConstructorVariant::LocalVariable { location, .. } => {
+                            eaf.variable(&self.generator.local_var_name(location))
+                        }
+                        ValueConstructorVariant::ModuleFn { .. }
+                        | ValueConstructorVariant::Record { .. } => panic!("invalid segment"),
                     }
-                    ValueConstructorVariant::LocalVariable { .. }
-                    | ValueConstructorVariant::ModuleFn { .. }
-                    | ValueConstructorVariant::Record { .. } => self.generator.local_var_name(name),
                 }
-            }
+            },
+
             BitArraySize::BinaryOperator {
                 operator,
                 left,
@@ -194,181 +285,140 @@ impl<'a, 'generator, 'module> PatternPrinter<'a, 'generator, 'module> {
                 ..
             } => {
                 let operator = match operator {
-                    IntOperator::Add => " + ",
-                    IntOperator::Subtract => " - ",
-                    IntOperator::Multiply => " * ",
+                    IntOperator::Add => "+",
+                    IntOperator::Subtract => "-",
+                    IntOperator::Multiply => "*",
                     IntOperator::Divide => {
-                        return self.bit_array_size_divide(left, right, "div");
+                        return self.bit_array_size_divide(eaf, left, right, "div");
                     }
                     IntOperator::Remainder => {
-                        return self.bit_array_size_divide(left, right, "rem");
+                        return self.bit_array_size_divide(eaf, left, right, "rem");
                     }
                 };
-
-                docvec![
-                    self.bit_array_size(left),
-                    operator,
-                    self.bit_array_size(right)
-                ]
+                eaf.binary_operator(operator);
+                self.bit_array_size(eaf, left);
+                self.bit_array_size(eaf, right);
             }
         }
     }
 
-    fn bit_array_size_divide(
+    fn bit_array_pattern_segment_value<Output>(
         &mut self,
-        left: &'a TypedBitArraySize,
-        right: &'a TypedBitArraySize,
-        operator: &'static str,
-    ) -> Document<'a> {
-        if right.non_zero_compile_time_number() {
-            return self.bit_array_size_operator(left, operator, right);
-        }
-
-        let left = self.bit_array_size(left);
-        let right = self.bit_array_size(right);
-        let denominator = self.generator.next_local_var_name("gleam@denominator");
-        let clauses = docvec![
-            line(),
-            "0 -> 0;",
-            line(),
-            denominator.clone(),
-            " -> ",
-            binop_documents(left, operator, denominator)
-        ];
-        docvec!["case ", right, " of", clauses.nest(INDENT), line(), "end"]
-    }
-
-    fn bit_array_size_operator(
-        &mut self,
-        left: &'a TypedBitArraySize,
-        operator: &'static str,
-        right: &'a TypedBitArraySize,
-    ) -> Document<'a> {
-        let left = if let BitArraySize::BinaryOperator { .. } = left {
-            self.bit_array_size(left).surround("(", ")")
-        } else {
-            self.bit_array_size(left)
+        eaf: &mut impl Eaf<Output>,
+        segment: &'a TypedPatternBitArraySegment,
+    ) {
+        let Pattern::Assign {
+            name,
+            location,
+            pattern,
+        } = segment.value.as_ref()
+        else {
+            // If the pattern is not an assign, it needs no extra care, we can
+            // just produce the code for such pattern!
+            self.pattern(eaf, &segment.value);
+            return;
         };
-        let right = if let BitArraySize::BinaryOperator { .. } = right {
-            self.bit_array_size(right).surround("(", ")")
-        } else {
-            self.bit_array_size(right)
-        };
-        binop_documents(left, operator, right)
-    }
 
-    fn tag_tuple_pattern(
-        &mut self,
-        name: &'a str,
-        arguments: &'a [CallArg<TypedPattern>],
-    ) -> Document<'a> {
-        if arguments.is_empty() {
-            atom_string(to_snake_case(name))
-        } else {
-            tuple(
-                [atom_string(to_snake_case(name))]
-                    .into_iter()
-                    .chain(arguments.iter().map(|argument| self.print(&argument.value))),
-            )
-        }
-    }
+        // But if we're dealing with an assign pattern inside a bit array
+        // segment we have to give it the same treatment we reserve for string
+        // prefixes (after all those are aliased bit array patterns too, since
+        // strings are just bitstrings!).
+        //
+        // After reading the docs for those you might already be familiar with
+        // the problem. But it's still worth going over that too one more time.
+        // In Gleam we can write `<<1 as a, _:bits>>` but in Erlang we can't
+        // produce the following pattern: `<<1 = A, _:bits>>`.
+        // So what we will do is match on the literal value and keep track of
+        // the constant value we'll have to add into scope later.
+        let aliased_value = match pattern.as_ref() {
+            Pattern::Int { int_value, .. } => AliasedLiteral::Int {
+                location: *location,
+                value: int_value.clone(),
+            },
 
-    fn pattern_list(
-        &mut self,
-        elements: &'a [TypedPattern],
-        tail: Option<&'a TypedTailPattern>,
-    ) -> Document<'a> {
-        let elements = join(
-            elements.iter().map(|element| self.print(element)),
-            break_(",", ", "),
-        );
-        let tail = tail.map(|tail| self.print(&tail.pattern));
-        list(elements, tail)
-    }
+            Pattern::Float { float_value, .. } => AliasedLiteral::Float {
+                location: *location,
+                value: *float_value,
+            },
+            Pattern::String { value, .. } => AliasedLiteral::String {
+                location: *location,
+                value: value.clone(),
+            },
 
-    fn pattern_segment(
-        &mut self,
-        value: &'a TypedPattern,
-        options: &'a [BitArrayOption<TypedPattern>],
-    ) -> Document<'a> {
-        let pattern_is_a_string_literal = matches!(value, Pattern::String { .. });
-        let pattern_is_a_discard = matches!(value, Pattern::Discard { .. });
-
-        let create_document = |this: &mut PatternPrinter<'a, 'generator, 'module>| match value {
-            Pattern::String { value, .. } => string_inner(value).surround("\"", "\""),
-            Pattern::Discard { .. }
-            | Pattern::Variable { .. }
-            | Pattern::Int { .. }
-            | Pattern::Float { .. } => this.print(value),
-
-            Pattern::Assign { name, pattern, .. } => {
-                this.variables.push(name);
-                let variable_name = this.generator.next_local_var_name(name);
-
-                match pattern.as_ref() {
-                    // In Erlang, assignment patterns inside bit arrays are not allowed. So instead of
-                    // generating `<<1 = A>>`, we  use guards, and generate `<<A>> when A =:= 1`.
-                    Pattern::Int { value, .. } => {
-                        this.guards
-                            .push(docvec![variable_name.clone(), " =:= ", int(value)]);
-                        variable_name
-                    }
-                    Pattern::Float { value, .. } => {
-                        this.guards
-                            .push(docvec![variable_name.clone(), " =:= ", float(value)]);
-                        variable_name
-                    }
-
-                    // Here we do the same as for floats and ints, but we must calculate the size of
-                    // the string first, so we can correctly match the bit array segment then compare
-                    // it afterwards.
-                    Pattern::String { value, .. } => {
-                        this.guards
-                            .push(docvec![variable_name.clone(), " =:= ", string(value)]);
-                        docvec![variable_name, ":", string_length_utf8_bytes(value)]
-                    }
-
-                    // Doing a pattern such as `<<_ as a>>` is the same as just `<<a>>`, so we treat it
-                    // as such.
-                    Pattern::Discard { .. } => variable_name,
-
-                    // Any other pattern is invalid as a bit array segment. We already handle the case
-                    // of `<<a as b>>` in the type-checker, and assignment patterns cannot be nested.
-                    Pattern::Variable { .. }
-                    | Pattern::BitArraySize(_)
-                    | Pattern::Assign { .. }
-                    | Pattern::List { .. }
-                    | Pattern::Constructor { .. }
-                    | Pattern::Tuple { .. }
-                    | Pattern::BitArray { .. }
-                    | Pattern::StringPrefix { .. }
-                    | Pattern::Invalid { .. } => panic!("Pattern segment match not recognised"),
-                }
+            // Aliasing a discard is the same as just producing a variable
+            // pattern, that makes things even simpler, we can just produce the
+            // code for a variable pattern with the wanted name and call it a day
+            Pattern::Discard { .. } => {
+                eaf.variable_pattern(&self.generator.new_erlang_variable(name, *location));
+                return;
             }
 
-            Pattern::BitArraySize(_)
+            Pattern::Variable { .. }
+            | Pattern::BitArraySize(_)
+            | Pattern::Assign { .. }
             | Pattern::List { .. }
             | Pattern::Constructor { .. }
             | Pattern::Tuple { .. }
             | Pattern::BitArray { .. }
             | Pattern::StringPrefix { .. }
-            | Pattern::Invalid { .. } => panic!("Pattern segment match not recognised"),
+            | Pattern::Invalid { .. } => {
+                panic!("invalid pattern inside aliased bit array pattern segment")
+            }
         };
 
-        let size = |value: &'a TypedPattern, this: &mut PatternPrinter<'a, 'generator, 'module>| {
-            Some(":".to_doc().append(this.print(value)))
+        let _ = self
+            .variables_to_add_later
+            .insert(name.clone(), aliased_value);
+        self.pattern(eaf, pattern);
+    }
+
+    fn bit_array_pattern_segment_size<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        segment: &'a TypedPatternBitArraySegment,
+    ) {
+        let Some(size) = segment.size() else {
+            eaf.atom("default");
+            return;
         };
+        let TypedPattern::BitArraySize(size) = size else {
+            panic!("invalid size in pattern size segment")
+        };
+        self.bit_array_size(eaf, size);
+    }
 
-        let unit = |value: &'a u8| Some(eco_format!("unit:{value}").to_doc());
+    fn bit_array_size_divide<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        left: &'a TypedBitArraySize,
+        right: &'a TypedBitArraySize,
+        operator: &'static str,
+    ) {
+        if right.non_zero_compile_time_number() {
+            eaf.binary_operator(operator);
+            self.bit_array_size(eaf, left);
+            self.bit_array_size(eaf, right);
+        } else {
+            let case = eaf.start_case();
+            self.bit_array_size(eaf, right);
 
-        bit_array_segment(
-            create_document,
-            options,
-            size,
-            unit,
-            pattern_is_a_string_literal,
-            pattern_is_a_discard,
-            self,
-        )
+            let clause = eaf.start_case_clause();
+            eaf.int_pattern(BigInt::ZERO);
+            let clause = eaf.end_clause_pattern(clause);
+            let clause = eaf.end_clause_guards(clause);
+            eaf.int(BigInt::ZERO);
+            eaf.end_clause_body(clause);
+
+            let clause = eaf.start_case_clause();
+            let denominator = self.generator.new_throwaway_variable();
+            eaf.variable_pattern(&denominator);
+            let clause = eaf.end_clause_pattern(clause);
+            let clause = eaf.end_clause_guards(clause);
+            eaf.binary_operator(operator);
+            self.bit_array_size(eaf, left);
+            eaf.variable(&denominator);
+            eaf.end_clause_body(clause);
+            eaf.end_case(case);
+        }
     }
 }

@@ -2784,9 +2784,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // We cannot support all values in guard expressions as the BEAM does not
         let (definition_location, origin) = match &constructor.variant {
-            ValueConstructorVariant::LocalVariable {
-                location, origin, ..
-            } => (*location, origin.clone()),
+            ValueConstructorVariant::LocalVariable { location, origin } => {
+                (*location, origin.clone())
+            }
 
             ValueConstructorVariant::ModuleFn { .. } | ValueConstructorVariant::Record { .. } => {
                 return Err(Error::NonLocalClauseGuardVariable { location, name });

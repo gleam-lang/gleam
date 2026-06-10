@@ -5,16 +5,13 @@ mod pattern;
 #[cfg(test)]
 mod tests;
 
-use crate::build::{Target, module_erlang_name};
-use crate::erlang::pattern::{PatternPrinter, StringPatternAssignment};
-use crate::strings::{convert_string_escape_chars, to_snake_case};
-use crate::type_::is_prelude_module;
+use crate::build::Target;
+use crate::erlang::pattern::{AliasedLiteral, PatternGenerator};
+use crate::strings::to_snake_case;
+use crate::type_::{self, is_prelude_module};
 use crate::{
-    Result,
-    ast::{Function, *},
-    docvec,
+    ast::*,
     line_numbers::LineNumbers,
-    pretty::*,
     type_::{
         ModuleValueConstructor, PatternConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
         ValueConstructorVariant,
@@ -22,19 +19,84 @@ use crate::{
 };
 use camino::Utf8Path;
 use ecow::{EcoString, eco_format};
+use erlang_abstract_format::{BitArraySegmentSpecifier, Eaf, ErlangModuleName, PrettyEaf};
 use itertools::Itertools;
 use num_bigint::BigInt;
 use num_traits::Signed;
-use regex::{Captures, Regex};
+use regex::Regex;
+use std::collections::VecDeque;
 use std::sync::OnceLock;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
-use vec1::Vec1;
 
-const INDENT: isize = 4;
-const MAX_COLUMNS: isize = 80;
+/// This is an open runtime error to which more fields can still be added.
+#[must_use]
+struct RuntimeError {
+    /// This is the map that is going to be thrown by the `erlang:error` call.
+    error_map: erlang_abstract_format::Map,
+    /// This is the call to `erlang:error` that will throw the error, with the
+    /// map as an argument.
+    erlang_error_call: erlang_abstract_format::Call,
+}
 
-fn module_name_atom(module: &str) -> Document<'static> {
-    atom_string(module.replace('/', "@").into())
+/// Represents all the different kind of runtime errors that Gleam can raise.
+enum RuntimeErrorKind {
+    Todo,
+    Panic,
+    Assert,
+    LetAssert,
+}
+
+impl RuntimeErrorKind {
+    fn default_error_message(&self) -> &'static str {
+        match self {
+            RuntimeErrorKind::Panic => "`panic` expression evaluated.",
+            RuntimeErrorKind::Assert => "Assertion failed.",
+            RuntimeErrorKind::LetAssert => "Pattern match failed, no pattern matched the value.",
+            RuntimeErrorKind::Todo => {
+                "`todo` expression evaluated. This code has not yet been implemented."
+            }
+        }
+    }
+}
+
+enum EchoPrintedValue<'a> {
+    /// We're printing the result of a pipeline step.
+    PipeStep {
+        /// This is the name that was given to the variable holding the value
+        /// we have to print.
+        name: EcoString,
+    },
+    /// We're printing any arbitrary expression.
+    Expression { value: &'a TypedExpr },
+}
+
+/// This describes how an expression that is used in a Gleam's function call
+/// should be called in the Erlang generated code.
+enum FunctionCall<'a> {
+    /// We're calling a function from the given module.
+    /// It might be the same module we're generating code for, so the
+    /// qualification might not be needed at all; remember to check that!
+    ///
+    /// ```erl
+    /// io:println("wibble")
+    /// ```
+    ///
+    Call { module: &'a str, name: &'a str },
+
+    /// The expression is not a module level function and can be called directly
+    /// like thie:
+    ///
+    /// ```erl
+    /// SomeVariable("wibble"),
+    /// fun() -> nil end().
+    /// ```
+    DirectCall,
+
+    /// This is actually not a call but rather needs to build a tuple with the
+    /// given tag.
+    /// This is needed for records: those are function calls in Gleam, but
+    /// simple tuples on the Erlang side.
+    BuildRecord { name: &'a str },
 }
 
 /// This is a structure used to generate code for an Erlang module.
@@ -44,17 +106,9 @@ pub struct Generator<'a> {
     module: &'a TypedModule,
     line_numbers: &'a LineNumbers,
 
-    /// The relative source path to the module that's gonna be used in `-file`
-    /// attributes in the generated Erlang code.
+    /// The relative source path to the module that's gonna be used in error
+    /// messages in the generated Erlang code.
     module_source_path: EcoString,
-
-    /// This will be true if we're generating `-doc` attributes for functions.
-    /// We need to know this to add a little `-if` macro to define `doc` in a
-    /// way that's compatible with older OTP versions.
-    ///
-    /// We could drop this once the `-doc` attribute has been available for at
-    /// least a couple of major versions.
-    needs_doc_attribute: bool,
 
     /// Wether `echo` has been used in this module, we're gonna need to know
     /// this in order to add the code needed by the pretty printing.
@@ -67,12 +121,71 @@ pub struct Generator<'a> {
 struct FunctionGenerator<'a, 'generator> {
     /// The name of the function we're generating code for.
     function_name: &'a str,
-    current_scope_vars: im::HashMap<String, usize>,
-    erl_function_scope_vars: im::HashMap<String, usize>,
 
     /// A reference to the module generator, this is needed to take care of some
     /// global state shared by all the functions.
     module_generator: &'generator mut Generator<'a>,
+
+    /// This maps from variable origin in the Gleam code to the name it was
+    /// assigned to it in the generated Erlang code.
+    ///
+    /// Erlang doesn't allow shadowing existing variables, so it's not always
+    /// the case that a variable named `wibble` in Gleam is going to correspond
+    /// to the Erlang `Wibble` variable. For example:
+    ///
+    /// ```gleam
+    /// let a = 1
+    /// let a = a + 1
+    /// ```
+    ///
+    /// In Erlang this would become:
+    ///
+    /// ```erl
+    /// A = 1,
+    /// A@1 = A + 1,
+    /// ```
+    ///
+    /// So variables might need renaming.
+    /// Whenever we find a variable usage in Gleam we have to check "what is
+    /// the name that was given to the variable that comes from this location?"
+    /// Only then we'll know what's the correct name to use for it.
+    ///
+    variable_names: im::HashMap<SrcSpan, EcoString>,
+
+    /// This keeps track of the number of throwaway variables that have already
+    /// been generated in the current function.
+    /// For example if this is `2` it means we've already generated:
+    ///
+    /// ```erl
+    /// _value
+    /// _value@1
+    /// _value@2
+    /// ```
+    ///
+    /// We need this to make sure that every time we generate a new throwaway
+    /// variable it has a unique name not shadowing anything else.
+    ///
+    throwaway_variables: usize,
+
+    /// This keeps track of all the names that are taken for the current
+    /// function and can't be used when defining new variables.
+    /// For example if this is `hash_map![("wibble", 2), ("wobble", 1)]`
+    /// this means that all of these variables have already been defined
+    /// somewhere in the current function:
+    ///
+    /// ```erl
+    /// Wibble = ...,
+    /// Wibble@1 = ...,
+    /// Wibble@2 = ...,
+    ///
+    /// Wobble = ...,
+    /// Wobble@1 = ...,
+    /// ```
+    ///
+    /// This is handy whenever we run into a new variable assignment and have to
+    /// generate a new name for it in Erlang.
+    ///
+    taken_names: im::HashMap<String, usize>,
 }
 
 impl<'a> Generator<'a> {
@@ -94,22 +207,11 @@ impl<'a> Generator<'a> {
             module,
             module_source_path,
             line_numbers,
-            needs_doc_attribute: false,
             echo_used: false,
         }
     }
 
-    fn module_document(&mut self) -> Result<Document<'a>> {
-        let mut exports = vec![];
-        let mut type_defs = vec![];
-        let mut type_exports = vec![];
-
-        let header = "-module("
-            .to_doc()
-            .append(self.module.erlang_name())
-            .append(").")
-            .append(line());
-
+    fn module_document<Output>(&mut self, eaf: &mut impl Eaf<Output>) {
         // We need to know which private functions are referenced in importable
         // constants so that we can export them anyway in the generated Erlang.
         // This is because otherwise when the constant is used in another module it
@@ -117,109 +219,251 @@ impl<'a> Generator<'a> {
         let overridden_publicity =
             find_private_functions_referenced_in_importable_constants(self.module);
 
-        for function in &self.module.definitions.functions {
-            register_function_exports(function, &mut exports, &overridden_publicity);
-        }
+        // We add a `-compile` attribute at the top of each module to instruct
+        // the Erlang compiler.
+        eaf.compile_attribute([
+            "no_auto_import",
+            "nowarn_ignored",
+            "nowarn_unused_vars",
+            "nowarn_unused_function",
+            "nowarn_nomatch",
+            "inline",
+        ]);
 
+        // We then need to add an `-export` attribute for all the module's
+        // public functions.
+        eaf.export_attribute(
+            (self.module.definitions.functions.iter())
+                .filter_map(|function| function_export(function, &overridden_publicity)),
+        );
+        // We do the same but with types.
+        eaf.export_type_attribute(self.module.definitions.custom_types.iter().map(type_export));
+
+        // We also add a `-module_doc` comment at the beginning of the module
+        // with its documentation.
+        self.module_documentation(eaf);
+
+        // Then we generate `-type` definitions for the module's types.
         for custom_type in &self.module.definitions.custom_types {
-            register_custom_type_exports(
-                custom_type,
-                &mut type_exports,
-                &mut type_defs,
-                &self.module.name,
-            );
+            self.type_definition(eaf, custom_type);
         }
 
-        let exports = match (!exports.is_empty(), !type_exports.is_empty()) {
-            (false, false) => return Ok(header),
-            (true, false) => "-export(["
-                .to_doc()
-                .append(join(exports, ", ".to_doc()))
-                .append("]).")
-                .append(lines(2)),
-
-            (true, true) => "-export(["
-                .to_doc()
-                .append(join(exports, ", ".to_doc()))
-                .append("]).")
-                .append(line())
-                .append("-export_type([")
-                .to_doc()
-                .append(join(type_exports, ", ".to_doc()))
-                .append("]).")
-                .append(lines(2)),
-
-            (false, true) => "-export_type(["
-                .to_doc()
-                .append(join(type_exports, ", ".to_doc()))
-                .append("]).")
-                .append(lines(2)),
-        };
-
-        let type_defs = if type_defs.is_empty() {
-            nil()
-        } else {
-            join(type_defs, lines(2)).append(lines(2))
-        };
-
-        let mut statements = vec![];
+        // And finally generate all the functions that the module defined.
         for function in &self.module.definitions.functions {
-            let mut generator = FunctionGenerator::new(function, self);
-            if let Some(function_doc) = generator.module_function(function) {
-                statements.push(function_doc);
+            FunctionGenerator::new(function, self).module_function(eaf, function);
+        }
+    }
+
+    fn module_documentation<Output>(&mut self, eaf: &mut impl Eaf<Output>) {
+        if self.module.type_info.is_internal {
+            // The module is internal so we need to add a `-moduledoc(false).`
+            // attribute to make sure its documentation is hidden.
+            let doc = eaf.start_moduledoc_attribute();
+            eaf.atom("false");
+            eaf.end_doc_attribute(doc);
+        } else if self.module.documentation.is_empty() {
+            // The module is not internal, but it has no docs.
+            // We don't have to do anything.
+        } else {
+            // The module has some documentation that we're going to include
+            // with a `-moduledoc` attribute.
+            let doc = eaf.start_moduledoc_attribute();
+            let documentation = &self.module.documentation.iter().join("\n");
+            eaf.string(documentation);
+            eaf.end_doc_attribute(doc);
+        };
+    }
+
+    fn type_definition<Output>(&self, eaf: &mut impl Eaf<Output>, custom_type: &TypedCustomType) {
+        let TypedCustomType {
+            name,
+            constructors,
+            opaque,
+            typed_parameters,
+            external_erlang,
+            ..
+        } = custom_type;
+
+        let name = erl_safe_type_name(to_snake_case(name));
+
+        // We start the type spec.
+        eaf.type_spec(
+            *opaque,
+            &name,
+            typed_parameters
+                .iter()
+                .map(|type_| type_parameter_name(type_)),
+        );
+
+        // Now we need to generate the type definition.
+        // Erlang doesn't allow to have phantom type variables, so if there's
+        // any type variable that is not used we will need to add one variant to
+        // the resulting type that is using all those phantom variables to avoid
+        // errors!
+        let phantom_type_variables = phantom_type_variables(custom_type);
+        let has_phantom_type_variables = !phantom_type_variables.is_empty();
+        match (constructors.as_slice(), has_phantom_type_variables) {
+            // This is an external type with an annotation telling us what type
+            // it corresponds to in Erlang.
+            // In that case all type variables are phantom type variables!
+            ([], _) if let Some((module, type_name, _)) = external_erlang => {
+                let type_ =
+                    eaf.start_remote_named_type(ErlangModuleName::new(module.clone()), type_name);
+                for type_variable in phantom_type_variables {
+                    eaf.type_variable(&type_variable);
+                }
+                eaf.end_named_type(type_);
+            }
+            // This is an external type with no external annotation and no
+            // phantom type variables. It is just `any()`.
+            ([], false) => {
+                let any = eaf.start_named_type("any");
+                eaf.end_named_type(any);
+            }
+            // This is an external type with no external annotation and some
+            // phantom type variables, we need to add an alternative to use
+            // them: `any() | {gleam_phantom, A, B, ...}`
+            ([], true) => {
+                let union = eaf.start_union_type();
+                let any = eaf.start_named_type("any");
+                eaf.end_named_type(any);
+                self.phantom_type(eaf, phantom_type_variables);
+                eaf.end_union_type(union);
+            }
+            // This is an external type with a single constructor, no need to
+            // make it a union.
+            ([constructor], false) => self.constructor_type(eaf, constructor),
+            // This is an external type with multiple constructors, we have to
+            // turn it into a union!
+            (constructors, has_phantom_type_variables) => {
+                let union = eaf.start_union_type();
+                for constructor in constructors {
+                    self.constructor_type(eaf, constructor);
+                }
+                if has_phantom_type_variables {
+                    self.phantom_type(eaf, phantom_type_variables);
+                }
+                eaf.end_union_type(union);
             }
         }
+    }
 
-        let module_doc = if self.module.type_info.is_internal {
-            Some(hidden_module_doc().append(lines(2)))
-        } else if self.module.documentation.is_empty() {
-            None
+    /// Given a constructor this generates its type. For example:
+    ///
+    /// ```gleam
+    /// Wibble(Int, String)
+    /// ```
+    ///
+    /// Would be turned into:
+    ///
+    /// ```erl
+    /// {wibble, integer(), binary()}.
+    /// ```
+    ///
+    fn constructor_type<Output>(
+        &self,
+        eaf: &mut impl Eaf<Output>,
+        constructor: &RecordConstructor<Arc<Type>>,
+    ) {
+        let constructor_atom = to_snake_case(&constructor.name);
+        if constructor.arguments.is_empty() {
+            // A constructor with no fields becomes a regular atom on the Erlang
+            // target.
+            eaf.literal_atom_type(&constructor_atom);
         } else {
-            Some(module_doc(&self.module.documentation).append(lines(2)))
-        };
+            // Othwerwise, it is a tuple tagged with the atom with the
+            // constructor name.
+            let generator = TypeGenerator::new(&self.module.name);
+            let tuple = eaf.start_tuple_type();
+            eaf.literal_atom_type(&constructor_atom);
+            for argument in &constructor.arguments {
+                generator.type_(eaf, &argument.type_);
+            }
+            eaf.end_tuple_type(tuple);
+        }
+    }
 
-        // We're going to need the documentation directives if any of the module's
-        // functions need it, or if the module has a module comment that we want to
-        // include in the generated Erlang source, or if the module is internal.
-        let needs_doc_directive = self.needs_doc_attribute || module_doc.is_some();
-        let documentation_directive = if needs_doc_directive {
-            "-if(?OTP_RELEASE >= 27).
--define(MODULEDOC(Str), -moduledoc(Str)).
--define(DOC(Str), -doc(Str)).
--else.
--define(MODULEDOC(Str), -compile([])).
--define(DOC(Str), -compile([])).
--endif."
-                .to_doc()
-                .append(lines(2))
-        } else {
-            nil()
-        };
+    /// Given a list of phantom type variabes, this generates a type using all
+    /// of those.
+    ///
+    /// Erlang doesn't allow having phantom type variables in type annotations,
+    /// so whenever there's any we need to manually add a type that uses them to
+    /// make sure we get no errors. For example:
+    ///
+    /// ```gleam
+    /// pub type Wibble(a, phantom) {
+    ///   Wibble(a)
+    /// }
+    /// ```
+    ///
+    /// Will have to be turned into:
+    ///
+    /// ```erl
+    /// -type wibble(A) :: {wibble, A} | {gleam_phantom, Phantom}.
+    /// ```
+    ///
+    /// So the phantom type is nothing more than a tuple tagged with
+    /// `gleam_phantom`.
+    ///
+    fn phantom_type<Output>(
+        &self,
+        eaf: &mut impl Eaf<Output>,
+        phantom_type_variables: Vec<EcoString>,
+    ) {
+        let phantom_tuple = eaf.start_tuple_type();
+        eaf.literal_atom_type("gleam_phantom");
+        for phantom_type_variable in phantom_type_variables {
+            eaf.type_variable(&phantom_type_variable);
+        }
+        eaf.end_tuple_type(phantom_tuple);
+    }
+}
 
-        let module = docvec![
-            header,
-            "-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).",
-            line(),
-            "-define(FILEPATH, \"",
-            self.module_source_path.clone(),
-            "\").",
-            line(),
-            exports,
-            documentation_directive,
-            module_doc,
-            type_defs,
-            join(statements, lines(2)),
-        ];
+/// Given a custom type, this will return a vector with the names of all the
+/// phantom type varaibles that it has. The names returned are the names we can
+/// use in Erlang!
+fn phantom_type_variables(custom_type: &CustomType<Arc<Type>>) -> Vec<EcoString> {
+    // We first find all the variables that appear in the type definition
+    // itself: any of those that isn't used by any of the constructors is going
+    // to be a phantom type variable.
+    let mut definition_type_variables =
+        collect_type_var_usages(HashMap::new(), custom_type.typed_parameters.iter());
 
-        let module = if self.echo_used {
-            module
-                .append(lines(2))
-                .append(std::include_str!("../templates/echo.erl").to_doc())
-        } else {
-            module
-        };
+    // So we need to gather all the type variables referenced by all the
+    // constructors.
+    let mut constructors_type_variables = HashMap::new();
+    for constructor in &custom_type.constructors {
+        constructors_type_variables = collect_type_var_usages(
+            constructors_type_variables,
+            constructor.arguments.iter().map(|argument| &argument.type_),
+        );
+    }
 
-        Ok(module.append(line()))
+    // The phantom ones are the ones in the definition that are not referenced
+    // by any constructor:
+    for used_type_variable in constructors_type_variables.keys() {
+        let _ = definition_type_variables.remove(used_type_variable);
+    }
+
+    definition_type_variables
+        .into_keys()
+        .map(id_to_type_var_str)
+        .sorted()
+        .collect_vec()
+}
+
+/// Given a custom type's type parameter (that is expected to be generic or
+/// unbound), this will return the name the corresponding type variable should
+/// have in the generated erlang code.
+///
+/// If the type passed is not generic this will panic!
+fn type_parameter_name(type_: &Type) -> EcoString {
+    let Type::Var { type_ } = type_ else {
+        panic!("non generic type as type parameter")
+    };
+    match &*type_.borrow() {
+        TypeVar::Unbound { id } | TypeVar::Generic { id } => id_to_type_var_str(*id),
+        TypeVar::Link { type_ } => type_parameter_name(type_),
     }
 }
 
@@ -236,8 +480,9 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         Self {
             function_name,
             module_generator,
-            current_scope_vars: im::HashMap::new(),
-            erl_function_scope_vars: im::HashMap::new(),
+            taken_names: im::HashMap::new(),
+            variable_names: im::HashMap::new(),
+            throwaway_variables: 0,
         }
     }
 
@@ -248,29 +493,84 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     /// ## Panics
     /// This will panic if the variable is not in scope as that is most likely
     /// the result of a bug in the compiler.
-    pub fn local_var_name(&self, name: &str) -> Document<'a> {
-        match self.current_scope_vars.get(name) {
-            None => panic!("variable name is not in scope"),
-            Some(0) => variable_name(name).to_doc(),
-            Some(n) => eco_format!("{}@{n}", variable_name(name)).to_doc(),
-        }
+    pub fn local_var_name(&self, variable_origin: &SrcSpan) -> EcoString {
+        self.variable_names
+            .get(variable_origin)
+            .expect("variable not in scope")
+            .clone()
     }
 
-    /// Add the given variable to the current scope also adding a suffix if it
-    /// would be shadowing an existing variable.
-    /// This returns the document with this newly generated name.
-    pub fn next_local_var_name(&mut self, name: &str) -> Document<'a> {
-        let next = self.erl_function_scope_vars.get(name).map_or(0, |i| i + 1);
-        let _ = self.erl_function_scope_vars.insert(name.to_string(), next);
-        let _ = self.current_scope_vars.insert(name.to_string(), next);
-        self.local_var_name(name)
+    /// Assigns a name to this new variable making sure it's not shadowing any
+    /// existing one.
+    ///
+    /// - `name` is the name of the variable as defined in the Gleam source code
+    /// - `location` is where that variable comes from, and it is used to then
+    ///   get this newly generated name back.
+    ///
+    /// For example:
+    ///
+    /// ```gleam
+    /// let wibble = 1
+    /// ```
+    ///
+    /// When we run into this Gleam assignment we will need to decide how to
+    /// call it on the Erlang side. So we would call:
+    ///
+    /// ```ignore
+    /// let location = todo!("the location of this variable")
+    /// new_erlang_variable("wibble", location)
+    /// // and later we can tell what name was picked by calling
+    /// // `local_variable_name`
+    /// local_variable_name(location) // "Wibble"
+    /// ```
+    ///
+    ///
+    pub fn new_erlang_variable(&mut self, name: &str, location: SrcSpan) -> EcoString {
+        let next = self.taken_names.get(name).map_or(0, |i| i + 1);
+        let _ = self.taken_names.insert(name.to_string(), next);
+        let erlang_name = match next {
+            0 => variable_name(name),
+            _ => eco_format!("{}@{}", variable_name(name), next),
+        };
+        let _ = self.variable_names.insert(location, erlang_name.clone());
+        erlang_name
+    }
+
+    /// Sometimes during code generation we might need to create new variables
+    /// that were not accounted for during analysis.
+    /// Those variables don't really have an origin in the source code and are
+    /// usually generated and immediately used.
+    ///
+    /// For example:
+    ///
+    /// ```erl
+    /// _denominator = ...,
+    /// 1 / _denominator.
+    /// ```
+    ///
+    /// Any time you need one such variable you can create it with this method
+    /// instead of `new_erlang_variable` which is meant to be used for variables
+    /// generated from Gleam code (and so wants the source location of the
+    /// variable).
+    ///
+    /// The generated name is guaranteed to always be unique for the given
+    /// function.
+    ///
+    fn new_throwaway_variable(&mut self) -> EcoString {
+        let name = if self.throwaway_variables == 0 {
+            EcoString::from("_value")
+        } else {
+            eco_format!("_value@{}", self.throwaway_variables)
+        };
+        self.throwaway_variables += 1;
+        name
     }
 
     /// Generates code for an Erlang module function. This might return None
     /// if there's no code to be generated at all!
     /// For example if the function is unused, or if the function is a private
     /// Erlang external (in which case, it would be inlined instead).
-    fn module_function(&mut self, function: &'a TypedFunction) -> Option<Document<'a>> {
+    fn module_function<Output>(&mut self, eaf: &mut impl Eaf<Output>, function: &'a TypedFunction) {
         // We don't generate any code for unused functions.
         if self
             .module_generator
@@ -278,261 +578,354 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             .unused_definition_positions
             .contains(&function.location.start)
         {
-            return None;
+            return;
         }
 
         // Private external functions don't need to render anything, the
         // underlying Erlang implementation is used directly at the call site.
         if function.external_erlang.is_some() && function.publicity.is_private() {
-            return None;
+            return;
         }
 
         // If the function has no suitable Erlang implementation then there is
         // nothing to generate for it.
         if !function.implementations.supports(Target::Erlang) {
-            return None;
+            return;
         }
 
-        let (arguments, body) = match function.external_erlang.as_ref() {
-            None => (
-                self.fun_arguments(&function.arguments),
-                self.statement_sequence(&function.body),
-            ),
+        let function_name = EcoString::from(escape_erlang_existing_name(self.function_name));
 
-            Some((module, external_function_name, _location)) => {
-                let arguments = self.external_fun_arguments(&function.arguments);
-                let body = docvec![
-                    atom(module),
-                    ":",
-                    atom(escape_erlang_existing_name(external_function_name)),
-                    arguments.clone()
-                ];
-                (arguments, body)
+        // Then we add the function's documentation and type annotation.
+        eaf.file_attribute(
+            &self.module_generator.module_source_path,
+            self.module_generator
+                .line_numbers
+                .line_number(function.location.start),
+        );
+        self.function_spec_attribute(eaf, &function_name, function);
+        self.function_doc_attribute(eaf, function);
+
+        // Finally we start generating code for the function itself, how we do
+        // it depends if the function is external or not.
+        let arity = function.arguments.len();
+        match function.external_erlang.as_ref() {
+            // If the function is not external we generate the code for all of
+            // its statements.
+            None => {
+                let arguments = self.function_arguments_names(&function.arguments, false);
+                let open_function = eaf.start_function(&function_name, arity, arguments);
+                self.statement_sequence(eaf, &function.body);
+                eaf.end_function(open_function);
             }
-        };
 
-        Some(docvec![
-            self.function_attributes(function),
-            line(),
-            atom_string(escape_erlang_existing_name(self.function_name).into()),
-            arguments,
-            " ->",
-            docvec![line(), body].nest(INDENT).group(),
-            ".",
-        ])
+            // An external function consists of just a remote call being
+            // passed all of the function's arguments.
+            Some((module, external_function_name, _location)) => {
+                let arguments = self
+                    .function_arguments_names(&function.arguments, true)
+                    .collect_vec();
+                let open_function = eaf.start_function(&function_name, arity, arguments.clone());
+                let call = eaf.start_remote_call(module.into(), external_function_name);
+                for argument in arguments {
+                    eaf.variable(&argument);
+                }
+                eaf.end_call(call);
+                eaf.end_function(open_function);
+            }
+        }
     }
 
-    /// Generates all the attributes that need to go before a function, like
-    /// a `-file` attribute, a `-doc` one, a `-spec` one, etc.
-    fn function_attributes(&mut self, function: &'a TypedFunction) -> Document<'a> {
+    /// This generates the `-spec` attribute for a function with the given name.
+    ///
+    fn function_spec_attribute<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        function_name: &EcoString,
+        function: &'a Function<Arc<Type>, TypedExpr>,
+    ) {
+        // We start by getting all the type variable usages from this function,
+        // both in the argument types and return type.
+        let module_name = &self.module_generator.module.name;
+        let var_usages = &collect_type_var_usages(
+            HashMap::new(),
+            function
+                .arguments
+                .iter()
+                .map(|argument| &argument.type_)
+                .chain(std::iter::once(&function.return_type)),
+        );
+        let generator = TypeGenerator::new(module_name).with_var_usages(var_usages);
+
+        // We can then start generating the function spec.
+        let spec = eaf.start_function_spec(function_name, function.arguments.len());
+        let function_type = eaf.start_function_type();
+        for argument in &function.arguments {
+            generator.type_(eaf, &argument.type_)
+        }
+        let function_type = eaf.end_function_type_arguments(function_type);
+        generator.type_(eaf, &function.return_type);
+        eaf.end_function_type(function_type);
+        eaf.end_function_spec(spec);
+    }
+
+    fn function_doc_attribute<Output>(&self, eaf: &mut impl Eaf<Output>, function: &TypedFunction) {
         // If a function is marked as internal or comes from an internal module
         // we want to hide its documentation in the Erlang shell!
         // So the doc directive will look like this: `-doc(false).`
         let is_internal =
             self.module_generator.module.type_info.is_internal || function.publicity.is_internal();
-        let doc_attribute = if is_internal {
-            self.hide_function_attribute().append(line())
-        } else if let Some((_, doc)) = &function.documentation {
-            self.function_doc_attribute(doc).append(line())
-        } else {
-            nil()
-        };
 
-        let file_attribute = self.file_attribute(function);
-        let spec_attribute = self.spec_attribute(function);
-        docvec![file_attribute, line(), doc_attribute, spec_attribute]
-    }
-
-    fn file_attribute(&self, function: &'a Function<Arc<Type>, TypedExpr>) -> Document<'a> {
-        let path = self.module_generator.module_source_path.clone();
-        let line = self
-            .module_generator
-            .line_numbers
-            .line_number(function.location.start);
-
-        docvec!["-file(\"", path, "\", ", line, ")."]
-    }
-
-    fn spec_attribute(&self, function: &'a TypedFunction) -> Document<'a> {
-        let function_types = function
-            .arguments
-            .iter()
-            .map(|argument| &argument.type_)
-            .chain(std::iter::once(&function.return_type));
-        let var_usages = collect_type_var_usages(HashMap::new(), function_types);
-        let type_printer =
-            TypePrinter::new(&self.module_generator.module.name).with_var_usages(&var_usages);
-        let function_name_atom = match function.name.as_ref() {
-            Some((_, function_name)) => atom(escape_erlang_existing_name(function_name)),
-            None => unreachable!("A module's function must be named"),
-        };
-        let arguments_spec = wrap_arguments(
-            function
-                .arguments
-                .iter()
-                .map(|argument| type_printer.print(&argument.type_)),
-        );
-        let return_spec = type_printer.print(&function.return_type);
-
-        docvec![
-            "-spec ",
-            function_name_atom,
-            arguments_spec,
-            " -> ",
-            return_spec,
-            ".",
-        ]
-        .group()
-    }
-
-    /// Generates an attribute to hide a function from the module's
-    /// documentation.
-    fn hide_function_attribute(&mut self) -> Document<'static> {
-        self.module_generator.needs_doc_attribute = true;
-        doc_attribute(DocCommentKind::Function, DocCommentContent::False)
-    }
-
-    /// Generates a `-doc` attribute with the given string as its content.
-    fn function_doc_attribute(&mut self, documentation: &EcoString) -> Document<'a> {
-        self.module_generator.needs_doc_attribute = true;
-        function_doc(documentation)
-    }
-
-    fn statement_sequence(&mut self, statements: &'a [TypedStatement]) -> Document<'a> {
-        let count = statements.len();
-        let mut documents = Vec::with_capacity(count * 3);
-        for (i, expression) in statements.iter().enumerate() {
-            let position = if i + 1 == count {
-                Position::Tail
-            } else {
-                Position::NotTail
-            };
-            documents.push(self.statement(expression, position).group());
-
-            if i + 1 < count {
-                // This isn't the final expression so add the delimeters
-                documents.push(",".to_doc());
-                documents.push(line());
-            }
-        }
-
-        if count == 1 {
-            documents.to_doc()
-        } else {
-            documents.to_doc().force_break()
+        if is_internal {
+            let attribute = eaf.start_doc_attribute();
+            eaf.atom("false");
+            eaf.end_doc_attribute(attribute);
+        } else if let Some((_, documentation)) = &function.documentation
+            && !documentation.is_empty()
+        {
+            let attribute = eaf.start_doc_attribute();
+            eaf.string(documentation);
+            eaf.end_doc_attribute(attribute);
         }
     }
 
-    fn statement(&mut self, statement: &'a TypedStatement, position: Position) -> Document<'a> {
-        match statement {
-            Statement::Expression(expression) => self.expr(expression),
-            Statement::Assignment(assignment) => self.assignment(assignment, position),
-            Statement::Use(use_) => self.expr(&use_.call),
-            Statement::Assert(assert) => self.assert(assert),
+    /// Given a function, this will return the names of the arguments to be used
+    /// in this function's definition. This will also update the current scope
+    /// to add those names to the available local variables.
+    fn function_arguments_names(
+        &mut self,
+        arguments: &[TypedArg],
+        is_external: bool,
+    ) -> impl Iterator<Item = EcoString> {
+        arguments.iter().map(move |argument| match &argument.names {
+            // When the function is external we need to be careful with discarded
+            // arguments. _All_ of the function arguments are always used in an
+            // external function, regardless of them being discarded in Gleam:
+            //
+            // ```gleam
+            // @external(erlang, "io", "format")
+            // fn format(_string: String, _args: List(String)) -> Nil
+            // ```
+            //
+            // Becomes:
+            //
+            // ```erl
+            // format(_string, _args) ->
+            //   io:format(_string, _args).
+            // ```
+            //
+            // If an argument is made of just underscores, then that would result
+            // in a syntax error in the generated Erlang, where the external
+            // function is called with a discard `io:format(_, _)`!
+            // So in this case we use a throwaway name to make sure the external
+            // function can be called correctly.
+            ArgNames::Discard { name, location }
+            | ArgNames::LabelledDiscard {
+                name,
+                name_location: location,
+                ..
+            } if is_external => {
+                if name.chars().all(|char| char == '_') {
+                    self.new_throwaway_variable()
+                } else {
+                    self.new_erlang_variable(name, *location)
+                }
+            }
+            ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => EcoString::from("_"),
+            ArgNames::Named { name, location }
+            | ArgNames::NamedLabelled {
+                name,
+                name_location: location,
+                ..
+            } => self.new_erlang_variable(name, *location),
+        })
+    }
+
+    fn statement_sequence<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        statements: &'a [TypedStatement],
+    ) {
+        // We go over each statement one by one and produce the code they need.
+        for i in 0..statements.len() {
+            match statements.get(i).expect("statement in range") {
+                Statement::Expression(expression) => self.expr(eaf, expression),
+                Statement::Use(use_) => self.expr(eaf, &use_.call),
+                Statement::Assert(assert) => self.assert(eaf, assert),
+                Statement::Assignment(assignment) => match &assignment.kind {
+                    AssignmentKind::Let | AssignmentKind::Generated => {
+                        self.let_(eaf, &assignment.value, &assignment.pattern)
+                    }
+                    // Let asserts are slightly different from everything else:
+                    // A let assert is compiled to a case expression where we
+                    // have two branches:
+                    //
+                    // ```gleam
+                    // let assert [a, b] = some_list
+                    // // ... the remaining statements
+                    // ```
+                    //
+                    // It will turn into something that looks like this:
+                    //
+                    // ```erl
+                    // case SomeList of
+                    //   [a, b] ->
+                    //     % ... the remaining statements;
+                    //   _ ->
+                    //    erlang:error(...)
+                    // end.
+                    // ```
+                    //
+                    // So in case we find a let assert we need to break out of
+                    // this cycle and pass it all the remaining statements so
+                    // that it can put those under the correct branch of the
+                    // case expression it's going to produce.
+                    AssignmentKind::Assert {
+                        message, location, ..
+                    } => {
+                        return self.let_assert(
+                            eaf,
+                            &assignment.value,
+                            &assignment.pattern,
+                            message.as_ref(),
+                            *location,
+                            statements.get(i + 1..).unwrap_or_default(),
+                        );
+                    }
+                },
+            }
         }
     }
 
-    /// Generates the document for the arguments' list of a function, bringing
-    /// all those variable names into scope (that's needed to avoid accidentally
-    /// shadowing a variable, that will result in an exception in Erlang)!
-    fn fun_arguments(&mut self, arguments: &'a [TypedArg]) -> Document<'a> {
-        wrap_arguments(arguments.iter().map(|argument| match &argument.names {
-            ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
-            ArgNames::Named { name, .. } | ArgNames::NamedLabelled { name, .. } => {
-                self.next_local_var_name(name)
-            }
-        }))
-    }
-
-    /// Generates the document for the arguments' list of an external function.
-    fn external_fun_arguments(&mut self, arguments: &'a [TypedArg]) -> Document<'a> {
-        wrap_arguments(arguments.iter().map(|argument| {
-            let name = match &argument.names {
-                ArgNames::Discard { name, .. }
-                | ArgNames::LabelledDiscard { name, .. }
-                | ArgNames::Named { name, .. }
-                | ArgNames::NamedLabelled { name, .. } => name,
-            };
-
-            if name.chars().all(|c| c == '_') {
-                self.next_local_var_name("argument")
-            } else {
-                self.next_local_var_name(name)
-            }
-        }))
-    }
-
-    fn expr(&mut self, expression: &'a TypedExpr) -> Document<'a> {
+    fn expr<Output>(&mut self, eaf: &mut impl Eaf<Output>, expression: &'a TypedExpr) {
         match expression {
-            TypedExpr::Todo {
-                message: label,
-                location,
-                ..
-            } => self.todo(label.as_deref(), *location),
-
-            TypedExpr::Panic {
-                location, message, ..
-            } => self.panic(*location, message.as_deref()),
-
-            TypedExpr::Echo {
-                expression,
-                location,
-                message,
-                ..
-            } => {
-                let expression = expression
-                    .as_ref()
-                    .expect("echo with no expression outside of pipe");
-                let expression = self.maybe_block_expr(expression);
-                self.echo(expression, message.as_deref(), location)
-            }
-
-            TypedExpr::Int { value, .. } => int(value),
-            TypedExpr::Float { value, .. } => float(value),
-            TypedExpr::String { value, .. } => string(value),
-
-            TypedExpr::Pipeline {
-                first_value,
-                assignments,
-                finally,
-                ..
-            } => self.pipeline(first_value, assignments, finally),
-
-            TypedExpr::Block { statements, .. } => self.block(statements),
-
-            TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
-
+            //
+            // Simple scalar values, and blocks.
+            //
+            TypedExpr::Int { int_value, .. } => eaf.int(int_value.clone()),
+            TypedExpr::Float { float_value, .. } => eaf.float(float_value.value()),
+            TypedExpr::String { value, .. } => eaf.string(value),
             TypedExpr::Var {
                 name, constructor, ..
-            } => self.var(name, constructor),
+            } => self.var(eaf, name, constructor),
+            TypedExpr::Block { statements, .. } => {
+                // If the block has a single expression we don't bother wrapping
+                // it in an additional `begin ... end` block.
+                // It's going to be added only if strictly needed.
+                if statements.len() == 1
+                    && let Statement::Expression(expression) = statements.first()
+                {
+                    self.maybe_block_expr(eaf, expression);
+                } else {
+                    let block = eaf.start_block();
+                    self.statement_sequence(eaf, statements);
+                    eaf.end_block(block)
+                }
+            }
 
-            TypedExpr::Fn {
-                arguments, body, ..
-            } => self.fun(arguments, body),
+            //
+            // Operators.
+            //
+            TypedExpr::NegateBool { value, .. } => {
+                eaf.unary_operator("not");
+                self.maybe_block_expr(eaf, value)
+            }
+            TypedExpr::NegateInt { value, .. } => {
+                eaf.unary_operator("-");
+                self.maybe_block_expr(eaf, value)
+            }
+            TypedExpr::BinOp {
+                operator,
+                left,
+                right,
+                ..
+            } => self.bin_op(eaf, operator, left, right),
 
-            TypedExpr::NegateBool { value, .. } => self.negate_with("not ", value),
+            //
+            // BitArrays, Lists, and Tuples.
+            //
+            TypedExpr::BitArray { segments, .. } => {
+                let bit_array = eaf.start_bit_array();
+                for segment in segments {
+                    self.bit_array_expression_segment(eaf, segment);
+                }
+                eaf.end_bit_array(bit_array);
+            }
+            TypedExpr::List { elements, tail, .. } => {
+                // We generate all the items of the list as cons cells.
+                for element in elements {
+                    eaf.cons_list();
+                    self.maybe_block_expr(eaf, element);
+                }
+                // Finally we close the list with the tail, or an empty list
+                // (so that we're sure we're building proper Erlang lists).
+                if let Some(tail) = tail {
+                    self.maybe_block_expr(eaf, tail);
+                } else {
+                    eaf.empty_list();
+                }
+            }
+            TypedExpr::Tuple { elements, .. } => {
+                let tuple = eaf.start_tuple();
+                for element in elements {
+                    self.maybe_block_expr(eaf, element);
+                }
+                eaf.end_tuple(tuple)
+            }
 
-            TypedExpr::NegateInt { value, .. } => self.negate_with("- ", value),
+            //
+            // Accessing data inside tuples, and records.
+            // They're all tuple accesses at the end of the day!
+            //
+            TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(eaf, tuple, *index),
+            TypedExpr::RecordAccess { record, index, .. }
+            | TypedExpr::PositionalAccess { record, index, .. } => {
+                self.tuple_index(eaf, record, index + 1)
+            }
 
-            TypedExpr::List { elements, tail, .. } => self.expr_list(elements, tail),
-
-            TypedExpr::Call { fun, arguments, .. } => self.call(fun, arguments),
-
+            //
+            // Records and record updates.
+            //
             TypedExpr::ModuleSelect {
                 constructor: ModuleValueConstructor::Record { name, arity: 0, .. },
                 ..
-            } => atom_string(to_snake_case(name)),
-
-            TypedExpr::ModuleSelect {
-                constructor: ModuleValueConstructor::Constant { literal, .. },
+            } => eaf.atom(&to_snake_case(name)),
+            TypedExpr::RecordUpdate {
+                updated_record_assigned_name,
+                updated_record,
+                constructor,
+                arguments,
                 ..
-            } => self.const_inline(literal),
+            } => {
+                // If the record value itself needs to be bound to a variable
+                // before the update, we define it.
+                if let Some(name) = updated_record_assigned_name.as_ref() {
+                    eaf.match_operator();
+                    eaf.variable_pattern(
+                        &self.new_erlang_variable(name, updated_record.location()),
+                    );
+                    self.maybe_block_expr(eaf, updated_record);
+                }
+                // Then a record update is simply a call!
+                self.call(eaf, constructor, arguments)
+            }
 
+            //
+            // All kinds of anonymous functions.
+            //
+            TypedExpr::Fn {
+                arguments, body, ..
+            } => {
+                let outer_scope = self.taken_names.clone();
+                let argument_names = self.function_arguments_names(arguments, false);
+                let function = eaf.start_anonymous_function(argument_names);
+                self.statement_sequence(eaf, body);
+                eaf.end_function(function);
+                self.taken_names = outer_scope;
+            }
             TypedExpr::ModuleSelect {
                 constructor: ModuleValueConstructor::Record { name, arity, .. },
                 ..
-            } => record_constructor_function(name.clone(), *arity as usize),
-
+            } => self.record_builder_anonymous_function(eaf, name, *arity as usize),
             TypedExpr::ModuleSelect {
                 type_,
                 constructor:
@@ -542,375 +935,329 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     }
                     | ModuleValueConstructor::Fn { module, name, .. },
                 ..
-            } => module_select_fn(type_.clone(), module, name),
+            } => match type_::collapse_links(type_.clone()).as_ref() {
+                Type::Fn { arguments, .. } => eaf.function_reference(
+                    Some(module.into()),
+                    escape_erlang_existing_name(name),
+                    arguments.len(),
+                ),
 
-            TypedExpr::RecordAccess { record, index, .. } => self.tuple_index(record, index + 1),
-            TypedExpr::PositionalAccess { record, index, .. } => {
-                self.tuple_index(record, index + 1)
-            }
+                Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
+                    let name = escape_erlang_existing_name(name);
+                    let call = eaf.start_remote_call(module.into(), name);
+                    eaf.end_call(call);
+                }
+            },
 
-            TypedExpr::RecordUpdate {
-                updated_record_assigned_name,
-                updated_record,
-                constructor,
-                arguments,
+            //
+            // Calling functions.
+            //
+            TypedExpr::Call { fun, arguments, .. } => self.call(eaf, fun, arguments),
+            TypedExpr::Pipeline {
+                first_value,
+                assignments,
+                finally,
                 ..
-            } => self.record_update(
-                updated_record,
-                updated_record_assigned_name,
-                constructor,
-                arguments,
+            } => self.pipeline(eaf, first_value, assignments, finally),
+
+            //
+            // Todo, panic, and echo.
+            //
+            TypedExpr::Todo {
+                message, location, ..
+            } => {
+                let error = self.start_runtime_error(
+                    eaf,
+                    RuntimeErrorKind::Todo,
+                    *location,
+                    message.as_deref(),
+                );
+                self.end_runtime_error(eaf, error);
+            }
+            TypedExpr::Panic {
+                location, message, ..
+            } => {
+                let error = self.start_runtime_error(
+                    eaf,
+                    RuntimeErrorKind::Panic,
+                    *location,
+                    message.as_deref(),
+                );
+                self.end_runtime_error(eaf, error);
+            }
+            TypedExpr::Echo {
+                expression,
+                location,
+                message,
+                ..
+            } => self.echo(
+                eaf,
+                *location,
+                message.as_deref(),
+                EchoPrintedValue::Expression {
+                    value: expression
+                        .as_ref()
+                        .expect("echo with no expression outside of pipe"),
+                },
             ),
 
+            //
+            // Module constants.
+            //
+            TypedExpr::ModuleSelect {
+                constructor: ModuleValueConstructor::Constant { literal, .. },
+                ..
+            } => self.inlined_constant(eaf, literal),
+
+            //
+            // Control flow.
+            //
             TypedExpr::Case {
                 subjects, clauses, ..
-            } => self.case(subjects, clauses),
+            } => self.case(eaf, subjects, clauses),
 
-            TypedExpr::BinOp {
-                operator,
-                left,
-                right,
-                ..
-            } => self.bin_op(operator, left, right),
-
-            TypedExpr::Tuple { elements, .. } => tuple(
-                elements
-                    .iter()
-                    .map(|element| self.maybe_block_expr(element)),
-            ),
-
-            TypedExpr::BitArray { segments, .. } => bit_array(
-                segments
-                    .iter()
-                    .map(|segment| self.bit_array_expression_segment(segment)),
-            ),
-
+            //
+            // Something went wrong!
+            //
             TypedExpr::Invalid { .. } => {
                 panic!("invalid expressions should not reach code generation")
             }
         }
     }
 
-    fn todo(&mut self, message: Option<&'a TypedExpr>, location: SrcSpan) -> Document<'a> {
-        let message = match message {
-            Some(message) => self.expr(message),
-            None => string("`todo` expression evaluated. This code has not yet been implemented."),
-        };
-        self.erlang_error("todo", &message, location, vec![])
-    }
-
-    fn panic(&mut self, location: SrcSpan, message: Option<&'a TypedExpr>) -> Document<'a> {
-        let message = match message {
-            Some(message) => self.expr(message),
-            None => string("`panic` expression evaluated."),
-        };
-        self.erlang_error("panic", &message, location, vec![])
-    }
-
-    fn erlang_error(
-        &self,
-        name: &'a str,
-        message: &Document<'a>,
-        location: SrcSpan,
-        fields: Vec<(&'a str, Document<'a>)>,
-    ) -> Document<'a> {
-        let mut fields_doc = docvec![
-            "gleam_error => ",
-            name,
-            ",",
-            line(),
-            "message => ",
-            message.clone(),
-            ",",
-            line(),
-            "file => <<?FILEPATH/utf8>>,",
-            line(),
-            "module => ",
-            self.module_generator
-                .module
-                .name
-                .clone()
-                .to_doc()
-                .surround("<<\"", "\"/utf8>>"),
-            ",",
-            line(),
-            "function => ",
-            string(self.function_name),
-            ",",
-            line(),
-            "line => ",
-            self.module_generator
-                .line_numbers
-                .line_number(location.start),
-        ];
-
-        for (key, value) in fields {
-            fields_doc = fields_doc
-                .append(",")
-                .append(line())
-                .append(key)
-                .append(" => ")
-                .append(value);
-        }
-
-        let error = docvec!["#{", fields_doc.group().nest(INDENT), "}"];
-        docvec!["erlang:error", wrap_arguments([error.group()])]
-    }
-
-    fn echo(
+    fn echo<Output>(
         &mut self,
-        body: Document<'a>,
+        eaf: &mut impl Eaf<Output>,
+        echo_location: SrcSpan,
         message: Option<&'a TypedExpr>,
-        location: &SrcSpan,
-    ) -> Document<'a> {
+        printed_value: EchoPrintedValue<'a>,
+    ) {
         self.module_generator.echo_used = true;
 
-        let message = message
-            .as_ref()
-            .map(|message| self.maybe_block_expr(message))
-            .unwrap_or("nil".to_doc());
+        let call = eaf.start_call();
+        eaf.atom("echo");
 
-        "echo".to_doc().append(wrap_arguments(vec![
-            body,
-            message,
+        // Echo has 4 arguments: the expression to print...
+        match printed_value {
+            EchoPrintedValue::PipeStep { name } => eaf.variable(&name),
+            EchoPrintedValue::Expression { value } => self.maybe_block_expr(eaf, value),
+        }
+        // ...the message to print (or nil if there's no message)...
+        if let Some(message) = message {
+            self.maybe_block_expr(eaf, message);
+        } else {
+            eaf.atom("nil")
+        }
+
+        // ...the filepath of this module...
+        eaf.string(&self.module_generator.module_source_path);
+
+        // ...and the line number of the expression.
+        eaf.int(
+            self.module_generator
+                .line_numbers
+                .line_number(echo_location.start)
+                .into(),
+        );
+
+        eaf.end_call(call);
+    }
+
+    /// This starts a call to `erlang:error` with a map representing a Gleam
+    /// runtime error of the given kind.
+    /// Some fields are mandatory and always added, but if you need to add more
+    /// fields you can still do so by calling `eaf.map_field()`.
+    ///
+    /// After you're done generating those additional fields remember you _must_
+    /// call `end_runtime_error` before generating any other piece of code!
+    ///
+    fn start_runtime_error<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        error_kind: RuntimeErrorKind,
+        location: SrcSpan,
+        message: Option<&'a TypedExpr>,
+    ) -> RuntimeError {
+        let call = eaf.start_remote_call("erlang".into(), "error");
+        let map = eaf.start_map();
+
+        eaf.map_field();
+        eaf.atom("gleam_error");
+        eaf.atom(match error_kind {
+            RuntimeErrorKind::Todo => "todo",
+            RuntimeErrorKind::Panic => "panic",
+            RuntimeErrorKind::Assert => "assert",
+            RuntimeErrorKind::LetAssert => "let_assert",
+        });
+
+        eaf.map_field();
+        eaf.atom("message");
+        if let Some(message) = message {
+            self.maybe_block_expr(eaf, message);
+        } else {
+            eaf.string(error_kind.default_error_message())
+        }
+
+        eaf.map_field();
+        eaf.atom("file");
+        eaf.string(&self.module_generator.module_source_path);
+
+        eaf.map_field();
+        eaf.atom("module");
+        eaf.string(&self.module_generator.module.name);
+
+        eaf.map_field();
+        eaf.atom("function");
+        eaf.string(self.function_name);
+
+        eaf.map_field();
+        eaf.atom("line");
+        eaf.int(
             self.module_generator
                 .line_numbers
                 .line_number(location.start)
-                .to_doc(),
-        ]))
+                .into(),
+        );
+
+        RuntimeError {
+            error_map: map,
+            erlang_error_call: call,
+        }
     }
 
-    fn maybe_block_expr(&mut self, expression: &'a TypedExpr) -> Document<'a> {
+    /// This closes an open runtime error.
+    fn end_runtime_error<Output>(&self, eaf: &mut impl Eaf<Output>, runtime_error: RuntimeError) {
+        eaf.end_map(runtime_error.error_map);
+        eaf.end_call(runtime_error.erlang_error_call);
+    }
+
+    fn maybe_block_expr<Output>(&mut self, eaf: &mut impl Eaf<Output>, expression: &'a TypedExpr) {
         if needs_begin_end_wrapping(expression) {
-            begin_end(self.expr(expression))
+            let block = eaf.start_block();
+            self.expr(eaf, expression);
+            eaf.end_block(block);
         } else {
-            self.expr(expression)
+            self.expr(eaf, expression);
         }
     }
 
-    fn assignment(&mut self, assignment: &'a TypedAssignment, position: Position) -> Document<'a> {
-        match &assignment.kind {
-            AssignmentKind::Let | AssignmentKind::Generated => {
-                self.let_(&assignment.value, &assignment.pattern)
-            }
-            AssignmentKind::Assert {
-                message, location, ..
-            } => self.let_assert(
-                &assignment.value,
-                &assignment.pattern,
-                message.as_ref(),
-                position,
-                *location,
-            ),
-        }
-    }
-
-    fn let_(&mut self, value: &'a TypedExpr, pattern: &'a TypedPattern) -> Document<'a> {
-        let body = self.maybe_block_expr(value).group();
-        PatternPrinter::new(self)
-            .print(pattern)
-            .append(" = ")
-            .append(body)
-    }
-
-    fn let_assert(
+    fn let_<Output>(
         &mut self,
+        eaf: &mut impl Eaf<Output>,
+        value: &'a TypedExpr,
+        pattern: &'a TypedPattern,
+    ) {
+        eaf.match_operator();
+        PatternGenerator::new(self).pattern(eaf, pattern);
+        self.maybe_block_expr(eaf, value)
+    }
+
+    fn let_assert<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
         value: &'a TypedExpr,
         pattern: &'a TypedPattern,
         message: Option<&'a TypedExpr>,
-        position: Position,
         location: SrcSpan,
-    ) -> Document<'a> {
+        following_statements: &'a [TypedStatement],
+    ) {
         // If the pattern will never fail, like a tuple or a simple variable, we
         // simply treat it as if it were a `let` assignment.
         if pattern.always_matches() {
-            return self.let_(value, pattern);
+            self.let_(eaf, value, pattern);
+            self.statement_sequence(eaf, following_statements);
+            return;
         }
 
-        let message = match message {
-            Some(message) => self.expr(message),
-            None => string("Pattern match failed, no pattern matched the value."),
-        };
+        // Otherwise we turn the let assert into a case expression with two
+        // branches: one for the asserted pattern, and one catch all to throw an
+        // exception in case the pattern doesn't match.
+        let case = eaf.start_case();
+        self.maybe_block_expr(eaf, value);
 
-        let subject = self.maybe_block_expr(value);
-
-        // The code we generated for a `let assert` assignment looks something like
-        // this. For this Gleam code:
-        //
-        // ```gleam
-        // let assert [a, b, c] = [1, 2, 3]
-        // ```
-        //
-        // We generate (roughly) the following Erlang:
-        //
-        // ```erlang
-        // {A, B, C} = case [1, 2, 3] of
-        //   [A, B, C] -> {A, B, C};
-        //   _ -> erlang:error(...)
-        // end.
-        // ```
-        // This is the most efficient way to properly extract all the required
-        // variables from the pattern. However, if the `let assert` assignment is
-        // the last in a block, like this:
-        //
-        // ```gleam
-        // let x = {
-        //   let assert [a, b, c] = [1, 2, 3]
-        // }
-        // ```
-        //
-        // The generated Erlang code will end up assigning the value `#(1, 2, 3)`
-        // to the variable `x`, instead of `[1, 2, 3]`. In this case, we must
-        // generate slightly different code. Since we know we won't be using the
-        // bound variables anywhere (there is nothing else in this scope to
-        // reference them), we can safely remove the assignment from the generated
-        // code, and generate the following:
-        //
-        // ```erlang
-        // X = begin
-        //   _assert_subject = [1, 2, 3]
-        //   case _assert_subject of
-        //     [A, B, C] -> _assert_subject;
-        //     _ -> erlang:error(...)
-        //   end
-        // end.
-        // ```
-        //
-        // That correctly assigns `[1, 2, 3]` to the `x` variable.
-        //
-        let is_tail = match position {
-            Position::Tail => true,
-            Position::NotTail => false,
-        };
-
-        let (subject_assignment, subject) = if is_tail && !value.is_var() {
-            let variable = self.next_local_var_name(ASSERT_SUBJECT_VARIABLE);
-            let assignment = docvec![variable.clone(), " = ", subject, ",", line()];
-            (assignment, variable)
+        // This is the first branch for when the asserted pattern matches: it's
+        // going to run all the remaining statements in its body.
+        if !following_statements.is_empty() {
+            // If there's statements after this let assert we want to generate
+            // them.
+            let clause = eaf.start_case_clause();
+            let mut generator = PatternGenerator::new(self);
+            generator.pattern(eaf, pattern);
+            let clause = eaf.end_clause_pattern(clause);
+            let clause = eaf.end_clause_guards(clause);
+            let variables_to_add_later = generator.variables_to_add_later;
+            self.pattern_assignments(eaf, variables_to_add_later);
+            self.statement_sequence(eaf, following_statements);
+            eaf.end_clause_body(clause);
         } else {
-            (nil(), subject)
-        };
+            // If there's no statements following the let assert, that means
+            // that it's the last statement in the block and we need to return
+            // the value being matched on.
+            // It will look something like this:
+            //
+            // ```erl
+            // case MatchedValue of
+            //   [_, A | _] = _value -> _value;
+            // %              ^^^^^^ We bind the pattern to a variable
+            // %                     and return it.
+            //   _ -> erlang:error(...)
+            // end
+            // ```
+            let clause = eaf.start_case_clause();
+            let matched_value_name = self.new_throwaway_variable();
+            eaf.match_pattern();
+            let mut generator = PatternGenerator::new(self);
+            generator.pattern(eaf, pattern);
+            eaf.variable_pattern(&matched_value_name);
 
-        let mut pattern_printer = PatternPrinter::new(self);
-        let pattern_document = pattern_printer.print(pattern);
-        let PatternPrinter {
-            generator: _,
-            variables,
-            guards,
-            assignments,
-        } = pattern_printer;
+            let clause = eaf.end_clause_pattern(clause);
+            let clause = eaf.end_clause_guards(clause);
+            eaf.variable(&matched_value_name);
+            eaf.end_clause_body(clause);
+        }
 
-        let assignments_map = assignments
-            .iter()
-            .map(|assignment| (assignment.gleam_name.clone(), assignment))
-            .collect();
-        let clause_guard = self.optional_clause_guard(None, guards, &assignments_map);
+        // This is the catch all branch to throw an error otherwise.
+        let clause = eaf.start_case_clause();
+        let value_name = self.new_throwaway_variable();
+        eaf.variable_pattern(&value_name);
+        let clause = eaf.end_clause_pattern(clause);
+        let clause = eaf.end_clause_guards(clause);
+        let error = self.start_runtime_error(eaf, RuntimeErrorKind::LetAssert, location, message);
 
-        let value_document = match variables.as_slice() {
-            _ if is_tail => subject.clone(),
-            [] => "nil".to_doc(),
-            [variable] => self.local_var_name(variable),
-            variables => {
-                let variables = variables
-                    .iter()
-                    .map(|variable| self.local_var_name(variable));
-                docvec![
-                    break_("{", "{"),
-                    join(variables, break_(",", ", ")).nest(INDENT),
-                    "}"
-                ]
-                .group()
-            }
-        };
+        // We want to add some additional fields to the error map:
+        eaf.map_field();
+        eaf.atom("value");
+        eaf.variable(&value_name);
 
-        let assignment = match variables.as_slice() {
-            _ if is_tail => nil(),
-            [] => nil(),
-            [variable] => self.next_local_var_name(variable).append(" = "),
-            variables => {
-                let variables = variables
-                    .iter()
-                    .map(|variable| self.next_local_var_name(variable));
-                docvec![
-                    break_("{", "{"),
-                    join(variables, break_(",", ", ")).nest(INDENT),
-                    "} = "
-                ]
-                .group()
-            }
-        };
+        eaf.map_field();
+        eaf.atom("start");
+        eaf.int(location.start.into());
 
-        let clauses = docvec![
-            pattern_document,
-            clause_guard,
-            " -> ",
-            value_document,
-            ";",
-            line(),
-            self.next_local_var_name(ASSERT_FAIL_VARIABLE),
-            " ->",
-            docvec![
-                line(),
-                self.erlang_error(
-                    "let_assert",
-                    &message,
-                    location,
-                    vec![
-                        ("value", self.local_var_name(ASSERT_FAIL_VARIABLE)),
-                        ("start", location.start.to_doc()),
-                        ("'end'", value.location().end.to_doc()),
-                        ("pattern_start", pattern.location().start.to_doc()),
-                        ("pattern_end", pattern.location().end.to_doc()),
-                    ],
-                )
-                .nest(INDENT)
-            ]
-            .nest(INDENT)
-        ];
+        eaf.map_field();
+        eaf.atom("end");
+        eaf.int(value.location().end.into());
 
-        let assignments = if assignments.is_empty() {
-            nil()
-        } else {
-            docvec![
-                ",",
-                line(),
-                join(
-                    assignments
-                        .iter()
-                        .map(|assignment| assignment.to_assignment_doc()),
-                    ",".to_doc().append(line())
-                )
-            ]
-        };
+        eaf.map_field();
+        eaf.atom("pattern_start");
+        eaf.int(pattern.location().start.into());
 
-        docvec![
-            subject_assignment,
-            assignment,
-            "case ",
-            subject,
-            " of",
-            docvec![line(), clauses].nest(INDENT),
-            line(),
-            "end",
-            assignments,
-        ]
+        eaf.map_field();
+        eaf.atom("pattern_end");
+        eaf.int(pattern.location().end.into());
+
+        self.end_runtime_error(eaf, error);
+        eaf.end_clause_body(clause);
+
+        eaf.end_case(case);
     }
 
-    fn pipeline(
+    fn pipeline<Output>(
         &mut self,
+        eaf: &mut impl Eaf<Output>,
         first_value: &'a TypedPipelineAssignment,
         assignments: &'a [(TypedPipelineAssignment, PipelineAssignmentKind)],
         finally: &'a TypedExpr,
-    ) -> Document<'a> {
-        let mut documents = Vec::with_capacity((assignments.len() + 1) * 3);
-        let all_assignments = std::iter::once(first_value)
-            .chain(assignments.iter().map(|(assignment, _kind)| assignment));
-
-        // We don't want the extra variables generated for a pipeline to get out
-        // of the current scope. So we will be saving that and restoring it
-        // after this is done.
-        let current_scope_vars = self.current_scope_vars.clone();
-
+    ) {
         // A pipeline is desugared as a sequence of assignments:
         //
         // ```erl
@@ -923,10 +1270,19 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // So we need to keep around the name the prevopis pipeline step had
         // to pass it as an argument to the following call. This is what this
         // variable is for.
-        let mut previous_step_variable_name = None;
-        for assignment in all_assignments {
-            // An echo in a pipeline won't result in an assignment, instead it
-            // just prints the previous variable assigned in the pipeline.
+        let mut previous_step_variable_name: Option<EcoString> = None;
+        for assignment in std::iter::once(first_value)
+            .chain(assignments.iter().map(|(assignment, _kind)| assignment))
+        {
+            // A pipeline step always ends up assigned to a variable.
+            // So we start by generating `_pipe = ...`, followed by the
+            // expression.
+            eaf.match_operator();
+            let name = self.new_erlang_variable(&assignment.name, assignment.location);
+            eaf.variable_pattern(&name);
+
+            // In case of a pipe we need to manually pass the previous step to
+            // echo as an argument.
             if let TypedExpr::Echo {
                 expression: None,
                 message,
@@ -934,23 +1290,20 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 ..
             } = assignment.value.as_ref()
             {
-                let previous_step_variable_name = previous_step_variable_name
-                    .to_owned()
-                    .expect("echo with no previous step in a pipe");
-                documents.push(self.echo(
-                    previous_step_variable_name,
+                self.echo(
+                    eaf,
+                    *location,
                     message.as_deref(),
-                    location,
-                ));
+                    EchoPrintedValue::PipeStep {
+                        name: previous_step_variable_name
+                            .to_owned()
+                            .expect("echo with no previous step in a pipe"),
+                    },
+                )
             } else {
-                // Otherwise we assign the intermediate pipe value to a variable.
-                let body = self.maybe_block_expr(&assignment.value).group();
-                let name = self.next_local_var_name(&assignment.name);
-                previous_step_variable_name = Some(name.clone());
-                documents.push(docvec![name, " = ", body]);
+                self.maybe_block_expr(eaf, &assignment.value);
+                previous_step_variable_name = Some(name);
             };
-            documents.push(",".to_doc());
-            documents.push(line());
         }
 
         // We also need to do the same thing for the final step of the pipeline.
@@ -963,56 +1316,55 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             ..
         } = finally
         {
-            let previous_step_variable_name = previous_step_variable_name
-                .to_owned()
-                .expect("echo with no previous step in a pipe");
-            documents.push(self.echo(previous_step_variable_name, message.as_deref(), location));
+            self.echo(
+                eaf,
+                *location,
+                message.as_deref(),
+                EchoPrintedValue::PipeStep {
+                    name: previous_step_variable_name
+                        .expect("echo with no previous step in a pipe"),
+                },
+            )
         } else {
-            documents.push(self.expr(finally))
+            self.expr(eaf, finally)
         }
-
-        // We're done so we can restore the scope to what it was before this.
-        self.current_scope_vars = current_scope_vars;
-        documents.to_doc()
     }
 
-    fn assert(&mut self, assert: &'a TypedAssert) -> Document<'a> {
+    fn assert<Output>(&mut self, eaf: &mut impl Eaf<Output>, assert: &'a TypedAssert) {
         let Assert {
             value,
             location,
             message,
         } = assert;
 
-        let message = match message {
-            Some(message) => self.expr(message),
-            None => string("Assertion failed."),
-        };
-
-        let mut assignments = Vec::new();
-
-        let (subject, mut fields) = match value {
-            TypedExpr::Call { fun, arguments, .. } => {
-                self.assert_call(fun, arguments, &mut assignments)
-            }
+        match value {
+            // We're asserting on a binary operator. We want to show the result
+            // of each side in the error that is produced.
+            // So we will bind the two sides of the operator to variables and
+            // shove them in the error map too!
             TypedExpr::BinOp {
                 operator,
                 left,
                 right,
                 ..
             } => {
-                let operator_document = match operator {
+                let erlang_operator = match operator {
+                    // Writing asserts on binops requires some extra care, check
+                    // out their docs!
                     BinOp::And => {
-                        return self.assert_and(left, right, message, *location);
+                        return self.assert_and(eaf, left, right, message.as_ref(), *location);
                     }
                     BinOp::Or => {
-                        return self.assert_or(left, right, message, *location);
+                        return self.assert_or(eaf, left, right, message.as_ref(), *location);
                     }
+
                     BinOp::Eq => "=:=",
                     BinOp::NotEq => "/=",
                     BinOp::LtInt | BinOp::LtFloat => "<",
                     BinOp::LtEqInt | BinOp::LtEqFloat => "=<",
                     BinOp::GtInt | BinOp::GtFloat => ">",
                     BinOp::GtEqInt | BinOp::GtEqFloat => ">=",
+
                     BinOp::AddInt
                     | BinOp::AddFloat
                     | BinOp::SubInt
@@ -1027,35 +1379,105 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     }
                 };
 
-                let left_document = self.assign_to_variable(left, &mut assignments);
-                let right_document = self.assign_to_variable(right, &mut assignments);
-                (
-                    binop_documents(
-                        left_document.clone(),
-                        operator_document,
-                        right_document.clone(),
-                    ),
-                    vec![
-                        ("kind", atom("binary_operator")),
-                        ("operator", atom(operator.name())),
-                        (
-                            "left",
-                            asserted_expression(
-                                AssertExpression::from_expression(left),
-                                Some(left_document),
-                                left.location(),
-                            ),
-                        ),
-                        (
-                            "right",
-                            asserted_expression(
-                                AssertExpression::from_expression(right),
-                                Some(right_document),
-                                right.location(),
-                            ),
-                        ),
-                    ],
-                )
+                // If the left or right hand side are not simple variables we'll
+                // need to first assign those to throwaway variables and keep
+                // track of those names.
+                let left = if !left.is_var() {
+                    let name = self.new_throwaway_variable();
+                    eaf.match_operator();
+                    eaf.variable_pattern(&name);
+                    self.maybe_block_expr(eaf, left);
+                    AssertionExpression::from_throwaway_variable(name, left)
+                } else {
+                    AssertionExpression::from_expression(left)
+                };
+
+                let right = if !right.is_var() {
+                    let name = self.new_throwaway_variable();
+                    eaf.match_operator();
+                    eaf.variable_pattern(&name);
+                    self.maybe_block_expr(eaf, right);
+                    AssertionExpression::from_throwaway_variable(name, right)
+                } else {
+                    AssertionExpression::from_expression(right)
+                };
+
+                let case = eaf.start_case();
+
+                // Then we need to apply the operator. If any of the two sides
+                // has been bound to a variable we can use that name directly!
+                eaf.binary_operator(erlang_operator);
+                self.runtime_value(eaf, &left);
+                self.runtime_value(eaf, &right);
+
+                // If the operator evaluates to true the assertion succeeded.
+                // We can just return nil.
+                let clause = eaf.start_case_clause();
+                eaf.atom_pattern("true");
+                let clause = eaf.end_clause_pattern(clause);
+                let clause = eaf.end_clause_guards(clause);
+                eaf.atom("nil");
+                eaf.end_clause_body(clause);
+
+                // Otherwise we want to throw a runtime error!
+                let clause = eaf.start_case_clause();
+                eaf.atom_pattern("false");
+                let clause = eaf.end_clause_pattern(clause);
+                let clause = eaf.end_clause_guards(clause);
+                self.assert_binary_operator_error(
+                    eaf,
+                    *operator,
+                    left,
+                    right,
+                    message.as_ref(),
+                    *location,
+                );
+                eaf.end_clause_body(clause);
+
+                eaf.end_case(case);
+            }
+
+            TypedExpr::Call { fun, arguments, .. } => {
+                // When asserting on a call, we want to include the values of
+                // each argument in the assertion error in case of failure.
+                // This means we first have to evaluate each argument and bind
+                // it to a variable so that we can later reference them from the
+                // error message without evaluating each argument twice!
+                let mut call_arguments = Vec::with_capacity(arguments.len());
+                for argument in arguments {
+                    let argument = if !argument.value.is_var() {
+                        let name = self.new_throwaway_variable();
+                        eaf.match_operator();
+                        eaf.variable_pattern(&name);
+                        self.maybe_block_expr(eaf, &argument.value);
+                        AssertionExpression::from_throwaway_variable(name, &argument.value)
+                    } else {
+                        AssertionExpression::from_expression(&argument.value)
+                    };
+                    call_arguments.push(argument);
+                }
+
+                let case = eaf.start_case();
+                self.call_in_assert(eaf, fun, &call_arguments);
+
+                // If the operator evaluates to true the assertion succeeded.
+                // We can just return nil.
+                let clause = eaf.start_case_clause();
+                eaf.atom_pattern("true");
+                let clause = eaf.end_clause_pattern(clause);
+                let clause = eaf.end_clause_guards(clause);
+                eaf.atom("nil");
+                eaf.end_clause_body(clause);
+
+                // Otherwise we want to throw a runtime error!
+                let clause = eaf.start_case_clause();
+                eaf.atom_pattern("false");
+                let clause = eaf.end_clause_pattern(clause);
+                let clause = eaf.end_clause_guards(clause);
+                self.assert_call_error(eaf, value, &call_arguments, message.as_ref(), *location);
+                eaf.end_clause_body(clause);
+
+                eaf.end_case(case);
             }
 
             TypedExpr::Int { .. }
@@ -1079,43 +1501,35 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. }
-            | TypedExpr::Invalid { .. } => (
-                self.maybe_block_expr(value),
-                vec![
-                    ("kind", atom("expression")),
-                    (
-                        "expression",
-                        asserted_expression(
-                            AssertExpression::from_expression(value),
-                            Some("false".to_doc()),
-                            value.location(),
-                        ),
-                    ),
-                ],
-            ),
-        };
+            | TypedExpr::Invalid { .. } => {
+                let case = eaf.start_case();
+                self.maybe_block_expr(eaf, value);
 
-        fields.push(("start", location.start.to_doc()));
-        fields.push(("'end'", value.location().end.to_doc()));
-        fields.push(("expression_start", value.location().start.to_doc()));
+                // If the expression evaluates to true the assertion succeeded.
+                // We can just return nil.
+                let clause = eaf.start_case_clause();
+                eaf.atom_pattern("true");
+                let clause = eaf.end_clause_pattern(clause);
+                let clause = eaf.end_clause_guards(clause);
+                eaf.atom("nil");
+                eaf.end_clause_body(clause);
 
-        let clauses = docvec![
-            line(),
-            "true -> nil;",
-            line(),
-            "false -> ",
-            self.erlang_error("assert", &message, *location, fields),
-        ];
+                // Otherwise we want to throw a runtime error!
+                let clause = eaf.start_case_clause();
+                eaf.atom_pattern("false");
+                let clause = eaf.end_clause_pattern(clause);
+                let clause = eaf.end_clause_guards(clause);
+                self.assert_expression_error(
+                    eaf,
+                    AssertionExpression::from_expression(value).evaluated_to_bool(false),
+                    message.as_ref(),
+                    *location,
+                );
+                eaf.end_clause_body(clause);
 
-        docvec![
-            assignments,
-            "case ",
-            subject,
-            " of",
-            clauses.nest(INDENT),
-            line(),
-            "end"
-        ]
+                eaf.end_case(case);
+            }
+        }
     }
 
     /// In Gleam, the `&&` operator is short-circuiting, meaning that we can't
@@ -1144,82 +1558,74 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     /// end
     /// ```
     ///
-    fn assert_and(
+    fn assert_and<Output>(
         &mut self,
+        eaf: &mut impl Eaf<Output>,
         left: &'a TypedExpr,
         right: &'a TypedExpr,
-        message: Document<'a>,
+        message: Option<&'a TypedExpr>,
         location: SrcSpan,
-    ) -> Document<'a> {
-        let left_kind = AssertExpression::from_expression(left);
-        let right_kind = AssertExpression::from_expression(right);
+    ) {
+        let case = eaf.start_case();
+        self.maybe_block_expr(eaf, left);
 
-        let fields_if_short_circuiting = vec![
-            ("kind", atom("binary_operator")),
-            ("operator", atom("&&")),
-            (
-                "left",
-                asserted_expression(left_kind, Some("false".to_doc()), left.location()),
-            ),
-            (
-                "right",
-                asserted_expression(AssertExpression::Unevaluated, None, right.location()),
-            ),
-            ("start", location.start.to_doc()),
-            ("'end'", right.location().end.to_doc()),
-            ("expression_start", left.location().start.to_doc()),
-        ];
+        // In case the first expression is true, we get to evaluate the second
+        // one as well, then we will be able to tell if the assertion failed or
+        // not!
+        let clause = eaf.start_case_clause();
+        eaf.atom_pattern("true");
+        let clause = eaf.end_clause_pattern(clause);
+        let clause = eaf.end_clause_guards(clause);
+        {
+            // Now we have to match on the right hand side!
+            let case = eaf.start_case();
+            self.maybe_block_expr(eaf, right);
 
-        let fields = vec![
-            ("kind", atom("binary_operator")),
-            ("operator", atom("&&")),
-            (
-                "left",
-                asserted_expression(left_kind, Some("true".to_doc()), left.location()),
-            ),
-            (
-                "right",
-                asserted_expression(right_kind, Some("false".to_doc()), right.location()),
-            ),
-            ("start", location.start.to_doc()),
-            ("'end'", right.location().end.to_doc()),
-            ("expression_start", left.location().start.to_doc()),
-        ];
+            // If it's true the assertion succeded! We can return `nil`.
+            let clause = eaf.start_case_clause();
+            eaf.atom_pattern("true");
+            let clause = eaf.end_clause_pattern(clause);
+            let clause = eaf.end_clause_guards(clause);
+            eaf.atom("nil");
+            eaf.end_clause_body(clause);
 
-        let right_clauses = docvec![
-            line(),
-            "true -> nil;",
-            line(),
-            "false -> ",
-            self.erlang_error("assert", &message, location, fields),
-        ];
+            // If it's false the assertion failed! The left hand side was true
+            // but this one evaluated to false :(
+            let clause = eaf.start_case_clause();
+            eaf.atom_pattern("false");
+            let clause = eaf.end_clause_pattern(clause);
+            let clause = eaf.end_clause_guards(clause);
+            self.assert_binary_operator_error(
+                eaf,
+                BinOp::And,
+                AssertionExpression::from_expression(left).evaluated_to_bool(true),
+                AssertionExpression::from_expression(right).evaluated_to_bool(false),
+                message,
+                location,
+            );
+            eaf.end_clause_body(clause);
+            eaf.end_case(case);
+        }
+        eaf.end_clause_body(clause);
 
-        let left_clauses = docvec![
-            line(),
-            "true -> ",
-            docvec![
-                "case ",
-                self.maybe_block_expr(right),
-                " of",
-                right_clauses.nest(INDENT),
-                line(),
-                "end"
-            ]
-            .nest(INDENT),
-            ";",
-            line(),
-            "false -> ",
-            self.erlang_error("assert", &message, location, fields_if_short_circuiting,),
-        ];
+        // In case the first expression is false, we want to fail fast. We are
+        // short circuiting without evaluating the right hand side! This side
+        // just build an error.
+        let clause = eaf.start_case_clause();
+        eaf.atom_pattern("false");
+        let clause = eaf.end_clause_pattern(clause);
+        let clause = eaf.end_clause_guards(clause);
+        self.assert_binary_operator_error(
+            eaf,
+            BinOp::And,
+            AssertionExpression::from_expression(left).evaluated_to_bool(false),
+            AssertionExpression::from_expression(right).was_unevaluated(),
+            message,
+            location,
+        );
+        eaf.end_clause_body(clause);
 
-        docvec![
-            "case ",
-            self.maybe_block_expr(left),
-            " of",
-            left_clauses.nest(INDENT),
-            line(),
-            "end"
-        ]
+        eaf.end_case(case);
     }
 
     /// Similar to `&&`, `||` is also short-circuiting in Gleam. However, if `||`
@@ -1230,126 +1636,299 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     /// The only difference is that due to the nature of `||`, if the assertion fails,
     /// we know that both sides must have evaluated to `false`, so we don't
     /// need to store the values of them in variables beforehand.
-    fn assert_or(
+    fn assert_or<Output>(
         &mut self,
+        eaf: &mut impl Eaf<Output>,
         left: &'a TypedExpr,
         right: &'a TypedExpr,
-        message: Document<'a>,
+        message: Option<&'a TypedExpr>,
         location: SrcSpan,
-    ) -> Document<'a> {
-        let fields = vec![
-            ("kind", atom("binary_operator")),
-            ("operator", atom("||")),
-            (
-                "left",
-                asserted_expression(
-                    AssertExpression::from_expression(left),
-                    Some("false".to_doc()),
-                    left.location(),
-                ),
-            ),
-            (
-                "right",
-                asserted_expression(
-                    AssertExpression::from_expression(right),
-                    Some("false".to_doc()),
-                    right.location(),
-                ),
-            ),
-            ("start", location.start.to_doc()),
-            ("'end'", right.location().end.to_doc()),
-            ("expression_start", left.location().start.to_doc()),
-        ];
+    ) {
+        let case = eaf.start_case();
+        eaf.binary_operator("orelse");
+        self.maybe_block_expr(eaf, left);
+        self.maybe_block_expr(eaf, right);
 
-        let clauses = docvec![
-            line(),
-            "true -> nil;",
-            line(),
-            "false -> ",
-            self.erlang_error("assert", &message, location, fields),
-        ];
+        // If the result is true, then the assertion succeeded, we can return
+        // nil.
+        let clause = eaf.start_case_clause();
+        eaf.atom_pattern("true");
+        let clause = eaf.end_clause_pattern(clause);
+        let clause = eaf.end_clause_guards(clause);
+        eaf.atom("nil");
+        eaf.end_clause_body(clause);
 
-        docvec![
-            "case ",
-            docvec![
-                self.maybe_block_expr(left),
-                " orelse ",
-                self.maybe_block_expr(right)
-            ]
-            .nest(INDENT),
-            " of",
-            clauses.nest(INDENT),
-            line(),
-            "end"
-        ]
+        // But if it fails we know that both sides of the assertion resulted in
+        // a false value. In that case we throw an error.
+
+        let clause = eaf.start_case_clause();
+        eaf.atom_pattern("false");
+        let clause = eaf.end_clause_pattern(clause);
+        let clause = eaf.end_clause_guards(clause);
+        self.assert_binary_operator_error(
+            eaf,
+            BinOp::Or,
+            AssertionExpression::from_expression(left).evaluated_to_bool(false),
+            AssertionExpression::from_expression(right).evaluated_to_bool(false),
+            message,
+            location,
+        );
+        eaf.end_clause_body(clause);
+
+        eaf.end_case(case);
     }
 
-    fn block(&mut self, statements: &'a Vec1<TypedStatement>) -> Document<'a> {
-        if statements.len() == 1
-            && let Statement::Expression(expression) = statements.first()
-            && !needs_begin_end_wrapping(expression)
-        {
-            return docvec!['(', self.expr(expression), ')'];
+    /// This generates the code that throws a runtime error whan an `assert`
+    /// that is checking the result of a binary operator fails.
+    fn assert_binary_operator_error<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        operator: BinOp,
+        left: AssertionExpression<'a>,
+        right: AssertionExpression<'a>,
+        message: Option<&'a TypedExpr>,
+        location: SrcSpan,
+    ) {
+        let error = self.start_runtime_error(eaf, RuntimeErrorKind::Assert, location, message);
+
+        eaf.map_field();
+        eaf.atom("kind");
+        eaf.atom("binary_operator");
+
+        eaf.map_field();
+        eaf.atom("operator");
+        eaf.atom(operator.name());
+
+        eaf.map_field();
+        eaf.atom("left");
+        self.assertion_expression_map(eaf, &left);
+
+        eaf.map_field();
+        eaf.atom("right");
+        self.assertion_expression_map(eaf, &right);
+
+        eaf.map_field();
+        eaf.atom("start");
+        eaf.int(location.start.into());
+
+        eaf.map_field();
+        eaf.atom("end");
+        eaf.int(right.location.end.into());
+
+        eaf.map_field();
+        eaf.atom("expression_start");
+        eaf.int(left.location.start.into());
+
+        self.end_runtime_error(eaf, error);
+    }
+
+    /// This generates the code that throws a runtime error whan an `assert`
+    /// that is checking the result of an arbitrary expression fails.
+    fn assert_expression_error<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        expression: AssertionExpression<'a>,
+        message: Option<&'a TypedExpr>,
+        location: SrcSpan,
+    ) {
+        let error = self.start_runtime_error(eaf, RuntimeErrorKind::Assert, location, message);
+
+        eaf.map_field();
+        eaf.atom("kind");
+        eaf.atom("expression");
+
+        // If assert fails on an expression's result then we know it must have
+        // evaluated to false!
+        eaf.map_field();
+        eaf.atom("expression");
+        self.assertion_expression_map(eaf, &expression);
+
+        eaf.map_field();
+        eaf.atom("start");
+        eaf.int(location.start.into());
+
+        eaf.map_field();
+        eaf.atom("end");
+        eaf.int(expression.location.end.into());
+
+        eaf.map_field();
+        eaf.atom("expression_start");
+        eaf.int(expression.location.start.into());
+
+        self.end_runtime_error(eaf, error);
+    }
+
+    fn assert_call_error<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        call: &'a TypedExpr,
+        arguments: &[AssertionExpression<'a>],
+        message: Option<&'a TypedExpr>,
+        location: SrcSpan,
+    ) {
+        let error = self.start_runtime_error(eaf, RuntimeErrorKind::Assert, location, message);
+
+        eaf.map_field();
+        eaf.atom("kind");
+        eaf.atom("function_call");
+
+        eaf.map_field();
+        eaf.atom("arguments");
+        for argument in arguments {
+            eaf.cons_list();
+            self.assertion_expression_map(eaf, argument);
+        }
+        eaf.empty_list();
+
+        eaf.map_field();
+        eaf.atom("start");
+        eaf.int(location.start.into());
+
+        eaf.map_field();
+        eaf.atom("end");
+        eaf.int(call.location().end.into());
+
+        eaf.map_field();
+        eaf.atom("expression_start");
+        eaf.int(call.location().start.into());
+
+        self.end_runtime_error(eaf, error);
+    }
+
+    /// Given an expression being asserted on. This generates the code for an
+    /// Erlang map that describes it: with a field for its kind, its value, and
+    /// its location in the source code.
+    fn assertion_expression_map<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        expression: &AssertionExpression<'a>,
+    ) {
+        let AssertionExpression {
+            kind,
+            runtime_value,
+            location,
+        } = expression;
+
+        let map = eaf.start_map();
+
+        eaf.map_field();
+        eaf.atom("kind");
+        eaf.atom(match kind {
+            AssertedExpressionKind::Literal => "literal",
+            AssertedExpressionKind::Expression => "expression",
+            AssertedExpressionKind::Unevaluated => "unevaluated",
+        });
+
+        if runtime_value.is_some() {
+            eaf.map_field();
+            eaf.atom("value");
+            self.runtime_value(eaf, expression);
         }
 
-        let outer_scope = self.current_scope_vars.clone();
-        let document = self.statement_sequence(statements);
-        self.current_scope_vars = outer_scope;
+        eaf.map_field();
+        eaf.atom("start");
+        eaf.int(location.start.into());
 
-        begin_end(document)
+        eaf.map_field();
+        eaf.atom("end");
+        eaf.int(location.end.into());
+
+        eaf.end_map(map);
     }
 
-    fn tuple_index(&mut self, tuple: &'a TypedExpr, index: u64) -> Document<'a> {
-        let index_doc = eco_format!("{}", (index + 1)).to_doc();
-        let tuple_doc = self.maybe_block_expr(tuple);
-        "erlang:element"
-            .to_doc()
-            .append(wrap_arguments([index_doc, tuple_doc]))
+    /// This takes a value that is in an assertion (and might have been bound
+    /// to a variable somewhere) and produces the code that will reference
+    /// such value.
+    ///
+    fn runtime_value<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        expression: &AssertionExpression<'a>,
+    ) {
+        match expression
+            .runtime_value
+            .as_ref()
+            .expect("trying to reference unevaluated assert value")
+        {
+            AssertedExpressionRuntimeValue::KnownBool(true) => eaf.atom("true"),
+            AssertedExpressionRuntimeValue::KnownBool(false) => eaf.atom("false"),
+            AssertedExpressionRuntimeValue::Variable(name) => eaf.variable(name),
+            AssertedExpressionRuntimeValue::Expression(expr) => self.maybe_block_expr(eaf, expr),
+        }
     }
 
-    fn var(&mut self, name: &'a str, constructor: &'a ValueConstructor) -> Document<'a> {
+    fn tuple_index<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        tuple: &'a TypedExpr,
+        index: u64,
+    ) {
+        let call = eaf.start_remote_call("erlang".into(), "element");
+        eaf.int((index + 1).into());
+        self.maybe_block_expr(eaf, tuple);
+        eaf.end_call(call);
+    }
+
+    fn var<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        name: &'a str,
+        constructor: &'a ValueConstructor,
+    ) {
         match &constructor.variant {
             ValueConstructorVariant::Record {
                 name: record_name, ..
             } => match constructor.type_.deref() {
-                Type::Fn { arguments, .. } => {
-                    let chars = incrementing_arguments_list(arguments.len());
-                    "fun("
-                        .to_doc()
-                        .append(chars.clone())
-                        .append(") -> {")
-                        .append(atom_string(to_snake_case(record_name)))
-                        .append(", ")
-                        .append(chars)
-                        .append("} end")
-                }
+                // We have a variable referencing a record: we are either
+                // referencing a record constructor function, or building a
+                // record that has no fields:
+                //
+                // ```gleam
+                // type Wibble {
+                //   Wibble
+                //   Wobble(Int)
+                // }
+                //
+                // pub fn main() {
+                //   Wibble
+                // //^^^^^^ Building record with no fields
+                //   Wobble
+                // //^^^^^^ Referencing record constructor function
+                // }
+                // ```
                 Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
-                    atom_string(to_snake_case(record_name))
+                    eaf.atom(&to_snake_case(record_name))
+                }
+                Type::Fn { arguments, .. } => {
+                    self.record_builder_anonymous_function(eaf, record_name, arguments.len())
                 }
             },
 
-            ValueConstructorVariant::LocalVariable { .. } => self.local_var_name(name),
+            ValueConstructorVariant::LocalVariable { location, .. } => {
+                eaf.variable(&self.local_var_name(location))
+            }
 
-            ValueConstructorVariant::ModuleConstant { literal, .. } => self.const_inline(literal),
-
-            ValueConstructorVariant::ModuleFn {
-                arity,
-                external_erlang: Some((module, name)),
-                ..
-            } if *module == self.module_generator.module.name => {
-                function_reference(None, name, *arity)
+            ValueConstructorVariant::ModuleConstant { literal, .. } => {
+                self.inlined_constant(eaf, literal)
             }
 
             ValueConstructorVariant::ModuleFn {
                 arity,
                 external_erlang: Some((module, name)),
                 ..
-            } => function_reference(Some(module), name, *arity),
+            } => {
+                let name = escape_erlang_existing_name(name);
+                if *module == self.module_generator.module.name {
+                    eaf.function_reference(None, name, *arity)
+                } else {
+                    eaf.function_reference(Some(module.into()), name, *arity)
+                }
+            }
 
             ValueConstructorVariant::ModuleFn { arity, module, .. }
                 if *module == self.module_generator.module.name =>
             {
-                function_reference(None, name, *arity)
+                eaf.function_reference(None, escape_erlang_existing_name(name), *arity)
             }
 
             ValueConstructorVariant::ModuleFn {
@@ -1357,475 +1936,349 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 module,
                 name,
                 ..
-            } => function_reference(Some(module), name, *arity),
-        }
-    }
-
-    fn fun(&mut self, arguments: &'a [TypedArg], body: &'a [TypedStatement]) -> Document<'a> {
-        let outer_scope = self.current_scope_vars.clone();
-        let doc = "fun"
-            .to_doc()
-            .append(self.fun_arguments(arguments).append(" ->"))
-            .append(
-                break_("", " ")
-                    .append(self.statement_sequence(body))
-                    .nest(INDENT),
-            )
-            .append(break_("", " "))
-            .append("end")
-            .group();
-        self.current_scope_vars = outer_scope;
-        doc
-    }
-
-    fn negate_with(&mut self, op: &'static str, value: &'a TypedExpr) -> Document<'a> {
-        docvec![op, self.maybe_block_expr(value)]
-    }
-
-    fn expr_list(
-        &mut self,
-        elements: &'a [TypedExpr],
-        tail: &'a Option<Box<TypedExpr>>,
-    ) -> Document<'a> {
-        let elements = join(
-            elements
-                .iter()
-                .map(|element| self.maybe_block_expr(element)),
-            break_(",", ", "),
-        );
-        list(
-            elements,
-            tail.as_ref().map(|element| self.maybe_block_expr(element)),
-        )
-    }
-
-    fn call(&mut self, fun: &'a TypedExpr, arguments: &'a [TypedCallArg]) -> Document<'a> {
-        let arguments = arguments
-            .iter()
-            .map(|argument| self.maybe_block_expr(&argument.value))
-            .collect();
-
-        self.docs_arguments_call(fun, arguments)
-    }
-
-    fn docs_arguments_call(
-        &mut self,
-        fun: &'a TypedExpr,
-        mut arguments: Vec<Document<'a>>,
-    ) -> Document<'a> {
-        match fun {
-            TypedExpr::ModuleSelect {
-                constructor: ModuleValueConstructor::Record { name, .. },
-                ..
-            }
-            | TypedExpr::Var {
-                constructor:
-                    ValueConstructor {
-                        variant: ValueConstructorVariant::Record { name, .. },
-                        ..
-                    },
-                ..
-            } => tuple(std::iter::once(atom_string(to_snake_case(name))).chain(arguments)),
-
-            TypedExpr::Var {
-                constructor:
-                    ValueConstructor {
-                        variant:
-                            ValueConstructorVariant::ModuleFn {
-                                external_erlang: Some((module, name)),
-                                ..
-                            }
-                            | ValueConstructorVariant::ModuleFn { module, name, .. },
-                        ..
-                    },
-                ..
-            } => self.module_fn_with_arguments(module, name, arguments),
-
-            // Match against a Constant::Var that contains a function.
-            // We want this to be emitted like a normal function call, not a function variable
-            // substitution.
-            TypedExpr::Var {
-                constructor:
-                    ValueConstructor {
-                        variant:
-                            ValueConstructorVariant::ModuleConstant {
-                                literal:
-                                    Constant::Var {
-                                        constructor: Some(constructor),
-                                        ..
-                                    },
-                                ..
-                            },
-                        ..
-                    },
-                ..
-            } if constructor.variant.is_module_fn() => match &constructor.variant {
-                ValueConstructorVariant::ModuleFn {
-                    external_erlang: Some((module, name)),
-                    ..
-                }
-                | ValueConstructorVariant::ModuleFn { module, name, .. } => {
-                    self.module_fn_with_arguments(module, name, arguments)
-                }
-                ValueConstructorVariant::LocalVariable { .. }
-                | ValueConstructorVariant::ModuleConstant { .. }
-                | ValueConstructorVariant::Record { .. } => {
-                    unreachable!("The above clause guard ensures that this is a module fn")
-                }
-            },
-
-            TypedExpr::ModuleSelect {
-                constructor:
-                    ModuleValueConstructor::Fn {
-                        external_erlang: Some((module, name)),
-                        ..
-                    }
-                    | ModuleValueConstructor::Fn { module, name, .. },
-                ..
-            } => {
-                let arguments = wrap_arguments(arguments);
-                let name = escape_erlang_existing_name(name);
-                // We use the constructor Fn variant's `module` and function `name`.
-                // It would also be valid to use the module and label as in the
-                // Gleam code, but using the variant can result in an optimisation
-                // in which the target function is used for `external fn`s, removing
-                // one layer of wrapping.
-                // This also enables an optimisation in the Erlang compiler in which
-                // some Erlang BIFs can be replaced with literals if their arguments
-                // are literals, such as `binary_to_atom`.
-                atom_string(module_erlang_name(module))
-                    .append(":")
-                    .append(atom_string(name.into()))
-                    .append(arguments)
-            }
-
-            TypedExpr::Fn { kind, body, .. } if kind.is_capture() => {
-                if let Statement::Expression(TypedExpr::Call {
-                    fun,
-                    arguments: inner_arguments,
-                    ..
-                }) = body.first()
-                {
-                    let mut merged_arguments = Vec::with_capacity(inner_arguments.len());
-                    for arg in inner_arguments {
-                        if let TypedExpr::Var { name, .. } = &arg.value
-                            && name == CAPTURE_VARIABLE
-                        {
-                            merged_arguments.push(arguments.swap_remove(0))
-                        } else {
-                            merged_arguments.push(self.maybe_block_expr(&arg.value))
-                        }
-                    }
-                    self.docs_arguments_call(fun, merged_arguments)
-                } else {
-                    panic!("Erl printing: Capture was not a call")
-                }
-            }
-
-            TypedExpr::Fn { .. }
-            | TypedExpr::Call { .. }
-            | TypedExpr::Todo { .. }
-            | TypedExpr::Panic { .. }
-            | TypedExpr::RecordAccess { .. }
-            | TypedExpr::TupleIndex { .. } => {
-                let arguments = wrap_arguments(arguments);
-                self.expr(fun).surround("(", ")").append(arguments)
-            }
-
-            TypedExpr::Int { .. }
-            | TypedExpr::Float { .. }
-            | TypedExpr::String { .. }
-            | TypedExpr::Block { .. }
-            | TypedExpr::Pipeline { .. }
-            | TypedExpr::Var { .. }
-            | TypedExpr::List { .. }
-            | TypedExpr::BinOp { .. }
-            | TypedExpr::Case { .. }
-            | TypedExpr::PositionalAccess { .. }
-            | TypedExpr::ModuleSelect { .. }
-            | TypedExpr::Tuple { .. }
-            | TypedExpr::Echo { .. }
-            | TypedExpr::BitArray { .. }
-            | TypedExpr::RecordUpdate { .. }
-            | TypedExpr::NegateBool { .. }
-            | TypedExpr::NegateInt { .. }
-            | TypedExpr::Invalid { .. } => {
-                let arguments = wrap_arguments(arguments);
-                self.maybe_block_expr(fun).append(arguments)
-            }
-        }
-    }
-
-    fn record_update(
-        &mut self,
-        updated_record: &'a TypedExpr,
-        updated_record_assigned_name: &'a Option<EcoString>,
-        constructor: &'a TypedExpr,
-        arguments: &'a [TypedCallArg],
-    ) -> Document<'a> {
-        let outer_scope = self.current_scope_vars.clone();
-
-        let document = match updated_record_assigned_name.as_ref() {
-            Some(name) => docvec![
-                self.simple_variable_let(name, updated_record),
-                ",",
-                line(),
-                self.call(constructor, arguments)
-            ],
-            None => self.call(constructor, arguments),
-        };
-
-        self.current_scope_vars = outer_scope;
-
-        document
-    }
-
-    /// This is used to render a simple variable assignment in Erlang, there's cases
-    /// when the left hand side of an assignment is known to be a variable with a
-    /// simple name. In that case we don't have to go through `let_` which needs a
-    /// whole pattern.
-    ///
-    /// If you need to deal with a complex `let` where the left hand side is a
-    /// generic pattern use the `let_` function.
-    fn simple_variable_let(&mut self, name: &'a EcoString, value: &'a TypedExpr) -> Document<'a> {
-        let body = self.maybe_block_expr(value).group();
-        let name = self.next_local_var_name(name.as_str());
-        docvec![name, " = ", body]
-    }
-
-    fn module_fn_with_arguments(
-        &self,
-        module: &'a str,
-        name: &'a str,
-        arguments: Vec<Document<'a>>,
-    ) -> Document<'a> {
-        let name = escape_erlang_existing_name(name);
-        let arguments = wrap_arguments(arguments);
-        if module == self.module_generator.module.name {
-            atom(name).append(arguments)
-        } else {
-            atom_string(module.replace('/', "@").into())
-                .append(":")
-                .append(atom(name))
-                .append(arguments)
-        }
-    }
-
-    fn case(&mut self, subjects: &'a [TypedExpr], cs: &'a [TypedClause]) -> Document<'a> {
-        let subjects_doc = if subjects.len() == 1 {
-            let subject = subjects
-                .first()
-                .expect("erl case printing of single subject");
-            self.maybe_block_expr(subject).group()
-        } else {
-            tuple(
-                subjects
-                    .iter()
-                    .map(|element| self.maybe_block_expr(element)),
-            )
-        };
-        "case "
-            .to_doc()
-            .append(subjects_doc)
-            .append(" of")
-            .append(line().append(self.clauses(cs)).nest(INDENT))
-            .append(line())
-            .append("end")
-            .group()
-    }
-
-    fn clauses(&mut self, cs: &'a [TypedClause]) -> Document<'a> {
-        join(
-            cs.iter().map(|c| {
-                let outer_scope = self.current_scope_vars.clone();
-                let erl = self.clause(c);
-                // Reset the known variables now the clauses' scope has ended
-                self.current_scope_vars = outer_scope;
-                erl
-            }),
-            ";".to_doc().append(lines(2)),
-        )
-    }
-
-    fn clause(&mut self, clause: &'a TypedClause) -> Document<'a> {
-        let Clause {
-            guard,
-            pattern,
-            alternative_patterns,
-            then,
-            ..
-        } = clause;
-
-        // These are required to get the alternative patterns working properly.
-        // Simply rendering the duplicate erlang clauses breaks the variable
-        // rewriting because each pattern would define different (rewritten)
-        // variables names.
-        let initial_erlang_vars = self.erl_function_scope_vars.clone();
-        let initial_scope_vars = self.current_scope_vars.clone();
-
-        let mut branches_docs = Vec::with_capacity(alternative_patterns.len() + 1);
-        for patterns in std::iter::once(pattern).chain(alternative_patterns) {
-            // Erlang doesn't support alternative patterns, so we turn each
-            // alternative into a branch of its own.
-            // For each alternative, before generating the body, we need to reset
-            // the variables in scope to what they are before the case expression,
-            // so that a branch will not interfere with the other ones!
-            self.erl_function_scope_vars = initial_erlang_vars.clone();
-            self.current_scope_vars = initial_scope_vars.clone();
-            let mut pattern_printer = PatternPrinter::new(self);
-
-            let pattern = match patterns.as_slice() {
-                [pattern] => pattern_printer.print(pattern),
-                _ => tuple(patterns.iter().map(|pattern| {
-                    pattern_printer.reset_variables();
-                    pattern_printer.print(pattern)
-                })),
-            };
-
-            let PatternPrinter {
-                generator: _,
-                variables: _,
-                guards,
-                assignments,
-            } = pattern_printer;
-
-            let assignments_map = assignments
-                .iter()
-                .map(|assignment| (assignment.gleam_name.clone(), assignment))
-                .collect();
-
-            let guard = self.optional_clause_guard(guard.as_ref(), guards, &assignments_map);
-            let then = self.clause_consequence(then, assignments).group();
-            branches_docs.push(docvec![
-                pattern,
-                guard,
-                " ->",
-                docvec![line(), then].nest(INDENT),
-            ]);
-        }
-
-        join(branches_docs, ";".to_doc().append(lines(2)))
-    }
-
-    fn clause_consequence(
-        &mut self,
-        consequence: &'a TypedExpr,
-        // Further assignments that the pattern might need to introduce at the start
-        // of the new block.
-        assignments: Vec<StringPatternAssignment<'a>>,
-    ) -> Document<'a> {
-        let assignment_doc = if assignments.is_empty() {
-            nil()
-        } else {
-            let separator = ",".to_doc().append(line());
-            join(
-                assignments
-                    .iter()
-                    .map(|assignment| assignment.to_assignment_doc()),
-                separator.clone(),
-            )
-            .append(separator)
-        };
-
-        let consequence = if let TypedExpr::Block { statements, .. } = consequence {
-            self.statement_sequence(statements)
-        } else {
-            self.expr(consequence)
-        };
-        assignment_doc.append(consequence)
-    }
-
-    fn const_inline(&mut self, literal: &'a TypedConstant) -> Document<'a> {
-        match literal {
-            Constant::Int { value, .. } => int(value),
-            Constant::Float { value, .. } => float(value),
-            Constant::String { value, .. } => string(value),
-            Constant::Tuple { elements, .. } => {
-                tuple(elements.iter().map(|element| self.const_inline(element)))
-            }
-
-            Constant::List { elements, tail, .. } => {
-                match tail {
-                    // There's no tail in the list, we join all the elements and
-                    // call it a day.
-                    None => join(
-                        elements.iter().map(|element| self.const_inline(element)),
-                        break_(",", ", "),
-                    ),
-                    Some(tail) => match tail.list_elements() {
-                        // There's a tail in the list whose elements are all known at
-                        // compile time. In this case we replace the tail with those
-                        // elements and create a single flat list.
-                        Some(tail_elements) => join(
-                            elements
-                                .iter()
-                                .chain(tail_elements)
-                                .map(|element| self.const_inline(element)),
-                            break_(",", ", "),
-                        ),
-                        // There's a tail in the list but we can't really tell what its
-                        // elements are at compile time. This means we have to use
-                        // erlang's syntax to append to a list.
-                        None => {
-                            let elements = join(
-                                elements.iter().map(|element| self.const_inline(element)),
-                                break_(",", ", "),
-                            );
-                            docvec![elements, " | ", self.const_inline(tail)]
-                        }
-                    },
-                }
-                .nest(INDENT)
-                .surround("[", "]")
-                .group()
-            }
-
-            Constant::BitArray { segments, .. } => bit_array(
-                segments
-                    .iter()
-                    .map(|s| self.const_segment(&s.value, &s.options)),
+            } => eaf.function_reference(
+                Some(module.into()),
+                escape_erlang_existing_name(name),
+                *arity,
             ),
+        }
+    }
 
-            Constant::Record {
-                type_, arguments, ..
-            } if arguments.is_none() => {
-                let tag = literal
-                    .constant_record_tag()
-                    .expect("record without inferred constructor made it to code generation");
-
-                match type_.deref() {
-                    Type::Fn { arguments, .. } => record_constructor_function(tag, arguments.len()),
-                    Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
-                        atom_string(to_snake_case(&tag))
-                    }
+    fn call<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        fun: &'a TypedExpr,
+        arguments: &'a [TypedCallArg],
+    ) {
+        match how_to_call(fun) {
+            // If we're building a record then we want to just output a
+            // tagged tuple, there's no function call at all!
+            FunctionCall::BuildRecord { name } => self.build_record(eaf, name, arguments),
+            // If we're calling some module function like `io.println`, `main`,
+            // `list.map` then we can call the function using its name (and
+            // module name if it comes from a different module).
+            FunctionCall::Call { module, name } => {
+                let call = if module != self.module_generator.module.name {
+                    eaf.start_remote_call(module.into(), escape_erlang_existing_name(name))
+                } else {
+                    let call = eaf.start_call();
+                    eaf.atom(escape_erlang_existing_name(name));
+                    call
+                };
+                for argument in arguments {
+                    self.maybe_block_expr(eaf, &argument.value);
                 }
+                eaf.end_call(call)
+            }
+            // If we're calling anything else (like an anonymous function, or
+            // the result of another function call) we generate its code and
+            // call that result directly.
+            FunctionCall::DirectCall => {
+                let call = eaf.start_call();
+                self.maybe_block_expr(eaf, fun);
+                for argument in arguments {
+                    self.maybe_block_expr(eaf, &argument.value);
+                }
+                eaf.end_call(call);
+            }
+        }
+    }
+
+    /// This generates the code for a call that happens in an `assert`.
+    /// For example: `assert wibble.wobble(a, b)`.
+    ///
+    /// This is a function separate from the regular `self.call` since the call
+    /// arguments are not just TypedExpressions but values that might have been
+    /// bound to variables in previous statements.
+    /// Assert has to do it when a call is asserted so that those arguments can
+    /// be referenced later in the error thrown at runtime!
+    ///
+    fn call_in_assert<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        fun: &'a TypedExpr,
+        arguments: &[AssertionExpression<'a>],
+    ) {
+        match how_to_call(fun) {
+            // What comes after `assert` has to produce a boolean, so type
+            // checking should make it impossible to build a record here.
+            FunctionCall::BuildRecord { .. } => {
+                panic!("type checking should make it impossible to call a record in an assert")
             }
 
-            Constant::Record { arguments, .. } => {
-                let tag = literal
-                    .constant_record_tag()
-                    .expect("record without inferred constructor made it to code generation");
-
-                // Record updates are fully expanded during type checking, so we just handle arguments
-                let arguments_doc = arguments
-                    .iter()
-                    .flatten()
-                    .map(|argument| self.const_inline(&argument.value));
-                let tag = atom_string(to_snake_case(&tag));
-                tuple(std::iter::once(tag).chain(arguments_doc))
+            // If we're calling some module function like `io.println`, `main`,
+            // `list.map` then we can call the function using its name (and
+            // module name if it comes from a different module).
+            FunctionCall::Call { module, name } => {
+                let call = if module != self.module_generator.module.name {
+                    eaf.start_remote_call(module.into(), escape_erlang_existing_name(name))
+                } else {
+                    let call = eaf.start_call();
+                    eaf.atom(escape_erlang_existing_name(name));
+                    call
+                };
+                for argument in arguments {
+                    self.runtime_value(eaf, argument);
+                }
+                eaf.end_call(call)
             }
 
+            // If we're calling anything else (like an anonymous function, or
+            // the result of another function call) we generate its code and
+            // call that result directly.
+            FunctionCall::DirectCall => {
+                let call = eaf.start_call();
+                self.maybe_block_expr(eaf, fun);
+                for argument in arguments {
+                    self.runtime_value(eaf, argument);
+                }
+                eaf.end_call(call);
+            }
+        }
+    }
+
+    /// Given a Gleam record name and the arguments it's called with, this
+    /// generates the code to build such record.
+    /// For example: `Wibble(1, 2)` would be `record_builder("Wibble", [1, 2])`.
+    /// It would result in a tuple like this: `{wibble, 1, 2}`.
+    ///
+    /// Notice how the name you have to specify is the _Gleam name_ of the
+    /// record. This function will take care of turning it to snake case!
+    fn build_record<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        record_name: &str,
+        arguments: &'a [TypedCallArg],
+    ) {
+        if arguments.is_empty() {
+            eaf.atom(&to_snake_case(record_name))
+        } else {
+            let tuple = eaf.start_tuple();
+            eaf.atom(&to_snake_case(record_name));
+            for argument in arguments {
+                self.maybe_block_expr(eaf, &argument.value);
+            }
+            eaf.end_tuple(tuple)
+        }
+    }
+
+    fn case<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        subjects: &'a [TypedExpr],
+        clauses: &'a [TypedClause],
+    ) {
+        let case = eaf.start_case();
+
+        // If there's more than a single subject we will need to wrap those in a
+        // tuple and start matching on tuple patterns. That's because Erlang
+        // doesn't support matching on multiple subjects like Gleam.
+        match subjects {
+            [subject] => self.maybe_block_expr(eaf, subject),
+            subjects => {
+                let tuple = eaf.start_tuple();
+                for subject in subjects {
+                    self.maybe_block_expr(eaf, subject);
+                }
+                eaf.end_tuple(tuple);
+            }
+        }
+
+        for clause in clauses {
+            let taken_names_before_clause = self.taken_names.clone();
+
+            self.clause_branch(eaf, &clause.pattern, clause);
+
+            // Erlang doesn't support alternative patterns so we're gonna have
+            // to turn those into separate branches!
+            // Since those are going to have the exact same body we don't want
+            // it to use different updated variable names.
+            // So they should have the same scope that existed before generating
+            // the first clause branch.
+            // For example:
+            //
+            // ```gleam
+            // case x {
+            //   1 | 2 -> { let a = Nil }
+            //   _ -> Nil
+            // }
+            // ```
+            //
+            // We want the generated code to look like this:
+            //
+            // ```erl
+            // case x of
+            //    1 -> A = nil;
+            //    2 -> A = nil;
+            // %       ^ We're still using `A`, not `A@1`!
+            //    _ -> nil
+            // end
+            // ```
+            //
+            for pattern in &clause.alternative_patterns {
+                self.taken_names = taken_names_before_clause.clone();
+                self.clause_branch(eaf, pattern, clause);
+            }
+        }
+
+        eaf.end_case(case);
+    }
+
+    /// Given a pattern and the branch it belongs to this generates an Erlang
+    /// case clause for that pattern.
+    fn clause_branch<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        patterns: &'a Vec<Pattern<Arc<Type>>>,
+        clause: &'a Clause<TypedExpr, Arc<Type>>,
+    ) {
+        let clause_pattern = eaf.start_case_clause();
+
+        // We start by generating the case clause pattern. If we're matching on
+        // multiple subjects (and so patterns has more that a single item) those
+        // are gonna be wrapped in a tuple pattern.
+        // That's how we match on multiple things on the Erlang target.
+        let mut pattern_generator = PatternGenerator::new(self);
+        match patterns.as_slice() {
+            [pattern] => pattern_generator.pattern(eaf, pattern),
+            patterns => {
+                let tuple = eaf.start_tuple_pattern();
+                for pattern in patterns {
+                    pattern_generator.pattern(eaf, pattern);
+                }
+                eaf.end_tuple_pattern(tuple);
+            }
+        };
+
+        let variables_to_add_later = pattern_generator.variables_to_add_later;
+
+        let clause_guards = eaf.end_clause_pattern(clause_pattern);
+        if let Some(guard) = clause.guard.as_ref() {
+            self.clause_guard(eaf, guard, &variables_to_add_later);
+        }
+
+        // Finally we can generate the clause body. If the clause is
+        // followed by a single block then we want it to be a statements
+        // sequence (and not wrapped in a begin ... end block as we usually
+        // would when generating code for a block expression).
+        let clause_body = eaf.end_clause_guards(clause_guards);
+        self.pattern_assignments(eaf, variables_to_add_later);
+        if let TypedExpr::Block { statements, .. } = &clause.then {
+            self.statement_sequence(eaf, statements);
+        } else {
+            self.expr(eaf, &clause.then);
+        }
+        eaf.end_clause_body(clause_body);
+    }
+
+    /// Erlang doesn't have a special constant declaration syntax; so each Gleam
+    /// constant is simply inlined anywhere it is used.
+    ///
+    /// This function produces the code of a constant expression.
+    ///
+    fn inlined_constant<Output>(&mut self, eaf: &mut impl Eaf<Output>, literal: &'a TypedConstant) {
+        match literal {
+            Constant::Int { int_value, .. } => eaf.int(int_value.clone()),
+            Constant::Float { float_value, .. } => eaf.float(float_value.value()),
+            Constant::String { value, .. } => eaf.string(value),
             Constant::Var {
                 name, constructor, ..
             } => self.var(
+                eaf,
                 name,
                 constructor
                     .as_ref()
                     .expect("This is guaranteed to hold a value."),
             ),
 
+            Constant::Tuple { elements, .. } => {
+                let tuple = eaf.start_tuple();
+                for element in elements {
+                    self.inlined_constant(eaf, element)
+                }
+                eaf.end_tuple(tuple);
+            }
+
+            Constant::List { elements, tail, .. } => {
+                for element in elements {
+                    eaf.cons_list();
+                    self.inlined_constant(eaf, element)
+                }
+                match tail {
+                    // If there's no tail we simply add an empty list cell to
+                    // end the cons list.
+                    None => eaf.empty_list(),
+                    Some(tail) => match tail.list_elements() {
+                        // If there's a tail and we don't statically know the
+                        // elements it's made of, we add it as a regular Erlang
+                        // tail and it will be `[1, 2 | Tail]`.
+                        None => self.inlined_constant(eaf, tail),
+                        // But if we can tell it has some fixed amount of
+                        // constant elements, then those are inlined too!
+                        Some(list_elements) => {
+                            for element in list_elements {
+                                eaf.cons_list();
+                                self.inlined_constant(eaf, element);
+                            }
+                            eaf.empty_list();
+                        }
+                    },
+                }
+            }
+
+            Constant::BitArray { segments, .. } => {
+                let bit_array = eaf.start_bit_array();
+                for segment in segments {
+                    self.bit_array_constant_segment(eaf, segment);
+                }
+                eaf.end_bit_array(bit_array);
+            }
+
+            Constant::Record {
+                type_, arguments, ..
+            } => {
+                let tag = literal
+                    .constant_record_tag()
+                    .expect("record without inferred constructor made it to code generation");
+
+                match arguments {
+                    // This is a regular record call, we're building a record as
+                    // usual as a tagged tuple.
+                    Some(arguments) => {
+                        let tuple = eaf.start_tuple();
+                        eaf.atom(&to_snake_case(&tag));
+                        for argument in arguments {
+                            self.inlined_constant(eaf, &argument.value);
+                        }
+                        eaf.end_tuple(tuple);
+                    }
+                    // Otherwise we are either referencing a record constructor
+                    // function, or building a record that has no fields:
+                    //
+                    // ```gleam
+                    // type Wibble {
+                    //   Wibble
+                    //   Wobble(Int)
+                    // }
+                    //
+                    // const a = Wibble
+                    // //        ^^^^^^ Building record with no fields
+                    // const b = Wobble
+                    // //        ^^^^^^ Referencing record constructor function
+                    // ```
+                    None => match type_::collapse_links(type_.clone()).deref() {
+                        Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
+                            eaf.atom(&to_snake_case(&tag))
+                        }
+                        Type::Fn { arguments, .. } => {
+                            self.record_builder_anonymous_function(eaf, &tag, arguments.len())
+                        }
+                    },
+                }
+            }
+
             Constant::StringConcatenation { left, right, .. } => {
-                self.const_string_concatenate(left, right)
+                self.constant_string_concatenate(eaf, left, right)
             }
 
             Constant::RecordUpdate { .. } => {
@@ -1838,237 +2291,159 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         }
     }
 
-    fn const_string_concatenate(
+    fn bit_array_constant_segment<Output>(
         &mut self,
+        eaf: &mut impl Eaf<Output>,
+        segment: &'a TypedConstantBitArraySegment,
+    ) {
+        eaf.bit_array_segment();
+        self.inlined_constant(eaf, &segment.value);
+        match segment.size() {
+            Some(TypedConstant::Int { int_value, .. }) if int_value.is_negative() => {
+                eaf.int(BigInt::ZERO)
+            }
+            Some(size) => self.inlined_constant(eaf, size),
+            None => eaf.atom("default"),
+        };
+        self.bit_array_segment_specifiers(eaf, segment);
+    }
+
+    fn bit_array_segment_specifiers<Output, Expr>(
+        &self,
+        eaf: &mut impl Eaf<Output>,
+        segment: &'a BitArraySegment<Expr, Arc<Type>>,
+    ) {
+        let options = segment.options.iter();
+        eaf.bit_array_segment_specifiers(options.filter_map(|option| match option {
+            BitArrayOption::Utf8 { .. } | BitArrayOption::Utf8Codepoint { .. } => {
+                Some(BitArraySegmentSpecifier::Utf8)
+            }
+            BitArrayOption::Utf16 { .. } | BitArrayOption::Utf16Codepoint { .. } => {
+                Some(BitArraySegmentSpecifier::Utf16)
+            }
+            BitArrayOption::Utf32 { .. } | BitArrayOption::Utf32Codepoint { .. } => {
+                Some(BitArraySegmentSpecifier::Utf32)
+            }
+            BitArrayOption::Int { .. } => Some(BitArraySegmentSpecifier::Integer),
+            BitArrayOption::Float { .. } => Some(BitArraySegmentSpecifier::Float),
+            BitArrayOption::Bytes { .. } => Some(BitArraySegmentSpecifier::Binary),
+            BitArrayOption::Bits { .. } => Some(BitArraySegmentSpecifier::Bitstring),
+            BitArrayOption::Signed { .. } => Some(BitArraySegmentSpecifier::Signed),
+            BitArrayOption::Unsigned { .. } => Some(BitArraySegmentSpecifier::Unsigned),
+            BitArrayOption::Big { .. } => Some(BitArraySegmentSpecifier::Big),
+            BitArrayOption::Little { .. } => Some(BitArraySegmentSpecifier::Little),
+            BitArrayOption::Native { .. } => Some(BitArraySegmentSpecifier::Native),
+            BitArrayOption::Unit { value, .. } => Some(BitArraySegmentSpecifier::Unit(*value)),
+            BitArrayOption::Size { .. } => None,
+        }));
+    }
+
+    fn constant_string_concatenate<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
         left: &'a TypedConstant,
         right: &'a TypedConstant,
-    ) -> Document<'a> {
-        let left = self.const_string_concatenate_argument(left);
-        let right = self.const_string_concatenate_argument(right);
-        const_string_concatenate_bit_array([left, right])
-    }
+    ) {
+        let mut items = VecDeque::new();
+        items.push_back(left);
+        items.push_back(right);
 
-    fn const_string_concatenate_inner(
-        &mut self,
-        left: &'a TypedConstant,
-        right: &'a TypedConstant,
-    ) -> Document<'a> {
-        let left = self.const_string_concatenate_argument(left);
-        let right = self.const_string_concatenate_argument(right);
-        join([left, right], break_(",", ", "))
-    }
-
-    fn const_string_concatenate_argument(&mut self, value: &'a TypedConstant) -> Document<'a> {
-        match value {
-            Constant::String { value, .. } => docvec!['"', string_inner(value), "\"/utf8"],
-
-            Constant::Var {
-                constructor: Some(constructor),
-                ..
-            } => match &constructor.variant {
-                ValueConstructorVariant::ModuleConstant {
-                    literal: Constant::String { value, .. },
+        let bit_array = eaf.start_bit_array();
+        while let Some(segment) = items.pop_front() {
+            match segment {
+                // When concatenating constant strings we flatten out all
+                // strings that are being concatenated: so that
+                // `"a" <> "b" <> "c"` becomes a single bitstring like this:
+                // `<<~"a", ~"b", ~"c">>` rather than nested bitstrings:
+                // `<<<<~"a", ~"b">>/binary, ~"c">>`.
+                // If we find a string concatenation we push its separate items
+                // to be printed next!
+                Constant::StringConcatenation { left, right, .. } => {
+                    items.push_front(right);
+                    items.push_front(left);
+                    continue;
+                }
+                // When concatenating constant strings we want all constant
+                // variables to also be fully expanded, so that if we have
+                //
+                // ```gleam
+                // const a = "one"
+                // const b = a <> "two"
+                // ```
+                //
+                // Any use of b will be replaced with `<<~"one", ~"two">>`.
+                Constant::Var {
+                    constructor: Some(constructor),
                     ..
-                } => docvec!['"', string_inner(value), "\"/utf8"],
-                ValueConstructorVariant::ModuleConstant {
-                    literal: Constant::StringConcatenation { left, right, .. },
-                    ..
-                } => self.const_string_concatenate_inner(left, right),
-                ValueConstructorVariant::LocalVariable { .. }
-                | ValueConstructorVariant::ModuleConstant { .. }
-                | ValueConstructorVariant::ModuleFn { .. }
-                | ValueConstructorVariant::Record { .. } => self.const_inline(value),
-            },
-
-            Constant::StringConcatenation { left, right, .. } => {
-                self.const_string_concatenate_inner(left, right)
-            }
-
-            Constant::Int { .. }
-            | Constant::Float { .. }
-            | Constant::Tuple { .. }
-            | Constant::List { .. }
-            | Constant::Record { .. }
-            | Constant::RecordUpdate { .. }
-            | Constant::BitArray { .. }
-            | Constant::Var { .. }
-            | Constant::Todo { .. }
-            | Constant::Invalid { .. } => self.const_inline(value),
-        }
-    }
-
-    fn string_concatenate(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Document<'a> {
-        let left = self.string_concatenate_argument(left);
-        let right = self.string_concatenate_argument(right);
-        bit_array([left, right])
-    }
-
-    fn string_concatenate_argument(&mut self, value: &'a TypedExpr) -> Document<'a> {
-        match value {
-            TypedExpr::Var {
-                constructor:
-                    ValueConstructor {
-                        variant:
-                            ValueConstructorVariant::ModuleConstant {
-                                literal: Constant::String { value, .. },
-                                ..
-                            },
-                        ..
-                    },
-                ..
-            }
-            | TypedExpr::String { value, .. } => docvec!['"', string_inner(value), "\"/utf8"],
-
-            TypedExpr::Var {
-                name,
-                constructor:
-                    ValueConstructor {
-                        variant: ValueConstructorVariant::LocalVariable { .. },
-                        ..
-                    },
-                ..
-            } => docvec![self.local_var_name(name), "/binary"],
-
-            TypedExpr::BinOp {
-                operator: BinOp::Concatenate,
-                ..
-            } => docvec![self.expr(value), "/binary"],
-
-            TypedExpr::Int { .. }
-            | TypedExpr::Float { .. }
-            | TypedExpr::Block { .. }
-            | TypedExpr::Pipeline { .. }
-            | TypedExpr::Var { .. }
-            | TypedExpr::Fn { .. }
-            | TypedExpr::List { .. }
-            | TypedExpr::Call { .. }
-            | TypedExpr::BinOp { .. }
-            | TypedExpr::Case { .. }
-            | TypedExpr::RecordAccess { .. }
-            | TypedExpr::PositionalAccess { .. }
-            | TypedExpr::ModuleSelect { .. }
-            | TypedExpr::Tuple { .. }
-            | TypedExpr::TupleIndex { .. }
-            | TypedExpr::Todo { .. }
-            | TypedExpr::Panic { .. }
-            | TypedExpr::Echo { .. }
-            | TypedExpr::BitArray { .. }
-            | TypedExpr::RecordUpdate { .. }
-            | TypedExpr::NegateBool { .. }
-            | TypedExpr::NegateInt { .. }
-            | TypedExpr::Invalid { .. } => docvec!["(", self.maybe_block_expr(value), ")/binary"],
-        }
-    }
-
-    fn const_segment(
-        &mut self,
-        value: &'a TypedConstant,
-        options: &'a [TypedConstantBitArraySegmentOption],
-    ) -> Document<'a> {
-        let value_is_a_string_literal = matches!(value, Constant::String { .. });
-
-        let create_document = |this: &mut Self| {
-            match value {
-                // Skip the normal <<value/utf8>> surrounds
-                Constant::String { value, .. } => value.to_doc().surround("\"", "\""),
-
-                // As normal
-                Constant::Int { .. } | Constant::Float { .. } | Constant::BitArray { .. } => {
-                    this.const_inline(value)
+                } if let ValueConstructorVariant::ModuleConstant { literal, .. } =
+                    &constructor.variant =>
+                {
+                    items.push_front(literal);
+                    continue;
                 }
 
-                // Wrap anything else in parentheses
-                Constant::Tuple { .. }
+                Constant::Int { .. }
+                | Constant::Float { .. }
+                | Constant::String { .. }
+                | Constant::Tuple { .. }
                 | Constant::List { .. }
                 | Constant::Record { .. }
                 | Constant::RecordUpdate { .. }
+                | Constant::BitArray { .. }
                 | Constant::Var { .. }
-                | Constant::StringConcatenation { .. }
-                | Constant::Todo { .. }
-                | Constant::Invalid { .. } => this.const_inline(value).surround("(", ")"),
+                | Constant::Invalid { .. }
+                | Constant::Todo { .. } => (),
             }
-        };
 
-        let size = |value: &'a TypedConstant, this: &mut Self| {
-            if let Constant::Int { .. } = value {
-                Some(":".to_doc().append(this.const_inline(value)))
-            } else {
-                Some(
-                    ":".to_doc()
-                        .append(this.const_inline(value).surround("(", ")")),
-                )
-            }
-        };
-
-        let unit = |value: &'a u8| Some(eco_format!("unit:{value}").to_doc());
-
-        bit_array_segment(
-            create_document,
-            options,
-            size,
-            unit,
-            value_is_a_string_literal,
-            false,
-            self,
-        )
-    }
-
-    fn assign_to_variable(
-        &mut self,
-        value: &'a TypedExpr,
-        assignments: &mut Vec<Document<'a>>,
-    ) -> Document<'a> {
-        if value.is_var() {
-            self.expr(value)
-        } else {
-            let value = self.maybe_block_expr(value);
-            let variable = self.next_local_var_name(ASSERT_SUBJECT_VARIABLE);
-            let definition = docvec![variable.clone(), " = ", value, ",", line()];
-            assignments.push(definition);
-            variable
+            eaf.bit_array_segment();
+            self.inlined_constant(eaf, segment);
+            eaf.atom("default");
+            eaf.bit_array_segment_specifiers([BitArraySegmentSpecifier::Utf8]);
         }
+        eaf.end_bit_array(bit_array);
     }
 
-    fn assert_call(
+    fn string_concatenate<Output>(
         &mut self,
-        function: &'a TypedExpr,
-        arguments: &'a Vec<CallArg<TypedExpr>>,
-        assignments: &mut Vec<Document<'a>>,
-    ) -> (Document<'a>, Vec<(&'static str, Document<'a>)>) {
-        let argument_variables = arguments
-            .iter()
-            .map(|argument| self.assign_to_variable(&argument.value, assignments))
-            .collect_vec();
-
-        let arguments = join(
-            argument_variables
-                .iter()
-                .zip(arguments)
-                .map(|(variable, argument)| {
-                    asserted_expression(
-                        AssertExpression::from_expression(&argument.value),
-                        Some(variable.clone()),
-                        argument.location(),
-                    )
-                }),
-            break_(",", ", "),
-        )
-        .nest(INDENT)
-        .surround("[", "]");
-
-        (
-            self.docs_arguments_call(function, argument_variables),
-            vec![("kind", atom("function_call")), ("arguments", arguments)],
-        )
+        eaf: &mut impl Eaf<Output>,
+        left: &'a TypedExpr,
+        right: &'a TypedExpr,
+    ) {
+        let bit_array = eaf.start_bit_array();
+        self.string_concatenate_argument(eaf, left);
+        self.string_concatenate_argument(eaf, right);
+        eaf.end_bit_array(bit_array);
     }
 
-    fn bin_op(
+    fn string_concatenate_argument<Output>(
         &mut self,
+        eaf: &mut impl Eaf<Output>,
+        value: &'a TypedExpr,
+    ) {
+        // String concatenation is basically building a bit array with two
+        // elements. Anything is going to be simply added as a `/binary` segment
+        // with one exception: if we're dealing with a literal string that needs
+        // the `/utf8` specifier instead!
+        // In both cases the size is alwaus automatic, so we generate the
+        // `default` atom.
+        eaf.bit_array_segment();
+        self.maybe_block_expr(eaf, value);
+        eaf.atom("default");
+        eaf.bit_array_segment_specifiers(if produces_literal_string(value) {
+            [BitArraySegmentSpecifier::Utf8]
+        } else {
+            [BitArraySegmentSpecifier::Binary]
+        });
+    }
+
+    fn bin_op<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
         name: &'a BinOp,
         left: &'a TypedExpr,
         right: &'a TypedExpr,
-    ) -> Document<'a> {
-        let op = match name {
+    ) {
+        let operator = match name {
             BinOp::And => "andalso",
             BinOp::Or => "orelse",
             BinOp::LtInt | BinOp::LtFloat => "<",
@@ -2077,91 +2452,210 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             BinOp::NotEq => "/=",
             BinOp::GtInt | BinOp::GtFloat => ">",
             BinOp::GtEqInt | BinOp::GtEqFloat => ">=",
-            BinOp::AddInt => "+",
-            BinOp::AddFloat => "+",
-            BinOp::SubInt => "-",
-            BinOp::SubFloat => "-",
-            BinOp::MultInt => "*",
-            BinOp::MultFloat => "*",
-            BinOp::DivFloat => return self.float_div(left, right),
-            BinOp::DivInt => return self.int_div(left, right, "div"),
-            BinOp::RemainderInt => return self.int_div(left, right, "rem"),
-            BinOp::Concatenate => return self.string_concatenate(left, right),
+            BinOp::AddInt | BinOp::AddFloat => "+",
+            BinOp::SubInt | BinOp::SubFloat => "-",
+            BinOp::MultInt | BinOp::MultFloat => "*",
+
+            // Division needs some extra case, in Gleam dividing by 0 results
+            // in 0; while in Erlang that's an exception.
+            BinOp::DivFloat => return self.float_division(eaf, left, right),
+            BinOp::DivInt => return self.int_division(eaf, left, right, "div"),
+            BinOp::RemainderInt => return self.int_division(eaf, left, right, "rem"),
+
+            // String concatenation is not a binop at all! It's just building a
+            // bit array.
+            BinOp::Concatenate => return self.string_concatenate(eaf, left, right),
         };
 
-        self.binop_exprs(left, op, right)
+        eaf.binary_operator(operator);
+        self.maybe_block_expr(eaf, left);
+        self.maybe_block_expr(eaf, right);
     }
 
-    fn float_div(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Document<'a> {
-        if right.is_non_zero_compile_time_number() {
-            return self.binop_exprs(left, "/", right);
-        } else if right.is_zero_compile_time_number() {
-            return "+0.0".to_doc();
+    fn float_division<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        left: &'a TypedExpr,
+        right: &'a TypedExpr,
+    ) {
+        match how_to_divide(left, right) {
+            HowToDivide::ReplaceWithZero => eaf.float(0.0),
+            HowToDivide::EvaluateLeftAndReturnZero => {
+                // We first evaluate the left hand side, and ignore its return
+                // value, and then we return zero directly!
+                self.maybe_block_expr(eaf, left);
+                eaf.float(0.0);
+            }
+            HowToDivide::PlainErlangDivision => {
+                eaf.binary_operator("/");
+                self.maybe_block_expr(eaf, left);
+                self.maybe_block_expr(eaf, right);
+            }
+            HowToDivide::MatchOnRight {
+                is_left_hand_side_pure,
+            } => {
+                // We first have to evaluate the left hand side, and store its
+                // result in a variable to use later.
+                let left_name = if !is_left_hand_side_pure {
+                    let left_name = self.new_throwaway_variable();
+                    eaf.match_operator();
+                    eaf.variable_pattern(&left_name);
+                    self.maybe_block_expr(eaf, left);
+                    Some(left_name)
+                } else {
+                    None
+                };
+
+                let case = eaf.start_case();
+                self.maybe_block_expr(eaf, right);
+
+                // +0.0 -> +0.0
+                let clause = eaf.start_case_clause();
+                eaf.float_pattern(0.0);
+                let guards = eaf.end_clause_pattern(clause);
+                let body = eaf.end_clause_guards(guards);
+                eaf.float(0.0);
+                eaf.end_clause_body(body);
+
+                // -0.0 -> -0.0
+                let clause = eaf.start_case_clause();
+                eaf.float_pattern(-0.0);
+                let guards = eaf.end_clause_pattern(clause);
+                let body = eaf.end_clause_guards(guards);
+                eaf.float(-0.0);
+                eaf.end_clause_body(body);
+
+                // _value -> left / _value
+                let denominator = self.new_throwaway_variable();
+                let clause = eaf.start_case_clause();
+                eaf.variable_pattern(&denominator);
+                let guards = eaf.end_clause_pattern(clause);
+                let body = eaf.end_clause_guards(guards);
+                eaf.binary_operator("/");
+                // If we had bound the left hand side to a variabe we just
+                // reference it, otherwise we will generate the code for the
+                // numerator.
+                if let Some(left_name) = left_name {
+                    eaf.variable(&left_name);
+                } else {
+                    self.maybe_block_expr(eaf, left);
+                }
+                eaf.variable(&denominator);
+                eaf.end_clause_body(body);
+
+                eaf.end_case(case);
+            }
         }
 
-        let left = self.expr(left);
-        let right = self.expr(right);
-        let denominator = self.next_local_var_name("gleam@denominator");
-        let clauses = docvec![
-            line(),
-            "+0.0 -> +0.0;",
-            line(),
-            "-0.0 -> -0.0;",
-            line(),
-            denominator.clone(),
-            " -> ",
-            binop_documents(left, "/", denominator)
-        ];
-        docvec!["case ", right, " of", clauses.nest(INDENT), line(), "end"]
+        //if right.is_non_zero_compile_time_number() {
+        //    eaf.binary_operator("/");
+        //    self.maybe_block_expr(eaf, left);
+        //    self.maybe_block_expr(eaf, right);
+        //} else if left.is_literal() && right.is_zero_compile_time_number() {
+        //    eaf.float(0.0);
+        //} else {
+        //    let left = {
+        //        self.expr(eaf, left);
+        //        nil()
+        //    };
+        //    let right = {
+        //        self.expr(eaf, right);
+        //        nil()
+        //    };
+        //    let denominator = self.new_throwaway_variable();
+        //    let clauses = docvec![
+        //        line(),
+        //        "+0.0 -> +0.0;",
+        //        line(),
+        //        "-0.0 -> -0.0;",
+        //        line(),
+        //        denominator.clone(),
+        //        " -> ",
+        //        binop_documents(left, "/", denominator.to_doc())
+        //    ];
+        //    let _ = docvec!["case ", right, " of", clauses.nest(INDENT), line(), "end"];
+        //}
     }
 
-    fn int_div(
+    fn int_division<Output>(
         &mut self,
+        eaf: &mut impl Eaf<Output>,
         left: &'a TypedExpr,
         right: &'a TypedExpr,
         op: &'static str,
-    ) -> Document<'a> {
-        if right.is_non_zero_compile_time_number() {
-            return self.binop_exprs(left, op, right);
+    ) {
+        match how_to_divide(left, right) {
+            HowToDivide::ReplaceWithZero => eaf.int(BigInt::ZERO),
+            HowToDivide::EvaluateLeftAndReturnZero => {
+                // We first evaluate the left hand side, and ignore its return
+                // value, and then we return zero directly!
+                self.maybe_block_expr(eaf, left);
+                eaf.int(BigInt::ZERO);
+            }
+            HowToDivide::PlainErlangDivision => {
+                eaf.binary_operator(op);
+                self.maybe_block_expr(eaf, left);
+                self.maybe_block_expr(eaf, right);
+            }
+            HowToDivide::MatchOnRight {
+                is_left_hand_side_pure,
+            } => {
+                // If the left hand side is not a pure expression we will have
+                // to evaluate it before the right hand side of the expression.
+                // So we assign it to a throwaway variable that we will then
+                // reference in the case expression's body.
+                // It will look something like this:
+                //
+                // ```erl
+                // _value = <left_hand_side>,
+                // case <right_hand_side> of
+                //   0 -> 0;
+                //   _value@1 -> _value div _value@1
+                // end
+                // ```
+                //
+                let left_name = if !is_left_hand_side_pure {
+                    let left_name = self.new_throwaway_variable();
+                    eaf.match_operator();
+                    eaf.variable_pattern(&left_name);
+                    self.maybe_block_expr(eaf, left);
+                    Some(left_name)
+                } else {
+                    None
+                };
+
+                let case = eaf.start_case();
+                self.maybe_block_expr(eaf, right);
+
+                // 0 -> 0
+                let clause = eaf.start_case_clause();
+                eaf.int_pattern(BigInt::ZERO);
+                let guards = eaf.end_clause_pattern(clause);
+                let body = eaf.end_clause_guards(guards);
+                eaf.int(BigInt::ZERO);
+                eaf.end_clause_body(body);
+
+                // _value -> left div _value
+                let denominator = self.new_throwaway_variable();
+                let clause = eaf.start_case_clause();
+                eaf.variable_pattern(&denominator);
+                let guards = eaf.end_clause_pattern(clause);
+                let body = eaf.end_clause_guards(guards);
+                eaf.binary_operator(op);
+                // If we had bound the left hand side to a variabe we just
+                // reference it, otherwise we will generate the code for the
+                // numerator.
+                if let Some(left_name) = left_name {
+                    eaf.variable(&left_name);
+                } else {
+                    self.maybe_block_expr(eaf, left);
+                }
+                eaf.variable(&denominator);
+                eaf.end_clause_body(body);
+
+                eaf.end_case(case);
+            }
         }
-
-        // If we have a constant value divided by zero then it's safe to replace it
-        // directly with 0.
-        if left.is_literal() && right.is_zero_compile_time_number() {
-            return "0".to_doc();
-        }
-
-        let left = self.expr(left);
-        let right = self.expr(right);
-        let denominator = self.next_local_var_name("gleam@denominator");
-        let clauses = docvec![
-            line(),
-            "0 -> 0;",
-            line(),
-            denominator.clone(),
-            " -> ",
-            binop_documents(left, op, denominator)
-        ];
-        docvec!["case ", right, " of", clauses.nest(INDENT), line(), "end"]
-    }
-
-    fn binop_exprs(
-        &mut self,
-        left: &'a TypedExpr,
-        op: &'static str,
-        right: &'a TypedExpr,
-    ) -> Document<'a> {
-        let left = if let TypedExpr::BinOp { .. } = left {
-            self.expr(left).surround("(", ")")
-        } else {
-            self.maybe_block_expr(left)
-        };
-        let right = if let TypedExpr::BinOp { .. } = right {
-            self.expr(right).surround("(", ")")
-        } else {
-            self.maybe_block_expr(right)
-        };
-        binop_documents(left, op, right)
     }
 
     /// This is used to print segments of a bit array expression.
@@ -2171,10 +2665,11 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     /// So you should use this one for printing expression segments, and the generic
     /// `bit_array_segment` function for constant and pattern segments instead.
     ///
-    fn bit_array_expression_segment(
+    fn bit_array_expression_segment<Output>(
         &mut self,
+        eaf: &mut impl Eaf<Output>,
         segment: &'a TypedExprBitArraySegment,
-    ) -> Document<'a> {
+    ) {
         // Literal strings can have the `utf8`, `utf16`, or `utf32` options just
         // fine, and that would be no issue on the Erlang side:
         //
@@ -2223,206 +2718,114 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             && !segment.value.is_literal_string()
             && let Some(encoding) = expression_segment_string_encoding(segment)
         {
-            match encoding {
-                // Gleam strings are utf8 encoded binaries, so we just need to add
-                // the binary option
+            let (size, endiannes) = match encoding {
+                ExpressionSegmentStringEncoding::Utf16 { endiannes } => (16, endiannes),
+                ExpressionSegmentStringEncoding::Utf32 { endiannes } => (32, endiannes),
                 ExpressionSegmentStringEncoding::Utf8 => {
-                    docvec![
-                        self.bit_array_expression_segment_value(&segment.value),
-                        "/binary"
-                    ]
+                    // Gleam strings are utf8 encoded binaries, so we just need
+                    // to add the binary option and we can call it a day.
+                    eaf.bit_array_segment();
+                    self.maybe_block_expr(eaf, &segment.value);
+                    eaf.atom("default");
+                    eaf.bit_array_segment_specifiers([BitArraySegmentSpecifier::Binary]);
+                    return;
                 }
+            };
 
-                // For utf16 and utf32 we need an explicit conversion using erlang's
-                // `unicode:characters_to_binary`
-                ExpressionSegmentStringEncoding::Utf16 { endiannes } => {
-                    let value = self.maybe_block_expr(&segment.value);
-                    let encoding = match endiannes {
-                        Endianness::Big => "{utf16, big}",
-                        Endianness::Little => "{utf16, little}",
-                    };
-                    docvec![
-                        "(unicode:characters_to_binary",
-                        wrap_arguments([value, "utf8".to_doc(), encoding.to_doc()]),
-                        ")/binary"
-                    ]
-                }
-                ExpressionSegmentStringEncoding::Utf32 { endiannes } => {
-                    let value = self.maybe_block_expr(&segment.value);
-                    let encoding = match endiannes {
-                        Endianness::Big => "{utf32, big}",
-                        Endianness::Little => "{utf32, little}",
-                    };
+            eaf.bit_array_segment();
 
-                    docvec![
-                        "(unicode:characters_to_binary",
-                        wrap_arguments([value, "utf8".to_doc(), encoding.to_doc()]),
-                        ")/binary"
-                    ]
+            // For utf16 and utf32 we need an explicit conversion using erlang's
+            // `unicode:characters_to_binary`. The segment value will be
+            // something like this:
+            // ```erl
+            // unicode:characters_to_binary(<segment_value>, utf8, {utf16, big})
+            // ```
+            let call = eaf.start_remote_call("unicode".into(), "characters_to_binary");
+            {
+                self.maybe_block_expr(eaf, &segment.value);
+                eaf.atom("utf8");
+                let tuple = eaf.start_tuple();
+                eaf.atom(&format!("utf{size}"));
+                match endiannes {
+                    Endianness::Big => eaf.atom("big"),
+                    Endianness::Little => eaf.atom("little"),
                 }
+                eaf.end_tuple(tuple);
             }
+            eaf.end_call(call);
+
+            eaf.atom("default");
+            eaf.bit_array_segment_specifiers([BitArraySegmentSpecifier::Binary]);
         } else {
             // If the bit array segment doesn't need any special handling we use the
             // regular printing functions to format its value and options.
-            docvec![
-                self.bit_array_expression_segment_value(&segment.value),
-                self.bit_array_expression_options(&segment.options)
-            ]
+            eaf.bit_array_segment();
+            self.maybe_block_expr(eaf, &segment.value);
+            self.bit_array_expression_segment_size(eaf, segment);
+            self.bit_array_segment_specifiers(eaf, segment);
         }
     }
 
-    fn bit_array_expression_options(
+    /// This generates the code that will produce the size expression of a bit
+    /// array segment.
+    ///
+    /// Make sure to only call this when you're expected to generate a bit array
+    /// size!
+    fn bit_array_expression_segment_size<Output>(
         &mut self,
-        options: &'a [BitArrayOption<TypedExpr>],
-    ) -> Document<'a> {
-        // The size and unit options are a bit special: if present size must come
-        // first, and the unit must come last. So we keep them separate from all the
-        // other options.
-        //
-        // ```erl
-        // <<Segment:Size/Option1-Option2-unit:UnitValue>>
-        // %        ^^^^^ Size is first immediately after `:`
-        // %             ^^^^^^^^^^^^^^^^ All other options come after `/`
-        // %                             ^^^^^ And unit is always the last one of
-        // %                                   those written like this: `unit:Value`
-        // ```
-        let mut size: Option<Document<'a>> = None;
-        let mut unit: Option<Document<'a>> = None;
-        let mut others = Vec::new();
-
-        for option in options {
-            match option {
-                BitArrayOption::Utf8 { .. } => others.push("utf8".to_doc()),
-                BitArrayOption::Utf16 { .. } => others.push("utf16".to_doc()),
-                BitArrayOption::Utf32 { .. } => others.push("utf32".to_doc()),
-                BitArrayOption::Int { .. } => others.push("integer".to_doc()),
-                BitArrayOption::Float { .. } => others.push("float".to_doc()),
-                BitArrayOption::Bytes { .. } => others.push("binary".to_doc()),
-                BitArrayOption::Bits { .. } => others.push("bitstring".to_doc()),
-                BitArrayOption::Utf8Codepoint { .. } => others.push("utf8".to_doc()),
-                BitArrayOption::Utf16Codepoint { .. } => others.push("utf16".to_doc()),
-                BitArrayOption::Utf32Codepoint { .. } => others.push("utf32".to_doc()),
-                BitArrayOption::Signed { .. } => others.push("signed".to_doc()),
-                BitArrayOption::Unsigned { .. } => others.push("unsigned".to_doc()),
-                BitArrayOption::Big { .. } => others.push("big".to_doc()),
-                BitArrayOption::Little { .. } => others.push("little".to_doc()),
-                BitArrayOption::Native { .. } => others.push("native".to_doc()),
-                BitArrayOption::Unit { value, .. } => {
-                    unit = Some(eco_format!("unit:{value}").to_doc())
-                }
-                BitArrayOption::Size { value, .. } => {
-                    // Sizes need some care: in Erlang, having a negative segment size
-                    // results in a runtime error. We can't do that in Gleam! So any
-                    // negative value must be turned to zero instead:
-                    size = Some(if let TypedExpr::Int { int_value, .. } = value.as_ref() {
-                        // For literals we can easily replace negative values with
-                        // the literal zero.
-                        let value = if int_value.is_negative() {
-                            &BigInt::ZERO
-                        } else {
-                            int_value
-                        };
-                        docvec![":", value.clone()]
-                    } else {
-                        // For any other non constant expression we need to use
-                        // `erlang:max(0, <Value>)` to ensure the value is never
-                        // zero at runtime!
-                        docvec![":(erlang:max(0, ", self.maybe_block_expr(value), "))"]
-                    });
-                }
-            }
-        }
-
-        // The unit must always be the last option, if present.
-        if let Some(unit) = unit {
-            others.push(unit)
-        }
-
-        let options = if !others.is_empty() {
-            docvec!["/", join(others, "-".to_doc())]
-        } else {
-            nil()
+        eaf: &mut impl Eaf<Output>,
+        segment: &'a TypedExprBitArraySegment,
+    ) {
+        let Some(size) = segment.size() else {
+            eaf.atom("default");
+            return;
         };
 
-        // Size comes before all the other options.
-        docvec![size, options]
-    }
-
-    /// The document for the value of a bit array segment expression.
-    /// Segment values can't be produced using a simple `expr` call but need special
-    /// handling in some cases which this function takes care of!
-    fn bit_array_expression_segment_value(&mut self, value: &'a TypedExpr) -> Document<'a> {
-        match value {
-            // Skip the normal <<value/utf8>> surrounds
-            TypedExpr::String { value, .. } => string_inner(value).surround("\"", "\""),
-
-            // As normal
-            TypedExpr::Int { .. }
-            | TypedExpr::Float { .. }
-            | TypedExpr::Var { .. }
-            | TypedExpr::BitArray { .. } => self.expr(value),
-
-            // Anything else needs to be wrapped in parentheses
-            TypedExpr::Block { .. }
-            | TypedExpr::Pipeline { .. }
-            | TypedExpr::Fn { .. }
-            | TypedExpr::List { .. }
-            | TypedExpr::Call { .. }
-            | TypedExpr::BinOp { .. }
-            | TypedExpr::Case { .. }
-            | TypedExpr::RecordAccess { .. }
-            | TypedExpr::PositionalAccess { .. }
-            | TypedExpr::ModuleSelect { .. }
-            | TypedExpr::Tuple { .. }
-            | TypedExpr::TupleIndex { .. }
-            | TypedExpr::Todo { .. }
-            | TypedExpr::Panic { .. }
-            | TypedExpr::Echo { .. }
-            | TypedExpr::RecordUpdate { .. }
-            | TypedExpr::NegateBool { .. }
-            | TypedExpr::NegateInt { .. }
-            | TypedExpr::Invalid { .. } => self.expr(value).surround("(", ")"),
-        }
-    }
-
-    fn optional_clause_guard(
-        &mut self,
-        guard: Option<&'a TypedClauseGuard>,
-        additional_guards: Vec<Document<'a>>,
-        assignments: &HashMap<EcoString, &StringPatternAssignment<'a>>,
-    ) -> Document<'a> {
-        let guard_doc = guard.map(|guard| self.bare_clause_guard(guard, assignments));
-
-        let guards_count = guard_doc.iter().len() + additional_guards.len();
-        let guards_docs = additional_guards.into_iter().chain(guard_doc).map(|guard| {
-            if guards_count > 1 {
-                guard.surround("(", ")")
+        // Sizes need some care: in Erlang, having a negative segment size
+        // results in a runtime error. We can't do that in Gleam! So any
+        // negative value must be turned to zero instead:
+        if let TypedExpr::Int { int_value, .. } = &size {
+            if int_value.is_negative() {
+                eaf.int(BigInt::ZERO)
             } else {
-                guard
+                eaf.int(int_value.clone());
             }
-        });
-        let doc = join(guards_docs, " andalso ".to_doc());
-        if doc.is_empty() {
-            doc
         } else {
-            " when ".to_doc().append(doc)
+            let call = eaf.start_remote_call("erlang".into(), "max");
+            eaf.int(BigInt::ZERO);
+            self.maybe_block_expr(eaf, size);
+            eaf.end_call(call);
         }
     }
 
-    fn bare_clause_guard(
+    fn clause_guard<Output>(
         &mut self,
+        eaf: &mut impl Eaf<Output>,
         guard: &'a TypedClauseGuard,
-        assignments: &HashMap<EcoString, &StringPatternAssignment<'a>>,
-    ) -> Document<'a> {
+        assignments: &HashMap<EcoString, AliasedLiteral>,
+    ) {
         match guard {
             ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to code generation"),
 
-            ClauseGuard::Block { value, .. } => self
-                .bare_clause_guard(value, assignments)
-                .surround("(", ")"),
+            ClauseGuard::ModuleSelect { literal, .. } => self.inlined_constant(eaf, literal),
+            ClauseGuard::Constant(constant) => self.inlined_constant(eaf, constant),
 
+            ClauseGuard::Block { value, .. } => self.clause_guard(eaf, value, assignments),
+
+            ClauseGuard::TupleIndex { tuple, index, .. } => {
+                self.clause_guard_tuple_index(eaf, tuple, *index)
+            }
+
+            ClauseGuard::FieldAccess {
+                container, index, ..
+            } => self.clause_guard_tuple_index(
+                eaf,
+                container,
+                index.expect("Unable to find index") + 1,
+            ),
             ClauseGuard::Not { expression, .. } => {
-                docvec!["not ", self.bare_clause_guard(expression, assignments)]
+                eaf.unary_operator("not");
+                self.clause_guard(eaf, expression, assignments);
             }
 
             ClauseGuard::BinaryOperator {
@@ -2431,9 +2834,6 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 right,
                 ..
             } => {
-                let left_document = self.clause_guard(left, assignments);
-                let right_document = self.clause_guard(right, assignments);
-
                 let operator = match operator {
                     BinOp::Or => "orelse",
                     BinOp::And => "andalso",
@@ -2450,138 +2850,163 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     BinOp::DivInt => "div",
                     BinOp::RemainderInt => "rem",
                     BinOp::Concatenate => {
-                        return self.clause_guard_string_concatenate(left, right, assignments);
+                        return self.clause_guard_string_concatenate(eaf, left, right, assignments);
                     }
                 };
 
-                docvec![left_document, " ", operator, " ", right_document]
+                eaf.binary_operator(operator);
+                self.clause_guard(eaf, left, assignments);
+                self.clause_guard(eaf, right, assignments);
             }
 
             // Only local variables are supported and the typer ensures that all
             // ClauseGuard::Vars are local variables
-            ClauseGuard::Var { name, .. } => {
-                // If we're referencing a variable introduced by a string pattern
-                // assignment we need to replace it with its actual literal value:
-                // in the generated code the variable is only defined later, so
-                // just referencing its name would result in an error.
-                assignments
-                    .get(name)
-                    .map(|assignment| assignment.literal_value.clone())
-                    .unwrap_or_else(|| self.local_var_name(name))
+            ClauseGuard::Var {
+                name,
+                definition_location,
+                ..
+            } => {
+                // If we're referencing a variable introduced by an alias pattern
+                // we need to replace it with its actual literal value: in the
+                // generated code the variable is only defined later, so just
+                // referencing its name would result in an error.
+                match assignments.get(name) {
+                    Some(AliasedLiteral::String { value, .. }) => eaf.string(value),
+                    Some(AliasedLiteral::Int { value, .. }) => eaf.int(value.clone()),
+                    Some(AliasedLiteral::Float { value, .. }) => eaf.float(value.value()),
+                    None => {
+                        eaf.variable(&self.local_var_name(definition_location));
+                    }
+                }
             }
-
-            ClauseGuard::TupleIndex { tuple, index, .. } => self.tuple_index_inline(tuple, *index),
-
-            ClauseGuard::FieldAccess {
-                container, index, ..
-            } => self.tuple_index_inline(container, index.expect("Unable to find index") + 1),
-
-            ClauseGuard::ModuleSelect { literal, .. } => self.const_inline(literal),
-
-            ClauseGuard::Constant(constant) => self.const_inline(constant),
         }
     }
 
-    fn clause_guard(
+    fn clause_guard_tuple_index<Output>(
         &mut self,
-        guard: &'a TypedClauseGuard,
-        assignments: &HashMap<EcoString, &StringPatternAssignment<'a>>,
-    ) -> Document<'a> {
-        match guard {
-            ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to code generation"),
-            // Binary operators are wrapped in parens
-            ClauseGuard::BinaryOperator { .. } => "("
-                .to_doc()
-                .append(self.bare_clause_guard(guard, assignments))
-                .append(")"),
-
-            // Other expressions are not
-            ClauseGuard::Constant(_)
-            | ClauseGuard::Not { .. }
-            | ClauseGuard::Var { .. }
-            | ClauseGuard::TupleIndex { .. }
-            | ClauseGuard::FieldAccess { .. }
-            | ClauseGuard::ModuleSelect { .. }
-            | ClauseGuard::Block { .. } => self.bare_clause_guard(guard, assignments),
-        }
+        eaf: &mut impl Eaf<Output>,
+        tuple: &'a TypedClauseGuard,
+        index: u64,
+    ) {
+        let call = eaf.start_remote_call("erlang".into(), "element");
+        eaf.int((index + 1).into());
+        self.clause_guard(eaf, tuple, &HashMap::new());
+        eaf.end_call(call);
     }
 
-    fn tuple_index_inline(&mut self, tuple: &'a TypedClauseGuard, index: u64) -> Document<'a> {
-        let index_doc = eco_format!("{}", (index + 1)).to_doc();
-        let tuple_doc = self.bare_clause_guard(tuple, &HashMap::new());
-        "erlang:element"
-            .to_doc()
-            .append(wrap_arguments([index_doc, tuple_doc]))
-    }
-
-    fn clause_guard_string_concatenate(
+    fn clause_guard_string_concatenate<Output>(
         &mut self,
+        eaf: &mut impl Eaf<Output>,
         left: &'a TypedClauseGuard,
         right: &'a TypedClauseGuard,
-        assignments: &HashMap<EcoString, &StringPatternAssignment<'a>>,
-    ) -> Document<'a> {
-        let left = self.clause_guard_string_concatenate_argument(left, assignments);
-        let right = self.clause_guard_string_concatenate_argument(right, assignments);
-        bit_array([left, right])
+        assignments: &HashMap<EcoString, AliasedLiteral>,
+    ) {
+        let bit_array = eaf.start_bit_array();
+        self.clause_guard_string_concatenate_argument(eaf, left, assignments);
+        self.clause_guard_string_concatenate_argument(eaf, right, assignments);
+        eaf.end_bit_array(bit_array);
     }
 
-    fn clause_guard_string_concatenate_argument(
+    fn clause_guard_string_concatenate_argument<Output>(
         &mut self,
+        eaf: &mut impl Eaf<Output>,
         guard: &'a TypedClauseGuard,
-        assignments: &HashMap<EcoString, &StringPatternAssignment<'a>>,
-    ) -> Document<'a> {
-        match guard {
-            ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to code generation"),
+        assignments: &HashMap<EcoString, AliasedLiteral>,
+    ) {
+        // String concatenation is basically building a bit array with two
+        // elements. Anything is going to be simply added as a `/binary` segment
+        // with one exception: if we're dealing with a literal string that needs
+        // the `/utf8` specifier instead!
+        // In both cases the size is alwaus automatic, so we generate the
+        // `default` atom.
+        eaf.bit_array_segment();
+        self.clause_guard(eaf, guard, assignments);
+        eaf.atom("default");
+        eaf.bit_array_segment_specifiers(if guard_produces_literal_string(guard) {
+            [BitArraySegmentSpecifier::Utf8]
+        } else {
+            [BitArraySegmentSpecifier::Binary]
+        });
+    }
 
-            ClauseGuard::Constant(Constant::String { value, .. }) => {
-                docvec!['"', string_inner(value), "\"/utf8"]
+    /// Given a record name and the number of arguments it accepts, this outputs
+    /// the code to generate an anonymous function that builds that record.
+    ///
+    /// For example, given:
+    ///
+    /// ```gleam
+    /// pub type Wibble {
+    ///   Wibble(Int, String)
+    /// }
+    ///
+    /// pub fn main() {
+    ///   Wibble
+    /// //^^^^^^ This has to return the builder function!
+    /// }
+    /// ```
+    ///
+    /// We will produce the following Erlang code:
+    ///
+    /// ```erl
+    /// main() ->
+    ///   fun(_value, _value@1) ->
+    ///     {wibble, _value, _value@1}
+    ///   end.
+    /// ```
+    ///
+    fn record_builder_anonymous_function<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        record_name: &str,
+        arguments: usize,
+    ) {
+        let arguments = (0..arguments)
+            .map(|_| self.new_throwaway_variable())
+            .collect_vec();
+        let function = eaf.start_anonymous_function(&arguments);
+
+        if arguments.is_empty() {
+            eaf.atom(&to_snake_case(record_name))
+        } else {
+            let tuple = eaf.start_tuple();
+            eaf.atom(&to_snake_case(record_name));
+            for argument in arguments {
+                eaf.variable(&argument);
             }
+            eaf.end_tuple(tuple)
+        }
 
-            ClauseGuard::Constant(Constant::StringConcatenation { left, right, .. }) => {
-                self.const_string_concatenate_inner(left, right)
-            }
+        eaf.end_function(function);
+    }
 
-            ClauseGuard::ModuleSelect { literal, .. } => match literal {
-                Constant::String { value, .. } => docvec!['"', string_inner(value), "\"/utf8"],
-                Constant::StringConcatenation { left, right, .. } => {
-                    self.const_string_concatenate_inner(left, right)
+    /// After generating a pattern we might have to generate additional variable
+    /// bindings in the body following a clause pattern.
+    /// This adds those variable to the current body.
+    fn pattern_assignments<Output>(
+        &mut self,
+        eaf: &mut impl Eaf<Output>,
+        variables_to_add_later: HashMap<EcoString, AliasedLiteral>,
+    ) {
+        let variables_to_add_later = variables_to_add_later
+            .into_iter()
+            .sorted_by(|(one, _), (other, _)| one.cmp(other));
+
+        for (gleam_name, value) in variables_to_add_later {
+            eaf.match_operator();
+            match value {
+                AliasedLiteral::String { location, value } => {
+                    eaf.variable_pattern(&self.new_erlang_variable(&gleam_name, location));
+                    eaf.string(&value);
                 }
-                Constant::Int { .. }
-                | Constant::Float { .. }
-                | Constant::Tuple { .. }
-                | Constant::List { .. }
-                | Constant::Record { .. }
-                | Constant::RecordUpdate { .. }
-                | Constant::BitArray { .. }
-                | Constant::Var { .. }
-                | Constant::Todo { .. }
-                | Constant::Invalid { .. } => docvec!["(", self.const_inline(literal), ")/binary"],
-            },
-
-            ClauseGuard::Var { name, .. } => assignments
-                .get(name)
-                .map(|assignment| docvec![assignment.literal_value.clone(), "/binary"])
-                .unwrap_or_else(|| docvec![self.local_var_name(name), "/binary"]),
-
-            ClauseGuard::BinaryOperator {
-                operator: BinOp::Concatenate,
-                left,
-                right,
-                ..
-            } => docvec![
-                self.clause_guard_string_concatenate(left, right, assignments),
-                "/binary"
-            ],
-
-            ClauseGuard::Block { .. }
-            | ClauseGuard::BinaryOperator { .. }
-            | ClauseGuard::Not { .. }
-            | ClauseGuard::TupleIndex { .. }
-            | ClauseGuard::FieldAccess { .. }
-            | ClauseGuard::Constant(_) => docvec![
-                self.clause_guard(guard, assignments).surround("(", ")"),
-                "/binary"
-            ],
+                AliasedLiteral::Float { location, value } => {
+                    eaf.variable_pattern(&self.new_erlang_variable(&gleam_name, location));
+                    eaf.float(value.value());
+                }
+                AliasedLiteral::Int { location, value } => {
+                    eaf.variable_pattern(&self.new_erlang_variable(&gleam_name, location));
+                    eaf.int(value.clone());
+                }
+            }
         }
     }
 }
@@ -2623,260 +3048,369 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
         .collect()
 }
 
-pub fn record_definition(name: &str, fields: &[(&str, Arc<Type>)]) -> String {
-    let name = to_snake_case(name);
-    let type_printer = TypePrinter::new("").var_as_any();
-    let fields = fields.iter().map(move |(name, type_)| {
-        let type_ = type_printer.print(type_);
-        docvec![atom_string((*name).into()), " :: ", type_.group()]
-    });
-    let fields = break_("", "")
-        .append(join(fields, break_(",", ", ")))
-        .nest(INDENT)
-        .append(break_("", ""))
-        .group();
-    docvec!["-record(", atom_string(name), ", {", fields, "}).", line()]
-        .to_pretty_string(MAX_COLUMNS)
+/// Given an expression, this tells us how we should be calling it as a
+/// function in the generated erlang code.
+fn how_to_call<'a>(function: &'a TypedExpr) -> FunctionCall<'a> {
+    match function {
+        // This is a record constructor from the current module.
+        // For example:
+        //
+        // ```gleam
+        // pub type Wibble { Wibble(Int) }
+        // pub fn main() {
+        //   Wibble(1)
+        // //^^^^^^^^^ This!
+        // }
+        // ```
+        //
+        // On the Erlang side we have to build a tagged tuple
+        //
+        TypedExpr::ModuleSelect {
+            constructor: ModuleValueConstructor::Record { name, .. },
+            ..
+        } => FunctionCall::BuildRecord { name },
+
+        // Notice how whenever we have a function that has an erlang
+        // external definition we will always directly call that and not go
+        // through the Gleam function. For example:
+        //
+        // ```gleam
+        // pub fn main() {
+        //   format("hello", [])
+        // }
+        //
+        // @external(erlang, "io", "format")
+        // fn format(string: String, args: List(String)) -> Nil
+        // ```
+        //
+        // Will result in:
+        //
+        // ```erl
+        // main() ->
+        //   io:format(~"hello", []).
+        // ```
+        //
+        // This enables the Erlang compiler to further optimise those calls.
+        //
+        TypedExpr::ModuleSelect {
+            constructor:
+                ModuleValueConstructor::Fn {
+                    external_erlang: Some((module, name)),
+                    ..
+                }
+                | ModuleValueConstructor::Fn { module, name, .. },
+            ..
+        } => FunctionCall::Call { module, name },
+
+        // We're calling a variable as a function.
+        TypedExpr::Var { constructor, .. } => match &constructor.variant {
+            // The variable is the constructor for a record.
+            // That's a tagged tuple.
+            ValueConstructorVariant::Record { name, .. } => FunctionCall::BuildRecord { name },
+            // The variable is a module function, we can call that as usual
+            // just like we did for `TypedExpr::ModuleSelect`.
+            ValueConstructorVariant::ModuleFn {
+                external_erlang: Some((module, name)),
+                ..
+            }
+            | ValueConstructorVariant::ModuleFn { module, name, .. } => {
+                FunctionCall::Call { module, name }
+            }
+            // The variable is a variable defined inside the function, we
+            // can call it directly:
+            //
+            // ```erl
+            // SomeVariable = fun() -> ... end,
+            // SomeVariable()
+            // ```
+            ValueConstructorVariant::LocalVariable { .. } => FunctionCall::DirectCall,
+            // The variable is a module constant, if it refers to a module
+            // function we want to call it directly.
+            ValueConstructorVariant::ModuleConstant { literal, .. } => {
+                if let Constant::Var {
+                    constructor: Some(constructor),
+                    ..
+                } = literal
+                    && let ValueConstructorVariant::ModuleFn {
+                        external_erlang: Some((module, name)),
+                        ..
+                    }
+                    | ValueConstructorVariant::ModuleFn { module, name, .. } =
+                        &constructor.variant
+                {
+                    FunctionCall::Call { module, name }
+                } else {
+                    FunctionCall::DirectCall
+                }
+            }
+        },
+
+        //TypedExpr::Fn { kind, body, .. } if kind.is_capture() => {
+        //    if let Statement::Expression(TypedExpr::Call {
+        //        fun,
+        //        arguments: inner_arguments,
+        //        ..
+        //    }) = body.first()
+        //    {
+        //        let mut merged_arguments = Vec::with_capacity(inner_arguments.len());
+        //        for arg in inner_arguments {
+        //            if let TypedExpr::Var { name, .. } = &arg.value
+        //                && name == CAPTURE_VARIABLE
+        //            {
+        //                merged_arguments.push(arguments.swap_remove(0))
+        //            } else {
+        //                merged_arguments.push(self.maybe_block_expr(eaf, &arg.value))
+        //            }
+        //        }
+        //        self.docs_arguments_call(eaf, fun, merged_arguments)
+        //    } else {
+        //        panic!("Erl printing: Capture was not a call")
+        //    }
+        //}
+        TypedExpr::Fn { .. }
+        | TypedExpr::Call { .. }
+        | TypedExpr::Todo { .. }
+        | TypedExpr::Panic { .. }
+        | TypedExpr::RecordAccess { .. }
+        | TypedExpr::TupleIndex { .. }
+        | TypedExpr::Int { .. }
+        | TypedExpr::Float { .. }
+        | TypedExpr::String { .. }
+        | TypedExpr::Block { .. }
+        | TypedExpr::Pipeline { .. }
+        | TypedExpr::List { .. }
+        | TypedExpr::BinOp { .. }
+        | TypedExpr::Case { .. }
+        | TypedExpr::PositionalAccess { .. }
+        | TypedExpr::ModuleSelect { .. }
+        | TypedExpr::Tuple { .. }
+        | TypedExpr::Echo { .. }
+        | TypedExpr::BitArray { .. }
+        | TypedExpr::RecordUpdate { .. }
+        | TypedExpr::NegateBool { .. }
+        | TypedExpr::NegateInt { .. }
+        | TypedExpr::Invalid { .. } => FunctionCall::DirectCall,
+    }
+}
+
+/// This represents the different ways a Gleam division could be turned into an
+/// Erlang division.
+/// In Gleam dividing by zero results in a 0, not in an exception. This means
+/// we can't always just use the plain Erlang division operator.
+enum HowToDivide {
+    /// Means we can divide two expression by just doing `One / Other`.
+    PlainErlangDivision,
+
+    /// The entire division can be safely replaced with a literal `0`.
+    ReplaceWithZero,
+
+    /// This means the left hand side could have side effects, but then we're
+    /// dividing it by zero, so we can just ignore its result and directly
+    /// return 0.
+    EvaluateLeftAndReturnZero,
+
+    /// This means we have to pattern match on the right hand side to make sure
+    /// that it is not zero, otherwise we'll have to return zero, or the
+    /// division operation would result in an exception.
+    ///
+    /// It will look something like this:
+    ///
+    /// ```erl
+    /// case right_hand_side of
+    ///   0 -> 0;
+    ///   _denominator -> left_hand_side / _denominator
+    /// ```
+    ///
+    MatchOnRight { is_left_hand_side_pure: bool },
+}
+
+fn how_to_divide(left: &TypedExpr, right: &TypedExpr) -> HowToDivide {
+    if right.is_non_zero_compile_time_number() {
+        // Right can't be zero, so it's safe to just divide!
+        HowToDivide::PlainErlangDivision
+    } else if left.is_pure_value_constructor() {
+        if right.is_zero_compile_time_number() {
+            // Left has no side effects and `right` is `0`, so we can just
+            // replace the result with zero!
+            HowToDivide::ReplaceWithZero
+        } else {
+            // Left has no side effects, but `right` could still be zero at
+            // runtime, we need to match on it.
+            HowToDivide::MatchOnRight {
+                is_left_hand_side_pure: true,
+            }
+        }
+    } else {
+        // Left can have side effects, but the right hand side is zero!
+        // In that case we have to evaluate `left`, but then we can directly
+        // return 0.
+        if right.is_zero_compile_time_number() {
+            HowToDivide::EvaluateLeftAndReturnZero
+        } else {
+            // Otherwise we'll have to make sure things are evaluated in the
+            // correct order.
+            HowToDivide::MatchOnRight {
+                is_left_hand_side_pure: false,
+            }
+        }
+    }
+}
+
+pub fn record_definition(record_name: &str, fields: &[(&str, Arc<Type>)]) -> String {
+    let mut eaf = PrettyEaf::new(None);
+
+    let record = eaf.start_record_attribute(&to_snake_case(record_name));
+
+    let type_printer = TypeGenerator::new("").var_as_any();
+    for (field_name, field_type) in fields {
+        eaf.record_field();
+        eaf.atom(field_name);
+        type_printer.type_(&mut eaf, field_type);
+    }
+
+    eaf.end_record_attribute(record);
+    eaf.into_output()
 }
 
 pub fn module<'a>(
     module: &'a TypedModule,
     line_numbers: &'a LineNumbers,
     root: &'a Utf8Path,
-) -> Result<String> {
-    Ok(Generator::new(module, line_numbers, root)
-        .module_document()?
-        .to_pretty_string(MAX_COLUMNS))
+) -> String {
+    let mut generator = Generator::new(module, line_numbers, root);
+    let mut eaf = PrettyEaf::new(Some(ErlangModuleName::from(&module.name)));
+    generator.module_document(&mut eaf);
+
+    let mut output = eaf.into_output();
+    if generator.echo_used {
+        output.push_str(std::include_str!("../templates/echo.erl"));
+    }
+    output
 }
 
-fn register_function_exports(
-    function: &TypedFunction,
-    exports: &mut Vec<Document<'_>>,
+/// If the given function should be exported from the current Erlang module then
+/// this function will return its name and arity to be used when exporting it.
+/// For example: `pub fn wibble(a, b)` will produce `Some(("wibble", 2))`, so
+/// we can export `wibble/2`.
+fn function_export<'a>(
+    function: &'a TypedFunction,
     overridden_publicity: &im::HashSet<EcoString>,
-) {
-    let Function {
-        publicity,
-        name: Some((_, name)),
-        arguments,
-        implementations,
-        ..
-    } = function
-    else {
-        return;
-    };
+) -> Option<(&'a str, usize)> {
+    let (_, name) = function
+        .name
+        .as_ref()
+        .expect("module function with no name");
 
-    // If the function isn't for this target then don't attempt to export it
-    if implementations.supports(Target::Erlang)
-        && (publicity.is_importable() || overridden_publicity.contains(name))
-    {
-        let function_name = escape_erlang_existing_name(name);
-        exports.push(
-            atom_string(function_name.into())
-                .append("/")
-                .append(arguments.len()),
-        )
+    // If the function is not implemented for this target, don't attempt to
+    // export it.
+    if !function.implementations.supports(Target::Erlang) {
+        return None;
     }
+
+    // If the function is not importable and it's publicity has not been
+    // overridden, don't attempt to export it.
+    if !function.publicity.is_importable() && !overridden_publicity.contains(name) {
+        return None;
+    }
+
+    let name = escape_erlang_existing_name(name);
+    Some((name, function.arguments.len()))
 }
 
-fn register_custom_type_exports<'a>(
-    custom_type: &TypedCustomType,
-    type_exports: &mut Vec<Document<'a>>,
-    type_defs: &mut Vec<Document<'a>>,
-    module_name: &'a str,
-) {
-    let TypedCustomType {
-        name,
-        constructors,
-        opaque,
-        typed_parameters,
-        external_erlang,
-        ..
-    } = custom_type;
+/// Given a custom type this returns the name it should be used to export it and
+/// its arity. For example: `pub type Wibble(a, b)` will produce `("wibble", 2)`,
+/// so we can export `wibble/2`.
+fn type_export(custom_type: &TypedCustomType) -> (EcoString, usize) {
+    let name = erl_safe_type_name(to_snake_case(&custom_type.name));
+    let arity = custom_type.typed_parameters.len();
+    (name, arity)
+}
 
-    // Erlang doesn't allow phantom type variables in type definitions but gleam does
-    // so we check the type declaratinon against its constroctors and generate a phantom
-    // value that uses the unused type variables.
-    let type_var_usages = collect_type_var_usages(HashMap::new(), typed_parameters);
-    let mut constructor_var_usages = HashMap::new();
-    for c in constructors {
-        constructor_var_usages =
-            collect_type_var_usages(constructor_var_usages, c.arguments.iter().map(|a| &a.type_));
-    }
-    let phantom_vars: Vec<_> = type_var_usages
-        .keys()
-        .filter(|&id| !constructor_var_usages.contains_key(id))
-        .sorted()
-        .map(|&id| Type::Var {
-            type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id })),
-        })
-        .collect();
-    let phantom_vars_constructor = if !phantom_vars.is_empty() {
-        let type_printer = TypePrinter::new(module_name);
-        Some(tuple(
-            std::iter::once("gleam_phantom".to_doc())
-                .chain(phantom_vars.iter().map(|pv| type_printer.print(pv))),
-        ))
-    } else {
-        None
-    };
-    // Type Exports
-    type_exports.push(
-        erl_safe_type_name(to_snake_case(name))
-            .to_doc()
-            .append("/")
-            .append(typed_parameters.len()),
-    );
-    // Type definitions
-    let definition = if constructors.is_empty() {
-        if let Some((module, external_type, _location)) = external_erlang {
-            let printer = TypePrinter::new(module_name);
-            docvec![
-                module,
-                ":",
-                external_type,
-                "(",
-                join(
-                    typed_parameters
-                        .iter()
-                        .map(|parameter| printer.print(parameter)),
-                    ", ".to_doc()
-                ),
-                ")"
-            ]
-        } else {
-            let constructors = std::iter::once("any()".to_doc()).chain(phantom_vars_constructor);
-            join(constructors, break_(" |", " | "))
+/// This returns true if the given expression is going to be compiled to a
+/// single literal Erlang string.
+/// This is not true just for literal Gleam strings like `"abc"`, but also
+/// variables referencing string constants (as those are inlined)
+fn produces_literal_string(value: &TypedExpr) -> bool {
+    match value {
+        TypedExpr::String { .. }
+        // Constants are inlined on the Erlang target, so we need to check if
+        // those are literal strings too!
+        | TypedExpr::ModuleSelect {
+            constructor:
+                ModuleValueConstructor::Constant {
+                    literal: Constant::String { .. },
+                    ..
+                },
+            ..
         }
-    } else {
-        let constructors = constructors
-            .iter()
-            .map(|constructor| {
-                let name = atom_string(to_snake_case(&constructor.name));
-                if constructor.arguments.is_empty() {
-                    name
-                } else {
-                    let type_printer = TypePrinter::new(module_name);
-                    let arguments = constructor
-                        .arguments
-                        .iter()
-                        .map(|argument| type_printer.print(&argument.type_));
-                    tuple(std::iter::once(name).chain(arguments))
-                }
-            })
-            .chain(phantom_vars_constructor);
-        join(constructors, break_(" |", " | "))
+        | TypedExpr::Var {
+            constructor:
+                ValueConstructor {
+                    variant:
+                        ValueConstructorVariant::ModuleConstant {
+                            literal: Constant::String { .. },
+                            ..
+                        },
+                    ..
+                },
+            ..
+        } => true,
+
+        TypedExpr::Int { .. }
+        | TypedExpr::Var { .. }
+        | TypedExpr::Float { .. }
+        | TypedExpr::Block { .. }
+        | TypedExpr::Pipeline { .. }
+        | TypedExpr::Fn { .. }
+        | TypedExpr::List { .. }
+        | TypedExpr::Call { .. }
+        | TypedExpr::BinOp { .. }
+        | TypedExpr::Case { .. }
+        | TypedExpr::RecordAccess { .. }
+        | TypedExpr::PositionalAccess { .. }
+        | TypedExpr::ModuleSelect { .. }
+        | TypedExpr::Tuple { .. }
+        | TypedExpr::TupleIndex { .. }
+        | TypedExpr::Todo { .. }
+        | TypedExpr::Panic { .. }
+        | TypedExpr::Echo { .. }
+        | TypedExpr::BitArray { .. }
+        | TypedExpr::RecordUpdate { .. }
+        | TypedExpr::NegateBool { .. }
+        | TypedExpr::NegateInt { .. }
+        | TypedExpr::Invalid { .. } => false,
     }
-    .nest(INDENT);
-    let type_printer = TypePrinter::new(module_name);
-    let params = join(
-        typed_parameters
-            .iter()
-            .map(|type_| type_printer.print(type_)),
-        ", ".to_doc(),
-    );
-    let doc = if *opaque { "-opaque " } else { "-type " }
-        .to_doc()
-        .append(erl_safe_type_name(to_snake_case(name)))
-        .append("(")
-        .append(params)
-        .append(") :: ")
-        .append(definition)
-        .group()
-        .append(".");
-    type_defs.push(doc);
 }
 
-enum DocCommentKind {
-    Module,
-    Function,
-}
+/// This returns true if the given expression is going to be compiled to a
+/// single literal Erlang string.
+/// This is not true just for literal Gleam strings like `"abc"`, but also
+/// variables referencing string constants (as those are inlined)
+fn guard_produces_literal_string(guard: &ClauseGuard<Arc<Type>>) -> bool {
+    match guard {
+        ClauseGuard::Block { value, .. } => guard_produces_literal_string(value),
 
-enum DocCommentContent<'a> {
-    String(&'a Vec<EcoString>),
-    False,
-}
-
-fn hidden_module_doc<'a>() -> Document<'a> {
-    doc_attribute(DocCommentKind::Module, DocCommentContent::False)
-}
-
-fn module_doc<'a>(content: &Vec<EcoString>) -> Document<'a> {
-    doc_attribute(DocCommentKind::Module, DocCommentContent::String(content))
-}
-
-fn function_doc<'a>(content: &EcoString) -> Document<'a> {
-    let doc_lines = content
-        .trim_end()
-        .split('\n')
-        .map(EcoString::from)
-        .collect_vec();
-
-    doc_attribute(
-        DocCommentKind::Function,
-        DocCommentContent::String(&doc_lines),
-    )
-}
-
-fn doc_attribute<'a>(kind: DocCommentKind, content: DocCommentContent<'_>) -> Document<'a> {
-    let prefix = match kind {
-        DocCommentKind::Module => "?MODULEDOC",
-        DocCommentKind::Function => "?DOC",
-    };
-
-    match content {
-        DocCommentContent::False => prefix.to_doc().append("(false)."),
-        DocCommentContent::String(doc_lines) => {
-            let is_multiline_doc_comment = doc_lines.len() > 1;
-            let doc_lines = join(
-                doc_lines.iter().map(|line| {
-                    let line = line.replace("\\", "\\\\").replace("\"", "\\\"");
-                    docvec!["\"", line, "\\n\""]
-                }),
-                line(),
-            );
-            if is_multiline_doc_comment {
-                let nested_documentation = docvec![line(), doc_lines].nest(INDENT);
-                docvec![prefix, "(", nested_documentation, line(), ")."]
-            } else {
-                docvec![prefix, "(", doc_lines, ")."]
-            }
+        ClauseGuard::ModuleSelect {
+            literal: Constant::String { .. },
+            ..
         }
+        | ClauseGuard::Constant(Constant::String { .. }) => true,
+
+        ClauseGuard::BinaryOperator { .. }
+        | ClauseGuard::Constant(..)
+        | ClauseGuard::ModuleSelect { .. }
+        | ClauseGuard::Not { .. }
+        | ClauseGuard::Var { .. }
+        | ClauseGuard::TupleIndex { .. }
+        | ClauseGuard::FieldAccess { .. }
+        | ClauseGuard::Invalid { .. } => false,
     }
-}
-
-fn wrap_arguments<'a, I>(arguments: I) -> Document<'a>
-where
-    I: IntoIterator<Item = Document<'a>>,
-{
-    break_("", "")
-        .append(join(arguments, break_(",", ", ")))
-        .nest(INDENT)
-        .append(break_("", ""))
-        .surround("(", ")")
-        .group()
-}
-
-fn atom_string(value: EcoString) -> Document<'static> {
-    escape_atom_string(value).to_doc()
 }
 
 static ATOM_PATTERN: OnceLock<Regex> = OnceLock::new();
 
 fn atom_pattern() -> &'static Regex {
     ATOM_PATTERN.get_or_init(|| Regex::new(r"^[a-z][a-z0-9_@]*$").expect("atom RE regex"))
-}
-
-fn atom(value: &str) -> Document<'_> {
-    if is_erlang_reserved_word(value) {
-        // Escape because of keyword collision
-        eco_format!("'{value}'").to_doc()
-    } else if atom_pattern().is_match(value) {
-        // No need to escape
-        EcoString::from(value).to_doc()
-    } else {
-        // Escape because of characters contained
-        eco_format!("'{value}'").to_doc()
-    }
 }
 
 pub fn escape_atom_string(value: EcoString) -> EcoString {
@@ -2889,67 +3423,6 @@ pub fn escape_atom_string(value: EcoString) -> EcoString {
         // Escape because of characters contained
         eco_format!("'{value}'")
     }
-}
-
-static PATTERN: OnceLock<Regex> = OnceLock::new();
-
-fn unicode_escape_sequence_pattern() -> &'static Regex {
-    PATTERN.get_or_init(|| {
-        Regex::new(r#"(\\+)(u)"#).expect("Unicode escape sequence regex cannot be constructed")
-    })
-}
-
-fn string_inner(value: &str) -> Document<'_> {
-    let content = unicode_escape_sequence_pattern()
-        // `\\u`-s should not be affected, so that "\\u..." is not converted to
-        // "\\x...". That's why capturing groups is used to exclude cases that
-        // shouldn't be replaced.
-        .replace_all(value, |caps: &Captures<'_>| {
-            let slashes = caps.get(1).map_or("", |m| m.as_str());
-
-            if slashes.len().is_multiple_of(2) {
-                format!("{slashes}u")
-            } else {
-                format!("{slashes}x")
-            }
-        });
-    EcoString::from(content).to_doc()
-}
-
-fn string(value: &str) -> Document<'_> {
-    string_inner(value).surround("<<\"", "\"/utf8>>")
-}
-
-fn string_length_utf8_bytes(str: &EcoString) -> usize {
-    convert_string_escape_chars(str).len()
-}
-
-fn tuple<'a>(elements: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
-    join(elements, break_(",", ", "))
-        .nest(INDENT)
-        .surround("{", "}")
-        .group()
-}
-
-fn const_string_concatenate_bit_array<'a>(
-    elements: impl IntoIterator<Item = Document<'a>>,
-) -> Document<'a> {
-    join(elements, break_(",", ", "))
-        .nest(INDENT)
-        .surround("<<", ">>")
-        .group()
-}
-
-fn bit_array<'a>(elements: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
-    join(elements, break_(",", ", "))
-        .nest(INDENT)
-        .surround("<<", ">>")
-        .group()
-}
-
-enum Position {
-    Tail,
-    NotTail,
 }
 
 enum ExpressionSegmentStringEncoding {
@@ -2984,164 +3457,39 @@ fn expression_segment_string_encoding(
     })
 }
 
-fn bit_array_segment<'a, Value: 'a, CreateDoc, SizeToDoc, UnitToDoc, State>(
-    mut create_document: CreateDoc,
-    options: &'a [BitArrayOption<Value>],
-    mut size_to_doc: SizeToDoc,
-    mut unit_to_doc: UnitToDoc,
-    value_is_a_string_literal: bool,
-    value_is_a_discard: bool,
-    state: &mut State,
-) -> Document<'a>
-where
-    CreateDoc: FnMut(&mut State) -> Document<'a>,
-    SizeToDoc: FnMut(&'a Value, &mut State) -> Option<Document<'a>>,
-    UnitToDoc: FnMut(&'a u8) -> Option<Document<'a>>,
-{
-    let mut size: Option<Document<'a>> = None;
-    let mut unit: Option<Document<'a>> = None;
-    let mut others = Vec::new();
-
-    // Erlang only allows valid codepoint integers to be used as values for utf segments
-    // We want to support <<string_var:utf8>> for all string variables, but <<StringVar/utf8>> is invalid
-    // To work around this we use the binary type specifier for these segments instead
-    let override_type = if !value_is_a_string_literal && !value_is_a_discard {
-        Some("binary")
-    } else {
-        None
-    };
-
-    for option in options {
-        use BitArrayOption as Opt;
-        if !others.is_empty() && !matches!(option, Opt::Size { .. } | Opt::Unit { .. }) {
-            others.push("-".to_doc());
-        }
-        match option {
-            Opt::Utf8 { .. } => others.push(override_type.unwrap_or("utf8").to_doc()),
-            Opt::Utf16 { .. } => others.push(override_type.unwrap_or("utf16").to_doc()),
-            Opt::Utf32 { .. } => others.push(override_type.unwrap_or("utf32").to_doc()),
-            Opt::Int { .. } => others.push("integer".to_doc()),
-            Opt::Float { .. } => others.push("float".to_doc()),
-            Opt::Bytes { .. } => others.push("binary".to_doc()),
-            Opt::Bits { .. } => others.push("bitstring".to_doc()),
-            Opt::Utf8Codepoint { .. } => others.push("utf8".to_doc()),
-            Opt::Utf16Codepoint { .. } => others.push("utf16".to_doc()),
-            Opt::Utf32Codepoint { .. } => others.push("utf32".to_doc()),
-            Opt::Signed { .. } => others.push("signed".to_doc()),
-            Opt::Unsigned { .. } => others.push("unsigned".to_doc()),
-            Opt::Big { .. } => others.push("big".to_doc()),
-            Opt::Little { .. } => others.push("little".to_doc()),
-            Opt::Native { .. } => others.push("native".to_doc()),
-            Opt::Size { value, .. } => size = size_to_doc(value, state),
-            Opt::Unit { value, .. } => unit = unit_to_doc(value),
-        }
-    }
-
-    let mut document = create_document(state);
-
-    document = document.append(size);
-    let others_is_empty = others.is_empty();
-
-    if !others_is_empty {
-        document = document.append("/").append(others);
-    }
-
-    if unit.is_some() {
-        if !others_is_empty {
-            document = document.append("-").append(unit)
-        } else {
-            document = document.append("/").append(unit)
-        }
-    }
-
-    document
-}
-
-fn binop_documents<'a>(left: Document<'a>, op: &'static str, right: Document<'a>) -> Document<'a> {
-    left.append(break_("", " "))
-        .append(op)
-        .group()
-        .append(" ")
-        .append(right)
-}
-
-fn float<'a>(value: &str) -> Document<'a> {
-    let mut value = value.replace('_', "");
-    if value.ends_with('.') {
-        value.push('0')
-    }
-
-    match value.split('.').collect_vec().as_slice() {
-        ["0", "0"] => "+0.0".to_doc(),
-        [before_dot, after_dot] if after_dot.starts_with('e') => {
-            eco_format!("{before_dot}.0{after_dot}").to_doc()
-        }
-        _ => EcoString::from(value).to_doc(),
-    }
-}
-
-fn list<'a>(elements: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
-    let elements = match tail {
-        Some(tail) if elements.is_empty() => return tail.to_doc(),
-
-        Some(tail) => elements.append(break_(" |", " | ")).append(tail),
-
-        None => elements,
-    };
-
-    elements.to_doc().nest(INDENT).surround("[", "]").group()
-}
-
-fn function_reference<'a>(module: Option<&'a str>, name: &'a str, arity: usize) -> Document<'a> {
-    match module {
-        None => "fun ".to_doc(),
-        Some(module) => "fun ".to_doc().append(module_name_atom(module)).append(":"),
-    }
-    .append(atom(escape_erlang_existing_name(name)))
-    .append("/")
-    .append(arity)
-}
-
-fn int<'a>(value: &str) -> Document<'a> {
-    let mut value = value.replace('_', "");
-    if value.starts_with("0x") {
-        value.replace_range(..2, "16#");
-    } else if value.starts_with("0o") {
-        value.replace_range(..2, "8#");
-    } else if value.starts_with("0b") {
-        value.replace_range(..2, "2#");
-    }
-
-    EcoString::from(value).to_doc()
-}
-
-fn record_constructor_function<'a>(tag: EcoString, arity: usize) -> Document<'a> {
-    let chars = incrementing_arguments_list(arity);
-    "fun("
-        .to_doc()
-        .append(chars.clone())
-        .append(") -> {")
-        .append(atom_string(to_snake_case(&tag)))
-        .append(", ")
-        .append(chars)
-        .append("} end")
-}
-
-/// Wrap a document in begin end
-///
-fn begin_end(document: Document<'_>) -> Document<'_> {
-    docvec!["begin", line().append(document).nest(INDENT), line(), "end"].force_break()
-}
-
 fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
     match expression {
-        // Record updates are 1 expression if there's no assignment, multiple otherwise.
+        // Record updates are 1 expression if there's no assignment, multiple
+        // otherwise.
         TypedExpr::RecordUpdate {
             updated_record_assigned_name,
             ..
         } => updated_record_assigned_name.is_some(),
 
+        // Pipelines are always multiple assignments.
         TypedExpr::Pipeline { .. } => true,
+
+        // Binary operations that require division might have to be turned into
+        // multiple statements!
+        TypedExpr::BinOp {
+            operator: BinOp::DivFloat | BinOp::DivInt | BinOp::RemainderInt,
+            left,
+            right,
+            ..
+        } => match how_to_divide(left, right) {
+            // In these cases we'll have to generate two statements: a variable
+            // assignment for the left hand side, and one to return the value!
+            HowToDivide::MatchOnRight {
+                is_left_hand_side_pure: false,
+            }
+            | HowToDivide::EvaluateLeftAndReturnZero => true,
+            // Here we just generate a single statement.
+            HowToDivide::PlainErlangDivision
+            | HowToDivide::ReplaceWithZero
+            | HowToDivide::MatchOnRight {
+                is_left_hand_side_pure: true,
+            } => false,
+        },
 
         TypedExpr::Int { .. }
         | TypedExpr::Float { .. }
@@ -3168,80 +3516,117 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-enum AssertExpression {
-    Literal,
-    Expression,
-    Unevaluated,
+/// This represents an expression that appears in an expression, either because
+/// it is part of some larger expression (like a binop: `assert a && b`, or a
+/// call `assert wibble(wobble)`), or because it is being matched against
+/// directly (like `assert wibble`).
+struct AssertionExpression<'a> {
+    /// This tells us the kind of expression we're dealing with: wether that's a
+    /// literal, an expression that can't be known at compile time, or if it
+    /// hasn't been evaluated at all!
+    kind: AssertedExpressionKind,
+    /// If the expression has been evaluated, this is going to tell us how we
+    /// can reference its value.
+    runtime_value: Option<AssertedExpressionRuntimeValue<'a>>,
+    /// This is the location pointing to where in the Gleam source code this
+    /// expression comes from.
+    location: SrcSpan,
 }
 
-impl AssertExpression {
-    fn from_expression(expression: &TypedExpr) -> Self {
-        if expression.is_literal() {
-            Self::Literal
-        } else {
-            Self::Expression
+impl<'a> AssertionExpression<'a> {
+    fn from_expression(expression: &'a TypedExpr) -> Self {
+        Self {
+            runtime_value: Some(AssertedExpressionRuntimeValue::Expression(expression)),
+            kind: if expression.is_literal() {
+                AssertedExpressionKind::Literal
+            } else {
+                AssertedExpressionKind::Expression
+            },
+            location: expression.location(),
+        }
+    }
+
+    fn was_unevaluated(mut self) -> Self {
+        self.kind = AssertedExpressionKind::Unevaluated;
+        self.runtime_value = None;
+        self
+    }
+
+    fn evaluated_to_bool(mut self, result: bool) -> Self {
+        self.runtime_value = Some(AssertedExpressionRuntimeValue::KnownBool(result));
+        self
+    }
+
+    fn from_throwaway_variable(name: EcoString, original_expression: &'a TypedExpr) -> Self {
+        Self {
+            runtime_value: Some(AssertedExpressionRuntimeValue::Variable(name)),
+            kind: if original_expression.is_literal() {
+                AssertedExpressionKind::Literal
+            } else {
+                AssertedExpressionKind::Expression
+            },
+            location: original_expression.location(),
         }
     }
 }
 
-fn asserted_expression(
-    kind: AssertExpression,
-    value: Option<Document<'_>>,
-    location: SrcSpan,
-) -> Document<'_> {
-    let kind = match kind {
-        AssertExpression::Literal => atom("literal"),
-        AssertExpression::Expression => atom("expression"),
-        AssertExpression::Unevaluated => atom("unevaluated"),
-    };
-
-    let start = location.start.to_doc();
-    let end = location.end.to_doc();
-
-    let value_field = if let Some(value) = value {
-        docvec!["value => ", value, ",", line()]
-    } else {
-        nil()
-    };
-
-    let fields_doc = docvec![
-        "kind => ",
-        kind,
-        ",",
-        line(),
-        value_field,
-        "start => ",
-        start,
-        ",",
-        line(),
-        // `end` is a keyword in Erlang, so we have to quote it
-        "'end' => ",
-        end,
-        line(),
-    ];
-
-    "#{".to_doc()
-        .append(fields_doc.group().nest(INDENT))
-        .append("}")
+/// This describes the kind of expression we're asserting against.
+///
+#[derive(Debug, Clone, Copy)]
+enum AssertedExpressionKind {
+    /// The expression being asserted against is a literal value. For example:
+    ///
+    /// ```gleam
+    /// assert True && wibble
+    /// //     ^^^^ This is a literal value.
+    /// ```
+    ///
+    Literal,
+    /// The expression being asserted against is anything but a literal, well
+    /// known, value.
+    /// For example:
+    ///
+    /// ```gleam
+    /// assert True && wibble
+    /// //             ^^^^^^ This is an expression.
+    /// ```
+    ///
+    Expression,
+    /// The expression being asserted against has not been evaluated yet,
+    /// because of some short circuiting behaviour.
+    ///
+    /// ```gleam
+    /// assert False && something_else()
+    /// //              ^^^^^^^^^^^^^^^^ This will never be evaluated.
+    /// ```
+    Unevaluated,
 }
 
-fn module_select_fn<'a>(type_: Arc<Type>, module_name: &'a str, label: &'a str) -> Document<'a> {
-    match crate::type_::collapse_links(type_).as_ref() {
-        Type::Fn { arguments, .. } => function_reference(Some(module_name), label, arguments.len()),
-
-        Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => module_name_atom(module_name)
-            .append(":")
-            .append(atom(label))
-            .append("()"),
-    }
-}
-
-fn incrementing_arguments_list(arity: usize) -> EcoString {
-    let arguments = (0..arity).map(|c| format!("Field@{c}"));
-    Itertools::intersperse(arguments, ", ".into())
-        .collect::<String>()
-        .into()
+/// This is telling us what the runtime value of some asserted value is.
+/// Used to produce the code for such value in runtime errors if an assert
+/// fails.
+///
+/// For example:
+///
+/// ```gleam
+/// assert wibble()
+/// ```
+///
+/// If the assertion fails we know that `wibble()` must be `false` at runtime.
+/// It's `AssertedExpressionRuntimeValue` would be
+/// `AssertedExpressionRuntimeValue::Bool(false)`.
+///
+#[derive(Debug)]
+enum AssertedExpressionRuntimeValue<'a> {
+    /// We can tell that the asserted value must be a known bool.
+    /// That's because we know wether the assertion failed (it must be false),
+    /// or not (it must be true).
+    KnownBool(bool),
+    /// The asserted value was bound to a throwaway variable with the given
+    /// name, and we can reference it using that name.
+    Variable(EcoString),
+    /// The asserted value is an expression we need to inline in the error.
+    Expression(&'a TypedExpr),
 }
 
 fn variable_name(name: &str) -> EcoString {
@@ -3251,14 +3636,15 @@ fn variable_name(name: &str) -> EcoString {
     first_uppercased.chain(chars).collect()
 }
 
-/// When rendering a type variable to an erlang type spec we need all type variables with the
-/// same id to end up with the same name in the generated erlang.
+/// When rendering a type variable to an erlang type spec we need all type
+/// variables with the same id to end up with the same name in the generated
+/// Erlang.
 /// This function converts a usize into base 26 A-Z for this purpose.
-fn id_to_type_var(id: u64) -> Document<'static> {
+fn id_to_type_var_str(id: u64) -> EcoString {
     if id < 26 {
         let mut name = EcoString::from("");
         name.push(char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"));
-        return name.to_doc();
+        return name;
     }
     let mut name = vec![];
     let mut last_char = id;
@@ -3268,114 +3654,34 @@ fn id_to_type_var(id: u64) -> Document<'static> {
     }
     name.push(char::from_u32((last_char % 26 + 64) as u32).expect("id_to_type_var 2"));
     name.reverse();
-    name.into_iter().collect::<EcoString>().to_doc()
+    name.into_iter().collect()
 }
 
 pub fn is_erlang_reserved_word(name: &str) -> bool {
-    matches!(
-        name,
-        "!" | "receive"
-            | "bnot"
-            | "div"
-            | "rem"
-            | "band"
-            | "bor"
-            | "bxor"
-            | "bsl"
-            | "bsr"
-            | "not"
-            | "and"
-            | "or"
-            | "xor"
-            | "orelse"
-            | "andalso"
-            | "when"
-            | "end"
-            | "fun"
-            | "try"
-            | "catch"
-            | "after"
-            | "begin"
-            | "let"
-            | "query"
-            | "cond"
-            | "if"
-            | "of"
-            | "case"
-            | "maybe"
-            | "else"
-    )
+    match name {
+        "!" | "receive" | "bnot" | "div" | "rem" | "band" | "bor" | "bxor" | "bsl" | "bsr"
+        | "not" | "and" | "or" | "xor" | "orelse" | "andalso" | "when" | "end" | "fun" | "try"
+        | "catch" | "after" | "begin" | "let" | "query" | "cond" | "if" | "of" | "case"
+        | "maybe" | "else" => true,
+        _ => false,
+    }
 }
 
 // Includes shell_default & user_default which are looked for by the erlang shell
 pub fn is_erlang_standard_library_module(name: &str) -> bool {
-    matches!(
-        name,
-        "array"
-            | "base64"
-            | "beam_lib"
-            | "binary"
-            | "c"
-            | "calendar"
-            | "dets"
-            | "dict"
-            | "digraph"
-            | "digraph_utils"
-            | "epp"
-            | "erl_anno"
-            | "erl_eval"
-            | "erl_expand_records"
-            | "erl_id_trans"
-            | "erl_internal"
-            | "erl_lint"
-            | "erl_parse"
-            | "erl_pp"
-            | "erl_scan"
-            | "erl_tar"
-            | "ets"
-            | "file_sorter"
-            | "filelib"
-            | "filename"
-            | "gb_sets"
-            | "gb_trees"
-            | "gen_event"
-            | "gen_fsm"
-            | "gen_server"
-            | "gen_statem"
-            | "io"
-            | "io_lib"
-            | "lists"
-            | "log_mf_h"
-            | "maps"
-            | "math"
-            | "ms_transform"
-            | "orddict"
-            | "ordsets"
-            | "pool"
-            | "proc_lib"
-            | "proplists"
-            | "qlc"
-            | "queue"
-            | "rand"
-            | "random"
-            | "re"
-            | "sets"
-            | "shell"
-            | "shell_default"
-            | "shell_docs"
-            | "slave"
-            | "sofs"
-            | "string"
-            | "supervisor"
-            | "supervisor_bridge"
-            | "sys"
-            | "timer"
-            | "unicode"
-            | "uri_string"
-            | "user_default"
-            | "win32reg"
-            | "zip"
-    )
+    match name {
+        "array" | "base64" | "beam_lib" | "binary" | "c" | "calendar" | "dets" | "dict"
+        | "digraph" | "digraph_utils" | "epp" | "erl_anno" | "erl_eval" | "erl_expand_records"
+        | "erl_id_trans" | "erl_internal" | "erl_lint" | "erl_parse" | "erl_pp" | "erl_scan"
+        | "erl_tar" | "ets" | "file_sorter" | "filelib" | "filename" | "gb_sets" | "gb_trees"
+        | "gen_event" | "gen_fsm" | "gen_server" | "gen_statem" | "io" | "io_lib" | "lists"
+        | "log_mf_h" | "maps" | "math" | "ms_transform" | "orddict" | "ordsets" | "pool"
+        | "proc_lib" | "proplists" | "qlc" | "queue" | "rand" | "random" | "re" | "sets"
+        | "shell" | "shell_default" | "shell_docs" | "slave" | "sofs" | "string" | "supervisor"
+        | "supervisor_bridge" | "sys" | "timer" | "unicode" | "uri_string" | "user_default"
+        | "win32reg" | "zip" => true,
+        _ => false,
+    }
 }
 
 // Includes the functions that are autogenerated by Erlang itself
@@ -3386,15 +3692,15 @@ pub fn escape_erlang_existing_name(name: &str) -> &str {
     }
 }
 
-// A TypeVar can either be rendered as an actual type variable such as `A` or `B`,
-// or it can be rendered as `any()` depending on how many usages it has. If it
-// has only 1 usage it is an `any()` type. If it has more than 1 usage it is a
-// type variable. This function gathers usages for this determination.
-//
-//   Examples:
-//     fn(a) -> String       // `a` is `any()`
-//     fn() -> Result(a, b)  // `a` and `b` are `any()`
-//     fn(a) -> a            // `a` is a type var
+/// A TypeVar can either be rendered as an actual type variable such as `A` or `B`,
+/// or it can be rendered as `any()` depending on how many usages it has. If it
+/// has only 1 usage it is an `any()` type. If it has more than 1 usage it is a
+/// type variable. This function gathers usages for this determination.
+///
+///   Examples:
+///     fn(a) -> String       // `a` is `any()`
+///     fn() -> Result(a, b)  // `a` and `b` are `any()`
+///     fn(a) -> a            // `a` is a type var
 fn collect_type_var_usages<'a>(
     mut ids: HashMap<u64, u64>,
     types: impl IntoIterator<Item = &'a Arc<Type>>,
@@ -3472,62 +3778,81 @@ fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
 }
 
 fn erl_safe_type_name(mut name: EcoString) -> EcoString {
-    if matches!(
-        name.as_str(),
+    match name.as_str() {
         "any"
-            | "arity"
-            | "atom"
-            | "binary"
-            | "bitstring"
-            | "boolean"
-            | "byte"
-            | "char"
-            | "dynamic"
-            | "float"
-            | "function"
-            | "identifier"
-            | "integer"
-            | "iodata"
-            | "iolist"
-            | "list"
-            | "map"
-            | "maybe_improper_list"
-            | "mfa"
-            | "module"
-            | "neg_integer"
-            | "nil"
-            | "no_return"
-            | "node"
-            | "non_neg_integer"
-            | "none"
-            | "nonempty_improper_list"
-            | "nonempty_list"
-            | "nonempty_string"
-            | "number"
-            | "pid"
-            | "port"
-            | "pos_integer"
-            | "reference"
-            | "string"
-            | "term"
-            | "timeout"
-            | "tuple"
-    ) {
-        name.push('_');
-        name
-    } else {
-        escape_atom_string(name)
+        | "arity"
+        | "atom"
+        | "binary"
+        | "bitstring"
+        | "boolean"
+        | "byte"
+        | "char"
+        | "dynamic"
+        | "float"
+        | "function"
+        | "identifier"
+        | "integer"
+        | "iodata"
+        | "iolist"
+        | "list"
+        | "map"
+        | "maybe_improper_list"
+        | "mfa"
+        | "module"
+        | "neg_integer"
+        | "nil"
+        | "no_return"
+        | "node"
+        | "non_neg_integer"
+        | "none"
+        | "nonempty_improper_list"
+        | "nonempty_list"
+        | "nonempty_string"
+        | "number"
+        | "pid"
+        | "port"
+        | "pos_integer"
+        | "reference"
+        | "string"
+        | "term"
+        | "timeout"
+        | "tuple" => {
+            name.push('_');
+            name
+        }
+
+        _ => name,
     }
 }
 
 #[derive(Debug)]
-struct TypePrinter<'a> {
+struct TypeGenerator<'a> {
+    /// If this is true, all types that are generic or unbound are going to be
+    /// treated as `any()`.
+    ///
     var_as_any: bool,
-    current_module: &'a str,
+    /// A TypeVar can either be rendered as an actual type variable such as `A`
+    /// or `B`, or it can be rendered as `any()` depending on how many times it
+    /// is used.
+    /// If it is only ever used once, it is an `any()` type.
+    /// If it has more than 1 usage it is a regular type variable.
+    ///
+    /// For example:
+    ///
+    /// ```gleam
+    /// fn(a) -> String       // `a` is turned into `any()`
+    /// fn() -> Result(a, b)  // `a` and `b` are turned into `any()`
+    /// fn(a) -> a            // `a` is a type var
+    /// ```
+    ///
+    /// If present, this is a map telling us from generic variable id, to number
+    /// of times that variable is used.
+    ///
     var_usages: Option<&'a HashMap<u64, u64>>,
+    current_module: &'a str,
 }
 
-impl<'a> TypePrinter<'a> {
+impl<'a> TypeGenerator<'a> {
     fn new(current_module: &'a str) -> Self {
         Self {
             current_module,
@@ -3536,114 +3861,160 @@ impl<'a> TypePrinter<'a> {
         }
     }
 
+    /// Records the how type variables are used in order to correctly print
+    /// the type
     pub fn with_var_usages(mut self, var_usages: &'a HashMap<u64, u64>) -> Self {
         self.var_usages = Some(var_usages);
         self
     }
 
-    pub fn print(&self, type_: &Type) -> Document<'static> {
-        match type_ {
-            Type::Var { type_ } => self.print_var(&type_.borrow()),
-
-            Type::Named {
-                name,
-                module,
-                arguments,
-                ..
-            } if is_prelude_module(module) => self.print_prelude_type(name, arguments),
-
-            Type::Named {
-                name,
-                module,
-                arguments,
-                ..
-            } => self.print_type_app(module, name, arguments),
-
-            Type::Fn { arguments, return_ } => self.print_fn(arguments, return_),
-
-            Type::Tuple { elements } => tuple(elements.iter().map(|element| self.print(element))),
-        }
-    }
-
-    fn print_var(&self, type_: &TypeVar) -> Document<'static> {
-        match type_ {
-            TypeVar::Generic { .. } | TypeVar::Unbound { .. } if self.var_as_any => {
-                "any()".to_doc()
-            }
-            TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => match &self.var_usages {
-                Some(usages) => match usages.get(id) {
-                    Some(&0) => nil(),
-                    Some(&1) => "any()".to_doc(),
-                    _ => id_to_type_var(*id),
-                },
-                None => id_to_type_var(*id),
-            },
-            TypeVar::Link { type_ } => self.print(type_),
-        }
-    }
-
-    fn print_prelude_type(&self, name: &str, arguments: &[Arc<Type>]) -> Document<'static> {
-        match name {
-            "Nil" => "nil".to_doc(),
-            "Int" | "UtfCodepoint" => "integer()".to_doc(),
-            "String" => "binary()".to_doc(),
-            "Bool" => "boolean()".to_doc(),
-            "Float" => "float()".to_doc(),
-            "BitArray" => "bitstring()".to_doc(),
-            "List" => {
-                let arg0 = self.print(arguments.first().expect("print_prelude_type list"));
-                "list(".to_doc().append(arg0).append(")")
-            }
-            "Result" => match arguments {
-                [arg_ok, arg_err] => {
-                    let ok = tuple(["ok".to_doc(), self.print(arg_ok)]);
-                    let error = tuple(["error".to_doc(), self.print(arg_err)]);
-                    docvec![ok, break_(" |", " | "), error].nest(INDENT).group()
-                }
-                _ => panic!("print_prelude_type result expects ok and err"),
-            },
-            // Getting here should mean we either forgot a built-in type or there is a
-            // compiler error
-            name => panic!("{name} is not a built-in type."),
-        }
-    }
-
-    fn print_type_app(
-        &self,
-        module: &str,
-        name: &str,
-        arguments: &[Arc<Type>],
-    ) -> Document<'static> {
-        let arguments = join(
-            arguments.iter().map(|argument| self.print(argument)),
-            ", ".to_doc(),
-        );
-        let name = erl_safe_type_name(to_snake_case(name)).to_doc();
-        if self.current_module == module {
-            docvec![name, "(", arguments, ")"]
-        } else {
-            docvec![module_name_atom(module), ":", name, "(", arguments, ")"]
-        }
-    }
-
-    fn print_fn(&self, arguments: &[Arc<Type>], return_: &Type) -> Document<'static> {
-        let arguments = join(
-            arguments.iter().map(|argument| self.print(argument)),
-            ", ".to_doc(),
-        );
-        let return_ = self.print(return_);
-        "fun(("
-            .to_doc()
-            .append(arguments)
-            .append(") -> ")
-            .append(return_)
-            .append(")")
-    }
-
-    /// Print type vars as `any()`.
+    /// Print any type variable as `any()` rather than a generic type (like `A`,
+    /// `B`, ...).
     fn var_as_any(mut self) -> Self {
         self.var_as_any = true;
         self
+    }
+
+    pub fn type_<Output>(&self, eaf: &mut impl Eaf<Output>, type_: &Type) {
+        match type_ {
+            Type::Var { type_ } => self.type_variable(eaf, &type_.borrow()),
+            Type::Named {
+                name,
+                module,
+                arguments,
+                ..
+            } if is_prelude_module(module) => self.prelude_type(eaf, name, arguments),
+            Type::Named {
+                name,
+                module,
+                arguments,
+                ..
+            } => self.named_type(eaf, module.into(), name, arguments),
+            Type::Fn { arguments, return_ } => {
+                let function_type = eaf.start_function_type();
+                for argument in arguments {
+                    self.type_(eaf, argument);
+                }
+                let function_type = eaf.end_function_type_arguments(function_type);
+                self.type_(eaf, return_);
+                eaf.end_function_type(function_type);
+            }
+            Type::Tuple { elements } => {
+                let tuple = eaf.start_tuple_type();
+                for element in elements {
+                    self.type_(eaf, element)
+                }
+                eaf.end_tuple_type(tuple);
+            }
+        }
+    }
+
+    fn type_variable<Output>(&self, eaf: &mut impl Eaf<Output>, type_: &TypeVar) {
+        match type_ {
+            TypeVar::Link { type_ } => self.type_(eaf, type_),
+            TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => {
+                if self.var_as_any || self.type_variable_is_used_exactly_once(*id) {
+                    let any = eaf.start_named_type("any");
+                    eaf.end_named_type(any);
+                } else {
+                    eaf.type_variable(&id_to_type_var_str(*id))
+                }
+            }
+        }
+    }
+
+    /// Given a type variable id, this returns true if the `var_usages` field
+    /// is set and the variable is used exactly once.
+    ///
+    #[must_use]
+    fn type_variable_is_used_exactly_once(&self, id: u64) -> bool {
+        match self.var_usages {
+            Some(usages) => usages.get(&id) == Some(&1),
+            None => false,
+        }
+    }
+
+    fn prelude_type<Output>(
+        &self,
+        eaf: &mut impl Eaf<Output>,
+        name: &str,
+        arguments: &[Arc<Type>],
+    ) {
+        match name {
+            "Nil" => eaf.literal_atom_type("nil"),
+            "Int" | "UtfCodepoint" => {
+                let integer = eaf.start_named_type("integer");
+                eaf.end_named_type(integer);
+            }
+            "String" => {
+                let string = eaf.start_named_type("binary");
+                eaf.end_named_type(string);
+            }
+            "Bool" => {
+                let boolean = eaf.start_named_type("boolean");
+                eaf.end_named_type(boolean);
+            }
+            "Float" => {
+                let float = eaf.start_named_type("float");
+                eaf.end_named_type(float);
+            }
+            "BitArray" => {
+                let bitstring = eaf.start_named_type("bitstring");
+                eaf.end_named_type(bitstring);
+            }
+            "List" => {
+                let list = eaf.start_named_type("list");
+                let list_item = arguments
+                    .first()
+                    .expect("prelude type list with no argument");
+                self.type_(eaf, list_item);
+                eaf.end_named_type(list);
+            }
+            "Result" => {
+                let [ok_type, error_type] = arguments else {
+                    panic!("result type with no ok and err types")
+                };
+
+                let result = eaf.start_union_type();
+
+                let ok = eaf.start_tuple_type();
+                eaf.literal_atom_type("ok");
+                self.type_(eaf, ok_type);
+                eaf.end_tuple_type(ok);
+
+                let error = eaf.start_tuple_type();
+                eaf.literal_atom_type("error");
+                self.type_(eaf, error_type);
+                eaf.end_tuple_type(error);
+
+                eaf.end_union_type(result);
+            }
+
+            // Getting here should mean we either forgot a built-in type or there is a
+            // compiler error
+            name => panic!("{name} is not a prelude type."),
+        }
+    }
+
+    fn named_type<Output>(
+        &self,
+        eaf: &mut impl Eaf<Output>,
+        module: EcoString,
+        name: &str,
+        arguments: &[Arc<Type>],
+    ) {
+        let name = erl_safe_type_name(to_snake_case(name));
+        let type_ = if self.current_module == module {
+            eaf.start_named_type(&name)
+        } else {
+            eaf.start_remote_named_type(ErlangModuleName::new(module), &name)
+        };
+
+        for argument in arguments {
+            self.type_(eaf, argument)
+        }
+
+        eaf.end_named_type(type_);
     }
 }
 

@@ -17,8 +17,7 @@ pub fn main(x) {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/1]).
 -export_type([x/0]).
 
@@ -32,9 +31,7 @@ id(X) ->
 -file("project/test/my/mod.gleam", 9).
 -spec main(x()) -> x().
 main(X) ->
-    {x,
-        begin
-            _pipe = 1,
-            id(_pipe)
-        end,
-        erlang:element(3, X)}.
+    {x, begin
+        _pipe = 1,
+        id(_pipe)
+    end, erlang:element(3, X)}.

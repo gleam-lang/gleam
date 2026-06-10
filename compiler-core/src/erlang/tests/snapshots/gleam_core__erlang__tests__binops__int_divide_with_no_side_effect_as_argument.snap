@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/erlang/tests/binops.rs
+expression: "pub fn main(wibble, a, b) { wibble(a / b) }"
+---
+----- SOURCE CODE
+pub fn main(wibble, a, b) { wibble(a / b) }
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([main/3]).
+
+-file("project/test/my/mod.gleam", 1).
+-spec main(fun((integer()) -> N), integer(), integer()) -> N.
+main(Wibble, A, B) ->
+    Wibble(case B of
+        0 ->
+            0;
+
+        _value ->
+            A div _value
+    end).

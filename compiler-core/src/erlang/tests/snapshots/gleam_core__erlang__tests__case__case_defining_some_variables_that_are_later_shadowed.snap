@@ -1,0 +1,46 @@
+---
+source: compiler-core/src/erlang/tests/case.rs
+expression: "\npub fn go(x) {\n  case x {\n    1 -> {\n      let a = 1\n      Nil\n    }\n    2 -> {\n      let a = 2\n      Nil\n    }\n    _ -> Nil\n  }\n\n  let a = 3\n  a + 1\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    1 -> {
+      let a = 1
+      Nil
+    }
+    2 -> {
+      let a = 2
+      Nil
+    }
+    _ -> Nil
+  }
+
+  let a = 3
+  a + 1
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([go/1]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec go(integer()) -> integer().
+go(X) ->
+    case X of
+        1 ->
+            A = 1,
+            nil;
+
+        2 ->
+            A@1 = 2,
+            nil;
+
+        _ ->
+            nil
+    end,
+    A@2 = 3,
+    A@2 + 1.

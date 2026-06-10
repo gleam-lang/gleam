@@ -1021,6 +1021,8 @@ impl TypedExpr {
         matches!(self, Self::Pipeline { .. })
     }
 
+    /// Returns true if this function is guaranteed to not have any side
+    /// effects.
     pub fn is_pure_value_constructor(&self) -> bool {
         match self {
             TypedExpr::Int { .. }
@@ -1046,10 +1048,8 @@ impl TypedExpr {
             // long as it's not called!
             TypedExpr::ModuleSelect { .. } => true,
 
-            // A pipeline is a pure value constructor if its last step is a record builder,
-            // or a call to a pure function. For example:
-            //  - `wibble() |> wobble() |> Ok`
-            //  - `"hello" |> fn(s) { s <> " world!" }`
+            // A pipeline is a pure value constructor if all of its steps are
+            // pure.
             TypedExpr::Pipeline {
                 first_value,
                 assignments,
@@ -1063,6 +1063,9 @@ impl TypedExpr {
                     && finally.is_pure_value_constructor()
             }
 
+            // A function is a pure value constructor if it is a record builder,
+            // or the called function is understood to be pure. Also all of its
+            // arguments must be pure value constructors!
             TypedExpr::Call { fun, arguments, .. } => {
                 (fun.is_record_literal() || fun.called_function_purity().is_pure())
                     && arguments
@@ -1091,9 +1094,9 @@ impl TypedExpr {
                     && clauses.iter().all(|c| c.then.is_pure_value_constructor())
             }
 
-            // `panic`, `todo`, and placeholders are never considered pure value constructors,
-            // we don't want to raise a warning for an unused value if it's one
-            // of those.
+            // `panic`, `todo`, and placeholders are never considered pure value
+            // constructors, we don't want to raise a warning for an unused
+            // value if it's one of those.
             TypedExpr::Todo { .. }
             | TypedExpr::Panic { .. }
             | TypedExpr::Echo { .. }

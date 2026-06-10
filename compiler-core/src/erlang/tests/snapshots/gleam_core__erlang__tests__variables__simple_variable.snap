@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/erlang/tests/variables.rs
+expression: "\npub fn wibble() {\n  let x = 1\n  let y = {\n    let a = 1\n    a\n  }\n  y\n}\n"
+---
+----- SOURCE CODE
+
+pub fn wibble() {
+  let x = 1
+  let y = {
+    let a = 1
+    a
+  }
+  y
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([wibble/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec wibble() -> integer().
+wibble() ->
+    X = 1,
+    Y = begin
+        A = 1,
+        A
+    end,
+    Y.

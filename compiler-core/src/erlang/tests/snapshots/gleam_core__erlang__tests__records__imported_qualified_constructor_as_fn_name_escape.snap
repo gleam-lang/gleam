@@ -11,11 +11,12 @@ pub fn main() {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/0]).
 
 -file("project/test/my/mod.gleam", 3).
 -spec main() -> fun((integer()) -> other_module:'let'()).
 main() ->
-    fun(Field@0) -> {'let', Field@0} end.
+    fun(_value) ->
+        {'let', _value}
+    end.

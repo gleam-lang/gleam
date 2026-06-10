@@ -14,8 +14,7 @@ pub fn bit_array_discard(x) -> Bool {
 
 ----- COMPILED ERLANG
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([bit_array_discard/1]).
 
 -file("project/test/my/mod.gleam", 2).
