@@ -15,6 +15,7 @@ members = [
   "test-package-compiler",
   "test-project-compiler",
   "hexpm",
+  "pretty-arena",
 ]
 
 # common dependencies
@@ -77,3 +78,7 @@ pubgrub = "0.3"
 opener = "0"
 # Recursively traversing directories
 ignore = "0"
+# Parsing of arbitrary width int values
+num-bigint = { version = "0.4.6", features = ["serde"] }
+# Unicode grapheme traversal
+unicode-segmentation = "1.13.2"
