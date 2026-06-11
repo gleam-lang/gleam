@@ -55,6 +55,14 @@ macro_rules! docvec_arena {
         Document::Vec(Vec::new())
     };
 
+    ($arena:expr, $first:expr, $second:expr, $third:expr) => {
+        $arena.join3($first, $second, $third)
+    };
+
+    ($arena:expr, $first:expr, $second:expr, $third:expr, $fourth:expr) => {
+        $arena.join4($first, $second, $third, $fourth)
+    };
+
     // A docvec![] with multiple elements.
     ($arena:expr, $first:expr, $($rest:expr),+ $(,)?) => {
         // A document that looks like this: `Vec[Vec[..rest], ..other_rest]`
@@ -731,6 +739,34 @@ impl<'string, 'doc> DocumentArena<'string, 'doc> {
         }
 
         previous
+    }
+
+    pub fn join3(
+        &'doc self,
+        first: impl Documentable<'string, 'doc>,
+        second: impl Documentable<'string, 'doc>,
+        third: impl Documentable<'string, 'doc>,
+    ) -> Document<'string, 'doc> {
+        Document(self.documents.alloc(PrintableDocument::Join3(
+            first.to_doc(self),
+            second.to_doc(self),
+            third.to_doc(self),
+        )))
+    }
+
+    pub fn join4(
+        &'doc self,
+        first: impl Documentable<'string, 'doc>,
+        second: impl Documentable<'string, 'doc>,
+        third: impl Documentable<'string, 'doc>,
+        fourth: impl Documentable<'string, 'doc>,
+    ) -> Document<'string, 'doc> {
+        Document(self.documents.alloc(PrintableDocument::Join4(
+            first.to_doc(self),
+            second.to_doc(self),
+            third.to_doc(self),
+            fourth.to_doc(self),
+        )))
     }
 }
 
