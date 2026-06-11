@@ -51,6 +51,8 @@ use crate::{Result, io::Utf8Writer};
 ///
 #[macro_export]
 macro_rules! docvec_arena {
+    // When we're joining exactly 3 or 4 documents we use the specialised
+    // `join3` and `join4` to be a bit faster!
     ($arena:expr, $first:expr, $second:expr, $third:expr) => {
         $arena.join3($first, $second, $third)
     };
@@ -59,6 +61,7 @@ macro_rules! docvec_arena {
         $arena.join4($first, $second, $third, $fourth)
     };
 
+    // Otherwise we just append all the documents together.
     ($arena:expr, $first:expr, $($rest:expr),+ $(,)?) => {
         {
             $first.to_doc(&$arena)
@@ -74,8 +77,9 @@ pub trait CursorPositionObserver: std::fmt::Debug {
     fn observe_cursor_position(&mut self, line: isize, width: isize);
 }
 
-// To the outside world a document is an opaque data structure. It just wraps an
-// id for an arena used to allocate all the `PrintableDocument`s.
+// To the outside world a document is an opaque data structure.
+// This is a newtype wrapper around a reference that is gonna be stored in a
+// document arena.
 #[derive(Debug, Clone, Copy)]
 pub struct Document<'string, 'doc>(&'doc PrintableDocument<'string, 'doc>);
 
@@ -94,7 +98,10 @@ impl<'string, 'doc> Documentable<'string, 'doc> for char {
 
 impl<'string, 'doc> Documentable<'string, 'doc> for &'string str {
     fn to_doc(self, arena: &'doc DocumentArena<'string, 'doc>) -> Document<'string, 'doc> {
-        Document(arena.documents.alloc(PrintableDocument::str(self)))
+        Document(arena.documents.alloc(PrintableDocument::Str {
+            graphemes: self.graphemes(true).count() as isize,
+            string: self,
+        }))
     }
 }
 
@@ -378,8 +385,7 @@ impl<'string, 'doc> Document<'string, 'doc> {
 /// elements which determine how it can be formatted.
 ///
 /// The variants of this enum should probably not be constructed directly,
-/// rather use the helper functions of the same names to construct them.
-/// For example, use `line()` instead of `Document::Line(1)`.
+/// rather use the helper functions on the DocumentArena to construct them.
 ///
 #[derive(Debug, Clone)]
 enum PrintableDocument<'string, 'doc> {
@@ -482,15 +488,6 @@ enum PrintableDocument<'string, 'doc> {
     Empty,
 }
 
-impl<'a, 'doc> PrintableDocument<'a, 'doc> {
-    fn str(str: &'a str) -> Self {
-        PrintableDocument::Str {
-            graphemes: str.graphemes(true).count() as isize,
-            string: str,
-        }
-    }
-}
-
 /// The kind of line break this `Document::Break` is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BreakKind {
@@ -554,10 +551,8 @@ pub enum NestMode {
     Set,
 }
 
-/// A structure used to allocate and manipulate documents.
-/// All documents are allocated on an arena.
-/// Some documents are only allocated once and can be used accessed as fields
-/// of this structure to avoid wasting loads of allocations on them.
+/// A structure used to efficiently allocate documents that can then be pretty
+/// printed.
 pub struct DocumentArena<'string, 'doc> {
     documents: Arena<PrintableDocument<'string, 'doc>>,
 }
@@ -575,15 +570,18 @@ impl<'string, 'doc> Default for DocumentArena<'string, 'doc> {
 }
 
 impl<'string, 'doc> DocumentArena<'string, 'doc> {
+    /// Creates a new empty arena with no documents allocated.
     pub fn new() -> Self {
         let documents = Arena::new();
         Self { documents }
     }
 
+    /// Allocates the empty document.
     pub fn nil(&'doc self) -> Document<'string, 'doc> {
         Document(self.documents.alloc(PrintableDocument::Empty))
     }
 
+    /// Allocates a document that is rendered as a single line.
     pub fn line(&'doc self) -> Document<'string, 'doc> {
         self.lines(1)
     }
@@ -676,6 +674,9 @@ impl<'string, 'doc> DocumentArena<'string, 'doc> {
         )
     }
 
+    /// Joins together an iterator of documents into a single document.
+    /// All the documents are gonna be rendered next to each other with no
+    /// spaces in between.
     pub fn concat(
         &'doc self,
         documents: impl IntoIterator<Item = Document<'string, 'doc>>,
@@ -720,6 +721,9 @@ impl<'string, 'doc> DocumentArena<'string, 'doc> {
         previous
     }
 
+    /// Joins exactly three documents into one.
+    /// This is a little optimisation over joining three documents using `join`
+    /// or `.append`.
     pub fn join3(
         &'doc self,
         first: impl Documentable<'string, 'doc>,
@@ -733,6 +737,9 @@ impl<'string, 'doc> DocumentArena<'string, 'doc> {
         )))
     }
 
+    /// Joins exactly four documents into one.
+    /// This is a little optimisation over joining three documents using `join`
+    /// or `.append`.
     pub fn join4(
         &'doc self,
         first: impl Documentable<'string, 'doc>,
