@@ -1367,6 +1367,7 @@ impl<'a, 'doc> Formatter<'a> {
         docvec_arena![arena, attributes, function]
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn expr_fn(
         &mut self,
         arena: &'doc DocumentArena<'a, 'doc>,
@@ -1782,6 +1783,7 @@ impl<'a, 'doc> Formatter<'a> {
         new_value.chars().rev().collect::<EcoString>().to_doc(arena)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn pattern_constructor(
         &mut self,
         arena: &'doc DocumentArena<'a, 'doc>,
@@ -1946,6 +1948,7 @@ impl<'a, 'doc> Formatter<'a> {
     // resulting document will try to first split that before splitting all the
     // other arguments.
     // This is used for function calls and tuples.
+    #[allow(clippy::too_many_arguments)]
     fn append_inlinable_wrapped_arguments<'b, T, Predicate, ToDoc>(
         &mut self,
         arena: &'doc DocumentArena<'a, 'doc>,
@@ -2098,6 +2101,7 @@ impl<'a, 'doc> Formatter<'a> {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn const_record_update<A>(
         &mut self,
         arena: &'doc DocumentArena<'a, 'doc>,
@@ -4579,7 +4583,7 @@ impl<'a> AttributesPrinter<'a> {
 
 impl<'a, 'doc> AttributesPrinter<'a> {
     fn to_doc(
-        self,
+        &self,
         arena: &'doc DocumentArena<'a, 'doc>,
         cache: &'doc FormatterCache<'a, 'doc>,
     ) -> Document<'a, 'doc> {
