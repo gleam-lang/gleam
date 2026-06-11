@@ -708,10 +708,7 @@ impl<'string, 'doc> DocumentArena<'string, 'doc> {
         };
 
         for next in documents {
-            previous = Document(
-                self.documents
-                    .alloc(PrintableDocument::Join(previous, next)),
-            );
+            previous = previous.append(self, next);
         }
 
         previous
@@ -731,11 +728,7 @@ impl<'string, 'doc> DocumentArena<'string, 'doc> {
         };
 
         for next in elements {
-            let doc = Document(
-                self.documents
-                    .alloc(PrintableDocument::Join(previous, separator)),
-            );
-            previous = Document(self.documents.alloc(PrintableDocument::Join(doc, next)));
+            previous = docvec_arena![self, previous, separator, next];
         }
 
         previous
