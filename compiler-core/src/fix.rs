@@ -4,6 +4,7 @@
 use crate::{
     Error, Result,
     format::{Formatter, FormatterCache, Intermediate},
+    io::Utf8Writer,
     pretty_arena::DocumentArena,
     warning::WarningEmitter,
 };
@@ -30,7 +31,8 @@ pub fn parse_fix_and_format(src: &EcoString, path: &Utf8Path) -> Result<String> 
     let cache = FormatterCache::allocate(&arena);
     Formatter::with_comments(&intermediate)
         .module(&arena, &cache, &module)
-        .pretty_print(80, &mut buffer)?;
+        .pretty_print(80, &mut buffer)
+        .map_err(|error| buffer.convert_err(error))?;
 
     Ok(buffer)
 }

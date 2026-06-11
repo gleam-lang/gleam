@@ -298,6 +298,7 @@ pub fn pretty(writer: &mut impl Utf8Writer, src: &EcoString, path: &Utf8Path) ->
     Formatter::with_comments(&intermediate)
         .module(&arena, &cache, &parsed.module)
         .pretty_print(80, writer)
+        .map_err(|error| writer.convert_err(error))
 }
 
 pub(crate) struct Intermediate<'a> {

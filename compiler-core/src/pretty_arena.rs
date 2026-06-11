@@ -34,8 +34,6 @@ use num_bigint::BigInt;
 use typed_arena::Arena;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{Result, io::Utf8Writer};
-
 /// Join multiple documents together in a vector. This macro calls the `to_doc`
 /// method on each element, providing a concise way to write a document sequence.
 /// For example:
@@ -374,7 +372,7 @@ impl<'string, 'doc> Document<'string, 'doc> {
 
     /// Prints a document into `writer`, attempting to limit lines to `limit`
     /// characters in length.
-    pub fn pretty_print(self, limit: isize, writer: &mut impl Utf8Writer) -> Result<()> {
+    pub fn pretty_print(self, limit: isize, writer: &mut impl std::fmt::Write) -> std::fmt::Result {
         let docs = im::vector![(0, Mode::Unbroken, self)];
         format(writer, limit, docs)?;
         Ok(())
@@ -757,10 +755,10 @@ impl<'string, 'doc> DocumentArena<'string, 'doc> {
 }
 
 fn format<'string, 'doc>(
-    writer: &mut impl Utf8Writer,
+    writer: &mut impl std::fmt::Write,
     limit: isize,
     mut docs: im::Vector<(isize, Mode, Document<'string, 'doc>)>,
-) -> Result<()> {
+) -> std::fmt::Result {
     let mut line: isize = 0;
     let mut width: isize = 0;
     // As long as there are documents to print we'll take each one by one and
@@ -781,11 +779,11 @@ fn format<'string, 'doc>(
             // add the indentation required by the given document.
             PrintableDocument::Line(count) => {
                 for _ in 0..*count {
-                    writer.str_write("\n")?;
+                    writer.write_str("\n")?;
                 }
                 line += *count as isize;
                 for _ in 0..indent {
-                    writer.str_write(" ")?;
+                    writer.write_char(' ')?;
                 }
                 width = indent;
             }
@@ -805,14 +803,14 @@ fn format<'string, 'doc>(
                 // Every time we need to check again if the remaining piece can
                 // fit. If it does, the flexible break is not broken.
                 if mode == Mode::Unbroken || fits(limit, unbroken_width, docs.clone()) {
-                    writer.str_write(unbroken)?;
+                    writer.write_str(unbroken)?;
                     width = unbroken_width;
                 } else {
-                    writer.str_write(broken)?;
-                    writer.str_write("\n")?;
+                    writer.write_str(broken)?;
+                    writer.write_char('\n')?;
                     line += 1;
                     for _ in 0..indent {
-                        writer.str_write(" ")?;
+                        writer.write_char(' ')?;
                     }
                     width = indent;
                 }
@@ -834,11 +832,11 @@ fn format<'string, 'doc>(
                 // string is printed, then we start a newline and indent it
                 // according to the current indentation level.
                 Mode::Broken | Mode::ForcedBroken => {
-                    writer.str_write(broken)?;
-                    writer.str_write("\n")?;
+                    writer.write_str(broken)?;
+                    writer.write_char('\n')?;
                     line += 1;
                     for _ in 0..indent {
-                        writer.str_write(" ")?;
+                        writer.write_char(' ')?;
                     }
                     width = indent;
                 }
@@ -846,7 +844,7 @@ fn format<'string, 'doc>(
                 // unbroken string is printed as if it were a normal string;
                 // also updating the width of the current line.
                 Mode::Unbroken | Mode::ForcedUnbroken => {
-                    writer.str_write(unbroken)?;
+                    writer.write_str(unbroken)?;
                     width += unbroken.len() as isize
                 }
             },
@@ -855,17 +853,17 @@ fn format<'string, 'doc>(
             // increased accordingly.
             PrintableDocument::EcoString { string, graphemes } => {
                 width += graphemes;
-                writer.str_write(string)?;
+                writer.write_str(string)?;
             }
 
             PrintableDocument::Str { string, graphemes } => {
                 width += graphemes;
-                writer.str_write(string)?;
+                writer.write_str(string)?;
             }
 
             PrintableDocument::ZeroWidthString { string } => {
                 // We write the string, but do not increment the length
-                writer.str_write(string)?;
+                writer.write_str(string)?;
             }
 
             // If multiple documents need to be printed, then they are all
