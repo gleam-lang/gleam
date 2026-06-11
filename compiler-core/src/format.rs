@@ -145,6 +145,13 @@ pub struct FormatterCache<'doc, 'a> {
     div_int: Document<'doc, 'a>,
     div_float: Document<'doc, 'a>,
     remainder_int: Document<'doc, 'a>,
+    case_break: Document<'doc, 'a>,
+    deprecated_attribute_quote: Document<'doc, 'a>,
+    quote_close_paren: Document<'doc, 'a>,
+    external_erlang_quote: Document<'doc, 'a>,
+    external_javascript_quote: Document<'doc, 'a>,
+    quote_comma_space_quote: Document<'doc, 'a>,
+    internal_attribute: Document<'doc, 'a>,
 }
 
 impl<'doc, 'a> FormatterCache<'doc, 'a> {
@@ -266,6 +273,13 @@ impl<'doc, 'a> FormatterCache<'doc, 'a> {
             div_int: "/".to_doc(arena),
             div_float: "/.".to_doc(arena),
             remainder_int: "%".to_doc(arena),
+            case_break: arena.break_("case", "case "),
+            deprecated_attribute_quote: "@deprecated(\"".to_doc(arena),
+            quote_close_paren: "\")".to_doc(arena),
+            external_erlang_quote: "@external(erlang, \"".to_doc(arena),
+            external_javascript_quote: "@external(javascript, \"".to_doc(arena),
+            quote_comma_space_quote: "\", \"".to_doc(arena),
+            internal_attribute: "@internal".to_doc(arena),
         }
     }
 }
@@ -731,7 +745,7 @@ impl<'a, 'doc> Formatter<'a> {
                 let attributes = AttributesPrinter::new()
                     .set_internal(*publicity)
                     .set_deprecation(deprecation)
-                    .to_doc(arena);
+                    .to_doc(arena, cache);
                 let head = attributes
                     .append(arena, pub_(cache, *publicity))
                     .append(arena, cache.const_space)
@@ -1205,7 +1219,7 @@ impl<'a, 'doc> Formatter<'a> {
         let attributes = AttributesPrinter::new()
             .set_deprecation(deprecation)
             .set_internal(*publicity)
-            .to_doc(arena);
+            .to_doc(arena, cache);
 
         let head = docvec_arena![
             arena,
@@ -1225,10 +1239,10 @@ impl<'a, 'doc> Formatter<'a> {
             )
         };
 
-        head.append(arena, " =").append(
+        head.append(arena, cache.space_equal).append(
             arena,
-            arena
-                .line()
+            cache
+                .line
                 .append(arena, self.type_ast(arena, cache, type_))
                 .group(arena)
                 .nest(arena, INDENT),
@@ -1283,7 +1297,7 @@ impl<'a, 'doc> Formatter<'a> {
             .set_internal(*publicity)
             .set_external_erlang(external_erlang)
             .set_external_javascript(external_javascript)
-            .to_doc(arena);
+            .to_doc(arena, cache);
 
         // Fn name and args
         let arguments = arguments
@@ -1339,8 +1353,8 @@ impl<'a, 'doc> Formatter<'a> {
             .group(arena)
             .append(
                 arena,
-                arena
-                    .line()
+                cache
+                    .line
                     .append(arena, body)
                     .nest(arena, INDENT)
                     .group(arena),
@@ -1990,8 +2004,8 @@ impl<'a, 'doc> Formatter<'a> {
         clauses: &'a [UntypedClause],
         location: &'a SrcSpan,
     ) -> Document<'a, 'doc> {
-        let subjects_doc = arena
-            .break_("case", "case ")
+        let subjects_doc = cache
+            .case_break
             .append(
                 arena,
                 arena.join(
@@ -2030,7 +2044,7 @@ impl<'a, 'doc> Formatter<'a> {
         subjects_doc
             .append(
                 arena,
-                arena.line().append(arena, clauses_doc).nest(arena, INDENT),
+                cache.line.append(arena, clauses_doc).nest(arena, INDENT),
             )
             .append(arena, closing_bracket)
             .force_break(arena)
@@ -2433,7 +2447,7 @@ impl<'a, 'doc> Formatter<'a> {
         let doc_comments = self.doc_comments(arena, cache, constructor.location.start);
         let attributes = AttributesPrinter::new()
             .set_deprecation(&constructor.deprecation)
-            .to_doc(arena);
+            .to_doc(arena, cache);
 
         let doc = if constructor.arguments.is_empty() {
             if self.any_comments(constructor.location.end) {
@@ -2525,7 +2539,7 @@ impl<'a, 'doc> Formatter<'a> {
             .set_internal(*publicity)
             .set_external_erlang(external_erlang)
             .set_external_javascript(external_javascript)
-            .to_doc(arena);
+            .to_doc(arena, cache);
 
         let doc = attributes
             .append(arena, pub_(cache, *publicity))
@@ -2717,8 +2731,8 @@ impl<'a, 'doc> Formatter<'a> {
                 let expression_comments = self.pop_comments(expression.location().start);
                 let expression_doc = self.expr(arena, cache, expression);
                 match printed_comments(arena, cache, expression_comments, true) {
-                    Some(comments) => arena
-                        .line()
+                    Some(comments) => cache
+                        .line
                         .append(arena, comments)
                         .append(arena, expression_doc)
                         .nest(arena, INDENT),
@@ -2726,8 +2740,8 @@ impl<'a, 'doc> Formatter<'a> {
                 }
             }
 
-            UntypedExpr::Case { .. } => arena
-                .line()
+            UntypedExpr::Case { .. } => cache
+                .line
                 .append(arena, self.expr(arena, cache, expression))
                 .nest(arena, INDENT),
 
@@ -4559,41 +4573,50 @@ impl<'a> AttributesPrinter<'a> {
     }
 }
 
-impl<'a, 'doc> Documentable<'a, 'doc> for AttributesPrinter<'a> {
-    fn to_doc(self, arena: &'doc DocumentArena<'a, 'doc>) -> Document<'a, 'doc> {
+impl<'a, 'doc> AttributesPrinter<'a> {
+    fn to_doc(
+        self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        cache: &'doc FormatterCache<'a, 'doc>,
+    ) -> Document<'a, 'doc> {
         let mut attributes = vec![];
 
         // @deprecated attribute
         if let Deprecation::Deprecated { message } = self.deprecation {
-            attributes.push(docvec_arena![arena, "@deprecated(\"", message, "\")"])
-        };
-
-        // @external attributes
-        if let Some((m, f, _)) = self.external_erlang {
             attributes.push(docvec_arena![
                 arena,
-                "@external(erlang, \"",
-                m,
-                "\", \"",
-                f,
-                "\")"
+                cache.deprecated_attribute_quote,
+                message,
+                cache.quote_close_paren
             ])
         };
 
-        if let Some((m, f, _)) = self.external_javascript {
+        // @external attributes
+        if let Some((module, function, _)) = self.external_erlang {
             attributes.push(docvec_arena![
                 arena,
-                "@external(javascript, \"",
-                m,
-                "\", \"",
-                f,
-                "\")"
+                cache.external_erlang_quote,
+                module,
+                cache.quote_comma_space_quote,
+                function,
+                cache.quote_close_paren,
+            ])
+        };
+
+        if let Some((module, function, _)) = self.external_javascript {
+            attributes.push(docvec_arena![
+                arena,
+                cache.external_javascript_quote,
+                module,
+                cache.quote_comma_space_quote,
+                function,
+                cache.quote_close_paren
             ])
         };
 
         // @internal attribute
         if self.internal {
-            attributes.push("@internal".to_doc(arena));
+            attributes.push(cache.internal_attribute);
         };
 
         if attributes.is_empty() {
