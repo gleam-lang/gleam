@@ -51,10 +51,6 @@ use crate::{Result, io::Utf8Writer};
 ///
 #[macro_export]
 macro_rules! docvec_arena {
-    () => {
-        Document::Vec(Vec::new())
-    };
-
     ($arena:expr, $first:expr, $second:expr, $third:expr) => {
         $arena.join3($first, $second, $third)
     };
@@ -63,12 +59,7 @@ macro_rules! docvec_arena {
         $arena.join4($first, $second, $third, $fourth)
     };
 
-    // A docvec![] with multiple elements.
     ($arena:expr, $first:expr, $($rest:expr),+ $(,)?) => {
-        // A document that looks like this: `Vec[Vec[..rest], ..other_rest]`
-        // is exactly the same as a flat: `Vec[..rest, ..other_rest]`.
-        // So in case a `docvec!` starts with a `Vec` we flatten it out to avoid
-        // having deeply nested documents.
         {
             $first.to_doc(&$arena)
             $(.append(&$arena, $rest))+
@@ -179,12 +170,6 @@ impl<'string, 'doc> Documentable<'string, 'doc> for BigInt {
 impl<'string, 'doc> Documentable<'string, 'doc> for Document<'string, 'doc> {
     fn to_doc(self, _arena: &'doc DocumentArena<'string, 'doc>) -> Document<'string, 'doc> {
         self
-    }
-}
-
-impl<'string, 'doc> Documentable<'string, 'doc> for Vec<Document<'string, 'doc>> {
-    fn to_doc(self, arena: &'doc DocumentArena<'string, 'doc>) -> Document<'string, 'doc> {
-        arena.concat(self)
     }
 }
 
