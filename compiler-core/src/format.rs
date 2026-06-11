@@ -1434,6 +1434,7 @@ impl<'a, 'doc> Formatter<'a> {
     ) -> Document<'a, 'doc> {
         let mut previous_position = 0;
         let count = statements.len();
+
         let mut documents = Vec::with_capacity(count * 2);
         for (i, statement) in statements.iter().enumerate() {
             let preceding_newline = self.pop_empty_lines(previous_position + 1);
@@ -1458,9 +1459,9 @@ impl<'a, 'doc> Formatter<'a> {
                 .first()
                 .is_some_and(|statement| statement.is_expression())
         {
-            documents.to_doc(arena)
+            arena.concat(documents)
         } else {
-            documents.to_doc(arena).force_break(arena)
+            arena.concat(documents).force_break(arena)
         }
     }
 
@@ -2309,49 +2310,74 @@ impl<'a, 'doc> Formatter<'a> {
         expressions: &'a Vec1<UntypedExpr>,
         nest_pipe: bool,
     ) -> Document<'a, 'doc> {
-        let mut docs = Vec::with_capacity(expressions.len() * 3);
+        // We start by producing the document for the first step of the pipeline.
         let first = expressions.first();
         let first_precedence = first.bin_op_precedence();
         let first = self.expr(arena, cache, first).group(arena);
-        docs.push(self.operator_side(arena, cache, first, 5, first_precedence));
+        let first_step = self.operator_side(arena, cache, first, 5, first_precedence);
 
+        // We then produce a doc for each item in the rest of the pipeline.
         let pipeline_start = expressions.first().location().start;
         let pipeline_end = expressions.last().location().end;
         let try_to_keep_on_one_line = !self.spans_multiple_lines(pipeline_start, pipeline_end);
-
-        for expression in expressions.iter().skip(1) {
-            let comments = self.pop_comments(expression.location().start);
-            let doc = if let UntypedExpr::Fn { kind, body, .. } = expression
-                && kind.is_capture()
-            {
-                self.fn_capture(arena, cache, body, FnCapturePosition::RightHandSideOfPipe)
-            } else {
-                self.expr(arena, cache, expression)
-            };
-            let doc = if nest_pipe {
-                doc.nest(arena, INDENT)
-            } else {
-                doc
-            };
-            let space = if try_to_keep_on_one_line {
-                cache.breakable_space
-            } else {
-                cache.line
-            };
-            let pipe = space.append(arena, commented(arena, cache, cache.pipe_space, comments));
-            let pipe = if nest_pipe {
-                pipe.nest(arena, INDENT)
-            } else {
-                pipe
-            };
-            docs.push(pipe);
-            docs.push(self.operator_side(arena, cache, doc, 4, expression.bin_op_precedence()));
-        }
-
-        if try_to_keep_on_one_line {
-            docs.to_doc(arena)
+        let steps_separator = if try_to_keep_on_one_line {
+            cache.breakable_space
         } else {
-            docs.to_doc(arena).force_break(arena)
+            cache.line
+        };
+
+        let other_steps = expressions.iter().skip(1).map(|expression| {
+            // We start by producing the document for the pipe itself `|>`,
+            // we also want to put comments before it!
+            let comments = self.pop_comments(expression.location().start);
+            let commented_pipe = commented(arena, cache, cache.pipe_space, comments);
+            let mut pipe = docvec_arena![arena, steps_separator, commented_pipe];
+            if nest_pipe {
+                pipe = pipe.nest(arena, INDENT);
+            };
+
+            // We then produce the document for the expression being piped into.
+            let expression_doc =
+                self.expression_on_right_hand_side_of_pipe(arena, cache, nest_pipe, expression);
+            let expression_doc = self.operator_side(
+                arena,
+                cache,
+                expression_doc,
+                4,
+                expression.bin_op_precedence(),
+            );
+
+            // And finally piece everything together.
+            pipe.append(arena, expression_doc)
+        });
+
+        let stops = std::iter::once(first_step).chain(other_steps);
+        if try_to_keep_on_one_line {
+            arena.concat(stops)
+        } else {
+            arena.concat(stops).force_break(arena)
+        }
+    }
+
+    fn expression_on_right_hand_side_of_pipe(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        cache: &'doc FormatterCache<'a, 'doc>,
+        nest_pipe: bool,
+        expression: &'a UntypedExpr,
+    ) -> Document<'a, 'doc> {
+        let expression = if let UntypedExpr::Fn { kind, body, .. } = expression
+            && kind.is_capture()
+        {
+            self.fn_capture(arena, cache, body, FnCapturePosition::RightHandSideOfPipe)
+        } else {
+            self.expr(arena, cache, expression)
+        };
+
+        if nest_pipe {
+            expression.nest(arena, INDENT)
+        } else {
+            expression
         }
     }
 
