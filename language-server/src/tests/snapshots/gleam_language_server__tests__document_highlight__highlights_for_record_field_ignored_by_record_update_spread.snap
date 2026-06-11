@@ -1,5 +1,5 @@
 ---
-source: language-server/src/tests/reference.rs
+source: language-server/src/tests/document_highlight.rs
 expression: "\ntype Wibble {\n  Wibble(wibble: Int, wobble: Int)\n}\n\npub fn main(w: Wibble) {\n  Wibble(..w, wibble: 2)\n}\n"
 ---
 -- app.gleam

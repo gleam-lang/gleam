@@ -1,6 +1,5 @@
 ---
 source: language-server/src/tests/rename.rs
-assertion_line: 2791
 expression: "\ntype Wibble {\n  Wibble(wibble: Int, wobble: Int)\n}\n\npub fn main(w: Wibble) {\n  Wibble(..w, wibble: 2)\n}\n"
 ---
 ----- BEFORE RENAME

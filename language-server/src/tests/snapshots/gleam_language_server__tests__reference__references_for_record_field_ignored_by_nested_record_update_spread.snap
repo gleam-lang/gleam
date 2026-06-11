@@ -1,0 +1,15 @@
+---
+source: language-server/src/tests/reference.rs
+expression: "\ntype Wibble {\n  Wibble(wibble: Int, wobble: Int)\n}\n\npub fn main(w: Wibble) {\n  Wibble(..Wibble(..w, wibble: 1), wobble: 2)\n}\n"
+---
+-- app.gleam
+
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+         ↑▔▔▔▔▔                   
+}
+
+pub fn main(w: Wibble) {
+  Wibble(..Wibble(..w, wibble: 1), wobble: 2)
+                       ▔▔▔▔▔▔                
+}
