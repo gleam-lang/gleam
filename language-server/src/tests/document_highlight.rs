@@ -1145,3 +1145,19 @@ pub fn main() {
         find_position_of("mod.wibble").under_char('w')
     );
 }
+
+#[test]
+fn highlights_for_record_field_ignored_by_record_update_spread() {
+    assert_highlights!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main(w: Wibble) {
+  Wibble(..w, wibble: 2)
+}
+",
+        find_position_of("wobble: Int").under_char('w'),
+    );
+}

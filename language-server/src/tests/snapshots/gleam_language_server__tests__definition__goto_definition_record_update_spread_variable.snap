@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+pub type Wibble { Wibble(one: Int, two: Int) }
+
+pub fn main() {
+  let value = Wibble(one: 1, two: 2)
+  Wibble(..value, two: 3)
+           ↑             
+}
+
+----- Jumped to `src/app.gleam`
+
+pub type Wibble { Wibble(one: Int, two: Int) }
+
+pub fn main() {
+  let value = Wibble(one: 1, two: 2)
+      ↑▔▔▔▔                         
+  Wibble(..value, two: 3)
+}

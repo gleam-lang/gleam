@@ -256,6 +256,20 @@ pub fn main() {
 }
 
 #[test]
+fn goto_definition_record_update_spread_variable() {
+    assert_goto!(
+        "
+pub type Wibble { Wibble(one: Int, two: Int) }
+
+pub fn main() {
+  let value = Wibble(one: 1, two: 2)
+  Wibble(..value, two: 3)
+}",
+        find_position_of("value").nth_occurrence(2)
+    );
+}
+
+#[test]
 fn goto_definition_same_module_constants() {
     assert_goto!(
         "
