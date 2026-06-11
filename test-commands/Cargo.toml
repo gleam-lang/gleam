@@ -10,6 +10,7 @@ gleam-core = { path = "../compiler-core" }
 gleam-cli = { path = "../compiler-cli" }
 test-helpers-rs = { path = "../test-helpers-rs" }
 camino = { workspace = true, features = ["serde1"] }
+strum = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 insta.workspace = true

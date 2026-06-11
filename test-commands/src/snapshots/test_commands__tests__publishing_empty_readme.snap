@@ -1,0 +1,11 @@
+---
+source: test-commands/src/tests.rs
+expression: error
+---
+error: Cannot publish with empty README
+
+You appear to be attempting to publish a package with an empty README.
+All published packages should have a non empty README.
+
+
+Hint: Update your project's README to describe it before publishing

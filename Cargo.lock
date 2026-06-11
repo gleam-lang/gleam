@@ -3371,6 +3371,7 @@ dependencies = [
  "gleam-cli",
  "gleam-core",
  "insta",
+ "strum",
  "test-helpers-rs",
 ]
 

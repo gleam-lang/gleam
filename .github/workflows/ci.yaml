@@ -240,13 +240,6 @@ jobs:
         env:
           GLEAM_COMMAND: gleam
 
-      - name: test/erlang_shipment_no_dev_deps
-        run: ./test.sh
-        working-directory: ./test/erlang_shipment_no_dev_deps
-        if: ${{ matrix.run-integration-tests }}
-        env:
-          GLEAM_COMMAND: gleam
-
       - name: test/project_javascript
         run: |
           gleam run
@@ -478,22 +471,6 @@ jobs:
         run: make clean bun
         working-directory: ./test/language
 
-      - name: test/compile_package0
-        run: make
-        working-directory: ./test/compile_package0
-
-      - name: test/compile_package1
-        run: make
-        working-directory: ./test/compile_package1
-
-      - name: Test JavaScript prelude
-        run: make
-        working-directory: ./test/javascript_prelude
-
-      - name: Test export of hex tarball
-        run: make test
-        working-directory: ./test/hextarball
-
       - name: test/running_modules
         run: make test-all
         working-directory: ./test/running_modules
@@ -510,22 +487,6 @@ jobs:
         run: make
         working-directory: ./test/subdir_ffi
 
-      - name: test/unicode_path
-        run: make
-        working-directory: ./test/unicode_path ⭐
-
       - name: test/assert
         run: make test-all
         working-directory: ./test/assert
-
-      - name: Test publishing with default main
-        run: ./test.sh
-        working-directory: ./test/publishing_default_main
-
-      - name: Test publishing with src symlink escape
-        run: ./test.sh
-        working-directory: ./test/publishing_src_symlink_escape
-
-      - name: Test publishing with priv symlink escape
-        run: ./test.sh
-        working-directory: ./test/publishing_priv_symlink_escape

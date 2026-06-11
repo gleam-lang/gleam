@@ -708,19 +708,19 @@ pub struct NewOptions {
 pub struct CompilePackage {
     /// The compilation target for the generated project
     #[arg(long, ignore_case = true, help = target_doc())]
-    target: Target,
+    pub target: Target,
 
     /// The directory of the Gleam package
     #[arg(long = "package")]
-    package_directory: Utf8PathBuf,
+    pub package_directory: Utf8PathBuf,
 
     /// A directory to write compiled package to
     #[arg(long = "out")]
-    output_directory: Utf8PathBuf,
+    pub output_directory: Utf8PathBuf,
 
     /// A directories of precompiled Gleam projects
     #[arg(long = "lib")]
-    libraries_directory: Utf8PathBuf,
+    pub libraries_directory: Utf8PathBuf,
 
     /// The location of the JavaScript prelude module, relative to the `out`
     /// directory.
@@ -731,11 +731,11 @@ pub struct CompilePackage {
     /// importing of other JavaScript file extensions.
     ///
     #[arg(verbatim_doc_comment, long = "javascript-prelude")]
-    javascript_prelude: Option<Utf8PathBuf>,
+    pub javascript_prelude: Option<Utf8PathBuf>,
 
     /// Skip Erlang to BEAM bytecode compilation
     #[arg(long = "no-beam")]
-    skip_beam_compilation: bool,
+    pub skip_beam_compilation: bool,
 }
 
 #[derive(Subcommand, Debug)]
