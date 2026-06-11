@@ -214,6 +214,8 @@ impl<'string, 'doc> Document<'string, 'doc> {
             | PrintableDocument::NextBreakFits(..)
             | PrintableDocument::Break { .. }
             | PrintableDocument::Join(..)
+            | PrintableDocument::Join3(..)
+            | PrintableDocument::Join4(..)
             | PrintableDocument::Nest(..) => Document(arena.documents.alloc(PrintableDocument::Group(self))),
         }
     }
@@ -291,12 +293,27 @@ impl<'string, 'doc> Document<'string, 'doc> {
     pub fn append(
         self,
         arena: &'doc DocumentArena<'string, 'doc>,
-        second: impl Documentable<'string, 'doc>,
+        new: impl Documentable<'string, 'doc>,
     ) -> Document<'string, 'doc> {
+        let new = new.to_doc(arena);
+        if let PrintableDocument::Empty = new.0 {
+            return self;
+        }
+
         match self.0 {
-            PrintableDocument::Empty => second.to_doc(arena),
+            PrintableDocument::Empty => new,
+            PrintableDocument::Join(first, second) => Document(
+                arena
+                    .documents
+                    .alloc(PrintableDocument::Join3(*first, *second, new)),
+            ),
+            PrintableDocument::Join3(first, second, third) => Document(
+                arena
+                    .documents
+                    .alloc(PrintableDocument::Join4(*first, *second, *third, new)),
+            ),
             PrintableDocument::Line(..)
-            | PrintableDocument::Join(..)
+            | PrintableDocument::Join4(..)
             | PrintableDocument::ForceBroken(..)
             | PrintableDocument::NextBreakFits(..)
             | PrintableDocument::Break { .. }
@@ -306,12 +323,7 @@ impl<'string, 'doc> Document<'string, 'doc> {
             | PrintableDocument::EcoString { .. }
             | PrintableDocument::ZeroWidthString { .. }
             | PrintableDocument::CursorPositionObserver { .. } => {
-                let second = second.to_doc(arena);
-                if let PrintableDocument::Empty = second.0 {
-                    self
-                } else {
-                    Document(arena.documents.alloc(PrintableDocument::Join(self, second)))
-                }
+                Document(arena.documents.alloc(PrintableDocument::Join(self, new)))
             }
         }
     }
@@ -344,6 +356,12 @@ impl<'string, 'doc> Document<'string, 'doc> {
             | PrintableDocument::Group(document)
             | PrintableDocument::NextBreakFits(document, _) => document.is_empty(),
             PrintableDocument::Join(first, second) => first.is_empty() && second.is_empty(),
+            PrintableDocument::Join3(first, second, third) => {
+                first.is_empty() && second.is_empty() && third.is_empty()
+            }
+            PrintableDocument::Join4(first, second, third, fourth) => {
+                first.is_empty() && second.is_empty() && third.is_empty() && fourth.is_empty()
+            }
             // Zero-width strings don't count towards line length, but they are
             // still printed and so are not empty. (Unless their string contents
             // is also empty)
@@ -405,6 +423,17 @@ enum PrintableDocument<'string, 'doc> {
     /// `Document::Line` is used.
     // maybe experiment with Slice(&'doc [Document<'string, 'doc>]),
     Join(Document<'string, 'doc>, Document<'string, 'doc>),
+    Join3(
+        Document<'string, 'doc>,
+        Document<'string, 'doc>,
+        Document<'string, 'doc>,
+    ),
+    Join4(
+        Document<'string, 'doc>,
+        Document<'string, 'doc>,
+        Document<'string, 'doc>,
+        Document<'string, 'doc>,
+    ),
 
     /// Nests the given document by the given indent, depending on the specified
     /// condition. See `Document::nest`, `Document::set_nesting` and
@@ -826,6 +855,17 @@ fn format<'string, 'doc>(
                 docs.push_front((indent, mode, *second));
                 docs.push_front((indent, mode, *first));
             }
+            PrintableDocument::Join3(first, second, third) => {
+                docs.push_front((indent, mode, *third));
+                docs.push_front((indent, mode, *second));
+                docs.push_front((indent, mode, *first));
+            }
+            PrintableDocument::Join4(first, second, third, fourth) => {
+                docs.push_front((indent, mode, *fourth));
+                docs.push_front((indent, mode, *third));
+                docs.push_front((indent, mode, *second));
+                docs.push_front((indent, mode, *first));
+            }
 
             // A `Nest` document doesn't result in anything being printed, its
             // only effect is to increase the current nesting level for the
@@ -1028,6 +1068,17 @@ fn fits<'string, 'doc>(
                 // The array needs to be reversed to preserve the order of the
                 // documents since each one is pushed _to the front_ of the
                 // queue of documents to check.
+                docs.push_front((indent, mode, *second));
+                docs.push_front((indent, mode, *first));
+            }
+            PrintableDocument::Join3(first, second, third) => {
+                docs.push_front((indent, mode, *third));
+                docs.push_front((indent, mode, *second));
+                docs.push_front((indent, mode, *first));
+            }
+            PrintableDocument::Join4(first, second, third, fourth) => {
+                docs.push_front((indent, mode, *fourth));
+                docs.push_front((indent, mode, *third));
                 docs.push_front((indent, mode, *second));
                 docs.push_front((indent, mode, *first));
             }
