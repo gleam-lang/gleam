@@ -1418,21 +1418,33 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         match (record_access, module_access) {
             // Record access is valid
             (Ok(record_access), _) => {
-                // If this is actually record access and not module access, and we didn't register
-                // the reference earlier, we register it now.
-                if let TypedExpr::RecordAccess { record, .. } = &record_access
-                    && let TypedExpr::Var {
+                if let TypedExpr::RecordAccess { record, label, .. } = &record_access {
+                    // The programmer wrote `record.label`, so register a
+                    // reference to the field for the language server.
+                    if let Some(type_name) = record.type_().named_type_name() {
+                        self.environment.references.register_label_reference(
+                            type_name,
+                            label.clone(),
+                            label_location,
+                            LabelSyntax::Longhand,
+                        );
+                    }
+                    // If this is actually record access and not module access,
+                    // and we didn't register the variable reference earlier, we
+                    // register it now.
+                    if let TypedExpr::Var {
                         location,
                         constructor,
                         name,
                     } = record.as_ref()
-                {
-                    self.register_value_constructor_reference(
-                        name,
-                        &constructor.variant,
-                        *location,
-                        ReferenceKind::Unqualified,
-                    )
+                    {
+                        self.register_value_constructor_reference(
+                            name,
+                            &constructor.variant,
+                            *location,
+                            ReferenceKind::Unqualified,
+                        )
+                    }
                 }
                 record_access
             }
@@ -2989,7 +3001,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<TypedExpr, Error> {
         let record = Box::new(record);
         let record_type = record.type_();
-        let type_name = record_type.named_type_name();
         let RecordAccessor {
             index,
             label,
@@ -3002,14 +3013,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             label_location,
             label,
         )?;
-        if let Some(type_name) = type_name {
-            self.environment.references.register_label_reference(
-                type_name,
-                label.clone(),
-                label_location,
-                LabelSyntax::Longhand,
-            );
-        }
         Ok(TypedExpr::RecordAccess {
             record,
             label,

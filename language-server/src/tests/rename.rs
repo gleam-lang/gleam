@@ -3009,6 +3009,45 @@ pub fn main() {
 }
 
 #[test]
+fn rename_record_field_ignored_by_record_update_spread() {
+    // https://github.com/gleam-lang/gleam/pull/5533#pullrequestreview-4475156690
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main(w: Wibble) {
+  Wibble(..w, wibble: 2)
+}
+",
+        "wabble",
+        find_position_of("wobble: Int").under_char('w')
+    );
+}
+
+#[test]
+fn rename_record_field_ignored_by_record_update_spread_with_expression() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn make() {
+  Wibble(wibble: 1, wobble: 2)
+}
+
+pub fn main() {
+  Wibble(..make(), wibble: 2)
+}
+",
+        "wabble",
+        find_position_of("wobble: Int").under_char('w')
+    );
+}
+
+#[test]
 fn rename_record_field_ignored_by_pattern_spread() {
     assert_rename!(
         "

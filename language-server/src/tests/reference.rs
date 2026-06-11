@@ -1257,6 +1257,23 @@ pub fn main() {
 }
 
 #[test]
+fn references_for_record_field_ignored_by_record_update_spread() {
+    // https://github.com/gleam-lang/gleam/pull/5533#pullrequestreview-4475156690
+    assert_references!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main(w: Wibble) {
+  Wibble(..w, wibble: 2)
+}
+",
+        find_position_of("wobble: Int").under_char('w')
+    );
+}
+
+#[test]
 fn references_for_record_field_ignored_by_pattern_spread() {
     assert_references!(
         "
