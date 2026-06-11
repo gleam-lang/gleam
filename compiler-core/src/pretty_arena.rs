@@ -173,13 +173,6 @@ impl<'string, 'doc> Documentable<'string, 'doc> for Document<'string, 'doc> {
     }
 }
 
-impl<'string, 'doc, D: Documentable<'string, 'doc>> Documentable<'string, 'doc> for Option<D> {
-    fn to_doc(self, arena: &'doc DocumentArena<'string, 'doc>) -> Document<'string, 'doc> {
-        self.map(|documentable| documentable.to_doc(arena))
-            .unwrap_or(arena.nil())
-    }
-}
-
 impl<'string, 'doc> Document<'string, 'doc> {
     /// Groups a document. When pretty printing a group, the formatter will
     /// first attempt to fit the entire group on one line. If it fails, all
