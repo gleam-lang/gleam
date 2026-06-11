@@ -4,7 +4,7 @@
 use crate::{
     Error, Result,
     format::{Formatter, FormatterCache, Intermediate},
-    pretty_ref_arena::DocumentArena,
+    pretty_arena::DocumentArena,
     warning::WarningEmitter,
 };
 use camino::Utf8Path;

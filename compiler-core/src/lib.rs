@@ -86,7 +86,7 @@ pub mod package_interface;
 pub mod parse;
 pub mod paths;
 pub mod pretty;
-pub mod pretty_ref_arena;
+pub mod pretty_arena;
 pub mod requirement;
 pub mod strings;
 pub mod type_;
