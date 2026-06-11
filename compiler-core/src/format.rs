@@ -107,7 +107,6 @@ pub struct FormatterCache<'doc, 'a> {
     open_bit_array: Document<'doc, 'a>,
     right_arrow: Document<'doc, 'a>,
     pub_space: Document<'doc, 'a>,
-    value: Document<'doc, 'a>,
     size: Document<'doc, 'a>,
     bytes: Document<'doc, 'a>,
     bits: Document<'doc, 'a>,
@@ -152,6 +151,7 @@ pub struct FormatterCache<'doc, 'a> {
     external_javascript_quote: Document<'doc, 'a>,
     quote_comma_space_quote: Document<'doc, 'a>,
     internal_attribute: Document<'doc, 'a>,
+    unit: Document<'doc, 'a>,
 }
 
 impl<'doc, 'a> FormatterCache<'doc, 'a> {
@@ -235,7 +235,6 @@ impl<'doc, 'a> FormatterCache<'doc, 'a> {
             open_bit_array: "<<".to_doc(arena),
             right_arrow: "->".to_doc(arena),
             pub_space: "pub ".to_doc(arena),
-            value: "value".to_doc(arena),
             size: "size".to_doc(arena),
             bytes: "bytes".to_doc(arena),
             bits: "bits".to_doc(arena),
@@ -252,6 +251,7 @@ impl<'doc, 'a> FormatterCache<'doc, 'a> {
             big: "big".to_doc(arena),
             little: "little".to_doc(arena),
             native: "native".to_doc(arena),
+            unit: "unit".to_doc(arena),
             and: "&&".to_doc(arena),
             or: "||".to_doc(arena),
             lt_int: "<".to_doc(arena),
@@ -941,12 +941,14 @@ impl<'a, 'doc> Formatter<'a> {
             ItemsPacking::FitOnePerLine | ItemsPacking::BreakOnePerLine => cache.comma_break,
         };
 
+        let mut is_empty = true;
         let mut elements_doc = cache.nil;
         for element in elements.iter() {
             let empty_lines = self.pop_empty_lines(element.location().start);
             let element_doc = self.const_expr(arena, cache, element);
 
-            elements_doc = if elements_doc.is_empty() {
+            elements_doc = if is_empty {
+                is_empty = false;
                 element_doc
             } else if empty_lines {
                 // If there's empty lines before the list item we want to add an
@@ -3002,12 +3004,14 @@ impl<'a, 'doc> Formatter<'a> {
                 None => 0,
             };
 
+        let mut is_empty = true;
         let mut elements_doc = cache.nil;
-        for element in elements.iter() {
+        for element in elements {
             let empty_lines = self.pop_empty_lines(element.location().start);
             let element_doc = self.comma_separated_item(arena, cache, element, list_size);
 
-            elements_doc = if elements_doc.is_empty() {
+            elements_doc = if is_empty {
+                is_empty = false;
                 element_doc
             } else if empty_lines {
                 // If there's empty lines before the list item we want to add an
@@ -4781,7 +4785,7 @@ where
         } => to_doc(value),
 
         BitArrayOption::Unit { value, .. } => cache
-            .value
+            .unit
             .append(arena, cache.open_paren)
             .append(arena, eco_format!("{value}"))
             .append(arena, cache.close_paren),
