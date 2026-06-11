@@ -135,6 +135,11 @@
 
 ### Formatter
 
+- Performance of the formatter has been improved.
+  `gleam format` has been measured to be up to 13% faster on projects like
+  `lustre`, with a 10% smaller peak memory footprint.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - When using the language server to extract a function from within an anonymous
