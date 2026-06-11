@@ -1,0 +1,16 @@
+[package]
+name = "pretty-arena"
+version = "1.0.0"
+authors = ["Louis Pilfold <louis@lpil.uk>", "Giacomo Cavalieri <info@giacomocavalieri.me>"]
+edition = "2024"
+license = "Apache-2.0"
+
+
+[dependencies]
+# Reference arena
+typed-arena = "2.0.2"
+
+unicode-segmentation.workspace = true
+ecow.workspace = true
+num-bigint.workspace = true
+im.workspace = true

@@ -48,7 +48,7 @@ use unicode_segmentation::UnicodeSegmentation;
 /// `"abc".to_doc()`.
 ///
 #[macro_export]
-macro_rules! docvec_arena {
+macro_rules! docvec {
     // When we're joining exactly 3 or 4 documents we use the specialised
     // `join3` and `join4` to be a bit faster!
     ($arena:expr, $first:expr, $second:expr, $third:expr) => {
@@ -687,9 +687,9 @@ impl<'string, 'doc> DocumentArena<'string, 'doc> {
         while let Some(second) = documents.next() {
             previous = if let Some(third) = documents.next() {
                 if let Some(fourth) = documents.next() {
-                    docvec_arena![self, previous, second, third, fourth]
+                    docvec![self, previous, second, third, fourth]
                 } else {
-                    docvec_arena![self, previous, second, third]
+                    docvec![self, previous, second, third]
                 }
             } else {
                 previous.append(self, second)
@@ -713,7 +713,7 @@ impl<'string, 'doc> DocumentArena<'string, 'doc> {
         };
 
         for next in elements {
-            previous = docvec_arena![self, previous, separator, next];
+            previous = docvec![self, previous, separator, next];
         }
 
         previous

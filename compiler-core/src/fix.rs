@@ -5,11 +5,11 @@ use crate::{
     Error, Result,
     format::{Formatter, FormatterCache, Intermediate},
     io::Utf8Writer,
-    pretty_arena::DocumentArena,
     warning::WarningEmitter,
 };
 use camino::Utf8Path;
 use ecow::EcoString;
+use pretty_arena::DocumentArena;
 
 pub fn parse_fix_and_format(src: &EcoString, path: &Utf8Path) -> Result<String> {
     // Parse
