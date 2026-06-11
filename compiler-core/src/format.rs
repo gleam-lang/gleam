@@ -483,8 +483,11 @@ impl<'a, 'doc> Formatter<'a> {
                 docvec_arena![arena, "@target(javascript)", cache.line, document]
             }
         };
-
-        comments.to_doc(arena).append(arena, document.group(arena))
+        let document = document.group(arena);
+        match comments {
+            Some(comments) => comments.append(arena, document),
+            None => document,
+        }
     }
 
     pub(crate) fn module(
@@ -1489,11 +1492,14 @@ impl<'a, 'doc> Formatter<'a> {
 
         let pattern = self.pattern(arena, cache, pattern);
 
-        let annotation = annotation.as_ref().map(|annotation| {
-            cache
-                .colon_space
-                .append(arena, self.type_ast(arena, cache, annotation))
-        });
+        let annotation = annotation
+            .as_ref()
+            .map(|annotation| {
+                cache
+                    .colon_space
+                    .append(arena, self.type_ast(arena, cache, annotation))
+            })
+            .unwrap_or(cache.nil);
 
         let doc = keyword
             .to_doc(arena)
@@ -3699,11 +3705,15 @@ impl<'a, 'doc> Formatter<'a> {
         } else {
             let assignments = use_.assignments.iter().map(|use_assignment| {
                 let pattern = self.pattern(arena, cache, &use_assignment.pattern);
-                let annotation = use_assignment.annotation.as_ref().map(|annotation| {
-                    cache
-                        .colon_space
-                        .append(arena, self.type_ast(arena, cache, annotation))
-                });
+                let annotation = use_assignment
+                    .annotation
+                    .as_ref()
+                    .map(|annotation| {
+                        cache
+                            .colon_space
+                            .append(arena, self.type_ast(arena, cache, annotation))
+                    })
+                    .unwrap_or(cache.nil);
 
                 pattern.append(arena, annotation).group(arena)
             });
