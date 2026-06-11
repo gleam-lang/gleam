@@ -50,7 +50,7 @@ use crate::{Result, io::Utf8Writer};
 /// `"abc".to_doc()`.
 ///
 #[macro_export]
-macro_rules! docvec_ref_arena {
+macro_rules! docvec_arena {
     () => {
         Document::Vec(Vec::new())
     };
