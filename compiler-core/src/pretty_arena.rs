@@ -707,8 +707,16 @@ impl<'string, 'doc> DocumentArena<'string, 'doc> {
             return self.nil();
         };
 
-        for next in documents {
-            previous = previous.append(self, next);
+        while let Some(second) = documents.next() {
+            previous = if let Some(third) = documents.next() {
+                if let Some(fourth) = documents.next() {
+                    docvec_arena![self, previous, second, third, fourth]
+                } else {
+                    docvec_arena![self, previous, second, third]
+                }
+            } else {
+                previous.append(self, second)
+            };
         }
 
         previous
