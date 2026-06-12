@@ -41,6 +41,10 @@
   `package.hexdocs.pm` rather than `hexdocs.pm/package`.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The error message when failing to decrypt the local Hex API key is now more
+  informative and helpful.
+  ([Moritz Böhme](https://github.com/MoritzBoehme))
+
 ### Language server
 
 - The "pattern match on value" code action can now be used to pattern match on
