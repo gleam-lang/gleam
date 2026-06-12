@@ -88,6 +88,24 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The language server now offers a code action to generate a missing type
+  definition when an unknown type is referenced. For example, if `Wibble`
+  is not defined:
+
+  ```gleam
+  pub fn wibble(argument: Wibble) { todo }
+  ```
+
+  The code action will generate:
+
+  ```gleam
+  pub type Wibble
+
+  pub fn wibble(argument: Wibble) { todo }
+  ```
+
+  ([Daniele Scaratti](https://github.com/lupodevelop))
+
 ### Formatter
 
 ### Bug fixes

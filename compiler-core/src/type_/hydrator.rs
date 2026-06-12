@@ -170,10 +170,12 @@ impl Hydrator {
                 } = environment
                     .get_type_constructor(&module, name)
                     .map_err(|error| {
+                        let parameter_names = generate_parameter_names(arguments);
                         convert_get_type_constructor_error(
                             error,
                             location,
                             module.as_ref().map(|(_, location)| *location),
+                            parameter_names,
                         )
                     })?
                     .clone();
@@ -317,6 +319,7 @@ impl Hydrator {
                             name: name.clone(),
                             location: *location,
                             hint,
+                            parameter_names: vec![],
                         })
                     }
                 }
@@ -370,4 +373,55 @@ impl Hydrator {
 pub struct CreatedTypeVariable {
     pub type_: Arc<Type>,
     pub usage_count: usize,
+}
+
+/// Names for the parameters of an unknown type, used to suggest a definition.
+/// Type variables keep their name; other parameters get a generated one.
+fn generate_parameter_names(arguments: &[TypeAst]) -> Vec<EcoString> {
+    // Reserve the type variable names so generated ones don't collide with them.
+    let mut used: HashSet<EcoString> = arguments
+        .iter()
+        .filter_map(|argument| match argument {
+            TypeAst::Var(TypeAstVar { name, .. }) => Some(name.clone()),
+            TypeAst::Constructor(_) | TypeAst::Fn(_) | TypeAst::Tuple(_) | TypeAst::Hole(_) => None,
+        })
+        .collect();
+
+    let mut next = 0;
+    arguments
+        .iter()
+        .map(|argument| match argument {
+            TypeAst::Var(TypeAstVar { name, .. }) => name.clone(),
+            TypeAst::Constructor(_) | TypeAst::Fn(_) | TypeAst::Tuple(_) | TypeAst::Hole(_) => {
+                loop {
+                    let candidate = type_parameter_name(next);
+                    next += 1;
+                    if used.insert(candidate.clone()) {
+                        break candidate;
+                    }
+                }
+            }
+        })
+        .collect()
+}
+
+/// `0 -> "a"`, `25 -> "z"`, `26 -> "aa"`, ...
+fn type_parameter_name(index: usize) -> EcoString {
+    let alphabet_length = 26;
+    let char_offset = 97;
+    let mut chars = vec![];
+    let mut rest = index;
+
+    loop {
+        let n = rest % alphabet_length;
+        rest /= alphabet_length;
+        chars.push((n as u8 + char_offset) as char);
+
+        if rest == 0 {
+            break;
+        }
+        rest -= 1;
+    }
+
+    chars.into_iter().rev().collect()
 }

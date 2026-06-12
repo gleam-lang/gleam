@@ -54,8 +54,8 @@ use super::{
         RemoveEchos, RemovePrivateOpaque, RemoveUnreachableCaseClauses, RemoveUnusedImports,
         UnwrapAnonymousFunction, UseLabelShorthandSyntax, WrapInAnonymousFunction, WrapInBlock,
         code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
-        code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
-        code_action_inexhaustive_let_to_case,
+        code_action_convert_unqualified_constructor_to_qualified, code_action_generate_type,
+        code_action_import_module, code_action_inexhaustive_let_to_case,
     },
     compiler::LspProjectCompiler,
     completer::Completer,
@@ -440,6 +440,7 @@ where
             actions.extend(RemoveUnusedImports::new(module, &lines, &params).code_actions());
             code_action_fix_names(module, &lines, &params, &this.error, &mut actions);
             code_action_import_module(module, &lines, &params, &this.error, &mut actions);
+            code_action_generate_type(module, &lines, &params, &this.error, &mut actions);
             code_action_add_missing_patterns(module, &lines, &params, &this.error, &mut actions);
             actions
                 .extend(RemoveUnreachableCaseClauses::new(module, &lines, &params).code_actions());

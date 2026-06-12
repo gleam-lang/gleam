@@ -1,0 +1,20 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\ntype Wibble {\n  Wibble(Wobble(Int, String))\n}\n"
+snapshot_kind: text
+---
+----- BEFORE ACTION
+
+type Wibble {
+  Wibble(Wobble(Int, String))
+         ↑                   
+}
+
+
+----- AFTER ACTION
+
+type Wobble(a, b)
+
+type Wibble {
+  Wibble(Wobble(Int, String))
+}
