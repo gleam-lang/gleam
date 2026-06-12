@@ -551,6 +551,165 @@ pub enum NestMode {
     /// wubble"
     Set,
 }
+macro_rules! const_str {
+    ($name:ident, $string:expr, $graphemes:expr) => {
+        pub const $name: $crate::Document<'static, 'static> = {
+            $crate::Document(&$crate::PrintableDocument::Str {
+                string: $string,
+                graphemes: $graphemes,
+            })
+        };
+    };
+}
+
+macro_rules! const_break {
+    ($name:ident, $broken:expr, $unbroken:expr) => {
+        pub const $name: $crate::Document<'static, 'static> = {
+            $crate::Document(&$crate::PrintableDocument::Break {
+                broken: $broken,
+                unbroken: $unbroken,
+                kind: $crate::BreakKind::Strict,
+            })
+        };
+    };
+}
+
+/// The empty document that renders as nothing.
+pub const EMPTY_DOCUMENT: Document<'static, 'static> = Document(&PrintableDocument::Empty);
+
+pub const LINE_DOCUMENT: Document<'static, 'static> = Document(&PrintableDocument::Line(1));
+
+pub const TWO_LINES_DOCUMENT: Document<'static, 'static> = Document(&PrintableDocument::Line(2));
+
+pub const FLEX_COMMA_DOCUMENT: Document<'static, 'static> = Document(&PrintableDocument::Break {
+    broken: ",",
+    unbroken: ", ",
+    kind: BreakKind::Flex,
+});
+
+const_str!(SPACE_DOCUMENT, " ", 1);
+const_str!(MODULE_COMMENT_DOCUMENT, "////", 4);
+const_str!(DOC_COMMENT_DOCUMENT, "///", 3);
+const_str!(CONST_SPACE_DOCUMENT, "const ", 5);
+const_str!(OPAQUE_TYPE_SPACE_DOCUMENT, "opaque type ", 12);
+const_str!(TYPE_SPACE_DOCUMENT, "type ", 5);
+const_str!(IMPORT_SPACE_DOCUMENT, "import ", 7);
+const_str!(SPACE_AS_SPACE_DOCUMENT, " as ", 4);
+const_str!(SPACE_EQUAL_SPACE_DOCUMENT, " = ", 3);
+const_str!(TODO_DOCUMENT, "todo", 4);
+const_str!(CONCAT_DOCUMENT, "<>", 2);
+const_str!(DOT_DOCUMENT, ".", 1);
+const_str!(DOT_DOT_DOCUMENT, "..", 2);
+const_str!(COLON_SPACE_DOCUMENT, ": ", 2);
+const_str!(OPEN_CURLY_DOCUMENT, "{", 1);
+const_str!(CLOSE_CURLY_DOCUMENT, "}", 1);
+const_str!(OPEN_SQUARE_DOCUMENT, "[", 1);
+const_str!(CLOSE_SQUARE_DOCUMENT, "]", 1);
+const_str!(OPEN_CLOSE_SQUARE_DOCUMENT, "[]", 2);
+const_str!(COMMENT_DOCUMENT, "//", 2);
+const_str!(ECHO_SPACE_DOCUMENT, "echo ", 5);
+const_str!(AS_DOCUMENT, "as", 2);
+const_str!(SPACE_AS_DOCUMENT, " as", 2);
+const_str!(OPEN_PAREN_DOCUMENT, "(", 1);
+const_str!(CLOSE_PAREN_DOCUMENT, ")", 1);
+const_str!(OPEN_CLOSE_PAREN_DOCUMENT, "()", 2);
+const_str!(USE_DOCUMENT, "use", 3);
+const_str!(USE_AND_ARROW_DOCUMENT, "use <-", 6);
+const_str!(LEFT_ARROW_DOCUMENT, "<-", 2);
+const_str!(MINUS_SPACE_DOCUMENT, "- ", 2);
+const_str!(EXCLAMATION_MARK_DOCUMENT, "!", 1);
+const_str!(ASSERT_SPACE_DOCUMENT, "assert ", 7);
+const_str!(PIPE_SPACE_DOCUMENT, "|> ", 3);
+const_str!(COLON_DOCUMENT, ":", 1);
+const_str!(HASHTAG_DOCUMENT, "#", 1);
+const_str!(SPACE_OPEN_CURLY_DOCUMENT, " {", 2);
+const_str!(EMPTY_TUPLE_DOCUMENT, "#()", 3);
+const_str!(OPEN_TUPLE_DOCUMENT, "#(", 2);
+const_str!(FN_DOCUMENT, "fn", 2);
+const_str!(FN_SPACE_DOCUMENT, "fn ", 3);
+const_str!(PANIC_DOCUMENT, "panic", 5);
+const_str!(IF_SPACE_DOCUMENT, "if ", 2);
+const_str!(SPACE_RIGHT_ARROW_DOCUMENT, " ->", 3);
+const_str!(SPACE_RIGHT_ARROW_SPACE_DOCUMENT, " -> ", 4);
+const_str!(LET_SPACE_DOCUMENT, "let ", 4);
+const_str!(LET_ASSERT_SPACE_DOCUMENT, "let assert ", 11);
+const_str!(SPACE_EQUAL_DOCUMENT, " =", 2);
+const_str!(UNDERSCORE_DOCUMENT, "_", 1);
+const_str!(DOUBLE_QUOTE_DOCUMENT, "\"", 1);
+const_str!(OPEN_PAREN_DOT_DOT_CLOSE_PAREN_DOCUMENT, "(..)", 4);
+const_str!(VERTICAL_BAR_SPACE_DOCUMENT, "| ", 2);
+const_str!(SPACE_CONCAT_SPACE_DOCUMENT, " <> ", 4);
+const_str!(SPACE_PLUS_SPACE_DOCUMENT, " + ", 3);
+const_str!(SPACE_MINUS_SPACE_DOCUMENT, " - ", 3);
+const_str!(SPACE_TIMES_SPACE_DOCUMENT, " * ", 3);
+const_str!(SPACE_MODULE_SPACE_DOCUMENT, " % ", 3);
+const_str!(SPACE_SLASH_SPACE_DOCUMENT, " / ", 3);
+const_str!(SPACE_CLOSE_CURLY_DOCUMENT, " }", 2);
+const_str!(OPEN_CURLY_SPACE_DOCUMENT, "{ ", 2);
+const_str!(CLOSE_BIT_ARRAY_DOCUMENT, ">>", 2);
+const_str!(ECHO_DOCUMENT, "echo", 4);
+const_str!(EMPTY_BIT_ARRAY_DOCUMENT, "<<>>", 4);
+const_str!(OPEN_BIT_ARRAY_DOCUMENT, "<<", 2);
+const_str!(RIGHT_ARROW_DOCUMENT, "->", 2);
+const_str!(PUB_SPACE_DOCUMENT, "pub ", 4);
+const_str!(SIZE_DOCUMENT, "size", 4);
+const_str!(BYTES_DOCUMENT, "bytes", 5);
+const_str!(BITS_DOCUMENT, "bits", 4);
+const_str!(INT_DOCUMENT, "int", 3);
+const_str!(FLOAT_DOCUMENT, "float", 5);
+const_str!(UTF8_DOCUMENT, "utf8", 4);
+const_str!(UTF16_DOCUMENT, "utf16", 5);
+const_str!(UTF32_DOCUMENT, "utf32", 5);
+const_str!(UTF8_CODEPOINT_DOCUMENT, "utf8_codepoint", 14);
+const_str!(UTF16_CODEPOINT_DOCUMENT, "utf16_codepoint", 15);
+const_str!(UTF32_CODEPOINT_DOCUMENT, "utf32_codepoint", 15);
+const_str!(SIGNED_DOCUMENT, "signed", 6);
+const_str!(UNSIGNED_DOCUMENT, "unsigned", 8);
+const_str!(BIG_DOCUMENT, "big", 3);
+const_str!(LITTLE_DOCUMENT, "little", 6);
+const_str!(NATIVE_DOCUMENT, "native", 6);
+const_str!(UNIT_DOCUMENT, "unit", 4);
+const_str!(AND_DOCUMENT, "&&", 2);
+const_str!(OR_DOCUMENT, "||", 2);
+const_str!(LT_INT_DOCUMENT, "<", 1);
+const_str!(LT_EQ_INT_DOCUMENT, "<=", 2);
+const_str!(LT_FLOAT_DOCUMENT, "<.", 2);
+const_str!(LT_EQ_FLOAT_DOCUMENT, "<=.", 3);
+const_str!(EQ_DOCUMENT, "==", 2);
+const_str!(NOT_EQ_DOCUMENT, "!=", 2);
+const_str!(GT_EQ_INT_DOCUMENT, ">=", 2);
+const_str!(GT_INT_DOCUMENT, ">", 1);
+const_str!(GT_EQ_FLOAT_DOCUMENT, ">=.", 3);
+const_str!(GT_FLOAT_DOCUMENT, ">.", 2);
+const_str!(ADD_INT_DOCUMENT, "+", 1);
+const_str!(ADD_FLOAT_DOCUMENT, "+.", 2);
+const_str!(SUB_INT_DOCUMENT, "-", 1);
+const_str!(SUB_FLOAT_DOCUMENT, "-.", 2);
+const_str!(MULT_INT_DOCUMENT, "*", 1);
+const_str!(MULT_FLOAT_DOCUMENT, "*.", 2);
+const_str!(DIV_INT_DOCUMENT, "/", 1);
+const_str!(DIV_FLOAT_DOCUMENT, "/.", 2);
+const_str!(REMAINDER_INT_DOCUMENT, "%", 1);
+const_str!(DEPRECATED_ATTRIBUTE_QUOTE_DOCUMENT, "@deprecated(\"", 13);
+const_str!(QUOTE_CLOSE_PAREN_DOCUMENT, "\")", 2);
+const_str!(EXTERNAL_ERLANG_QUOTE_DOCUMENT, "@external(erlang, \"", 19);
+const_str!(
+    EXTERNAL_JAVASCRIPT_QUOTE_DOCUMENT,
+    "@external(javascript, \"",
+    23
+);
+const_str!(QUOTE_COMMA_SPACE_QUOTE_DOCUMENT, "\", \"", 4);
+const_str!(INTERNAL_ATTRIBUTE_DOCUMENT, "@internal", 9);
+const_break!(EMPTY_BREAK_DOCUMENT, "", "");
+const_break!(BREAKABLE_SPACE_DOCUMENT, "", " ");
+const_break!(COMMA_BREAK_DOCUMENT, ",", ", ");
+const_break!(TRAILING_COMMA_BREAK_DOCUMENT, ",", "");
+const_break!(OPEN_CURLY_BREAK_DOCUMENT, "{", "{ ");
+const_break!(OPEN_SQUARE_BREAK_DOCUMENT, "[", "[");
+const_break!(OPEN_PAREN_BREAK_DOCUMENT, "(", "(");
+const_break!(OPEN_TUPLE_BREAK_DOCUMENT, "#(", "#(");
+const_break!(OPEN_BIT_ARRAY_BREAK_DOCUMENT, "<<", "<<");
+const_break!(CASE_BREAK_DOCUMENT, "case", "case ");
 
 /// A structure used to efficiently allocate documents that can then be pretty
 /// printed.
@@ -575,11 +734,6 @@ impl<'string, 'doc> DocumentArena<'string, 'doc> {
     pub fn new() -> Self {
         let documents = Arena::new();
         Self { documents }
-    }
-
-    /// Allocates the empty document.
-    pub fn nil(&'doc self) -> Document<'string, 'doc> {
-        Document(self.documents.alloc(PrintableDocument::Empty))
     }
 
     /// Allocates a document that is rendered as a single line.
@@ -684,7 +838,7 @@ impl<'string, 'doc> DocumentArena<'string, 'doc> {
     ) -> Document<'string, 'doc> {
         let mut documents = documents.into_iter().peekable();
         let Some(mut previous) = documents.next() else {
-            return self.nil();
+            return EMPTY_DOCUMENT;
         };
 
         while let Some(second) = documents.next() {
@@ -712,7 +866,7 @@ impl<'string, 'doc> DocumentArena<'string, 'doc> {
     ) -> Document<'string, 'doc> {
         let mut elements = elements.into_iter().peekable();
         let Some(mut previous) = elements.next() else {
-            return self.nil();
+            return EMPTY_DOCUMENT;
         };
 
         for next in elements {
