@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: Apache-2.0
-// SPDX-FileCopyrightText: 2024 The Gleam contributors
-
 function echo(value, message, file, line) {
   const grey = "\u001b[90m";
   const reset_color = "\u001b[39m";
