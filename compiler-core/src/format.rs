@@ -37,7 +37,7 @@ pub fn pretty(writer: &mut impl Utf8Writer, src: &EcoString, path: &Utf8Path) ->
     let arena = DocumentArena::new();
 
     Formatter::with_comments(&intermediate)
-        .module(&arena, &&parsed.module)
+        .module(&arena, &parsed.module)
         .pretty_print(80, writer)
         .map_err(|error| writer.convert_err(error))
 }
