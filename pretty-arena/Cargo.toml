@@ -8,10 +8,9 @@ authors = ["Louis Pilfold <louis@lpil.uk>", "Giacomo Cavalieri <info@giacomocava
 edition = "2024"
 license = "Apache-2.0"
 
-
 [dependencies]
-# Reference arena
-typed-arena = "2.0.2"
+# Reference based memory arena
+typed-arena = "2"
 
 unicode-segmentation.workspace = true
 ecow.workspace = true
