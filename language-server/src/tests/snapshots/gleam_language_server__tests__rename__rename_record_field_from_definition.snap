@@ -1,0 +1,30 @@
+---
+source: language-server/src/tests/rename.rs
+assertion_line: 2556
+expression: "\ntype Wibble {\n  Wibble(wibble: Int)\n}\n\npub fn main() {\n  let value = Wibble(wibble: 1)\n  value.wibble\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+type Wibble {
+  Wibble(wibble: Int)
+         ↑▔▔▔▔▔      
+}
+
+pub fn main() {
+  let value = Wibble(wibble: 1)
+  value.wibble
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+type Wibble {
+  Wibble(wobble: Int)
+}
+
+pub fn main() {
+  let value = Wibble(wobble: 1)
+  value.wobble
+}

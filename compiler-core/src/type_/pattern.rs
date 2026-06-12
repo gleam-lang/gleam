@@ -1236,6 +1236,22 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             constructor_field_map,
                         );
 
+                        if let Some(type_name) = return_.named_type_name() {
+                            for argument in &pattern_arguments {
+                                if let Some(label) = &argument.label
+                                    && let Some(label_location) = argument.label_location()
+                                    && !argument.is_implicit()
+                                {
+                                    self.environment.references.register_label_reference(
+                                        type_name.clone(),
+                                        label.clone(),
+                                        label_location,
+                                        argument.label_syntax(),
+                                    );
+                                }
+                            }
+                        }
+
                         Pattern::Constructor {
                             location,
                             name_location,

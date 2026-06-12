@@ -1,0 +1,18 @@
+---
+source: language-server/src/tests/definition.rs
+assertion_line: 1033
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+pub type Person {
+  Person(name: String, age: Int)
+         ↑                      
+}
+
+----- Jumped to `src/app.gleam`
+
+pub type Person {
+  Person(name: String, age: Int)
+         ↑▔▔▔                   
+}

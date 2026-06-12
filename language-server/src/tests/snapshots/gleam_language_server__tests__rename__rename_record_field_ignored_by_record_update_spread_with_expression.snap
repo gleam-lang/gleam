@@ -1,0 +1,35 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\ntype Wibble {\n  Wibble(wibble: Int, wobble: Int)\n}\n\npub fn make() {\n  Wibble(wibble: 1, wobble: 2)\n}\n\npub fn main() {\n  Wibble(..make(), wibble: 2)\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+                      ↑▔▔▔▔▔      
+}
+
+pub fn make() {
+  Wibble(wibble: 1, wobble: 2)
+}
+
+pub fn main() {
+  Wibble(..make(), wibble: 2)
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+type Wibble {
+  Wibble(wibble: Int, wabble: Int)
+}
+
+pub fn make() {
+  Wibble(wibble: 1, wabble: 2)
+}
+
+pub fn main() {
+  Wibble(..make(), wibble: 2)
+}

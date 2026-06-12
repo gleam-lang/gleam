@@ -20,7 +20,7 @@ use crate::{
     build::Target,
     exhaustiveness::{self, CompileCaseResult, CompiledCase, Reachability},
     parse::{LiteralFloatValue, PatternPosition},
-    reference::ReferenceKind,
+    reference::{LabelSyntax, ReferenceKind},
 };
 use ecow::eco_format;
 use hexpm::version::{LowestVersion, Version};
@@ -1418,21 +1418,33 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         match (record_access, module_access) {
             // Record access is valid
             (Ok(record_access), _) => {
-                // If this is actually record access and not module access, and we didn't register
-                // the reference earlier, we register it now.
-                if let TypedExpr::RecordAccess { record, .. } = &record_access
-                    && let TypedExpr::Var {
+                if let TypedExpr::RecordAccess { record, label, .. } = &record_access {
+                    // The programmer wrote `record.label`, so register a
+                    // reference to the field for the language server.
+                    if let Some(type_name) = record.type_().named_type_name() {
+                        self.environment.references.register_label_reference(
+                            type_name,
+                            label.clone(),
+                            label_location,
+                            LabelSyntax::Longhand,
+                        );
+                    }
+                    // If this is actually record access and not module access,
+                    // and we didn't register the variable reference earlier, we
+                    // register it now.
+                    if let TypedExpr::Var {
                         location,
                         constructor,
                         name,
                     } = record.as_ref()
-                {
-                    self.register_value_constructor_reference(
-                        name,
-                        &constructor.variant,
-                        *location,
-                        ReferenceKind::Unqualified,
-                    )
+                    {
+                        self.register_value_constructor_reference(
+                            name,
+                            &constructor.variant,
+                            *location,
+                            ReferenceKind::Unqualified,
+                        )
+                    }
                 }
                 record_access
             }
@@ -3266,6 +3278,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     self.problems.error(convert_unify_error(error, *location));
                 };
 
+                if let Some(type_name) = return_type.named_type_name() {
+                    self.environment.references.register_label_reference(
+                        type_name,
+                        label.clone(),
+                        argument.label_location(),
+                        argument.label_syntax(),
+                    );
+                }
+
                 explicit_arguments.push((
                     index,
                     CallArg {
@@ -4087,6 +4108,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                 let mut final_arguments = base_arguments;
                 for argument in arguments {
+                    let syntax = argument.label_syntax();
+                    let label_location = argument.label_location();
                     if argument.uses_label_shorthand() {
                         self.track_feature_usage(
                             FeatureKind::LabelShorthandSyntax,
@@ -4123,6 +4146,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         self.problems
                             .error(convert_unify_error(error, typed_value.location()));
                         return self.new_invalid_constant(location);
+                    }
+
+                    if let Some(type_name) = expected_type.named_type_name() {
+                        self.environment.references.register_label_reference(
+                            type_name,
+                            label.clone(),
+                            label_location,
+                            syntax,
+                        );
                     }
 
                     let _ = update_argument_indices.insert(index as usize);
@@ -4459,6 +4491,41 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             })
             .collect_vec();
 
+        // Register a reference to each labelled field so the language server can
+        // offer go-to-definition, find-references and rename on record fields. We
+        // do this before adding back the ignored arguments below, as those are
+        // synthetic placeholders without a real value: their labels are
+        // registered using the locations captured before the values were
+        // discarded.
+        if let Some(type_name) = expected_return.named_type_name() {
+            for argument in &typed_arguments {
+                if let Some(label) = &argument.label
+                    && let Some(label_location) = argument.label_location()
+                {
+                    self.environment.references.register_label_reference(
+                        type_name.clone(),
+                        label.clone(),
+                        label_location,
+                        argument.label_syntax(),
+                    );
+                }
+            }
+
+            for argument in &ignored_labelled_arguments {
+                if let Some(label) = &argument.label
+                    && let Some(label_location) = argument.label_location
+                    && argument.implicit.is_none()
+                {
+                    self.environment.references.register_label_reference(
+                        type_name.clone(),
+                        label.clone(),
+                        label_location,
+                        argument.syntax,
+                    );
+                }
+            }
+        }
+
         // Now if we had supplied less arguments than required and some of those
         // were labelled, in the previous step we would have got rid of those
         // _before_ typing.
@@ -4471,6 +4538,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             label,
             location,
             implicit,
+            ..
         } in ignored_labelled_arguments
         {
             typed_arguments.push(CallArg {
@@ -4933,6 +5001,43 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             })
             .collect();
 
+        // Register a reference to each labelled field so the language server can
+        // offer go-to-definition, find-references and rename on record fields. We
+        // do this before adding back the ignored arguments below, as those are
+        // synthetic placeholders without a real value: their labels are
+        // registered using the locations captured before the values were
+        // discarded.
+        if fun.is_record_constructor_function()
+            && let Some(type_name) = return_type.named_type_name()
+        {
+            for argument in &typed_arguments {
+                if let Some(label) = &argument.label
+                    && let Some(label_location) = argument.label_location()
+                {
+                    self.environment.references.register_label_reference(
+                        type_name.clone(),
+                        label.clone(),
+                        label_location,
+                        argument.label_syntax(),
+                    );
+                }
+            }
+
+            for argument in &ignored_labelled_arguments {
+                if let Some(label) = &argument.label
+                    && let Some(label_location) = argument.label_location
+                    && argument.implicit.is_none()
+                {
+                    self.environment.references.register_label_reference(
+                        type_name.clone(),
+                        label.clone(),
+                        label_location,
+                        argument.syntax,
+                    );
+                }
+            }
+        }
+
         // Now if we had supplied less arguments than required and some of those
         // were labelled, in the previous step we would have got rid of those
         // _before_ typing.
@@ -4945,6 +5050,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             label,
             location,
             implicit,
+            ..
         } in ignored_labelled_arguments
         {
             typed_arguments.push(CallArg {
@@ -5430,7 +5536,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn fault_tolerant_match_function_type<A>(
+    fn fault_tolerant_match_function_type<A: HasLocation>(
         &mut self,
         has_labelled_arity_error: bool,
         call_kind: CallKind,
@@ -5514,6 +5620,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         label: argument.label.clone(),
                         location: argument.location(),
                         implicit: argument.implicit,
+                        label_location: argument.label_location(),
+                        syntax: argument.label_syntax(),
                     })
                     .collect_vec();
 
@@ -5545,6 +5653,13 @@ struct IgnoredLabelledArgument {
     label: Option<EcoString>,
     location: SrcSpan,
     implicit: Option<ImplicitCallArgOrigin>,
+    /// The location of the label, captured before the argument's value is
+    /// discarded: the synthetic replacement value spans the whole argument,
+    /// so it can no longer tell the label and the value apart.
+    label_location: Option<SrcSpan>,
+    /// The syntax of the label, captured before the argument's value is
+    /// discarded for the same reason as `label_location`.
+    syntax: LabelSyntax,
 }
 
 /// Given a constants, this will change its type into the given one, turning

@@ -174,10 +174,15 @@ impl TypedConstant {
                 .find_map(|element| element.find_node(byte_index))
                 .or_else(|| tail.as_deref().and_then(|tail| tail.find_node(byte_index)))
                 .unwrap_or(Located::Constant(self)),
-            Constant::Record { arguments, .. } => arguments
+            Constant::Record {
+                arguments,
+                type_,
+                name,
+                ..
+            } => arguments
                 .iter()
                 .flatten()
-                .find_map(|argument| argument.find_node(byte_index))
+                .find_map(|argument| argument.find_node(byte_index, type_, name))
                 .unwrap_or(Located::Constant(self)),
             Constant::RecordUpdate {
                 record, arguments, ..

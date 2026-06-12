@@ -2824,3 +2824,285 @@ pub fn main() -> wibble.Wibble {
 ",
     );
 }
+
+#[test]
+fn rename_record_field_from_access() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let value = Wibble(wibble: 1)
+  value.wibble
+}
+",
+        "wobble",
+        find_position_of("value.wibble").under_char('i')
+    );
+}
+
+#[test]
+fn rename_record_field_from_constructor_label() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let value = Wibble(wibble: 1)
+  value.wibble
+}
+",
+        "wobble",
+        find_position_of("wibble: 1").under_char('w')
+    );
+}
+
+#[test]
+fn rename_record_field_from_pattern_label() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main(w: Wibble) {
+  case w {
+    Wibble(wibble: value) -> value
+  }
+}
+",
+        "wobble",
+        find_position_of("wibble: value").under_char('w')
+    );
+}
+
+#[test]
+fn rename_record_field_expands_label_shorthand() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let wibble = 1
+  let value = Wibble(wibble:)
+  value.wibble
+}
+",
+        "wobble",
+        find_position_of("value.wibble").under_char('i')
+    );
+}
+
+#[test]
+fn rename_record_field_in_record_update() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main(w: Wibble) {
+  Wibble(..w, wibble: 2)
+}
+",
+        "wabble",
+        find_position_of("wibble: 2").under_char('w')
+    );
+}
+
+#[test]
+fn rename_record_field_across_modules() {
+    assert_rename!(
+        ("wibble", "pub type Wibble {\n  Wibble(wibble: Int)\n}"),
+        "
+import wibble
+
+pub fn main() {
+  let value = wibble.Wibble(wibble: 1)
+  value.wibble
+}
+",
+        "wobble",
+        find_position_of("value.wibble").under_char('i')
+    );
+}
+
+#[test]
+fn rename_record_field_in_module_not_importing_the_type_module() {
+    assert_rename!(
+        TestProject::for_source(
+            "
+import wobble
+
+pub fn main() {
+  wobble.make().wibble
+}
+"
+        )
+        .add_module("wibble", "pub type Wibble {\n  Wibble(wibble: Int)\n}")
+        .add_module(
+            "wobble",
+            "import wibble\n\npub fn make() -> wibble.Wibble {\n  wibble.Wibble(wibble: 1)\n}"
+        ),
+        "wabble",
+        find_position_of("().wibble").under_char('b')
+    );
+}
+
+#[test]
+fn rename_record_field_with_invalid_name() {
+    assert_rename_error!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let value = Wibble(wibble: 1)
+  value.wibble
+}
+",
+        "Wobble",
+        find_position_of("value.wibble").under_char('i')
+    );
+}
+
+#[test]
+fn rename_record_field_from_definition() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let value = Wibble(wibble: 1)
+  value.wibble
+}
+",
+        "wobble",
+        find_position_of("wibble: Int").under_char('w')
+    );
+}
+
+#[test]
+fn rename_record_field_renames_labelled_arguments_of_call_with_incorrect_arity() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main() {
+  Wibble(wibble: 1)
+}
+",
+        "wabble",
+        find_position_of("wibble: Int").under_char('w')
+    );
+}
+
+#[test]
+fn rename_record_field_ignored_by_record_update_spread() {
+    // https://github.com/gleam-lang/gleam/pull/5533#pullrequestreview-4475156690
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main(w: Wibble) {
+  Wibble(..w, wibble: 2)
+}
+",
+        "wabble",
+        find_position_of("wobble: Int").under_char('w')
+    );
+}
+
+#[test]
+fn rename_record_field_ignored_by_record_update_spread_with_expression() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn make() {
+  Wibble(wibble: 1, wobble: 2)
+}
+
+pub fn main() {
+  Wibble(..make(), wibble: 2)
+}
+",
+        "wabble",
+        find_position_of("wobble: Int").under_char('w')
+    );
+}
+
+#[test]
+fn rename_record_field_ignored_by_pattern_spread() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main(w: Wibble) {
+  case w {
+    Wibble(wibble: a, ..) -> a
+  }
+}
+",
+        "wabble",
+        find_position_of("wobble: Int").under_char('w')
+    );
+}
+
+#[test]
+fn rename_record_field_ignored_by_bare_pattern_spread() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main(w: Wibble) {
+  case w {
+    Wibble(..) -> 1
+  }
+}
+",
+        "wabble",
+        find_position_of("wibble: Int").under_char('w')
+    );
+}
+
+#[test]
+fn rename_record_field_shared_between_variants() {
+    assert_rename!(
+        "
+pub type Shape {
+  Square(colour: Int, width: Int)
+  Circle(colour: Int, radius: Int)
+}
+
+pub fn main() {
+  let shape = Square(colour: 1, width: 10)
+  case shape {
+    Circle(colour:, ..) -> colour
+    Square(..) -> shape.colour
+  }
+}
+",
+        "shade",
+        find_position_of("colour: Int, width").under_char('c')
+    );
+}

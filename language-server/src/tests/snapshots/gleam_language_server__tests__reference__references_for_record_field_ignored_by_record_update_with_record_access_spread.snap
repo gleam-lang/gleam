@@ -1,0 +1,18 @@
+---
+source: language-server/src/tests/reference.rs
+expression: "\ntype Container {\n  Container(inner: Wibble)\n}\n\ntype Wibble {\n  Wibble(wibble: Int, wobble: Int)\n}\n\npub fn main(c: Container) {\n  Wibble(..c.inner, wibble: 2)\n}\n"
+---
+-- app.gleam
+
+type Container {
+  Container(inner: Wibble)
+}
+
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+                      ↑▔▔▔▔▔      
+}
+
+pub fn main(c: Container) {
+  Wibble(..c.inner, wibble: 2)
+}

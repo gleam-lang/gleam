@@ -1,0 +1,32 @@
+---
+source: language-server/src/tests/rename.rs
+assertion_line: 2466
+expression: "\ntype Wibble {\n  Wibble(wibble: Int)\n}\n\npub fn main(w: Wibble) {\n  case w {\n    Wibble(wibble: value) -> value\n  }\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main(w: Wibble) {
+  case w {
+    Wibble(wibble: value) -> value
+           ↑▔▔▔▔▔                 
+  }
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+type Wibble {
+  Wibble(wobble: Int)
+}
+
+pub fn main(w: Wibble) {
+  case w {
+    Wibble(wobble: value) -> value
+  }
+}

@@ -9,7 +9,7 @@ type Wibble {
 
 pub fn main() {
   let Wibble(wibble: _, wobble: _) = todo
-             ▔▔▔▔↑▔▔▔▔                   
+             ▔▔▔▔↑▔                      
   todo
 }
 

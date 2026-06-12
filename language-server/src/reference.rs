@@ -13,6 +13,7 @@ use gleam_core::{
         ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
     },
     build::Located,
+    reference::RecordLabel,
     type_::{
         ModuleInterface, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant,
         error::{Named, VariableOrigin},
@@ -52,6 +53,12 @@ pub enum Referenced {
     TypeVariable {
         location: SrcSpan,
         name: EcoString,
+    },
+    Label {
+        type_module: EcoString,
+        type_name: EcoString,
+        label: EcoString,
+        location: SrcSpan,
     },
 }
 
@@ -372,6 +379,40 @@ pub fn reference_for_ast_node(
             target_kind: RenameTarget::Qualified,
         }),
 
+        Located::RecordLabelUsage {
+            record_type,
+            label,
+            location,
+            ..
+        }
+        | Located::RecordAccessLabel {
+            record_type,
+            label,
+            location,
+            ..
+        } => record_type
+            .named_type_name()
+            .map(|(type_module, type_name)| Referenced::Label {
+                type_module,
+                type_name,
+                label: label.clone(),
+                location,
+            }),
+
+        // A label at its definition in a custom type, which lives in the
+        // current module.
+        Located::RecordLabelDefinition {
+            type_name,
+            label,
+            location,
+            ..
+        } => Some(Referenced::Label {
+            type_module: current_module.clone(),
+            type_name,
+            label: label.clone(),
+            location,
+        }),
+
         Located::Pattern(_)
         | Located::ClauseGuard(_)
         | Located::PatternSpread { .. }
@@ -379,7 +420,7 @@ pub fn reference_for_ast_node(
         | Located::Expression { .. }
         | Located::FunctionBody(_)
         | Located::UnqualifiedImport(_)
-        | Located::Label(..)
+        | Located::Label { .. }
         | Located::Constant(_)
         | Located::ModuleFunction(_)
         | Located::ModuleTypeAlias(_) => None,
@@ -432,6 +473,76 @@ pub fn find_module_references_in_module(
         &mut reference_locations,
         layer,
     );
+
+    reference_locations
+}
+
+pub fn find_label_references(
+    type_module: EcoString,
+    type_name: EcoString,
+    label: EcoString,
+    modules: &im::HashMap<EcoString, ModuleInterface>,
+    sources: &HashMap<EcoString, ModuleSourceInformation>,
+) -> Vec<Location> {
+    let mut reference_locations = Vec::new();
+
+    // Unlike values and types, a label can be referenced in a module that
+    // doesn't import the type's defining module: a record value can be
+    // obtained transitively through another module and have its fields
+    // accessed. So every module has to be searched.
+    for module in modules.values() {
+        let Some(source_information) = sources.get(&module.name) else {
+            continue;
+        };
+        reference_locations.extend(find_label_references_in_module(
+            type_module.clone(),
+            type_name.clone(),
+            label.clone(),
+            module,
+            source_information,
+        ));
+    }
+
+    reference_locations
+}
+
+pub fn find_label_references_in_module(
+    type_module: EcoString,
+    type_name: EcoString,
+    label: EcoString,
+    module: &ModuleInterface,
+    source_information: &ModuleSourceInformation,
+) -> Vec<Location> {
+    let mut reference_locations = Vec::new();
+
+    let Some(uri) = url_from_path(source_information.path.as_str()) else {
+        return reference_locations;
+    };
+
+    let key = RecordLabel {
+        type_module,
+        type_name,
+        label,
+    };
+    let definitions = module.references.label_definitions.get(&key);
+    let references = module.references.label_references.get(&key);
+    let locations = definitions
+        .into_iter()
+        .flatten()
+        .map(|definition| definition.location)
+        .chain(
+            references
+                .into_iter()
+                .flatten()
+                .map(|reference| reference.location),
+        );
+
+    for location in locations {
+        reference_locations.push(Location {
+            uri: uri.clone(),
+            range: src_span_to_lsp_range(location, &source_information.line_numbers),
+        });
+    }
 
     reference_locations
 }

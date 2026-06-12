@@ -65,10 +65,13 @@ use super::{
     files::FileSystemProxy,
     progress::ProgressReporter,
     reference::{
-        FindVariableReferences, Referenced, VariableReferenceKind, find_module_references,
-        reference_for_ast_node,
+        FindVariableReferences, Referenced, VariableReferenceKind, find_label_references,
+        find_label_references_in_module, find_module_references, reference_for_ast_node,
     },
-    rename::{RenameOutcome, RenameTarget, Renamed, rename_local_variable, rename_module_entity},
+    rename::{
+        RenameOutcome, RenameTarget, Renamed, rename_label, rename_local_variable,
+        rename_module_entity,
+    },
     signature_help, src_span_to_lsp_range,
 };
 
@@ -407,7 +410,22 @@ where
 
                 Located::Annotation { .. } => Some(completer.completion_types()),
 
-                Located::Label(_, _) => None,
+                Located::Label { .. }
+                | Located::RecordLabelDefinition { .. }
+                | Located::RecordLabelUsage { .. } => None,
+
+                Located::RecordAccessLabel {
+                    field_type,
+                    record_type,
+                    ..
+                } => {
+                    completer.expected_type = Some(field_type.clone());
+                    let mut completions = vec![];
+                    completions.append(&mut completer.completion_values());
+                    completions
+                        .append(&mut completer.completion_field_accessors(record_type.clone()));
+                    Some(completions)
+                }
 
                 Located::ModuleName {
                     layer: ast::Layer::Type,
@@ -855,6 +873,16 @@ where
 
                 Some(Referenced::TypeVariable { location, name: _ }) => success_response(location),
 
+                // For a label written using the shorthand syntax the location
+                // spans the whole `label:`, so we trim it down to just the
+                // label.
+                Some(Referenced::Label {
+                    location, label, ..
+                }) => success_response(SrcSpan {
+                    start: location.start,
+                    end: location.start + label.len() as u32,
+                }),
+
                 _ => None,
             })
         })
@@ -955,6 +983,21 @@ where
                 Some(Referenced::TypeVariable { location, name }) => {
                     rename_type_variable(module, &lines, &params, location, name).into_result()
                 }
+
+                Some(Referenced::Label {
+                    type_module,
+                    type_name,
+                    label,
+                    ..
+                }) => rename_label(
+                    &params,
+                    &type_module,
+                    &type_name,
+                    &label,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
+                )
+                .into_result(),
 
                 None => RenameOutcome::NoRenames.into_result(),
             })
@@ -1058,6 +1101,31 @@ where
                         source_module,
                         source_information,
                         ast::Layer::Type,
+                    ))
+                }
+            },
+            Some(Referenced::Label {
+                type_module,
+                type_name,
+                label,
+                ..
+            }) => match search_scope {
+                FindReferencesSearchScope::AllModules => Some(find_label_references(
+                    type_module,
+                    type_name,
+                    label,
+                    self.compiler.project_compiler.get_importable_modules(),
+                    &self.compiler.sources,
+                )),
+                FindReferencesSearchScope::CurrentModule => {
+                    let source_information = self.compiler.get_source(&source_module.name)?;
+                    let source_module = self.compiler.get_module_interface(&source_module.name)?;
+                    Some(find_label_references_in_module(
+                        type_module,
+                        type_name,
+                        label,
+                        source_module,
+                        source_information,
                     ))
                 }
             },
@@ -1286,9 +1354,32 @@ Unused labelled fields:
                         module,
                     ))
                 }
-                Located::Label(location, type_) => {
-                    Some(hover_for_label(location, type_, lines, module))
+                Located::Label {
+                    location,
+                    field_type,
                 }
+                | Located::RecordLabelDefinition {
+                    location,
+                    field_type,
+                    ..
+                }
+                | Located::RecordLabelUsage {
+                    location,
+                    field_type,
+                    ..
+                } => Some(hover_for_label(location, field_type, None, lines, module)),
+                Located::RecordAccessLabel {
+                    location,
+                    field_type,
+                    documentation,
+                    ..
+                } => Some(hover_for_label(
+                    location,
+                    field_type,
+                    documentation.as_ref(),
+                    lines,
+                    module,
+                )),
                 Located::ModuleName {
                     location,
                     module_name,
@@ -1671,11 +1762,15 @@ fn hover_for_annotation(
 fn hover_for_label(
     location: SrcSpan,
     type_: Arc<Type>,
+    documentation: Option<&EcoString>,
     line_numbers: LineNumbers,
     module: &Module,
 ) -> Hover {
     let type_ = Printer::new(&module.ast.names).print_type(&type_);
-    let contents = format!("```gleam\n{type_}\n```");
+    let contents = match documentation {
+        Some(documentation) => format!("```gleam\n{type_}\n```\n{documentation}"),
+        None => format!("```gleam\n{type_}\n```"),
+    };
     Hover {
         contents: Contents::MarkedString(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(location, &line_numbers)),

@@ -177,6 +177,50 @@ pub enum ModuleNameReference {
 
 pub type ReferenceMap = HashMap<(EcoString, EcoString), Vec<Reference>>;
 
+/// A use of a record field label: a labelled argument in a record constructor
+/// call or pattern, a record update argument, or a `record.field` access.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct LabelReference {
+    /// The location of the label. For a shorthand (`label:`) this spans the
+    /// whole `label:`, mirroring how variable references record label
+    /// shorthands. For everything else it is just the label itself.
+    pub location: SrcSpan,
+    pub syntax: LabelSyntax,
+}
+
+/// The syntax used to write a record field label where it is used.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum LabelSyntax {
+    /// The label is written out on its own, as in `Wibble(label: value)` or
+    /// `record.label`, so renaming it is a simple replacement.
+    Longhand,
+    /// The label shorthand syntax (`label:`), which stands for both the label
+    /// and a variable with the same name. Renaming the field then has to
+    /// expand it so the value keeps its name: `wibble:` becomes
+    /// `wobble: wibble`.
+    Shorthand,
+}
+
+/// The location at which a record field label is defined in one of the
+/// variants of a custom type.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct LabelDefinition {
+    pub location: SrcSpan,
+    /// The name of the variant this label is defined in.
+    pub variant: EcoString,
+}
+
+/// Identifies a record field label within a custom type, used to look up the
+/// references to that label.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub struct RecordLabel {
+    /// The module the type this label belongs to is defined in.
+    pub type_module: EcoString,
+    /// The name of the type this label belongs to.
+    pub type_name: EcoString,
+    pub label: EcoString,
+}
+
 #[derive(Debug, Clone)]
 pub struct EntityInformation {
     pub origin: SrcSpan,
@@ -248,6 +292,12 @@ pub struct ReferenceTracker {
     /// The locations of the references to each imported module, used for
     /// renaming and go-to reference.
     pub module_references: HashMap<EcoString, Vec<ModuleNameReference>>,
+    /// The locations of the references to each record field label in this
+    /// module, used for renaming and go-to reference.
+    pub label_references: HashMap<RecordLabel, Vec<LabelReference>>,
+    /// The locations at which each record field label is defined, one per
+    /// variant that defines it, used for renaming and go-to definition.
+    pub label_definitions: HashMap<RecordLabel, Vec<LabelDefinition>>,
 
     /// This map is used to access the nodes of modules that were not
     /// aliased, given their name.
@@ -607,6 +657,51 @@ impl ReferenceTracker {
             .entry(module)
             .or_default()
             .push(reference);
+    }
+
+    /// Registers a use of a record field label.
+    ///
+    /// `type_` is the `(module, name)` of the type the label belongs to, as
+    /// returned by [`Type::named_type_name`].
+    pub fn register_label_reference(
+        &mut self,
+        type_: (EcoString, EcoString),
+        label: EcoString,
+        location: SrcSpan,
+        syntax: LabelSyntax,
+    ) {
+        let (type_module, type_name) = type_;
+        self.label_references
+            .entry(RecordLabel {
+                type_module,
+                type_name,
+                label,
+            })
+            .or_default()
+            .push(LabelReference { location, syntax });
+    }
+
+    /// Registers the definition of a record field label in one of the
+    /// variants of a custom type.
+    ///
+    /// `type_` is the `(module, name)` of the type being defined, as returned
+    /// by [`Type::named_type_name`].
+    pub fn register_label_definition(
+        &mut self,
+        type_: (EcoString, EcoString),
+        label: EcoString,
+        location: SrcSpan,
+        variant: EcoString,
+    ) {
+        let (type_module, type_name) = type_;
+        self.label_definitions
+            .entry(RecordLabel {
+                type_module,
+                type_name,
+                label,
+            })
+            .or_default()
+            .push(LabelDefinition { location, variant });
     }
 
     /// Like `register_type_reference`, but doesn't modify `self.type_references`.

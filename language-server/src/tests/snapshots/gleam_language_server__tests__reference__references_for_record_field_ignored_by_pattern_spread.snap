@@ -1,0 +1,16 @@
+---
+source: language-server/src/tests/reference.rs
+expression: "\ntype Wibble {\n  Wibble(wibble: Int, wobble: Int)\n}\n\npub fn main(w: Wibble) {\n  case w {\n    Wibble(wibble: a, ..) -> a\n  }\n}\n"
+---
+-- app.gleam
+
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+                      ↑▔▔▔▔▔      
+}
+
+pub fn main(w: Wibble) {
+  case w {
+    Wibble(wibble: a, ..) -> a
+  }
+}

@@ -1,0 +1,15 @@
+---
+source: language-server/src/tests/reference.rs
+expression: "\ntype Wibble {\n  Wibble(wibble: Int, wobble: Int)\n}\n\nconst base = Wibble(wibble: 1, wobble: 2)\n\nconst updated = Wibble(..base, wibble: 3)\n"
+---
+-- app.gleam
+
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+                      ↑▔▔▔▔▔      
+}
+
+const base = Wibble(wibble: 1, wobble: 2)
+                               ▔▔▔▔▔▔    
+
+const updated = Wibble(..base, wibble: 3)

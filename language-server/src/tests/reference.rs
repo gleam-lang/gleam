@@ -1217,3 +1217,144 @@ const wobble = todo as [wibble]
         find_position_of("wibble")
     );
 }
+
+#[test]
+fn references_for_record_field() {
+    assert_references!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let value = Wibble(wibble: 1)
+  value.wibble
+}
+",
+        find_position_of("value.wibble").under_char('i')
+    );
+}
+
+#[test]
+fn references_for_record_field_in_module_not_importing_the_type_module() {
+    assert_references!(
+        TestProject::for_source(
+            "
+import wobble
+
+pub fn main() {
+  wobble.make().wibble
+}
+"
+        )
+        .add_module("wibble", "pub type Wibble {\n  Wibble(wibble: Int)\n}")
+        .add_module(
+            "wobble",
+            "import wibble\n\npub fn make() -> wibble.Wibble {\n  wibble.Wibble(wibble: 1)\n}"
+        ),
+        find_position_of("().wibble").under_char('b')
+    );
+}
+
+#[test]
+fn references_for_record_field_ignored_by_record_update_spread() {
+    // https://github.com/gleam-lang/gleam/pull/5533#pullrequestreview-4475156690
+    assert_references!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main(w: Wibble) {
+  Wibble(..w, wibble: 2)
+}
+",
+        find_position_of("wobble: Int").under_char('w')
+    );
+}
+
+#[test]
+fn references_for_record_field_ignored_by_constant_record_update_spread() {
+    assert_references!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+const base = Wibble(wibble: 1, wobble: 2)
+
+const updated = Wibble(..base, wibble: 3)
+",
+        find_position_of("wobble: Int").under_char('w')
+    );
+}
+
+#[test]
+fn references_for_record_field_ignored_by_record_update_with_record_access_spread() {
+    assert_references!(
+        "
+type Container {
+  Container(inner: Wibble)
+}
+
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main(c: Container) {
+  Wibble(..c.inner, wibble: 2)
+}
+",
+        find_position_of("wobble: Int").under_char('w')
+    );
+}
+
+#[test]
+fn references_for_record_field_ignored_by_nested_record_update_spread() {
+    assert_references!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main(w: Wibble) {
+  Wibble(..Wibble(..w, wibble: 1), wobble: 2)
+}
+",
+        find_position_of("wibble: Int").under_char('w')
+    );
+}
+
+#[test]
+fn references_for_record_field_ignored_by_pipe_into_constructor() {
+    assert_references!(
+        "
+type Wibble {
+  Wibble(name: Int, age: Int)
+}
+
+pub fn main() {
+  1 |> Wibble(age: 2)
+}
+",
+        find_position_of("name: Int").under_char('n')
+    );
+}
+
+#[test]
+fn references_for_record_field_ignored_by_pattern_spread() {
+    assert_references!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main(w: Wibble) {
+  case w {
+    Wibble(wibble: a, ..) -> a
+  }
+}
+",
+        find_position_of("wobble: Int").under_char('w')
+    );
+}

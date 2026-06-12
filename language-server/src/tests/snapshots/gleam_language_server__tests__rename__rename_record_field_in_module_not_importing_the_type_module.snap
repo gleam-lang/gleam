@@ -1,0 +1,48 @@
+---
+source: language-server/src/tests/rename.rs
+assertion_line: 2718
+expression: "\nimport wobble\n\npub fn main() {\n  wobble.make().wibble\n}\n"
+---
+----- BEFORE RENAME
+-- wibble.gleam
+pub type Wibble {
+  Wibble(wibble: Int)
+}
+
+-- wobble.gleam
+import wibble
+
+pub fn make() -> wibble.Wibble {
+  wibble.Wibble(wibble: 1)
+}
+
+-- app.gleam
+
+import wobble
+
+pub fn main() {
+  wobble.make().wibble
+                ↑▔▔▔▔▔
+}
+
+
+----- AFTER RENAME
+-- wibble.gleam
+pub type Wibble {
+  Wibble(wabble: Int)
+}
+
+-- wobble.gleam
+import wibble
+
+pub fn make() -> wibble.Wibble {
+  wibble.Wibble(wabble: 1)
+}
+
+-- app.gleam
+
+import wobble
+
+pub fn main() {
+  wobble.make().wabble
+}

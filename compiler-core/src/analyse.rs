@@ -410,6 +410,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     value_references: env.references.value_references,
                     type_references: env.references.type_references,
                     module_references: env.references.module_references,
+                    label_references: env.references.label_references,
+                    label_definitions: env.references.label_definitions,
                 },
                 inline_functions: self.inline_functions,
             },
@@ -1232,6 +1234,15 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     Some((location, label)) => (*location, Some(label)),
                     None => (*location, None),
                 };
+
+                if let Some(label) = label {
+                    environment.references.register_label_definition(
+                        (environment.current_module.clone(), name.clone()),
+                        label.clone(),
+                        label_location,
+                        constructor.name.clone(),
+                    );
+                }
 
                 // Register the label for this parameter
                 if let Err(error) = field_map_builder.add(label, label_location) {

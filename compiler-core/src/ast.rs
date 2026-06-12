@@ -20,6 +20,7 @@ use crate::bit_array;
 use crate::build::{ExpressionPosition, Located, Target, module_erlang_name};
 use crate::exhaustiveness::CompiledCase;
 use crate::parse::{LiteralFloatValue, SpannedString};
+use crate::reference::LabelSyntax;
 use crate::type_::error::VariableOrigin;
 use crate::type_::expression::{Implementations, Purity};
 use crate::type_::printer::Names;
@@ -1146,13 +1147,26 @@ impl TypedCustomType {
             .iter()
             .find(|constructor| constructor.location.contains(byte_index))
         {
-            if let Some(annotation) = constructor
+            if let Some(argument) = constructor
                 .arguments
                 .iter()
-                .find(|arg| arg.location.contains(byte_index))
-                .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
+                .find(|argument| argument.location.contains(byte_index))
             {
-                return Some(annotation);
+                if let Some((label_location, label)) = &argument.label
+                    && label_location.contains(byte_index)
+                {
+                    return Some(Located::RecordLabelDefinition {
+                        location: *label_location,
+                        field_type: argument.type_.clone(),
+                        label: label.clone(),
+                        type_name: self.name.clone(),
+                    });
+                }
+
+                if let Some(annotation) = argument.ast.find_node(byte_index, argument.type_.clone())
+                {
+                    return Some(annotation);
+                }
             }
 
             return Some(Located::VariantConstructorDefinition(constructor));
@@ -1715,10 +1729,31 @@ impl CallArg<TypedExpr> {
                 }
                 Some(located) => Some(located),
                 None => {
-                    if self.location.contains(byte_index) && self.label.is_some() {
-                        Some(Located::Label(self.location, self.value.type_()))
+                    if !self.location.contains(byte_index) {
+                        return None;
+                    }
+                    let label = self.label.as_ref()?;
+
+                    if let Some(variant) = called_function.record_constructor_variant_name()
+                        && let Some(label_location) = self.label_location()
+                        && label_location.contains(byte_index)
+                    {
+                        let record_type = called_function
+                            .type_()
+                            .return_type()
+                            .expect("record constructors with arguments are functions");
+                        Some(Located::RecordLabelUsage {
+                            location: label_location,
+                            field_type: self.value.type_(),
+                            label: label.clone(),
+                            record_type,
+                            variant: variant.clone(),
+                        })
                     } else {
-                        None
+                        Some(Located::Label {
+                            location: self.location,
+                            field_type: self.value.type_(),
+                        })
                     }
                 }
             },
@@ -1767,14 +1802,39 @@ impl CallArg<TypedExpr> {
 }
 
 impl CallArg<TypedPattern> {
-    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+    /// `record_type` is the type of the record this pattern is matching on,
+    /// and `variant` is the name of the variant being matched. They are used
+    /// to resolve the definition of the field if the cursor is on this
+    /// argument's label.
+    pub fn find_node(
+        &self,
+        byte_index: u32,
+        record_type: &Arc<Type>,
+        variant: &EcoString,
+    ) -> Option<Located<'_>> {
         match self.value.find_node(byte_index) {
             Some(located) => Some(located),
             _ => {
-                if self.location.contains(byte_index) && self.label.is_some() {
-                    Some(Located::Label(self.location, self.value.type_()))
+                if !self.location.contains(byte_index) {
+                    return None;
+                }
+                let label = self.label.as_ref()?;
+
+                if let Some(label_location) = self.label_location()
+                    && label_location.contains(byte_index)
+                {
+                    Some(Located::RecordLabelUsage {
+                        location: label_location,
+                        field_type: self.value.type_(),
+                        label: label.clone(),
+                        record_type: record_type.clone(),
+                        variant: variant.clone(),
+                    })
                 } else {
-                    None
+                    Some(Located::Label {
+                        location: self.location,
+                        field_type: self.value.type_(),
+                    })
                 }
             }
         }
@@ -1782,14 +1842,39 @@ impl CallArg<TypedPattern> {
 }
 
 impl CallArg<TypedConstant> {
-    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+    /// `record_type` is the type of the record this constant is building, and
+    /// `variant` is the name of the variant being built. They are used to
+    /// resolve the definition of the field if the cursor is on this
+    /// argument's label.
+    pub fn find_node(
+        &self,
+        byte_index: u32,
+        record_type: &Arc<Type>,
+        variant: &EcoString,
+    ) -> Option<Located<'_>> {
         match self.value.find_node(byte_index) {
             Some(located) => Some(located),
             _ => {
-                if self.location.contains(byte_index) && self.label.is_some() {
-                    Some(Located::Label(self.location, self.value.type_()))
+                if !self.location.contains(byte_index) {
+                    return None;
+                }
+                let label = self.label.as_ref()?;
+
+                if let Some(label_location) = self.label_location()
+                    && label_location.contains(byte_index)
+                {
+                    Some(Located::RecordLabelUsage {
+                        location: label_location,
+                        field_type: self.value.type_(),
+                        label: label.clone(),
+                        record_type: record_type.clone(),
+                        variant: variant.clone(),
+                    })
                 } else {
-                    None
+                    Some(Located::Label {
+                        location: self.location,
+                        field_type: self.value.type_(),
+                    })
                 }
             }
         }
@@ -1843,6 +1928,30 @@ where
             None
         }
     }
+
+    /// The location of this argument's label, if it has one. For the label
+    /// shorthand syntax this spans the whole `label:`, otherwise it is just
+    /// the label itself.
+    ///
+    pub fn label_location(&self) -> Option<SrcSpan> {
+        let label = self.label.as_ref()?;
+        if self.uses_label_shorthand() {
+            Some(self.location)
+        } else {
+            Some(SrcSpan {
+                start: self.location.start,
+                end: self.location.start + label.len() as u32,
+            })
+        }
+    }
+
+    pub fn label_syntax(&self) -> LabelSyntax {
+        if self.uses_label_shorthand() {
+            LabelSyntax::Shorthand
+        } else {
+            LabelSyntax::Longhand
+        }
+    }
 }
 
 impl<T> HasLocation for CallArg<T> {
@@ -1876,6 +1985,28 @@ impl<A: HasLocation> RecordUpdateArg<A> {
     #[must_use]
     pub fn uses_label_shorthand(&self) -> bool {
         self.value.location() == self.location
+    }
+
+    /// The location of this argument's label. For the label shorthand syntax
+    /// this spans the whole `label:`, otherwise it is just the label itself.
+    ///
+    pub fn label_location(&self) -> SrcSpan {
+        if self.uses_label_shorthand() {
+            self.location
+        } else {
+            SrcSpan {
+                start: self.location.start,
+                end: self.location.start + self.label.len() as u32,
+            }
+        }
+    }
+
+    pub fn label_syntax(&self) -> LabelSyntax {
+        if self.uses_label_shorthand() {
+            LabelSyntax::Shorthand
+        } else {
+            LabelSyntax::Longhand
+        }
     }
 }
 
@@ -3323,6 +3454,8 @@ impl TypedPattern {
                 spread,
                 arguments,
                 constructor,
+                type_,
+                name,
                 ..
             } => {
                 if let Some((module_alias, module_location)) = module
@@ -3345,7 +3478,7 @@ impl TypedPattern {
                 } else {
                     arguments
                         .iter()
-                        .find_map(|argument| argument.find_node(byte_index))
+                        .find_map(|argument| argument.find_node(byte_index, type_, name))
                 }
             }
 

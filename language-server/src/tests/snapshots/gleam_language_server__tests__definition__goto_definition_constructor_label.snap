@@ -1,0 +1,29 @@
+---
+source: language-server/src/tests/definition.rs
+assertion_line: 1000
+expression: output
+snapshot_kind: text
+---
+----- Jumping from `src/app.gleam`
+
+pub type Things {
+  A(a: Int)
+  B(a: String)
+}
+
+pub fn main() {
+  B(a: "hello")
+    ↑          
+}
+
+----- Jumped to `src/app.gleam`
+
+pub type Things {
+  A(a: Int)
+  B(a: String)
+    ↑         
+}
+
+pub fn main() {
+  B(a: "hello")
+}
