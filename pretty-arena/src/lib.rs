@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 //! This module implements the functionality described in
 //! ["Strictly Pretty" (2000) by Christian Lindig][0], with a few
 //! extensions.
