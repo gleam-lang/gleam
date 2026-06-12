@@ -92,7 +92,7 @@ pub fn main() { wibble() }
 
     let error = compile_package(0, "javascript").unwrap_err();
     assert!(
-        error.contains("The javascript target does not support"),
+        error.contains("The JavaScript target does not support"),
         "incorrect error message: {error:?}"
     );
 }
