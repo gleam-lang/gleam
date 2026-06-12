@@ -1238,6 +1238,7 @@ dependencies = [
  "num-traits",
  "pathdiff",
  "petgraph",
+ "pretty-arena",
  "pretty_assertions",
  "pubgrub",
  "pulldown-cmark",
@@ -2321,6 +2322,17 @@ name = "ppv-lite86"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
+
+[[package]]
+name = "pretty-arena"
+version = "1.0.0"
+dependencies = [
+ "ecow",
+ "im",
+ "num-bigint",
+ "typed-arena",
+ "unicode-segmentation",
+]
 
 [[package]]
 name = "pretty_assertions"
@@ -3810,6 +3822,12 @@ checksum = "deb68604048ff8fa93347f02441e4487594adc20bb8a084f9e564d2b827a0a9f"
 dependencies = [
  "rustc-hash 1.1.0",
 ]
+
+[[package]]
+name = "typed-arena"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6af6ae20167a9ece4bcb41af5b80f8a1f1df981f6391189ce00fd257af04126a"
 
 [[package]]
 name = "typed-path"

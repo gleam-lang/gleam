@@ -113,6 +113,11 @@
 
 ### Formatter
 
+- Performance of the formatter has been improved.
+  `gleam format` has been measured to be up to 13% faster on projects like
+  `lustre`, with a 10% smaller peak memory footprint.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - When using the language server to extract a function from within an anonymous
@@ -165,6 +170,7 @@
   use statement, only the selected statement(s) are extracted.
 
   For example,
+
   ```gleam
   pub fn wibble() {
       use wobble <- result.map(todo)
@@ -172,7 +178,9 @@
       echo wobble as "2"
   }
   ```
+
   is turned into
+
   ```gleam
   pub fn wibble() {
       use wobble <- result.map(todo)
@@ -184,4 +192,5 @@
     Nil
   }
   ```
+
   ([Gavin Morrow](https://github.com/gavinmorrow))

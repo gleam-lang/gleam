@@ -35,12 +35,8 @@ pubgrub = "0.3"
 pathdiff = { version = "0", features = ["camino"] }
 # Memory arena using ids rather than references
 id-arena = "2"
-# Unicode grapheme traversal
-unicode-segmentation = "1.13.2"
 # Bijective (bi-directional) hashmap
 bimap = { version = "0.6.3", features = ["serde"] }
-# Parsing of arbitrary width int values
-num-bigint = { version = "0.4.6", features = ["serde"] }
 num-traits = "0.2.19"
 # Encryption
 age = { version = "0.11", features = ["armor"] }
@@ -51,7 +47,9 @@ stacker = "0.1.21"
 bitvec = { version = "1", features = ["serde"] }
 # Sourcemap generation
 sourcemap = "9"
+indexmap = "2.12.1"
 
+num-bigint.workspace = true
 async-trait.workspace = true
 base16.workspace = true
 camino = { workspace = true, features = ["serde1"] }
@@ -61,6 +59,7 @@ ecow = { workspace = true, features = ["serde"] }
 flate2.workspace = true
 futures.workspace = true
 hexpm = { path = "../hexpm" }
+pretty-arena = { path = "../pretty-arena" }
 http.workspace = true
 im.workspace = true
 itertools.workspace = true
@@ -75,8 +74,8 @@ termcolor.workspace = true
 thiserror.workspace = true
 toml.workspace = true
 tracing.workspace = true
-indexmap = "2.12.1"
 vec1.workspace = true
+unicode-segmentation.workspace = true
 
 [dev-dependencies]
 pretty_assertions.workspace = true

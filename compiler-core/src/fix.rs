@@ -4,10 +4,12 @@
 use crate::{
     Error, Result,
     format::{Formatter, Intermediate},
+    io::Utf8Writer,
     warning::WarningEmitter,
 };
 use camino::Utf8Path;
 use ecow::EcoString;
+use pretty_arena::DocumentArena;
 
 pub fn parse_fix_and_format(src: &EcoString, path: &Utf8Path) -> Result<String> {
     // Parse
@@ -25,9 +27,11 @@ pub fn parse_fix_and_format(src: &EcoString, path: &Utf8Path) -> Result<String> 
 
     // Format
     let mut buffer = String::new();
+    let arena = DocumentArena::new();
     Formatter::with_comments(&intermediate)
-        .module(&module)
-        .pretty_print(80, &mut buffer)?;
+        .module(&arena, &module)
+        .pretty_print(80, &mut buffer)
+        .map_err(|error| buffer.convert_err(error))?;
 
     Ok(buffer)
 }

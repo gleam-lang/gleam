@@ -188,11 +188,11 @@ fn all_files_have_copyright_notice() {
 Add a comment like this:
 
     // SPDX-License-Identifier: Apache-2.0
-    // SPDX-FileCopyrightText: 2016 The Gleam contributors
+    // SPDX-FileCopyrightText: 2026 The Gleam contributors
 
 To these files:
 
-{paths}
+- {paths}
 "
         )
     }
