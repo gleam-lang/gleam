@@ -1,0 +1,41 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\nimport mod.{something as smth}\n\npub fn main() {\n  smth + mod.something\n}\n"
+---
+----- BEFORE RENAME
+-- mod.gleam
+
+pub const something = 10
+
+fn wibble() {
+  something
+}
+
+
+-- app.gleam
+
+import mod.{something as smth}
+            ↑▔▔▔▔▔▔▔▔         
+
+pub fn main() {
+  smth + mod.something
+}
+
+
+----- AFTER RENAME
+-- mod.gleam
+
+pub const something = 10
+
+fn wibble() {
+  something
+}
+
+
+-- app.gleam
+
+import mod.{something as ten}
+
+pub fn main() {
+  ten + mod.something
+}
