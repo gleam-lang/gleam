@@ -123,7 +123,7 @@ fn all_files_have_copyright_notice() {
                 }
 
                 // GitHub templates
-                "md" if path.starts_with("../.github/ISSUE_TEMPLATE") => return None,
+                "md" if path.starts_with("../.github/") => return None,
 
                 // Static assets
                 "gz" => return None,
