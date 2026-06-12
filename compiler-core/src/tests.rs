@@ -122,6 +122,9 @@ fn all_files_have_copyright_notice() {
                     return None;
                 }
 
+                // GitHub templates
+                "md" if path.starts_with("../.github/ISSUE_TEMPLATE") => return None,
+
                 // Static assets
                 "gz" => return None,
                 "tar" => return None,
@@ -135,6 +138,9 @@ fn all_files_have_copyright_notice() {
                 // Template files to be added to user projects
                 "ps1" if file_name == "erlang-shipment-entrypoint.ps1" => return None,
                 "sh" if file_name == "erlang-shipment-entrypoint.sh" => return None,
+                "mjs" if file_name == "prelude.mjs" || file_name == "echo.mjs" => return None,
+                "erl" if file_name == "gleam@@main.erl" || file_name == "echo.erl" => return None,
+                "mts" if file_name == "prelude.d.mts" => return None,
 
                 // Generated files
                 "toml" if file_name == "manifest.toml" => return None,

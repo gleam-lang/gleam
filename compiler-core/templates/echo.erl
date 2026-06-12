@@ -1,6 +1,3 @@
-%% SPDX-License-Identifier: Apache-2.0
-%% SPDX-FileCopyrightText: 2024 The Gleam contributors
-
 -define(is_lowercase_char(X),
     (X > 96 andalso X < 123)).
 

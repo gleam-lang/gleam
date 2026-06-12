@@ -1,8 +1,3 @@
-<!--
-  SPDX-License-Identifier: Apache-2.0
-  SPDX-FileCopyrightText: 2024 The Gleam contributors
--->
-
 ---
 name: Feature request
 about: Suggest an idea for this project
