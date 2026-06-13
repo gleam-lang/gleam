@@ -41,6 +41,9 @@
   `package.hexdocs.pm` rather than `hexdocs.pm/package`.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- More readable error message when trying to revert an old release.
+  ([Moritz Böhme](https://github.com/MoritzBoehme))
+
 ### Language server
 
 - The "pattern match on value" code action can now be used to pattern match on
