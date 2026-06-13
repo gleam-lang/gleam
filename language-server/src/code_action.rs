@@ -10127,23 +10127,108 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveUnreachableCaseClauses<'ast> {
             let pattern_range = self.edits.src_span_to_lsp_range(clause.pattern_location());
             within(self.params.range, pattern_range)
         });
-        if is_hovering_clause {
-            self.clauses_to_delete = clauses
-                .iter()
-                .filter(|clause| {
-                    self.unreachable_clauses
-                        .contains(&clause.pattern_location())
-                })
-                .map(|clause| clause.location())
-                .collect_vec();
-            return;
-        }
 
         // If we're not hovering any of the clauses then we want to
         // keep visiting the case expression as the unreachable branch might be
         // in one of the nested cases.
-        ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
+        if !is_hovering_clause {
+            ast::visit::visit_typed_expr_case(
+                self,
+                location,
+                type_,
+                subjects,
+                clauses,
+                compiled_case,
+            );
+            return;
+        }
+
+        for clause in clauses {
+            let mut all_alternatives_are_unreachable = true;
+            let mut unreachable_alternatives = vec![];
+            let mut previous_alternative_end = None;
+            let mut all_previous_alternatives_were_deleted = true;
+
+            for alternative in clause.alternatives() {
+                let alternative_location = alternative_location(alternative);
+                if self.unreachable_clauses.contains(&alternative_location) {
+                    // If an alternative is unreachable we want to delete
+                    // everything from the end of the previous alternative to
+                    // the start of this one.
+                    //
+                    // ```gleam
+                    // Error(_) | Error(_) | Ok(_)
+                    // //      ^^^^^^^^^^^ We want to delete all of this
+                    // ```
+                    unreachable_alternatives.push(
+                        previous_alternative_end.map_or(alternative_location, |previous_end| {
+                            SrcSpan::new(previous_end, alternative_location.end)
+                        }),
+                    );
+                } else {
+                    // If all the previous alternatives have been deleted and
+                    // this one is reachable there's some final cleanup we need
+                    // to take care of:
+                    //
+                    // ```gleam
+                    // Ok(_) | Ok(_) | Error(_) -> todo
+                    // //^^^^^^^^^^^ All of this has been deleted, but there's
+                    // //            that last vertical bar that needs to be
+                    // //            taken care of!
+                    // ```
+                    //
+
+                    if all_previous_alternatives_were_deleted
+                        && let Some(end) = previous_alternative_end
+                    {
+                        self.clauses_to_delete
+                            .push(SrcSpan::new(end, alternative_location.start));
+                    }
+
+                    all_previous_alternatives_were_deleted = false;
+                    all_alternatives_are_unreachable = false;
+                }
+
+                previous_alternative_end = alternative.last().map(|pattern| pattern.location().end);
+            }
+
+            if all_alternatives_are_unreachable {
+                // If all the patterns of the clause are unreachable then we
+                // want to delete the entire branch:
+                //
+                // ```gleam
+                // case a, b {
+                //   _, _ -> todo
+                //   Ok(_), Ok(_) | Error(_), Error(_) -> todo
+                // // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                // // we want the entire branch to be deleted!
+                // }
+                // ```
+                self.clauses_to_delete.push(clause.location())
+            } else {
+                // If only some of the variants are unreachable but not all
+                // we want to delete just those.
+                // case a, b {
+                //   1, 2 | 1, 2 -> todo
+                // //       ^^^^ just this one should be deleted
+                // }
+                self.clauses_to_delete.extend(&unreachable_alternatives);
+            }
+        }
     }
+}
+
+fn alternative_location(alternative: &[Pattern<Arc<Type>>]) -> SrcSpan {
+    let start = alternative
+        .first()
+        .map(|pattern| pattern.location().start)
+        .unwrap_or_default();
+    let end = alternative
+        .last()
+        .map(|pattern| pattern.location().end)
+        .unwrap_or_default();
+
+    SrcSpan::new(start, end)
 }
 
 /// Code action to remove a record update when all of its fields have been
