@@ -1264,7 +1264,11 @@ fn package_config(
         gleam_version: None,
         licences: vec![],
         description: "".into(),
-        documentation: Docs { pages: vec![] },
+        documentation: Docs {
+            pages: vec![],
+            unknown: Default::default(),
+        },
+
         dependencies,
         dev_dependencies,
         repository: None,
@@ -1273,6 +1277,7 @@ fn package_config(
             application_start_module: None,
             application_start_argument: None,
             extra_applications: vec![],
+            unknown: Default::default(),
         },
         javascript: JavaScriptConfig {
             typescript_declarations: false,
@@ -1290,10 +1295,14 @@ fn package_config(
                 allow_all: true,
                 unstable: true,
                 location: None,
+                unknown: Default::default(),
             },
+            unknown: Default::default(),
         },
         target: Target::Erlang,
         internal_modules: None,
+        tools: Default::default(),
+        unknown: Default::default(),
     }
 }
 

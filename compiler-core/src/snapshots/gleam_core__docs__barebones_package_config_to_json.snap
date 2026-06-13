@@ -48,6 +48,7 @@ version = "1.0.0"
       }
     },
     "target": "erlang",
-    "internal_modules": null
+    "internal_modules": null,
+    "tools": {}
   }
 }

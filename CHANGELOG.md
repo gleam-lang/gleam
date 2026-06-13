@@ -41,6 +41,40 @@
   `package.hexdocs.pm` rather than `hexdocs.pm/package`.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The build tool will now show a warning for unknown keys in `gleam.toml`. Note
+  that it doesn't give warnings for keys under `[tools]` that is only supported
+  place for tools' configuration. For example, project with this `gleam.toml`:
+
+  ```toml
+  name = "wibble"
+  version = "1.0.0"
+  wibble = true
+  wobble = false
+
+  [tools]
+  wibble = true
+  ```
+
+  Will give following warnings:
+
+  ```txt
+  warning: Unknown config key
+
+  Config key 'wibble' isn't allowed.
+
+  Hint: See the `gleam.toml` schema at
+  https://gleam.run/writing-gleam/gleam-toml.
+
+  warning: Unknown config key
+
+  Config key 'wobble' isn't allowed.
+
+  Hint: See the `gleam.toml` schema at
+  https://gleam.run/writing-gleam/gleam-toml.
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The "pattern match on value" code action can now be used to pattern match on

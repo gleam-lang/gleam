@@ -1,0 +1,68 @@
+---
+source: compiler-core/src/config.rs
+expression: output
+---
+--- GLEAM.TOML
+
+name = "wibble"
+version = "1.0.0"
+repository = { type = "github", user = "user", repo = "repo", wibble = "wobble" }
+links = [{ title = "Website", href = "https://example.com", wibble = "wobble" }]
+wibble = true
+
+[erlang]
+wibble = true
+
+[javascript]
+wibble = true
+
+[javascript.deno]
+wibble = true
+
+[tools.my_tool]
+enable = true
+
+
+--- WARNINGS
+
+warning: Unknown config key
+
+Config key 'wibble' isn't allowed.
+
+Hint: See the `gleam.toml` schema at
+https://gleam.run/writing-gleam/gleam-toml.
+
+warning: Unknown config key
+
+Config key 'repository.wibble' isn't allowed.
+
+Hint: See the `gleam.toml` schema at
+https://gleam.run/writing-gleam/gleam-toml.
+
+warning: Unknown config key
+
+Config key 'links.wibble' isn't allowed.
+
+Hint: See the `gleam.toml` schema at
+https://gleam.run/writing-gleam/gleam-toml.
+
+warning: Unknown config key
+
+Config key 'erlang.wibble' isn't allowed.
+
+Hint: See the `gleam.toml` schema at
+https://gleam.run/writing-gleam/gleam-toml.
+
+warning: Unknown config key
+
+Config key 'javascript.wibble' isn't allowed.
+
+Hint: See the `gleam.toml` schema at
+https://gleam.run/writing-gleam/gleam-toml.
+
+warning: Unknown config key
+
+Config key 'javascript.deno.wibble' isn't allowed.
+
+Hint: See the `gleam.toml` schema at
+https://gleam.run/writing-gleam/gleam-toml.

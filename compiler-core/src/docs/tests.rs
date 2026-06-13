@@ -99,6 +99,7 @@ fn compile_with_markdown_pages(
             title: (*title).into(),
             path: Utf8PathBuf::from(format!("{title}.html")),
             source: format!("{title}.md").into(),
+            unknown: Default::default(),
         })
         .collect_vec();
 
@@ -608,6 +609,7 @@ fn source_link_for_github_repository() {
         repo: "wobble".to_string(),
         path: None,
         tag_prefix: None,
+        unknown: Default::default(),
     });
 
     let modules = vec![("app.gleam", "pub type Wibble = Int")];
@@ -626,6 +628,7 @@ fn source_link_for_github_repository_with_path_and_tag_prefix() {
         repo: "wobble".to_string(),
         path: Some("path/to/package".to_string()),
         tag_prefix: Some("subdir-".into()),
+        unknown: Default::default(),
     });
 
     let modules = vec![("app.gleam", "pub type Wibble = Int")];
@@ -1222,6 +1225,7 @@ fn gitea_repository_url_has_no_double_slash() {
         repo: "forgejo_bug".into(),
         path: None,
         tag_prefix: None,
+        unknown: Default::default(),
     };
 
     assert_eq!(repo.url(), "https://code.example.org/person/forgejo_bug");
@@ -1248,6 +1252,7 @@ fn forgejo_single_line_definition() {
         repo: "wobble".into(),
         path: None,
         tag_prefix: None,
+        unknown: Default::default(),
     };
 
     config.name = EcoString::from("test_project_name");
@@ -1270,6 +1275,7 @@ fn forgejo_multiple_line_definition() {
         repo: "wobble".into(),
         path: None,
         tag_prefix: None,
+        unknown: Default::default(),
     };
 
     config.name = EcoString::from("test_project_name");
