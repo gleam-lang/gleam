@@ -67,7 +67,8 @@ pub async fn publish_package<Http: HttpClient>(
         | ApiError::ExpiredToken
         | ApiError::OAuthRefreshTokenRejected
         | ApiError::IncorrectOneTimePassword
-        | ApiError::LateModification => Error::hex(e),
+        | ApiError::LateModification
+        | ApiError::ReleaseTooLarge => Error::hex(e),
     })
 }
 

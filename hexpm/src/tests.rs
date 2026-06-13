@@ -828,9 +828,25 @@ fn not_replacing() {
 }
 
 #[test]
+fn publish_package_response_too_large() {
+    let resp_body = json!({
+        "errors": {"tar": "too big"},
+        "message": "Validation error(s)",
+        "status": 422,
+    });
+    let response = make_json_response(422, resp_body);
+    let result = crate::api_publish_package_response(response);
+
+    match result {
+        Err(ApiError::ReleaseTooLarge) => (),
+        result => panic!("expected Err(ApiError::ReleaseTooLarge), got {result:?}"),
+    }
+}
+
+#[test]
 fn unknown_error_422() {
     let resp_body = json!({
-        "errors": {"tar": "file too big: metadata.config"},
+        "errors": {"name": "has already been taken"},
         "message": "Validation error(s)",
         "status": 422,
     });
@@ -841,8 +857,8 @@ fn unknown_error_422() {
         Err(ApiError::UnexpectedResponse(status, body)) => {
             assert_eq!(status, http::StatusCode::UNPROCESSABLE_ENTITY);
             assert!(
-                body.contains("file too big: metadata.config"),
-                "expected file too big string copied from hexpm error, got: {body}"
+                body.contains("has already been taken"),
+                "expected validation error string copied from hexpm error, got: {body}"
             );
         }
         result => panic!("expected Err(ApiError::UnexpectedResponse), got {result:?}"),

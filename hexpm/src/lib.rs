@@ -555,6 +555,8 @@ pub fn api_publish_package_response(response: http::Response<Vec<u8>>) -> Result
                 Err(ApiError::NotReplacing)
             } else if body.contains("can only modify a release up to one hour after publication") {
                 Err(ApiError::LateModification)
+            } else if body.contains("too big") {
+                Err(ApiError::ReleaseTooLarge)
             } else {
                 Err(ApiError::UnexpectedResponse(
                     StatusCode::UNPROCESSABLE_ENTITY,
@@ -764,6 +766,9 @@ pub enum ApiError {
 
     #[error("Can only modify a release up to one hour after publication")]
     LateModification,
+
+    #[error("The release tarball is too large to be published to Hex. Try reducing its size.")]
+    ReleaseTooLarge,
 
     #[error("The oauth request wasn't approved in time")]
     OAuthTimeout,
