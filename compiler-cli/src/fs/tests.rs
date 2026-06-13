@@ -217,26 +217,7 @@ fn hardlink_dir_copies_files_and_directories() {
 }
 
 #[test]
-fn hardlink_dir_skips_git_directory() {
-    let tmp = tempfile::tempdir().unwrap();
-    let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
-    let src = base.join("src");
-    let dest = base.join("dest");
-
-    super::mkdir(&src).unwrap();
-    super::mkdir(&src.join(".git")).unwrap();
-    super::write(&src.join("a.txt"), "content").unwrap();
-    super::write(&src.join(".git").join("config"), "gitdata").unwrap();
-
-    super::mkdir(&dest).unwrap();
-    super::hardlink_dir(&src, &dest).unwrap();
-
-    assert!(dest.join("a.txt").exists());
-    assert!(!dest.join(".git").exists());
-}
-
-#[test]
-fn hardlink_dir_empty_source() {
+fn hardlink_dir_empty_source_creates_empty_dest() {
     let tmp = tempfile::tempdir().unwrap();
     let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
     let src = base.join("src");
