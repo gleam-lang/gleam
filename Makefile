@@ -24,6 +24,7 @@ test: ## Run the compiler unit tests
 	cd test/project_javascript && cargo run clean && cargo run check && cargo run test
 	cd test/project_deno && cargo run clean && cargo run check && cargo run test
 	cd test/hextarball && make test
+	cd test/typescript_declarations && make test
 	cd test/running_modules && make test
 	cd test/subdir_ffi && make
 
@@ -58,6 +59,10 @@ test-watch: ## Run compiler tests when files change
 .PHONY: export-hex-tarball-test
 export-hex-tarball-test: ## Run `gleam export hex-tarball` and verify it is created
 	cd test/hextarball && make test
+
+.PHONY: typescript-declarations-test
+typescript-declarations-test: ## Check that generated TypeScript declaration compile
+	cd test/typescript_declarations && make test
 
 .PHONY: benchmark
 benchmark: ## Run the benchmarks
