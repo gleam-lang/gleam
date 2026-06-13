@@ -683,11 +683,13 @@ impl StandardIoAction {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum FileIoAction {
-    Link,
+    Link(Utf8PathBuf),
     Open,
-    Copy,
+    // Path is `Option` here since there are some cases where we do not have
+    // destination, like when writing ZIP archives
+    Copy(Option<Utf8PathBuf>),
     Read,
     Parse,
     Delete,
@@ -703,9 +705,9 @@ pub enum FileIoAction {
 impl FileIoAction {
     fn text(&self) -> &'static str {
         match self {
-            FileIoAction::Link => "link",
+            FileIoAction::Link(..) => "link",
             FileIoAction::Open => "open",
-            FileIoAction::Copy => "copy",
+            FileIoAction::Copy(..) => "copy",
             FileIoAction::Read => "read",
             FileIoAction::Parse => "parse",
             FileIoAction::Delete => "delete",
@@ -716,6 +718,45 @@ impl FileIoAction {
             FileIoAction::Canonicalise => "canonicalise",
             FileIoAction::UpdatePermissions => "update permissions of",
             FileIoAction::ReadMetadata => "read metadata of",
+        }
+    }
+
+    fn is_link(&self) -> bool {
+        match self {
+            FileIoAction::Link(..) => true,
+
+            FileIoAction::Open
+            | FileIoAction::Copy(..)
+            | FileIoAction::Read
+            | FileIoAction::Parse
+            | FileIoAction::Delete
+            | FileIoAction::Create
+            | FileIoAction::WriteTo
+            | FileIoAction::Canonicalise
+            | FileIoAction::UpdatePermissions
+            | FileIoAction::FindParent
+            | FileIoAction::ReadMetadata => false,
+        }
+    }
+
+    /// Returns a destination path of action, if any
+    fn destination(&self) -> Option<&Utf8PathBuf> {
+        match self {
+            FileIoAction::Link(destination) | FileIoAction::Copy(Some(destination)) => {
+                Some(destination)
+            }
+
+            FileIoAction::Open
+            | FileIoAction::Read
+            | FileIoAction::Parse
+            | FileIoAction::Delete
+            | FileIoAction::Create
+            | FileIoAction::WriteTo
+            | FileIoAction::Canonicalise
+            | FileIoAction::UpdatePermissions
+            | FileIoAction::FindParent
+            | FileIoAction::ReadMetadata
+            | FileIoAction::Copy(None) => None,
         }
     }
 }
@@ -1791,17 +1832,27 @@ Erlang modules must have unique names regardless of the subfolders where their
                     }
                     None => "".into(),
                 };
+                let destination = if let Some(destination) = action.destination() {
+                    format!(
+                        "\n\nTo:
+
+    {destination}"
+                    )
+                } else {
+                    "".into()
+                };
                 let mut text = format!(
                     "An error occurred while trying to {} this {}:
 
-    {}
+    {}{}
 {}",
                     action.text(),
                     kind.text(),
                     path,
+                    destination,
                     err,
                 );
-                if cfg!(target_family = "windows") && action == &FileIoAction::Link {
+                if cfg!(target_family = "windows") && action.is_link() {
                     text.push_str("
 
 Windows does not support symbolic links without developer mode
