@@ -1,0 +1,44 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn go(x) {\n  case x {\n    <<a:float-32, _:int-16>> -> a\n    <<c:float-32, d:float-32>> -> c +. d\n    _ -> 0.0\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    <<a:float-32, _:int-16>> -> a
+    <<c:float-32, d:float-32>> -> c +. d
+    _ -> 0.0
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { bitArraySliceToFloat } from "../gleam.mjs";
+
+export function go(x) {
+  if (x.bitSize >= 32) {
+    let $;
+    if (Number.isFinite($ = bitArraySliceToFloat(x, 0, 32, true))) {
+      if (x.bitSize === 48) {
+        let a = $;
+        return a;
+      } else if (x.bitSize === 64) {
+        let $1;
+        if (Number.isFinite($1 = bitArraySliceToFloat(x, 32, 64, true))) {
+          let c = $;
+          let d = $1;
+          return c + d;
+        } else {
+          return 0.0;
+        }
+      } else {
+        return 0.0;
+      }
+    } else {
+      return 0.0;
+    }
+  } else {
+    return 0.0;
+  }
+}
