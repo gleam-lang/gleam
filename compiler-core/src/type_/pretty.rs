@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
 use super::{Type, TypeVar};
+use super::printer::{NameContextInformation, Names as FullNames, PrintMode};
 use crate::{
     docvec,
     pretty::{nil, *},
@@ -11,6 +12,8 @@ use std::sync::Arc;
 
 #[cfg(test)]
 use super::*;
+#[cfg(test)]
+use crate::ast::SrcSpan;
 #[cfg(test)]
 use std::cell::RefCell;
 
@@ -22,6 +25,7 @@ const INDENT: isize = 2;
 #[derive(Debug, Default)]
 pub struct Printer {
     names: im::HashMap<u64, EcoString>,
+    full_names: Option<FullNames>,
     uid: u64,
     // A mapping of printd type names to the module that they are defined in.
     printed_types: im::HashMap<EcoString, EcoString>,
@@ -34,6 +38,11 @@ impl Printer {
 
     pub fn with_names(&mut self, names: im::HashMap<u64, EcoString>) {
         self.names = names;
+    }
+
+    pub fn add_full_names(mut self, names: &FullNames) -> Self {
+        self.full_names = Some(names.clone());
+        self
     }
 
     /// Render a Type as a well formatted string.
@@ -61,7 +70,27 @@ impl Printer {
                 module,
                 ..
             } => {
-                let doc = if self.name_clashes_if_unqualified(name, module) {
+                let doc = if let Some(full_names) = &self.full_names {
+                    let (module, name) = match full_names.named_type(module, name, PrintMode::Normal)
+                    {
+                        NameContextInformation::Qualified(module, name) => {
+                            (Some(EcoString::from(module)), EcoString::from(name))
+                        }
+                        NameContextInformation::Unqualified(name) => {
+                            (None, EcoString::from(name))
+                        }
+                        NameContextInformation::Unimported(module, name) => (
+                            Some(EcoString::from(
+                                module.split('/').next_back().unwrap_or(module),
+                            )),
+                            EcoString::from(name),
+                        ),
+                    };
+                    match module {
+                        Some(module) => qualify_type_name(&module, &name),
+                        None => name.to_doc(),
+                    }
+                } else if self.name_clashes_if_unqualified(name, module) {
                     qualify_type_name(module, name)
                 } else {
                     let _ = self.printed_types.insert(name.clone(), module.clone());
@@ -466,6 +495,46 @@ fn function_test() {
     #(Float, Float, Float, Float, Float, Float),
     #(Float, Float, Float, Float, Float, Float),
   )"
+    );
+}
+
+#[test]
+fn full_names_qualifies_with_module_alias() {
+    let mut names = FullNames::new();
+    _ = names.imported_module("my/module".into(), "my_alias".into(), SrcSpan::new(0, 0));
+
+    let type_ = Arc::new(Type::Named {
+        module: "my/module".into(),
+        package: "whatever".into(),
+        name: "Thing".into(),
+        publicity: Publicity::Public,
+        arguments: vec![],
+        inferred_variant: None,
+    });
+
+    assert_eq!(
+        Printer::new().add_full_names(&names).pretty_print(&type_, 0),
+        "my_alias.Thing"
+    );
+}
+
+#[test]
+fn full_names_uses_local_type_alias() {
+    let mut names = FullNames::new();
+    names.named_type_in_scope("my/module".into(), "Thing".into(), "LocalThing".into());
+
+    let type_ = Arc::new(Type::Named {
+        module: "my/module".into(),
+        package: "whatever".into(),
+        name: "Thing".into(),
+        publicity: Publicity::Public,
+        arguments: vec![],
+        inferred_variant: None,
+    });
+
+    assert_eq!(
+        Printer::new().add_full_names(&names).pretty_print(&type_, 0),
+        "LocalThing"
     );
 }
 

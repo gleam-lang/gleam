@@ -261,7 +261,7 @@ impl Names {
     }
 
     /// Get the name and optional module qualifier for a named type.
-    fn named_type<'a>(
+    pub fn named_type<'a>(
         &'a self,
         module: &'a EcoString,
         name: &'a EcoString,
