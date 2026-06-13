@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn main(x) {\n  case x {\n    Ok(n) -> 1\n    Error(_) | Ok(_) -> 3\n    Ok(1) -> todo\n  }\n}\n"
+---
+----- BEFORE ACTION
+pub fn main(x) {
+  case x {
+    Ok(n) -> 1
+    Error(_) | Ok(_) -> 3
+               ↑         
+    Ok(1) -> todo
+  }
+}
+
+
+----- AFTER ACTION
+pub fn main(x) {
+  case x {
+    Ok(n) -> 1
+    Error(_) -> 3
+    
+  }
+}

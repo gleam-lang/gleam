@@ -442,8 +442,8 @@ pub fn new() -> other.Wibble { todo }
 }
 
 #[test]
-fn generate_unqualified_variant_in_other_module_adds_an_unqualified_import_if_other_variants_are_unqualified()
- {
+fn generate_unqualified_variant_in_other_module_adds_an_unqualified_import_if_other_variants_are_unqualified(
+) {
     let src = r#"
 import other.{ Wibble }
 
@@ -467,8 +467,8 @@ pub fn new() -> other.Wibble { todo }
 }
 
 #[test]
-fn generate_unqualified_variant_in_other_module_adds_qualification_if_other_variants_are_not_imported()
- {
+fn generate_unqualified_variant_in_other_module_adds_qualification_if_other_variants_are_not_imported(
+) {
     let src = r#"
 import other
 
@@ -8109,8 +8109,8 @@ pub fn main(arg: CannotBeDestructured) {
 }
 
 #[test]
-fn pattern_match_on_argument_with_multiple_constructors_is_nicely_formatted_in_function_with_empty_body()
- {
+fn pattern_match_on_argument_with_multiple_constructors_is_nicely_formatted_in_function_with_empty_body(
+) {
     assert_code_action!(
         PATTERN_MATCH_ON_ARGUMENT,
         "
@@ -11774,6 +11774,102 @@ fn remove_unreachable_clauses() {
 }
 ",
         find_position_of("Ok(1)").to_selection()
+    );
+}
+
+#[test]
+fn remove_unreachable_clauses_removes_alternative_patterns() {
+    assert_code_action!(
+        REMOVE_UNREACHABLE_CLAUSES,
+        "pub fn main(x) {
+  case x {
+    Ok(n) -> 1
+    Ok(1) -> 3
+    Error(_) | Ok(_) -> todo
+  }
+}
+",
+        find_position_of("Ok(1)").to_selection()
+    );
+}
+
+#[test]
+fn remove_unreachable_clauses_removes_multiple_alternative_patterns_at_the_start_of_branch() {
+    assert_code_action!(
+        REMOVE_UNREACHABLE_CLAUSES,
+        "pub fn main(x) {
+  case x {
+    Ok(n) -> 1
+    Ok(1) -> 3
+    Ok(_) | Ok(_) | Ok(_) | Error(_) -> todo
+  }
+}
+",
+        find_position_of("Ok(1)").to_selection()
+    );
+}
+
+#[test]
+fn remove_unreachable_clauses_removes_multiple_alternative_patterns_at_the_end_of_branch() {
+    assert_code_action!(
+        REMOVE_UNREACHABLE_CLAUSES,
+        "pub fn main(x) {
+  case x {
+    Ok(n) -> 1
+    Ok(1) -> 3
+    Error(_) | Ok(_) | Ok(_) | Ok(_) -> todo
+  }
+}
+",
+        find_position_of("Ok(1)").to_selection()
+    );
+}
+
+#[test]
+fn remove_unreachable_clauses_removes_multiple_alternative_patterns_in_the_middle_of_branch() {
+    assert_code_action!(
+        REMOVE_UNREACHABLE_CLAUSES,
+        "pub fn main(x) {
+  case x {
+    1 -> todo
+    2 -> todo
+    3 | 3 | 3 | 3 | 4 -> todo
+  }
+}
+",
+        find_position_of("3").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn remove_unreachable_clauses_with_mix_of_reachable_and_unreachables() {
+    assert_code_action!(
+        REMOVE_UNREACHABLE_CLAUSES,
+        "pub fn main(x) {
+  case x {
+    1 -> todo
+    2 -> todo
+    3 | 3 | 3 | 4 | 3 | 5 -> todo
+  }
+}
+",
+        find_position_of("3").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn remove_unreachable_clauses_can_be_triggered_from_alternative_pattern() {
+    assert_code_action!(
+        REMOVE_UNREACHABLE_CLAUSES,
+        "pub fn main(x) {
+  case x {
+    Ok(n) -> 1
+    Error(_) | Ok(_) -> 3
+    Ok(1) -> todo
+  }
+}
+",
+        find_position_of("Ok(_)").to_selection()
     );
 }
 
