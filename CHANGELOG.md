@@ -41,6 +41,10 @@
   `package.hexdocs.pm` rather than `hexdocs.pm/package`.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The build tool now deletes `escript` file after compilation, which is
+  unnecessary once the build is completed.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The "pattern match on value" code action can now be used to pattern match on
