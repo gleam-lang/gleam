@@ -51,6 +51,7 @@ cd "$REPO_DIR"
 git init -q
 git add .
 git -c user.name="Test" -c user.email="test@example.com" commit -q -m "Initial commit"
+git branch -M main
 REF=$(git rev-parse HEAD)
 cd "$OLDPWD"
 
@@ -67,6 +68,60 @@ EOF
 
 g update
 g check
+
+echo
+echo Testing with a branch ref, two packages from one repo, and a clean rebuild
+rm -fr build
+
+cat > gleam.toml << EOF
+name = "git_deps_path"
+version = "0.1.0"
+
+[dependencies]
+package_a = { git = "file://${REPO_DIR}", ref = "main", path = "package_a" }
+package_b = { git = "file://${REPO_DIR}", ref = "main", path = "package_b" }
+EOF
+
+g update
+
+echo Checking that the hard-linked packages do not contain a .git entry
+if [ -e "build/packages/package_a/.git" ]; then
+  echo "build/packages/package_a/.git should not exist"
+  exit 1
+fi
+if [ -e "build/packages/package_b/.git" ]; then
+  echo "build/packages/package_b/.git should not exist"
+  exit 1
+fi
+
+EXPECTED_PACKAGE_B="  { name = \"package_b\", version = \"0.1.0\", build_tools = [\"gleam\"], requirements = [], source = \"git\", repo = \"file://${REPO_DIR}\", commit = \"${REF}\", path = \"package_b\" },"
+if ! grep -qFx "$EXPECTED_PACKAGE_B" manifest.toml; then
+  echo "manifest.toml does not lock package_b as a git source. Expected:"
+  echo "$EXPECTED_PACKAGE_B"
+  echo "Got:"
+  cat manifest.toml
+  exit 1
+fi
+
+rm -fr build
+g check
+
+echo
+echo Testing that an unresolvable ref fails
+rm -fr build
+
+cat > gleam.toml << EOF
+name = "git_deps_path"
+version = "0.1.0"
+
+[dependencies]
+package_a = { git = "file://${REPO_DIR}", ref = "no-such-ref", path = "package_a" }
+EOF
+
+if g update; then
+  echo "g update should have failed for an unresolvable ref"
+  exit 1
+fi
 
 echo
 echo Success! 💖

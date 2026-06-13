@@ -170,7 +170,14 @@ impl<'de> Deserialize<'de> for Requirement {
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_any(RequirementVisitor)
+        let requirement = deserializer.deserialize_any(RequirementVisitor)?;
+        if let Requirement::Git {
+            path: Some(path), ..
+        } = &requirement
+        {
+            crate::io::validate_safe_relative_path(path).map_err(de::Error::custom)?;
+        }
+        Ok(requirement)
     }
 }
 
@@ -206,6 +213,17 @@ mod tests {
 
         let error =
             toml::from_str::<HashMap<String, Requirement>>(toml).expect_err("invalid version");
+        insta::assert_snapshot!(error.to_string());
+    }
+
+    #[test]
+    fn read_git_requirement_with_escaping_path() {
+        let toml = r#"
+            monorepo = { git = "https://github.com/gleam-lang/gleam.git", ref = "main", path = "../escape" }
+        "#;
+
+        let error =
+            toml::from_str::<HashMap<String, Requirement>>(toml).expect_err("escaping path");
         insta::assert_snapshot!(error.to_string());
     }
 }

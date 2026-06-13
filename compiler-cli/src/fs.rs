@@ -733,6 +733,7 @@ pub fn hardlink(from: impl AsRef<Utf8Path>, to: impl AsRef<Utf8Path>) -> Result<
         .map(|_| ())
 }
 
+/// Recursively hardlinks all files from one directory into another.
 pub fn hardlink_dir(
     from: impl AsRef<Utf8Path> + Debug,
     to: impl AsRef<Utf8Path> + Debug,

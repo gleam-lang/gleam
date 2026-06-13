@@ -66,12 +66,12 @@ impl ProjectPaths {
         self.build_directory().join("packages")
     }
 
-    pub fn build_git_repos_directory(&self) -> Utf8PathBuf {
-        self.build_directory().join("git_repos")
+    pub fn build_git_directory(&self) -> Utf8PathBuf {
+        self.build_directory().join("git")
     }
 
     pub fn build_git_repo(&self, name: &str) -> Utf8PathBuf {
-        self.build_git_repos_directory().join(name)
+        self.build_git_directory().join(name)
     }
 
     pub fn build_packages_toml(&self) -> Utf8PathBuf {

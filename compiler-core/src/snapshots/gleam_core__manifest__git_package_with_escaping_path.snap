@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/manifest.rs
+expression: error.to_string()
+---
+TOML parse error at line 5, column 3
+  |
+5 |   { name = "wibble", version = "0.1.0", build_tools = ["gleam"], requirements = [], source = "git", repo = "https://github.com/gleam-lang/gleam.git", commit = "bd9fe02f72250e6a136967917bcb1bdccaffa3c8", path = "../escape" },
+  |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+paths must not contain .. segments
