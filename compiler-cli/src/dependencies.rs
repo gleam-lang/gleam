@@ -304,6 +304,18 @@ pub fn cleanup<Telem: Telemetry>(paths: &ProjectPaths, telemetry: Telem) -> Resu
     let changes = PackageChanges::between_manifests(&old_manifest, &manifest);
     telemetry.resolved_package_versions(&changes);
 
+    // We need to clean build directory for the top level package for all modes
+    for mode in Mode::iter() {
+        for target in Target::iter() {
+            let lock = BuildLock::new_target(paths, mode, target)?;
+            let _guard = lock.lock(&telemetry)?;
+
+            let build_directory_path =
+                paths.build_directory_for_package(mode, target, &config.name);
+            fs::delete_directory(build_directory_path.as_ref())?;
+        }
+    }
+
     Ok(manifest)
 }
 
