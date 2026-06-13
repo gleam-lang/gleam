@@ -68,6 +68,10 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The "remove unreachable patterns" code action can now be triggered on
+  unreachable alternative patterns of a case expression.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server now permits renaming type variables in functions, types,
   and constants. For example:
 
@@ -165,6 +169,7 @@
   use statement, only the selected statement(s) are extracted.
 
   For example,
+
   ```gleam
   pub fn wibble() {
       use wobble <- result.map(todo)
@@ -172,7 +177,9 @@
       echo wobble as "2"
   }
   ```
+
   is turned into
+
   ```gleam
   pub fn wibble() {
       use wobble <- result.map(todo)
@@ -184,4 +191,5 @@
     Nil
   }
   ```
+
   ([Gavin Morrow](https://github.com/gavinmorrow))

@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn main(x) {\n  case x {\n    1 -> todo\n    2 -> todo\n    3 | 3 | 3 | 3 | 4 -> todo\n  }\n}\n"
+---
+----- BEFORE ACTION
+pub fn main(x) {
+  case x {
+    1 -> todo
+    2 -> todo
+    3 | 3 | 3 | 3 | 4 -> todo
+        ↑                    
+  }
+}
+
+
+----- AFTER ACTION
+pub fn main(x) {
+  case x {
+    1 -> todo
+    2 -> todo
+    3 | 4 -> todo
+  }
+}
