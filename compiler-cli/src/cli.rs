@@ -114,6 +114,36 @@ pub fn print_retired(package: &str, version: &str) {
     print_colourful_prefix("Retired", &format!("{package} {version}"))
 }
 
+pub fn print_warning_retired_dependency(
+    package: &str,
+    version: &str,
+    reason: &str,
+    message: &str,
+) {
+    let detail = if message.is_empty() {
+        format!("{package} v{version} is retired ({reason})")
+    } else {
+        format!("{package} v{version} is retired ({reason}): {message}")
+    };
+    let buffer_writer = stderr_buffer_writer();
+    let mut buffer = buffer_writer.buffer();
+    buffer
+        .set_color(
+            ColorSpec::new()
+                .set_intense(true)
+                .set_fg(Some(Color::Yellow)),
+        )
+        .expect("print_warning_retired_dependency");
+    write!(buffer, "{: >11}", "Warning").expect("print_warning_retired_dependency");
+    buffer
+        .set_color(&ColorSpec::new())
+        .expect("print_warning_retired_dependency");
+    writeln!(buffer, " {detail}").expect("print_warning_retired_dependency");
+    buffer_writer
+        .print(&buffer)
+        .expect("print_warning_retired_dependency");
+}
+
 pub fn print_unretired(package: &str, version: &str) {
     print_colourful_prefix("Unretired", &format!("{package} {version}"))
 }
