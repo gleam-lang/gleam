@@ -402,6 +402,7 @@ fn missing_local_packages() {
             ("local3".into(), Version::parse("3.0.0").unwrap()),
         ]
         .into(),
+        git: HashMap::new(),
     }
     .missing_local_packages(&manifest, "root");
     extra.sort();
@@ -441,6 +442,7 @@ fn extra_local_packages() {
             ("local3".into(), Version::parse("3.0.0").unwrap()),
         ]
         .into(),
+        git: HashMap::new(),
     }
     .extra_local_packages(&Manifest {
         requirements: HashMap::new(),
