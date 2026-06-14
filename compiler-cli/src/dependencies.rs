@@ -625,6 +625,18 @@ fn write_manifest_to_disc(paths: &ProjectPaths, manifest: &Manifest) -> Result<(
 struct LocalPackages {
     #[serde(deserialize_with = "gleam_core::config::map_with_package_name_keys::deserialize")]
     packages: HashMap<EcoString, Version>,
+    // Git packages can resolve to a new commit (or a new sub-path) without
+    // their version changing, so their on-disc freshness is keyed by commit
+    // and path rather than version alone. Absent for hex and local packages.
+    #[serde(default)]
+    git: HashMap<EcoString, GitState>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+struct GitState {
+    commit: EcoString,
+    #[serde(default)]
+    path: Option<Utf8PathBuf>,
 }
 
 impl LocalPackages {
@@ -653,9 +665,22 @@ impl LocalPackages {
             .filter(|p| p.name != root)
             // We don't need to download local packages because we use the linked source directly
             .filter(|p| !p.is_local())
-            // We don't need to download packages which we have the correct version of
-            .filter(|p| self.packages.get(p.name.as_str()) != Some(&p.version))
+            // We don't need to download packages which we already have on disc. For
+            // git packages this means the same commit and path.
+            .filter(|p| !self.has_fresh(p))
             .collect()
+    }
+
+    fn has_fresh(&self, package: &ManifestPackage) -> bool {
+        match &package.source {
+            ManifestPackageSource::Git { commit, path, .. } => match self.git.get(&package.name) {
+                Some(state) => &state.commit == commit && &state.path == path,
+                None => false,
+            },
+            ManifestPackageSource::Hex { .. } | ManifestPackageSource::Local { .. } => {
+                self.packages.get(package.name.as_str()) == Some(&package.version)
+            }
+        }
     }
 
     pub fn read_from_disc(paths: &ProjectPaths) -> Result<Self> {
@@ -663,6 +688,7 @@ impl LocalPackages {
         if !path.exists() {
             return Ok(Self {
                 packages: HashMap::new(),
+                git: HashMap::new(),
             });
         }
         let toml = fs::read(&path)?;
@@ -681,13 +707,27 @@ impl LocalPackages {
     }
 
     pub fn from_manifest(manifest: &Manifest) -> Self {
-        Self {
-            packages: manifest
-                .packages
-                .iter()
-                .map(|p| (p.name.clone(), p.version.clone()))
-                .collect(),
-        }
+        let packages = manifest
+            .packages
+            .iter()
+            .map(|p| (p.name.clone(), p.version.clone()))
+            .collect();
+        let git = manifest
+            .packages
+            .iter()
+            .filter_map(|p| match &p.source {
+                ManifestPackageSource::Git { commit, path, .. } => Some((
+                    p.name.clone(),
+                    GitState {
+                        commit: commit.clone(),
+                        path: path.clone(),
+                    },
+                )),
+                ManifestPackageSource::Hex { .. } | ManifestPackageSource::Local { .. } => None,
+            })
+            .collect();
+
+        Self { packages, git }
     }
 }
 
@@ -705,7 +745,8 @@ gleam_otp = "1.1.0"
             packages: HashMap::from_iter([
                 ("gleam_stdlib".into(), Version::new(1, 0, 0)),
                 ("gleam_otp".into(), Version::new(1, 1, 0)),
-            ])
+            ]),
+            git: HashMap::new(),
         }
     )
 }

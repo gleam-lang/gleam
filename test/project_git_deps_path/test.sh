@@ -107,6 +107,55 @@ rm -fr build
 g check
 
 echo
+echo Testing that a new commit on a branch refreshes a transitive path dependency
+rm -fr build
+
+cat > gleam.toml << EOF
+name = "git_deps_path"
+version = "0.1.0"
+
+[dependencies]
+package_a = { git = "file://${REPO_DIR}", ref = "main", path = "package_a" }
+EOF
+
+g update
+
+echo Checking that the transitive package_b starts at the original commit
+if ! grep -qF "hello from package_b" build/packages/package_b/src/package_b.gleam; then
+  echo "build/packages/package_b should contain the original greeting"
+  cat build/packages/package_b/src/package_b.gleam
+  exit 1
+fi
+
+echo Making a new commit that changes package_b without changing its version
+cat > "$REPO_DIR/package_b/src/package_b.gleam" << 'GLEAM'
+pub fn greeting() -> String {
+  "hello from package_b v2"
+}
+GLEAM
+git -C "$REPO_DIR" add .
+git -C "$REPO_DIR" -c user.name="Test" -c user.email="test@example.com" commit -q -m "Update package_b"
+NEW_REF=$(git -C "$REPO_DIR" rev-parse HEAD)
+
+g update
+
+echo Checking that build/packages/package_b was refreshed to the new commit
+if ! grep -qF "hello from package_b v2" build/packages/package_b/src/package_b.gleam; then
+  echo "build/packages/package_b was not refreshed to the new commit"
+  cat build/packages/package_b/src/package_b.gleam
+  exit 1
+fi
+
+EXPECTED_PACKAGE_B="  { name = \"package_b\", version = \"0.1.0\", build_tools = [\"gleam\"], requirements = [], source = \"git\", repo = \"file://${REPO_DIR}\", commit = \"${NEW_REF}\", path = \"package_b\" },"
+if ! grep -qFx "$EXPECTED_PACKAGE_B" manifest.toml; then
+  echo "manifest.toml does not lock package_b at the new commit. Expected:"
+  echo "$EXPECTED_PACKAGE_B"
+  echo "Got:"
+  cat manifest.toml
+  exit 1
+fi
+
+echo
 echo Testing that an unresolvable ref fails
 rm -fr build
 
