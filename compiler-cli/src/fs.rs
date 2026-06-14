@@ -779,6 +779,7 @@ fn hardlink_dir_recursive(
 
         // Skip symlinks to prevent path traversal outside the source tree
         if file_type.is_symlink() {
+            tracing::trace!(path=?source_path, "skipping_symlink_in_hardlink_dir");
             continue;
         }
 
