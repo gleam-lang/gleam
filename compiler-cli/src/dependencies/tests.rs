@@ -1034,8 +1034,8 @@ fn git_staging_path_is_clone_path_with_staging_suffix() {
         Utf8PathBuf::from("/app/build/git/gleam-ea2aeaa3761e8bc6")
     );
     assert_eq!(
-        git_staging_path(&paths, repo),
-        Utf8PathBuf::from("/app/build/git/gleam-ea2aeaa3761e8bc6-staging")
+        git_staging_path(&paths, repo, "wibble"),
+        Utf8PathBuf::from("/app/build/git/gleam-ea2aeaa3761e8bc6-wibble-staging")
     );
 }
 
