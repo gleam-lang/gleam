@@ -176,6 +176,9 @@ impl<'de> Deserialize<'de> for Requirement {
             path: Some(path), ..
         } = &requirement
         {
+            if path.as_str().is_empty() {
+                return Err(de::Error::custom("git dependency path must not be empty"));
+            }
             crate::io::validate_safe_relative_path(path).map_err(de::Error::custom)?;
         }
         Ok(requirement)
@@ -225,6 +228,16 @@ mod tests {
 
         let error =
             toml::from_str::<HashMap<String, Requirement>>(toml).expect_err("escaping path");
+        insta::assert_snapshot!(error.to_string());
+    }
+
+    #[test]
+    fn read_git_requirement_with_empty_path() {
+        let toml = r#"
+            monorepo = { git = "https://github.com/gleam-lang/gleam.git", ref = "main", path = "" }
+        "#;
+
+        let error = toml::from_str::<HashMap<String, Requirement>>(toml).expect_err("empty path");
         insta::assert_snapshot!(error.to_string());
     }
 }
