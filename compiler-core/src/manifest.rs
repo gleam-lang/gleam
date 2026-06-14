@@ -699,16 +699,22 @@ impl PackageChanges {
                 Some(old) if old.version == new.version => match (&old.source, &new.source) {
                     (
                         ManifestPackageSource::Git {
-                            commit: old_hash, ..
+                            commit: old_hash,
+                            path: old_path,
+                            ..
                         },
                         ManifestPackageSource::Git {
-                            commit: new_hash, ..
+                            commit: new_hash,
+                            path: new_path,
+                            ..
                         },
-                    ) if old_hash != new_hash => changed_git.push(ChangedGit {
-                        name: new.name.clone(),
-                        old_hash: old_hash.clone(),
-                        new_hash: new_hash.clone(),
-                    }),
+                    ) if old_hash != new_hash || old_path != new_path => {
+                        changed_git.push(ChangedGit {
+                            name: new.name.clone(),
+                            old_hash: old_hash.clone(),
+                            new_hash: new_hash.clone(),
+                        })
+                    }
                     (
                         ManifestPackageSource::Hex { .. }
                         | ManifestPackageSource::Local { .. }
@@ -747,8 +753,10 @@ mod manifest_update_tests {
     use ecow::EcoString;
     use hexpm::version::Version;
 
-    use crate::manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource, PackageChanges};
-    use crate::manifest::{Changed, Manifest};
+    use crate::manifest::{
+        Base16Checksum, Changed, ChangedGit, Manifest, ManifestPackage, ManifestPackageSource,
+        PackageChanges,
+    };
 
     #[test]
     fn resolved_with_updated() {
@@ -853,6 +861,46 @@ mod manifest_update_tests {
         assert!(changes.changed.is_empty());
         assert_eq!(changes.removed, vec![name.clone()]);
         assert_eq!(changes.added, vec![(name.clone(), version.clone())]);
+    }
+
+    #[test]
+    fn resolved_with_git_path_change_same_commit() {
+        let name = EcoString::from("wibble");
+        let commit = EcoString::from("bd9fe02f72250e6a136967917bcb1bdccaffa3c8");
+        let package = |path: &str| ManifestPackage {
+            name: name.clone(),
+            version: Version::new(1, 0, 0),
+            build_tools: vec![],
+            otp_app: None,
+            requirements: vec![],
+            source: ManifestPackageSource::Git {
+                repo: "https://github.com/gleam-lang/gleam.git".into(),
+                commit: commit.clone(),
+                path: Some(path.into()),
+            },
+        };
+
+        let old = Manifest {
+            requirements: HashMap::new(),
+            packages: vec![package("packages/a")],
+        };
+        let new = Manifest {
+            requirements: HashMap::new(),
+            packages: vec![package("packages/b")],
+        };
+
+        let changes = PackageChanges::between_manifests(&old, &new);
+        assert_eq!(
+            changes.changed_git,
+            vec![ChangedGit {
+                name: name.clone(),
+                old_hash: commit.clone(),
+                new_hash: commit.clone(),
+            }]
+        );
+        assert!(changes.added.is_empty());
+        assert!(changes.changed.is_empty());
+        assert!(changes.removed.is_empty());
     }
 }
 
