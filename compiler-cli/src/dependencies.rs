@@ -1112,8 +1112,11 @@ fn git_repo_dir_name(repo: &str) -> String {
     format!("{name}-{hash:016x}")
 }
 
-fn git_staging_path(project_paths: &ProjectPaths, repo: &str) -> Utf8PathBuf {
-    project_paths.build_git_repo(&format!("{}-staging", git_repo_dir_name(repo)))
+fn git_staging_path(project_paths: &ProjectPaths, repo: &str, package_name: &str) -> Utf8PathBuf {
+    project_paths.build_git_repo(&format!(
+        "{}-{package_name}-staging",
+        git_repo_dir_name(repo)
+    ))
 }
 
 enum GitCheckout {
@@ -1163,7 +1166,7 @@ impl GitCheckout {
 /// git fetch origin
 /// git rev-parse --verify --quiet <ref>^{commit}
 /// git worktree prune
-/// git worktree add --force --detach <clone>-staging <commit>
+/// git worktree add --force --detach <clone>-<pkg>-staging <commit>
 /// ```
 ///
 /// The staging worktree exists only for the duration of one package download.
@@ -1246,7 +1249,7 @@ fn download_git_package_to_staged_path(
     // Delete any staging worktree left behind by a previous crash, and prune
     // its registration from the clone so `git worktree add` can reuse the
     // path.
-    let staging_path = git_staging_path(project_paths, repo);
+    let staging_path = git_staging_path(project_paths, repo, package_name);
     fs::delete_directory(&staging_path)?;
     let _ = Command::new("git")
         .arg("worktree")
