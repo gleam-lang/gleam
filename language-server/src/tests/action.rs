@@ -442,8 +442,8 @@ pub fn new() -> other.Wibble { todo }
 }
 
 #[test]
-fn generate_unqualified_variant_in_other_module_adds_an_unqualified_import_if_other_variants_are_unqualified(
-) {
+fn generate_unqualified_variant_in_other_module_adds_an_unqualified_import_if_other_variants_are_unqualified()
+ {
     let src = r#"
 import other.{ Wibble }
 
@@ -467,8 +467,8 @@ pub fn new() -> other.Wibble { todo }
 }
 
 #[test]
-fn generate_unqualified_variant_in_other_module_adds_qualification_if_other_variants_are_not_imported(
-) {
+fn generate_unqualified_variant_in_other_module_adds_qualification_if_other_variants_are_not_imported()
+ {
     let src = r#"
 import other
 
@@ -8109,8 +8109,8 @@ pub fn main(arg: CannotBeDestructured) {
 }
 
 #[test]
-fn pattern_match_on_argument_with_multiple_constructors_is_nicely_formatted_in_function_with_empty_body(
-) {
+fn pattern_match_on_argument_with_multiple_constructors_is_nicely_formatted_in_function_with_empty_body()
+ {
     assert_code_action!(
         PATTERN_MATCH_ON_ARGUMENT,
         "
