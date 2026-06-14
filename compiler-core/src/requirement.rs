@@ -82,6 +82,7 @@ impl Requirement {
                 path,
             } => match path {
                 Some(path) => {
+                    let path = path.as_str().replace('\\', "/");
                     format!(r#"{{ git = "{url}", ref = "{ref_}", path = "{path}" }}"#)
                 }
                 None => format!(r#"{{ git = "{url}", ref = "{ref_}" }}"#),

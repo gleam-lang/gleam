@@ -104,7 +104,7 @@ impl Manifest {
                     buffer.push('"');
                     if let Some(path) = path {
                         buffer.push_str(r#", path = ""#);
-                        buffer.push_str(path.as_str());
+                        buffer.push_str(&path.as_str().replace('\\', "/"));
                         buffer.push('"');
                     }
                 }
@@ -295,17 +295,17 @@ mod tests {
     #[cfg(windows)]
     const HOME: &'static str = "C:\\home\\louis\\packages\\some_folder";
 
-    #[cfg(windows)]
-    const PACKAGE: &'static str = "C:\\home\\louis\\packages\\path\\to\\package";
-
-    #[cfg(windows)]
-    const PACKAGE_WITH_UNC: &'static str = "\\\\?\\C:\\home\\louis\\packages\\path\\to\\package";
-
     #[cfg(not(windows))]
     const HOME: &str = "/home/louis/packages/some_folder";
 
+    #[cfg(windows)]
+    const PACKAGE: &'static str = "C:\\home\\louis\\packages\\path\\to\\package";
+
     #[cfg(not(windows))]
     const PACKAGE: &str = "/home/louis/packages/path/to/package";
+
+    #[cfg(windows)]
+    const PACKAGE_WITH_UNC: &'static str = "\\\\?\\C:\\home\\louis\\packages\\path\\to\\package";
 
     #[test]
     fn manifest_toml_format() {
@@ -440,6 +440,44 @@ awsome_local3 = { git = "https://github.com/gleam-lang/gleam.git", ref = "bd9fe0
 gleam_stdlib = { version = "~> 0.17" }
 gleeunit = { version = "~> 0.1" }
 zzz = { version = "> 0.0.0" }
+"#
+        );
+    }
+
+    #[test]
+    fn git_package_path_with_backslashes_is_normalised() {
+        let manifest = Manifest {
+            requirements: HashMap::new(),
+            packages: vec![ManifestPackage {
+                name: "wibble".into(),
+                version: Version::new(1, 0, 0),
+                build_tools: ["gleam".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Git {
+                    repo: "https://github.com/gleam-lang/gleam.git".into(),
+                    commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+                    path: Some("packages\\wibble".into()),
+                },
+            }],
+        };
+
+        let buffer = manifest.to_toml(HOME.into());
+        assert_eq!(
+            buffer,
+            r#"# Do not manually edit this file, it is managed by Gleam.
+#
+# This file locks the dependency versions used, to make your build
+# deterministic and to prevent unexpected versions from being included
+# in your application.
+#
+# You should check this file into your source control repository.
+
+packages = [
+  { name = "wibble", version = "1.0.0", build_tools = ["gleam"], requirements = [], source = "git", repo = "https://github.com/gleam-lang/gleam.git", commit = "bd9fe02f72250e6a136967917bcb1bdccaffa3c8", path = "packages/wibble" },
+]
+
+[requirements]
 "#
         );
     }
