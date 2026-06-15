@@ -833,6 +833,11 @@ pub(crate) fn is_git_work_tree_root(path: &Utf8Path) -> bool {
     exists(path.join(".git")).unwrap_or(false)
 }
 
+pub(crate) fn is_bare_git_repo_root(path: &Utf8Path) -> bool {
+    tracing::debug!(path=?path, "checking_for_bare_git_repo_root");
+    exists(path.join("HEAD")).unwrap_or(false) && exists(path.join("objects")).unwrap_or(false)
+}
+
 /// Run `git init` in the given path.
 /// If git is not installed then we do nothing.
 pub fn git_init(path: &Utf8Path) -> Result<(), Error> {

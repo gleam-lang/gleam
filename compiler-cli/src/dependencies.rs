@@ -1174,12 +1174,12 @@ impl GitCheckout {
 /// ```
 ///
 /// For a package in a subdirectory of its repository the repository is
-/// instead cloned into `build/git/<repo-name>-<hash>` without ever populating
-/// its worktree, and the package is checked out into a transient staging
+/// instead cloned into `build/git/<repo-name>-<hash>` as a bare repository
+/// with no work tree, and the package is checked out into a transient staging
 /// worktree which the subdirectory is hard-linked out of:
 ///
 /// ```sh
-/// git init
+/// git init --bare
 /// git remote remove origin
 /// git remote add origin <repo>
 /// git fetch origin
@@ -1232,7 +1232,7 @@ fn download_git_package_in_place(
     project_paths: &ProjectPaths,
 ) -> Result<GitCheckout, Error> {
     let clone_path = project_paths.build_packages_package(package_name);
-    prepare_git_clone(&clone_path, repo)?;
+    prepare_git_clone(&clone_path, repo, false)?;
     let _ = execute_command(git_command(&clone_path).arg("checkout").arg(ref_))?;
     let output = execute_command(git_command(&clone_path).arg("rev-parse").arg("HEAD"))?;
     let commit = git_stdout(output);
@@ -1248,7 +1248,7 @@ fn download_git_package_to_staged_path(
     subdir: &Utf8Path,
 ) -> Result<GitCheckout, Error> {
     let clone_path = project_paths.build_git_repo(&git_repo_dir_name(repo));
-    prepare_git_clone(&clone_path, repo)?;
+    prepare_git_clone(&clone_path, repo, true)?;
 
     let commit = resolve_git_ref(&clone_path, repo, ref_)?;
 
@@ -1292,19 +1292,29 @@ fn download_git_package_to_staged_path(
 }
 
 /// Initialise (or reuse) a git clone at the given path and fetch from the
-/// remote repository.
-fn prepare_git_clone(clone_path: &Utf8Path, repo: &str) -> Result<()> {
-    // If the clone path exists but is not inside a git work tree, we need to
-    // remove the directory because running `git init` in a non-empty directory
-    // followed by `git checkout ...` is an error. See
-    // https://github.com/gleam-lang/gleam/issues/4488 for details.
-    if !fs::is_git_work_tree_root(clone_path) {
+/// remote repository. When `bare` is set the clone is a bare repository with
+/// no work tree.
+fn prepare_git_clone(clone_path: &Utf8Path, repo: &str, bare: bool) -> Result<()> {
+    // If the clone path exists but is not the kind of git repo we expect, we
+    // need to remove the directory.
+    let reusable = if bare {
+        fs::is_bare_git_repo_root(clone_path)
+    } else {
+        fs::is_git_work_tree_root(clone_path)
+    };
+
+    if !reusable {
         fs::delete_directory(clone_path)?;
     }
 
     fs::mkdir(clone_path)?;
 
-    let _ = execute_command(git_command(clone_path).arg("init"))?;
+    let mut init = git_command(clone_path);
+    let _ = init.arg("init");
+    if bare {
+        let _ = init.arg("--bare");
+    }
+    let _ = execute_command(&mut init)?;
 
     // If this directory already exists, but the remote URL has been edited in
     // `gleam.toml` without a `gleam clean`, `git remote add` will fail, causing
