@@ -1104,7 +1104,7 @@ fn git_repo_dir_name(repo: &str) -> String {
     let name = repo
         .trim_end_matches('/')
         .trim_end_matches(".git")
-        .rsplit(['/', ':'])
+        .rsplit(['/', ':', '\\'])
         .next()
         .filter(|name| !name.is_empty())
         .unwrap_or("repo");

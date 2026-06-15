@@ -1023,6 +1023,10 @@ fn git_repo_dir_name_uses_repo_basename_and_hash_of_full_url() {
         git_repo_dir_name("git@github.com:gleam-lang/gleam.git"),
         "gleam-102c9e1e5cf87965"
     );
+    assert_eq!(
+        git_repo_dir_name("C:\\src\\gleam.git"),
+        "gleam-ab03c1f252f639da"
+    );
 }
 
 #[test]
