@@ -32,7 +32,7 @@ use gleam_core::{
     build::Origin,
     config::PackageConfig,
     io::{
-        BeamCompiler, Command, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
+        BeamCompilerIO, Command, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
         WrappedReader, memory::InMemoryFileSystem,
     },
     line_numbers::LineNumbers,
@@ -256,7 +256,7 @@ impl CommandExecutor for LanguageServerTestIO {
     }
 }
 
-impl BeamCompiler for LanguageServerTestIO {
+impl BeamCompilerIO for LanguageServerTestIO {
     fn compile_beam(
         &self,
         out: &Utf8Path,

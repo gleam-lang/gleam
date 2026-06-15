@@ -15,7 +15,7 @@ use gleam_core::{
         ExpressionPosition, Located, Module, UnqualifiedImport, type_constructor_from_modules,
     },
     config::PackageConfig,
-    io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
+    io::{BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
@@ -115,7 +115,7 @@ where
     // IO to be supplied from outside of gleam-core
     IO: FileSystemReader
         + FileSystemWriter
-        + BeamCompiler
+        + BeamCompilerIO
         + CommandExecutor
         + DownloadDependencies
         + MakeLocker

@@ -6,7 +6,7 @@ use gleam_core::{
     build::{NullTelemetry, Target},
     error::{Error, FileIoAction, FileKind, OS, ShellCommandFailureReason, parse_os},
     io::{
-        BeamCompiler, Command, CommandExecutor, Content, DirEntry, FileSystemReader,
+        BeamCompilerIO, Command, CommandExecutor, Content, DirEntry, FileSystemReader,
         FileSystemWriter, OutputFile, ReadDir, Stdio, WrappedReader, is_native_file_extension,
     },
     manifest::Manifest,
@@ -25,7 +25,7 @@ use std::{
 
 use camino::{ReadDirUtf8, Utf8Path, Utf8PathBuf};
 
-use crate::{dependencies, lsp::LspLocker};
+use crate::{beam_compiler::BeamCompilerInstance, dependencies, lsp::LspLocker};
 
 #[cfg(test)]
 mod tests;
@@ -89,7 +89,7 @@ pub fn get_distro_str() -> String {
 /// A `FileWriter` implementation that writes to the file system.
 #[derive(Debug, Clone, Default)]
 pub struct ProjectIO {
-    beam_compiler: Arc<Mutex<crate::beam_compiler::BeamCompiler>>,
+    beam_compiler: Arc<Mutex<Option<BeamCompilerInstance>>>,
 }
 
 impl ProjectIO {
@@ -101,6 +101,15 @@ impl ProjectIO {
 
     pub fn boxed() -> Box<Self> {
         Box::new(Self::new())
+    }
+
+    pub(crate) fn initialise_beam_compiler(&self) -> Result<(), Error> {
+        let mut guard = self
+            .beam_compiler
+            .lock()
+            .expect("could not lock beam_compiler");
+        *guard = Some(BeamCompilerInstance::new(self)?);
+        Ok(())
     }
 }
 
@@ -244,7 +253,7 @@ impl CommandExecutor for ProjectIO {
     }
 }
 
-impl BeamCompiler for ProjectIO {
+impl BeamCompilerIO for ProjectIO {
     fn compile_beam(
         &self,
         out: &Utf8Path,
@@ -252,11 +261,20 @@ impl BeamCompiler for ProjectIO {
         modules: &HashSet<Utf8PathBuf>,
         stdio: Stdio,
     ) -> Result<Vec<String>, Error> {
-        self.beam_compiler
+        let mut guard = self
+            .beam_compiler
             .lock()
-            .as_mut()
-            .expect("could not get beam_compiler")
-            .compile(self, out, lib, modules, stdio)
+            .expect("could not lock beam_compiler");
+
+        match &mut *guard {
+            Some(compiler) => compiler.compile(out, lib, modules, stdio),
+            None => {
+                let mut compiler = BeamCompilerInstance::new(self)?;
+                let result = compiler.compile(out, lib, modules, stdio);
+                *guard = Some(compiler);
+                result
+            }
+        }
     }
 }
 

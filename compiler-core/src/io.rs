@@ -322,7 +322,7 @@ impl Stdio {
 }
 
 /// A trait used to compile Erlang and Elixir modules to BEAM bytecode.
-pub trait BeamCompiler {
+pub trait BeamCompilerIO {
     fn compile_beam(
         &self,
         out: &Utf8Path,

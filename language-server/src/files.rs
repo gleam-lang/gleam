@@ -10,8 +10,8 @@ use gleam_core::{
     Result,
     error::Error,
     io::{
-        BeamCompiler, Command, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir, Stdio,
-        WrappedReader, memory::InMemoryFileSystem,
+        BeamCompilerIO, Command, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
+        Stdio, WrappedReader, memory::InMemoryFileSystem,
     },
 };
 
@@ -169,9 +169,9 @@ where
     }
 }
 
-impl<IO> BeamCompiler for FileSystemProxy<IO>
+impl<IO> BeamCompilerIO for FileSystemProxy<IO>
 where
-    IO: BeamCompiler,
+    IO: BeamCompilerIO,
 {
     fn compile_beam(
         &self,

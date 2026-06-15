@@ -5,7 +5,7 @@ use gleam_core::{
     Error, Result,
     build::SourceFingerprint,
     error::{FileIoAction, FileKind},
-    io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
+    io::{BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter},
     paths::ProjectPaths,
 };
 use std::{
@@ -39,7 +39,7 @@ where
     // IO to be supplied from outside of gleam-core
     IO: FileSystemReader
         + FileSystemWriter
-        + BeamCompiler
+        + BeamCompilerIO
         + CommandExecutor
         + DownloadDependencies
         + MakeLocker

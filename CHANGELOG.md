@@ -188,6 +188,10 @@
   segments when compiling a function with a JavaScript external.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- A `gleam@@compile.erl` is no longer left in the build output of
+  `gleam compile-package`.
+  ([Louis Pilfold](https://github.com/lpil))
+
 - When using the language server to extract a function from within the body of a
   use statement, only the selected statement(s) are extracted.
 

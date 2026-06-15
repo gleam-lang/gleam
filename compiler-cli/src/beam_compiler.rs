@@ -20,35 +20,32 @@ use camino::{Utf8Path, Utf8PathBuf};
 use itertools::Itertools;
 
 #[derive(Debug)]
-struct BeamCompilerInner {
+pub struct BeamCompilerInstance {
     process: Child,
-    stdin: ChildStdin,
+    stdin: Option<ChildStdin>,
     stdout: BufReader<ChildStdout>,
+    // A guard held for cleaning up the temporary file used to start the BEAM instance.
+    _source: tempfile::NamedTempFile,
 }
 
-#[derive(Debug, Default)]
-pub struct BeamCompiler {
-    inner: Option<BeamCompilerInner>,
-}
-
-impl BeamCompiler {
-    pub fn compile<IO: FileSystemWriter>(
+impl BeamCompilerInstance {
+    pub fn compile(
         &mut self,
-        io: &IO,
         out: &Utf8Path,
         lib: &Utf8Path,
         modules: &HashSet<Utf8PathBuf>,
         stdio: Stdio,
     ) -> Result<Vec<String>, Error> {
-        let inner = match self.inner {
-            Some(ref mut inner) => match inner.process.try_wait() {
-                Ok(None) => inner,
-                _ => self.inner.insert(self.spawn(io, out)?),
-            },
+        // Check that the BEAM instance is still alive before attempting to use it.
+        let exit_status = self
+            .process
+            .try_wait()
+            .expect("access BEAM instance exit state");
+        if let Some(status) = exit_status {
+            panic!("BEAM compiler instance exited: {status}");
+        }
 
-            None => self.inner.insert(self.spawn(io, out)?),
-        };
-
+        // Prepare work to send to the BEAM instance.
         let args = format!(
             "{{\"{}\", \"{}\", [\"{}\"]}}",
             escape_path(lib),
@@ -61,14 +58,16 @@ impl BeamCompiler {
 
         tracing::debug!(args=?args, "call_beam_compiler");
 
-        writeln!(inner.stdin, "{args}.").map_err(|e| Error::ShellCommand {
-            program: "escript".into(),
-            reason: ShellCommandFailureReason::IoError(e.kind()),
+        writeln!(self.stdin.as_ref().expect("stdin present"), "{args}.").map_err(|e| {
+            Error::ShellCommand {
+                program: "escript".into(),
+                reason: ShellCommandFailureReason::IoError(e.kind()),
+            }
         })?;
 
         let mut buf = String::new();
         let mut accumulated_modules: Vec<String> = Vec::new();
-        while let (Ok(_), Ok(None)) = (inner.stdout.read_line(&mut buf), inner.process.try_wait()) {
+        while let (Ok(_), Ok(None)) = (self.stdout.read_line(&mut buf), self.process.try_wait()) {
             match buf.trim() {
                 "gleam-compile-result-ok" => {
                     // Return Ok with the accumulated modules
@@ -101,16 +100,15 @@ impl BeamCompiler {
         })
     }
 
-    fn spawn<IO: FileSystemWriter>(
-        &self,
-        io: &IO,
-        out: &Utf8Path,
-    ) -> Result<BeamCompilerInner, Error> {
-        let escript_path = out
-            .join(paths::ARTEFACT_DIRECTORY_NAME)
-            .join("gleam@@compile.erl");
-
+    pub fn new<IO: FileSystemWriter>(io: &IO) -> Result<Self, Error> {
         let escript_source = std::include_str!("../templates/gleam@@compile.erl");
+        let escript_file =
+            tempfile::NamedTempFile::new().map_err(|e| Error::CouldNotCreateTempFile {
+                error: e.to_string(),
+            })?;
+        let escript_path =
+            Utf8PathBuf::from_path_buf(escript_file.path().to_path_buf()).expect("UTF8 temp");
+
         io.write(&escript_path, escript_source)?;
 
         tracing::trace!(escript_path=?escript_path, "spawn_beam_compiler");
@@ -134,21 +132,20 @@ impl BeamCompiler {
         let stdin = process.stdin.take().expect("could not get child stdin");
         let stdout = process.stdout.take().expect("could not get child stdout");
 
-        Ok(BeamCompilerInner {
+        Ok(Self {
             process,
-            stdin,
+            stdin: Some(stdin),
             stdout: BufReader::new(stdout),
+            _source: escript_file,
         })
     }
 }
 
-impl Drop for BeamCompiler {
+impl Drop for BeamCompilerInstance {
     fn drop(&mut self) {
-        if let Some(mut inner) = self.inner.take() {
-            // closing stdin will cause the erlang process to exit.
-            drop(inner.stdin);
-            let _ = inner.process.wait();
-        }
+        // closing stdin will cause the BEAM instance to exit.
+        drop(self.stdin.take());
+        let _ = self.process.wait();
     }
 }
 

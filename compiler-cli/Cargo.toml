@@ -36,6 +36,8 @@ fslock = "0"
 same-file = "1"
 # Creation of zip files
 zip = { version = "8", features = ["deflate"], default-features = false }
+# Creation of temporary directories
+tempfile = "3"
 
 async-trait.workspace = true
 base16.workspace = true
@@ -65,8 +67,6 @@ toml.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
-# Creation of temporary directories
-tempfile = "3"
 # Setting file modification times for tests
 filetime = "0.2"
 pretty_assertions.workspace = true

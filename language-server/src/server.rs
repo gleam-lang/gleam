@@ -16,7 +16,7 @@ use debug_ignore::DebugIgnore;
 use gleam_core::{
     Result,
     diagnostic::{Diagnostic, ExtraLabel, Level},
-    io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
+    io::{BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
 };
 use itertools::Itertools;
@@ -54,7 +54,7 @@ impl<'a, IO> LanguageServer<'a, IO>
 where
     IO: FileSystemReader
         + FileSystemWriter
-        + BeamCompiler
+        + BeamCompilerIO
         + CommandExecutor
         + DownloadDependencies
         + MakeLocker
