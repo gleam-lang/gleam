@@ -7,8 +7,8 @@ use crate::analyse::Inferred;
 
 use super::*;
 
-pub(super) struct PatternPrinter<'a, 'env> {
-    pub environment: &'env mut Env<'a>,
+pub(super) struct PatternPrinter<'a, 'generator, 'module> {
+    pub generator: &'generator mut FunctionGenerator<'a, 'module>,
     pub variables: Vec<&'a str>,
     pub guards: Vec<Document<'a>>,
     /// In case we're dealing with string patterns, we might have something like
@@ -52,10 +52,10 @@ impl<'a> StringPatternAssignment<'a> {
     }
 }
 
-impl<'a, 'env> PatternPrinter<'a, 'env> {
-    pub(super) fn new(environment: &'env mut Env<'a>) -> Self {
+impl<'a, 'generator, 'module> PatternPrinter<'a, 'generator, 'module> {
+    pub(super) fn new(generator: &'generator mut FunctionGenerator<'a, 'module>) -> Self {
         Self {
-            environment,
+            generator,
             variables: vec![],
             guards: vec![],
             assignments: vec![],
@@ -72,7 +72,7 @@ impl<'a, 'env> PatternPrinter<'a, 'env> {
                 self.variables.push(name);
                 self.print(pattern)
                     .append(" = ")
-                    .append(self.environment.next_local_var_name(name))
+                    .append(self.generator.next_local_var_name(name))
             }
 
             Pattern::List { elements, tail, .. } => self.pattern_list(elements, tail.as_deref()),
@@ -88,7 +88,7 @@ impl<'a, 'env> PatternPrinter<'a, 'env> {
 
             Pattern::Variable { name, .. } => {
                 self.variables.push(name);
-                self.environment.next_local_var_name(name)
+                self.generator.next_local_var_name(name)
             }
 
             Pattern::Int { value, .. } => int(value),
@@ -127,7 +127,7 @@ impl<'a, 'env> PatternPrinter<'a, 'env> {
                 let right = match right_side_assignment {
                     AssignName::Variable(right) => {
                         self.variables.push(right);
-                        self.environment.next_local_var_name(right)
+                        self.generator.next_local_var_name(right)
                     }
                     AssignName::Discard(_) => "_".to_doc(),
                 };
@@ -148,7 +148,7 @@ impl<'a, 'env> PatternPrinter<'a, 'env> {
 
                     self.assignments.push(StringPatternAssignment {
                         gleam_name: left_name.clone(),
-                        erlang_name: self.environment.next_local_var_name(left_name),
+                        erlang_name: self.generator.next_local_var_name(left_name),
                         literal_value: string(left_side_string),
                     });
                 }
@@ -180,13 +180,11 @@ impl<'a, 'env> PatternPrinter<'a, 'env> {
                     .variant;
                 match variant {
                     ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                        const_inline(literal, self.environment)
+                        self.generator.const_inline(literal)
                     }
                     ValueConstructorVariant::LocalVariable { .. }
                     | ValueConstructorVariant::ModuleFn { .. }
-                    | ValueConstructorVariant::Record { .. } => {
-                        self.environment.local_var_name(name)
-                    }
+                    | ValueConstructorVariant::Record { .. } => self.generator.local_var_name(name),
                 }
             }
             BitArraySize::BinaryOperator {
@@ -228,7 +226,7 @@ impl<'a, 'env> PatternPrinter<'a, 'env> {
 
         let left = self.bit_array_size(left);
         let right = self.bit_array_size(right);
-        let denominator = self.environment.next_local_var_name("gleam@denominator");
+        let denominator = self.generator.next_local_var_name("gleam@denominator");
         let clauses = docvec![
             line(),
             "0 -> 0;",
@@ -296,7 +294,7 @@ impl<'a, 'env> PatternPrinter<'a, 'env> {
         let pattern_is_a_string_literal = matches!(value, Pattern::String { .. });
         let pattern_is_a_discard = matches!(value, Pattern::Discard { .. });
 
-        let create_document = |this: &mut PatternPrinter<'a, 'env>| match value {
+        let create_document = |this: &mut PatternPrinter<'a, 'generator, 'module>| match value {
             Pattern::String { value, .. } => string_inner(value).surround("\"", "\""),
             Pattern::Discard { .. }
             | Pattern::Variable { .. }
@@ -305,7 +303,7 @@ impl<'a, 'env> PatternPrinter<'a, 'env> {
 
             Pattern::Assign { name, pattern, .. } => {
                 this.variables.push(name);
-                let variable_name = this.environment.next_local_var_name(name);
+                let variable_name = this.generator.next_local_var_name(name);
 
                 match pattern.as_ref() {
                     // In Erlang, assignment patterns inside bit arrays are not allowed. So instead of
@@ -357,7 +355,7 @@ impl<'a, 'env> PatternPrinter<'a, 'env> {
             | Pattern::Invalid { .. } => panic!("Pattern segment match not recognised"),
         };
 
-        let size = |value: &'a TypedPattern, this: &mut PatternPrinter<'a, 'env>| {
+        let size = |value: &'a TypedPattern, this: &mut PatternPrinter<'a, 'generator, 'module>| {
             Some(":".to_doc().append(this.print(value)))
         };
 
