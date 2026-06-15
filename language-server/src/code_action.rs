@@ -10144,14 +10144,14 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveUnreachableCaseClauses<'ast> {
         }
 
         for clause in clauses {
-            let mut all_alternatives_are_unreachable = true;
-            let mut unreachable_alternatives = vec![];
-            let mut previous_alternative_end = None;
-            let mut all_previous_alternatives_were_deleted = true;
+            let mut all_patterns_are_unreachable = true;
+            let mut unreachable_patterns = vec![];
+            let mut previous_pattern_end = None;
+            let mut all_previous_patterns_were_deleted = true;
 
-            for alternative in clause.alternatives() {
-                let alternative_location = alternative_location(alternative);
-                if self.unreachable_clauses.contains(&alternative_location) {
+            for pattern in clause.patterns() {
+                let pattern_location = multi_pattern_location(pattern);
+                if self.unreachable_clauses.contains(&pattern_location) {
                     // If an alternative is unreachable we want to delete
                     // everything from the end of the previous alternative to
                     // the start of this one.
@@ -10160,9 +10160,9 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveUnreachableCaseClauses<'ast> {
                     // Error(_) | Error(_) | Ok(_)
                     // //      ^^^^^^^^^^^ We want to delete all of this
                     // ```
-                    unreachable_alternatives.push(
-                        previous_alternative_end.map_or(alternative_location, |previous_end| {
-                            SrcSpan::new(previous_end, alternative_location.end)
+                    unreachable_patterns.push(
+                        previous_pattern_end.map_or(pattern_location, |previous_end| {
+                            SrcSpan::new(previous_end, pattern_location.end)
                         }),
                     );
                 } else {
@@ -10178,21 +10178,19 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveUnreachableCaseClauses<'ast> {
                     // ```
                     //
 
-                    if all_previous_alternatives_were_deleted
-                        && let Some(end) = previous_alternative_end
-                    {
+                    if all_previous_patterns_were_deleted && let Some(end) = previous_pattern_end {
                         self.clauses_to_delete
-                            .push(SrcSpan::new(end, alternative_location.start));
+                            .push(SrcSpan::new(end, pattern_location.start));
                     }
 
-                    all_previous_alternatives_were_deleted = false;
-                    all_alternatives_are_unreachable = false;
+                    all_previous_patterns_were_deleted = false;
+                    all_patterns_are_unreachable = false;
                 }
 
-                previous_alternative_end = alternative.last().map(|pattern| pattern.location().end);
+                previous_pattern_end = pattern.last().map(|pattern| pattern.location().end);
             }
 
-            if all_alternatives_are_unreachable {
+            if all_patterns_are_unreachable {
                 // If all the patterns of the clause are unreachable then we
                 // want to delete the entire branch:
                 //
@@ -10212,13 +10210,15 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveUnreachableCaseClauses<'ast> {
                 //   1, 2 | 1, 2 -> todo
                 // //       ^^^^ just this one should be deleted
                 // }
-                self.clauses_to_delete.extend(&unreachable_alternatives);
+                self.clauses_to_delete.extend(&unreachable_patterns);
             }
         }
     }
 }
 
-fn alternative_location(alternative: &[Pattern<Arc<Type>>]) -> SrcSpan {
+/// Given a pattern with possibly many subjects, this returns the location
+/// spanning the whole thing.
+fn multi_pattern_location(alternative: &[Pattern<Arc<Type>>]) -> SrcSpan {
     let start = alternative
         .first()
         .map(|pattern| pattern.location().start)
