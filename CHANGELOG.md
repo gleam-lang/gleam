@@ -120,15 +120,15 @@
   is not defined:
 
   ```gleam
-  pub fn wibble(argument: Wibble) { todo }
+  pub fn run(data: Wibble(Int)) { todo }
   ```
 
   The code action will generate:
 
   ```gleam
-  pub type Wibble
+  pub type Wibble(a)
 
-  pub fn wibble(argument: Wibble) { todo }
+  pub fn run(data: Wibble(Int)) { todo }
   ```
 
   ([Daniele Scaratti](https://github.com/lupodevelop))
