@@ -1915,8 +1915,8 @@ impl TypedClause {
         }
     }
 
-    /// Returns an iterator over all the alternative patterns of a case clause.
-    pub fn alternatives(&self) -> impl Iterator<Item = &Vec<TypedPattern>> {
+    /// Returns an iterator over all the patterns of a case clause.
+    pub fn patterns(&self) -> impl Iterator<Item = &Vec<TypedPattern>> {
         std::iter::once(&self.pattern).chain(self.alternative_patterns.iter())
     }
 
