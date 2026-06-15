@@ -1072,18 +1072,37 @@ fn execute_command(command: &mut Command) -> Result<std::process::Output> {
                 reason,
             })
         }
-        Err(error) => Err(match error.kind() {
-            ErrorKind::NotFound => Error::ShellProgramNotFound {
-                program: "git".into(),
-                os: fs::get_os(),
-            },
-
-            other => Error::ShellCommand {
-                program: "git".into(),
-                reason: ShellCommandFailureReason::IoError(other),
-            },
-        }),
+        Err(error) => Err(git_io_error(error)),
     }
+}
+
+/// A `git` command with its working directory set to `dir`.
+fn git_command(dir: &Utf8Path) -> Command {
+    let mut command = Command::new("git");
+    let _ = command.current_dir(dir);
+    command
+}
+
+/// Map an IO error from spawning `git` onto the appropriate `Error`.
+fn git_io_error(error: std::io::Error) -> Error {
+    match error.kind() {
+        ErrorKind::NotFound => Error::ShellProgramNotFound {
+            program: "git".into(),
+            os: fs::get_os(),
+        },
+        other => Error::ShellCommand {
+            program: "git".into(),
+            reason: ShellCommandFailureReason::IoError(other),
+        },
+    }
+}
+
+/// Parse the trimmed UTF-8 stdout of a `git` command.
+fn git_stdout(output: std::process::Output) -> EcoString {
+    String::from_utf8(output.stdout)
+        .expect("Output should be UTF-8")
+        .trim()
+        .into()
 }
 
 fn git_repo_dir_name(repo: &str) -> String {
@@ -1200,22 +1219,9 @@ fn download_git_package_in_place(
 ) -> Result<GitCheckout, Error> {
     let clone_path = project_paths.build_packages_package(package_name);
     prepare_git_clone(&clone_path, repo)?;
-    let _ = execute_command(
-        Command::new("git")
-            .arg("checkout")
-            .arg(ref_)
-            .current_dir(&clone_path),
-    )?;
-    let output = execute_command(
-        Command::new("git")
-            .arg("rev-parse")
-            .arg("HEAD")
-            .current_dir(&clone_path),
-    )?;
-    let commit = String::from_utf8(output.stdout)
-        .expect("Output should be UTF-8")
-        .trim()
-        .into();
+    let _ = execute_command(git_command(&clone_path).arg("checkout").arg(ref_))?;
+    let output = execute_command(git_command(&clone_path).arg("rev-parse").arg("HEAD"))?;
+    let commit = git_stdout(output);
 
     Ok(GitCheckout::InPlace { commit })
 }
@@ -1237,21 +1243,19 @@ fn download_git_package_to_staged_path(
     // path.
     let staging_path = git_staging_path(project_paths, repo, package_name);
     fs::delete_directory(&staging_path)?;
-    let _ = Command::new("git")
+    let _ = git_command(&clone_path)
         .arg("worktree")
         .arg("prune")
-        .current_dir(&clone_path)
         .output();
 
     let _ = execute_command(
-        Command::new("git")
+        git_command(&clone_path)
             .arg("worktree")
             .arg("add")
             .arg("--force")
             .arg("--detach")
             .arg(&staging_path)
-            .arg(commit.as_str())
-            .current_dir(&clone_path),
+            .arg(commit.as_str()),
     )?;
 
     let Some(subdir_source) = resolve_git_subdir(&staging_path, subdir) else {
@@ -1286,7 +1290,7 @@ fn prepare_git_clone(clone_path: &Utf8Path, repo: &str) -> Result<()> {
 
     fs::mkdir(clone_path)?;
 
-    let _ = execute_command(Command::new("git").arg("init").current_dir(clone_path))?;
+    let _ = execute_command(git_command(clone_path).arg("init"))?;
 
     // If this directory already exists, but the remote URL has been edited in
     // `gleam.toml` without a `gleam clean`, `git remote add` will fail, causing
@@ -1294,28 +1298,21 @@ fn prepare_git_clone(clone_path: &Utf8Path, repo: &str) -> Result<()> {
     // first, which ensures that `git remote add` properly add the remote each
     // time. If this fails, that means we haven't set the remote in the first
     // place, so we can safely ignore the error.
-    let _ = Command::new("git")
+    let _ = git_command(clone_path)
         .arg("remote")
         .arg("remove")
         .arg("origin")
-        .current_dir(clone_path)
         .output();
 
     let _ = execute_command(
-        Command::new("git")
+        git_command(clone_path)
             .arg("remote")
             .arg("add")
             .arg("origin")
-            .arg(repo)
-            .current_dir(clone_path),
+            .arg(repo),
     )?;
 
-    let _ = execute_command(
-        Command::new("git")
-            .arg("fetch")
-            .arg("origin")
-            .current_dir(clone_path),
-    )?;
+    let _ = execute_command(git_command(clone_path).arg("fetch").arg("origin"))?;
 
     Ok(())
 }
@@ -1332,37 +1329,19 @@ fn resolve_git_ref(clone_path: &Utf8Path, repo: &str, ref_: &str) -> Result<EcoS
     ];
 
     for revision in revisions {
-        let result = Command::new("git")
+        let result = git_command(clone_path)
             .arg("rev-parse")
             .arg("--verify")
             .arg("--quiet")
             .arg(&revision)
-            .current_dir(clone_path)
             .output();
 
         match result {
             // A failed rev-parse is expected when the ref form doesn't match
             // this pattern, so try the next one.
             Ok(output) if !output.status.success() => (),
-            Ok(output) => {
-                let commit = String::from_utf8(output.stdout)
-                    .expect("Output should be UTF-8")
-                    .trim()
-                    .into();
-                return Ok(commit);
-            }
-            Err(error) => {
-                return Err(match error.kind() {
-                    ErrorKind::NotFound => Error::ShellProgramNotFound {
-                        program: "git".into(),
-                        os: fs::get_os(),
-                    },
-                    other => Error::ShellCommand {
-                        program: "git".into(),
-                        reason: ShellCommandFailureReason::IoError(other),
-                    },
-                });
-            }
+            Ok(output) => return Ok(git_stdout(output)),
+            Err(error) => return Err(git_io_error(error)),
         }
     }
 
