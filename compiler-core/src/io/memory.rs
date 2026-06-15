@@ -452,7 +452,7 @@ impl CommandExecutor for InMemoryFileSystem {
     }
 }
 
-impl BeamCompiler for InMemoryFileSystem {
+impl BeamCompilerIO for InMemoryFileSystem {
     fn compile_beam(
         &self,
         _out: &Utf8Path,

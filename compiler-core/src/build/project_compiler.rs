@@ -15,7 +15,7 @@ use crate::{
     config::PackageConfig,
     dep_tree,
     error::{DefinedModuleOrigin, FileIoAction, FileKind, ShellCommandFailureReason},
-    io::{BeamCompiler, Command, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
+    io::{BeamCompilerIO, Command, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     manifest::{ManifestPackage, ManifestPackageSource},
     metadata,
     paths::{self, ProjectPaths},
@@ -128,7 +128,7 @@ pub struct ProjectCompiler<IO> {
 
 impl<IO> ProjectCompiler<IO>
 where
-    IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
+    IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompilerIO + Clone,
 {
     pub fn new(
         config: PackageConfig,

@@ -23,7 +23,7 @@ use crate::{
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
     dep_tree, error,
-    io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
+    io::{BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     parse::extra::ModuleExtra,
     paths, type_,
     uid::UniqueIdGenerator,
@@ -79,7 +79,7 @@ pub struct PackageCompiler<'a, IO> {
 
 impl<'a, IO> PackageCompiler<'a, IO>
 where
-    IO: FileSystemReader + FileSystemWriter + CommandExecutor + BeamCompiler + Clone,
+    IO: FileSystemReader + FileSystemWriter + CommandExecutor + BeamCompilerIO + Clone,
 {
     pub fn new(
         config: &'a PackageConfig,

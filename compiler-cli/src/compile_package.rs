@@ -29,6 +29,13 @@ pub fn command(options: CompilePackage) -> Result<()> {
     let paths = ProjectPaths::new(options.package_directory.clone());
     let config = config::read(paths.root_config())?;
 
+    let io = ProjectIO::new();
+    // Initialise the BEAM compiler instance eagerly, so we don't have to wait
+    // for it to boot when we come to use it for the first time.
+    if options.target.is_erlang() && !options.skip_beam_compilation {
+        io.initialise_beam_compiler()?;
+    }
+
     let target = match options.target {
         Target::Erlang => TargetCodegenConfiguration::Erlang { app_file: None },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
@@ -50,7 +57,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
         &options.libraries_directory,
         &target,
         ids,
-        ProjectIO::new(),
+        io,
     );
     compiler.write_entrypoint = false;
     compiler.write_metadata = true;

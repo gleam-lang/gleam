@@ -10,7 +10,7 @@ use gleam_core::{
     analyse::TargetSupport,
     build::{self, Mode, Module, NullTelemetry, Outcome, ProjectCompiler},
     config::PackageConfig,
-    io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
+    io::{BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     line_numbers::LineNumbers,
     manifest::Manifest,
     paths::ProjectPaths,
@@ -45,7 +45,7 @@ pub struct LspProjectCompiler<IO> {
 
 impl<IO> LspProjectCompiler<IO>
 where
-    IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
+    IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompilerIO + Clone,
 {
     pub fn new(
         manifest: Manifest,

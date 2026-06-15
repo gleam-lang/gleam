@@ -425,6 +425,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("{path} could not be added to the tarball as it is outside the project root")]
     TarPathOutsideOfProjectRoot { path: Utf8PathBuf },
+
+    #[error("could not create temp file: {error}")]
+    CouldNotCreateTempFile { error: String },
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
@@ -1778,6 +1781,14 @@ Erlang modules must have unique names regardless of the subfolders where their
                     location: None,
                 }]
             }
+
+            Error::CouldNotCreateTempFile { error } => vec![Diagnostic {
+                title: "File IO failure".into(),
+                text: wrap_format!("Could not create temporary file:\n\n\t{error}"),
+                level: Level::Error,
+                location: None,
+                hint: None,
+            }],
 
             Error::FileIo {
                 kind,
