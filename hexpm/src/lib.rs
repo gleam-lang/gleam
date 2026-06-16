@@ -36,6 +36,8 @@ pub struct Config {
     pub api_base: http::Uri,
     /// Defaults to https://repo.hex.pm/
     pub repository_base: http::Uri,
+    /// Defaults to `hexdocs.pm`
+    pub documentation_url: String,
 }
 
 impl Config {
@@ -43,6 +45,7 @@ impl Config {
         Self {
             api_base: http::Uri::from_static("https://hex.pm/api/"),
             repository_base: http::Uri::from_static("https://repo.hex.pm/"),
+            documentation_url: "hexdocs.pm".into(),
         }
     }
 
@@ -62,6 +65,28 @@ impl Config {
     ) -> http::request::Builder {
         RequestBuilder {
             builder: make_request(self.repository_base.clone(), method, path_suffix),
+        }
+        .read_credentials(credentials)
+    }
+
+    fn hexdocs_request(
+        &self,
+        method: http::Method,
+        package: &str,
+        path_suffix: &str,
+        credentials: Option<&Credentials>,
+    ) -> http::request::Builder {
+        RequestBuilder {
+            builder: make_request(
+                http::Uri::try_from(format!(
+                    "https://{}.{}",
+                    package.replace("_", "-"),
+                    self.documentation_url
+                ))
+                .expect("Url is valid"),
+                method,
+                path_suffix,
+            ),
         }
         .read_credentials(credentials)
     }
@@ -457,6 +482,39 @@ pub fn repository_get_package_tarball_response(
     };
     let body = read_and_check_body(body.reader(), checksum)?;
     Ok(body)
+}
+
+pub fn repository_get_package_interface_request(
+    name: &str,
+    version: &str,
+    credentials: Option<&Credentials>,
+    config: &Config,
+) -> http::Request<Vec<u8>> {
+    config
+        .hexdocs_request(
+            Method::GET,
+            name,
+            &format!("{version}/package-interface.json"),
+            credentials,
+        )
+        .header("accept", "application/json")
+        .body(vec![])
+        .expect("repository_get_package_interface_request request")
+}
+
+pub fn repository_get_package_interface_response(
+    response: http::Response<Vec<u8>>,
+) -> Result<String, ApiError> {
+    let (parts, body) = response.into_parts();
+    match parts.status {
+        StatusCode::OK => (),
+        StatusCode::FORBIDDEN => return Err(ApiError::NotFound),
+        StatusCode::NOT_FOUND => return Err(ApiError::NotFound),
+        status => {
+            return Err(ApiError::unexpected_response(status, body));
+        }
+    };
+    Ok(String::try_from(body).expect("TODO: fixme"))
 }
 
 /// API Docs:
