@@ -4,7 +4,9 @@
 #[cfg(test)]
 mod tests;
 
-use crate::{
+use camino::Utf8Path;
+use ecow::{EcoString, eco_format};
+use gleam_core::{
     Error, Result,
     ast::{
         CustomType, Import, ModuleConstant, TypeAlias, TypeAstConstructor, TypeAstFn, TypeAstHole,
@@ -13,21 +15,18 @@ use crate::{
     build::Target,
     io::Utf8Writer,
     parse::extra::{Comment, ModuleExtra},
+    type_::Deprecation,
     warning::WarningEmitter,
 };
-use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use pretty_arena::*;
 use std::cmp::Ordering;
 use vec1::Vec1;
 
-use crate::type_::Deprecation;
-use camino::Utf8Path;
-
 const INDENT: isize = 2;
 
 pub fn pretty(writer: &mut impl Utf8Writer, src: &EcoString, path: &Utf8Path) -> Result<()> {
-    let parsed = crate::parse::parse_module(path.to_owned(), src, &WarningEmitter::null())
+    let parsed = gleam_core::parse::parse_module(path.to_owned(), src, &WarningEmitter::null())
         .map_err(|error| Error::Parse {
             path: path.to_path_buf(),
             src: src.clone(),
@@ -406,6 +405,20 @@ impl<'a, 'doc> Formatter<'a> {
         arena.join(imports, LINE_DOCUMENT)
     }
 
+    fn unqualified_import(
+        &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        unqualified_import: &'a UnqualifiedImport,
+    ) -> Document<'a, 'doc> {
+        unqualified_import.name.as_ref().to_doc(arena).append(
+            arena,
+            match &unqualified_import.as_name {
+                None => EMPTY_DOCUMENT,
+                Some(s) => " as ".to_doc(arena).append(arena, s.as_str()),
+            },
+        )
+    }
+
     fn definition(
         &mut self,
         arena: &'doc DocumentArena<'a, 'doc>,
@@ -431,11 +444,17 @@ impl<'a, 'doc> Formatter<'a> {
                     let unqualified_types = unqualified_types
                         .iter()
                         .sorted_by(|a, b| a.name.cmp(&b.name))
-                        .map(|type_| docvec![arena, TYPE_SPACE_DOCUMENT, type_]);
+                        .map(|import_| {
+                            docvec![
+                                arena,
+                                TYPE_SPACE_DOCUMENT,
+                                self.unqualified_import(arena, import_)
+                            ]
+                        });
                     let unqualified_values = unqualified_values
                         .iter()
                         .sorted_by(|a, b| a.name.cmp(&b.name))
-                        .map(|value| value.to_doc(arena));
+                        .map(|import_| self.unqualified_import(arena, import_));
                     let unqualified = arena.join(
                         unqualified_types.chain(unqualified_values),
                         FLEX_COMMA_DOCUMENT,
@@ -966,6 +985,20 @@ impl<'a, 'doc> Formatter<'a> {
         )
     }
 
+    fn argument_names(
+        &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        argument_names: &'a ArgNames,
+    ) -> Document<'a, 'doc> {
+        match argument_names {
+            ArgNames::Named { name, .. } | ArgNames::Discard { name, .. } => name.to_doc(arena),
+            ArgNames::LabelledDiscard { label, name, .. }
+            | ArgNames::NamedLabelled { label, name, .. } => {
+                docvec![arena, label, " ", name]
+            }
+        }
+    }
+
     fn fn_arg<A>(
         &mut self,
         arena: &'doc DocumentArena<'a, 'doc>,
@@ -973,10 +1006,9 @@ impl<'a, 'doc> Formatter<'a> {
     ) -> Document<'a, 'doc> {
         let comments = self.pop_comments(argument.location.start);
         let doc = match &argument.annotation {
-            None => argument.names.to_doc(arena),
-            Some(type_) => argument
-                .names
-                .to_doc(arena)
+            None => self.argument_names(arena, &argument.names),
+            Some(type_) => self
+                .argument_names(arena, &argument.names)
                 .append(arena, COLON_SPACE_DOCUMENT)
                 .append(arena, self.type_ast(arena, type_)),
         }
@@ -3855,30 +3887,6 @@ fn init_and_last<T>(vec: &[T]) -> Option<(&[T], &T)> {
             (init, [last]) => Some((init, last)),
             _ => panic!("unreachable"),
         },
-    }
-}
-
-impl<'a, 'doc> Documentable<'a, 'doc> for &'a ArgNames {
-    fn to_doc(self, arena: &'doc DocumentArena<'a, 'doc>) -> Document<'a, 'doc> {
-        match self {
-            ArgNames::Named { name, .. } | ArgNames::Discard { name, .. } => name.to_doc(arena),
-            ArgNames::LabelledDiscard { label, name, .. }
-            | ArgNames::NamedLabelled { label, name, .. } => {
-                docvec![arena, label, " ", name]
-            }
-        }
-    }
-}
-
-impl<'a, 'doc> Documentable<'a, 'doc> for &'a UnqualifiedImport {
-    fn to_doc(self, arena: &'doc DocumentArena<'a, 'doc>) -> Document<'a, 'doc> {
-        self.name.as_str().to_doc(arena).append(
-            arena,
-            match &self.as_name {
-                None => EMPTY_DOCUMENT,
-                Some(s) => " as ".to_doc(arena).append(arena, s.as_str()),
-            },
-        )
     }
 }
 

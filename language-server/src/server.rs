@@ -338,7 +338,7 @@ where
             Err(error) => return self.path_error_response(path, error),
         };
 
-        if let Err(error) = gleam_core::format::pretty(&mut new_text, &src, &path) {
+        if let Err(error) = gleam_format::pretty(&mut new_text, &src, &path) {
             return self.path_error_response(path, error);
         }
 

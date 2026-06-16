@@ -1172,6 +1172,7 @@ dependencies = [
  "futures",
  "gen-lsp-types",
  "gleam-core",
+ "gleam-format",
  "gleam-language-server",
  "hexpm",
  "hostname",
@@ -1264,6 +1265,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "gleam-format"
+version = "1.17.0"
+dependencies = [
+ "camino",
+ "ecow",
+ "gleam-core",
+ "itertools",
+ "pretty-arena",
+ "pretty_assertions",
+ "vec1",
+]
+
+[[package]]
 name = "gleam-language-server"
 version = "1.17.0"
 dependencies = [
@@ -1272,6 +1286,7 @@ dependencies = [
  "ecow",
  "gen-lsp-types",
  "gleam-core",
+ "gleam-format",
  "hexpm",
  "im",
  "insta",

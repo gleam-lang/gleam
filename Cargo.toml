@@ -16,6 +16,7 @@ members = [
   "test-project-compiler",
   "hexpm",
   "pretty-arena",
+  "format",
 ]
 
 # common dependencies
