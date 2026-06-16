@@ -74,8 +74,6 @@ pub mod docs;
 pub mod encryption;
 pub mod erlang;
 pub mod error;
-pub mod fix;
-pub mod format;
 pub mod hex;
 pub mod io;
 pub mod javascript;
