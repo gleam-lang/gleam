@@ -10,20 +10,26 @@ use gleam_core::{
     ast::{CallArg, Statement, TypedExpr, TypedFunction},
     build::{Codegen, Compile, ErlangOutput, Mode, Options, Package, Target},
     config::{GleamVersion, PackageConfig, SpdxLicense},
+    dependency::{PackageFetchError, PackageFetcher as _},
     docs::{Dependency, DependencyKind, DocContext},
     error::{InvalidReadmeReason, SmallVersion, wrap},
     hex,
+    io::HttpClient as _,
     manifest::ManifestPackageSource,
+    package_interface::PackageInterface,
     paths::{self, ProjectPaths},
     requirement::Requirement,
-    type_,
+    type_::ModuleInterface,
+    version_bump::{VersionBump, detect_changes},
 };
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
 use std::{collections::HashMap, io::Write};
 
-use crate::{build, cli, docs, fs, http::HttpClient, new::default_readme};
+use crate::{
+    build, cli, dependencies::PackageFetcher, docs, fs, http::HttpClient, new::default_readme,
+};
 
 const CORE_TEAM_PUBLISH_PASSWORD: &str = "Trans rights are human rights";
 
@@ -50,9 +56,17 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         dependencies,
     } = do_build_hex_tarball(paths, &mut config)?;
 
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let http = HttpClient::new();
+    let hex_config = hexpm::Config::new();
+
     check_for_name_squatting(&compile_result)?;
     check_for_multiple_top_level_modules(&compile_result, i_am_sure)?;
     check_for_default_main(&compile_result)?;
+    if !check_version_changes(&config, &cached_modules, &runtime, &hex_config, &http)? {
+        println!("Not publishing.");
+        return Ok(());
+    }
 
     // Build HTML documentation
     let docs_tarball = fs::create_tar_archive(docs::build_documentation(
@@ -84,9 +98,6 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         return Ok(());
     }
 
-    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let http = HttpClient::new();
-    let hex_config = hexpm::Config::new();
     let credentials = crate::hex::HexAuthentication::new(&runtime, &http, hex_config.clone())
         .get_or_create_api_credentials()?;
     let credentials = crate::hex::write_credentials(&credentials)?;
@@ -370,6 +381,138 @@ be published.
     Ok(should_publish)
 }
 
+/// Checks that the changes in this version match up with the bump in version
+/// number (major, minor, or patch)
+fn check_version_changes(
+    config: &PackageConfig,
+    modules: &im::HashMap<EcoString, ModuleInterface>,
+    runtime: &tokio::runtime::Runtime,
+    hex_config: &hexpm::Config,
+    http: &HttpClient,
+) -> Result<bool, Error> {
+    // v0 means there are no semver rules so breaking changes are allowed with
+    // any release; we discourage publishing v0 packages but that code is handled
+    // elsewhere so we don't need to worry about it here.
+    if config.version.major == 0 {
+        return Ok(true);
+    }
+
+    // Pre-release versions allow arbitrary breaking changes, so there's nothing
+    // to check here.
+    if config.version.is_pre() {
+        return Ok(true);
+    }
+
+    let package_fetcher = PackageFetcher::new(runtime.handle().clone());
+    let hex_package = match package_fetcher.get_dependencies(&config.name) {
+        Ok(package) => package,
+        // If the package is not found on Hex, we are publishing the first version
+        // so there's nothing to compare with.
+        Err(PackageFetchError::NotFoundError(_)) => return Ok(true),
+        Err(error) => return Err(Error::Hex(error.to_string())),
+    };
+    let current_version = &config.version;
+
+    // Find the latest non-pre-release version which is less than this one, i.e.
+    // the version that this is updating.
+    let Some(previous_version) = hex_package
+        .releases
+        .iter()
+        .map(|release| &release.version)
+        // Sort in reverse, so that we iterate backwards through the versions
+        // until we find the most recent which is before the current one.
+        .sorted_by(|first, second| second.cmp(first))
+        .filter(|version| !version.is_pre())
+        .find(|version| *version < current_version)
+    else {
+        // The package has no versions or only pre-release versions, which means
+        // there's nothing to compare to. Versions can have breaking changes compared
+        // to pre-releases, so we shouldn't compare those here.
+        return Ok(true);
+    };
+
+    let version_bump = if previous_version.major != current_version.major {
+        VersionBump::Major
+    } else if previous_version.minor != current_version.minor {
+        VersionBump::Minor
+    } else if previous_version.patch != current_version.patch {
+        VersionBump::Patch
+    } else {
+        // The branch cannot actually happen, because we're only comparing versions
+        // before the current published one, not ones that are equal. In a case
+        // where the versions were equal, that error would be caught elsewhere.
+        return Ok(true);
+    };
+
+    let request = hexpm::repository_get_package_interface_request(
+        &config.name,
+        &previous_version.to_string(),
+        None,
+        hex_config,
+    );
+
+    let response = runtime.handle().block_on(http.send(request))?;
+
+    let package_interface =
+        hexpm::repository_get_package_interface_response(response).map_err(|error| {
+            Error::DownloadPackageError {
+                package_name: config.name.to_string(),
+                package_version: previous_version.to_string(),
+                error: error.to_string(),
+            }
+        })?;
+
+    let parsed: PackageInterface =
+        serde_json::from_str(&package_interface).map_err(|error| Error::DownloadPackageError {
+            package_name: config.name.to_string(),
+            package_version: previous_version.to_string(),
+            error: error.to_string(),
+        })?;
+
+    let suggested_bump = detect_changes(parsed, modules);
+
+    let bump_is_sufficient = match (version_bump, suggested_bump) {
+        (VersionBump::Major, _) => true,
+        (VersionBump::Minor, VersionBump::Major) => false,
+        (VersionBump::Minor, _) => true,
+        (VersionBump::Patch, VersionBump::Major | VersionBump::Minor) => false,
+        (VersionBump::Patch, _) => true,
+    };
+
+    if bump_is_sufficient {
+        return Ok(true);
+    }
+
+    let suggested_version = match suggested_bump {
+        VersionBump::Major => Version::new(previous_version.major + 1, 0, 0),
+        VersionBump::Minor => Version::new(previous_version.major, previous_version.minor + 1, 0),
+        VersionBump::Patch => Version::new(
+            previous_version.major,
+            previous_version.minor,
+            previous_version.patch + 1,
+        ),
+    };
+
+    println!(
+        "You are about to publish a release which makes a {} version bump.
+
+Based on what I can see, the changes you've made indicate that this version
+should be a {} version bump instead, meaning the next version should be v{}.
+Unless you have a very good reason, you should follow semantic versioning
+in your package versioning.
+
+Hint: Run `gleam bump` to update the package version automatically
+\n",
+        version_bump.to_string(),
+        suggested_bump.to_string(),
+        suggested_version
+    );
+    let should_publish =
+        cli::confirm_with_text("I have a good reason to not use semantic versioning")?;
+    println!();
+    Ok(should_publish)
+}
+
 /// Ask for confirmation if the package name if `gleam_*`
 fn check_for_gleam_prefix(config: &PackageConfig) -> Result<bool, Error> {
     if !config.name.starts_with("gleam_") || config.name.starts_with("gleam_community_") {
@@ -392,7 +535,7 @@ the maintainers listed on https://hex.pm/.
 
 struct Tarball {
     compile_result: Package,
-    cached_modules: im::HashMap<EcoString, type_::ModuleInterface>,
+    cached_modules: im::HashMap<EcoString, ModuleInterface>,
     data: Vec<u8>,
     src_files_added: Vec<Utf8PathBuf>,
     generated_files_added: Vec<(Utf8PathBuf, String)>,

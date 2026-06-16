@@ -183,6 +183,13 @@ impl Type {
         }
     }
 
+    pub fn variable_id(&self) -> Option<u64> {
+        match self {
+            Self::Var { type_ } => type_.borrow().variable_id(),
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => None,
+        }
+    }
+
     pub fn return_type(&self) -> Option<Arc<Self>> {
         match self {
             Self::Fn { return_, .. } => Some(return_.clone()),
@@ -1302,6 +1309,13 @@ impl TypeVar {
         match self {
             Self::Unbound { .. } | Self::Generic { .. } => true,
             Self::Link { type_ } => type_.is_variable(),
+        }
+    }
+
+    pub fn variable_id(&self) -> Option<u64> {
+        match self {
+            Self::Unbound { id, .. } | Self::Generic { id, .. } => Some(*id),
+            Self::Link { type_ } => type_.variable_id(),
         }
     }
 

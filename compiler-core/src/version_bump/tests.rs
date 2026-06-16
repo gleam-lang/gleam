@@ -1,0 +1,1506 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
+use super::{VersionBump, detect_changes};
+use crate::{
+    package_interface::{ModuleInterface, PackageInterface},
+    type_::tests::compile_module,
+};
+
+fn get_bump(old: &str, new: &str) -> VersionBump {
+    let old_module =
+        compile_module("the_module", old, None, vec![]).expect("Failed to compile old module");
+
+    let new_module =
+        compile_module("the_module", new, None, vec![]).expect("Failed to compile new module");
+
+    let package_interface = PackageInterface {
+        name: "thepackage".into(),
+        version: "1.0.0".into(),
+        gleam_version_constraint: None,
+        modules: [(
+            "the_module".into(),
+            ModuleInterface::from_interface(&old_module.type_info),
+        )]
+        .into(),
+    };
+
+    let modules = im::hashmap! {
+        "the_module".into() => new_module.type_info
+    };
+
+    detect_changes(package_interface, &modules)
+}
+
+macro_rules! assert_bump {
+    ($old:literal, $new:literal, $bump:ident) => {
+        let bump = get_bump($old, $new);
+        assert_eq!(bump, VersionBump::$bump);
+    };
+}
+
+#[test]
+fn changing_type_alias_is_major() {
+    assert_bump!("pub type Number = Int", "pub type Number = Float", Major);
+}
+
+#[test]
+fn changing_type_alias_generics_is_major() {
+    assert_bump!(
+        "pub type MyResult = Result(Int, String)",
+        "pub type MyResult = Result(String, Int)",
+        Major
+    );
+}
+
+#[test]
+fn adding_type_alias_parameter_is_major() {
+    assert_bump!(
+        "pub type Maybe(a) = Result(a, Nil)",
+        "pub type Maybe(a, b) = Result(a, b)",
+        Major
+    );
+}
+
+#[test]
+fn changing_type_alias_parameter_order_is_major() {
+    assert_bump!(
+        "pub type OkOrError(a, b) = Result(a, b)",
+        "pub type OkOrError(a, b) = Result(b, a)",
+        Major
+    );
+}
+
+#[test]
+fn changing_type_alias_parameter_names_is_patch() {
+    assert_bump!(
+        "pub type OkOrError(a, b) = Result(a, b)",
+        "pub type OkOrError(ok, error) = Result(ok, error)",
+        Patch
+    );
+}
+
+#[test]
+fn removing_public_type_alias_is_major() {
+    assert_bump!("pub type MyAlias = Int", "", Major);
+}
+
+#[test]
+fn making_public_type_alias_private_is_major() {
+    assert_bump!("pub type MyAlias = Int", "type MyAlias = Int", Major);
+}
+
+#[test]
+fn making_public_type_alias_internal_is_major() {
+    assert_bump!(
+        "pub type MyAlias = Int",
+        "@internal pub type MyAlias = Int",
+        Major
+    );
+}
+
+#[test]
+fn adding_public_type_alias_is_minor() {
+    assert_bump!("", "pub type MyAlias = Int", Minor);
+}
+
+#[test]
+fn making_private_type_alias_public_is_minor() {
+    assert_bump!("type MyAlias = Int", "pub type MyAlias = Int", Minor);
+}
+
+#[test]
+fn making_internal_type_alias_public_is_minor() {
+    assert_bump!(
+        "@internal pub type MyAlias = Int",
+        "pub type MyAlias = Int",
+        Minor
+    );
+}
+
+#[test]
+fn removing_private_type_alias_is_patch() {
+    assert_bump!("type MyAlias = Int", "", Patch);
+}
+
+#[test]
+fn removing_internal_type_alias_is_patch() {
+    assert_bump!("@internal pub type MyAlias = Int", "", Patch);
+}
+
+#[test]
+fn changing_private_type_alias_is_patch() {
+    assert_bump!("type MyAlias = Int", "type MyAlias = Float", Patch);
+}
+
+#[test]
+fn changing_internal_type_alias_is_patch() {
+    assert_bump!(
+        "@internal pub type MyAlias = Int",
+        "@internal pub type MyAlias = Float",
+        Patch
+    );
+}
+
+#[test]
+fn adding_custom_type_parameter_is_major() {
+    assert_bump!(
+        "pub type Wibble(a) { Wibble(a) }",
+        "pub type Wibble(a, b) { Wibble(a) }",
+        Major
+    );
+}
+
+#[test]
+fn changing_custom_type_parameter_order_is_major() {
+    assert_bump!(
+        "pub type Wibble(a, b) { Wibble(a, b) }",
+        "pub type Wibble(a, b) { Wibble(b, a) }",
+        Major
+    );
+}
+
+#[test]
+fn changing_custom_type_parameter_names_is_patch() {
+    assert_bump!(
+        "pub type Box(a) { Box(a) }",
+        "pub type Box(inner) { Box(inner) }",
+        Patch
+    );
+}
+
+#[test]
+fn removing_public_custom_type_is_major() {
+    assert_bump!("pub type Wibble { Wibble }", "", Major);
+}
+
+#[test]
+fn making_public_custom_type_private_is_major() {
+    assert_bump!(
+        "pub type Wibble { Wibble }",
+        "type Wibble { Wibble }",
+        Major
+    );
+}
+
+#[test]
+fn making_public_custom_type_internal_is_major() {
+    assert_bump!(
+        "pub type Wibble { Wibble }",
+        "@internal pub type Wibble { Wibble }",
+        Major
+    );
+}
+
+#[test]
+fn adding_public_custom_type_is_minor() {
+    assert_bump!("", "pub type Wibble { Wibble }", Minor);
+}
+
+#[test]
+fn making_private_custom_type_public_is_minor() {
+    assert_bump!(
+        "type Wibble { Wibble }",
+        "pub type Wibble { Wibble }",
+        Minor
+    );
+}
+
+#[test]
+fn making_internal_custom_type_public_is_minor() {
+    assert_bump!(
+        "@internal pub type Wibble { Wibble }",
+        "pub type Wibble { Wibble }",
+        Minor
+    );
+}
+
+#[test]
+fn removing_private_custom_type_is_patch() {
+    assert_bump!("type Wibble { Wibble }", "", Patch);
+}
+
+#[test]
+fn removing_internal_custom_type_is_patch() {
+    assert_bump!("@internal pub type Wibble { Wibble }", "", Patch);
+}
+
+#[test]
+fn changing_private_custom_type_is_patch() {
+    assert_bump!("type Wibble { Wibble }", "type Wibble(a) { Wibble }", Patch);
+}
+
+#[test]
+fn changing_internal_custom_type_is_patch() {
+    assert_bump!(
+        "@internal pub type Wibble { Wibble }",
+        "@internal pub type Wibble(a) { Wibble }",
+        Patch
+    );
+}
+
+#[test]
+fn adding_constructor_to_public_custom_type_is_major() {
+    assert_bump!(
+        "
+pub type Wibble {
+  Wibble
+}",
+        "
+pub type Wibble {
+  Wibble
+  Wobble
+}",
+        Major
+    );
+}
+
+#[test]
+fn removing_constructor_from_public_custom_type_is_major() {
+    assert_bump!(
+        "
+pub type Wibble {
+  Wibble
+  Wobble
+}",
+        "
+pub type Wibble {
+  Wibble
+}",
+        Major
+    );
+}
+
+#[test]
+fn adding_constructor_to_internal_custom_type_is_patch() {
+    assert_bump!(
+        "@internal pub type Wibble {
+  Wibble
+}",
+        "@internal pub type Wibble {
+  Wibble
+  Wobble
+}",
+        Patch
+    );
+}
+
+#[test]
+fn removing_constructor_from_internal_custom_type_is_patch() {
+    assert_bump!(
+        "@internal pub type Wibble {
+  Wibble
+  Wobble
+}",
+        "@internal pub type Wibble {
+  Wibble
+}",
+        Patch
+    );
+}
+
+#[test]
+fn adding_constructor_to_private_custom_type_is_patch() {
+    assert_bump!(
+        "
+type Wibble {
+  Wibble
+}",
+        "
+type Wibble {
+  Wibble
+  Wobble
+}",
+        Patch
+    );
+}
+
+#[test]
+fn removing_constructor_from_private_custom_type_is_patch() {
+    assert_bump!(
+        "
+type Wibble {
+  Wibble
+  Wobble
+}",
+        "
+type Wibble {
+  Wibble
+}",
+        Patch
+    );
+}
+
+#[test]
+fn adding_constructor_to_opaque_custom_type_is_patch() {
+    assert_bump!(
+        "
+pub opaque type Wibble {
+  Wibble
+}",
+        "
+pub opaque type Wibble {
+  Wibble
+  Wobble
+}",
+        Patch
+    );
+}
+
+#[test]
+fn removing_constructor_from_opaque_custom_type_is_patch() {
+    assert_bump!(
+        "
+pub opaque type Wibble {
+  Wibble
+  Wobble
+}",
+        "
+pub opaque type Wibble {
+  Wibble
+}",
+        Patch
+    );
+}
+
+#[test]
+fn making_opaque_custom_type_public_is_minor() {
+    assert_bump!(
+        "
+pub opaque type Wibble {
+  Wibble
+}",
+        "
+pub type Wibble {
+  Wibble
+}",
+        Minor
+    );
+}
+
+#[test]
+fn making_public_custom_type_opaque_is_major() {
+    assert_bump!(
+        "
+pub type Wibble {
+  Wibble
+}",
+        "
+pub opaque type Wibble {
+  Wibble
+}",
+        Major
+    );
+}
+
+#[test]
+fn changing_external_custom_type_to_opaque_is_patch() {
+    assert_bump!(
+        "pub type Wibble",
+        "
+pub opaque type Wibble {
+  Wibble
+}",
+        Patch
+    );
+}
+
+#[test]
+fn adding_constructors_to_external_custom_type_is_minor() {
+    assert_bump!(
+        "pub type Wibble",
+        "
+pub type Wibble {
+  Wibble
+}",
+        Minor
+    );
+}
+
+#[test]
+fn making_custom_type_with_constructors_external_is_major() {
+    assert_bump!(
+        "
+pub type Wibble {
+  Wibble
+}",
+        "pub type Wibble",
+        Major
+    );
+}
+
+#[test]
+fn adding_label_to_constructor_field_is_minor() {
+    assert_bump!(
+        "
+pub type Wibble {
+  Wibble(Int, String)
+}",
+        "
+pub type Wibble {
+  Wibble(int: Int, string: String)
+}",
+        Minor
+    );
+}
+
+#[test]
+fn changing_label_of_constructor_field_is_major() {
+    assert_bump!(
+        "
+pub type Wibble {
+  Wibble(int: Int, string: String)
+}",
+        "
+pub type Wibble {
+  Wibble(number: Int, text: String)
+}",
+        Major
+    );
+}
+
+#[test]
+fn removing_label_from_constructor_field_is_major() {
+    assert_bump!(
+        "
+pub type Wibble {
+  Wibble(int: Int, string: String)
+}",
+        "
+pub type Wibble {
+  Wibble(Int, String)
+}",
+        Major
+    );
+}
+
+#[test]
+fn removing_label_from_opaque_constructor_field_is_patch() {
+    assert_bump!(
+        "
+pub opaque type Wibble {
+  Wibble(int: Int, string: String)
+}",
+        "
+pub opaque type Wibble {
+  Wibble(Int, String)
+}",
+        Patch
+    );
+}
+
+#[test]
+fn removing_label_from_opaque_constructor_field_when_turning_to_non_opaque_is_minor() {
+    assert_bump!(
+        "
+pub opaque type Wibble {
+  Wibble(int: Int, string: String)
+}",
+        "
+pub type Wibble {
+  Wibble(Int, String)
+}",
+        Minor
+    );
+}
+
+#[test]
+fn adding_constructor_field_is_major() {
+    assert_bump!(
+        "
+pub type Wibble {
+  Wibble(Int, String)
+}",
+        "
+pub type Wibble {
+  Wibble(Int, String, Float)
+}",
+        Major
+    );
+}
+
+#[test]
+fn removing_constructor_field_is_major() {
+    assert_bump!(
+        "
+pub type Wibble {
+  Wibble(Int, String)
+}",
+        "
+pub type Wibble {
+  Wibble(Int)
+}",
+        Major
+    );
+}
+
+#[test]
+fn changing_type_of_constructor_field_is_major() {
+    assert_bump!(
+        "
+pub type Wibble {
+  Wibble(Int, String)
+}",
+        "
+pub type Wibble {
+  Wibble(Float, String)
+}",
+        Major
+    );
+}
+
+#[test]
+fn moving_custom_type_while_keeping_alias_is_minor() {
+    assert_bump!(
+        "
+pub type OldType {
+  Wibble
+  Wobble
+}",
+        "
+pub type NewType {
+  Wibble
+  Wobble
+}
+
+pub type OldType = NewType",
+        Minor
+    );
+}
+
+#[test]
+fn moving_and_changing_custom_type_while_keeping_alias_is_major() {
+    assert_bump!(
+        "
+pub type OldType {
+  Wibble
+  Wobble
+}",
+        "
+pub type NewType {
+  Wibble
+  Wobble
+  Wubble
+}
+
+pub type OldType = NewType",
+        Major
+    );
+}
+
+#[test]
+fn moving_custom_type_while_keeping_alias_with_different_parameters_is_major() {
+    assert_bump!(
+        "
+pub type OldType(a, b) {
+  Wibble(a)
+  Wobble(b)
+}",
+        "
+pub type NewType(a, b) {
+  Wibble(a)
+  Wobble(b)
+}
+
+pub type OldType(a, b) = NewType(b, a)",
+        Major
+    );
+}
+
+#[test]
+fn moving_and_changing_custom_type_while_keeping_alias_with_same_parameters_is_minor() {
+    assert_bump!(
+        "
+pub type OldType(a, b) {
+  Wibble(a)
+  Wobble(b)
+}",
+        "
+pub type NewType(a, b, c) {
+  Wibble(a)
+  Wobble(b)
+}
+
+pub type OldType(a, b) = NewType(a, b, Nil)",
+        Minor
+    );
+}
+
+#[test]
+fn moving_and_changing_custom_type_while_keeping_alias_with_same_parameters_is_minor2() {
+    assert_bump!(
+        "
+pub type OldType(a, b) {
+  Wibble(a)
+  Wobble(b)
+  Wubble(Int)
+}",
+        "
+pub type NewType(a, b, c) {
+  Wibble(a)
+  Wobble(b)
+  Wubble(c)
+}
+
+pub type OldType(a, b) = NewType(a, b, Int)",
+        Minor
+    );
+}
+
+#[test]
+fn moving_and_changing_custom_type_while_keeping_alias_with_same_parameters_is_minor3() {
+    assert_bump!(
+        "
+pub type OldType(wibble, wobble) {
+  Wibble(wibble)
+  Wobble(wobble)
+}",
+        "
+pub type NewType(wobble, wibble) {
+  Wibble(wibble)
+  Wobble(wobble)
+}
+
+pub type OldType(wibble, wobble) = NewType(wobble, wibble)",
+        Minor
+    );
+}
+
+#[test]
+fn moving_custom_type_while_keeping_alias_with_function_using_type_is_minor() {
+    assert_bump!(
+        "
+pub type OldType(a, b) {
+  Wibble(a)
+  Wobble(b)
+}
+
+pub fn make_wibble(value: a) -> OldType(a, b) { Wibble(value) }",
+        "
+pub type NewType(a, b) {
+  Wibble(a)
+  Wobble(b)
+}
+
+pub type OldType(a, b) = NewType(a, b)
+
+pub fn make_wibble(value: a) -> OldType(a, b) { Wibble(value) }",
+        Minor
+    );
+}
+
+#[test]
+fn swapping_custom_type_with_alias_is_minor() {
+    assert_bump!(
+        "
+pub type Custom {
+  Wibble
+  Wobble
+}
+
+pub type Alias = Custom",
+        "
+pub type Alias {
+  Wibble
+  Wobble
+}
+
+pub type Custom = Alias",
+        Minor
+    );
+}
+
+#[test]
+fn making_custom_type_internal_while_keeping_alias_is_major() {
+    assert_bump!(
+        "
+pub type OldType {
+  Wibble
+  Wobble
+}",
+        "
+@internal
+pub type NewType {
+  Wibble
+  Wobble
+}
+
+pub type OldType = NewType",
+        Major
+    );
+}
+
+#[test]
+fn changing_custom_type_to_type_alias_is_major() {
+    assert_bump!(
+        "
+pub type MyBool {
+  True
+  False
+}",
+        "pub type MyBool = Bool",
+        Major
+    );
+}
+
+#[test]
+fn changing_type_alias_to_custom_type_is_major() {
+    assert_bump!(
+        "pub type MyBool = Bool",
+        "
+pub type MyBool {
+  True
+  False
+}",
+        Major
+    );
+}
+
+#[test]
+fn changing_constructor_field_type_from_concrete_to_generic_is_major() {
+    assert_bump!(
+        "
+pub type Wibble(a) {
+  Wibble(Int)
+}",
+        "
+pub type Wibble(a) {
+  Wibble(a)
+}",
+        Major
+    );
+}
+
+#[test]
+fn changing_value_of_public_constant_with_same_type_is_patch() {
+    assert_bump!(
+        "pub const max_size = 512",
+        "pub const max_size = 1024",
+        Patch
+    );
+}
+
+#[test]
+fn changing_type_of_public_constant_is_major() {
+    assert_bump!(
+        "pub const max_size = 512",
+        "pub const max_size = 512.2",
+        Major
+    );
+}
+
+#[test]
+fn changing_type_of_internal_constant_is_patch() {
+    assert_bump!(
+        "@internal pub const max_size = 512",
+        "@internal pub const max_size = 512.2",
+        Patch
+    );
+}
+
+#[test]
+fn changing_type_of_private_constant_is_patch() {
+    assert_bump!("const max_size = 512", "const max_size = 512.2", Patch);
+}
+
+#[test]
+fn adding_public_constant_is_minor() {
+    assert_bump!("", "pub const max_size = 512", Minor);
+}
+
+#[test]
+fn removing_public_constant_is_major() {
+    assert_bump!("pub const max_size = 512", "", Major);
+}
+
+#[test]
+fn adding_internal_constant_is_patch() {
+    assert_bump!("", "@internal pub const max_size = 512", Patch);
+}
+
+#[test]
+fn removing_internal_constant_is_patch() {
+    assert_bump!("@internal pub const max_size = 512", "", Patch);
+}
+
+#[test]
+fn adding_private_constant_is_patch() {
+    assert_bump!("", "const max_size = 512", Patch);
+}
+
+#[test]
+fn removing_private_constant_is_patch() {
+    assert_bump!("const max_size = 512", "", Patch);
+}
+
+#[test]
+fn making_private_constant_public_is_minor() {
+    assert_bump!("const max_size = 512", "pub const max_size = 512", Minor);
+}
+
+#[test]
+fn making_public_constant_private_is_major() {
+    assert_bump!("pub const max_size = 512", "const max_size = 512", Major);
+}
+
+#[test]
+fn making_internal_constant_public_is_minor() {
+    assert_bump!(
+        "@internal pub const max_size = 512",
+        "pub const max_size = 512",
+        Minor
+    );
+}
+
+#[test]
+fn making_public_constant_internal_is_major() {
+    assert_bump!(
+        "pub const max_size = 512",
+        "@internal pub const max_size = 512",
+        Major
+    );
+}
+
+#[test]
+fn adding_annotation_to_constant_without_changing_type_is_patch() {
+    assert_bump!(
+        "pub const list = [1]",
+        "pub const list: List(Int) = [1]",
+        Patch
+    );
+}
+
+#[test]
+fn adding_annotation_to_constant_while_changing_type_is_major() {
+    assert_bump!(
+        "pub const list = []",
+        "pub const list: List(Int) = []",
+        Major
+    );
+}
+
+#[test]
+fn changing_constant_annotation_and_type_is_major() {
+    assert_bump!(
+        "pub const list: List(Int) = []",
+        "pub const list: List(Float) = []",
+        Major
+    );
+}
+
+#[test]
+fn removing_constant_annotation_without_changing_type_is_patch() {
+    assert_bump!(
+        "pub const list: List(Int) = [1]",
+        "pub const list = [1]",
+        Patch
+    );
+}
+
+#[test]
+fn changing_concrete_constant_type_to_generic_is_minor() {
+    assert_bump!("pub const list = [1]", "pub const list = []", Minor);
+}
+
+#[test]
+fn removing_constant_annotation_to_change_concrete_type_to_generic_is_minor() {
+    assert_bump!(
+        "pub const list: List(Int) = []",
+        "pub const list = []",
+        Minor
+    );
+}
+
+#[test]
+fn changing_different_concrete_constant_types_to_the_same_generic_is_major() {
+    assert_bump!(
+        "pub const lists: #(List(Int), List(Float)) = #([], [])",
+        "pub const lists: #(List(a), List(a)) = #([], [])",
+        Major
+    );
+}
+
+#[test]
+fn changing_multiple_concrete_constant_types_to_separate_generics_is_minor() {
+    assert_bump!(
+        "pub const lists: #(List(Int), List(Float)) = #([], [])",
+        "pub const lists: #(List(a), List(b)) = #([], [])",
+        Minor
+    );
+}
+
+#[test]
+fn changing_same_concrete_constant_type_to_the_same_generic_is_minor() {
+    assert_bump!(
+        "pub const lists: #(List(Int), List(Int)) = #([], [])",
+        "pub const lists: #(List(a), List(a)) = #([], [])",
+        Minor
+    );
+}
+
+#[test]
+fn changing_generic_constant_type_to_concrete_is_major() {
+    assert_bump!(
+        "pub const list: List(a) = []",
+        "pub const list: List(Int) = []",
+        Major
+    );
+}
+
+#[test]
+fn renaming_constant_while_keeping_old_alias_is_minor() {
+    assert_bump!(
+        "pub const old_name = 10",
+        "
+pub const new_name = 10
+pub const old_name = new_name",
+        Minor
+    );
+}
+
+#[test]
+fn changing_constant_to_function_of_same_type_is_patch() {
+    assert_bump!(
+        "
+fn add_private(a, b) { a + b }
+
+pub const add = add_private",
+        "pub fn add(a, b) { a + b }",
+        Patch
+    );
+}
+
+#[test]
+fn changing_constant_to_function_of_same_type_while_adding_labels_is_minor() {
+    assert_bump!(
+        "
+fn add_private(a, b) { a + b }
+
+pub const add = add_private",
+        "pub fn add(first a, second b) { a + b }",
+        Minor
+    );
+}
+
+#[test]
+fn adding_new_external_to_constant_is_minor() {
+    assert_bump!(
+        r#"
+pub const wobble = wibble
+
+@external(erlang, "wibble_ffi", "something")
+fn wibble() -> Nil"#,
+        r#"
+pub const wobble = wibble
+
+@external(erlang, "wibble_ffi", "something")
+@external(javascript, "./wibble_ffi.mjs", "something")
+pub fn wibble() -> Nil"#,
+        Minor
+    );
+}
+
+#[test]
+fn adding_pure_gleam_implementation_to_external_constant_is_minor() {
+    assert_bump!(
+        r#"
+pub const wobble = wibble
+
+@external(erlang, "wibble_ffi", "something")
+fn wibble() -> Nil"#,
+        r#"
+pub const wobble = wibble
+
+@external(erlang, "wibble_ffi", "something")
+fn wibble() -> Nil {
+  Nil
+}"#,
+        Minor
+    );
+}
+
+#[test]
+fn removing_target_support_from_constant_is_major() {
+    assert_bump!(
+        r#"
+pub const wobble = wibble
+
+@external(erlang, "wibble_ffi", "something")
+@external(javascript, "./wibble_ffi.mjs", "something")
+fn wibble() -> Nil"#,
+        r#"
+pub const wobble = wibble
+
+@external(erlang, "wibble_ffi", "something")
+fn wibble() -> Nil"#,
+        Major
+    );
+}
+
+#[test]
+fn removing_pure_gleam_implementation_from_external_constant_is_major() {
+    assert_bump!(
+        r#"
+pub const wobble = wibble
+
+@external(erlang, "wibble_ffi", "something")
+fn wibble() -> Nil {
+  Nil
+}"#,
+        r#"
+pub const wobble = wibble
+
+@external(erlang, "wibble_ffi", "something")
+fn wibble() -> Nil"#,
+        Major
+    );
+}
+
+#[test]
+fn adding_pure_gleam_implementation_to_external_constant_which_supports_both_targets_is_patch() {
+    assert_bump!(
+        r#"
+pub const wobble = wibble
+
+@external(erlang, "wibble_ffi", "something")
+@external(javascript, "./wibble_ffi.mjs", "something")
+fn wibble() -> Nil"#,
+        r#"
+pub const wobble = wibble
+
+@external(erlang, "wibble_ffi", "something")
+@external(javascript, "./wibble_ffi.mjs", "something")
+fn wibble() -> Nil {
+  Nil
+}"#,
+        Patch
+    );
+}
+
+#[test]
+fn removing_pure_gleam_implementation_from_external_constant_which_supports_both_targets_is_patch()
+{
+    assert_bump!(
+        r#"
+pub const wobble = wibble
+
+@external(erlang, "wibble_ffi", "something")
+@external(javascript, "./wibble_ffi.mjs", "something")
+fn wibble() -> Nil {
+  Nil
+}"#,
+        r#"
+pub const wobble = wibble
+
+@external(erlang, "wibble_ffi", "something")
+@external(javascript, "./wibble_ffi.mjs", "something")
+fn wibble() -> Nil"#,
+        Patch
+    );
+}
+
+#[test]
+fn changing_implementation_of_public_function_with_same_type_is_patch() {
+    assert_bump!(
+        "pub fn combine(a, b) { a + b }",
+        "pub fn combine(a, b) { a * b }",
+        Patch
+    );
+}
+
+#[test]
+fn changing_type_of_public_function_is_major() {
+    assert_bump!(
+        "pub fn add(a, b) { a + b }",
+        "pub fn add(a, b) { a +. b }",
+        Major
+    );
+}
+
+#[test]
+fn changing_type_of_internal_function_is_patch() {
+    assert_bump!(
+        "@internal pub fn add(a, b) { a + b }",
+        "@internal pub fn add(a, b) { a +. b }",
+        Patch
+    );
+}
+
+#[test]
+fn changing_type_of_private_function_is_patch() {
+    assert_bump!("fn add(a, b) { a + b }", "fn add(a, b) { a +. b }", Patch);
+}
+
+#[test]
+fn adding_public_function_is_minor() {
+    assert_bump!("", "pub fn add(a, b) { a + b }", Minor);
+}
+
+#[test]
+fn removing_public_function_is_major() {
+    assert_bump!("pub fn add(a, b) { a + b }", "", Major);
+}
+
+#[test]
+fn adding_internal_function_is_patch() {
+    assert_bump!("", "@internal pub fn add(a, b) { a + b }", Patch);
+}
+
+#[test]
+fn removing_internal_function_is_patch() {
+    assert_bump!("@internal pub fn add(a, b) { a + b }", "", Patch);
+}
+
+#[test]
+fn adding_private_function_is_patch() {
+    assert_bump!("", "fn add(a, b) { a + b }", Patch);
+}
+
+#[test]
+fn removing_private_function_is_patch() {
+    assert_bump!("fn add(a, b) { a + b }", "", Patch);
+}
+
+#[test]
+fn making_private_function_public_is_minor() {
+    assert_bump!(
+        "fn add(a, b) { a + b }",
+        "pub fn add(a, b) { a + b }",
+        Minor
+    );
+}
+
+#[test]
+fn making_public_function_private_is_major() {
+    assert_bump!(
+        "pub fn add(a, b) { a + b }",
+        "fn add(a, b) { a + b }",
+        Major
+    );
+}
+
+#[test]
+fn making_internal_function_public_is_minor() {
+    assert_bump!(
+        "@internal pub fn add(a, b) { a + b }",
+        "pub fn add(a, b) { a + b }",
+        Minor
+    );
+}
+
+#[test]
+fn making_public_function_internal_is_major() {
+    assert_bump!(
+        "pub fn add(a, b) { a + b }",
+        "@internal pub fn add(a, b) { a + b }",
+        Major
+    );
+}
+
+#[test]
+fn adding_label_to_function_parameter_is_minor() {
+    assert_bump!(
+        "pub fn add(a, b) { a + b }",
+        "pub fn add(first a, second b) { a + b }",
+        Minor
+    );
+}
+
+#[test]
+fn removing_label_from_function_parameter_is_major() {
+    assert_bump!(
+        "pub fn add(first a, second b) { a + b }",
+        "pub fn add(a, b) { a + b }",
+        Major
+    );
+}
+
+#[test]
+fn changing_label_of_function_parameter_is_major() {
+    assert_bump!(
+        "pub fn add(first a, second b) { a + b }",
+        "pub fn add(this a, to b) { a + b }",
+        Major
+    );
+}
+
+#[test]
+fn adding_annotation_to_function_without_changing_type_is_patch() {
+    assert_bump!(
+        "pub fn add(a, b) { a + b }",
+        "pub fn add(a: Int, b: Int) -> Int { a + b }",
+        Patch
+    );
+}
+
+#[test]
+fn adding_annotation_to_function_while_changing_type_is_major() {
+    assert_bump!(
+        "pub fn pair(a, b) { #(a, b) }",
+        "pub fn pair(a: Int, b: Int) -> #(Int, Int) { #(a, b) }",
+        Major
+    );
+}
+
+#[test]
+fn changing_function_annotation_and_type_is_major() {
+    assert_bump!(
+        "pub fn pair(a: Int, b: Int) -> #(Int, Int) { #(a, b) }",
+        "pub fn pair(a: Float, b: Float) -> #(Float, Float) { #(a, b) }",
+        Major
+    );
+}
+
+#[test]
+fn removing_function_annotation_without_changing_type_is_patch() {
+    assert_bump!(
+        "pub fn add(a: Int, b: Int) -> Int { a + b }",
+        "pub fn add(a, b) { a + b }",
+        Patch
+    );
+}
+
+#[test]
+fn changing_concrete_function_type_to_generic_is_minor() {
+    assert_bump!(
+        "pub fn identity(x: Int) { x }",
+        "pub fn identity(x: a) { x }",
+        Minor
+    );
+}
+
+#[test]
+fn removing_function_annotation_to_change_concrete_type_to_generic_is_minor() {
+    assert_bump!(
+        "pub fn identity(x: Int) { x }",
+        "pub fn identity(x) { x }",
+        Minor
+    );
+}
+
+#[test]
+fn changing_different_concrete_function_types_to_the_same_generic_is_major() {
+    assert_bump!(
+        "pub fn pair(a: Int, b: Float) { #(a, b) }",
+        "pub fn pair(a: a, b: a) { #(a, b) }",
+        Major
+    );
+}
+
+#[test]
+fn changing_multiple_concrete_function_types_to_separate_generics_is_minor() {
+    assert_bump!(
+        "pub fn pair(a: Int, b: Float) { #(a, b) }",
+        "pub fn pair(a: a, b: b) { #(a, b) }",
+        Minor
+    );
+}
+
+#[test]
+fn changing_same_concrete_function_type_to_the_same_generic_is_minor() {
+    assert_bump!(
+        "pub fn pair(a: Int, b: Int) { #(a, b) }",
+        "pub fn pair(a: a, b: a) { #(a, b) }",
+        Minor
+    );
+}
+
+#[test]
+fn changing_generic_function_type_to_concrete_is_major() {
+    assert_bump!(
+        "pub fn identity(x: a) { x }",
+        "pub fn identity(x: Int) { x }",
+        Major
+    );
+}
+
+#[test]
+fn changing_function_without_labels_to_constant_is_patch() {
+    assert_bump!(
+        "pub fn add(a, b) { a + b }",
+        "
+pub const add = do_add
+fn do_add(a, b) { a + b }",
+        Patch
+    );
+}
+
+#[test]
+fn changing_function_with_labels_to_constant_is_major() {
+    assert_bump!(
+        "pub fn add(a, addend b) { a + b }",
+        "
+pub const add = do_add
+
+fn do_add(a, addend b) { a + b }",
+        Major
+    );
+}
+
+#[test]
+fn adding_new_external_to_function_is_minor() {
+    assert_bump!(
+        r#"
+@external(erlang, "wibble_ffi", "something")
+pub fn wibble() -> Nil"#,
+        r#"
+@external(erlang, "wibble_ffi", "something")
+@external(javascript, "./wibble_ffi.mjs", "something")
+pub fn wibble() -> Nil"#,
+        Minor
+    );
+}
+
+#[test]
+fn adding_pure_gleam_implementation_to_external_function_is_minor() {
+    assert_bump!(
+        r#"
+@external(erlang, "wibble_ffi", "something")
+pub fn wibble() -> Nil"#,
+        r#"
+@external(erlang, "wibble_ffi", "something")
+pub fn wibble() -> Nil {
+  Nil
+}"#,
+        Minor
+    );
+}
+
+#[test]
+fn removing_target_support_from_function_is_major() {
+    assert_bump!(
+        r#"
+@external(erlang, "wibble_ffi", "something")
+@external(javascript, "./wibble_ffi.mjs", "something")
+pub fn wibble() -> Nil"#,
+        r#"
+@external(erlang, "wibble_ffi", "something")
+pub fn wibble() -> Nil"#,
+        Major
+    );
+}
+
+#[test]
+fn removing_pure_gleam_implementation_from_external_function_is_major() {
+    assert_bump!(
+        r#"
+@external(erlang, "wibble_ffi", "something")
+pub fn wibble() -> Nil {
+  Nil
+}"#,
+        r#"
+@external(erlang, "wibble_ffi", "something")
+pub fn wibble() -> Nil"#,
+        Major
+    );
+}
+
+#[test]
+fn adding_pure_gleam_implementation_to_external_function_which_supports_both_targets_is_patch() {
+    assert_bump!(
+        r#"
+@external(erlang, "wibble_ffi", "something")
+@external(javascript, "./wibble_ffi.mjs", "something")
+pub fn wibble() -> Nil"#,
+        r#"
+@external(erlang, "wibble_ffi", "something")
+@external(javascript, "./wibble_ffi.mjs", "something")
+pub fn wibble() -> Nil {
+  Nil
+}"#,
+        Patch
+    );
+}
+
+#[test]
+fn removing_pure_gleam_implementation_from_external_function_which_supports_both_targets_is_patch()
+{
+    assert_bump!(
+        r#"
+@external(erlang, "wibble_ffi", "something")
+@external(javascript, "./wibble_ffi.mjs", "something")
+pub fn wibble() -> Nil {
+  Nil
+}"#,
+        r#"
+@external(erlang, "wibble_ffi", "something")
+@external(javascript, "./wibble_ffi.mjs", "something")
+pub fn wibble() -> Nil"#,
+        Patch
+    );
+}
+
+#[test]
+fn changing_concrete_to_generic_type_with_other_unchanging_generic_is_minor() {
+    assert_bump!(
+        "
+pub fn wibble(a: Int, b: a) -> #(Int, a) {
+  #(a, b)
+}",
+        "
+pub fn wibble(a: a, b: b) -> #(a, b) {
+  #(a, b)
+}",
+        Minor
+    );
+}
+
+#[test]
+fn changing_concrete_to_existing_generic_type_is_major() {
+    assert_bump!(
+        "
+pub fn wibble(a: Int, b: a) -> #(Int, a) {
+  #(a, b)
+}",
+        "
+pub fn wibble(a: a, b: a) -> #(a, a) {
+  #(a, b)
+}",
+        Major
+    );
+}
+
+#[test]
+fn generic_function_staying_the_same_is_patch() {
+    assert_bump!(
+        "pub fn wibble(a, b) -> c { todo }",
+        "pub fn wibble(a, b) -> c { todo }",
+        Patch
+    );
+}
+
+#[test]
+fn tuple_length_change_is_major() {
+    assert_bump!(
+        "pub const tuple = #(1, 2.0)",
+        "pub const tuple = #(1, 2.0, True)",
+        Major
+    );
+}
+
+#[test]
+fn tuple_length_change_is_major2() {
+    assert_bump!(
+        "pub const tuple = #(1, 2.0, True)",
+        "pub const tuple = #(1, 2.0)",
+        Major
+    );
+}
+
+#[test]
+fn function_parameter_length_change_is_major() {
+    assert_bump!(
+        "pub fn x() { fn(a, b) { a + b } }",
+        "pub fn x() { fn(a, b, c) { a + b + c } }",
+        Major
+    );
+}
+
+#[test]
+fn function_parameter_length_change_is_major2() {
+    assert_bump!(
+        "pub fn x() { fn(a, b, c) { a + b + c } }",
+        "pub fn x() { fn(a, b) { a + b } }",
+        Major
+    );
+}

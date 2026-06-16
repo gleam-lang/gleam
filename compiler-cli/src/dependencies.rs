@@ -1758,7 +1758,7 @@ fn hex_manifest_package(
     }
 }
 
-struct PackageFetcher {
+pub struct PackageFetcher {
     runtime_cache: RefCell<HashMap<String, Rc<hexpm::Package>>>,
     runtime: tokio::runtime::Handle,
     http: HttpClient,
