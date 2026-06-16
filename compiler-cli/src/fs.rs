@@ -108,7 +108,9 @@ impl ProjectIO {
             .beam_compiler
             .lock()
             .expect("could not lock beam_compiler");
-        *guard = Some(BeamCompilerInstance::new(self)?);
+        if guard.is_none() {
+            *guard = Some(BeamCompilerInstance::new(self)?);
+        }
         Ok(())
     }
 }
