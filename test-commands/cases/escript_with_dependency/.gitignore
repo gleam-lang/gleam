@@ -3,3 +3,4 @@
 /build
 erl_crash.dump
 escript_with_dependency
+escript_with_dependency.cmd
