@@ -215,3 +215,23 @@ fn io_read_metadata_of_file_error() {
     .pretty_string();
     assert_snapshot!(error);
 }
+
+#[test]
+fn file_not_found() {
+    let error = Error::FileNotFound {
+        kind: FileKind::File,
+        path: "/file".into(),
+    }
+    .pretty_string();
+    assert_snapshot!(error);
+}
+
+#[test]
+fn directory_not_found() {
+    let error = Error::FileNotFound {
+        kind: FileKind::Directory,
+        path: "/directory/".into(),
+    }
+    .pretty_string();
+    assert_snapshot!(error);
+}
