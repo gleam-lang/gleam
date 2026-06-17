@@ -2934,6 +2934,25 @@ pub fn main() {
 }
 
 #[test]
+fn no_rename_record_field_from_other_package() {
+    let src = "
+import wibble
+
+pub fn main() {
+  let value = wibble.Wibble(wibble: 1)
+  value.wibble
+}
+";
+
+    assert_no_rename!(
+        &TestProject::for_source(src)
+            .add_hex_module("wibble", "pub type Wibble {\n  Wibble(wibble: Int)\n}"),
+        "wobble",
+        find_position_of("value.wibble").under_char('i')
+    );
+}
+
+#[test]
 fn rename_record_field_in_module_not_importing_the_type_module() {
     assert_rename!(
         TestProject::for_source(

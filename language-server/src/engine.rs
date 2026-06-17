@@ -878,11 +878,16 @@ where
                 // spans the whole `label:`, so we trim it down to just the
                 // label.
                 Some(Referenced::Label {
-                    location, label, ..
-                }) => success_response(SrcSpan {
-                    start: location.start,
-                    end: location.start + label.len() as u32,
-                }),
+                    location,
+                    label,
+                    type_module,
+                    ..
+                }) if this.is_same_package(current_module, &type_module) => {
+                    success_response(SrcSpan {
+                        start: location.start,
+                        end: location.start + label.len() as u32,
+                    })
+                }
 
                 _ => None,
             })
