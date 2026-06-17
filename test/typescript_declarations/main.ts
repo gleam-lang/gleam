@@ -1,6 +1,12 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
 import type { Option$ } from "./build/dev/javascript/gleam_stdlib/gleam/option.d.mts";
 import type { List } from "./build/dev/javascript/typescript_declarations/gleam.d.mts";
 import * as gleam from "./build/dev/javascript/typescript_declarations/typescript_declarations.mjs";
+
+// These statements use the `satisfies` keyword to assert the types are
+// what we expect.
 
 gleam.const_int satisfies number
 gleam.const_int_alias satisfies number
