@@ -19,9 +19,39 @@ fn wibble() {
 
 
 ----- Ranges -----
-1. lines 7..12 kind: none
+1. lines 1..2 kind: none
+2. lines 4..6 kind: none
+3. lines 7..12 kind: none
+4. lines 8..10 kind: none
 
------ Fold 1 (lines 7..12) -----
+----- Fold 1 (lines 1..2) -----
+
+//// This is very useful module. ...
+
+/// Function to wibble.
+///
+/// Not that it wobbles when wubble is true
+fn wibble() {
+  // We use this to wibble.
+  // Actually we could use wobble, would probably
+  // use wubble some time later
+  todo
+}
+
+----- Fold 2 (lines 4..6) -----
+
+//// This is very useful module.
+//// It can be used to wibble, wobble, and to wubble
+
+/// Function to wibble. ...
+fn wibble() {
+  // We use this to wibble.
+  // Actually we could use wobble, would probably
+  // use wubble some time later
+  todo
+}
+
+----- Fold 3 (lines 7..12) -----
 
 //// This is very useful module.
 //// It can be used to wibble, wobble, and to wubble
@@ -30,3 +60,16 @@ fn wibble() {
 ///
 /// Not that it wobbles when wubble is true
 fn wibble() { ...
+
+----- Fold 4 (lines 8..10) -----
+
+//// This is very useful module.
+//// It can be used to wibble, wobble, and to wubble
+
+/// Function to wibble.
+///
+/// Not that it wobbles when wubble is true
+fn wibble() {
+  // We use this to wibble. ...
+  todo
+}
