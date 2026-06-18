@@ -119,12 +119,17 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             Publicity::Private,
         );
 
+        let alias_location = SrcSpan {
+            start: import.imported_name_location.end,
+            end: import.location.end,
+        };
+
         self.environment.references.register_type_reference(
             type_info.module.clone(),
             import.name.clone(),
             imported_name,
             import.imported_name_location,
-            ReferenceKind::Import,
+            ReferenceKind::Import(alias_location),
         );
 
         if let Err(e) = self
@@ -197,12 +202,17 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     Publicity::Private,
                 );
 
+                let alias_location = SrcSpan {
+                    start: import.imported_name_location.end,
+                    end: import.location.end,
+                };
+
                 self.environment.references.register_value_reference(
                     module.clone(),
                     import_name.clone(),
                     used_name,
                     import.imported_name_location,
-                    ReferenceKind::Import,
+                    ReferenceKind::Import(alias_location),
                 );
             }
             ValueConstructorVariant::ModuleConstant { module, .. }
@@ -215,12 +225,18 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     location,
                     Publicity::Private,
                 );
+
+                let alias_location = SrcSpan {
+                    start: import.imported_name_location.end,
+                    end: import.location.end,
+                };
+
                 self.environment.references.register_value_reference(
                     module.clone(),
                     import_name.clone(),
                     used_name,
                     import.imported_name_location,
-                    ReferenceKind::Import,
+                    ReferenceKind::Import(alias_location),
                 );
             }
             ValueConstructorVariant::LocalVariable { .. } => {}
