@@ -782,7 +782,11 @@ where
                 &line_numbers,
                 "///",
             ) {
-                let Some(range) = folding_range_for_span(doc_comment, &line_numbers, None) else {
+                let Some(range) = folding_range_for_span(
+                    doc_comment,
+                    &line_numbers,
+                    Some(FoldingRangeKind::Comment),
+                ) else {
                     continue;
                 };
                 ranges.push(range);
@@ -794,8 +798,11 @@ where
                 &line_numbers,
                 "////",
             ) {
-                let Some(range) = folding_range_for_span(module_comment, &line_numbers, None)
-                else {
+                let Some(range) = folding_range_for_span(
+                    module_comment,
+                    &line_numbers,
+                    Some(FoldingRangeKind::Comment),
+                ) else {
                     continue;
                 };
                 ranges.push(range);
@@ -804,7 +811,9 @@ where
             for comment in
                 comment_folding_spans(&module.extra.comments, &module.code, &line_numbers, "//")
             {
-                let Some(range) = folding_range_for_span(comment, &line_numbers, None) else {
+                let Some(range) =
+                    folding_range_for_span(comment, &line_numbers, Some(FoldingRangeKind::Comment))
+                else {
                     continue;
                 };
                 ranges.push(range);
