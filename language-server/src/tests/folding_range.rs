@@ -240,3 +240,70 @@ pub fn three() {
 }"
     );
 }
+
+#[test]
+fn folds_for_comments() {
+    assert_folding!(
+        "
+//// This is very useful module.
+//// It can be used to wibble, wobble, and to wubble
+
+/// Function to wibble.
+///
+/// Not that it wobbles when wubble is true
+fn wibble() {
+  // We use this to wibble.
+  // Actually we could use wobble, would probably
+  // use wubble some time later
+  todo
+}
+"
+    );
+}
+
+#[test]
+fn folds_for_comments_breaked_with_code() {
+    assert_folding!(
+        "
+fn wibble() {
+  // Wibble comment
+  // Wobble comment
+  todo // ToDo comment
+
+  // Wubble comment
+}
+"
+    );
+}
+
+#[test]
+fn doesnt_fold_single_line_comments() {
+    assert_folding!(
+        "
+//// This is very useful module
+
+/// This is function for wibbling
+fn wibble() {
+  // Useful comment
+  todo
+}
+"
+    );
+}
+
+#[test]
+fn doesnt_fold_separated_comment_blocks() {
+    assert_folding!(
+        "
+fn wibble() {
+  // Useful comment
+  // Another useful comment
+
+  // Yet another useful comment
+  // Last useful comment
+
+  todo
+}
+"
+    );
+}
