@@ -300,3 +300,7 @@
   declarations when a variable was reassigned after being shadowed inside a
   directly matching `case` branch.
   ([Eyup Can Akman](https://github.com/eyupcanakman))
+
+- Fixed a bug where the language server would produce wrong code when triggering
+  rename of types and values with import aliases.
+  ([Andrey Kozhev](https://github.com/ankddev))
