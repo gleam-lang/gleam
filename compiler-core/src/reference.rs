@@ -73,7 +73,13 @@ pub enum ReferenceKind {
     /// import gleam/dynamic/decode.{type Dynamic}
     /// //                                ^^^^^^^ Import
     /// ```
-    Import,
+    /// The contained span is the location of `as ...` part, if it exists,
+    /// otherwise it will just be empty. For example:
+    /// ```gleam
+    /// import gleam/option.{None as Nothing}
+    /// //                       ^^^^^^^^^^^ Alias span
+    /// ```
+    Import(SrcSpan),
     /// The original definition location of a type or value. This also counts as
     /// a reference for renaming and "find references" purposes. For example:
     ///
@@ -597,7 +603,7 @@ impl ReferenceTracker {
                 };
                 self.register_module_name_reference(module.clone(), reference);
             }
-            ReferenceKind::Import | ReferenceKind::Definition => {}
+            ReferenceKind::Import(_) | ReferenceKind::Definition => {}
             ReferenceKind::Alias | ReferenceKind::Unqualified => {
                 let target = self.get_or_create_node(referenced_name.clone(), EntityLayer::Value);
                 _ = self.graph.add_edge(self.current_node, target, ());
@@ -631,7 +637,7 @@ impl ReferenceTracker {
                 };
                 self.register_module_name_reference(module.clone(), reference);
             }
-            ReferenceKind::Import | ReferenceKind::Definition => {}
+            ReferenceKind::Import(_) | ReferenceKind::Definition => {}
             ReferenceKind::Alias | ReferenceKind::Unqualified => {
                 self.register_type_reference_in_call_graph(referenced_name.clone())
             }
