@@ -208,6 +208,32 @@
 
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The language server will now better rename types and values with import
+  aliases by removing `as ...` part in case new name is same as original name of
+  item. For example:
+
+  ```gleam
+  import wibble.{type Wibble as Wobble, Wibble as Wobble}
+
+  pub fn go() -> Wobble {
+    //           ^^^^^^ Rename to `Wibble`
+    Wobble
+  //^^^^^^ Rename to `Wibble`
+  }
+  ```
+
+  Will now result in this code:
+
+  ```gleam
+  import wibble.{type Wibble, Wibble}
+
+  pub fn go() -> Wibble {
+    Wibble
+  }
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Formatter
 
 - Performance of the formatter has been improved.
