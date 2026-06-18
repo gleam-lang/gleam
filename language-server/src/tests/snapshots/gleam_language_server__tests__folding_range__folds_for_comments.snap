@@ -1,0 +1,32 @@
+---
+source: language-server/src/tests/folding_range.rs
+expression: "\n//// This is very useful module.\n//// It can be used to wibble, wobble, and to wubble\n\n/// Function to wibble.\n///\n/// Not that it wobbles when wubble is true\nfn wibble() {\n  // We use this to wibble.\n  // Actually we could use wobble, would probably\n  // use wubble some time later\n  todo\n}\n"
+---
+----- Code -----
+
+//// This is very useful module.
+//// It can be used to wibble, wobble, and to wubble
+
+/// Function to wibble.
+///
+/// Not that it wobbles when wubble is true
+fn wibble() {
+  // We use this to wibble.
+  // Actually we could use wobble, would probably
+  // use wubble some time later
+  todo
+}
+
+
+----- Ranges -----
+1. lines 7..12 kind: none
+
+----- Fold 1 (lines 7..12) -----
+
+//// This is very useful module.
+//// It can be used to wibble, wobble, and to wubble
+
+/// Function to wibble.
+///
+/// Not that it wobbles when wubble is true
+fn wibble() { ...

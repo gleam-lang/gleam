@@ -1,0 +1,24 @@
+---
+source: language-server/src/tests/folding_range.rs
+expression: "\n//// This is very useful module\n\n/// This is function for wibbling\nfn wibble() {\n  // Useful comment\n  todo\n}\n"
+---
+----- Code -----
+
+//// This is very useful module
+
+/// This is function for wibbling
+fn wibble() {
+  // Useful comment
+  todo
+}
+
+
+----- Ranges -----
+1. lines 4..7 kind: none
+
+----- Fold 1 (lines 4..7) -----
+
+//// This is very useful module
+
+/// This is function for wibbling
+fn wibble() { ...
