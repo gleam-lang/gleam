@@ -3229,3 +3229,103 @@ pub type Wibble {
         find_position_of("Wobble").nth_occurrence(4).under_char('b')
     );
 }
+
+#[test]
+fn rename_item_with_import_alias_to_original_name() {
+    assert_rename!(
+        TestProject::for_source(
+            "
+import wibble.{Wibble as Wobble}
+
+pub fn main() {
+  let _ = Wobble
+}
+"
+        )
+        .add_module(
+            "wibble",
+            "
+pub type Wibble {
+  Wibble
+}
+"
+        ),
+        "Wibble",
+        find_position_of("= Wobble").under_char('b')
+    );
+}
+
+#[test]
+fn rename_type_with_import_alias_to_original_name() {
+    assert_rename!(
+        TestProject::for_source(
+            "
+import wibble.{type Wibble as Wobble}
+
+pub fn main() -> Wobble {
+  todo
+}
+"
+        )
+        .add_module(
+            "wibble",
+            "
+pub type Wibble {
+  Wibble
+}
+"
+        ),
+        "Wibble",
+        find_position_of("-> Wobble").under_char('b')
+    );
+}
+
+#[test]
+fn rename_type_with_import_alias_to_original_name_with_other_items() {
+    assert_rename!(
+        TestProject::for_source(
+            "
+import wibble.{type Wibble as Wobble, Wibble as Wobble}
+
+pub fn main() -> Wobble {
+  Wobble
+}
+"
+        )
+        .add_module(
+            "wibble",
+            "
+pub type Wibble {
+  Wibble
+}
+"
+        ),
+        "Wibble",
+        find_position_of("-> Wobble").under_char('b')
+    );
+}
+
+#[test]
+fn rename_item_with_import_alias_to_original_name_with_other_items() {
+    assert_rename!(
+        TestProject::for_source(
+            "
+import wibble.{type Wibble as Wobble, Wibble as Wobble}
+
+pub fn main() -> Wobble {
+  Wobble
+}
+"
+        )
+        .add_module(
+            "wibble",
+            "
+pub type Wibble {
+  Wibble
+}
+"
+        ),
+        "Wibble",
+        find_position_of("Wobble").nth_occurrence(4).under_char('b')
+    );
+}
