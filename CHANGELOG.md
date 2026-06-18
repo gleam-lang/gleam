@@ -234,6 +234,38 @@
 
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The language server now supports folding of comments and documentation
+  comments. For example, this code:
+
+  ```gleam
+  //// Very useful module.
+  ////
+  //// It could be used to make interesting things
+
+  /// Function to wibble.
+  ///
+  /// Not that it wobbles when wubble is true
+  pub fn wibble() {
+    // This todo here is temporary.
+    // It will need to be removed at some moment.
+    todo
+  }
+  ```
+
+  can now be folded to:
+
+  ```gleam
+  //// Very useful module. ...
+
+  /// Function to wibble. ...
+  pub fn wibble() {
+    // This todo here is temporary. ...
+    todo
+  }
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Formatter
 
 - Performance of the formatter has been improved.
