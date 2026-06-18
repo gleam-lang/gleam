@@ -368,7 +368,13 @@ fn alias_references_in_module(
                 edits.replace(reference.location, params.new_name.clone())
             }
             ReferenceKind::Import(alias_location) => {
-                edits.replace(alias_location, format!(" as {}", params.new_name));
+                // If old name is equal to original name, we can just remove
+                // alias part.
+                if name == &params.new_name {
+                    edits.delete(alias_location);
+                } else {
+                    edits.replace(alias_location, format!(" as {}", params.new_name));
+                }
                 found_import = true;
             }
             ReferenceKind::Definition => {}

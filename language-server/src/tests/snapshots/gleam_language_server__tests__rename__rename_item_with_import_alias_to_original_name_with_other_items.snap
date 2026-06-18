@@ -30,7 +30,7 @@ pub type Wibble {
 
 -- app.gleam
 
-import wibble.{type Wibble as Wobble, Wibble as Wibble}
+import wibble.{type Wibble as Wobble, Wibble}
 
 pub fn main() -> Wobble {
   Wibble
