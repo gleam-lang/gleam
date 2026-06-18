@@ -17,8 +17,8 @@ fn wibble() {
 
 ----- Ranges -----
 1. lines 1..9 kind: none
-2. lines 2..3 kind: none
-3. lines 5..6 kind: none
+2. lines 2..3 kind: comment
+3. lines 5..6 kind: comment
 
 ----- Fold 1 (lines 1..9) -----
 
