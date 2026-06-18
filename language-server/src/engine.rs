@@ -776,6 +776,40 @@ where
                 ranges.push(range);
             }
 
+            for doc_comment in comment_folding_spans(
+                &module.extra.doc_comments,
+                &module.code,
+                &line_numbers,
+                "///",
+            ) {
+                let Some(range) = folding_range_for_span(doc_comment, &line_numbers, None) else {
+                    continue;
+                };
+                ranges.push(range);
+            }
+
+            for module_comment in comment_folding_spans(
+                &module.extra.module_comments,
+                &module.code,
+                &line_numbers,
+                "////",
+            ) {
+                let Some(range) = folding_range_for_span(module_comment, &line_numbers, None)
+                else {
+                    continue;
+                };
+                ranges.push(range);
+            }
+
+            for comment in
+                comment_folding_spans(&module.extra.comments, &module.code, &line_numbers, "//")
+            {
+                let Some(range) = folding_range_for_span(comment, &line_numbers, None) else {
+                    continue;
+                };
+                ranges.push(range);
+            }
+
             ranges.sort_by_key(|range| range.start_line);
             Ok(ranges)
         })
@@ -1530,6 +1564,77 @@ fn import_folding_spans(
         }
 
         previous_line = next_line;
+    }
+
+    if current_len > 1 {
+        spans.push(SrcSpan::new(current_start, current_end));
+    }
+
+    spans
+}
+
+fn comment_folding_spans(
+    comments: &[SrcSpan],
+    code: &str,
+    line_numbers: &LineNumbers,
+    comment_prefix: &str,
+) -> Vec<SrcSpan> {
+    let mut spans = vec![];
+    let comments = comments.iter();
+
+    let mut comments = comments.map(|span| {
+        let line = src_span_to_lsp_range(*span, line_numbers).start.line;
+        let start = line_numbers
+            .line_starts
+            .get(line as usize)
+            .copied()
+            .unwrap_or_default();
+        let end = line_numbers
+            .line_starts
+            .get(line as usize + 1)
+            .copied()
+            .map(|next_line_start| next_line_start.saturating_sub(1))
+            .unwrap_or(line_numbers.length);
+
+        // Find prefix (`//`, `///` or `////`), so we use start of the prefix
+        // as start of comment. This allows us to not fold comments before and
+        // after some code, like here:
+        // ```gleam
+        // // wibble
+        // // wobble
+        // wibble // wubble
+        // ```
+        let between = &code[start as usize..end as usize];
+        let start = start + between.find(comment_prefix).unwrap_or_default() as u32;
+        (start, line, end)
+    });
+
+    let Some((start, line, end)) = comments.next() else {
+        return spans;
+    };
+
+    let mut current_start = start;
+    let mut current_line = line;
+    let mut current_end = end;
+    let mut current_len = 1;
+
+    for (start, line, end) in comments {
+        let separated_by_blank_line = line > current_line + 1;
+        let between = &code[current_end as usize..start as usize];
+        let has_non_comments_between_between = between.chars().any(|char| !char.is_whitespace());
+
+        if separated_by_blank_line || has_non_comments_between_between {
+            if current_len > 1 {
+                spans.push(SrcSpan::new(current_start, current_end));
+            }
+            current_start = start;
+            current_end = end;
+            current_len = 1;
+        } else {
+            current_end = end;
+            current_len += 1;
+        }
+        current_line = line;
     }
 
     if current_len > 1 {
