@@ -1,0 +1,37 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\nimport wibble.{type Wibble as Wobble}\n\npub fn main() -> Wobble {\n  todo\n}\n"
+---
+----- BEFORE RENAME
+-- wibble.gleam
+
+pub type Wibble {
+  Wibble
+}
+
+
+-- app.gleam
+
+import wibble.{type Wibble as Wobble}
+
+pub fn main() -> Wobble {
+                 ↑▔▔▔▔▔  
+  todo
+}
+
+
+----- AFTER RENAME
+-- wibble.gleam
+
+pub type Wibble {
+  Wibble
+}
+
+
+-- app.gleam
+
+import wibble.{type Wibble as Wubble as Wobble}
+
+pub fn main() -> Wubble {
+  todo
+}

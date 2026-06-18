@@ -3125,3 +3125,107 @@ pub fn main() {
         find_position_of("colour: Int, width").under_char('c')
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5861
+#[test]
+fn rename_item_with_import_alias() {
+    assert_rename!(
+        TestProject::for_source(
+            "
+import wibble.{Wibble as Wobble}
+
+pub fn main() {
+  let _ = Wobble
+}
+"
+        )
+        .add_module(
+            "wibble",
+            "
+pub type Wibble {
+  Wibble
+}
+"
+        ),
+        "Wubble",
+        find_position_of("= Wobble").under_char('b')
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5861
+#[test]
+fn rename_type_with_import_alias() {
+    assert_rename!(
+        TestProject::for_source(
+            "
+import wibble.{type Wibble as Wobble}
+
+pub fn main() -> Wobble {
+  todo
+}
+"
+        )
+        .add_module(
+            "wibble",
+            "
+pub type Wibble {
+  Wibble
+}
+"
+        ),
+        "Wubble",
+        find_position_of("-> Wobble").under_char('b')
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5861
+#[test]
+fn rename_type_with_import_alias_and_other_imported_items() {
+    assert_rename!(
+        TestProject::for_source(
+            "
+import wibble.{Wibble as Wobble, type Wibble as Wobble}
+
+pub fn main() -> Wobble {
+  Wobble
+}
+"
+        )
+        .add_module(
+            "wibble",
+            "
+pub type Wibble {
+  Wibble
+}
+"
+        ),
+        "Wubble",
+        find_position_of("-> Wobble").under_char('b')
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5861
+#[test]
+fn rename_value_with_import_alias_and_other_imported_items() {
+    assert_rename!(
+        TestProject::for_source(
+            "
+import wibble.{Wibble as Wobble, type Wibble as Wobble}
+
+pub fn main() -> Wobble {
+  Wobble
+}
+"
+        )
+        .add_module(
+            "wibble",
+            "
+pub type Wibble {
+  Wibble
+}
+"
+        ),
+        "Wubble",
+        find_position_of("Wobble").nth_occurrence(4).under_char('b')
+    );
+}
