@@ -15278,3 +15278,125 @@ fn discard_unused_variable_triggered_at_list_pattern_assignment() {
         find_position_of("tail").to_selection()
     );
 }
+
+#[test]
+fn convert_to_function_call_on_single_step_pipeline() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "fn wibble(wobble: List(Int)) -> Nil {
+  wobble |> echo
+}",
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_function_call_on_single_step_pipeline_on_value() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "fn wibble(wobble: List(Int)) -> Nil {
+  wobble |> echo
+}",
+        find_position_of("wobble |>").under_char('b').to_selection()
+    );
+}
+
+#[test]
+fn convert_to_function_call_on_value() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "fn go() {
+  [1, 2, 3]
+  |> echo
+  |> wibble
+  |> wobble
+}",
+        find_position_of("[1, 2, 3]").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_function_call_on_first_step() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "fn go() {
+  [1, 2, 3]
+  |> echo
+  |> wibble
+  |> wobble
+}",
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_function_call_on_second_step() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "fn go() {
+  [1, 2, 3]
+  |> echo
+  |> wibble
+  |> wobble
+}",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_function_call_on_last_step() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "fn go() {
+  [1, 2, 3]
+  |> echo
+  |> wibble
+  |> wobble
+}",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_function_call_on_value_single_line() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "fn go() {
+  [1, 2, 3] |> echo |> wibble |> wobble
+}",
+        find_position_of("[1, 2, 3]").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_function_call_on_first_step_single_line() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "fn go() {
+  [1, 2, 3] |> echo |> wibble |> wobble
+}",
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_function_call_on_second_step_single_line() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "fn go() {
+  [1, 2, 3] |> echo |> wibble |> wobble
+}",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_function_call_on_last_step_single_line() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "fn go() {
+  [1, 2, 3] |> echo |> wibble |> wobble
+}",
+        find_position_of("wobble").to_selection()
+    );
+}

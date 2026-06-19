@@ -1,0 +1,15 @@
+---
+source: language-server/src/tests/action.rs
+expression: "fn wibble(wobble: List(Int)) -> Nil {\n  wobble |> echo\n}"
+---
+----- BEFORE ACTION
+fn wibble(wobble: List(Int)) -> Nil {
+  wobble |> echo
+            ↑   
+}
+
+
+----- AFTER ACTION
+fn wibble(wobble: List(Int)) -> Nil {
+  echo wobble
+}
