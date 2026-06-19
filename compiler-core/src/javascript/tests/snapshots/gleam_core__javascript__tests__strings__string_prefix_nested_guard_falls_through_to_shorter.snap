@@ -1,0 +1,44 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\npub fn classify(input: String, flag: Bool) -> String {\n  case input {\n    \"w\" <> _ if flag -> \"w\"\n    \"wibble\" <> rest if rest == \"x\" -> rest\n    \"wib\" <> rest -> rest\n    _ -> \"other\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn classify(input: String, flag: Bool) -> String {
+  case input {
+    "w" <> _ if flag -> "w"
+    "wibble" <> rest if rest == "x" -> rest
+    "wib" <> rest -> rest
+    _ -> "other"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function classify(input, flag) {
+  if (input.charCodeAt(0) === 119) {
+    if (flag) {
+      return "w";
+    } else {
+      let $ = input.slice(1);
+      if ($.startsWith("ibble")) {
+        let rest = $.slice(5);
+        if (rest === "x") {
+          return rest;
+        } else if ($.startsWith("ib")) {
+          let rest = $.slice(2);
+          return rest;
+        } else {
+          return "other";
+        }
+      } else if ($.startsWith("ib")) {
+        let rest = $.slice(2);
+        return rest;
+      } else {
+        return "other";
+      }
+    }
+  } else {
+    return "other";
+  }
+}

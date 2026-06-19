@@ -479,3 +479,7 @@
 - Fixed a bug where warnings and errors in the arguments of a call to a
   function literal would be reported multiple times.
   ([John Downey](https://github.com/jtdowney))
+
+- Fixed a bug where pattern matching on overlapping string prefixes with guards
+  could generate incorrect JavaScript.
+  ([John Downey](https://github.com/jtdowney))
