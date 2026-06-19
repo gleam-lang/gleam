@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\npub fn classify(input: String, flag: Bool) -> String {\n  case input {\n    \"aa\" <> _rest if flag -> \"wibble\"\n    \"a\" <> _rest if flag -> \"wobble\"\n    \"a\" <> _rest -> \"woo\"\n    _ -> \"other\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn classify(input: String, flag: Bool) -> String {
+  case input {
+    "aa" <> _rest if flag -> "wibble"
+    "a" <> _rest if flag -> "wobble"
+    "a" <> _rest -> "woo"
+    _ -> "other"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function classify(input, flag) {
+  if (input.startsWith("aa") && flag) {
+    return "wibble";
+  } else if (input.charCodeAt(0) === 97) {
+    if (flag) {
+      return "wobble";
+    } else {
+      return "woo";
+    }
+  } else {
+    return "other";
+  }
+}

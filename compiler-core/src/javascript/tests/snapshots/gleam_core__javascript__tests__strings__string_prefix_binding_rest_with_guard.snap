@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\npub fn classify(input: String, flag: Bool) -> String {\n  case input {\n    \"aa\" <> rest if flag -> rest\n    \"a\" <> rest -> rest\n    _ -> \"other\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn classify(input: String, flag: Bool) -> String {
+  case input {
+    "aa" <> rest if flag -> rest
+    "a" <> rest -> rest
+    _ -> "other"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function classify(input, flag) {
+  if (input.startsWith("aa") && flag) {
+    let rest = input.slice(2);
+    return rest;
+  } else if (input.charCodeAt(0) === 97) {
+    let rest = input.slice(1);
+    return rest;
+  } else {
+    return "other";
+  }
+}
