@@ -266,6 +266,10 @@
 
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The "Convert to function call" code action will now convert the currently
+  hovered call and not only the final one.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Formatter
 
 - Performance of the formatter has been improved.
