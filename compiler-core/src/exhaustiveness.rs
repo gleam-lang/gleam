@@ -336,6 +336,26 @@ impl Branch {
                         None => return false,
                     },
 
+                    // A guaranteed-match slice binds the prefix name (if any) and
+                    // the rest variable (if any) to the correctly sliced string.
+                    Pattern::StringPrefixSlice {
+                        prefix,
+                        prefix_name,
+                        rest_name,
+                    } => {
+                        let prefix = prefix.clone();
+                        let prefix_name_val = std::mem::take(prefix_name);
+                        let rest_name_val = std::mem::take(rest_name);
+                        if let Some(name) = prefix_name_val {
+                            self.body.assign_literal_string(name, prefix.clone());
+                        }
+                        if let Some(name) = rest_name_val {
+                            self.body
+                                .assign_string_slice(name, check.var.clone(), prefix);
+                        }
+                        return false;
+                    }
+
                     // All other patterns are not unconditional, so we just keep them.
                     Pattern::Int { .. }
                     | Pattern::Float { .. }
@@ -396,6 +416,13 @@ pub enum BoundValue {
         bit_array: Variable,
         read_action: ReadAction,
     },
+
+    /// `let a = subject.slice(N)`
+    ///
+    StringSlice {
+        subject: Variable,
+        prefix: EcoString,
+    },
 }
 
 impl Body {
@@ -415,6 +442,11 @@ impl Body {
     fn assign_literal_string(&mut self, variable: EcoString, value: EcoString) {
         self.bindings
             .push((variable, BoundValue::LiteralString(value)));
+    }
+
+    fn assign_string_slice(&mut self, variable: EcoString, subject: Variable, prefix: EcoString) {
+        self.bindings
+            .push((variable, BoundValue::StringSlice { subject, prefix }));
     }
 
     fn assign_bit_array_slice(
@@ -477,6 +509,11 @@ pub enum Pattern {
         prefix_name: Option<EcoString>,
         rest: Id<Pattern>,
     },
+    StringPrefixSlice {
+        prefix: EcoString,
+        prefix_name: Option<EcoString>,
+        rest_name: Option<EcoString>,
+    },
     Assign {
         name: EcoString,
         pattern: Id<Pattern>,
@@ -514,7 +551,10 @@ impl Pattern {
             // These patterns are unconditional: they will always match and be moved
             // out of a branch's checks. So there's no corresponding runtime check
             // we can perform for them.
-            Pattern::Discard | Pattern::Variable { .. } | Pattern::Assign { .. } => return None,
+            Pattern::Discard
+            | Pattern::Variable { .. }
+            | Pattern::Assign { .. }
+            | Pattern::StringPrefixSlice { .. } => return None,
             Pattern::Int { int_value, .. } => RuntimeCheckKind::Int {
                 int_value: int_value.clone(),
             },
@@ -582,6 +622,7 @@ impl Pattern {
             | Self::Float { .. }
             | Self::String { .. }
             | Self::StringPrefix { .. }
+            | Self::StringPrefixSlice { .. }
             | Self::Assign { .. }
             | Self::Variable { .. }
             | Self::Tuple { .. }
@@ -2748,14 +2789,23 @@ impl<'a> Compiler<'a> {
                     // left to do.
                     vec![]
                 } else {
-                    // The pattern is guaranteed to match but it does bind something, so we
-                    // re-issue it on the original value to bind `rest1` to the correctly sliced
-                    // string (preserving any prefix name like `"a" as first <> rest1`).
-                    let pattern = self.patterns.alloc(Pattern::StringPrefix {
+                    // The pattern is guaranteed to match but it does bind something. Use
+                    // StringPrefixSlice so the backend only emits the slice, not a redundant
+                    // startsWith check.
+                    let rest_pattern = self.pattern(*rest1);
+                    let rest_name = if let Pattern::Variable { name } = rest_pattern {
+                        Some(name.clone())
+                    } else if matches!(rest_pattern, Pattern::Discard) {
+                        None
+                    } else {
+                        unreachable!("rest should be Variable or Discard, got {rest_pattern:?}")
+                    };
+                    let pattern = self.patterns.alloc(Pattern::StringPrefixSlice {
                         prefix: prefix1.clone(),
                         prefix_name: prefix_name.clone(),
-                        rest: *rest1,
+                        rest_name,
                     });
+
                     vec![subject.is(pattern)]
                 }
             }

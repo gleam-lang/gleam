@@ -25,11 +25,9 @@ export function classify(input, flag) {
         let rest = $.slice(5);
         if (rest === "x") {
           return rest;
-        } else if ($.startsWith("ib")) {
+        } else {
           let rest = $.slice(2);
           return rest;
-        } else {
-          return "other";
         }
       } else if ($.startsWith("ib")) {
         let rest = $.slice(2);
