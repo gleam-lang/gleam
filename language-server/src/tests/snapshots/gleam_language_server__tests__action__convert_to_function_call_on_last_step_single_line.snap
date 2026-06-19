@@ -11,5 +11,5 @@ fn go() {
 
 ----- AFTER ACTION
 fn go() {
-  echo [1, 2, 3] |> wibble |> wobble
+  wobble([1, 2, 3] |> echo |> wibble)
 }

@@ -7833,18 +7833,47 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToFunctionCall<'ast> {
     ) {
         let pipeline_range = self.edits.src_span_to_lsp_range(*location);
         if within(self.params.range, pipeline_range) {
-            // We will always desugar the pipeline's first step. If there's no
-            // intermediate assignment it means we're dealing with a single step
-            // pipeline and the call is `finally`.
-            let (call, call_kind) = assignments
-                .first()
+            // Add final assignment to the list
+            let all_assignments = assignments
+                .iter()
                 .map(|(call, kind)| (call.location, *kind))
-                .unwrap_or_else(|| (finally.location(), *finally_kind));
+                .chain(iter::once((finally.location(), *finally_kind)));
+            let mut call_information = None;
+            // Span, containing content that will be extracted as call argument
+            let mut accumulated_span = first_value.location;
+
+            for (current_location, current_kind) in all_assignments {
+                if within(
+                    self.params.range,
+                    self.edits.src_span_to_lsp_range(current_location),
+                ) {
+                    call_information = Some((accumulated_span, current_location, current_kind));
+                    break;
+                }
+                accumulated_span = accumulated_span.merge(&current_location);
+            }
+
+            let (final_prev, final_call, final_kind) = match call_information {
+                Some(triple) => triple,
+
+                // Here two situations are possible:
+                // - If the cursor is not on any of the assignments (for example, it is on first value), then we need
+                // to use that first value as accumulated location, and the first call location and kind
+                // - If there are no assignments, then we are dealing with a single
+                // step pipeline and the call is `finally`
+                None => {
+                    let (call, call_kind) = &assignments
+                        .first()
+                        .map(|(call, call_kind)| (call.location, *call_kind))
+                        .unwrap_or_else(|| (finally.location(), *finally_kind));
+                    (first_value.location, *call, *call_kind)
+                }
+            };
 
             self.locations = Some(ConvertToFunctionCallLocations {
-                first_value: first_value.location,
-                call,
-                call_kind,
+                first_value: final_prev,
+                call: final_call,
+                call_kind: final_kind,
             });
 
             ast::visit::visit_typed_expr_pipeline(
