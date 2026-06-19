@@ -1,13 +1,13 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-expression: "\npub fn classify(input: String) -> String {\n  case input {\n    \"aa\" <> rest if rest == \"x\" -> \"aa-x\"\n    \"a\" <> rest -> rest\n    _ -> \"other\"\n  }\n}\n"
+expression: "\npub fn classify(input: String) -> String {\n  case input {\n    \"aa\" <> rest if rest == \"x\" -> rest\n    \"a\" <> _ -> \"short\"\n    _ -> \"other\"\n  }\n}\n"
 ---
 ----- SOURCE CODE
 
 pub fn classify(input: String) -> String {
   case input {
-    "aa" <> rest if rest == "x" -> "aa-x"
-    "a" <> rest -> rest
+    "aa" <> rest if rest == "x" -> rest
+    "a" <> _ -> "short"
     _ -> "other"
   }
 }
@@ -18,14 +18,12 @@ export function classify(input) {
   if (input.startsWith("aa")) {
     let rest = input.slice(2);
     if (rest === "x") {
-      return "aa-x";
-    } else {
-      let rest = input.slice(1);
       return rest;
+    } else {
+      return "short";
     }
   } else if (input.charCodeAt(0) === 97) {
-    let rest = input.slice(1);
-    return rest;
+    return "short";
   } else {
     return "other";
   }
