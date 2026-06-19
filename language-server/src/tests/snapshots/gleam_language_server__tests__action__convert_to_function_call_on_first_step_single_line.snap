@@ -1,0 +1,15 @@
+---
+source: language-server/src/tests/action.rs
+expression: "fn go() {\n  [1, 2, 3] |> echo |> wibble |> wobble\n}"
+---
+----- BEFORE ACTION
+fn go() {
+  [1, 2, 3] |> echo |> wibble |> wobble
+               ↑                       
+}
+
+
+----- AFTER ACTION
+fn go() {
+  echo [1, 2, 3] |> wibble |> wobble
+}
