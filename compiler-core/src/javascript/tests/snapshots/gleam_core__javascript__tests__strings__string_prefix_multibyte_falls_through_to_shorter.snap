@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\npub fn classify(input: String) -> String {\n  case input {\n    \"🫥a\" <> rest if rest == \"x\" -> rest\n    \"🫥\" <> rest -> rest\n    _ -> \"other\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn classify(input: String) -> String {
+  case input {
+    "🫥a" <> rest if rest == "x" -> rest
+    "🫥" <> rest -> rest
+    _ -> "other"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function classify(input) {
+  if (input.startsWith("🫥a")) {
+    let rest = input.slice(3);
+    if (rest === "x") {
+      return rest;
+    } else {
+      let rest = input.slice(2);
+      return rest;
+    }
+  } else if (input.startsWith("🫥")) {
+    let rest = input.slice(2);
+    return rest;
+  } else {
+    return "other";
+  }
+}

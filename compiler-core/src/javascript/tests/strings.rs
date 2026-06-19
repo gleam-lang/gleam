@@ -372,3 +372,51 @@ pub fn classify(input: String, flag: Bool) -> String {
 "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5856
+#[test]
+fn string_prefix_name_binding_falls_through_to_shorter() {
+    assert_js!(
+        r#"
+pub fn classify(input: String) -> String {
+  case input {
+    "aa" <> rest if rest == "x" -> rest
+    "a" as first <> rest -> rest <> first
+    _ -> "other"
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5856
+#[test]
+fn string_prefix_discard_falls_through_to_shorter() {
+    assert_js!(
+        r#"
+pub fn classify(input: String) -> String {
+  case input {
+    "aa" <> rest if rest == "x" -> rest
+    "a" <> _ -> "short"
+    _ -> "other"
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5856
+#[test]
+fn string_prefix_multibyte_falls_through_to_shorter() {
+    assert_js!(
+        r#"
+pub fn classify(input: String) -> String {
+  case input {
+    "🫥a" <> rest if rest == "x" -> rest
+    "🫥" <> rest -> rest
+    _ -> "other"
+  }
+}
+"#,
+    );
+}
