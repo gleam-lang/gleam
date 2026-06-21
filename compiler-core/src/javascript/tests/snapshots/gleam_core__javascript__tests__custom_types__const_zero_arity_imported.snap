@@ -14,4 +14,4 @@ pub const x = other.Two
 ----- COMPILED JAVASCRIPT
 import * as $other from "../other.mjs";
 
-export const x = /* @__PURE__ */ new $other.Two();
+export const x = $other.One$Two$const;

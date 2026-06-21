@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\nimport wibble.{Wobble}\n\npub const wibble = wibble.Wibble\n\npub const wobble = Wobble\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+pub type Wibble { Wibble Wobble }
+
+-- main.gleam
+
+import wibble.{Wobble}
+
+pub const wibble = wibble.Wibble
+
+pub const wobble = Wobble
+
+
+----- COMPILED JAVASCRIPT
+import * as $wibble from "../wibble.mjs";
+import { Wibble$Wobble$const } from "../wibble.mjs";
+
+export const wibble = $wibble.Wibble$Wibble$const;
+
+export const wobble = Wibble$Wobble$const;

@@ -1191,3 +1191,68 @@ pub fn wobble(x: Int) -> Wibble {
 "
     );
 }
+
+#[test]
+fn singleton_constant_used_in_const() {
+    assert_js!(
+        "
+pub opaque type Wibble {
+  Wibble
+  Wobble(Int)
+}
+
+pub const wibble = Wibble
+"
+    );
+}
+
+#[test]
+fn singleton_constant_from_other_module_used_in_const() {
+    assert_js!(
+        ("wibble", "pub type Wibble { Wibble Wobble }"),
+        "
+import wibble.{Wobble}
+
+pub const wibble = wibble.Wibble
+
+pub const wobble = Wobble
+"
+    );
+}
+
+#[test]
+fn singleton_constant_used_in_guard() {
+    assert_js!(
+        "
+pub opaque type Wibble {
+  Wibble
+  Wobble(Int)
+}
+
+pub fn go(x) {
+  case x {
+    _ if x == #(Wibble) -> True
+    _ -> False
+  }
+}
+"
+    );
+}
+
+#[test]
+fn singleton_constant_from_other_module_used_in_guard() {
+    assert_js!(
+        ("wibble", "pub type Wibble { Wibble Wobble }"),
+        "
+import wibble.{Wobble}
+
+pub fn go(x) {
+  case x {
+    _ if x == #(wibble.Wibble) -> 1
+    _ if x == #(Wobble) -> 2
+    _ -> 3
+  }
+}
+"
+    );
+}

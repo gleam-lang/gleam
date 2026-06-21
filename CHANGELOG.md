@@ -362,3 +362,7 @@
 - Fixed a bug where the language server would produce wrong code when triggering
   rename of types and values with import aliases.
   ([Andrey Kozhev](https://github.com/ankddev))
+
+- Fixed a bug where referencing qualified constructors in constant where a value
+  of the same name exists in scope would cause invalid code to be generated.
+  ([Surya Rose](https://github.com/GearsDatapacks))

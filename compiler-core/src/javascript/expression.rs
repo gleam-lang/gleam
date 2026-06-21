@@ -2281,26 +2281,25 @@ impl<'module, 'a> Generator<'module, 'a> {
                     }
                 }
 
-                // If there's no arguments and the type is a function that takes
-                // arguments then this is the constructor being referenced, not the
-                // function being called.
-                if let Some(arity) = type_.fn_arity()
-                    && arguments.is_none()
-                    && arity != 0
-                {
-                    let arity = arity as u16;
-                    return self.record_constructor(type_.clone(), None, &tag, name, arity);
+                // If there's no arguments, then this is either a constructor
+                // which takes arguments being referenced rather than called,
+                // or a variant with no fields at all.
+                if arguments.is_none() {
+                    // If the constructor is not a function that takes arguments,
+                    // it effectively has zero arity.
+                    let arity = type_.fn_arity().unwrap_or(0) as u16;
+                    return self.record_constructor(
+                        type_.clone(),
+                        module.as_ref().map(|(name, _)| name.as_str()),
+                        &tag,
+                        name,
+                        arity,
+                    );
                 }
 
-                // Otherwise we're always constructing a record! Even if there's
-                // no argument list:
-                // ```gleam
-                // pub type Wibble { Wibble }
-                // pub const wibble = Wibble // <- here we're constructing the record!
-                // ```
-                //
-                // Record updates are fully expanded during type checking, so we
-                // just handle arguments
+                // Otherwise we're always constructing a record! Record updates
+                // are fully expanded during type checking, so we just need to
+                // handle the arguments here.
                 let field_values = arguments
                     .iter()
                     .flatten()

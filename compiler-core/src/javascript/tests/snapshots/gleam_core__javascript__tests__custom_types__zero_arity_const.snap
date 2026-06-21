@@ -29,6 +29,6 @@ export const Mine$ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLong
 export const Mine$isThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant = (value) =>
   value instanceof ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant;
 
-export const this$ = /* @__PURE__ */ new This();
+export const this$ = Mine$This$const;
 
-export const that = /* @__PURE__ */ new ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant();
+export const that = Mine$ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant$const;

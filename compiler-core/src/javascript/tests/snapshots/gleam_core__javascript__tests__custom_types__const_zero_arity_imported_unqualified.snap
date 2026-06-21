@@ -13,6 +13,6 @@ pub const a = Two
 
 ----- COMPILED JAVASCRIPT
 import * as $other from "../other.mjs";
-import { Two } from "../other.mjs";
+import { One$Two$const } from "../other.mjs";
 
-export const a = /* @__PURE__ */ new Two();
+export const a = One$Two$const;
