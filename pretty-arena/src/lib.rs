@@ -700,6 +700,9 @@ const_str!(
 );
 const_str!(QUOTE_COMMA_SPACE_QUOTE_DOCUMENT, "\", \"", 4);
 const_str!(INTERNAL_ATTRIBUTE_DOCUMENT, "@internal", 9);
+const_str!(TRUE_LOWERCASE_DOCUMENT, "true", 4);
+const_str!(FALSE_LOWERCASE_DOCUMENT, "false", 5);
+
 const_break!(EMPTY_BREAK_DOCUMENT, "", "");
 const_break!(BREAKABLE_SPACE_DOCUMENT, "", " ");
 const_break!(COMMA_BREAK_DOCUMENT, ",", ", ");

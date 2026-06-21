@@ -21,18 +21,16 @@ use crate::build::Target;
 use crate::build::package_compiler::StdlibPackage;
 use crate::codegen::TypeScriptDeclarations;
 use crate::line_numbers::LineColumn;
-use crate::pretty::CursorPositionObserver;
 use crate::type_::{PRELUDE_MODULE_NAME, RecordAccessor};
 use crate::{
     ast::{Import, *},
-    docvec,
     line_numbers::LineNumbers,
-    pretty::*,
 };
 use camino::Utf8Path;
 use ecow::{EcoString, eco_format};
 use expression::Context;
 use itertools::Itertools;
+use pretty_arena::*;
 
 use self::import::{Imports, Member};
 
@@ -114,7 +112,7 @@ pub struct Generator<'a> {
     src_path: EcoString,
 }
 
-impl<'a> Generator<'a> {
+impl<'a, 'doc> Generator<'a> {
     pub fn new(config: ModuleConfig<'a>) -> Self {
         let ModuleConfig {
             typescript,
@@ -158,9 +156,9 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn type_reference(&self) -> Document<'a> {
+    fn type_reference(&self, arena: &'doc DocumentArena<'a, 'doc>) -> Document<'a, 'doc> {
         if self.typescript == TypeScriptDeclarations::None {
-            return nil();
+            return EMPTY_DOCUMENT;
         }
 
         // Get the name of the module relative the directory (similar to basename)
@@ -172,12 +170,18 @@ impl<'a> Generator<'a> {
             .next_back()
             .expect("JavaScript generator could not identify imported module name.");
 
-        docvec!["/// <reference types=\"./", module, ".d.mts\" />", line()]
+        docvec![
+            arena,
+            "/// <reference types=\"./",
+            module,
+            ".d.mts\" />",
+            LINE_DOCUMENT
+        ]
     }
 
-    fn sourcemap_reference(&self) -> Document<'a> {
+    fn sourcemap_reference(&self, arena: &'doc DocumentArena<'a, 'doc>) -> Document<'a, 'doc> {
         match self.source_map_builder {
-            None => "".to_doc(),
+            None => "".to_doc(arena),
             Some(_) => {
                 // Get the name of the module relative the directory (similar to basename)
                 let module = self
@@ -188,14 +192,20 @@ impl<'a> Generator<'a> {
                     .next_back()
                     .expect("JavaScript generator could not identify imported module name.");
 
-                docvec!["//# sourceMappingURL=", module, ".mjs.map", line()]
+                docvec![
+                    arena,
+                    "//# sourceMappingURL=",
+                    module,
+                    ".mjs.map",
+                    LINE_DOCUMENT
+                ]
             }
         }
     }
 
-    pub fn compile(&mut self) -> Document<'a> {
+    pub fn compile(&mut self, arena: &'doc DocumentArena<'a, 'doc>) -> Document<'a, 'doc> {
         // Determine what JavaScript imports we need to generate
-        let mut imports = self.collect_imports();
+        let mut imports = self.collect_imports(arena);
 
         // Determine what names are defined in the module scope so we know to
         // rename any variables that are defined within functions using the same
@@ -203,31 +213,33 @@ impl<'a> Generator<'a> {
         self.register_module_definitions_in_scope();
 
         // Generate JavaScript code for each statement.
-        let statements = self.definitions();
+        let statements = self.definitions(arena);
 
         // Two lines between each statement
-        let mut statements = Itertools::intersperse(statements.into_iter(), lines(2)).collect_vec();
+        let mut statements =
+            Itertools::intersperse(statements.into_iter(), TWO_LINES_DOCUMENT).collect_vec();
 
         // Import any prelude functions that have been used
 
         if self.tracker.ok_used {
-            self.register_prelude_usage(&mut imports, "Ok", None);
+            self.register_prelude_usage(arena, &mut imports, "Ok", None);
         };
 
         if self.tracker.error_used {
-            self.register_prelude_usage(&mut imports, "Error", None);
+            self.register_prelude_usage(arena, &mut imports, "Error", None);
         };
 
         if self.tracker.list_used {
-            self.register_prelude_usage(&mut imports, "toList", None);
+            self.register_prelude_usage(arena, &mut imports, "toList", None);
         };
 
         if self.tracker.list_empty_class_used || self.tracker.echo_used {
-            self.register_prelude_usage(&mut imports, "Empty", Some("$Empty"));
+            self.register_prelude_usage(arena, &mut imports, "Empty", Some("$Empty"));
         };
 
         if self.tracker.list_empty_const_used {
             self.register_prelude_usage(
+                arena,
                 &mut imports,
                 "List$Empty$const",
                 Some("$List$Empty$const"),
@@ -235,90 +247,90 @@ impl<'a> Generator<'a> {
         };
 
         if self.tracker.list_non_empty_class_used || self.tracker.echo_used {
-            self.register_prelude_usage(&mut imports, "NonEmpty", Some("$NonEmpty"));
+            self.register_prelude_usage(arena, &mut imports, "NonEmpty", Some("$NonEmpty"));
         };
 
         if self.tracker.prepend_used {
-            self.register_prelude_usage(&mut imports, "prepend", Some("listPrepend"));
+            self.register_prelude_usage(arena, &mut imports, "prepend", Some("listPrepend"));
         };
 
         if self.tracker.custom_type_used || self.tracker.echo_used {
-            self.register_prelude_usage(&mut imports, "CustomType", Some("$CustomType"));
+            self.register_prelude_usage(arena, &mut imports, "CustomType", Some("$CustomType"));
         };
 
         if self.tracker.make_error_used {
-            self.register_prelude_usage(&mut imports, "makeError", None);
+            self.register_prelude_usage(arena, &mut imports, "makeError", None);
         };
 
         if self.tracker.int_remainder_used {
-            self.register_prelude_usage(&mut imports, "remainderInt", None);
+            self.register_prelude_usage(arena, &mut imports, "remainderInt", None);
         };
 
         if self.tracker.float_division_used {
-            self.register_prelude_usage(&mut imports, "divideFloat", None);
+            self.register_prelude_usage(arena, &mut imports, "divideFloat", None);
         };
 
         if self.tracker.int_division_used {
-            self.register_prelude_usage(&mut imports, "divideInt", None);
+            self.register_prelude_usage(arena, &mut imports, "divideInt", None);
         };
 
         if self.tracker.object_equality_used {
-            self.register_prelude_usage(&mut imports, "isEqual", None);
+            self.register_prelude_usage(arena, &mut imports, "isEqual", None);
         };
 
         if self.tracker.bit_array_literal_used {
-            self.register_prelude_usage(&mut imports, "toBitArray", None);
+            self.register_prelude_usage(arena, &mut imports, "toBitArray", None);
         }
 
         if self.tracker.bit_array_slice_used || self.tracker.echo_used {
-            self.register_prelude_usage(&mut imports, "bitArraySlice", None);
+            self.register_prelude_usage(arena, &mut imports, "bitArraySlice", None);
         }
 
         if self.tracker.bit_array_slice_to_float_used {
-            self.register_prelude_usage(&mut imports, "bitArraySliceToFloat", None);
+            self.register_prelude_usage(arena, &mut imports, "bitArraySliceToFloat", None);
         }
 
         if self.tracker.bit_array_slice_to_int_used || self.tracker.echo_used {
-            self.register_prelude_usage(&mut imports, "bitArraySliceToInt", None);
+            self.register_prelude_usage(arena, &mut imports, "bitArraySliceToInt", None);
         }
 
         if self.tracker.sized_integer_segment_used {
-            self.register_prelude_usage(&mut imports, "sizedInt", None);
+            self.register_prelude_usage(arena, &mut imports, "sizedInt", None);
         }
 
         if self.tracker.string_bit_array_segment_used {
-            self.register_prelude_usage(&mut imports, "stringBits", None);
+            self.register_prelude_usage(arena, &mut imports, "stringBits", None);
         }
 
         if self.tracker.string_utf16_bit_array_segment_used {
-            self.register_prelude_usage(&mut imports, "stringToUtf16", None);
+            self.register_prelude_usage(arena, &mut imports, "stringToUtf16", None);
         }
 
         if self.tracker.string_utf32_bit_array_segment_used {
-            self.register_prelude_usage(&mut imports, "stringToUtf32", None);
+            self.register_prelude_usage(arena, &mut imports, "stringToUtf32", None);
         }
 
         if self.tracker.codepoint_bit_array_segment_used {
-            self.register_prelude_usage(&mut imports, "codepointBits", None);
+            self.register_prelude_usage(arena, &mut imports, "codepointBits", None);
         }
 
         if self.tracker.codepoint_utf16_bit_array_segment_used {
-            self.register_prelude_usage(&mut imports, "codepointToUtf16", None);
+            self.register_prelude_usage(arena, &mut imports, "codepointToUtf16", None);
         }
 
         if self.tracker.codepoint_utf32_bit_array_segment_used {
-            self.register_prelude_usage(&mut imports, "codepointToUtf32", None);
+            self.register_prelude_usage(arena, &mut imports, "codepointToUtf32", None);
         }
 
         if self.tracker.float_bit_array_segment_used {
-            self.register_prelude_usage(&mut imports, "sizedFloat", None);
+            self.register_prelude_usage(arena, &mut imports, "sizedFloat", None);
         }
 
         for (variant, alias) in self.tracker.variant_constants_used.iter() {
             let path = self.import_path(&variant.package, &variant.module);
             let member = Member {
                 name: eco_format!("{}${}$const", variant.type_name, variant.name),
-                alias: alias.as_ref().map(|alias| alias.to_doc()),
+                alias: alias.as_ref().map(|alias| alias.to_doc(arena)),
             };
             imports.register_module(path, [], [member]);
         }
@@ -362,56 +374,64 @@ impl<'a> Generator<'a> {
                 }),
         );
 
-        let echo_definition = self.echo_definition(&mut imports);
-        let sourcemap_reference = self.sourcemap_reference();
-        let type_reference = self.type_reference();
-        let filepath_definition = self.filepath_definition();
+        let echo_definition = self.echo_definition(arena, &mut imports);
+        let sourcemap_reference = self.sourcemap_reference(arena);
+        let type_reference = self.type_reference(arena);
+        let filepath_definition = self.filepath_definition(arena);
 
         // Put it all together
 
         if imports.is_empty() && statements.is_empty() {
             docvec![
+                arena,
                 sourcemap_reference,
                 type_reference,
                 filepath_definition,
                 "export {}",
-                line(),
+                LINE_DOCUMENT,
                 echo_definition
             ]
         } else if imports.is_empty() {
-            statements.push(line());
+            statements.push(LINE_DOCUMENT);
             docvec![
+                arena,
                 sourcemap_reference,
                 type_reference,
                 filepath_definition,
-                statements,
+                arena.concat(statements),
                 echo_definition
             ]
         } else if statements.is_empty() {
             docvec![
+                arena,
                 sourcemap_reference,
                 type_reference,
-                imports.into_doc(JavaScriptCodegenTarget::JavaScript),
+                imports.into_doc(arena, JavaScriptCodegenTarget::JavaScript),
                 filepath_definition,
                 echo_definition,
             ]
         } else {
             docvec![
+                arena,
                 sourcemap_reference,
                 type_reference,
-                imports.into_doc(JavaScriptCodegenTarget::JavaScript),
-                line(),
+                imports.into_doc(arena, JavaScriptCodegenTarget::JavaScript),
+                LINE_DOCUMENT,
                 filepath_definition,
-                statements,
-                line(),
+                arena.concat(statements),
+                LINE_DOCUMENT,
                 echo_definition
             ]
         }
     }
 
-    fn echo_definition(&mut self, imports: &mut Imports<'a>) -> Document<'a> {
+    fn echo_definition(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        imports: &mut Imports<'a, 'doc>,
+    ) -> Document<'a, 'doc> {
         if !self.tracker.echo_used {
-            return nil();
+            return EMPTY_DOCUMENT;
         }
 
         if StdlibPackage::Present == self.stdlib_package {
@@ -420,32 +440,39 @@ impl<'a> Generator<'a> {
                 SrcSpan::default(),
             ));
 
-            self.register_import(imports, "gleam_stdlib", "gleam/dict", &value, &[]);
+            self.register_import(arena, imports, "gleam_stdlib", "gleam/dict", &value, &[]);
         }
-        self.register_prelude_usage(imports, "BitArray", Some("$BitArray"));
-        self.register_prelude_usage(imports, "List", Some("$List"));
-        self.register_prelude_usage(imports, "UtfCodepoint", Some("$UtfCodepoint"));
-        docvec![line(), std::include_str!("../templates/echo.mjs"), line()]
+        self.register_prelude_usage(arena, imports, "BitArray", Some("$BitArray"));
+        self.register_prelude_usage(arena, imports, "List", Some("$List"));
+        self.register_prelude_usage(arena, imports, "UtfCodepoint", Some("$UtfCodepoint"));
+        docvec![
+            arena,
+            LINE_DOCUMENT,
+            std::include_str!("../templates/echo.mjs"),
+            LINE_DOCUMENT
+        ]
     }
 
     fn register_prelude_usage(
         &self,
-        imports: &mut Imports<'a>,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        imports: &mut Imports<'a, 'doc>,
         name: &'static str,
         alias: Option<&'static str>,
     ) {
         let path = self.import_path(&self.module.type_info.package, PRELUDE_MODULE_NAME);
         let member = Member {
             name: name.into(),
-            alias: alias.map(|a| a.to_doc()),
+            alias: alias.map(|a| a.to_doc(arena)),
         };
         imports.register_module(path, [], [member]);
     }
 
     fn custom_type_definition(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         custom_type: &'a TypedCustomType,
-    ) -> Option<Vec<Document<'a>>> {
+    ) -> Option<Vec<Document<'a, 'doc>>> {
         if self
             .module
             .unused_definition_positions
@@ -477,7 +504,9 @@ impl<'a> Generator<'a> {
 
         let mut definitions = constructors
             .iter()
-            .map(|constructor| self.variant_definition(constructor, name, constructor_publicity))
+            .map(|constructor| {
+                self.variant_definition(arena, constructor, name, constructor_publicity)
+            })
             .collect_vec();
 
         // Generate getters for fields shared between variants
@@ -489,7 +518,11 @@ impl<'a> Generator<'a> {
             // Only generate accessors for the API if the constructors are public
             && constructor_publicity.is_public()
         {
-            definitions.push(self.shared_custom_type_fields(name, &accessors_map.shared_accessors));
+            definitions.push(self.shared_custom_type_fields(
+                arena,
+                name,
+                &accessors_map.shared_accessors,
+            ));
         }
         // Add start and end position source map trackers to the first and last
         // definition in place. This is to prevent extra new lines from being added
@@ -504,53 +537,60 @@ impl<'a> Generator<'a> {
         let first_definition = definitions.remove(0);
         definitions.insert(
             0,
-            self.source_map_tracker(start_location)
-                .append(first_definition),
+            self.source_map_tracker(arena, start_location)
+                .append(arena, first_definition),
         );
         let last_definition = definitions
             .pop()
             .expect("Custom type must have at least one definition here");
-        definitions.push(last_definition.append(self.source_map_tracker(custom_type.end_position)));
+        definitions.push(last_definition.append(
+            arena,
+            self.source_map_tracker(arena, custom_type.end_position),
+        ));
 
         Some(definitions)
     }
 
     fn variant_definition(
         &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
         publicity: Publicity,
-    ) -> Document<'a> {
-        let class_definition = self.variant_class_definition(constructor, publicity);
+    ) -> Document<'a, 'doc> {
+        let class_definition = self.variant_class_definition(arena, constructor, publicity);
 
         // Singleton constants are used internally by the compiler, so they aren't
         // part of the public JS API and need to be generated even for private
         // types.
         let constructor_singleton = if constructor.arguments.is_empty() {
             docvec![
-                line(),
-                self.variant_constructor_constant(constructor, type_name, publicity)
+                arena,
+                LINE_DOCUMENT,
+                self.variant_constructor_constant(arena, constructor, type_name, publicity)
             ]
         } else {
-            nil()
+            EMPTY_DOCUMENT
         };
 
         // If the custom type is private or opaque, we don't need to generate API
         // functions for it.
         if publicity.is_private() {
-            return class_definition.append(constructor_singleton);
+            return class_definition.append(arena, constructor_singleton);
         }
 
-        let constructor_definition = self.variant_constructor_definition(constructor, type_name);
-        let variant_check_definition = self.variant_check_definition(constructor, type_name);
-        let fields_definition = self.variant_fields_definition(constructor, type_name);
+        let constructor_definition =
+            self.variant_constructor_definition(arena, constructor, type_name);
+        let variant_check_definition = self.variant_check_definition(arena, constructor, type_name);
+        let fields_definition = self.variant_fields_definition(arena, constructor, type_name);
 
         docvec![
+            arena,
             class_definition,
             constructor_singleton,
-            line(),
+            LINE_DOCUMENT,
             constructor_definition,
-            line(),
+            LINE_DOCUMENT,
             variant_check_definition,
             fields_definition,
         ]
@@ -562,52 +602,63 @@ impl<'a> Generator<'a> {
     ///
     fn variant_constructor_constant(
         &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
         publicity: Publicity,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let keyword = if publicity.is_importable() {
             "export const "
         } else {
             "const "
         };
         docvec![
-            self.source_map_tracker(constructor.location.start),
+            arena,
+            self.source_map_tracker(arena, constructor.location.start),
             keyword,
             type_name,
             "$",
             constructor.name.as_str(),
             "$const",
             " =",
-            docvec![break_("", " "), "new ", constructor.name.as_str(), "();"]
-                .group()
-                .nest(INDENT)
+            docvec![
+                arena,
+                arena.break_("", " "),
+                "new ",
+                constructor.name.as_str(),
+                "();"
+            ]
+            .group(arena)
+            .nest(arena, INDENT)
         ]
     }
 
     fn variant_constructor_definition(
         &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         // If the constructor has no fields, return the singleton constant
         // instead.
         if constructor.arguments.is_empty() {
             return docvec![
+                arena,
                 "export const ",
                 type_name,
                 "$",
                 constructor.name.as_str(),
                 " = () =>",
                 docvec![
-                    break_("", " "),
+                    arena,
+                    arena.break_("", " "),
                     type_name,
                     "$",
                     constructor.name.as_str(),
                     "$const;"
                 ]
-                .group()
-                .nest(INDENT),
+                .group(arena)
+                .nest(arena, INDENT),
             ];
         }
 
@@ -615,64 +666,72 @@ impl<'a> Generator<'a> {
 
         for (index, parameter) in constructor.arguments.iter().enumerate() {
             if let Some((_, label)) = &parameter.label {
-                arguments.push(maybe_escape_identifier(label).to_doc());
+                arguments.push(maybe_escape_identifier(label).to_doc(arena));
             } else {
-                arguments.push(eco_format!("${index}").to_doc());
+                arguments.push(eco_format!("${index}").to_doc(arena));
             }
         }
 
         let construction = docvec![
-            break_("", " "),
+            arena,
+            arena.break_("", " "),
             "new ",
             constructor.name.as_str(),
             "(",
-            join(arguments.clone(), break_(",", ", ")).group(),
+            arena
+                .join(arguments.clone(), arena.break_(",", ", "))
+                .group(arena),
             ");"
         ]
-        .group();
+        .group(arena);
 
         docvec![
-            self.source_map_tracker(constructor.location.start),
+            arena,
+            self.source_map_tracker(arena, constructor.location.start),
             "export const ",
             type_name,
             "$",
             constructor.name.as_str(),
             " = (",
-            join(arguments, break_(",", ", ")),
+            arena.join(arguments, arena.break_(",", ", ")),
             ") =>",
-            construction.nest(INDENT),
+            construction.nest(arena, INDENT),
         ]
     }
 
     fn variant_check_definition(
         &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let construction = docvec![
-            break_("", " "),
+            arena,
+            arena.break_("", " "),
             "value instanceof ",
             constructor.name.as_str(),
             ";"
         ]
-        .group();
+        .group(arena);
 
         docvec![
-            self.source_map_tracker(constructor.location.start),
+            arena,
+            self.source_map_tracker(arena, constructor.location.start),
             "export const ",
             type_name,
             "$is",
             constructor.name.as_str(),
             " = (value) =>",
-            construction.nest(INDENT),
+            construction.nest(arena, INDENT),
         ]
     }
 
     fn variant_fields_definition(
         &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let mut functions = Vec::new();
 
         for (index, argument) in constructor.arguments.iter().enumerate() {
@@ -697,79 +756,100 @@ impl<'a> Generator<'a> {
                     record_name = constructor.name,
                 );
 
-                contents =
-                    docvec![break_("", " "), "value.", maybe_escape_property(label), ";"].group();
+                contents = docvec![
+                    arena,
+                    arena.break_("", " "),
+                    "value.",
+                    maybe_escape_property(label),
+                    ";"
+                ]
+                .group(arena);
 
                 functions.push(docvec![
-                    line(),
-                    self.source_map_tracker(constructor.location.start),
+                    arena,
+                    LINE_DOCUMENT,
+                    self.source_map_tracker(arena, constructor.location.start),
                     "export const ",
                     function_name,
                     " = (value) =>",
-                    contents.clone().nest(INDENT),
+                    contents.clone().nest(arena, INDENT),
                 ]);
             } else {
-                contents = docvec![break_("", " "), "value[", index, "];"].group()
+                contents = docvec![arena, arena.break_("", " "), "value[", index, "];"].group(arena)
             }
 
             functions.push(docvec![
-                line(),
-                self.source_map_tracker(constructor.location.start),
+                arena,
+                LINE_DOCUMENT,
+                self.source_map_tracker(arena, constructor.location.start),
                 "export const ",
                 function_name,
                 " = (value) =>",
-                contents.nest(INDENT),
+                contents.nest(arena, INDENT),
             ]);
         }
 
-        concat(functions)
+        arena.concat(functions)
     }
 
     fn shared_custom_type_fields(
         &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         type_name: &'a str,
         shared_accessors: &HashMap<EcoString, RecordAccessor>,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let accessors = shared_accessors.keys().sorted().map(|field| {
             let function_name = eco_format!("{type_name}${field}");
 
-            let contents =
-                docvec![break_("", " "), "value.", maybe_escape_property(field), ";"].group();
+            let contents = docvec![
+                arena,
+                arena.break_("", " "),
+                "value.",
+                maybe_escape_property(field),
+                ";"
+            ]
+            .group(arena);
 
             docvec![
+                arena,
                 "export const ",
                 function_name,
                 " = (value) =>",
-                contents.nest(INDENT),
+                contents.nest(arena, INDENT),
             ]
         });
-        concat(Itertools::intersperse(accessors, line()))
+        arena.concat(Itertools::intersperse(accessors, LINE_DOCUMENT))
     }
 
     fn variant_class_definition(
         &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         constructor: &'a TypedRecordConstructor,
         publicity: Publicity,
-    ) -> Document<'a> {
-        fn parameter((i, arg): (usize, &TypedRecordConstructorArg)) -> Document<'_> {
+    ) -> Document<'a, 'doc> {
+        fn parameter<'a, 'doc>(
+            arena: &'doc DocumentArena<'a, 'doc>,
+            (i, arg): (usize, &TypedRecordConstructorArg),
+        ) -> Document<'a, 'doc> {
             arg.label
                 .as_ref()
                 .map(|(_, s)| maybe_escape_identifier(s))
                 .unwrap_or_else(|| eco_format!("${i}"))
-                .to_doc()
+                .to_doc(arena)
         }
 
         let doc = if let Some((start, documentation)) = &constructor.documentation {
             docvec![
+                arena,
                 // 3 is the length of the "///" documentation marker.
                 // Start is the index of the actual content, so we need to subtract
                 // the length of the marker.
-                self.source_map_tracker(*start - 3),
-                jsdoc_comment(documentation, publicity),
-                line()
+                self.source_map_tracker(arena, *start - 3),
+                jsdoc_comment(arena, documentation, publicity),
+                LINE_DOCUMENT
             ]
         } else {
-            nil()
+            EMPTY_DOCUMENT
         };
 
         let head = if publicity.is_public() {
@@ -779,65 +859,78 @@ impl<'a> Generator<'a> {
         };
 
         let head = docvec![
-            self.source_map_tracker(constructor.location.start),
+            arena,
+            self.source_map_tracker(arena, constructor.location.start),
             head,
             &constructor.name,
             " extends $CustomType {"
         ];
 
         if constructor.arguments.is_empty() {
-            return docvec![doc, head, "}"];
+            return docvec![arena, doc, head, "}"];
         };
 
-        let parameters = join(
-            constructor.arguments.iter().enumerate().map(parameter),
-            break_(",", ", "),
+        let parameters = arena.join(
+            constructor
+                .arguments
+                .iter()
+                .enumerate()
+                .map(|argument| parameter(arena, argument)),
+            arena.break_(",", ", "),
         );
 
-        let constructor_body = join(
+        let constructor_body = arena.join(
             constructor.arguments.iter().enumerate().map(|(i, arg)| {
-                let var = parameter((i, arg));
+                let var = parameter(arena, (i, arg));
                 match &arg.label {
-                    None => docvec!["this[", i, "] = ", var, ";"],
+                    None => docvec![arena, "this[", i, "] = ", var, ";"],
                     Some((_, name)) => {
-                        docvec!["this.", maybe_escape_property(name), " = ", var, ";"]
+                        docvec![arena, "this.", maybe_escape_property(name), " = ", var, ";"]
                     }
                 }
             }),
-            line(),
+            LINE_DOCUMENT,
         );
 
         let class_body = docvec![
-            line(),
+            arena,
+            LINE_DOCUMENT,
             "constructor(",
             parameters,
             ") {",
-            docvec![line(), "super();", line(), constructor_body].nest(INDENT),
-            line(),
+            docvec![
+                arena,
+                LINE_DOCUMENT,
+                "super();",
+                LINE_DOCUMENT,
+                constructor_body
+            ]
+            .nest(arena, INDENT),
+            LINE_DOCUMENT,
             "}",
         ]
-        .nest(INDENT);
+        .nest(arena, INDENT);
 
-        docvec![doc, head, class_body, line(), "}"]
+        docvec![arena, doc, head, class_body, LINE_DOCUMENT, "}"]
     }
 
-    fn definitions(&mut self) -> Vec<Document<'a>> {
+    fn definitions(&mut self, arena: &'doc DocumentArena<'a, 'doc>) -> Vec<Document<'a, 'doc>> {
         let mut definitions = vec![];
 
         for custom_type in &self.module.definitions.custom_types {
-            if let Some(mut new_definitions) = self.custom_type_definition(custom_type) {
+            if let Some(mut new_definitions) = self.custom_type_definition(arena, custom_type) {
                 definitions.append(&mut new_definitions)
             }
         }
 
         for constant in &self.module.definitions.constants {
-            if let Some(definition) = self.module_constant(constant) {
+            if let Some(definition) = self.module_constant(arena, constant) {
                 definitions.push(definition)
             }
         }
 
         for function in &self.module.definitions.functions {
-            if let Some(definition) = self.module_function(function) {
+            if let Some(definition) = self.module_function(arena, function) {
                 definitions.push(definition)
             }
         }
@@ -845,7 +938,7 @@ impl<'a> Generator<'a> {
         definitions
     }
 
-    fn collect_imports(&mut self) -> Imports<'a> {
+    fn collect_imports(&mut self, arena: &'doc DocumentArena<'a, 'doc>) -> Imports<'a, 'doc> {
         let mut imports = Imports::new();
 
         for Import {
@@ -856,7 +949,14 @@ impl<'a> Generator<'a> {
             ..
         } in &self.module.definitions.imports
         {
-            self.register_import(&mut imports, package, module, as_name, unqualified_values);
+            self.register_import(
+                arena,
+                &mut imports,
+                package,
+                module,
+                as_name,
+                unqualified_values,
+            );
         }
 
         for function in &self.module.definitions.functions {
@@ -864,6 +964,7 @@ impl<'a> Generator<'a> {
                 && let Some((module, external_function, _)) = &function.external_javascript
             {
                 self.register_external_function(
+                    arena,
                     &mut imports,
                     function.publicity,
                     name,
@@ -897,7 +998,8 @@ impl<'a> Generator<'a> {
 
     fn register_import(
         &mut self,
-        imports: &mut Imports<'a>,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        imports: &mut Imports<'a, 'doc>,
         package: &'a str,
         module: &'a str,
         as_name: &Option<(AssignName, SrcSpan)>,
@@ -921,7 +1023,7 @@ impl<'a> Generator<'a> {
         let unqualified_imports = unqualified.iter().map(|i| {
             let alias = i.as_name.as_ref().map(|n| {
                 self.register_in_scope(n);
-                maybe_escape_identifier(n).to_doc()
+                maybe_escape_identifier(n).to_doc(arena)
             });
             let name = maybe_escape_identifier(&i.name);
             Member { name, alias }
@@ -933,7 +1035,8 @@ impl<'a> Generator<'a> {
 
     fn register_external_function(
         &mut self,
-        imports: &mut Imports<'a>,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        imports: &mut Imports<'a, 'doc>,
         publicity: Publicity,
         name: &'a str,
         module: &'a str,
@@ -945,9 +1048,9 @@ impl<'a> Generator<'a> {
             alias: if name == fun && !needs_escaping {
                 None
             } else if needs_escaping {
-                Some(escape_identifier(name).to_doc())
+                Some(escape_identifier(name).to_doc(arena))
             } else {
-                Some(name.to_doc())
+                Some(name.to_doc(arena))
             },
         };
         if publicity.is_importable() {
@@ -956,7 +1059,11 @@ impl<'a> Generator<'a> {
         imports.register_module(EcoString::from(module), [], [member]);
     }
 
-    fn module_constant(&mut self, constant: &'a TypedModuleConstant) -> Option<Document<'a>> {
+    fn module_constant(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        constant: &'a TypedModuleConstant,
+    ) -> Option<Document<'a, 'doc>> {
         let TypedModuleConstant {
             documentation,
             location,
@@ -992,30 +1099,32 @@ impl<'a> Generator<'a> {
             self.source_map_builder.clone(),
         );
 
-        let document = generator.constant_expression(Context::Constant, value);
+        let document = generator.constant_expression(arena, Context::Constant, value);
 
         let jsdoc = if let Some((start, documentation)) = documentation {
             docvec![
+                arena,
                 // 3 is the length of the "///" documentation marker.
                 // Start is the index of the actual content, so we need to subtract
                 // the length of the marker.
-                self.source_map_tracker(*start - 3),
-                jsdoc_comment(documentation, *publicity),
-                line()
+                self.source_map_tracker(arena, *start - 3),
+                jsdoc_comment(arena, documentation, *publicity),
+                LINE_DOCUMENT
             ]
         } else {
-            nil()
+            EMPTY_DOCUMENT
         };
 
         Some(docvec![
+            arena,
             jsdoc,
-            self.source_map_tracker(location.start),
+            self.source_map_tracker(arena, location.start),
             head,
             maybe_escape_identifier(name),
             " = ",
             document,
             ";",
-            self.source_map_tracker(value.location().end),
+            self.source_map_tracker(arena, value.location().end),
         ])
     }
 
@@ -1023,7 +1132,11 @@ impl<'a> Generator<'a> {
         let _ = self.module_scope.insert(name.into(), 0);
     }
 
-    fn module_function(&mut self, function: &'a TypedFunction) -> Option<Document<'a>> {
+    fn module_function(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        function: &'a TypedFunction,
+    ) -> Option<Document<'a, 'doc>> {
         // We don't generate any code for unused functions.
         if self
             .module
@@ -1044,7 +1157,7 @@ impl<'a> Generator<'a> {
         if !function.implementations.supports(Target::JavaScript) {
             return None;
         }
-        let function_source_mapping = self.source_map_tracker(function.location.start);
+        let function_source_mapping = self.source_map_tracker(arena, function.location.start);
 
         let (_, name) = function
             .name
@@ -1057,15 +1170,16 @@ impl<'a> Generator<'a> {
             .collect();
 
         let function_doc = match &function.documentation {
-            None => nil(),
+            None => EMPTY_DOCUMENT,
             Some((start, documentation)) => {
                 docvec![
+                    arena,
                     // 3 is the length of the "///" documentation marker.
                     // Start is the index of the actual content, so we need to subtract
                     // the length of the marker.
-                    self.source_map_tracker(*start - 3),
-                    jsdoc_comment(documentation, function.publicity),
-                    line()
+                    self.source_map_tracker(arena, *start - 3),
+                    jsdoc_comment(arena, documentation, function.publicity),
+                    LINE_DOCUMENT
                 ]
             }
         };
@@ -1087,19 +1201,30 @@ impl<'a> Generator<'a> {
             "export function "
         };
 
-        let body = generator.function_body(function.body.as_slice(), function.arguments.as_slice());
+        let body = generator.function_body(
+            arena,
+            function.body.as_slice(),
+            function.arguments.as_slice(),
+        );
 
         Some(docvec![
+            arena,
             function_doc,
             function_source_mapping,
             head,
             maybe_escape_identifier(name.as_str()),
-            fun_arguments(function.arguments.as_slice(), generator.tail_recursion_used),
+            fun_arguments(
+                arena,
+                function.arguments.as_slice(),
+                generator.tail_recursion_used
+            ),
             " {",
-            docvec![line(), body].nest(INDENT).group(),
-            line(),
+            docvec![arena, LINE_DOCUMENT, body]
+                .nest(arena, INDENT)
+                .group(arena),
+            LINE_DOCUMENT,
             "}",
-            self.source_map_tracker(function.end_position),
+            self.source_map_tracker(arena, function.end_position),
         ])
     }
 
@@ -1121,36 +1246,62 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn filepath_definition(&self) -> Document<'a> {
+    fn filepath_definition(&self, arena: &'doc DocumentArena<'a, 'doc>) -> Document<'a, 'doc> {
         if !self.tracker.make_error_used {
-            return nil();
+            return EMPTY_DOCUMENT;
         }
 
-        docvec!["const FILEPATH = ", self.src_path.clone(), ';', lines(2)]
+        docvec![
+            arena,
+            "const FILEPATH = ",
+            self.src_path.clone(),
+            ';',
+            TWO_LINES_DOCUMENT
+        ]
     }
 
-    fn source_map_tracker(&self, start_index: u32) -> Document<'a> {
-        create_cursor_position_observer(&self.source_map_builder, self.line_numbers, start_index)
+    fn source_map_tracker(
+        &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        start_index: u32,
+    ) -> Document<'a, 'doc> {
+        create_cursor_position_observer(
+            arena,
+            &self.source_map_builder,
+            self.line_numbers,
+            start_index,
+        )
     }
 }
 
-fn jsdoc_comment(documentation: &EcoString, publicity: Publicity) -> Document<'_> {
+fn jsdoc_comment<'a, 'doc>(
+    arena: &'doc DocumentArena<'a, 'doc>,
+    documentation: &EcoString,
+    publicity: Publicity,
+) -> Document<'a, 'doc> {
     let doc_lines = documentation
         .trim_end()
         .split('\n')
-        .map(|line| eco_format!(" *{line}", line = line.replace("*/", "*\\/")).to_doc())
+        .map(|line| eco_format!(" *{line}", line = line.replace("*/", "*\\/")).to_doc(arena))
         .collect_vec();
 
     // We start with the documentation of the function
-    let doc_body = join(doc_lines, line());
-    let mut doc = docvec!["/**", line(), doc_body, line()];
+    let doc_body = arena.join(doc_lines, LINE_DOCUMENT);
+    let mut doc = docvec![arena, "/**", LINE_DOCUMENT, doc_body, LINE_DOCUMENT];
     if !publicity.is_public() {
         // If the function is not public we hide the documentation using
         // the `@ignore` tag: https://jsdoc.app/tags-ignore
-        doc = docvec![doc, " * ", line(), " * @ignore", line()];
+        doc = docvec![
+            arena,
+            doc,
+            " * ",
+            LINE_DOCUMENT,
+            " * @ignore",
+            LINE_DOCUMENT
+        ];
     }
     // And finally we close the doc comment
-    docvec![doc, " */"]
+    docvec![arena, doc, " */"]
 }
 
 #[derive(Debug)]
@@ -1165,13 +1316,18 @@ pub struct ModuleConfig<'a> {
     pub project_root: &'a Utf8Path,
 }
 
-pub fn module(config: ModuleConfig<'_>) -> (String, Option<SourceMap>) {
+pub fn module<'a, 'doc>(config: ModuleConfig<'a>) -> (String, Option<SourceMap>) {
+    let arena = DocumentArena::new();
     let (output, sourcemap_builder) = {
         let mut generator = Generator::new(config);
-        let document = generator.compile();
-        let builder = generator.source_map_builder;
+        let document = generator.compile(&arena);
+        // let builder = generator.source_map_builder;
+        let builder: Option<Rc<RefCell<DebugIgnore<sourcemap::SourceMapBuilder>>>> = todo!();
         (document.to_pretty_string(80), builder)
     };
+
+    drop(arena);
+
     let source_map = sourcemap_builder.map(|builder| {
         // We have completed the generation of the module, so we can now take ownership
         // of the builder.
@@ -1184,82 +1340,93 @@ pub fn module(config: ModuleConfig<'_>) -> (String, Option<SourceMap>) {
     (output, source_map)
 }
 
-pub fn ts_declaration(module: &TypedModule) -> String {
-    let document = typescript::TypeScriptGenerator::new(module).compile();
+pub fn ts_declaration<'a, 'doc>(module: &'a TypedModule) -> String {
+    let arena = DocumentArena::new();
+    let document = typescript::TypeScriptGenerator::new(module).compile(&arena);
     document.to_pretty_string(80)
 }
 
-fn create_cursor_position_observer<'a>(
+fn create_cursor_position_observer<'a, 'doc>(
+    arena: &'doc DocumentArena<'a, 'doc>,
     builder: &Option<Rc<RefCell<DebugIgnore<sourcemap::SourceMapBuilder>>>>,
     line_numbers: &LineNumbers,
     start_index: u32,
-) -> Document<'a> {
+) -> Document<'a, 'doc> {
     let start_location = line_numbers.line_and_column_number(start_index);
-    Document::CursorPositionObserver {
-        observer: match builder {
-            None => Rc::new(RefCell::new(NullCursorPositionObserver)),
-            Some(builder) => Rc::new(RefCell::new(SourceMapCursorPositionObserver::new(
-                start_location,
-                builder.clone(),
-            ))),
-        },
-    }
+    arena.position_observer(match builder {
+        None => Rc::new(RefCell::new(NullCursorPositionObserver)),
+        Some(builder) => Rc::new(RefCell::new(SourceMapCursorPositionObserver::new(
+            start_location,
+            builder.clone(),
+        ))),
+    })
 }
 
-fn fun_arguments(arguments: &'_ [TypedArg], tail_recursion_used: bool) -> Document<'_> {
+fn fun_arguments<'a, 'doc>(
+    arena: &'doc DocumentArena<'a, 'doc>,
+    arguments: &'a [TypedArg],
+    tail_recursion_used: bool,
+) -> Document<'a, 'doc> {
     let mut discards = 0;
     wrap_arguments(
+        arena,
         arguments
             .iter()
             .map(|argument| match argument.get_variable_name() {
                 None => {
                     let doc = if discards == 0 {
-                        "_".to_doc()
+                        "_".to_doc(arena)
                     } else {
-                        eco_format!("_{discards}").to_doc()
+                        eco_format!("_{discards}").to_doc(arena)
                     };
                     discards += 1;
                     doc
                 }
-                Some(name) if tail_recursion_used => eco_format!("loop${name}").to_doc(),
-                Some(name) => maybe_escape_identifier(name).to_doc(),
+                Some(name) if tail_recursion_used => eco_format!("loop${name}").to_doc(arena),
+                Some(name) => maybe_escape_identifier(name).to_doc(arena),
             }),
     )
 }
 
-fn wrap_arguments<'a, I>(arguments: I) -> Document<'a>
+fn wrap_arguments<'a, 'doc, I>(
+    arena: &'doc DocumentArena<'a, 'doc>,
+    arguments: I,
+) -> Document<'a, 'doc>
 where
-    I: IntoIterator<Item = Document<'a>>,
+    I: IntoIterator<Item = Document<'a, 'doc>>,
 {
-    break_("", "")
-        .append(join(arguments, break_(",", ", ")))
-        .nest(INDENT)
-        .append(break_("", ""))
-        .surround("(", ")")
-        .group()
+    arena
+        .break_("", "")
+        .append(arena, arena.join(arguments, arena.break_(",", ", ")))
+        .nest(arena, INDENT)
+        .append(arena, arena.break_("", ""))
+        .surround(arena, "(", ")")
+        .group(arena)
 }
 
-fn wrap_object<'a>(
-    items: impl IntoIterator<Item = (Document<'a>, Option<Document<'a>>)>,
-) -> Document<'a> {
+fn wrap_object<'a, 'doc>(
+    arena: &'doc DocumentArena<'a, 'doc>,
+    items: impl IntoIterator<Item = (Document<'a, 'doc>, Option<Document<'a, 'doc>>)>,
+) -> Document<'a, 'doc> {
     let mut empty = true;
     let fields = items.into_iter().map(|(key, value)| {
         empty = false;
         match value {
-            Some(value) => docvec![key, ": ", value],
-            None => key.to_doc(),
+            Some(value) => docvec![arena, key, ": ", value],
+            None => key.to_doc(arena),
         }
     });
-    let fields = join(fields, break_(",", ", "));
+    let fields = arena.join(fields, arena.break_(",", ", "));
 
     if empty {
-        "{}".to_doc()
+        "{}".to_doc(arena)
     } else {
         docvec![
-            docvec!["{", break_("", " "), fields]
-                .nest(INDENT)
-                .append(break_("", " "))
-                .group(),
+            arena,
+            docvec![arena, "{", arena.break_("", " "), fields]
+                .nest(arena, INDENT)
+                .append(arena, arena.break_("", " "))
+                .group(arena),
             "}"
         ]
     }
@@ -1419,10 +1586,10 @@ pub struct TypeVariant {
     name: EcoString,
 }
 
-fn bool(bool: bool) -> Document<'static> {
+fn bool(bool: bool) -> Document<'static, 'static> {
     match bool {
-        true => "true".to_doc(),
-        false => "false".to_doc(),
+        true => TRUE_LOWERCASE_DOCUMENT,
+        false => FALSE_LOWERCASE_DOCUMENT,
     }
 }
 
