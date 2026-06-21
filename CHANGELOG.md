@@ -44,6 +44,10 @@
 - More readable error message when trying to revert an old release.
   ([Moritz Böhme](https://github.com/MoritzBoehme))
 
+- The build tool now falls back to recursively hardlinking directories on
+  Windows when it fails to symlink one due to disabled "Developer mode".
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Language server
 
 - The language server now supports go-to-definition, find-references and rename
