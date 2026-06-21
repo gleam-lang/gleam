@@ -216,8 +216,8 @@ impl<'a, 'doc> Generator<'a> {
         let statements = self.definitions(arena);
 
         // Two lines between each statement
-        let mut statements =
-            Itertools::intersperse(statements.into_iter(), TWO_LINES_DOCUMENT).collect_vec();
+        let no_statements = statements.is_empty();
+        let statements = arena.join(statements, TWO_LINES_DOCUMENT);
 
         // Import any prelude functions that have been used
 
@@ -381,7 +381,7 @@ impl<'a, 'doc> Generator<'a> {
 
         // Put it all together
 
-        if imports.is_empty() && statements.is_empty() {
+        if imports.is_empty() && no_statements {
             docvec![
                 arena,
                 sourcemap_reference,
@@ -392,16 +392,15 @@ impl<'a, 'doc> Generator<'a> {
                 echo_definition
             ]
         } else if imports.is_empty() {
-            statements.push(LINE_DOCUMENT);
             docvec![
                 arena,
                 sourcemap_reference,
                 type_reference,
                 filepath_definition,
-                arena.concat(statements),
+                statements.append(arena, LINE_DOCUMENT),
                 echo_definition
             ]
-        } else if statements.is_empty() {
+        } else if no_statements {
             docvec![
                 arena,
                 sourcemap_reference,
@@ -418,7 +417,7 @@ impl<'a, 'doc> Generator<'a> {
                 imports.into_doc(arena, JavaScriptCodegenTarget::JavaScript),
                 LINE_DOCUMENT,
                 filepath_definition,
-                arena.concat(statements),
+                statements,
                 LINE_DOCUMENT,
                 echo_definition
             ]
@@ -825,7 +824,7 @@ impl<'a, 'doc> Generator<'a> {
                 contents.nest(arena, INDENT),
             ]
         });
-        arena.concat(Itertools::intersperse(accessors, LINE_DOCUMENT))
+        arena.join(accessors, LINE_DOCUMENT)
     }
 
     fn variant_class_definition(

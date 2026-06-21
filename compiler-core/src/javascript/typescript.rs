@@ -204,11 +204,12 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
 
     pub fn compile(&mut self, arena: &'doc DocumentArena<'a, 'doc>) -> Document<'a, 'doc> {
         let mut imports = self.collect_imports();
+
         let statements = self.definitions(arena, &mut imports);
+        let no_statements = statements.is_empty();
 
         // Two lines between each statement
-        let mut statements =
-            Itertools::intersperse(statements.into_iter(), TWO_LINES_DOCUMENT).collect_vec();
+        let statements = arena.join(statements, TWO_LINES_DOCUMENT);
 
         // Put it all together
 
@@ -217,19 +218,18 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
             imports.register_module(path, ["_".into()], []);
         }
 
-        if imports.is_empty() && statements.is_empty() {
+        if imports.is_empty() && no_statements {
             docvec![arena, EXPORT_SPACE_OPEN_CLOSE_CURLY_DOCUMENT, LINE_DOCUMENT]
         } else if imports.is_empty() {
-            statements.push(LINE_DOCUMENT);
-            arena.concat(statements)
-        } else if statements.is_empty() {
+            statements.append(arena, LINE_DOCUMENT)
+        } else if no_statements {
             imports.into_doc(arena, JavaScriptCodegenTarget::TypeScriptDeclarations)
         } else {
             docvec![
                 arena,
                 imports.into_doc(arena, JavaScriptCodegenTarget::TypeScriptDeclarations),
                 LINE_DOCUMENT,
-                arena.concat(statements),
+                statements,
                 LINE_DOCUMENT
             ]
         }

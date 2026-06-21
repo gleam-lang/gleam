@@ -1899,32 +1899,36 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                     && self.function_position.is_tail()
                     && self.current_scope.counter(name) == Some(0) =>
             {
-                let mut docs = Vec::with_capacity(arguments.len() * 4);
                 // Record that tail recursion is happening so that we know to
                 // render the loop at the top level of the function.
                 self.tail_recursion_used = true;
+                arena.concat(
+                    arguments
+                        .into_iter()
+                        .zip(&self.function_arguments)
+                        .enumerate()
+                        .map(|(i, (element, argument))| {
+                            let mut doc = EMPTY_DOCUMENT;
 
-                for (i, (element, argument)) in arguments
-                    .into_iter()
-                    .zip(&self.function_arguments)
-                    .enumerate()
-                {
-                    if i != 0 {
-                        docs.push(LINE_DOCUMENT);
-                    }
-                    // Create an assignment for each variable created by the function arguments
-                    if let Some(name) = argument {
-                        docs.push(LOOP_DOLLAR_DOCUMENT);
-                        docs.push(name.to_doc(arena));
-                        docs.push(SPACE_EQUAL_SPACE_DOCUMENT.to_doc(arena));
-                    }
-                    // Render the value given to the function. Even if it is not
-                    // assigned we still render it because the expression may
-                    // have some side effects.
-                    docs.push(element);
-                    docs.push(SEMICOLON_DOCUMENT);
-                }
-                arena.concat(docs)
+                            if i != 0 {
+                                doc = doc.append(arena, LINE_DOCUMENT);
+                            }
+                            // Create an assignment for each variable created by the function arguments
+                            if let Some(name) = argument {
+                                doc = docvec![
+                                    arena,
+                                    doc,
+                                    LOOP_DOLLAR_DOCUMENT,
+                                    name.to_doc(arena),
+                                    SPACE_EQUAL_SPACE_DOCUMENT
+                                ]
+                            }
+                            // Render the value given to the function. Even if it is not
+                            // assigned we still render it because the expression may
+                            // have some side effects.
+                            docvec![arena, doc, element, SEMICOLON_DOCUMENT]
+                        }),
+                )
             }
 
             TypedExpr::Int { .. }

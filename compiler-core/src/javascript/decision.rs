@@ -2282,24 +2282,23 @@ fn assignments_to_doc<'a, 'doc>(
     expression_generator: &mut Generator<'_, 'a, 'doc>,
     assignments: Vec<SubjectAssignment<'a, 'doc>>,
 ) -> Document<'a, 'doc> {
-    let mut assignments_docs = vec![];
-    for assignment in assignments.into_iter() {
+    arena.concat(assignments.into_iter().filter_map(|assignment| {
         let SubjectAssignment::BindToVariable {
             name,
             value,
             location,
         } = assignment
         else {
-            continue;
+            return None;
         };
-        assignments_docs.push(docvec![
+
+        Some(docvec![
             arena,
             expression_generator.source_map_tracker(arena, location.start),
             let_doc(arena, name, value),
             LINE_DOCUMENT
         ])
-    }
-    arena.concat(assignments_docs)
+    }))
 }
 
 /// Appends the second document to the first one separating the two with a newline.
