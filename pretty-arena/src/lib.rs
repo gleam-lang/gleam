@@ -702,6 +702,60 @@ const_str!(QUOTE_COMMA_SPACE_QUOTE_DOCUMENT, "\", \"", 4);
 const_str!(INTERNAL_ATTRIBUTE_DOCUMENT, "@internal", 9);
 const_str!(TRUE_LOWERCASE_DOCUMENT, "true", 4);
 const_str!(FALSE_LOWERCASE_DOCUMENT, "false", 5);
+const_str!(OPEN_CLOSE_CURLY_DOCUMENT, "{}", 2);
+const_str!(SPACE_TIMES_AT_IGNORE_DOCUMENT, " * @ignore", 10);
+const_str!(SLASH_TIMES_TIMES_DOCUMENT, "/**", 3);
+const_str!(SPACE_TIMES_SLASH_DOCUMENT, " */", 3);
+const_str!(CONST_FILEPATH_EQUALS_DOCUMENT, "const FILEPATH = ", 17);
+const_str!(SEMICOLON_DOCUMENT, ";", 1);
+const_str!(FUNCTION_SPACE_DOCUMENT, "function ", 9);
+const_str!(EXPORT_FUNCTION_SPACE_DOCUMENT, "export function ", 16);
+const_str!(EXPORT_CONST_SPACE_DOCUMENT, "export const ", 13);
+const_str!(SUPER_CALL_SEMICOLON_DOCUMENT, "super();", 8);
+const_str!(CONSTRUCTOR_OPEN_PAREN_DOCUMENT, "constructor(", 12);
+const_str!(CLOSE_PAREN_SPACE_OPEN_CURLY_DOCUMENT, ") {", 3);
+const_str!(THIS_DOT_DOCUMENT, "this.", 5);
+const_str!(THIS_OPEN_SQUARE_DOCUMENT, "this[", 5);
+const_str!(CLOSE_SQUARE_SPACE_EQUAL_SPACE_DOCUMENT, "] = ", 4);
+const_str!(
+    SPACE_EXTENDS_CUSTOM_TYPE_OPEN_CURLY_DOCUMENT,
+    " extends $CustomType {",
+    22
+);
+const_str!(CLASS_SPACE_DOCUMENT, "class ", 6);
+const_str!(EXPORT_CLASS_SPACE_DOCUMENT, "export class ", 13);
+const_str!(VALUE_DOT_DOCUMENT, "value.", 6);
+const_str!(SPACE_EQUAL_SPACE_VALUE_SPACE_ARROW, " = (value) =>", 13);
+const_str!(
+    SPACE_EQUAL_OPEN_CLOSE_PAREN_SPACE_ARROW_DOCUMENT,
+    " = () =>",
+    8
+);
+const_str!(CLOSE_PAREN_SEMICOLON_DOCUMENT, ");", 2);
+const_str!(NEW_SPACE_DOCUMENT, "new ", 4);
+const_str!(VALUE_OPEN_SQUARE_DOCUMENT, "value[", 6);
+const_str!(CLOSE_SQUARE_SEMICOLON_DOCUMENT, "];", 2);
+const_str!(DOLLAR_IS_DOCUMENT, "$is", 3);
+const_str!(VALUE_INSTANCE_OF_SPACE_DOCUMENT, "value instanceof ", 17);
+const_str!(DOLLAR_DOCUMENT, "$", 1);
+const_str!(CLOSE_PAREN_ARROW_DOCUMENT, ") =>", 4);
+const_str!(SPACE_EQUAL_SPACE_OPEN_PAREN_DOCUMENT, " = (", 4);
+const_str!(DOLLAR_CONST_SEMICOLON_DOCUMENT, "$const;", 7);
+const_str!(DOLLAR_CONST_DOCUMENT, "$const", 6);
+const_str!(OPEN_CLOSE_PAREN_SEMICOLON_DOCUMENT, "();", 3);
+const_str!(EXPORT_SPACE_OPEN_CLOSE_CURLY_DOCUMENT, "export {}", 9);
+const_str!(DOT_MJS_DOT_MAP_DOCUMENT, ".mjs.map", 8);
+const_str!(
+    DOT_D_DOT_MTS_CLOSE_QUOTE_CLOSE_TAG_DOCUMENT,
+    ".d.mts\" />",
+    10
+);
+const_str!(
+    SOURCE_MAPPING_URL_EQUAL_DOCUMENT,
+    "//# sourceMappingURL=",
+    21
+);
+const_str!(REFERENCE_TYPES_DOCUMENT, "/// <reference types=\"./", 24);
 
 const_break!(EMPTY_BREAK_DOCUMENT, "", "");
 const_break!(BREAKABLE_SPACE_DOCUMENT, "", " ");

@@ -172,9 +172,9 @@ impl<'a, 'doc> Generator<'a> {
 
         docvec![
             arena,
-            "/// <reference types=\"./",
+            REFERENCE_TYPES_DOCUMENT,
             module,
-            ".d.mts\" />",
+            DOT_D_DOT_MTS_CLOSE_QUOTE_CLOSE_TAG_DOCUMENT,
             LINE_DOCUMENT
         ]
     }
@@ -194,9 +194,9 @@ impl<'a, 'doc> Generator<'a> {
 
                 docvec![
                     arena,
-                    "//# sourceMappingURL=",
+                    SOURCE_MAPPING_URL_EQUAL_DOCUMENT,
                     module,
-                    ".mjs.map",
+                    DOT_MJS_DOT_MAP_DOCUMENT,
                     LINE_DOCUMENT
                 ]
             }
@@ -387,7 +387,7 @@ impl<'a, 'doc> Generator<'a> {
                 sourcemap_reference,
                 type_reference,
                 filepath_definition,
-                "export {}",
+                EXPORT_SPACE_OPEN_CLOSE_CURLY_DOCUMENT,
                 LINE_DOCUMENT,
                 echo_definition
             ]
@@ -608,25 +608,25 @@ impl<'a, 'doc> Generator<'a> {
         publicity: Publicity,
     ) -> Document<'a, 'doc> {
         let keyword = if publicity.is_importable() {
-            "export const "
+            EXPORT_CONST_SPACE_DOCUMENT
         } else {
-            "const "
+            CONST_SPACE_DOCUMENT
         };
         docvec![
             arena,
             self.source_map_tracker(arena, constructor.location.start),
             keyword,
             type_name,
-            "$",
+            DOLLAR_DOCUMENT,
             constructor.name.as_str(),
-            "$const",
-            " =",
+            DOLLAR_CONST_DOCUMENT,
+            SPACE_EQUAL_DOCUMENT,
             docvec![
                 arena,
-                arena.break_("", " "),
-                "new ",
+                BREAKABLE_SPACE_DOCUMENT,
+                NEW_SPACE_DOCUMENT,
                 constructor.name.as_str(),
-                "();"
+                OPEN_CLOSE_PAREN_SEMICOLON_DOCUMENT,
             ]
             .group(arena)
             .nest(arena, INDENT)
@@ -644,18 +644,18 @@ impl<'a, 'doc> Generator<'a> {
         if constructor.arguments.is_empty() {
             return docvec![
                 arena,
-                "export const ",
+                EXPORT_CONST_SPACE_DOCUMENT,
                 type_name,
-                "$",
+                DOLLAR_DOCUMENT,
                 constructor.name.as_str(),
-                " = () =>",
+                SPACE_EQUAL_OPEN_CLOSE_PAREN_SPACE_ARROW_DOCUMENT,
                 docvec![
                     arena,
-                    arena.break_("", " "),
+                    BREAKABLE_SPACE_DOCUMENT,
                     type_name,
-                    "$",
+                    DOLLAR_DOCUMENT,
                     constructor.name.as_str(),
-                    "$const;"
+                    DOLLAR_CONST_SEMICOLON_DOCUMENT
                 ]
                 .group(arena)
                 .nest(arena, INDENT),
@@ -674,27 +674,27 @@ impl<'a, 'doc> Generator<'a> {
 
         let construction = docvec![
             arena,
-            arena.break_("", " "),
-            "new ",
+            BREAKABLE_SPACE_DOCUMENT,
+            NEW_SPACE_DOCUMENT,
             constructor.name.as_str(),
-            "(",
+            OPEN_PAREN_DOCUMENT,
             arena
-                .join(arguments.clone(), arena.break_(",", ", "))
+                .join(arguments.clone(), COMMA_BREAK_DOCUMENT)
                 .group(arena),
-            ");"
+            CLOSE_PAREN_SEMICOLON_DOCUMENT,
         ]
         .group(arena);
 
         docvec![
             arena,
             self.source_map_tracker(arena, constructor.location.start),
-            "export const ",
+            EXPORT_CONST_SPACE_DOCUMENT,
             type_name,
-            "$",
+            DOLLAR_DOCUMENT,
             constructor.name.as_str(),
-            " = (",
-            arena.join(arguments, arena.break_(",", ", ")),
-            ") =>",
+            SPACE_EQUAL_SPACE_OPEN_PAREN_DOCUMENT,
+            arena.join(arguments, COMMA_BREAK_DOCUMENT),
+            CLOSE_PAREN_ARROW_DOCUMENT,
             construction.nest(arena, INDENT),
         ]
     }
@@ -707,21 +707,21 @@ impl<'a, 'doc> Generator<'a> {
     ) -> Document<'a, 'doc> {
         let construction = docvec![
             arena,
-            arena.break_("", " "),
-            "value instanceof ",
+            BREAKABLE_SPACE_DOCUMENT,
+            VALUE_INSTANCE_OF_SPACE_DOCUMENT,
             constructor.name.as_str(),
-            ";"
+            SEMICOLON_DOCUMENT
         ]
         .group(arena);
 
         docvec![
             arena,
             self.source_map_tracker(arena, constructor.location.start),
-            "export const ",
+            EXPORT_CONST_SPACE_DOCUMENT,
             type_name,
-            "$is",
+            DOLLAR_IS_DOCUMENT,
             constructor.name.as_str(),
-            " = (value) =>",
+            SPACE_EQUAL_SPACE_VALUE_SPACE_ARROW,
             construction.nest(arena, INDENT),
         ]
     }
@@ -758,10 +758,10 @@ impl<'a, 'doc> Generator<'a> {
 
                 contents = docvec![
                     arena,
-                    arena.break_("", " "),
-                    "value.",
+                    BREAKABLE_SPACE_DOCUMENT,
+                    VALUE_DOT_DOCUMENT,
                     maybe_escape_property(label),
-                    ";"
+                    SEMICOLON_DOCUMENT
                 ]
                 .group(arena);
 
@@ -769,22 +769,29 @@ impl<'a, 'doc> Generator<'a> {
                     arena,
                     LINE_DOCUMENT,
                     self.source_map_tracker(arena, constructor.location.start),
-                    "export const ",
+                    EXPORT_CONST_SPACE_DOCUMENT,
                     function_name,
-                    " = (value) =>",
+                    SPACE_EQUAL_SPACE_VALUE_SPACE_ARROW,
                     contents.clone().nest(arena, INDENT),
                 ]);
             } else {
-                contents = docvec![arena, arena.break_("", " "), "value[", index, "];"].group(arena)
+                contents = docvec![
+                    arena,
+                    BREAKABLE_SPACE_DOCUMENT,
+                    VALUE_OPEN_SQUARE_DOCUMENT,
+                    index,
+                    CLOSE_SQUARE_SEMICOLON_DOCUMENT
+                ]
+                .group(arena)
             }
 
             functions.push(docvec![
                 arena,
                 LINE_DOCUMENT,
                 self.source_map_tracker(arena, constructor.location.start),
-                "export const ",
+                EXPORT_CONST_SPACE_DOCUMENT,
                 function_name,
-                " = (value) =>",
+                SPACE_EQUAL_SPACE_VALUE_SPACE_ARROW,
                 contents.nest(arena, INDENT),
             ]);
         }
@@ -803,18 +810,18 @@ impl<'a, 'doc> Generator<'a> {
 
             let contents = docvec![
                 arena,
-                arena.break_("", " "),
-                "value.",
+                BREAKABLE_SPACE_DOCUMENT,
+                VALUE_DOT_DOCUMENT,
                 maybe_escape_property(field),
-                ";"
+                SEMICOLON_DOCUMENT
             ]
             .group(arena);
 
             docvec![
                 arena,
-                "export const ",
+                EXPORT_CONST_SPACE_DOCUMENT,
                 function_name,
-                " = (value) =>",
+                SPACE_EQUAL_SPACE_VALUE_SPACE_ARROW,
                 contents.nest(arena, INDENT),
             ]
         });
@@ -853,9 +860,9 @@ impl<'a, 'doc> Generator<'a> {
         };
 
         let head = if publicity.is_public() {
-            "export class "
+            EXPORT_CLASS_SPACE_DOCUMENT
         } else {
-            "class "
+            CLASS_SPACE_DOCUMENT
         };
 
         let head = docvec![
@@ -863,11 +870,11 @@ impl<'a, 'doc> Generator<'a> {
             self.source_map_tracker(arena, constructor.location.start),
             head,
             &constructor.name,
-            " extends $CustomType {"
+            SPACE_EXTENDS_CUSTOM_TYPE_OPEN_CURLY_DOCUMENT
         ];
 
         if constructor.arguments.is_empty() {
-            return docvec![arena, doc, head, "}"];
+            return docvec![arena, doc, head, CLOSE_CURLY_DOCUMENT];
         };
 
         let parameters = arena.join(
@@ -876,16 +883,30 @@ impl<'a, 'doc> Generator<'a> {
                 .iter()
                 .enumerate()
                 .map(|argument| parameter(arena, argument)),
-            arena.break_(",", ", "),
+            COMMA_BREAK_DOCUMENT,
         );
 
         let constructor_body = arena.join(
             constructor.arguments.iter().enumerate().map(|(i, arg)| {
                 let var = parameter(arena, (i, arg));
                 match &arg.label {
-                    None => docvec![arena, "this[", i, "] = ", var, ";"],
+                    None => docvec![
+                        arena,
+                        THIS_OPEN_SQUARE_DOCUMENT,
+                        i,
+                        CLOSE_SQUARE_SPACE_EQUAL_SPACE_DOCUMENT,
+                        var,
+                        SEMICOLON_DOCUMENT
+                    ],
                     Some((_, name)) => {
-                        docvec![arena, "this.", maybe_escape_property(name), " = ", var, ";"]
+                        docvec![
+                            arena,
+                            THIS_DOT_DOCUMENT,
+                            maybe_escape_property(name),
+                            SPACE_EQUAL_SPACE_DOCUMENT,
+                            var,
+                            SEMICOLON_DOCUMENT
+                        ]
                     }
                 }
             }),
@@ -895,19 +916,19 @@ impl<'a, 'doc> Generator<'a> {
         let class_body = docvec![
             arena,
             LINE_DOCUMENT,
-            "constructor(",
+            CONSTRUCTOR_OPEN_PAREN_DOCUMENT,
             parameters,
-            ") {",
+            CLOSE_PAREN_SPACE_OPEN_CURLY_DOCUMENT,
             docvec![
                 arena,
                 LINE_DOCUMENT,
-                "super();",
+                SUPER_CALL_SEMICOLON_DOCUMENT,
                 LINE_DOCUMENT,
                 constructor_body
             ]
             .nest(arena, INDENT),
             LINE_DOCUMENT,
-            "}",
+            CLOSE_CURLY_DOCUMENT,
         ]
         .nest(arena, INDENT);
 
@@ -1083,9 +1104,9 @@ impl<'a, 'doc> Generator<'a> {
         }
 
         let head = if publicity.is_private() {
-            "const "
+            CONST_SPACE_DOCUMENT
         } else {
-            "export const "
+            EXPORT_CONST_SPACE_DOCUMENT
         };
 
         let mut generator = expression::Generator::new(
@@ -1121,9 +1142,9 @@ impl<'a, 'doc> Generator<'a> {
             self.source_map_tracker(arena, location.start),
             head,
             maybe_escape_identifier(name),
-            " = ",
+            SPACE_EQUAL_SPACE_DOCUMENT,
             document,
-            ";",
+            SEMICOLON_DOCUMENT,
             self.source_map_tracker(arena, value.location().end),
         ])
     }
@@ -1196,9 +1217,9 @@ impl<'a, 'doc> Generator<'a> {
         );
 
         let head = if function.publicity.is_private() {
-            "function "
+            FUNCTION_SPACE_DOCUMENT
         } else {
-            "export function "
+            EXPORT_FUNCTION_SPACE_DOCUMENT
         };
 
         let body = generator.function_body(
@@ -1218,12 +1239,12 @@ impl<'a, 'doc> Generator<'a> {
                 function.arguments.as_slice(),
                 generator.tail_recursion_used
             ),
-            " {",
+            SPACE_OPEN_CURLY_DOCUMENT,
             docvec![arena, LINE_DOCUMENT, body]
                 .nest(arena, INDENT)
                 .group(arena),
             LINE_DOCUMENT,
-            "}",
+            CLOSE_CURLY_DOCUMENT,
             self.source_map_tracker(arena, function.end_position),
         ])
     }
@@ -1253,9 +1274,9 @@ impl<'a, 'doc> Generator<'a> {
 
         docvec![
             arena,
-            "const FILEPATH = ",
+            CONST_FILEPATH_EQUALS_DOCUMENT,
             self.src_path.clone(),
-            ';',
+            SEMICOLON_DOCUMENT,
             TWO_LINES_DOCUMENT
         ]
     }
@@ -1279,29 +1300,36 @@ fn jsdoc_comment<'a, 'doc>(
     documentation: &EcoString,
     publicity: Publicity,
 ) -> Document<'a, 'doc> {
-    let doc_lines = documentation
-        .trim_end()
-        .split('\n')
-        .map(|line| eco_format!(" *{line}", line = line.replace("*/", "*\\/")).to_doc(arena))
-        .collect_vec();
-
     // We start with the documentation of the function
-    let doc_body = arena.join(doc_lines, LINE_DOCUMENT);
-    let mut doc = docvec![arena, "/**", LINE_DOCUMENT, doc_body, LINE_DOCUMENT];
+    let doc_body = arena.join(
+        documentation
+            .trim_end()
+            .split('\n')
+            .map(|line| eco_format!(" *{}", line.replace("*/", "*\\/")).to_doc(arena)),
+        LINE_DOCUMENT,
+    );
+
+    let mut doc = docvec![
+        arena,
+        SLASH_TIMES_TIMES_DOCUMENT,
+        LINE_DOCUMENT,
+        doc_body,
+        LINE_DOCUMENT
+    ];
     if !publicity.is_public() {
         // If the function is not public we hide the documentation using
         // the `@ignore` tag: https://jsdoc.app/tags-ignore
         doc = docvec![
             arena,
             doc,
-            " * ",
+            SPACE_TIMES_SPACE_DOCUMENT,
             LINE_DOCUMENT,
-            " * @ignore",
+            SPACE_TIMES_AT_IGNORE_DOCUMENT,
             LINE_DOCUMENT
         ];
     }
     // And finally we close the doc comment
-    docvec![arena, doc, " */"]
+    docvec![arena, doc, SPACE_TIMES_SLASH_DOCUMENT]
 }
 
 #[derive(Debug)]
@@ -1372,7 +1400,7 @@ fn fun_arguments<'a, 'doc>(
             .map(|argument| match argument.get_variable_name() {
                 None => {
                     let doc = if discards == 0 {
-                        "_".to_doc(arena)
+                        UNDERSCORE_DOCUMENT
                     } else {
                         eco_format!("_{discards}").to_doc(arena)
                     };
@@ -1385,19 +1413,15 @@ fn fun_arguments<'a, 'doc>(
     )
 }
 
-fn wrap_arguments<'a, 'doc, I>(
+fn wrap_arguments<'a, 'doc>(
     arena: &'doc DocumentArena<'a, 'doc>,
-    arguments: I,
-) -> Document<'a, 'doc>
-where
-    I: IntoIterator<Item = Document<'a, 'doc>>,
-{
-    arena
-        .break_("", "")
-        .append(arena, arena.join(arguments, arena.break_(",", ", ")))
+    arguments: impl IntoIterator<Item = Document<'a, 'doc>>,
+) -> Document<'a, 'doc> {
+    EMPTY_BREAK_DOCUMENT
+        .append(arena, arena.join(arguments, COMMA_BREAK_DOCUMENT))
         .nest(arena, INDENT)
-        .append(arena, arena.break_("", ""))
-        .surround(arena, "(", ")")
+        .append(arena, EMPTY_BREAK_DOCUMENT)
+        .surround(arena, OPEN_PAREN_DOCUMENT, CLOSE_PAREN_DOCUMENT)
         .group(arena)
 }
 
@@ -1409,22 +1433,22 @@ fn wrap_object<'a, 'doc>(
     let fields = items.into_iter().map(|(key, value)| {
         empty = false;
         match value {
-            Some(value) => docvec![arena, key, ": ", value],
+            Some(value) => docvec![arena, key, COLON_SPACE_DOCUMENT, value],
             None => key.to_doc(arena),
         }
     });
-    let fields = arena.join(fields, arena.break_(",", ", "));
+    let fields = arena.join(fields, COMMA_BREAK_DOCUMENT);
 
     if empty {
-        "{}".to_doc(arena)
+        OPEN_CLOSE_CURLY_DOCUMENT
     } else {
         docvec![
             arena,
-            docvec![arena, "{", arena.break_("", " "), fields]
+            docvec![arena, OPEN_CURLY_DOCUMENT, BREAKABLE_SPACE_DOCUMENT, fields]
                 .nest(arena, INDENT)
-                .append(arena, arena.break_("", " "))
+                .append(arena, BREAKABLE_SPACE_DOCUMENT)
                 .group(arena),
-            "}"
+            CLOSE_CURLY_DOCUMENT
         ]
     }
 }
