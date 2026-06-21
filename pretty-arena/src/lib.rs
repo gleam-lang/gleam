@@ -802,6 +802,50 @@ const_str!(UNDERSCORE_DOT_BIT_ARRAY_DOCUMENT, "_.BitArray", 10);
 const_str!(UNDERSCORE_DOT_LIST_DOCUMENT, "_.List", 6);
 const_str!(UNDERSCORE_DOT_RESULT_DOCUMENT, "_.Result", 8);
 const_str!(SPACE_EQUAL_RIGHT_ARROW_SPACE_DOCUMENT, " => ", 4);
+const_str!(IF_SPACE_OPEN_PAREN_DOCUMENT, "if (", 4);
+const_str!(CLOSE_PAREN_SPACE_DOCUMENT, ") ", 2);
+const_str!(DOUBLE_CLOSE_PAREN_SPACE_DOCUMENT, ")) ", 3);
+const_str!(
+    IF_SPACE_OPEN_PAREN_EXCLAMATION_OPEN_PAREN_DOCUMENT,
+    "if (!(",
+    6
+);
+const_str!(SPACE_ELSE_SPACE_DOCUMENT, " else ", 6);
+const_str!(DOT_CHAR_CODE_AT_ZERO_DOCUMENT, ".charCodeAt(0)", 14);
+const_str!(SPACE_TRIPLE_EQUAL_SPACE_DOCUMENT, " === ", 5);
+const_str!(DOT_STARTS_WITH_OPEN_PAREN_DOCUMENT, ".startsWith(", 12);
+const_str!(ZERO_DOCUMENT, "0", 1);
+const_str!(DOT_BIT_SIZE_MODULO_8_DOCUMENT, ".bitSize % 8", 12);
+const_str!(DOT_BIT_SIZE_MINUS_SPACE_DOCUMENT, ".bitSize - ", 11);
+const_str!(DOT_BIT_SIZE_DOCUMENT, ".bitSize", 8);
+const_str!(CLOSE_PAREN_MODULO_8_DOCUMENT, ") % 8", 5);
+const_str!(SPACE_GT_EQ_ZERO_DOCUMENT, " >= 0", 5);
+const_str!(SPACE_GT_EQ_SPACE_DOCUMENT, " >= ", 4);
+const_str!(
+    NUMBER_DOT_IS_FINITE_OPEN_PAREN_DOCUMENT,
+    "Number.isFinite(",
+    16
+);
+const_str!(SPACE_INSTANCE_OF_SPACE_DOCUMENT, " instanceof ", 12);
+const_str!(
+    SPACE_INSTANCE_OF_NON_EMPTY_DOCUMENT,
+    " instanceof $NonEmpty",
+    21
+);
+const_str!(SPACE_INSTANCE_OF_EMPTY_DOCUMENT, " instanceof $Empty", 18);
+const_str!(DOT_BYTE_AT_OPEN_PAREN_DOCUMENT, ".byteAt(", 8);
+const_str!(COMMA_SPACE_DOCUMENT, ", ", 2);
+const_str!(
+    BIT_ARRAY_SLICE_TO_INT_OPEN_PAREN_DOCUMENT,
+    "bitArraySliceToInt(",
+    19
+);
+const_str!(
+    BIT_ARRAY_SLICE_TO_FLOAT_OPEN_PAREN_DOCUMENT,
+    "bitArraySliceToFloat(",
+    21
+);
+const_str!(BIT_ARRAY_SLICE_OPEN_PAREN_DOCUMENT, "bitArraySlice(", 14);
 
 const_break!(EMPTY_BREAK_DOCUMENT, "", "");
 const_break!(BREAKABLE_SPACE_DOCUMENT, "", " ");
@@ -814,6 +858,7 @@ const_break!(OPEN_PAREN_BREAK_DOCUMENT, "(", "(");
 const_break!(OPEN_TUPLE_BREAK_DOCUMENT, "#(", "#(");
 const_break!(OPEN_BIT_ARRAY_BREAK_DOCUMENT, "<<", "<<");
 const_break!(CASE_BREAK_DOCUMENT, "case", "case ");
+const_break!(SPACE_DOUBLE_AMPERSAND_BREAK_DOCUMENT, " &&", " && ");
 
 /// A structure used to efficiently allocate documents that can then be pretty
 /// printed.
