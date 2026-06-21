@@ -813,6 +813,7 @@ const_str!(
 const_str!(SPACE_ELSE_SPACE_DOCUMENT, " else ", 6);
 const_str!(DOT_CHAR_CODE_AT_ZERO_DOCUMENT, ".charCodeAt(0)", 14);
 const_str!(SPACE_TRIPLE_EQUAL_SPACE_DOCUMENT, " === ", 5);
+const_str!(TRIPLE_EQUAL_DOCUMENT, "===", 3);
 const_str!(DOT_STARTS_WITH_OPEN_PAREN_DOCUMENT, ".startsWith(", 12);
 const_str!(ZERO_DOCUMENT, "0", 1);
 const_str!(DOT_BIT_SIZE_MODULO_8_DOCUMENT, ".bitSize % 8", 12);
@@ -846,6 +847,73 @@ const_str!(
     21
 );
 const_str!(BIT_ARRAY_SLICE_OPEN_PAREN_DOCUMENT, "bitArraySlice(", 14);
+const_str!(RETURN_SPACE_DOCUMENT, "return ", 7);
+const_str!(SPACE_EQUAL_LOOP_DOLLAR_DOCUMENT, " = loop$", 8);
+const_str!(WHILE_TRUE_OPEN_PAREN_DOCUMENT, "while (true) {", 14);
+const_str!(
+    DOLLAR_LIST_DOLLAR_EMPTY_DOLLAR_CONST_DOCUMENT,
+    "$List$Empty$const",
+    17
+);
+const_str!(SIZED_INT_OPEN_PAREN_DOCUMENT, "sizedInt(", 9);
+const_str!(SIZED_FLOAT_OPEN_PAREN_DOCUMENT, "sizedFloat(", 11);
+const_str!(STRING_BITS_OPEN_PAREN_DOCUMENT, "stringBits(", 11);
+const_str!(STRING_TO_UTF16_OPEN_PAREN_DOCUMENT, "stringToUtf16(", 14);
+const_str!(STRING_TO_UTF32_OPEN_PAREN_DOCUMENT, "stringToUtf32(", 14);
+const_str!(
+    CODEPOINT_TO_UTF16_OPEN_PAREN_DOCUMENT,
+    "codepointToUtf16(",
+    17
+);
+const_str!(
+    CODEPOINT_TO_UTF32_OPEN_PAREN_DOCUMENT,
+    "codepointToUtf32(",
+    17
+);
+const_str!(TO_BIT_ARRAY_OPEN_PAREN_DOCUMENT, "toBitArray(", 11);
+const_str!(COMMA_ZERO_COMMA_SPACE, ", 0, ", 5);
+const_str!(THROW_MAKE_ERROR_DOCUMENT, "throw makeError", 15);
+const_str!(FILEPATH_UPPERCASE_DOCUMENT, "FILEPATH", 8);
+const_str!(SPACE_EQUAL_ARROW_SPACE_OPEN_CURLY_DOCUMENT, " => {", 5);
+const_str!(INFINITY_DOCUMENT, "Infinity", 8);
+const_str!(MINUS_INFINITY_DOCUMENT, "-Infinity", 9);
+const_str!(NAN_DOCUMENT, "NaN", 3);
+const_str!(TO_LIST_OPEN_PAREN_DOCUMENT, "toList(", 7);
+const_str!(LIST_PREPEND_DOCUMENT, "listPrepend", 11);
+const_str!(CLOSE_CURLY_CLOSE_PAREN_OPEN_CLOSE_PAREN_DOCUMENT, "})()", 4);
+const_str!(
+    OPEN_PAREN_OPEN_CLOSE_PAREN_EQUAL_ARROW_OPEN_CURLY_DOCUMENT,
+    "(() => {",
+    8
+);
+const_str!(CODEPOINT_BITS_OPEN_PAREN_DOCUMENT, "codepointBits(", 14);
+const_str!(CLOSE_CURLY_ELSE_OPEN_CURLY_DOCUMENT, "} else {", 8);
+const_str!(EXCLAMATION_MARK_OPEN_PAREN_DOCUMENT, "!(", 2);
+const_str!(SPACE_DOUBLE_VERTICAL_BAR_SPACE_DOCUMENT, " || ", 4);
+const_str!(SPACE_DOUBLE_AMPERSAND_SPACE_DOCUMENT, " && ", 4);
+const_str!(LOOP_DOLLAR_DOCUMENT, "loop$", 5);
+const_str!(DIVIDE_INT_DOCUMENT, "divideInt", 9);
+const_str!(DIVIDE_FLOAT_DOCUMENT, "divideFloat", 9);
+const_str!(
+    GLOBAL_THIS_DOT_MATH_DOT_TRUNC_DOCUMENT,
+    "globalThis.Math.trunc",
+    21
+);
+const_str!(SPACE_MODULO_SPACE_DOCUMENT, " % ", 3);
+const_str!(
+    SPACE_EXCLAMATION_MARK_DOUBLE_EQUAL_SPACE_DOCUMENT,
+    " !== ",
+    5
+);
+const_str!(EXCLAMATION_MARK_DOUBLE_EQUAL_DOCUMENT, "!==", 3);
+const_str!(IS_EQUAL_DOCUMENT, "isEqual", 7);
+const_str!(EXCLAMATION_MARK_IS_EQUAL_DOCUMENT, "!isEqual", 8);
+const_str!(SPACE_LT_INT_SPACE_DOCUMENT, " < ", 3);
+const_str!(SPACE_LT_EQ_INT_SPACE_DOCUMENT, " <= ", 4);
+const_str!(SPACE_GT_INT_SPACE_DOCUMENT, " > ", 3);
+const_str!(SPACE_GT_EQ_INT_SPACE_DOCUMENT, " >= ", 4);
+const_str!(CAMEL_CASE_REMAINDER_INT_DOCUMENT, "remainderInt", 12);
+const_str!(PURE_JAVASCRIPT_COMMENT_DOCUMENT, "/* @__PURE__ */ ", 16);
 
 const_break!(EMPTY_BREAK_DOCUMENT, "", "");
 const_break!(BREAKABLE_SPACE_DOCUMENT, "", " ");
