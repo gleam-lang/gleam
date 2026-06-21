@@ -6,22 +6,19 @@ use std::collections::{HashMap, HashSet};
 use ecow::EcoString;
 use itertools::Itertools;
 
-use crate::{
-    docvec,
-    javascript::{INDENT, JavaScriptCodegenTarget},
-    pretty::{Document, Documentable, break_, concat, join, line},
-};
+use crate::javascript::{INDENT, JavaScriptCodegenTarget};
+use pretty_arena::*;
 
 /// A collection of JavaScript import statements from Gleam imports and from
 /// external functions, to be rendered into a JavaScript module.
 ///
 #[derive(Debug, Default)]
-pub(crate) struct Imports<'a> {
-    imports: HashMap<EcoString, Import<'a>>,
+pub(crate) struct Imports<'a, 'doc> {
+    imports: HashMap<EcoString, Import<'a, 'doc>>,
     exports: HashSet<EcoString>,
 }
 
-impl<'a> Imports<'a> {
+impl<'a, 'doc> Imports<'a, 'doc> {
     pub fn new() -> Self {
         Self::default()
     }
@@ -34,7 +31,7 @@ impl<'a> Imports<'a> {
         &mut self,
         path: EcoString,
         aliases: impl IntoIterator<Item = EcoString>,
-        unqualified_imports: impl IntoIterator<Item = Member<'a>>,
+        unqualified_imports: impl IntoIterator<Item = Member<'a, 'doc>>,
     ) {
         let import = self
             .imports
@@ -44,41 +41,49 @@ impl<'a> Imports<'a> {
         import.unqualified.extend(unqualified_imports)
     }
 
-    pub fn into_doc(self, codegen_target: JavaScriptCodegenTarget) -> Document<'a> {
-        let imports = concat(
+    pub fn into_doc(
+        self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        codegen_target: JavaScriptCodegenTarget,
+    ) -> Document<'a, 'doc> {
+        let imports = arena.concat(
             self.imports
                 .into_values()
                 .sorted_by(|a, b| a.path.cmp(&b.path))
-                .map(|import| import.into_doc(codegen_target)),
+                .map(|import| import.into_doc(arena, codegen_target)),
         );
 
         if self.exports.is_empty() {
             imports
         } else {
-            let names = join(
+            let names = arena.join(
                 self.exports
                     .into_iter()
                     .sorted()
-                    .map(|string| string.to_doc()),
-                break_(",", ", "),
+                    .map(|string| string.to_doc(arena)),
+                arena.break_(",", ", "),
             );
             let names = docvec![
-                docvec![break_("", " "), names].nest(INDENT),
-                break_(",", " ")
+                arena,
+                docvec![arena, arena.break_("", " "), names].nest(arena, INDENT),
+                arena.break_(",", " ")
             ]
-            .group();
+            .group(arena);
 
             let export_keyword = match codegen_target {
                 JavaScriptCodegenTarget::JavaScript => "export {",
                 JavaScriptCodegenTarget::TypeScriptDeclarations => "export type {",
             };
 
-            imports
-                .append(line())
-                .append(export_keyword)
-                .append(names)
-                .append("};")
-                .append(line())
+            docvec![
+                arena,
+                imports,
+                LINE_DOCUMENT,
+                export_keyword,
+                names,
+                "};",
+                LINE_DOCUMENT
+            ]
         }
     }
 
@@ -107,13 +112,13 @@ impl<'a> Imports<'a> {
 }
 
 #[derive(Debug)]
-struct Import<'a> {
+struct Import<'a, 'doc> {
     path: EcoString,
     aliases: HashSet<EcoString>,
-    unqualified: Vec<Member<'a>>,
+    unqualified: Vec<Member<'a, 'doc>>,
 }
 
-impl<'a> Import<'a> {
+impl<'a, 'doc> Import<'a, 'doc> {
     fn new(path: EcoString) -> Self {
         Self {
             path,
@@ -122,15 +127,20 @@ impl<'a> Import<'a> {
         }
     }
 
-    pub fn into_doc(self, codegen_target: JavaScriptCodegenTarget) -> Document<'a> {
-        let path = self.path.to_doc();
+    pub fn into_doc(
+        self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        codegen_target: JavaScriptCodegenTarget,
+    ) -> Document<'a, 'doc> {
+        let path = self.path.to_doc(arena);
         let import_modifier = if codegen_target == JavaScriptCodegenTarget::TypeScriptDeclarations {
             "type "
         } else {
             ""
         };
-        let alias_imports = concat(self.aliases.into_iter().sorted().map(|alias| {
+        let alias_imports = arena.concat(self.aliases.into_iter().sorted().map(|alias| {
             docvec![
+                arena,
                 "import ",
                 import_modifier,
                 "* as ",
@@ -138,20 +148,25 @@ impl<'a> Import<'a> {
                 " from \"",
                 path.clone(),
                 r#"";"#,
-                line()
+                LINE_DOCUMENT
             ]
         }));
         if self.unqualified.is_empty() {
             alias_imports
         } else {
-            let members = self.unqualified.into_iter().map(Member::into_doc);
-            let members = join(members, break_(",", ", "));
+            let members = self
+                .unqualified
+                .into_iter()
+                .map(|member| member.into_doc(arena));
+            let members = arena.join(members, arena.break_(",", ", "));
             let members = docvec![
-                docvec![break_("", " "), members].nest(INDENT),
-                break_(",", " ")
+                arena,
+                docvec![arena, arena.break_("", " "), members].nest(arena, INDENT),
+                arena.break_(",", " ")
             ]
-            .group();
+            .group(arena);
             docvec![
+                arena,
                 alias_imports,
                 "import ",
                 import_modifier,
@@ -160,29 +175,30 @@ impl<'a> Import<'a> {
                 "} from \"",
                 path,
                 r#"";"#,
-                line()
+                LINE_DOCUMENT
             ]
         }
     }
 }
 
 #[derive(Debug)]
-pub struct Member<'a> {
+pub struct Member<'a, 'doc> {
     pub name: EcoString,
-    pub alias: Option<Document<'a>>,
+    pub alias: Option<Document<'a, 'doc>>,
 }
 
-impl<'a> Member<'a> {
-    fn into_doc(self) -> Document<'a> {
+impl<'a, 'doc> Member<'a, 'doc> {
+    fn into_doc(self, arena: &'doc DocumentArena<'a, 'doc>) -> Document<'a, 'doc> {
         match self.alias {
-            None => self.name.to_doc(),
-            Some(alias) => docvec![self.name, " as ", alias],
+            None => self.name.to_doc(arena),
+            Some(alias) => docvec![arena, self.name, " as ", alias],
         }
     }
 }
 
 #[test]
 fn into_doc() {
+    let arena = DocumentArena::new();
     let mut imports = Imports::new();
     imports.register_module("./gleam/empty".into(), [], []);
     imports.register_module(
@@ -210,11 +226,11 @@ fn into_doc() {
             },
             Member {
                 name: "one".into(),
-                alias: Some("onee".to_doc()),
+                alias: Some("onee".to_doc(&arena)),
             },
             Member {
                 name: "two".into(),
-                alias: Some("twoo".to_doc()),
+                alias: Some("twoo".to_doc(&arena)),
             },
         ],
     );
@@ -250,8 +266,11 @@ fn into_doc() {
     );
 
     assert_eq!(
-        line()
-            .append(imports.into_doc(JavaScriptCodegenTarget::JavaScript))
+        LINE_DOCUMENT
+            .append(
+                &arena,
+                imports.into_doc(&arena, JavaScriptCodegenTarget::JavaScript)
+            )
             .to_pretty_string(40),
         r#"
 import * as wibble from "./multiple/times";

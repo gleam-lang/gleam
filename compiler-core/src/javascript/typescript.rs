@@ -21,27 +21,26 @@ use crate::javascript::import::Member;
 use crate::type_::{PRELUDE_MODULE_NAME, RecordAccessor, is_prelude_module};
 use crate::{
     ast::{TypedModule, TypedRecordConstructor},
-    docvec,
     javascript::JavaScriptCodegenTarget,
-    pretty::{Document, Documentable, break_},
     type_::{Type, TypeVar},
 };
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
+use pretty_arena::*;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use super::{INDENT, concat, import::Imports, join, line, lines, wrap_arguments};
+use super::{INDENT, import::Imports, wrap_arguments};
 
 /// When rendering a type variable to an TypeScript type spec we need all type
 /// variables with the same id to end up with the same name in the generated
 /// TypeScript. This function converts a usize into base 26 A-Z for this purpose.
-fn id_to_type_var(id: u64) -> Document<'static> {
+fn id_to_type_var<'a, 'doc>(arena: &'doc DocumentArena<'a, 'doc>, id: u64) -> Document<'a, 'doc> {
     if id < 26 {
         return std::iter::once(
             std::char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"),
         )
         .collect::<EcoString>()
-        .to_doc();
+        .to_doc(arena);
     }
     let mut name = vec![];
     let mut last_char = id;
@@ -51,26 +50,28 @@ fn id_to_type_var(id: u64) -> Document<'static> {
     }
     name.push(std::char::from_u32((last_char % 26 + 64) as u32).expect("id_to_type_var 2"));
     name.reverse();
-    name.into_iter().collect::<EcoString>().to_doc()
+    name.into_iter().collect::<EcoString>().to_doc(arena)
 }
 
-fn name_with_generics<'a>(
-    name: Document<'a>,
+fn name_with_generics<'a, 'doc>(
+    arena: &'doc DocumentArena<'a, 'doc>,
+    name: Document<'a, 'doc>,
     types: impl IntoIterator<Item = &'a Arc<Type>>,
-) -> Document<'a> {
+) -> Document<'a, 'doc> {
     let generic_usages = collect_generic_usages(HashMap::new(), types);
-    let generic_names: Vec<Document<'_>> = generic_usages
+    let generic_names: Vec<Document<'_, '_>> = generic_usages
         .keys()
         .sorted()
-        .map(|id| id_to_type_var(*id))
+        .map(|id| id_to_type_var(arena, *id))
         .collect();
 
     docvec![
+        arena,
         name,
         if generic_names.is_empty() {
-            super::nil()
+            EMPTY_DOCUMENT
         } else {
-            wrap_generic_arguments(generic_names)
+            wrap_generic_arguments(arena, generic_names)
         },
     ]
 }
@@ -124,25 +125,33 @@ fn generic_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
 
 /// Prints a Gleam tuple in the TypeScript equivalent syntax
 ///
-fn tuple<'a>(elements: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
-    break_("", "")
-        .append(join(elements, break_(",", ", ")))
-        .nest(INDENT)
-        .append(break_("", ""))
-        .surround("[", "]")
-        .group()
+fn tuple<'a, 'doc>(
+    arena: &'doc DocumentArena<'a, 'doc>,
+    elements: impl IntoIterator<Item = Document<'a, 'doc>>,
+) -> Document<'a, 'doc> {
+    arena
+        .break_("", "")
+        .append(arena, arena.join(elements, arena.break_(",", ", ")))
+        .nest(arena, INDENT)
+        .append(arena, arena.break_("", ""))
+        .surround(arena, "[", "]")
+        .group(arena)
 }
 
-fn wrap_generic_arguments<'a, I>(arguments: I) -> Document<'a>
+fn wrap_generic_arguments<'a, 'doc, I>(
+    arena: &'doc DocumentArena<'a, 'doc>,
+    arguments: I,
+) -> Document<'a, 'doc>
 where
-    I: IntoIterator<Item = Document<'a>>,
+    I: IntoIterator<Item = Document<'a, 'doc>>,
 {
-    break_("", "")
-        .append(join(arguments, break_(",", ", ")))
-        .nest(INDENT)
-        .append(break_("", ""))
-        .surround("<", ">")
-        .group()
+    arena
+        .break_("", "")
+        .append(arena, arena.join(arguments, arena.break_(",", ", ")))
+        .nest(arena, INDENT)
+        .append(arena, arena.break_("", ""))
+        .surround(arena, "<", ">")
+        .group(arena)
 }
 
 /// Returns a name that can be used as a TypeScript type name. If there is a
@@ -184,7 +193,7 @@ pub struct TypeScriptGenerator<'a> {
     current_module_name_segments_count: usize,
 }
 
-impl<'a> TypeScriptGenerator<'a> {
+impl<'a, 'doc> TypeScriptGenerator<'a> {
     pub fn new(module: &'a TypedModule) -> Self {
         let current_module_name_segments_count = module.name.split('/').count();
         Self {
@@ -195,12 +204,13 @@ impl<'a> TypeScriptGenerator<'a> {
         }
     }
 
-    pub fn compile(&mut self) -> Document<'a> {
+    pub fn compile(&mut self, arena: &'doc DocumentArena<'a, 'doc>) -> Document<'a, 'doc> {
         let mut imports = self.collect_imports();
-        let statements = self.definitions(&mut imports);
+        let statements = self.definitions(arena, &mut imports);
 
         // Two lines between each statement
-        let mut statements = Itertools::intersperse(statements.into_iter(), lines(2)).collect_vec();
+        let mut statements =
+            Itertools::intersperse(statements.into_iter(), TWO_LINES_DOCUMENT).collect_vec();
 
         // Put it all together
 
@@ -210,23 +220,24 @@ impl<'a> TypeScriptGenerator<'a> {
         }
 
         if imports.is_empty() && statements.is_empty() {
-            docvec!["export {}", line()]
+            docvec![arena, "export {}", LINE_DOCUMENT]
         } else if imports.is_empty() {
-            statements.push(line());
-            statements.to_doc()
+            statements.push(LINE_DOCUMENT);
+            arena.concat(statements)
         } else if statements.is_empty() {
-            imports.into_doc(JavaScriptCodegenTarget::TypeScriptDeclarations)
+            imports.into_doc(arena, JavaScriptCodegenTarget::TypeScriptDeclarations)
         } else {
             docvec![
-                imports.into_doc(JavaScriptCodegenTarget::TypeScriptDeclarations),
-                line(),
-                statements,
-                line()
+                arena,
+                imports.into_doc(arena, JavaScriptCodegenTarget::TypeScriptDeclarations),
+                LINE_DOCUMENT,
+                arena.concat(statements),
+                LINE_DOCUMENT
             ]
         }
     }
 
-    fn collect_imports(&mut self) -> Imports<'a> {
+    fn collect_imports(&mut self) -> Imports<'a, 'doc> {
         let mut imports = Imports::new();
 
         for function in &self.module.definitions.functions {
@@ -270,7 +281,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
     /// Recurses through a type and any types it references, registering all of their imports.
     ///
-    fn collect_imports_for_type<'b>(&mut self, type_: &'b Type, imports: &mut Imports<'a>) {
+    fn collect_imports_for_type<'b>(&mut self, type_: &'b Type, imports: &mut Imports<'a, 'doc>) {
         match &type_ {
             Type::Named {
                 package,
@@ -320,7 +331,7 @@ impl<'a> TypeScriptGenerator<'a> {
     ///
     fn register_import<'b>(
         &mut self,
-        imports: &mut Imports<'a>,
+        imports: &mut Imports<'a, 'doc>,
         package: &'b str,
         module: &'b str,
     ) {
@@ -350,29 +361,35 @@ impl<'a> TypeScriptGenerator<'a> {
         }
     }
 
-    fn definitions(&mut self, imports: &mut Imports<'_>) -> Vec<Document<'a>> {
+    fn definitions(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        imports: &mut Imports<'a, 'doc>,
+    ) -> Vec<Document<'a, 'doc>> {
         let mut documents = vec![];
 
         for custom_type in &self.module.definitions.custom_types {
-            if let Some(mut new_documents) = self.custom_type_definition(custom_type, imports) {
+            if let Some(mut new_documents) =
+                self.custom_type_definition(arena, custom_type, imports)
+            {
                 documents.append(&mut new_documents);
             }
         }
 
         for type_alias in &self.module.definitions.type_aliases {
-            if let Some(document) = self.type_alias(type_alias) {
+            if let Some(document) = self.type_alias(arena, type_alias) {
                 documents.push(document);
             }
         }
 
         for constant in &self.module.definitions.constants {
-            if let Some(document) = self.module_constant(constant) {
+            if let Some(document) = self.module_constant(arena, constant) {
                 documents.push(document);
             }
         }
 
         for function in &self.module.definitions.functions {
-            if let Some(document) = self.module_function(function) {
+            if let Some(document) = self.module_function(arena, function) {
                 documents.push(document);
             }
         }
@@ -380,16 +397,21 @@ impl<'a> TypeScriptGenerator<'a> {
         documents
     }
 
-    fn type_alias(&mut self, type_alias: &TypedTypeAlias) -> Option<Document<'a>> {
+    fn type_alias(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        type_alias: &TypedTypeAlias,
+    ) -> Option<Document<'a, 'doc>> {
         if !type_alias.publicity.is_importable() {
             return None;
         }
 
         Some(docvec![
+            arena,
             "export type ",
             ts_safe_type_name(type_alias.alias.to_string()),
             " = ",
-            self.print_type(&type_alias.type_),
+            self.print_type(arena, &type_alias.type_),
             ";"
         ])
     }
@@ -404,9 +426,10 @@ impl<'a> TypeScriptGenerator<'a> {
     ///
     fn custom_type_definition(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         custom_type: &'a TypedCustomType,
-        imports: &mut Imports<'_>,
-    ) -> Option<Vec<Document<'a>>> {
+        imports: &mut Imports<'a, 'doc>,
+    ) -> Option<Vec<Document<'a, 'doc>>> {
         let TypedCustomType {
             name,
             publicity,
@@ -424,12 +447,17 @@ impl<'a> TypeScriptGenerator<'a> {
             Publicity::Public
         };
 
-        let type_name = name_with_generics(eco_format!("{name}$").to_doc(), typed_parameters);
+        let type_name = name_with_generics(
+            arena,
+            eco_format!("{name}$").to_doc(arena),
+            typed_parameters,
+        );
 
         let mut definitions = constructors
             .iter()
             .map(|constructor| {
                 self.variant_definition(
+                    arena,
                     constructor,
                     constructor_publicity,
                     name,
@@ -443,23 +471,24 @@ impl<'a> TypeScriptGenerator<'a> {
             if let Some((module, external_name, _location)) = external_javascript {
                 let member = Member {
                     name: external_name.clone(),
-                    alias: Some(eco_format!("{name}$").to_doc()),
+                    alias: Some(eco_format!("{name}$").to_doc(arena)),
                 };
                 imports.register_export(eco_format!("{name}$"));
 
                 imports.register_module(module.clone(), [], [member]);
                 return Some(Vec::new());
             } else {
-                "any".to_doc()
+                "any".to_doc(arena)
             }
         } else {
             let constructors = constructors.iter().map(|x| {
                 name_with_generics(
-                    super::maybe_escape_identifier(&x.name).to_doc(),
+                    arena,
+                    super::maybe_escape_identifier(&x.name).to_doc(arena),
                     x.arguments.iter().map(|a| &a.type_),
                 )
             });
-            join(constructors, break_("| ", " | "))
+            arena.join(constructors, arena.break_("| ", " | "))
         };
 
         let head = if publicity.is_private() {
@@ -468,7 +497,14 @@ impl<'a> TypeScriptGenerator<'a> {
             "export type "
         };
 
-        definitions.push(docvec![head, type_name.clone(), " = ", definition, ";",]);
+        definitions.push(docvec![
+            arena,
+            head,
+            type_name.clone(),
+            " = ",
+            definition,
+            ";",
+        ]);
 
         // Generate getters for fields shared between variants
         if let Some(accessors_map) = self.module.type_info.accessors.get(name)
@@ -480,6 +516,7 @@ impl<'a> TypeScriptGenerator<'a> {
             && constructor_publicity.is_public()
         {
             definitions.push(self.shared_custom_type_fields(
+                arena,
                 name,
                 &type_name,
                 typed_parameters,
@@ -492,14 +529,15 @@ impl<'a> TypeScriptGenerator<'a> {
 
     fn variant_definition(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         constructor: &'a TypedRecordConstructor,
         publicity: Publicity,
         type_name: &'a str,
-        type_name_with_generics: &Document<'a>,
+        type_name_with_generics: &Document<'a, 'doc>,
         type_parameters: &'a [Arc<Type>],
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         self.set_prelude_used();
-        let class_definition = self.variant_class_definition(constructor, publicity);
+        let class_definition = self.variant_class_definition(arena, constructor, publicity);
 
         // If the custom type is private or opaque, we don't need to generate API
         // functions for it.
@@ -508,14 +546,16 @@ impl<'a> TypeScriptGenerator<'a> {
         }
 
         let constructor_definition = self.variant_constructor_definition(
+            arena,
             constructor,
             type_name,
             type_name_with_generics,
             type_parameters,
         );
         let variant_check_definition =
-            self.variant_check_definition(constructor, type_name, type_parameters);
+            self.variant_check_definition(arena, constructor, type_name, type_parameters);
         let fields_definition = self.variant_fields_definition(
+            arena,
             constructor,
             type_name,
             type_name_with_generics,
@@ -523,10 +563,11 @@ impl<'a> TypeScriptGenerator<'a> {
         );
 
         docvec![
+            arena,
             class_definition,
-            line(),
+            LINE_DOCUMENT,
             constructor_definition,
-            line(),
+            LINE_DOCUMENT,
             variant_check_definition,
             fields_definition,
         ]
@@ -534,34 +575,39 @@ impl<'a> TypeScriptGenerator<'a> {
 
     fn variant_class_definition(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         constructor: &'a TypedRecordConstructor,
         publicity: Publicity,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let head = docvec![
+            arena,
             if publicity.is_public() {
-                "export ".to_doc()
+                "export ".to_doc(arena)
             } else {
-                "declare ".to_doc()
+                "declare ".to_doc(arena)
             },
             "class ",
             name_with_generics(
-                super::maybe_escape_identifier(&constructor.name).to_doc(),
+                arena,
+                super::maybe_escape_identifier(&constructor.name).to_doc(arena),
                 constructor.arguments.iter().map(|a| &a.type_)
             ),
             " extends _.CustomType {"
         ];
 
         if constructor.arguments.is_empty() {
-            return head.append("}");
+            return head.append(arena, "}");
         };
 
         let class_body = docvec![
-            line(),
+            arena,
+            LINE_DOCUMENT,
             "/** @deprecated */",
-            line(),
+            LINE_DOCUMENT,
             // First add the constructor
             "constructor",
             wrap_arguments(
+                arena,
                 constructor
                     .arguments
                     .iter()
@@ -572,49 +618,52 @@ impl<'a> TypeScriptGenerator<'a> {
                             .as_ref()
                             .map(|(_, s)| super::maybe_escape_identifier(s))
                             .unwrap_or_else(|| eco_format!("argument${i}"))
-                            .to_doc();
+                            .to_doc(arena);
                         docvec![
+                            arena,
                             name,
                             ": ",
-                            self.do_print_force_generic_param(&argument.type_)
+                            self.do_print_force_generic_param(arena, &argument.type_)
                         ]
                     })
             ),
             ";",
-            line(),
+            LINE_DOCUMENT,
             // Then add each field to the class
-            join(
+            arena.join(
                 constructor.arguments.iter().enumerate().map(|(i, arg)| {
                     let name = arg
                         .label
                         .as_ref()
                         .map(|(_, s)| super::maybe_escape_property(s))
                         .unwrap_or_else(|| eco_format!("{i}"))
-                        .to_doc();
+                        .to_doc(arena);
                     docvec![
+                        arena,
                         "/** @deprecated */",
-                        line(),
+                        LINE_DOCUMENT,
                         name,
                         ": ",
-                        self.do_print_force_generic_param(&arg.type_),
+                        self.do_print_force_generic_param(arena, &arg.type_),
                         ";"
                     ]
                 }),
-                line(),
+                LINE_DOCUMENT,
             ),
         ]
-        .nest(INDENT);
+        .nest(arena, INDENT);
 
-        docvec![head, class_body, line(), "}"]
+        docvec![arena, head, class_body, LINE_DOCUMENT, "}"]
     }
 
     fn variant_constructor_definition(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
-        type_name_with_generics: &Document<'a>,
+        type_name_with_generics: &Document<'a, 'doc>,
         type_parameters: &'a [Arc<Type>],
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let mut arguments = Vec::new();
 
         for (index, parameter) in constructor.arguments.iter().enumerate() {
@@ -625,9 +674,10 @@ impl<'a> TypeScriptGenerator<'a> {
             };
 
             arguments.push(docvec![
+                arena,
                 name,
                 ": ",
-                self.do_print_force_generic_param(&parameter.type_)
+                self.do_print_force_generic_param(arena, &parameter.type_)
             ])
         }
 
@@ -635,40 +685,48 @@ impl<'a> TypeScriptGenerator<'a> {
             "{type_name}${variant_name}",
             variant_name = constructor.name
         )
-        .to_doc();
+        .to_doc(arena);
 
         let has_arguments = !arguments.is_empty();
 
         docvec![
+            arena,
             "export function ",
-            name_with_generics(function_name, type_parameters),
+            name_with_generics(arena, function_name, type_parameters),
             "(",
-            docvec![break_("", ""), join(arguments, break_(",", ", ")),].nest(INDENT),
-            break_(if has_arguments { "," } else { "" }, ""),
+            docvec![
+                arena,
+                arena.break_("", ""),
+                arena.join(arguments, arena.break_(",", ", ")),
+            ]
+            .nest(arena, INDENT),
+            arena.break_(if has_arguments { "," } else { "" }, ""),
             "): ",
             type_name_with_generics.clone(),
             ";"
         ]
-        .group()
+        .group(arena)
     }
 
     fn variant_check_definition(
         &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
         type_parameters: &'a [Arc<Type>],
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let function_name = eco_format!(
             "{type_name}$is{variant_name}",
             variant_name = constructor.name
         )
-        .to_doc();
+        .to_doc(arena);
         let mut document = docvec![
+            arena,
             "export function ",
-            name_with_generics(function_name, type_parameters),
+            name_with_generics(arena, function_name, type_parameters),
             "(",
-            docvec![break_("", "",), "value: any"].nest(INDENT),
-            break_(",", ""),
+            docvec![arena, arena.break_("", "",), "value: any"].nest(arena, INDENT),
+            arena.break_(",", ""),
             "): value is ",
             type_name,
             "$",
@@ -676,24 +734,25 @@ impl<'a> TypeScriptGenerator<'a> {
         if !type_parameters.is_empty() {
             for i in 0..type_parameters.len() {
                 if i == 0 {
-                    document = document.append("<unknown");
+                    document = document.append(arena, "<unknown");
                 } else {
-                    document = document.append(", unknown");
+                    document = document.append(arena, ", unknown");
                 }
             }
-            document = document.append('>');
+            document = document.append(arena, '>');
         };
-        document = document.append(';');
-        document.group()
+        document = document.append(arena, ';');
+        document.group(arena)
     }
 
     fn variant_fields_definition(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         constructor: &'a TypedRecordConstructor,
         type_name: &'a str,
-        type_name_with_generics: &Document<'a>,
+        type_name_with_generics: &Document<'a, 'doc>,
         type_parameters: &'a [Arc<Type>],
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let mut functions = Vec::new();
 
         for (index, argument) in constructor.arguments.iter().enumerate() {
@@ -707,22 +766,28 @@ impl<'a> TypeScriptGenerator<'a> {
                 "{type_name}${variant_name}${index}",
                 variant_name = constructor.name
             )
-            .to_doc();
+            .to_doc(arena);
 
             functions.push(
                 docvec![
-                    line(),
+                    arena,
+                    LINE_DOCUMENT,
                     "export function ",
-                    name_with_generics(function_name, type_parameters),
+                    name_with_generics(arena, function_name, type_parameters),
                     "(",
-                    docvec![break_("", "",), "value: ", type_name_with_generics.clone(),]
-                        .nest(INDENT),
-                    break_(",", ""),
+                    docvec![
+                        arena,
+                        arena.break_("", "",),
+                        "value: ",
+                        type_name_with_generics.clone(),
+                    ]
+                    .nest(arena, INDENT),
+                    arena.break_(",", ""),
                     "): ",
-                    self.do_print_force_generic_param(&argument.type_),
+                    self.do_print_force_generic_param(arena, &argument.type_),
                     ";",
                 ]
-                .group(),
+                .group(arena),
             );
 
             // If the argument is labelled, also generate a getter for the labelled
@@ -732,73 +797,95 @@ impl<'a> TypeScriptGenerator<'a> {
                     "{type_name}${variant_name}${label}",
                     variant_name = constructor.name
                 )
-                .to_doc();
+                .to_doc(arena);
 
                 functions.push(
                     docvec![
-                        line(),
+                        arena,
+                        LINE_DOCUMENT,
                         "export function ",
-                        name_with_generics(function_name, type_parameters),
+                        name_with_generics(arena, function_name, type_parameters),
                         "(",
-                        docvec![break_("", "",), "value: ", type_name_with_generics.clone(),]
-                            .nest(INDENT),
-                        break_(",", ""),
+                        docvec![
+                            arena,
+                            arena.break_("", "",),
+                            "value: ",
+                            type_name_with_generics.clone(),
+                        ]
+                        .nest(arena, INDENT),
+                        arena.break_(",", ""),
                         "): ",
-                        self.do_print_force_generic_param(&argument.type_),
+                        self.do_print_force_generic_param(arena, &argument.type_),
                         ";",
                     ]
-                    .group(),
+                    .group(arena),
                 );
             }
         }
 
-        concat(functions)
+        arena.concat(functions)
     }
 
     fn shared_custom_type_fields(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         type_name: &'a str,
-        type_name_with_generics: &Document<'a>,
+        type_name_with_generics: &Document<'a, 'doc>,
         type_parameters: &'a [Arc<Type>],
         shared_accessors: &HashMap<EcoString, RecordAccessor>,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let accessors = shared_accessors
             .iter()
             .sorted_by_key(|(name, _)| *name)
             .map(|(field, accessor)| {
-                let function_name = eco_format!("{type_name}${field}").to_doc();
+                let function_name = eco_format!("{type_name}${field}").to_doc(arena);
 
                 docvec![
+                    arena,
                     "export function ",
-                    name_with_generics(function_name, type_parameters),
+                    name_with_generics(arena, function_name, type_parameters),
                     "(",
-                    docvec![break_("", "",), "value: ", type_name_with_generics.clone(),]
-                        .nest(INDENT),
-                    break_(",", ""),
+                    docvec![
+                        arena,
+                        arena.break_("", "",),
+                        "value: ",
+                        type_name_with_generics.clone(),
+                    ]
+                    .nest(arena, INDENT),
+                    arena.break_(",", ""),
                     "): ",
-                    self.do_print_force_generic_param(&accessor.type_),
+                    self.do_print_force_generic_param(arena, &accessor.type_),
                     ";"
                 ]
-                .group()
+                .group(arena)
             });
-        join(accessors, line())
+        arena.join(accessors, LINE_DOCUMENT)
     }
 
-    fn module_constant(&mut self, constant: &TypedModuleConstant) -> Option<Document<'a>> {
+    fn module_constant(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        constant: &TypedModuleConstant,
+    ) -> Option<Document<'a, 'doc>> {
         if !constant.publicity.is_importable() {
             return None;
         }
 
         Some(docvec![
+            arena,
             "export const ",
             super::maybe_escape_identifier(&constant.name),
             ": ",
-            self.print_type(&constant.value.type_()),
+            self.print_type(arena, &constant.value.type_()),
             ";",
         ])
     }
 
-    fn module_function(&mut self, function: &'a TypedFunction) -> Option<Document<'a>> {
+    fn module_function(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        function: &'a TypedFunction,
+    ) -> Option<Document<'a, 'doc>> {
         let TypedFunction {
             name: Some((_, name)),
             arguments,
@@ -818,48 +905,66 @@ impl<'a> TypeScriptGenerator<'a> {
             HashMap::new(),
             std::iter::once(return_type).chain(arguments.iter().map(|a| &a.type_)),
         );
-        let generic_names: Vec<Document<'_>> = generic_usages
+        let generic_names: Vec<Document<'_, '_>> = generic_usages
             .iter()
             .filter(|(_id, use_count)| **use_count > 1)
             .sorted_by_key(|x| x.0)
-            .map(|(id, _use_count)| id_to_type_var(*id))
+            .map(|(id, _use_count)| id_to_type_var(arena, *id))
             .collect();
 
         Some(docvec![
+            arena,
             "export function ",
             super::maybe_escape_identifier(name),
             if generic_names.is_empty() {
-                super::nil()
+                EMPTY_DOCUMENT
             } else {
-                wrap_generic_arguments(generic_names)
+                wrap_generic_arguments(arena, generic_names)
             },
-            wrap_arguments(arguments.iter().enumerate().map(|(i, argument)| {
-                match argument.get_variable_name() {
-                    None => {
-                        docvec![
-                            "x",
-                            i,
+            wrap_arguments(
+                arena,
+                arguments.iter().enumerate().map(|(i, argument)| {
+                    match argument.get_variable_name() {
+                        None => {
+                            docvec![
+                                arena,
+                                "x",
+                                i,
+                                ": ",
+                                self.print_type_with_generic_usages(
+                                    arena,
+                                    &argument.type_,
+                                    &generic_usages
+                                )
+                            ]
+                        }
+                        Some(name) => docvec![
+                            arena,
+                            super::maybe_escape_identifier(name),
                             ": ",
-                            self.print_type_with_generic_usages(&argument.type_, &generic_usages)
-                        ]
+                            self.print_type_with_generic_usages(
+                                arena,
+                                &argument.type_,
+                                &generic_usages
+                            )
+                        ],
                     }
-                    Some(name) => docvec![
-                        super::maybe_escape_identifier(name),
-                        ": ",
-                        self.print_type_with_generic_usages(&argument.type_, &generic_usages)
-                    ],
-                }
-            }),),
+                }),
+            ),
             ": ",
-            self.print_type_with_generic_usages(return_type, &generic_usages),
+            self.print_type_with_generic_usages(arena, return_type, &generic_usages),
             ";",
         ])
     }
 
     /// Converts a Gleam type into a TypeScript type string
     ///
-    pub fn print_type(&mut self, type_: &Type) -> Document<'static> {
-        self.do_print(type_, GenericPrinting::AsAny)
+    pub fn print_type(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        type_: &Type,
+    ) -> Document<'a, 'doc> {
+        self.do_print(arena, type_, GenericPrinting::AsAny)
     }
 
     /// Helper function for generating a TypeScript type string after collecting
@@ -867,10 +972,11 @@ impl<'a> TypeScriptGenerator<'a> {
     ///
     pub fn print_type_with_generic_usages(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         type_: &Type,
         generic_usages: &HashMap<u64, u64>,
-    ) -> Document<'static> {
-        self.do_print(type_, GenericPrinting::FromUsage(generic_usages))
+    ) -> Document<'a, 'doc> {
+        self.do_print(arena, type_, GenericPrinting::FromUsage(generic_usages))
     }
 
     /// Get the locally used name for a module. Either the last segment, or the
@@ -892,11 +998,12 @@ impl<'a> TypeScriptGenerator<'a> {
 
     fn do_print(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         type_: &Type,
         generic_printing: GenericPrinting<'_>,
-    ) -> Document<'static> {
+    ) -> Document<'a, 'doc> {
         match type_ {
-            Type::Var { type_ } => self.print_var(&type_.borrow(), generic_printing),
+            Type::Var { type_ } => self.print_var(arena, &type_.borrow(), generic_printing),
 
             Type::Named {
                 name,
@@ -904,7 +1011,7 @@ impl<'a> TypeScriptGenerator<'a> {
                 arguments,
                 ..
             } if is_prelude_module(module) => {
-                self.print_prelude_type(name, arguments, generic_printing)
+                self.print_prelude_type(arena, name, arguments, generic_printing)
             }
 
             Type::Named {
@@ -912,21 +1019,30 @@ impl<'a> TypeScriptGenerator<'a> {
                 arguments,
                 module,
                 ..
-            } => self.print_type_app(name, arguments, module, generic_printing),
+            } => self.print_type_app(arena, name, arguments, module, generic_printing),
 
-            Type::Fn { arguments, return_ } => self.print_fn(arguments, return_, generic_printing),
+            Type::Fn { arguments, return_ } => {
+                self.print_fn(arena, arguments, return_, generic_printing)
+            }
 
             Type::Tuple { elements } => tuple(
+                arena,
                 elements
                     .iter()
-                    .map(|element| self.do_print(element, generic_printing)),
+                    .map(|element| self.do_print(arena, element, generic_printing)),
             ),
         }
     }
 
-    fn do_print_force_generic_param(&mut self, type_: &Type) -> Document<'static> {
+    fn do_print_force_generic_param(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        type_: &Type,
+    ) -> Document<'a, 'doc> {
         match type_ {
-            Type::Var { type_ } => self.print_var(&type_.borrow(), GenericPrinting::AlwaysGeneric),
+            Type::Var { type_ } => {
+                self.print_var(arena, &type_.borrow(), GenericPrinting::AlwaysGeneric)
+            }
 
             Type::Named {
                 name,
@@ -934,7 +1050,7 @@ impl<'a> TypeScriptGenerator<'a> {
                 arguments,
                 ..
             } if is_prelude_module(module) => {
-                self.print_prelude_type(name, arguments, GenericPrinting::AlwaysGeneric)
+                self.print_prelude_type(arena, name, arguments, GenericPrinting::AlwaysGeneric)
             }
 
             Type::Named {
@@ -942,36 +1058,44 @@ impl<'a> TypeScriptGenerator<'a> {
                 arguments,
                 module,
                 ..
-            } => self.print_type_app(name, arguments, module, GenericPrinting::AlwaysGeneric),
+            } => self.print_type_app(
+                arena,
+                name,
+                arguments,
+                module,
+                GenericPrinting::AlwaysGeneric,
+            ),
 
             Type::Fn { arguments, return_ } => {
-                self.print_fn(arguments, return_, GenericPrinting::AlwaysGeneric)
+                self.print_fn(arena, arguments, return_, GenericPrinting::AlwaysGeneric)
             }
 
             Type::Tuple { elements } => tuple(
+                arena,
                 elements
                     .iter()
-                    .map(|element| self.do_print(element, GenericPrinting::AlwaysGeneric)),
+                    .map(|element| self.do_print(arena, element, GenericPrinting::AlwaysGeneric)),
             ),
         }
     }
 
     fn print_var(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         type_: &TypeVar,
         generic_printing: GenericPrinting<'_>,
-    ) -> Document<'static> {
+    ) -> Document<'a, 'doc> {
         match type_ {
             TypeVar::Unbound { id } | TypeVar::Generic { id } => match generic_printing {
                 GenericPrinting::FromUsage(usages) => match usages.get(id) {
-                    Some(&0) => super::nil(),
-                    Some(&1) => "any".to_doc(),
-                    _ => id_to_type_var(*id),
+                    Some(&0) => EMPTY_DOCUMENT,
+                    Some(&1) => "any".to_doc(arena),
+                    _ => id_to_type_var(arena, *id),
                 },
-                GenericPrinting::AlwaysGeneric => id_to_type_var(*id),
-                GenericPrinting::AsAny => "any".to_doc(),
+                GenericPrinting::AlwaysGeneric => id_to_type_var(arena, *id),
+                GenericPrinting::AsAny => "any".to_doc(arena),
             },
-            TypeVar::Link { type_ } => self.do_print(type_, generic_printing),
+            TypeVar::Link { type_ } => self.do_print(arena, type_, generic_printing),
         }
     }
 
@@ -982,40 +1106,49 @@ impl<'a> TypeScriptGenerator<'a> {
     ///
     fn print_prelude_type(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         name: &str,
         arguments: &[Arc<Type>],
         generic_printing: GenericPrinting<'_>,
-    ) -> Document<'static> {
+    ) -> Document<'a, 'doc> {
         match name {
-            "Nil" => "undefined".to_doc(),
-            "Int" | "Float" => "number".to_doc(),
+            "Nil" => "undefined".to_doc(arena),
+            "Int" | "Float" => "number".to_doc(arena),
             "UtfCodepoint" => {
                 self.tracker.prelude_used = true;
-                "_.UtfCodepoint".to_doc()
+                "_.UtfCodepoint".to_doc(arena)
             }
-            "String" => "string".to_doc(),
-            "Bool" => "boolean".to_doc(),
+            "String" => "string".to_doc(arena),
+            "Bool" => "boolean".to_doc(arena),
             "BitArray" => {
                 self.tracker.prelude_used = true;
-                "_.BitArray".to_doc()
+                "_.BitArray".to_doc(arena)
             }
             "List" => {
                 self.tracker.prelude_used = true;
                 docvec![
+                    arena,
                     "_.List",
                     wrap_generic_arguments(
-                        arguments
-                            .iter()
-                            .map(|argument| self.do_print(argument, generic_printing))
+                        arena,
+                        arguments.iter().map(|argument| self.do_print(
+                            arena,
+                            argument,
+                            generic_printing
+                        ))
                     )
                 ]
             }
             "Result" => {
                 self.tracker.prelude_used = true;
                 docvec![
+                    arena,
                     "_.Result",
                     wrap_generic_arguments(
-                        arguments.iter().map(|x| self.do_print(x, generic_printing))
+                        arena,
+                        arguments
+                            .iter()
+                            .map(|x| self.do_print(arena, x, generic_printing))
                     )
                 ]
             }
@@ -1030,18 +1163,19 @@ impl<'a> TypeScriptGenerator<'a> {
     ///
     fn print_type_app(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         name: &str,
         arguments: &[Arc<Type>],
         module: &str,
         generic_printing: GenericPrinting<'_>,
-    ) -> Document<'static> {
+    ) -> Document<'a, 'doc> {
         let name = eco_format!("{}$", ts_safe_type_name(name.to_string()));
         let name = match module == self.module.name {
-            true => name.to_doc(),
+            true => name.to_doc(arena),
             false => {
                 // If type comes from a separate module, use that module's name
                 // as a TypeScript namespace prefix
-                docvec![self.module_name(module), ".", name]
+                docvec![arena, self.module_name(module), ".", name]
             }
         };
         if arguments.is_empty() {
@@ -1050,11 +1184,13 @@ impl<'a> TypeScriptGenerator<'a> {
 
         // If the App type takes arguments, pass them in as TypeScript generics
         docvec![
+            arena,
             name,
             wrap_generic_arguments(
+                arena,
                 arguments
                     .iter()
-                    .map(|argument| self.do_print(argument, generic_printing))
+                    .map(|argument| self.do_print(arena, argument, generic_printing))
             )
         ]
     }
@@ -1063,19 +1199,25 @@ impl<'a> TypeScriptGenerator<'a> {
     ///
     fn print_fn(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         arguments: &[Arc<Type>],
         return_: &Type,
         generic_printing: GenericPrinting<'_>,
-    ) -> Document<'static> {
+    ) -> Document<'a, 'doc> {
         docvec![
-            wrap_arguments(arguments.iter().enumerate().map(|(idx, argument)| docvec![
-                "x",
-                idx,
-                ": ",
-                self.do_print(argument, generic_printing)
-            ])),
+            arena,
+            wrap_arguments(
+                arena,
+                arguments.iter().enumerate().map(|(idx, argument)| docvec![
+                    arena,
+                    "x",
+                    idx,
+                    ": ",
+                    self.do_print(arena, argument, generic_printing)
+                ])
+            ),
             " => ",
-            self.do_print(return_, generic_printing)
+            self.do_print(arena, return_, generic_printing)
         ]
     }
 

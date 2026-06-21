@@ -7,7 +7,6 @@ use super::{
 };
 use crate::{
     ast::{AssignmentKind, Endianness, SrcSpan, TypedClause, TypedExpr, TypedPattern},
-    docvec,
     exhaustiveness::{
         BitArrayMatchedValue, BitArrayTest, Body, BoundValue, CompiledCase, Decision,
         FallbackCheck, MatchTest, Offset, ReadAction, ReadSize, ReadType, RuntimeCheck,
@@ -18,25 +17,26 @@ use crate::{
         expression::{eco_string_int, string},
         maybe_escape_property,
     },
-    pretty::{Document, Documentable, break_, concat, join, line, nil},
     strings::{convert_string_escape_chars, length_utf16},
 };
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use num_bigint::BigInt;
+use pretty_arena::*;
 use std::{collections::HashMap, sync::OnceLock};
 
 pub const ASSIGNMENT_VAR: &str = "$";
 
-pub fn case<'a>(
+pub fn case<'a, 'doc>(
+    arena: &'doc DocumentArena<'a, 'doc>,
     compiled_case: &'a CompiledCase,
     clauses: &'a [TypedClause],
     subjects: &'a [TypedExpr],
-    expression_generator: &mut Generator<'_, 'a>,
-) -> Document<'a> {
+    expression_generator: &mut Generator<'_, 'a, 'doc>,
+) -> Document<'a, 'doc> {
     let scope_position = expression_generator.scope_position.clone();
     let mut variables = Variables::new(expression_generator, VariableAssignment::Declare);
-    let assignments = variables.assign_case_subjects(compiled_case, subjects);
+    let assignments = variables.assign_case_subjects(arena, compiled_case, subjects);
     let mut printer = CasePrinter {
         variables,
         assignments: &assignments,
@@ -73,46 +73,48 @@ pub fn case<'a>(
         //
         // So in this special case we have to wrap everything in a block.
         tree @ Decision::Guard { .. } if !scope_position.is_tail() => break_block(
+            arena,
             printer
-                .inside_new_scope(|this| this.decision(tree))
-                .into_doc(),
+                .inside_new_scope(|this| this.decision(arena, tree))
+                .into_doc(arena),
         ),
 
         tree @ (Decision::Run { .. }
         | Decision::Guard { .. }
         | Decision::Switch { .. }
-        | Decision::Fail) => printer.decision(tree).into_doc(),
+        | Decision::Fail) => printer.decision(arena, tree).into_doc(arena),
     };
     docvec![
+        arena,
         subjects
             .first()
-            .map(|subject| expression_generator.source_map_tracker(subject.location().start))
-            .unwrap_or_else(nil),
-        assignments_to_doc(&mut *expression_generator, assignments),
+            .map(|subject| expression_generator.source_map_tracker(arena, subject.location().start))
+            .unwrap_or(EMPTY_DOCUMENT),
+        assignments_to_doc(arena, &mut *expression_generator, assignments),
         decision
     ]
-    .force_break()
+    .force_break(arena)
 }
 
 /// The generated code for a decision tree.
-enum CaseBody<'a> {
+enum CaseBody<'a, 'doc> {
     /// A JavaScript `if`` statement by itself. This can be merged with any
     /// preceding `else` statements to form an `else if` construct.
     If {
-        check: Document<'a>,
-        body: Document<'a>,
+        check: Document<'a, 'doc>,
+        body: Document<'a, 'doc>,
     },
     /// A sequence of statements. This must be wrapped as the body of an `if` or
     /// `else` statement.
-    Statements(Document<'a>),
+    Statements(Document<'a, 'doc>),
 
     /// A JavaScript `if` statement followed by a single `else` clause. In some
     /// cases this can be flattened to reduce the size of the generated decision
     /// tree.
     IfElse {
-        check: Document<'a>,
-        if_body: Document<'a>,
-        else_body: Document<'a>,
+        check: Document<'a, 'doc>,
+        if_body: Document<'a, 'doc>,
+        else_body: Document<'a, 'doc>,
         /// The decision in the tree that is used to generate the code for the
         /// `else` clause of this statement. If this is the same as another `if`-
         /// `else` statement, the two can be merged into one.
@@ -122,21 +124,23 @@ enum CaseBody<'a> {
     /// A JavaScript `if` statement followed by more than one `else` clause. This
     /// can sometimes be merged with preceding `else` statements in the same way
     /// that `if` can.
-    IfElseChain(Document<'a>),
+    IfElseChain(Document<'a, 'doc>),
 }
 
-impl<'a> CaseBody<'a> {
-    fn into_doc(self) -> Document<'a> {
+impl<'a, 'doc> CaseBody<'a, 'doc> {
+    fn into_doc(self, arena: &'doc DocumentArena<'a, 'doc>) -> Document<'a, 'doc> {
         match self {
             CaseBody::If { check, body } => docvec![
+                arena,
                 "if (",
-                break_("", "")
-                    .append(check)
-                    .nest(INDENT)
-                    .append(break_("", ""))
-                    .group(),
+                arena
+                    .break_("", "")
+                    .append(arena, check)
+                    .nest(arena, INDENT)
+                    .append(arena, arena.break_("", ""))
+                    .group(arena),
                 ") ",
-                break_block(body)
+                break_block(arena, body)
             ],
             // If we have some code like the following:
             // ```javascript
@@ -162,12 +166,14 @@ impl<'a> CaseBody<'a> {
                 else_body,
                 ..
             } if if_body.is_empty() => docvec![
+                arena,
                 "if (!(",
-                break_("", "")
-                    .append(check)
-                    .nest(INDENT)
-                    .append(break_("", ""))
-                    .group(),
+                arena
+                    .break_("", "")
+                    .append(arena, check)
+                    .nest(arena, INDENT)
+                    .append(arena, arena.break_("", ""))
+                    .group(arena),
                 ")) ",
                 else_body,
             ],
@@ -177,14 +183,16 @@ impl<'a> CaseBody<'a> {
                 else_body,
                 ..
             } => docvec![
+                arena,
                 "if (",
-                break_("", "")
-                    .append(check)
-                    .nest(INDENT)
-                    .append(break_("", ""))
-                    .group(),
+                arena
+                    .break_("", "")
+                    .append(arena, check)
+                    .nest(arena, INDENT)
+                    .append(arena, arena.break_("", ""))
+                    .group(arena),
                 ") ",
-                break_block(if_body),
+                break_block(arena, if_body),
                 " else ",
                 else_body,
             ],
@@ -194,13 +202,13 @@ impl<'a> CaseBody<'a> {
 
     /// Convert this value into the required document to put directly after an
     /// `else` keyword.
-    fn document_after_else(self) -> Document<'a> {
+    fn document_after_else(self, arena: &'doc DocumentArena<'a, 'doc>) -> Document<'a, 'doc> {
         match self {
             // `if` and `if-else` statements can come directly after an `else` keyword
-            CaseBody::If { .. } | CaseBody::IfElse { .. } => self.into_doc(),
+            CaseBody::If { .. } | CaseBody::IfElse { .. } => self.into_doc(arena),
             CaseBody::IfElseChain(document) => document,
             // Lists of statements must be wrapped in a block
-            CaseBody::Statements(document) => break_block(document),
+            CaseBody::Statements(document) => break_block(arena, document),
         }
     }
 
@@ -212,9 +220,9 @@ impl<'a> CaseBody<'a> {
     }
 }
 
-struct CasePrinter<'module, 'generator, 'a, 'assignments> {
-    variables: Variables<'generator, 'module, 'a>,
-    assignments: &'assignments Vec<SubjectAssignment<'a>>,
+struct CasePrinter<'module, 'generator, 'a, 'assignments, 'doc> {
+    variables: Variables<'generator, 'module, 'a, 'doc>,
+    assignments: &'assignments Vec<SubjectAssignment<'a, 'doc>>,
     kind: DecisionKind<'a>,
 }
 
@@ -232,7 +240,7 @@ enum DecisionKind<'a> {
     },
 }
 
-enum BodyExpression<'a> {
+enum BodyExpression<'a, 'doc> {
     /// This happens when a case expression branch returns the same value that
     /// is being matched on. So instead of rebuilding it from scratch we can
     /// return the case subject directly. For example:
@@ -240,7 +248,7 @@ enum BodyExpression<'a> {
     /// `a -> a`
     /// `[1, ..rest] -> [1, ..rest]`
     ///
-    Variable(Document<'a>),
+    Variable(Document<'a, 'doc>),
 
     /// This happens when a case expression has a complex body that is not just
     /// returning the matched subject. For example:
@@ -248,7 +256,7 @@ enum BodyExpression<'a> {
     /// `_ -> [1, 2, 3]`
     /// `1 -> "wibble"`
     ///
-    Expressions(Document<'a>),
+    Expressions(Document<'a, 'doc>),
 }
 
 /// Code generation for decision trees can look a bit daunting at a first glance
@@ -310,8 +318,12 @@ enum BodyExpression<'a> {
 /// In order to do that we'll be using a `Variables` data structure to hold all
 /// this information about the current scope.
 ///
-impl<'a> CasePrinter<'_, '_, 'a, '_> {
-    fn decision(&mut self, decision: &'a Decision) -> CaseBody<'a> {
+impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
+    fn decision(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        decision: &'a Decision,
+    ) -> CaseBody<'a, 'doc> {
         match decision {
             Decision::Fail => {
                 if let DecisionKind::LetAssert {
@@ -322,7 +334,8 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
                 } = &self.kind
                 {
                     CaseBody::Statements(self.assignment_no_match(
-                        subject.to_doc(),
+                        arena,
+                        subject.to_doc(arena),
                         kind,
                         *subject_location,
                         *pattern_location,
@@ -353,15 +366,16 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
                 let source_map_tracker = self
                     .variables
                     .expression_generator
-                    .source_map_tracker(location.start);
+                    .source_map_tracker(arena, location.start);
                 let bindings = docvec![
+                    arena,
                     source_map_tracker,
-                    self.variables.bindings_doc(&body.bindings)
+                    self.variables.bindings_doc(arena, &body.bindings)
                 ];
-                let body = self.body_expression(body.clause_index);
+                let body = self.body_expression(arena, body.clause_index);
                 let body = match body {
                     BodyExpression::Variable(variable) => variable,
-                    BodyExpression::Expressions(body) => join_with_line(bindings, body),
+                    BodyExpression::Expressions(body) => join_with_line(arena, bindings, body),
                 };
                 CaseBody::Statements(body)
             }
@@ -370,21 +384,25 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
                 choices,
                 fallback,
                 fallback_check,
-            } => self.switch(var, choices, fallback, fallback_check),
+            } => self.switch(arena, var, choices, fallback, fallback_check),
             Decision::Guard {
                 guard,
                 if_true,
                 if_false,
-            } => self.decision_guard(*guard, if_true, if_false),
+            } => self.decision_guard(arena, *guard, if_true, if_false),
         }
     }
 
-    fn body_expression(&mut self, clause_index: usize) -> BodyExpression<'a> {
+    fn body_expression(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        clause_index: usize,
+    ) -> BodyExpression<'a, 'doc> {
         // If we are not in a `case` expression, there is no additional code to
         // execute when a branch matches; we only assign variables bound in the
         // pattern.
         let DecisionKind::Case { clauses } = &self.kind else {
-            return BodyExpression::Expressions(nil());
+            return BodyExpression::Expressions(EMPTY_DOCUMENT);
         };
 
         let clause = &clauses.get(clause_index).expect("invalid clause index");
@@ -400,24 +418,25 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             BodyExpression::Variable(
                 self.variables
                     .expression_generator
-                    .wrap_return(variable.to_doc()),
+                    .wrap_return(arena, variable.to_doc(arena)),
             )
         } else {
             BodyExpression::Expressions(
                 self.variables
                     .expression_generator
-                    .expression_flattening_blocks(body),
+                    .expression_flattening_blocks(arena, body),
             )
         }
     }
 
     fn switch(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         var: &'a Variable,
         choices: &'a [(RuntimeCheck, Decision)],
         fallback: &'a Decision,
         fallback_check: &'a FallbackCheck,
-    ) -> CaseBody<'a> {
+    ) -> CaseBody<'a, 'doc> {
         // If there's just a single choice we can just generate the code for
         // it: no need to do any checking, we know it must match!
         if choices.is_empty() {
@@ -425,7 +444,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             // not just a simple catch all) we need to keep track of all the
             // variables brought into scope by the (always) successfull check.
             if let FallbackCheck::RuntimeCheck { check } = fallback_check {
-                self.variables.record_check_assignments(var, check);
+                self.variables.record_check_assignments(arena, var, check);
             }
 
             // We can't use `inside_new_scope` here without care: the
@@ -451,7 +470,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             let old_segments = self.variables.segment_values.clone();
             let old_segment_names = self.variables.scoped_segment_names.clone();
 
-            let result = self.decision(fallback);
+            let result = self.decision(arena, fallback);
 
             match &self.kind {
                 DecisionKind::Case { .. } => {
@@ -484,7 +503,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             let name = self.variables.next_local_var(&ASSIGNMENT_VAR.into());
             let value = self.variables.get_value(var);
             self.variables.bind(name.clone(), var);
-            assignments.push(let_doc(name, value.to_doc()))
+            assignments.push(let_doc(arena, name, value.to_doc(arena)))
         };
 
         // Variable storing the character code for the first character of a string.
@@ -494,16 +513,16 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
         let first_character_variable = if multiple_single_character_prefix_checks(choices) {
             let name = self.variables.next_local_var(&ASSIGNMENT_VAR.into());
             let string = self.variables.get_value(var);
-            let first_character = docvec![string, ".charCodeAt(0)"];
-            assignments.push(let_doc(name.clone(), first_character));
+            let first_character = docvec![arena, string, ".charCodeAt(0)"];
+            assignments.push(let_doc(arena, name.clone(), first_character));
             Some(name)
         } else {
             None
         };
 
-        let mut if_ = CaseBody::Statements(nil());
+        let mut if_ = CaseBody::Statements(EMPTY_DOCUMENT);
         for (i, (check, decision)) in choices.iter().enumerate() {
-            self.variables.record_check_assignments(var, check);
+            self.variables.record_check_assignments(arena, var, check);
 
             // For each check we generate:
             // - the document to perform such check
@@ -511,28 +530,29 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             // - the assignments we need to bring all the bit array segments
             //   referenced by this check
             let (check_doc, body, mut segment_assignments) = self.inside_new_scope(|this| {
-                let segment_assignments = this.variables.bit_array_segment_assignments(check);
+                let segment_assignments =
+                    this.variables.bit_array_segment_assignments(arena, check);
 
                 // If the pattern matches on a single character, use the character
                 // code instead of `.startsWith`.
                 let check_doc = if let Some(code) = single_character_prefix_code(check) {
                     let first_character = if let Some(variable) = &first_character_variable {
-                        variable.to_doc()
+                        variable.to_doc(arena)
                     } else {
                         // This is the only single-character match in this `case`
                         // expression, so we don't bind it to a variable and just
                         // call `.charCodeAt` inline. This is still faster than
                         // `.startsWith`.
                         let string = this.variables.get_value(var);
-                        docvec![string, ".charCodeAt(0)"]
+                        docvec![arena, string, ".charCodeAt(0)"]
                     };
 
-                    docvec![first_character, " === ", code]
+                    docvec![arena, first_character, " === ", code]
                 } else {
-                    this.variables.runtime_check(var, check)
+                    this.variables.runtime_check(arena, var, check)
                 };
 
-                let body = this.decision(decision);
+                let body = this.decision(arena, decision);
                 (check_doc, body, segment_assignments)
             });
             assignments.append(&mut segment_assignments);
@@ -553,9 +573,10 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
                 //   ...
                 // }
                 // ```
-                CaseBody::If { check, body } => {
-                    (docvec![check_doc, break_(" &&", " && "), check], body)
-                }
+                CaseBody::If { check, body } => (
+                    docvec![arena, check_doc, arena.break_(" &&", " && "), check],
+                    body,
+                ),
 
                 // The following code is a pretty common pattern in the code
                 // generated by decision trees:
@@ -593,11 +614,12 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
                     if_body,
                     fallback_decision: decision,
                     ..
-                } if decision == fallback => {
-                    (docvec![check_doc, break_(" &&", " && "), check], if_body)
-                }
+                } if decision == fallback => (
+                    docvec![arena, check_doc, arena.break_(" &&", " && "), check],
+                    if_body,
+                ),
 
-                if_else @ CaseBody::IfElse { .. } => (check_doc, if_else.into_doc()),
+                if_else @ CaseBody::IfElse { .. } => (check_doc, if_else.into_doc(arena)),
 
                 CaseBody::Statements(document) | CaseBody::IfElseChain(document) => {
                     (check_doc, document)
@@ -612,27 +634,31 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
                 },
                 // If this is the second check, the `if` becomes `else if`
                 CaseBody::If { .. } | CaseBody::IfElse { .. } => CaseBody::IfElseChain(docvec![
-                    if_.into_doc(),
+                    arena,
+                    if_.into_doc(arena),
                     " else if (",
-                    break_("", "")
-                        .append(check_doc)
-                        .nest(INDENT)
-                        .append(break_("", ""))
-                        .group(),
+                    arena
+                        .break_("", "")
+                        .append(arena, check_doc)
+                        .nest(arena, INDENT)
+                        .append(arena, arena.break_("", ""))
+                        .group(arena),
                     ") ",
-                    break_block(body)
+                    break_block(arena, body)
                 ]),
                 CaseBody::IfElseChain(document) | CaseBody::Statements(document) => {
                     CaseBody::IfElseChain(docvec![
+                        arena,
                         document,
                         " else if (",
-                        break_("", "")
-                            .append(check_doc)
-                            .nest(INDENT)
-                            .append(break_("", ""))
-                            .group(),
+                        arena
+                            .break_("", "")
+                            .append(arena, check_doc)
+                            .nest(arena, INDENT)
+                            .append(arena, arena.break_("", ""))
+                            .group(arena),
                         ") ",
-                        break_block(body)
+                        break_block(arena, body)
                     ])
                 }
             };
@@ -643,10 +669,10 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
         // the check itself: the type system ensures that, if we ever get here,
         // the check is going to match no matter what!
         if let FallbackCheck::RuntimeCheck { check } = fallback_check {
-            self.variables.record_check_assignments(var, check);
+            self.variables.record_check_assignments(arena, var, check);
         }
 
-        let else_body = self.inside_new_scope(|this| this.decision(fallback));
+        let else_body = self.inside_new_scope(|this| this.decision(arena, fallback));
         let document = if else_body.is_empty() {
             if_
         } else if let CaseBody::If {
@@ -657,14 +683,15 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             CaseBody::IfElse {
                 check,
                 if_body,
-                else_body: else_body.document_after_else(),
+                else_body: else_body.document_after_else(arena),
                 fallback_decision: fallback,
             }
         } else {
             CaseBody::IfElseChain(docvec![
-                if_.into_doc(),
+                arena,
+                if_.into_doc(arena),
                 " else ",
-                else_body.document_after_else()
+                else_body.document_after_else(arena)
             ])
         };
 
@@ -672,8 +699,9 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             document
         } else {
             CaseBody::Statements(join_with_line(
-                join(assignments, line()),
-                document.into_doc(),
+                arena,
+                arena.join(assignments, LINE_DOCUMENT),
+                document.into_doc(arena),
             ))
         }
     }
@@ -709,10 +737,11 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
 
     fn decision_guard(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         guard: usize,
         if_true: &'a Body,
         if_false: &'a Decision,
-    ) -> CaseBody<'a> {
+    ) -> CaseBody<'a, 'doc> {
         let DecisionKind::Case { clauses } = &self.kind else {
             unreachable!("Guards cannot appear in let assert decision trees")
         };
@@ -736,22 +765,22 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
         let (check_bindings, check, if_true) = self.inside_new_scope(|this| {
             // check_bindings and if_true generation have to be in this scope so that pattern-bound
             // variables used in guards don't leak into other case branches (if_false).
-            let check_bindings = this.variables.bindings_ref_doc(&check_bindings);
-            let check = this.variables.expression_generator.guard(guard);
+            let check_bindings = this.variables.bindings_ref_doc(arena, &check_bindings);
+            let check = this.variables.expression_generator.guard(arena, guard);
             // All the other bindings that are not needed by the guard check will
             // end up directly in the body of the if clause.
-            let if_true_bindings = this.variables.bindings_ref_doc(&if_true_bindings);
-            let if_true_body = this.body_expression(if_true.clause_index);
+            let if_true_bindings = this.variables.bindings_ref_doc(arena, &if_true_bindings);
+            let if_true_body = this.body_expression(arena, if_true.clause_index);
             let if_true = match if_true_body {
                 BodyExpression::Variable(variable) => variable,
                 BodyExpression::Expressions(if_true_body) => {
-                    join_with_line(if_true_bindings, if_true_body)
+                    join_with_line(arena, if_true_bindings, if_true_body)
                 }
             };
             (check_bindings, check, if_true)
         });
 
-        let if_false_body = self.inside_new_scope(|this| this.decision(if_false));
+        let if_false_body = self.inside_new_scope(|this| this.decision(arena, if_false));
 
         // We can now piece everything together into a case body!
         let if_ = if if_false_body.is_empty() {
@@ -763,7 +792,7 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
             CaseBody::IfElse {
                 check,
                 if_body: if_true,
-                else_body: if_false_body.document_after_else(),
+                else_body: if_false_body.document_after_else(arena),
                 fallback_decision: if_false,
             }
         };
@@ -771,17 +800,18 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
         if check_bindings.is_empty() {
             if_
         } else {
-            CaseBody::Statements(join_with_line(check_bindings, if_.into_doc()))
+            CaseBody::Statements(join_with_line(arena, check_bindings, if_.into_doc(arena)))
         }
     }
 
     fn assignment_no_match(
         &mut self,
-        subject: Document<'a>,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        subject: Document<'a, 'doc>,
         kind: &'a AssignmentKind<TypedExpr>,
         subject_location: SrcSpan,
         pattern_location: SrcSpan,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let AssignmentKind::Assert {
             location, message, ..
         } = kind
@@ -791,20 +821,22 @@ impl<'a> CasePrinter<'_, '_, 'a, '_> {
 
         let generator = &mut self.variables.expression_generator;
         let message = match message {
-            None => string("Pattern match failed, no pattern matched the value."),
-            Some(message) => generator
-                .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(message)),
+            None => string(arena, "Pattern match failed, no pattern matched the value."),
+            Some(message) => generator.not_in_tail_position(Some(Ordering::Strict), |this| {
+                this.wrap_expression(arena, message)
+            }),
         };
         generator.throw_error(
+            arena,
             "let_assert",
             &message,
             *location,
             [
                 ("value", subject),
-                ("start", location.start.to_doc()),
-                ("end", subject_location.end.to_doc()),
-                ("pattern_start", pattern_location.start.to_doc()),
-                ("pattern_end", pattern_location.end.to_doc()),
+                ("start", location.start.to_doc(arena)),
+                ("end", subject_location.end.to_doc(arena)),
+                ("pattern_start", pattern_location.start.to_doc(arena)),
+                ("pattern_end", pattern_location.end.to_doc(arena)),
             ],
         )
     }
@@ -854,13 +886,14 @@ fn multiple_single_character_prefix_checks(choices: &[(RuntimeCheck, Decision)])
     false
 }
 
-pub fn let_<'a>(
+pub fn let_<'a, 'doc>(
+    arena: &'doc DocumentArena<'a, 'doc>,
     compiled_case: &'a CompiledCase,
     subject: &'a TypedExpr,
     kind: &'a AssignmentKind<TypedExpr>,
-    expression_generator: &mut Generator<'_, 'a>,
+    expression_generator: &mut Generator<'_, 'a, 'doc>,
     pattern: &'a TypedPattern,
-) -> Document<'a> {
+) -> Document<'a, 'doc> {
     let scope_position = expression_generator.scope_position.clone();
     let variable_assignment_kind = match &compiled_case.tree {
         // If the binding is exhaustive (so no runtime checks need to be done), then
@@ -877,7 +910,7 @@ pub fn let_<'a>(
     };
     let mut variables = Variables::new(expression_generator, variable_assignment_kind);
 
-    let assignment = variables.assign_let_subject(compiled_case, subject);
+    let assignment = variables.assign_let_subject(arena, compiled_case, subject);
     let assignment_name = assignment.name();
     let assignments = vec![assignment];
     let pattern_location = pattern.location();
@@ -891,13 +924,13 @@ pub fn let_<'a>(
             subject: assignment_name.clone(),
         },
     }
-    .decision(&compiled_case.tree);
+    .decision(arena, &compiled_case.tree);
 
-    let assignments_doc = assignments_to_doc(expression_generator, assignments);
+    let assignments_doc = assignments_to_doc(arena, expression_generator, assignments);
 
     let beginning_assignments = match variable_assignment_kind {
         // If the decision tree will generate declarations, don't declare them here.
-        VariableAssignment::Declare => nil(),
+        VariableAssignment::Declare => EMPTY_DOCUMENT,
         // If the decision tree will only assign, declare the variables here.
         VariableAssignment::Reassign => {
             // When we generate `let assert` statements, we want to produce code like
@@ -916,24 +949,40 @@ pub fn let_<'a>(
             // We must generate this after we generate the code for the decision tree
             // itself as we might be re-binding variables which are used in the checks
             // to determine whether the pattern matches or not.
-            concat(pattern.bound_variables().into_iter().map(|bound_variable| {
+            arena.concat(pattern.bound_variables().into_iter().map(|bound_variable| {
                 docvec![
+                    arena,
                     "let ",
                     expression_generator.local_var(&bound_variable.name()),
                     ";",
-                    line()
+                    LINE_DOCUMENT
                 ]
             }))
         }
     };
 
-    let doc = docvec![assignments_doc, beginning_assignments, decision.into_doc()];
+    let doc = docvec![
+        arena,
+        assignments_doc,
+        beginning_assignments,
+        decision.into_doc(arena)
+    ];
 
     match scope_position {
         expression::Position::Expression(_) | expression::Position::Statement => doc,
-        expression::Position::Tail => docvec![doc, line(), "return ", assignment_name, ";"],
+        expression::Position::Tail => {
+            docvec![arena, doc, LINE_DOCUMENT, "return ", assignment_name, ";"]
+        }
         expression::Position::Assign(variable) => {
-            docvec![doc, line(), variable, " = ", assignment_name, ";"]
+            docvec![
+                arena,
+                doc,
+                LINE_DOCUMENT,
+                variable,
+                " = ",
+                assignment_name,
+                ";"
+            ]
         }
     }
 }
@@ -948,8 +997,8 @@ enum VariableAssignment {
 /// itself so we can reuse it both with `case`s and `let`s without rewriting
 /// everything from scratch.
 ///
-struct Variables<'generator, 'module, 'a> {
-    expression_generator: &'generator mut Generator<'module, 'a>,
+struct Variables<'generator, 'module, 'a, 'doc> {
+    expression_generator: &'generator mut Generator<'module, 'a, 'doc>,
 
     /// Whether to bind variables using `let` as we do in `case` expressions,
     /// or to reassign them as we do in `let assert` statements.
@@ -965,7 +1014,7 @@ struct Variables<'generator, 'module, 'a> {
 
     /// The same happens for bit array segments. Unlike pattern variables, we
     /// identify those using their names and store their value as a `Document`.
-    segment_values: HashMap<EcoString, Document<'a>>,
+    segment_values: HashMap<EcoString, Document<'a, 'doc>>,
 
     /// When we discover new variables after a runtime check we don't immediately
     /// generate assignments for each of them, because that could lead to wasted
@@ -1022,9 +1071,9 @@ struct Variables<'generator, 'module, 'a> {
     scoped_segment_names: HashMap<EcoString, EcoString>,
 }
 
-impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
+impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
     fn new(
-        expression_generator: &'generator mut Generator<'module, 'a>,
+        expression_generator: &'generator mut Generator<'module, 'a, 'doc>,
         variable_assignment: VariableAssignment,
     ) -> Self {
         Variables {
@@ -1042,12 +1091,15 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     ///
     fn assign_case_subjects(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         compiled_case: &'a CompiledCase,
         subjects: &'a [TypedExpr],
-    ) -> Vec<SubjectAssignment<'a>> {
+    ) -> Vec<SubjectAssignment<'a, 'doc>> {
         let assignments = subjects
             .iter()
-            .map(|subject| assign_subject(self.expression_generator, subject, Ordering::Strict))
+            .map(|subject| {
+                assign_subject(arena, self.expression_generator, subject, Ordering::Strict)
+            })
             .collect_vec();
 
         for (variable, assignment) in compiled_case
@@ -1070,14 +1122,15 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     ///
     fn assign_let_subject(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         compiled_case: &'a CompiledCase,
         subject: &'a TypedExpr,
-    ) -> SubjectAssignment<'a> {
+    ) -> SubjectAssignment<'a, 'doc> {
         let variable = compiled_case
             .subject_variables
             .first()
             .expect("decision tree with no subjects");
-        let assignment = assign_subject(self.expression_generator, subject, Ordering::Loose);
+        let assignment = assign_subject(arena, self.expression_generator, subject, Ordering::Loose);
         self.set_value(variable, assignment.name());
         self.bind(assignment.name(), variable);
         assignment
@@ -1118,11 +1171,12 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     /// segments instead of pattern variables.
     fn set_segment_value(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         bit_array: &Variable,
         segment_name: EcoString,
         read_action: &ReadAction,
     ) {
-        let value = self.read_action_to_doc(bit_array, read_action);
+        let value = self.read_action_to_doc(arena, bit_array, read_action);
         let _ = self.segment_values.insert(segment_name, value);
     }
 
@@ -1180,41 +1234,52 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         let _ = self.scoped_segment_names.insert(segment, bound_to_variable);
     }
 
-    fn bindings_doc(&mut self, bindings: &'a [(EcoString, BoundValue)]) -> Document<'a> {
-        let bindings =
-            (bindings.iter()).map(|(variable, value)| self.body_binding_doc(variable, value));
-        join(bindings, line())
+    fn bindings_doc(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        bindings: &'a [(EcoString, BoundValue)],
+    ) -> Document<'a, 'doc> {
+        let bindings = (bindings.iter())
+            .map(|(variable, value)| self.body_binding_doc(arena, variable, value));
+        arena.join(bindings, LINE_DOCUMENT)
     }
 
-    fn bindings_ref_doc(&mut self, bindings: &[&'a (EcoString, BoundValue)]) -> Document<'a> {
-        let bindings =
-            (bindings.iter()).map(|(variable, value)| self.body_binding_doc(variable, value));
-        join(bindings, line())
+    fn bindings_ref_doc(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        bindings: &[&'a (EcoString, BoundValue)],
+    ) -> Document<'a, 'doc> {
+        let bindings = (bindings.iter())
+            .map(|(variable, value)| self.body_binding_doc(arena, variable, value));
+        arena.join(bindings, LINE_DOCUMENT)
     }
 
     fn body_binding_doc(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         variable_name: &'a EcoString,
         value: &'a BoundValue,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let local_variable_name = self.next_local_var(variable_name);
         let assigned_value = match value {
-            BoundValue::Variable(variable) => self.get_value(variable).to_doc(),
-            BoundValue::LiteralString(value) => string(value),
-            BoundValue::LiteralFloat(value) => float(value),
-            BoundValue::LiteralInt(value) => eco_string_int(eco_format!("{value}")),
+            BoundValue::Variable(variable) => self.get_value(variable).to_doc(arena),
+            BoundValue::LiteralString(value) => string(arena, value),
+            BoundValue::LiteralFloat(value) => float(arena, value),
+            BoundValue::LiteralInt(value) => eco_string_int(arena, eco_format!("{value}")),
             BoundValue::BitArraySlice {
                 bit_array,
                 read_action,
             } => self
-                .get_segment_value(variable_name)
-                .unwrap_or_else(|| self.read_action_to_doc(bit_array, read_action)),
+                .get_segment_value(arena, variable_name)
+                .unwrap_or_else(|| self.read_action_to_doc(arena, bit_array, read_action)),
         };
 
         match self.variable_assignment {
-            VariableAssignment::Declare => let_doc(local_variable_name.clone(), assigned_value),
+            VariableAssignment::Declare => {
+                let_doc(arena, local_variable_name.clone(), assigned_value)
+            }
             VariableAssignment::Reassign => {
-                reassignment_doc(local_variable_name.clone(), assigned_value)
+                reassignment_doc(arena, local_variable_name.clone(), assigned_value)
             }
         }
     }
@@ -1224,23 +1289,31 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     ///
     fn runtime_check(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         variable: &Variable,
         runtime_check: &'a RuntimeCheck,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let value = self.get_value(variable);
 
         let equality = " === ";
 
         match runtime_check {
-            RuntimeCheck::String { value: expected } => docvec![value, equality, string(expected)],
+            RuntimeCheck::String { value: expected } => {
+                docvec![arena, value, equality, string(arena, expected)]
+            }
             RuntimeCheck::Float {
                 float_value: expected,
-            } => docvec![value, equality, float_from_value(expected.value())],
+            } => docvec![
+                arena,
+                value,
+                equality,
+                float_from_value(arena, expected.value())
+            ],
             RuntimeCheck::Int {
                 int_value: expected,
-            } => docvec![value, equality, expected.clone()],
+            } => docvec![arena, value, equality, expected.clone()],
             RuntimeCheck::StringPrefix { prefix, .. } => {
-                docvec![value, ".startsWith(", string(prefix), ")"]
+                docvec![arena, value, ".startsWith(", string(arena, prefix), ")"]
             }
 
             RuntimeCheck::BitArray { test } => match test {
@@ -1248,16 +1321,20 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 // bit array has a whole number of bytes.
                 BitArrayTest::CatchAllIsBytes { size_so_far } => {
                     if size_so_far.is_zero() {
-                        docvec![value, ".bitSize % 8", equality, "0"]
+                        docvec![arena, value, ".bitSize % 8", equality, "0"]
                     } else {
-                        let size_so_far = self.offset_to_doc(size_so_far, true);
-                        let remaining_bits = docvec![value, ".bitSize - ", size_so_far];
-                        docvec!["(", remaining_bits, ") % 8", equality, "0"]
+                        let size_so_far = self.offset_to_doc(arena, size_so_far, true);
+                        let remaining_bits = docvec![arena, value, ".bitSize - ", size_so_far];
+                        docvec![arena, "(", remaining_bits, ") % 8", equality, "0"]
                     }
                 }
 
                 BitArrayTest::ReadSizeIsNotNegative { size } => {
-                    docvec![self.read_size_to_doc(size), " >= 0"]
+                    docvec![
+                        arena,
+                        self.read_size_to_doc(arena, size).expect("empty size"),
+                        " >= 0"
+                    ]
                 }
 
                 BitArrayTest::SegmentIsFiniteFloat {
@@ -1269,17 +1346,25 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                             ..
                         },
                 } => {
-                    let start_doc = self.offset_to_doc(start, false);
+                    let start_doc = self.offset_to_doc(arena, start, false);
                     let end = match (start.constant_bits(), size.constant_bits()) {
                         (Some(start), _) if start == BigInt::ZERO => self
-                            .read_size_to_doc(size)
+                            .read_size_to_doc(arena, size)
                             .expect("unexpected catch all size"),
-                        (Some(start), Some(end)) => (start + end).to_doc(),
-                        (_, _) => docvec![start_doc.clone(), " + ", self.read_size_to_doc(size)],
+                        (Some(start), Some(end)) => (start + end).to_doc(arena),
+                        (_, _) => {
+                            docvec![
+                                arena,
+                                start_doc.clone(),
+                                " + ",
+                                self.read_size_to_doc(arena, size).expect("empty size")
+                            ]
+                        }
                     };
-                    let check = self.bit_array_slice_to_float(value, start_doc, end, endianness);
+                    let check =
+                        self.bit_array_slice_to_float(arena, value, start_doc, end, endianness);
 
-                    docvec!["Number.isFinite(", check, ")"]
+                    docvec![arena, "Number.isFinite(", check, ")"]
                 }
 
                 // Here we need to make sure that the bit array has a specific
@@ -1289,8 +1374,8 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                         SizeOperator::GreaterEqual => " >= ",
                         SizeOperator::Equal => equality,
                     };
-                    let size = self.offset_to_doc(size, false);
-                    docvec![value, ".bitSize", operator, size]
+                    let size = self.offset_to_doc(arena, size, false);
+                    docvec![arena, value, ".bitSize", operator, size]
                 }
 
                 // Finally, here we need to check that a given portion of the
@@ -1303,13 +1388,20 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                         value: _,
                         encoding: _,
                         bytes: expected,
-                    } => self.literal_string_segment_bytes_check(value, expected, read_action),
+                    } => {
+                        self.literal_string_segment_bytes_check(arena, value, expected, read_action)
+                    }
                     BitArrayMatchedValue::LiteralFloat(expected) => {
-                        self.literal_float_segment_bytes_check(value, expected, read_action)
+                        self.literal_float_segment_bytes_check(arena, value, expected, read_action)
                     }
                     BitArrayMatchedValue::LiteralInt {
                         value: expected, ..
-                    } => self.literal_int_segment_bytes_check(value, expected.clone(), read_action),
+                    } => self.literal_int_segment_bytes_check(
+                        arena,
+                        value,
+                        expected.clone(),
+                        read_action,
+                    ),
                     BitArrayMatchedValue::Variable(..)
                     | BitArrayMatchedValue::Discard(..)
                     | BitArrayMatchedValue::Assign { .. } => {
@@ -1327,8 +1419,8 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             // in a different way from all other variants.
             RuntimeCheck::Variant { match_, .. } if variable.type_.is_bool() => {
                 match match_.used_name().as_str() {
-                    "True" => value.to_doc(),
-                    _ => docvec!["!", value],
+                    "True" => value.to_doc(arena),
+                    _ => docvec![arena, "!", value],
                 }
             }
 
@@ -1369,17 +1461,23 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                         });
                 }
 
-                docvec![value, " instanceof ", qualification, match_.used_name()]
+                docvec![
+                    arena,
+                    value,
+                    " instanceof ",
+                    qualification,
+                    match_.used_name()
+                ]
             }
 
             RuntimeCheck::NonEmptyList { .. } => {
                 self.expression_generator.tracker.list_non_empty_class_used = true;
-                docvec![value, " instanceof $NonEmpty"]
+                docvec![arena, value, " instanceof $NonEmpty"]
             }
 
             RuntimeCheck::EmptyList => {
                 self.expression_generator.tracker.list_empty_class_used = true;
-                docvec![value, " instanceof $Empty"]
+                docvec![arena, value, " instanceof $Empty"]
             }
         }
     }
@@ -1390,9 +1488,10 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     ///
     fn read_action_to_doc(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         bit_array: &Variable,
         read_action: &ReadAction,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let ReadAction {
             from,
             size,
@@ -1414,13 +1513,13 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                     && from_bits.clone() % 8 == BigInt::ZERO =>
             {
                 let from_byte: BigInt = from_bits / 8;
-                return docvec![bit_array, ".byteAt(", from_byte, ")"];
+                return docvec![arena, bit_array, ".byteAt(", from_byte, ")"];
             }
 
             // If we're reading all the remaining bits/bytes of an array we'll
             // take the remaining slice.
             (ReadSize::RemainingBits | ReadSize::RemainingBytes, _) => {
-                return self.bit_array_slice(bit_array, from);
+                return self.bit_array_slice(arena, bit_array, from);
             }
 
             _ => (),
@@ -1433,42 +1532,51 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 // If both the start and and are known at compile time we can use
                 // those directly in the slice call and perform no addition at
                 // runtime.
-                let start = from_bits.clone().to_doc();
-                let end = (from_bits + size).to_doc();
+                let start = from_bits.clone().to_doc(arena);
+                let end = (from_bits + size).to_doc(arena);
                 (start, end)
             } else {
                 // Otherwise we'll have to sum the variable part and the constant
                 // one to tell how long the slice should be.
-                let size = self.read_size_to_doc(size).expect("no variable size");
-                let start = self.offset_to_doc(from, false);
+                let size = self
+                    .read_size_to_doc(arena, size)
+                    .expect("no variable size");
+                let start = self.offset_to_doc(arena, from, false);
                 let end = if from.is_zero() {
                     size
                 } else {
-                    docvec![start.clone(), " + ", size]
+                    docvec![arena, start.clone(), " + ", size]
                 };
                 (start, end)
             };
 
         match type_ {
             ReadType::Int => {
-                self.bit_array_slice_to_int(bit_array, start, end, endianness, *signed)
+                self.bit_array_slice_to_int(arena, bit_array, start, end, endianness, *signed)
             }
-            ReadType::Float => self.bit_array_slice_to_float(bit_array, start, end, endianness),
-            ReadType::BitArray => self.bit_array_slice_with_end(bit_array, from, end),
+            ReadType::Float => {
+                self.bit_array_slice_to_float(arena, bit_array, start, end, endianness)
+            }
+            ReadType::BitArray => self.bit_array_slice_with_end(arena, bit_array, from, end),
             ReadType::String | ReadType::UtfCodepoint => {
                 panic!("invalid slice type made it to code generation: {type_:#?}")
             }
         }
     }
 
-    fn offset_to_doc(&mut self, offset: &Offset, parenthesise: bool) -> Document<'a> {
+    fn offset_to_doc(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        offset: &Offset,
+        parenthesise: bool,
+    ) -> Document<'a, 'doc> {
         if offset.is_zero() {
-            return "0".to_doc();
+            return "0".to_doc(arena);
         }
 
         let mut pieces = vec![];
         if offset.constant != BigInt::ZERO {
-            pieces.push(eco_string_int(offset.constant.to_string().into()));
+            pieces.push(eco_string_int(arena, offset.constant.to_string().into()));
         }
 
         for (variable, times) in offset
@@ -1478,21 +1586,22 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         {
             let mut variable = match variable {
                 VariableUsage::PatternSegment(segment_name, _) => self
-                    .get_segment_value(segment_name)
+                    .get_segment_value(arena, segment_name)
                     .expect("segment referenced in a check before being created"),
-                VariableUsage::OutsideVariable(name) => self.local_var(name).to_doc(),
+                VariableUsage::OutsideVariable(name) => self.local_var(name).to_doc(arena),
             };
             if *times != 1 {
-                variable = variable.append(" * ").append(*times)
+                variable = variable.append(arena, " * ").append(arena, *times)
             }
-            pieces.push(variable.to_doc())
+            pieces.push(variable.to_doc(arena))
         }
 
         for calculation in offset.calculations.iter() {
-            let left = self.offset_to_doc(&calculation.left, true);
-            let right = self.offset_to_doc(&calculation.right, true);
+            let left = self.offset_to_doc(arena, &calculation.left, true);
+            let right = self.offset_to_doc(arena, &calculation.right, true);
 
             let calculation = self.expression_generator.bin_op_with_doc_operands(
+                arena,
                 calculation.operator.to_bin_op(),
                 left,
                 right,
@@ -1500,31 +1609,36 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             );
 
             if parenthesise {
-                pieces.push(calculation.surround("(", ")"))
+                pieces.push(calculation.surround(arena, "(", ")"))
             } else {
                 pieces.push(calculation)
             }
         }
 
         if pieces.len() > 1 && parenthesise {
-            docvec!["(", join(pieces, " + ".to_doc()), ")"]
+            docvec![arena, "(", arena.join(pieces, " + ".to_doc(arena)), ")"]
         } else {
-            join(pieces, " + ".to_doc())
+            arena.join(pieces, " + ".to_doc(arena))
         }
     }
 
     /// If the read size has a constant value (that is, it's not a "read all the
     /// remaining bits/bytes") this returns a document representing that size.
+    /// Otherwise it returns an empty document.
     ///
-    fn read_size_to_doc(&mut self, size: &ReadSize) -> Option<Document<'a>> {
+    fn read_size_to_doc(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        size: &ReadSize,
+    ) -> Option<Document<'a, 'doc>> {
         match size {
-            ReadSize::ConstantBits(value) => Some(value.clone().to_doc()),
+            ReadSize::ConstantBits(value) => Some(value.clone().to_doc(arena)),
             ReadSize::VariableBits { variable, unit } => {
                 let variable = self.local_var(variable.name());
                 Some(if *unit == 1 {
-                    variable.to_doc()
+                    variable.to_doc(arena)
                 } else {
-                    docvec![variable, " * ", *unit as i64]
+                    docvec![arena, variable, " * ", *unit as i64]
                 })
             }
             ReadSize::RemainingBits | ReadSize::RemainingBytes => None,
@@ -1535,17 +1649,20 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
                 operator,
             } => {
                 let left = if self.read_size_must_be_wrapped(left) {
-                    self.read_size_to_doc(left)?.surround("(", ")")
+                    self.read_size_to_doc(arena, left)?
+                        .surround(arena, "(", ")")
                 } else {
-                    self.read_size_to_doc(left)?
+                    self.read_size_to_doc(arena, left)?
                 };
                 let right = if self.read_size_must_be_wrapped(right) {
-                    self.read_size_to_doc(right)?.surround("(", ")")
+                    self.read_size_to_doc(arena, right)?
+                        .surround(arena, "(", ")")
                 } else {
-                    self.read_size_to_doc(right)?
+                    self.read_size_to_doc(arena, right)?
                 };
 
                 Some(self.expression_generator.bin_op_with_doc_operands(
+                    arena,
                     operator.to_bin_op(),
                     left,
                     right,
@@ -1569,12 +1686,13 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     ///
     fn bit_array_slice_to_int(
         &mut self,
-        bit_array: impl Documentable<'a>,
-        start: impl Documentable<'a>,
-        end: impl Documentable<'a>,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        bit_array: impl Documentable<'a, 'doc>,
+        start: impl Documentable<'a, 'doc>,
+        end: impl Documentable<'a, 'doc>,
         endianness: &Endianness,
         signed: bool,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         self.expression_generator
             .tracker
             .bit_array_slice_to_int_used = true;
@@ -1584,17 +1702,17 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             Endianness::Little => "false",
         };
         let signed = if signed { "true" } else { "false" };
-        let arguments = join(
+        let arguments = arena.join(
             [
-                bit_array.to_doc(),
-                start.to_doc(),
-                end.to_doc(),
-                endianness.to_doc(),
-                signed.to_doc(),
+                bit_array.to_doc(arena),
+                start.to_doc(arena),
+                end.to_doc(arena),
+                endianness.to_doc(arena),
+                signed.to_doc(arena),
             ],
-            ", ".to_doc(),
+            ", ".to_doc(arena),
         );
-        docvec!["bitArraySliceToInt(", arguments, ")"]
+        docvec![arena, "bitArraySliceToInt(", arguments, ")"]
     }
 
     /// Generates the document that calls the `bitArraySliceToFloat` function,
@@ -1602,11 +1720,12 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     ///
     fn bit_array_slice_to_float(
         &mut self,
-        bit_array: impl Documentable<'a>,
-        start: impl Documentable<'a>,
-        end: impl Documentable<'a>,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        bit_array: impl Documentable<'a, 'doc>,
+        start: impl Documentable<'a, 'doc>,
+        end: impl Documentable<'a, 'doc>,
         endianness: &Endianness,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         self.expression_generator
             .tracker
             .bit_array_slice_to_float_used = true;
@@ -1615,16 +1734,16 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             Endianness::Big => "true",
             Endianness::Little => "false",
         };
-        let arguments = join(
+        let arguments = arena.join(
             [
-                bit_array.to_doc(),
-                start.to_doc(),
-                end.to_doc(),
-                endianness.to_doc(),
+                bit_array.to_doc(arena),
+                start.to_doc(arena),
+                end.to_doc(arena),
+                endianness.to_doc(arena),
             ],
-            ", ".to_doc(),
+            ", ".to_doc(arena),
         );
-        docvec!["bitArraySliceToFloat(", arguments, ")"]
+        docvec![arena, "bitArraySliceToFloat(", arguments, ")"]
     }
 
     /// Generates the document that calls the `bitArraySlice` function, with
@@ -1633,13 +1752,23 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     ///
     fn bit_array_slice_with_end(
         &mut self,
-        bit_array: impl Documentable<'a>,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        bit_array: impl Documentable<'a, 'doc>,
         from: &Offset,
-        end: impl Documentable<'a>,
-    ) -> Document<'a> {
+        end: impl Documentable<'a, 'doc>,
+    ) -> Document<'a, 'doc> {
         self.expression_generator.tracker.bit_array_slice_used = true;
-        let from = self.offset_to_doc(from, false);
-        docvec!["bitArraySlice(", bit_array, ", ", from, ", ", end, ")"]
+        let from = self.offset_to_doc(arena, from, false);
+        docvec![
+            arena,
+            "bitArraySlice(",
+            bit_array,
+            ", ",
+            from,
+            ", ",
+            end,
+            ")"
+        ]
     }
 
     /// Generates the document that calls the `bitArraySlice` function, starting
@@ -1647,10 +1776,15 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     /// if you know that the slice should end at a given offset you can use
     /// `bit_array_slice_with_end` instead.
     ///
-    fn bit_array_slice(&mut self, bit_array: impl Documentable<'a>, from: &Offset) -> Document<'a> {
+    fn bit_array_slice(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        bit_array: impl Documentable<'a, 'doc>,
+        from: &Offset,
+    ) -> Document<'a, 'doc> {
         self.expression_generator.tracker.bit_array_slice_used = true;
-        let from = self.offset_to_doc(from, false);
-        docvec!["bitArraySlice(", bit_array, ", ", from, ")"]
+        let from = self.offset_to_doc(arena, from, false);
+        docvec![arena, "bitArraySlice(", bit_array, ", ", from, ")"]
     }
 
     /// This generates all the checks that need to be performed to make sure a
@@ -1659,12 +1793,13 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     ///
     fn literal_string_segment_bytes_check(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         // A string representing the bit array value we read bits from.
         bit_array: EcoString,
         // The bytes of the literal string we should be matching on.
         string_bytes: &Vec<u8>,
         read_action: &ReadAction,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let ReadAction {
             from: start,
             endianness,
@@ -1682,8 +1817,9 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             // optimise this by reading all the subsequent bytes and checking
             // they have a specific value.
             for byte in bytes {
-                let byte_access = docvec![bit_array.clone(), ".byteAt(", from_byte.clone(), ")"];
-                checks.push(docvec![byte_access, equality, byte]);
+                let byte_access =
+                    docvec![arena, bit_array.clone(), ".byteAt(", from_byte.clone(), ")"];
+                checks.push(docvec![arena, byte_access, equality, *byte]);
                 from_byte += 1;
             }
         } else {
@@ -1692,18 +1828,22 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             // If the string doesn't start at a byte aligned offset then we'll
             // have to take slices out of it to check that each byte matches.
             for byte in bytes {
-                let start_doc = self.offset_to_doc(&start, false);
+                let start_doc = self.offset_to_doc(arena, &start, false);
                 let end = start.add_constant(8);
-                let end_doc = self.offset_to_doc(&end, false);
-                let byte_access = self
-                    .bit_array_slice_to_int(&bit_array, start_doc, end_doc, endianness, *signed);
-                checks.push(docvec![byte_access, equality, byte]);
+                let end_doc = self.offset_to_doc(arena, &end, false);
+                let byte_access = self.bit_array_slice_to_int(
+                    arena, &bit_array, start_doc, end_doc, endianness, *signed,
+                );
+                checks.push(docvec![arena, byte_access, equality, *byte]);
                 start = end;
             }
         }
 
         // Otherwise the check succeeds if all the byte checks succeed.
-        join(checks, break_(" &&", " && ")).nest(INDENT).group()
+        arena
+            .join(checks, arena.break_(" &&", " && "))
+            .nest(arena, INDENT)
+            .group(arena)
     }
 
     /// This generates all the checks that need to be performed to make sure a
@@ -1712,11 +1852,12 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     ///
     fn literal_int_segment_bytes_check(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         // A string representing the bit array value we read bits from.
         bit_array: EcoString,
         literal_int: BigInt,
         read_action: &ReadAction,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let ReadAction {
             from: start,
             size,
@@ -1733,25 +1874,35 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             // all the bytes starting at the given offset match the int bytes.
             let mut checks = vec![];
             for byte in bit_array_segment_int_value_to_bytes(literal_int, size * 8, *endianness) {
-                let byte_access = docvec![bit_array.clone(), ".byteAt(", from_byte.clone(), ")"];
-                checks.push(docvec![byte_access, equality, byte]);
+                let byte_access =
+                    docvec![arena, bit_array.clone(), ".byteAt(", from_byte.clone(), ")"];
+                checks.push(docvec![arena, byte_access, equality, byte]);
                 from_byte += 1;
             }
 
-            join(checks, break_(" &&", " && ")).nest(INDENT).group()
+            arena
+                .join(checks, arena.break_(" &&", " && "))
+                .nest(arena, INDENT)
+                .group(arena)
         } else {
             // Otherwise we have to take an int slice out of the bit array and
             // check it matches the expected value.
-            let start_doc = self.offset_to_doc(start, false);
+            let start_doc = self.offset_to_doc(arena, start, false);
             let end = match (start.constant_bits(), size.constant_bits()) {
                 (Some(start), _) if start == BigInt::ZERO => self
-                    .read_size_to_doc(size)
+                    .read_size_to_doc(arena, size)
                     .expect("unexpected catch all size"),
-                (Some(start), Some(end)) => (start + end).to_doc(),
-                (_, _) => docvec![start_doc.clone(), " + ", self.read_size_to_doc(size)],
+                (Some(start), Some(end)) => (start + end).to_doc(arena),
+                (_, _) => docvec![
+                    arena,
+                    start_doc.clone(),
+                    " + ",
+                    self.read_size_to_doc(arena, size).expect("empty size")
+                ],
             };
-            let check = self.bit_array_slice_to_int(bit_array, start_doc, end, endianness, *signed);
-            docvec![check, equality, literal_int]
+            let check =
+                self.bit_array_slice_to_int(arena, bit_array, start_doc, end, endianness, *signed);
+            docvec![arena, check, equality, literal_int]
         }
     }
 
@@ -1761,11 +1912,12 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     ///
     fn literal_float_segment_bytes_check(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         // A string representing the bit array value we read bits from.
         bit_array: EcoString,
         expected: &EcoString,
         read_action: &ReadAction,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let ReadAction {
             from: start,
             size,
@@ -1778,16 +1930,21 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         // Unlike literal integers and strings, for now we don't try and apply any
         // optimisation in the way we match on those: we take an entire slice,
         // convert it to a float and check if it matches the expected value.
-        let start_doc = self.offset_to_doc(start, false);
+        let start_doc = self.offset_to_doc(arena, start, false);
         let end = match (start.constant_bits(), size.constant_bits()) {
             (Some(start), _) if start == BigInt::ZERO => self
-                .read_size_to_doc(size)
+                .read_size_to_doc(arena, size)
                 .expect("unexpected catch all size"),
-            (Some(start), Some(end)) => (start + end).to_doc(),
-            (_, _) => docvec![start_doc.clone(), " + ", self.read_size_to_doc(size)],
+            (Some(start), Some(end)) => (start + end).to_doc(arena),
+            (_, _) => docvec![
+                arena,
+                start_doc.clone(),
+                " + ",
+                self.read_size_to_doc(arena, size).expect("empty size")
+            ],
         };
-        let check = self.bit_array_slice_to_float(bit_array, start_doc, end, endianness);
-        docvec![check, equality, expected]
+        let check = self.bit_array_slice_to_float(arena, bit_array, start_doc, end, endianness);
+        docvec![arena, check, equality, expected]
     }
 
     #[must_use]
@@ -1803,7 +1960,12 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     /// In case the check introduces new variables, this will record their
     /// actual value to be used by later checks and assignments.
     ///
-    fn record_check_assignments(&mut self, variable: &Variable, check: &RuntimeCheck) {
+    fn record_check_assignments(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        variable: &Variable,
+        check: &RuntimeCheck,
+    ) {
         let value = self.get_value(variable);
         match check {
             RuntimeCheck::Int { .. }
@@ -1813,7 +1975,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
 
             RuntimeCheck::BitArray { test } => {
                 for (segment_name, read_action) in test.referenced_segment_patterns() {
-                    self.set_segment_value(variable, segment_name.clone(), read_action)
+                    self.set_segment_value(arena, variable, segment_name.clone(), read_action)
                 }
             }
 
@@ -1851,7 +2013,11 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
     /// the referenced segments into scope, so they're available to use for the
     /// runtime check.
     ///
-    fn bit_array_segment_assignments(&mut self, check: &RuntimeCheck) -> Vec<Document<'a>> {
+    fn bit_array_segment_assignments(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        check: &RuntimeCheck,
+    ) -> Vec<Document<'a, 'doc>> {
         let mut check_assignments = vec![];
         for (segment, _) in check.referenced_segment_patterns() {
             // If the segment was already bound to a variable in this scope we
@@ -1863,10 +2029,10 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
 
             let variable_name = self.next_local_var(segment);
             let segment_value = self
-                .get_segment_value(segment)
+                .get_segment_value(arena, segment)
                 .expect("segment referenced in a check before being created");
             self.bind_segment(variable_name.clone(), segment.clone());
-            check_assignments.push(let_doc(variable_name, segment_value))
+            check_assignments.push(let_doc(arena, variable_name, segment_value))
         }
         check_assignments
     }
@@ -1890,11 +2056,15 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             .clone()
     }
 
-    fn get_segment_value(&self, segment_name: &EcoString) -> Option<Document<'a>> {
+    fn get_segment_value(
+        &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        segment_name: &EcoString,
+    ) -> Option<Document<'a, 'doc>> {
         // If the segment was already assigned to a variable that is in scope
         // we use that variable name!
         if let Some(name) = self.scoped_segment_names.get(segment_name) {
-            return Some(name.clone().to_doc());
+            return Some(name.clone().to_doc(arena));
         }
 
         // Otherwise we fallback to using its value directly.
@@ -1942,13 +2112,13 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
 /// as we want; however, if it's anything else we first need to bind that subject
 /// to a variable we can then reference multiple times.
 ///
-enum SubjectAssignment<'a> {
+enum SubjectAssignment<'a, 'doc> {
     /// The subject is a complex expression with a `value` that has to be
     /// assigned to a variable with the given `name` as repeating the `value`
     /// multiple times could possibly change the meaning of the program.
     BindToVariable {
         name: EcoString,
-        value: Document<'a>,
+        value: Document<'a, 'doc>,
         location: SrcSpan,
     },
     /// The subject is already a simple variable with the given name, we will
@@ -1956,7 +2126,7 @@ enum SubjectAssignment<'a> {
     AlreadyAVariable { name: EcoString },
 }
 
-impl SubjectAssignment<'_> {
+impl SubjectAssignment<'_, '_> {
     fn name(&self) -> EcoString {
         match self {
             SubjectAssignment::BindToVariable {
@@ -1969,11 +2139,12 @@ impl SubjectAssignment<'_> {
     }
 }
 
-fn assign_subject<'a>(
-    expression_generator: &mut Generator<'_, 'a>,
+fn assign_subject<'a, 'doc>(
+    arena: &'doc DocumentArena<'a, 'doc>,
+    expression_generator: &mut Generator<'_, 'a, 'doc>,
     subject: &'a TypedExpr,
     ordering: Ordering,
-) -> SubjectAssignment<'a> {
+) -> SubjectAssignment<'a, 'doc> {
     static ASSIGNMENT_VAR_ECO_STR: OnceLock<EcoString> = OnceLock::new();
 
     // If the value is a variable we don't need to assign it to a new
@@ -1993,7 +2164,7 @@ fn assign_subject<'a>(
         let name = expression_generator
             .next_local_var(ASSIGNMENT_VAR_ECO_STR.get_or_init(|| ASSIGNMENT_VAR.into()));
         let value = expression_generator
-            .not_in_tail_position(Some(ordering), |this| this.wrap_expression(subject));
+            .not_in_tail_position(Some(ordering), |this| this.wrap_expression(arena, subject));
 
         SubjectAssignment::BindToVariable {
             value,
@@ -2003,10 +2174,11 @@ fn assign_subject<'a>(
     }
 }
 
-fn assignments_to_doc<'a>(
-    expression_generator: &mut Generator<'_, 'a>,
-    assignments: Vec<SubjectAssignment<'a>>,
-) -> Document<'a> {
+fn assignments_to_doc<'a, 'doc>(
+    arena: &'doc DocumentArena<'a, 'doc>,
+    expression_generator: &mut Generator<'_, 'a, 'doc>,
+    assignments: Vec<SubjectAssignment<'a, 'doc>>,
+) -> Document<'a, 'doc> {
     let mut assignments_docs = vec![];
     for assignment in assignments.into_iter() {
         let SubjectAssignment::BindToVariable {
@@ -2018,33 +2190,46 @@ fn assignments_to_doc<'a>(
             continue;
         };
         assignments_docs.push(docvec![
-            expression_generator.source_map_tracker(location.start),
-            let_doc(name, value),
-            line()
+            arena,
+            expression_generator.source_map_tracker(arena, location.start),
+            let_doc(arena, name, value),
+            LINE_DOCUMENT
         ])
     }
-    assignments_docs.to_doc()
+    arena.concat(assignments_docs)
 }
 
 /// Appends the second document to the first one separating the two with a newline.
 /// However, if the second document is empty the empty line is not added.
 ///
-fn join_with_line<'a>(one: Document<'a>, other: Document<'a>) -> Document<'a> {
+fn join_with_line<'a, 'doc>(
+    arena: &'doc DocumentArena<'a, 'doc>,
+    one: Document<'a, 'doc>,
+    other: Document<'a, 'doc>,
+) -> Document<'a, 'doc> {
     if one.is_empty() {
         other
     } else if other.is_empty() {
         one
     } else {
-        docvec![one, line(), other]
+        docvec![arena, one, LINE_DOCUMENT, other]
     }
 }
 
-fn reassignment_doc(variable_name: EcoString, value: Document<'_>) -> Document<'_> {
-    docvec![variable_name, " = ", value, ";"]
+fn reassignment_doc<'a, 'doc>(
+    arena: &'doc DocumentArena<'a, 'doc>,
+    variable_name: EcoString,
+    value: Document<'a, 'doc>,
+) -> Document<'a, 'doc> {
+    docvec![arena, variable_name, " = ", value, ";"]
 }
 
-fn let_doc(variable_name: EcoString, value: Document<'_>) -> Document<'_> {
-    docvec!["let ", variable_name, " = ", value, ";"]
+fn let_doc<'a, 'doc>(
+    arena: &'doc DocumentArena<'a, 'doc>,
+    variable_name: EcoString,
+    value: Document<'a, 'doc>,
+) -> Document<'a, 'doc> {
+    docvec![arena, "let ", variable_name, " = ", value, ";"]
 }
 
 /// Calculates the length of str as utf16 without escape characters.
@@ -2053,10 +2238,16 @@ fn utf16_no_escape_len(str: &EcoString) -> usize {
     length_utf16(&convert_string_escape_chars(str))
 }
 
-pub fn break_block(doc: Document<'_>) -> Document<'_> {
-    "{".to_doc()
-        .append(line().append(doc).nest(INDENT))
-        .append(line())
-        .append("}")
-        .force_break()
+pub fn break_block<'a, 'doc>(
+    arena: &'doc DocumentArena<'a, 'doc>,
+    doc: Document<'a, 'doc>,
+) -> Document<'a, 'doc> {
+    docvec![
+        arena,
+        "{",
+        docvec![arena, LINE_DOCUMENT, doc].nest(arena, INDENT),
+        LINE_DOCUMENT,
+        "}"
+    ]
+    .force_break(arena)
 }
