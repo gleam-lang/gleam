@@ -129,12 +129,11 @@ fn tuple<'a, 'doc>(
     arena: &'doc DocumentArena<'a, 'doc>,
     elements: impl IntoIterator<Item = Document<'a, 'doc>>,
 ) -> Document<'a, 'doc> {
-    arena
-        .break_("", "")
-        .append(arena, arena.join(elements, arena.break_(",", ", ")))
+    EMPTY_BREAK_DOCUMENT
+        .append(arena, arena.join(elements, COMMA_BREAK_DOCUMENT))
         .nest(arena, INDENT)
-        .append(arena, arena.break_("", ""))
-        .surround(arena, "[", "]")
+        .append(arena, EMPTY_BREAK_DOCUMENT)
+        .surround(arena, OPEN_SQUARE_DOCUMENT, CLOSE_SQUARE_DOCUMENT)
         .group(arena)
 }
 
@@ -145,12 +144,11 @@ fn wrap_generic_arguments<'a, 'doc, I>(
 where
     I: IntoIterator<Item = Document<'a, 'doc>>,
 {
-    arena
-        .break_("", "")
-        .append(arena, arena.join(arguments, arena.break_(",", ", ")))
+    EMPTY_BREAK_DOCUMENT
+        .append(arena, arena.join(arguments, COMMA_BREAK_DOCUMENT))
         .nest(arena, INDENT)
-        .append(arena, arena.break_("", ""))
-        .surround(arena, "<", ">")
+        .append(arena, EMPTY_BREAK_DOCUMENT)
+        .surround(arena, LT_INT_DOCUMENT, GT_INT_DOCUMENT)
         .group(arena)
 }
 
@@ -220,7 +218,7 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
         }
 
         if imports.is_empty() && statements.is_empty() {
-            docvec![arena, "export {}", LINE_DOCUMENT]
+            docvec![arena, EXPORT_SPACE_OPEN_CLOSE_CURLY_DOCUMENT, LINE_DOCUMENT]
         } else if imports.is_empty() {
             statements.push(LINE_DOCUMENT);
             arena.concat(statements)
@@ -408,11 +406,11 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
 
         Some(docvec![
             arena,
-            "export type ",
+            EXPORT_TYPE_SPACE_DOCUMENT,
             ts_safe_type_name(type_alias.alias.to_string()),
-            " = ",
+            SPACE_EQUAL_SPACE_DOCUMENT,
             self.print_type(arena, &type_alias.type_),
-            ";"
+            SEMICOLON_DOCUMENT
         ])
     }
 
@@ -478,7 +476,7 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
                 imports.register_module(module.clone(), [], [member]);
                 return Some(Vec::new());
             } else {
-                "any".to_doc(arena)
+                ANY_DOCUMENT
             }
         } else {
             let constructors = constructors.iter().map(|x| {
@@ -492,18 +490,18 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
         };
 
         let head = if publicity.is_private() {
-            "type "
+            TYPE_SPACE_DOCUMENT
         } else {
-            "export type "
+            EXPORT_TYPE_SPACE_DOCUMENT
         };
 
         definitions.push(docvec![
             arena,
             head,
             type_name.clone(),
-            " = ",
+            SPACE_EQUAL_SPACE_DOCUMENT,
             definition,
-            ";",
+            SEMICOLON_DOCUMENT,
         ]);
 
         // Generate getters for fields shared between variants
@@ -582,30 +580,30 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
         let head = docvec![
             arena,
             if publicity.is_public() {
-                "export ".to_doc(arena)
+                EXPORT_SPACE_DOCUMENT
             } else {
-                "declare ".to_doc(arena)
+                DECLARE_SPACE_DOCUMENT
             },
-            "class ",
+            CLASS_SPACE_DOCUMENT,
             name_with_generics(
                 arena,
                 super::maybe_escape_identifier(&constructor.name).to_doc(arena),
                 constructor.arguments.iter().map(|a| &a.type_)
             ),
-            " extends _.CustomType {"
+            SPACE_EXTENDS_UNDERSCORE_CUSTOM_TYPE_DOCUMENT
         ];
 
         if constructor.arguments.is_empty() {
-            return head.append(arena, "}");
+            return head.append(arena, CLOSE_CURLY_DOCUMENT);
         };
 
         let class_body = docvec![
             arena,
             LINE_DOCUMENT,
-            "/** @deprecated */",
+            DEPRECATED_MULTILINE_COMMENT_DOCUMENT,
             LINE_DOCUMENT,
             // First add the constructor
-            "constructor",
+            CONSTRUCTOR_DOCUMENT,
             wrap_arguments(
                 arena,
                 constructor
@@ -622,12 +620,12 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
                         docvec![
                             arena,
                             name,
-                            ": ",
+                            COLON_SPACE_DOCUMENT,
                             self.do_print_force_generic_param(arena, &argument.type_)
                         ]
                     })
             ),
-            ";",
+            SEMICOLON_DOCUMENT,
             LINE_DOCUMENT,
             // Then add each field to the class
             arena.join(
@@ -640,12 +638,12 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
                         .to_doc(arena);
                     docvec![
                         arena,
-                        "/** @deprecated */",
+                        DEPRECATED_MULTILINE_COMMENT_DOCUMENT,
                         LINE_DOCUMENT,
                         name,
-                        ": ",
+                        COLON_SPACE_DOCUMENT,
                         self.do_print_force_generic_param(arena, &arg.type_),
-                        ";"
+                        SEMICOLON_DOCUMENT
                     ]
                 }),
                 LINE_DOCUMENT,
@@ -676,7 +674,7 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
             arguments.push(docvec![
                 arena,
                 name,
-                ": ",
+                COLON_SPACE_DOCUMENT,
                 self.do_print_force_generic_param(arena, &parameter.type_)
             ])
         }
@@ -691,19 +689,23 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
 
         docvec![
             arena,
-            "export function ",
+            EXPORT_FUNCTION_SPACE_DOCUMENT,
             name_with_generics(arena, function_name, type_parameters),
-            "(",
+            OPEN_PAREN_DOCUMENT,
             docvec![
                 arena,
-                arena.break_("", ""),
-                arena.join(arguments, arena.break_(",", ", ")),
+                EMPTY_BREAK_DOCUMENT,
+                arena.join(arguments, COMMA_BREAK_DOCUMENT),
             ]
             .nest(arena, INDENT),
-            arena.break_(if has_arguments { "," } else { "" }, ""),
-            "): ",
+            if has_arguments {
+                TRAILING_COMMA_BREAK_DOCUMENT
+            } else {
+                EMPTY_BREAK_DOCUMENT
+            },
+            CLOSE_PAREN_COLON_SPACE_DOCUMENT,
             type_name_with_generics.clone(),
-            ";"
+            SEMICOLON_DOCUMENT
         ]
         .group(arena)
     }
@@ -722,26 +724,27 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
         .to_doc(arena);
         let mut document = docvec![
             arena,
-            "export function ",
+            EXPORT_FUNCTION_SPACE_DOCUMENT,
             name_with_generics(arena, function_name, type_parameters),
-            "(",
-            docvec![arena, arena.break_("", "",), "value: any"].nest(arena, INDENT),
-            arena.break_(",", ""),
-            "): value is ",
+            OPEN_PAREN_DOCUMENT,
+            docvec![arena, EMPTY_BREAK_DOCUMENT, VALUE_COLON_SPACE_ANY_DOCUMENT]
+                .nest(arena, INDENT),
+            TRAILING_COMMA_BREAK_DOCUMENT,
+            CLOSE_PAREN_COLON_SPACE_VALUE_IS_SPACE_DOCUMENT,
             type_name,
-            "$",
+            DOLLAR_DOCUMENT,
         ];
         if !type_parameters.is_empty() {
             for i in 0..type_parameters.len() {
                 if i == 0 {
-                    document = document.append(arena, "<unknown");
+                    document = document.append(arena, LT_INT_UNKNOWN_DOCUMENT);
                 } else {
-                    document = document.append(arena, ", unknown");
+                    document = document.append(arena, COMMA_SPACE_UNKNOWN_DOCUMENT);
                 }
             }
-            document = document.append(arena, '>');
+            document = document.append(arena, GT_INT_DOCUMENT);
         };
-        document = document.append(arena, ';');
+        document = document.append(arena, SEMICOLON_DOCUMENT);
         document.group(arena)
     }
 
@@ -772,20 +775,20 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
                 docvec![
                     arena,
                     LINE_DOCUMENT,
-                    "export function ",
+                    EXPORT_FUNCTION_SPACE_DOCUMENT,
                     name_with_generics(arena, function_name, type_parameters),
-                    "(",
+                    OPEN_PAREN_DOCUMENT,
                     docvec![
                         arena,
-                        arena.break_("", "",),
-                        "value: ",
+                        EMPTY_BREAK_DOCUMENT,
+                        VALUE_COLON_SPACE_DOCUMENT,
                         type_name_with_generics.clone(),
                     ]
                     .nest(arena, INDENT),
-                    arena.break_(",", ""),
-                    "): ",
+                    TRAILING_COMMA_BREAK_DOCUMENT,
+                    CLOSE_PAREN_COLON_SPACE_DOCUMENT,
                     self.do_print_force_generic_param(arena, &argument.type_),
-                    ";",
+                    SEMICOLON_DOCUMENT,
                 ]
                 .group(arena),
             );
@@ -803,20 +806,20 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
                     docvec![
                         arena,
                         LINE_DOCUMENT,
-                        "export function ",
+                        EXPORT_FUNCTION_SPACE_DOCUMENT,
                         name_with_generics(arena, function_name, type_parameters),
-                        "(",
+                        OPEN_PAREN_DOCUMENT,
                         docvec![
                             arena,
-                            arena.break_("", "",),
-                            "value: ",
+                            EMPTY_BREAK_DOCUMENT,
+                            VALUE_COLON_SPACE_DOCUMENT,
                             type_name_with_generics.clone(),
                         ]
                         .nest(arena, INDENT),
-                        arena.break_(",", ""),
-                        "): ",
+                        TRAILING_COMMA_BREAK_DOCUMENT,
+                        CLOSE_PAREN_COLON_SPACE_DOCUMENT,
                         self.do_print_force_generic_param(arena, &argument.type_),
-                        ";",
+                        SEMICOLON_DOCUMENT,
                     ]
                     .group(arena),
                 );
@@ -842,20 +845,20 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
 
                 docvec![
                     arena,
-                    "export function ",
+                    EXPORT_FUNCTION_SPACE_DOCUMENT,
                     name_with_generics(arena, function_name, type_parameters),
-                    "(",
+                    OPEN_PAREN_DOCUMENT,
                     docvec![
                         arena,
-                        arena.break_("", "",),
-                        "value: ",
+                        EMPTY_BREAK_DOCUMENT,
+                        VALUE_COLON_SPACE_DOCUMENT,
                         type_name_with_generics.clone(),
                     ]
                     .nest(arena, INDENT),
-                    arena.break_(",", ""),
-                    "): ",
+                    TRAILING_COMMA_BREAK_DOCUMENT,
+                    CLOSE_PAREN_COLON_SPACE_DOCUMENT,
                     self.do_print_force_generic_param(arena, &accessor.type_),
-                    ";"
+                    SEMICOLON_DOCUMENT
                 ]
                 .group(arena)
             });
@@ -873,11 +876,11 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
 
         Some(docvec![
             arena,
-            "export const ",
+            EXPORT_CONST_SPACE_DOCUMENT,
             super::maybe_escape_identifier(&constant.name),
-            ": ",
+            COLON_SPACE_DOCUMENT,
             self.print_type(arena, &constant.value.type_()),
-            ";",
+            SEMICOLON_DOCUMENT,
         ])
     }
 
@@ -914,7 +917,7 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
 
         Some(docvec![
             arena,
-            "export function ",
+            EXPORT_FUNCTION_SPACE_DOCUMENT,
             super::maybe_escape_identifier(name),
             if generic_names.is_empty() {
                 EMPTY_DOCUMENT
@@ -928,9 +931,9 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
                         None => {
                             docvec![
                                 arena,
-                                "x",
+                                X_DOCUMENT,
                                 i,
-                                ": ",
+                                COLON_SPACE_DOCUMENT,
                                 self.print_type_with_generic_usages(
                                     arena,
                                     &argument.type_,
@@ -941,7 +944,7 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
                         Some(name) => docvec![
                             arena,
                             super::maybe_escape_identifier(name),
-                            ": ",
+                            COLON_SPACE_DOCUMENT,
                             self.print_type_with_generic_usages(
                                 arena,
                                 &argument.type_,
@@ -951,9 +954,9 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
                     }
                 }),
             ),
-            ": ",
+            COLON_SPACE_DOCUMENT,
             self.print_type_with_generic_usages(arena, return_type, &generic_usages),
-            ";",
+            SEMICOLON_DOCUMENT,
         ])
     }
 
@@ -1089,11 +1092,11 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
             TypeVar::Unbound { id } | TypeVar::Generic { id } => match generic_printing {
                 GenericPrinting::FromUsage(usages) => match usages.get(id) {
                     Some(&0) => EMPTY_DOCUMENT,
-                    Some(&1) => "any".to_doc(arena),
+                    Some(&1) => ANY_DOCUMENT,
                     _ => id_to_type_var(arena, *id),
                 },
                 GenericPrinting::AlwaysGeneric => id_to_type_var(arena, *id),
-                GenericPrinting::AsAny => "any".to_doc(arena),
+                GenericPrinting::AsAny => ANY_DOCUMENT,
             },
             TypeVar::Link { type_ } => self.do_print(arena, type_, generic_printing),
         }
@@ -1112,23 +1115,23 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
         generic_printing: GenericPrinting<'_>,
     ) -> Document<'a, 'doc> {
         match name {
-            "Nil" => "undefined".to_doc(arena),
-            "Int" | "Float" => "number".to_doc(arena),
+            "Nil" => UNDEFINED_DOCUMENT,
+            "Int" | "Float" => NUMBER_DOCUMENT,
             "UtfCodepoint" => {
                 self.tracker.prelude_used = true;
-                "_.UtfCodepoint".to_doc(arena)
+                UNDERSCORE_DOT_UTF_CODEPOINT_DOCUMENT
             }
-            "String" => "string".to_doc(arena),
-            "Bool" => "boolean".to_doc(arena),
+            "String" => STRING_DOCUMENT,
+            "Bool" => BOOLEAN_DOCUMENT,
             "BitArray" => {
                 self.tracker.prelude_used = true;
-                "_.BitArray".to_doc(arena)
+                UNDERSCORE_DOT_BIT_ARRAY_DOCUMENT
             }
             "List" => {
                 self.tracker.prelude_used = true;
                 docvec![
                     arena,
-                    "_.List",
+                    UNDERSCORE_DOT_LIST_DOCUMENT,
                     wrap_generic_arguments(
                         arena,
                         arguments.iter().map(|argument| self.do_print(
@@ -1143,7 +1146,7 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
                 self.tracker.prelude_used = true;
                 docvec![
                     arena,
-                    "_.Result",
+                    UNDERSCORE_DOT_RESULT_DOCUMENT,
                     wrap_generic_arguments(
                         arena,
                         arguments
@@ -1175,7 +1178,7 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
             false => {
                 // If type comes from a separate module, use that module's name
                 // as a TypeScript namespace prefix
-                docvec![arena, self.module_name(module), ".", name]
+                docvec![arena, self.module_name(module), DOT_DOCUMENT, name]
             }
         };
         if arguments.is_empty() {
@@ -1210,13 +1213,13 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
                 arena,
                 arguments.iter().enumerate().map(|(idx, argument)| docvec![
                     arena,
-                    "x",
+                    X_DOCUMENT,
                     idx,
-                    ": ",
+                    COLON_SPACE_DOCUMENT,
                     self.do_print(arena, argument, generic_printing)
                 ])
             ),
-            " => ",
+            SPACE_EQUAL_RIGHT_ARROW_SPACE_DOCUMENT,
             self.do_print(arena, return_, generic_printing)
         ]
     }

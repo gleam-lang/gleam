@@ -767,6 +767,41 @@ const_str!(
     "} from \"",
     8
 );
+const_str!(EXPORT_TYPE_SPACE_DOCUMENT, "export type ", 12);
+const_str!(X_DOCUMENT, "x", 1);
+const_str!(ANY_DOCUMENT, "any", 3);
+const_str!(EXPORT_SPACE_DOCUMENT, "export ", 7);
+const_str!(DECLARE_SPACE_DOCUMENT, "declare ", 8);
+const_str!(
+    SPACE_EXTENDS_UNDERSCORE_CUSTOM_TYPE_DOCUMENT,
+    " extends _.CustomType {",
+    23
+);
+const_str!(CONSTRUCTOR_DOCUMENT, "constructor", 11);
+const_str!(
+    DEPRECATED_MULTILINE_COMMENT_DOCUMENT,
+    "/** @deprecated */",
+    18
+);
+const_str!(CLOSE_PAREN_COLON_SPACE_DOCUMENT, "): ", 3);
+const_str!(VALUE_COLON_SPACE_ANY_DOCUMENT, "value: any", 10);
+const_str!(
+    CLOSE_PAREN_COLON_SPACE_VALUE_IS_SPACE_DOCUMENT,
+    "): value is ",
+    12
+);
+const_str!(LT_INT_UNKNOWN_DOCUMENT, "<unknown", 8);
+const_str!(COMMA_SPACE_UNKNOWN_DOCUMENT, ", unknown", 9);
+const_str!(VALUE_COLON_SPACE_DOCUMENT, "value: ", 7);
+const_str!(UNDEFINED_DOCUMENT, "undefined", 9);
+const_str!(NUMBER_DOCUMENT, "number", 6);
+const_str!(UNDERSCORE_DOT_UTF_CODEPOINT_DOCUMENT, "_.UtfCodepoint", 14);
+const_str!(STRING_DOCUMENT, "string", 6);
+const_str!(BOOLEAN_DOCUMENT, "boolean", 7);
+const_str!(UNDERSCORE_DOT_BIT_ARRAY_DOCUMENT, "_.BitArray", 10);
+const_str!(UNDERSCORE_DOT_LIST_DOCUMENT, "_.List", 6);
+const_str!(UNDERSCORE_DOT_RESULT_DOCUMENT, "_.Result", 8);
+const_str!(SPACE_EQUAL_RIGHT_ARROW_SPACE_DOCUMENT, " => ", 4);
 
 const_break!(EMPTY_BREAK_DOCUMENT, "", "");
 const_break!(BREAKABLE_SPACE_DOCUMENT, "", " ");
