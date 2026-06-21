@@ -132,14 +132,13 @@ impl<'a, 'doc> CaseBody<'a, 'doc> {
         match self {
             CaseBody::If { check, body } => docvec![
                 arena,
-                "if (",
-                arena
-                    .break_("", "")
+                IF_SPACE_OPEN_PAREN_DOCUMENT,
+                EMPTY_BREAK_DOCUMENT
                     .append(arena, check)
                     .nest(arena, INDENT)
-                    .append(arena, arena.break_("", ""))
+                    .append(arena, EMPTY_BREAK_DOCUMENT)
                     .group(arena),
-                ") ",
+                CLOSE_PAREN_SPACE_DOCUMENT,
                 break_block(arena, body)
             ],
             // If we have some code like the following:
@@ -167,14 +166,13 @@ impl<'a, 'doc> CaseBody<'a, 'doc> {
                 ..
             } if if_body.is_empty() => docvec![
                 arena,
-                "if (!(",
-                arena
-                    .break_("", "")
+                IF_SPACE_OPEN_PAREN_EXCLAMATION_OPEN_PAREN_DOCUMENT,
+                EMPTY_BREAK_DOCUMENT
                     .append(arena, check)
                     .nest(arena, INDENT)
-                    .append(arena, arena.break_("", ""))
+                    .append(arena, EMPTY_BREAK_DOCUMENT)
                     .group(arena),
-                ")) ",
+                DOUBLE_CLOSE_PAREN_SPACE_DOCUMENT,
                 else_body,
             ],
             CaseBody::IfElse {
@@ -184,16 +182,15 @@ impl<'a, 'doc> CaseBody<'a, 'doc> {
                 ..
             } => docvec![
                 arena,
-                "if (",
-                arena
-                    .break_("", "")
+                IF_SPACE_OPEN_PAREN_DOCUMENT,
+                EMPTY_BREAK_DOCUMENT
                     .append(arena, check)
                     .nest(arena, INDENT)
-                    .append(arena, arena.break_("", ""))
+                    .append(arena, EMPTY_BREAK_DOCUMENT)
                     .group(arena),
-                ") ",
+                CLOSE_PAREN_SPACE_DOCUMENT,
                 break_block(arena, if_body),
-                " else ",
+                SPACE_ELSE_SPACE_DOCUMENT,
                 else_body,
             ],
             CaseBody::Statements(document) | CaseBody::IfElseChain(document) => document,
@@ -513,7 +510,7 @@ impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
         let first_character_variable = if multiple_single_character_prefix_checks(choices) {
             let name = self.variables.next_local_var(&ASSIGNMENT_VAR.into());
             let string = self.variables.get_value(var);
-            let first_character = docvec![arena, string, ".charCodeAt(0)"];
+            let first_character = docvec![arena, string, DOT_CHAR_CODE_AT_ZERO_DOCUMENT];
             assignments.push(let_doc(arena, name.clone(), first_character));
             Some(name)
         } else {
@@ -544,10 +541,15 @@ impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
                         // call `.charCodeAt` inline. This is still faster than
                         // `.startsWith`.
                         let string = this.variables.get_value(var);
-                        docvec![arena, string, ".charCodeAt(0)"]
+                        docvec![arena, string, DOT_CHAR_CODE_AT_ZERO_DOCUMENT]
                     };
 
-                    docvec![arena, first_character, " === ", code]
+                    docvec![
+                        arena,
+                        first_character,
+                        SPACE_TRIPLE_EQUAL_SPACE_DOCUMENT,
+                        code
+                    ]
                 } else {
                     this.variables.runtime_check(arena, var, check)
                 };
@@ -574,7 +576,12 @@ impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
                 // }
                 // ```
                 CaseBody::If { check, body } => (
-                    docvec![arena, check_doc, arena.break_(" &&", " && "), check],
+                    docvec![
+                        arena,
+                        check_doc,
+                        SPACE_DOUBLE_AMPERSAND_BREAK_DOCUMENT,
+                        check
+                    ],
                     body,
                 ),
 
@@ -615,7 +622,12 @@ impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
                     fallback_decision: decision,
                     ..
                 } if decision == fallback => (
-                    docvec![arena, check_doc, arena.break_(" &&", " && "), check],
+                    docvec![
+                        arena,
+                        check_doc,
+                        SPACE_DOUBLE_AMPERSAND_BREAK_DOCUMENT,
+                        check
+                    ],
                     if_body,
                 ),
 
@@ -637,13 +649,12 @@ impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
                     arena,
                     if_.into_doc(arena),
                     " else if (",
-                    arena
-                        .break_("", "")
+                    EMPTY_BREAK_DOCUMENT
                         .append(arena, check_doc)
                         .nest(arena, INDENT)
-                        .append(arena, arena.break_("", ""))
+                        .append(arena, EMPTY_BREAK_DOCUMENT)
                         .group(arena),
-                    ") ",
+                    CLOSE_PAREN_SPACE_DOCUMENT,
                     break_block(arena, body)
                 ]),
                 CaseBody::IfElseChain(document) | CaseBody::Statements(document) => {
@@ -651,13 +662,12 @@ impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
                         arena,
                         document,
                         " else if (",
-                        arena
-                            .break_("", "")
+                        EMPTY_BREAK_DOCUMENT
                             .append(arena, check_doc)
                             .nest(arena, INDENT)
-                            .append(arena, arena.break_("", ""))
+                            .append(arena, EMPTY_BREAK_DOCUMENT)
                             .group(arena),
-                        ") ",
+                        CLOSE_PAREN_SPACE_DOCUMENT,
                         break_block(arena, body)
                     ])
                 }
@@ -690,7 +700,7 @@ impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
             CaseBody::IfElseChain(docvec![
                 arena,
                 if_.into_doc(arena),
-                " else ",
+                SPACE_ELSE_SPACE_DOCUMENT,
                 else_body.document_after_else(arena)
             ])
         };
@@ -952,9 +962,9 @@ pub fn let_<'a, 'doc>(
             arena.concat(pattern.bound_variables().into_iter().map(|bound_variable| {
                 docvec![
                     arena,
-                    "let ",
+                    LET_SPACE_DOCUMENT,
                     expression_generator.local_var(&bound_variable.name()),
-                    ";",
+                    SEMICOLON_DOCUMENT,
                     LINE_DOCUMENT
                 ]
             }))
@@ -971,7 +981,14 @@ pub fn let_<'a, 'doc>(
     match scope_position {
         expression::Position::Expression(_) | expression::Position::Statement => doc,
         expression::Position::Tail => {
-            docvec![arena, doc, LINE_DOCUMENT, "return ", assignment_name, ";"]
+            docvec![
+                arena,
+                doc,
+                LINE_DOCUMENT,
+                "return ",
+                assignment_name,
+                SEMICOLON_DOCUMENT
+            ]
         }
         expression::Position::Assign(variable) => {
             docvec![
@@ -979,9 +996,9 @@ pub fn let_<'a, 'doc>(
                 doc,
                 LINE_DOCUMENT,
                 variable,
-                " = ",
+                SPACE_EQUAL_SPACE_DOCUMENT,
                 assignment_name,
-                ";"
+                SEMICOLON_DOCUMENT
             ]
         }
     }
@@ -1295,25 +1312,39 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
     ) -> Document<'a, 'doc> {
         let value = self.get_value(variable);
 
-        let equality = " === ";
-
         match runtime_check {
             RuntimeCheck::String { value: expected } => {
-                docvec![arena, value, equality, string(arena, expected)]
+                docvec![
+                    arena,
+                    value,
+                    SPACE_TRIPLE_EQUAL_SPACE_DOCUMENT,
+                    string(arena, expected)
+                ]
             }
             RuntimeCheck::Float {
                 float_value: expected,
             } => docvec![
                 arena,
                 value,
-                equality,
+                SPACE_TRIPLE_EQUAL_SPACE_DOCUMENT,
                 float_from_value(arena, expected.value())
             ],
             RuntimeCheck::Int {
                 int_value: expected,
-            } => docvec![arena, value, equality, expected.clone()],
+            } => docvec![
+                arena,
+                value,
+                SPACE_TRIPLE_EQUAL_SPACE_DOCUMENT,
+                expected.clone()
+            ],
             RuntimeCheck::StringPrefix { prefix, .. } => {
-                docvec![arena, value, ".startsWith(", string(arena, prefix), ")"]
+                docvec![
+                    arena,
+                    value,
+                    DOT_STARTS_WITH_OPEN_PAREN_DOCUMENT,
+                    string(arena, prefix),
+                    CLOSE_PAREN_DOCUMENT
+                ]
             }
 
             RuntimeCheck::BitArray { test } => match test {
@@ -1321,11 +1352,25 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                 // bit array has a whole number of bytes.
                 BitArrayTest::CatchAllIsBytes { size_so_far } => {
                     if size_so_far.is_zero() {
-                        docvec![arena, value, ".bitSize % 8", equality, "0"]
+                        docvec![
+                            arena,
+                            value,
+                            DOT_BIT_SIZE_MODULO_8_DOCUMENT,
+                            SPACE_TRIPLE_EQUAL_SPACE_DOCUMENT,
+                            ZERO_DOCUMENT,
+                        ]
                     } else {
                         let size_so_far = self.offset_to_doc(arena, size_so_far, true);
-                        let remaining_bits = docvec![arena, value, ".bitSize - ", size_so_far];
-                        docvec![arena, "(", remaining_bits, ") % 8", equality, "0"]
+                        let remaining_bits =
+                            docvec![arena, value, DOT_BIT_SIZE_MINUS_SPACE_DOCUMENT, size_so_far];
+                        docvec![
+                            arena,
+                            OPEN_PAREN_DOCUMENT,
+                            remaining_bits,
+                            CLOSE_PAREN_MODULO_8_DOCUMENT,
+                            SPACE_TRIPLE_EQUAL_SPACE_DOCUMENT,
+                            ZERO_DOCUMENT
+                        ]
                     }
                 }
 
@@ -1333,7 +1378,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                     docvec![
                         arena,
                         self.read_size_to_doc(arena, size).expect("empty size"),
-                        " >= 0"
+                        SPACE_GT_EQ_ZERO_DOCUMENT
                     ]
                 }
 
@@ -1356,7 +1401,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                             docvec![
                                 arena,
                                 start_doc.clone(),
-                                " + ",
+                                SPACE_PLUS_SPACE_DOCUMENT,
                                 self.read_size_to_doc(arena, size).expect("empty size")
                             ]
                         }
@@ -1364,18 +1409,23 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                     let check =
                         self.bit_array_slice_to_float(arena, value, start_doc, end, endianness);
 
-                    docvec![arena, "Number.isFinite(", check, ")"]
+                    docvec![
+                        arena,
+                        NUMBER_DOT_IS_FINITE_OPEN_PAREN_DOCUMENT,
+                        check,
+                        CLOSE_PAREN_DOCUMENT
+                    ]
                 }
 
                 // Here we need to make sure that the bit array has a specific
                 // size.
                 BitArrayTest::Size(SizeTest { operator, size }) => {
                     let operator = match operator {
-                        SizeOperator::GreaterEqual => " >= ",
-                        SizeOperator::Equal => equality,
+                        SizeOperator::GreaterEqual => SPACE_GT_EQ_SPACE_DOCUMENT,
+                        SizeOperator::Equal => SPACE_TRIPLE_EQUAL_SPACE_DOCUMENT,
                     };
                     let size = self.offset_to_doc(arena, size, false);
-                    docvec![arena, value, ".bitSize", operator, size]
+                    docvec![arena, value, DOT_BIT_SIZE_DOCUMENT, operator, size]
                 }
 
                 // Finally, here we need to check that a given portion of the
@@ -1420,7 +1470,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
             RuntimeCheck::Variant { match_, .. } if variable.type_.is_bool() => {
                 match match_.used_name().as_str() {
                     "True" => value.to_doc(arena),
-                    _ => docvec![arena, "!", value],
+                    _ => docvec![arena, EXCLAMATION_MARK_DOCUMENT, value],
                 }
             }
 
@@ -1464,7 +1514,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                 docvec![
                     arena,
                     value,
-                    " instanceof ",
+                    SPACE_INSTANCE_OF_SPACE_DOCUMENT,
                     qualification,
                     match_.used_name()
                 ]
@@ -1472,12 +1522,12 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
 
             RuntimeCheck::NonEmptyList { .. } => {
                 self.expression_generator.tracker.list_non_empty_class_used = true;
-                docvec![arena, value, " instanceof $NonEmpty"]
+                docvec![arena, value, SPACE_INSTANCE_OF_NON_EMPTY_DOCUMENT]
             }
 
             RuntimeCheck::EmptyList => {
                 self.expression_generator.tracker.list_empty_class_used = true;
-                docvec![arena, value, " instanceof $Empty"]
+                docvec![arena, value, SPACE_INSTANCE_OF_EMPTY_DOCUMENT]
             }
         }
     }
@@ -1513,7 +1563,13 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                     && from_bits.clone() % 8 == BigInt::ZERO =>
             {
                 let from_byte: BigInt = from_bits / 8;
-                return docvec![arena, bit_array, ".byteAt(", from_byte, ")"];
+                return docvec![
+                    arena,
+                    bit_array,
+                    DOT_BYTE_AT_OPEN_PAREN_DOCUMENT,
+                    from_byte,
+                    CLOSE_PAREN_DOCUMENT
+                ];
             }
 
             // If we're reading all the remaining bits/bytes of an array we'll
@@ -1545,7 +1601,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                 let end = if from.is_zero() {
                     size
                 } else {
-                    docvec![arena, start.clone(), " + ", size]
+                    docvec![arena, start.clone(), SPACE_PLUS_SPACE_DOCUMENT, size]
                 };
                 (start, end)
             };
@@ -1571,7 +1627,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
         parenthesise: bool,
     ) -> Document<'a, 'doc> {
         if offset.is_zero() {
-            return "0".to_doc(arena);
+            return ZERO_DOCUMENT;
         }
 
         let mut pieces = vec![];
@@ -1591,7 +1647,9 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                 VariableUsage::OutsideVariable(name) => self.local_var(name).to_doc(arena),
             };
             if *times != 1 {
-                variable = variable.append(arena, " * ").append(arena, *times)
+                variable = variable
+                    .append(arena, SPACE_TIMES_SPACE_DOCUMENT)
+                    .append(arena, *times)
             }
             pieces.push(variable.to_doc(arena))
         }
@@ -1609,16 +1667,21 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
             );
 
             if parenthesise {
-                pieces.push(calculation.surround(arena, "(", ")"))
+                pieces.push(calculation.surround(arena, OPEN_PAREN_DOCUMENT, CLOSE_PAREN_DOCUMENT))
             } else {
                 pieces.push(calculation)
             }
         }
 
         if pieces.len() > 1 && parenthesise {
-            docvec![arena, "(", arena.join(pieces, " + ".to_doc(arena)), ")"]
+            docvec![
+                arena,
+                OPEN_PAREN_DOCUMENT,
+                arena.join(pieces, SPACE_PLUS_SPACE_DOCUMENT),
+                CLOSE_PAREN_DOCUMENT
+            ]
         } else {
-            arena.join(pieces, " + ".to_doc(arena))
+            arena.join(pieces, SPACE_PLUS_SPACE_DOCUMENT)
         }
     }
 
@@ -1638,7 +1701,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                 Some(if *unit == 1 {
                     variable.to_doc(arena)
                 } else {
-                    docvec![arena, variable, " * ", *unit as i64]
+                    docvec![arena, variable, SPACE_TIMES_SPACE_DOCUMENT, *unit as i64]
                 })
             }
             ReadSize::RemainingBits | ReadSize::RemainingBytes => None,
@@ -1649,14 +1712,20 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                 operator,
             } => {
                 let left = if self.read_size_must_be_wrapped(left) {
-                    self.read_size_to_doc(arena, left)?
-                        .surround(arena, "(", ")")
+                    self.read_size_to_doc(arena, left)?.surround(
+                        arena,
+                        OPEN_PAREN_DOCUMENT,
+                        CLOSE_PAREN_DOCUMENT,
+                    )
                 } else {
                     self.read_size_to_doc(arena, left)?
                 };
                 let right = if self.read_size_must_be_wrapped(right) {
-                    self.read_size_to_doc(arena, right)?
-                        .surround(arena, "(", ")")
+                    self.read_size_to_doc(arena, right)?.surround(
+                        arena,
+                        OPEN_PAREN_DOCUMENT,
+                        CLOSE_PAREN_DOCUMENT,
+                    )
                 } else {
                     self.read_size_to_doc(arena, right)?
                 };
@@ -1698,10 +1767,14 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
             .bit_array_slice_to_int_used = true;
 
         let endianness = match endianness {
-            Endianness::Big => "true",
-            Endianness::Little => "false",
+            Endianness::Big => TRUE_LOWERCASE_DOCUMENT,
+            Endianness::Little => FALSE_LOWERCASE_DOCUMENT,
         };
-        let signed = if signed { "true" } else { "false" };
+        let signed = if signed {
+            TRUE_LOWERCASE_DOCUMENT
+        } else {
+            FALSE_LOWERCASE_DOCUMENT
+        };
         let arguments = arena.join(
             [
                 bit_array.to_doc(arena),
@@ -1710,9 +1783,14 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                 endianness.to_doc(arena),
                 signed.to_doc(arena),
             ],
-            ", ".to_doc(arena),
+            COMMA_SPACE_DOCUMENT,
         );
-        docvec![arena, "bitArraySliceToInt(", arguments, ")"]
+        docvec![
+            arena,
+            BIT_ARRAY_SLICE_TO_INT_OPEN_PAREN_DOCUMENT,
+            arguments,
+            CLOSE_PAREN_DOCUMENT
+        ]
     }
 
     /// Generates the document that calls the `bitArraySliceToFloat` function,
@@ -1731,8 +1809,8 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
             .bit_array_slice_to_float_used = true;
 
         let endianness = match endianness {
-            Endianness::Big => "true",
-            Endianness::Little => "false",
+            Endianness::Big => TRUE_LOWERCASE_DOCUMENT,
+            Endianness::Little => FALSE_LOWERCASE_DOCUMENT,
         };
         let arguments = arena.join(
             [
@@ -1741,9 +1819,14 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                 end.to_doc(arena),
                 endianness.to_doc(arena),
             ],
-            ", ".to_doc(arena),
+            COMMA_SPACE_DOCUMENT,
         );
-        docvec![arena, "bitArraySliceToFloat(", arguments, ")"]
+        docvec![
+            arena,
+            BIT_ARRAY_SLICE_TO_FLOAT_OPEN_PAREN_DOCUMENT,
+            arguments,
+            CLOSE_PAREN_DOCUMENT
+        ]
     }
 
     /// Generates the document that calls the `bitArraySlice` function, with
@@ -1761,13 +1844,13 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
         let from = self.offset_to_doc(arena, from, false);
         docvec![
             arena,
-            "bitArraySlice(",
+            BIT_ARRAY_SLICE_OPEN_PAREN_DOCUMENT,
             bit_array,
-            ", ",
+            COMMA_SPACE_DOCUMENT,
             from,
-            ", ",
+            COMMA_SPACE_DOCUMENT,
             end,
-            ")"
+            CLOSE_PAREN_DOCUMENT
         ]
     }
 
@@ -1784,7 +1867,14 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
     ) -> Document<'a, 'doc> {
         self.expression_generator.tracker.bit_array_slice_used = true;
         let from = self.offset_to_doc(arena, from, false);
-        docvec![arena, "bitArraySlice(", bit_array, ", ", from, ")"]
+        docvec![
+            arena,
+            BIT_ARRAY_SLICE_OPEN_PAREN_DOCUMENT,
+            bit_array,
+            COMMA_SPACE_DOCUMENT,
+            from,
+            CLOSE_PAREN_DOCUMENT
+        ]
     }
 
     /// This generates all the checks that need to be performed to make sure a
@@ -1808,7 +1898,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
         } = read_action;
         let mut checks = vec![];
 
-        let equality = " === ";
+        let equality = SPACE_TRIPLE_EQUAL_SPACE_DOCUMENT;
 
         let bytes = string_bytes.as_slice();
 
@@ -1817,8 +1907,13 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
             // optimise this by reading all the subsequent bytes and checking
             // they have a specific value.
             for byte in bytes {
-                let byte_access =
-                    docvec![arena, bit_array.clone(), ".byteAt(", from_byte.clone(), ")"];
+                let byte_access = docvec![
+                    arena,
+                    bit_array.clone(),
+                    DOT_BYTE_AT_OPEN_PAREN_DOCUMENT,
+                    from_byte.clone(),
+                    CLOSE_PAREN_DOCUMENT
+                ];
                 checks.push(docvec![arena, byte_access, equality, *byte]);
                 from_byte += 1;
             }
@@ -1841,7 +1936,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
 
         // Otherwise the check succeeds if all the byte checks succeed.
         arena
-            .join(checks, arena.break_(" &&", " && "))
+            .join(checks, SPACE_DOUBLE_AMPERSAND_BREAK_DOCUMENT)
             .nest(arena, INDENT)
             .group(arena)
     }
@@ -1866,22 +1961,30 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
             ..
         } = read_action;
 
-        let equality = " === ";
-
         if let (Some(mut from_byte), Some(size)) = (start.constant_bytes(), size.constant_bytes()) {
             // If the number starts at a byte-aligned offset and is made of a
             // whole number of bytes then we can optimise this by checking that
             // all the bytes starting at the given offset match the int bytes.
             let mut checks = vec![];
             for byte in bit_array_segment_int_value_to_bytes(literal_int, size * 8, *endianness) {
-                let byte_access =
-                    docvec![arena, bit_array.clone(), ".byteAt(", from_byte.clone(), ")"];
-                checks.push(docvec![arena, byte_access, equality, byte]);
+                let byte_access = docvec![
+                    arena,
+                    bit_array.clone(),
+                    DOT_BYTE_AT_OPEN_PAREN_DOCUMENT,
+                    from_byte.clone(),
+                    CLOSE_PAREN_DOCUMENT
+                ];
+                checks.push(docvec![
+                    arena,
+                    byte_access,
+                    SPACE_TRIPLE_EQUAL_SPACE_DOCUMENT,
+                    byte
+                ]);
                 from_byte += 1;
             }
 
             arena
-                .join(checks, arena.break_(" &&", " && "))
+                .join(checks, SPACE_DOUBLE_AMPERSAND_BREAK_DOCUMENT)
                 .nest(arena, INDENT)
                 .group(arena)
         } else {
@@ -1896,13 +1999,13 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                 (_, _) => docvec![
                     arena,
                     start_doc.clone(),
-                    " + ",
+                    SPACE_PLUS_SPACE_DOCUMENT,
                     self.read_size_to_doc(arena, size).expect("empty size")
                 ],
             };
             let check =
                 self.bit_array_slice_to_int(arena, bit_array, start_doc, end, endianness, *signed);
-            docvec![arena, check, equality, literal_int]
+            docvec![arena, check, SPACE_TRIPLE_EQUAL_SPACE_DOCUMENT, literal_int]
         }
     }
 
@@ -1925,7 +2028,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
             ..
         } = read_action;
 
-        let equality = " === ";
+        let equality = SPACE_TRIPLE_EQUAL_SPACE_DOCUMENT;
 
         // Unlike literal integers and strings, for now we don't try and apply any
         // optimisation in the way we match on those: we take an entire slice,
@@ -1939,7 +2042,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
             (_, _) => docvec![
                 arena,
                 start_doc.clone(),
-                " + ",
+                SPACE_PLUS_SPACE_DOCUMENT,
                 self.read_size_to_doc(arena, size).expect("empty size")
             ],
         };
@@ -2221,7 +2324,13 @@ fn reassignment_doc<'a, 'doc>(
     variable_name: EcoString,
     value: Document<'a, 'doc>,
 ) -> Document<'a, 'doc> {
-    docvec![arena, variable_name, " = ", value, ";"]
+    docvec![
+        arena,
+        variable_name,
+        SPACE_EQUAL_SPACE_DOCUMENT,
+        value,
+        SEMICOLON_DOCUMENT
+    ]
 }
 
 fn let_doc<'a, 'doc>(
@@ -2229,7 +2338,14 @@ fn let_doc<'a, 'doc>(
     variable_name: EcoString,
     value: Document<'a, 'doc>,
 ) -> Document<'a, 'doc> {
-    docvec![arena, "let ", variable_name, " = ", value, ";"]
+    docvec![
+        arena,
+        LET_SPACE_DOCUMENT,
+        variable_name,
+        SPACE_EQUAL_SPACE_DOCUMENT,
+        value,
+        SEMICOLON_DOCUMENT
+    ]
 }
 
 /// Calculates the length of str as utf16 without escape characters.
@@ -2244,10 +2360,10 @@ pub fn break_block<'a, 'doc>(
 ) -> Document<'a, 'doc> {
     docvec![
         arena,
-        "{",
+        OPEN_CURLY_DOCUMENT,
         docvec![arena, LINE_DOCUMENT, doc].nest(arena, INDENT),
         LINE_DOCUMENT,
-        "}"
+        CLOSE_CURLY_DOCUMENT
     ]
     .force_break(arena)
 }
