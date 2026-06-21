@@ -61,18 +61,20 @@ impl<'a, 'doc> Imports<'a, 'doc> {
                     .into_iter()
                     .sorted()
                     .map(|string| string.to_doc(arena)),
-                arena.break_(",", ", "),
+                COMMA_BREAK_DOCUMENT,
             );
             let names = docvec![
                 arena,
-                docvec![arena, arena.break_("", " "), names].nest(arena, INDENT),
-                arena.break_(",", " ")
+                docvec![arena, BREAKABLE_SPACE_DOCUMENT, names].nest(arena, INDENT),
+                TRAILING_COMMA_OR_SPACE_BREAK_DOCUMENT
             ]
             .group(arena);
 
             let export_keyword = match codegen_target {
-                JavaScriptCodegenTarget::JavaScript => "export {",
-                JavaScriptCodegenTarget::TypeScriptDeclarations => "export type {",
+                JavaScriptCodegenTarget::JavaScript => EXPORT_SPACE_OPEN_CURLY_DOCUMENT,
+                JavaScriptCodegenTarget::TypeScriptDeclarations => {
+                    EXPORT_TYPE_SPACE_OPEN_CURLY_DOCUMENT
+                }
             };
 
             docvec![
@@ -81,7 +83,7 @@ impl<'a, 'doc> Imports<'a, 'doc> {
                 LINE_DOCUMENT,
                 export_keyword,
                 names,
-                "};",
+                CLOSE_CURLY_SEMICOLON_DOCUMENT,
                 LINE_DOCUMENT
             ]
         }
@@ -134,20 +136,20 @@ impl<'a, 'doc> Import<'a, 'doc> {
     ) -> Document<'a, 'doc> {
         let path = self.path.to_doc(arena);
         let import_modifier = if codegen_target == JavaScriptCodegenTarget::TypeScriptDeclarations {
-            "type "
+            TYPE_SPACE_DOCUMENT
         } else {
-            ""
+            EMPTY_DOCUMENT
         };
         let alias_imports = arena.concat(self.aliases.into_iter().sorted().map(|alias| {
             docvec![
                 arena,
-                "import ",
+                IMPORT_SPACE_DOCUMENT,
                 import_modifier,
-                "* as ",
+                TIMES_SPACE_AS_SPACE_DOCUMENT,
                 alias,
-                " from \"",
+                SPACE_FROM_SPACE_DOUBLE_QUOTE_DOCUMENT,
                 path.clone(),
-                r#"";"#,
+                DOUBLE_QUOTE_SEMICOLON_DOCUMENT,
                 LINE_DOCUMENT
             ]
         }));
@@ -158,23 +160,23 @@ impl<'a, 'doc> Import<'a, 'doc> {
                 .unqualified
                 .into_iter()
                 .map(|member| member.into_doc(arena));
-            let members = arena.join(members, arena.break_(",", ", "));
+            let members = arena.join(members, COMMA_BREAK_DOCUMENT);
             let members = docvec![
                 arena,
-                docvec![arena, arena.break_("", " "), members].nest(arena, INDENT),
-                arena.break_(",", " ")
+                docvec![arena, BREAKABLE_SPACE_DOCUMENT, members].nest(arena, INDENT),
+                TRAILING_COMMA_OR_SPACE_BREAK_DOCUMENT
             ]
             .group(arena);
             docvec![
                 arena,
                 alias_imports,
-                "import ",
+                IMPORT_SPACE_DOCUMENT,
                 import_modifier,
-                "{",
+                OPEN_CURLY_DOCUMENT,
                 members,
-                "} from \"",
+                CLOSE_CURLY_SPACE_FROM_SPACE_DOUBLE_QUOTE_DOCUMENT,
                 path,
-                r#"";"#,
+                DOUBLE_QUOTE_SEMICOLON_DOCUMENT,
                 LINE_DOCUMENT
             ]
         }
@@ -191,7 +193,7 @@ impl<'a, 'doc> Member<'a, 'doc> {
     fn into_doc(self, arena: &'doc DocumentArena<'a, 'doc>) -> Document<'a, 'doc> {
         match self.alias {
             None => self.name.to_doc(arena),
-            Some(alias) => docvec![arena, self.name, " as ", alias],
+            Some(alias) => docvec![arena, self.name, SPACE_AS_SPACE_DOCUMENT, alias],
         }
     }
 }
