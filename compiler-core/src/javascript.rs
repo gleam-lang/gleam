@@ -1316,17 +1316,14 @@ pub struct ModuleConfig<'a> {
     pub project_root: &'a Utf8Path,
 }
 
-pub fn module<'a, 'doc>(config: ModuleConfig<'a>) -> (String, Option<SourceMap>) {
-    let arena = DocumentArena::new();
+pub fn module(config: ModuleConfig<'_>) -> (String, Option<SourceMap>) {
     let (output, sourcemap_builder) = {
+        let arena = DocumentArena::new();
         let mut generator = Generator::new(config);
-        let document = generator.compile(&arena);
-        // let builder = generator.source_map_builder;
-        let builder: Option<Rc<RefCell<DebugIgnore<sourcemap::SourceMapBuilder>>>> = todo!();
-        (document.to_pretty_string(80), builder)
+        let document = generator.compile(&arena).to_pretty_string(80);
+        let builder = generator.source_map_builder;
+        (document, builder)
     };
-
-    drop(arena);
 
     let source_map = sourcemap_builder.map(|builder| {
         // We have completed the generation of the module, so we can now take ownership
