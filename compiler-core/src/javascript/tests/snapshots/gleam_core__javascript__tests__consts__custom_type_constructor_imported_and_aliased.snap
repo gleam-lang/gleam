@@ -10,6 +10,6 @@ pub const local = B
 
 ----- COMPILED JAVASCRIPT
 import * as $other_module from "../../package/other_module.mjs";
-import { A as B } from "../../package/other_module.mjs";
+import { T$A$const as T$B$const } from "../../package/other_module.mjs";
 
-export const local = /* @__PURE__ */ new B();
+export const local = T$B$const;

@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub opaque type Wibble {\n  Wibble\n  Wobble(Int)\n}\n\npub fn go(x) {\n  case x {\n    _ if x == #(Wibble) -> True\n    _ -> False\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub opaque type Wibble {
+  Wibble
+  Wobble(Int)
+}
+
+pub fn go(x) {
+  case x {
+    _ if x == #(Wibble) -> True
+    _ -> False
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType, isEqual } from "../gleam.mjs";
+
+class Wibble extends $CustomType {}
+const Wibble$Wibble$const = new Wibble();
+
+class Wobble extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+
+export function go(x) {
+  if (isEqual(x, [Wibble$Wibble$const])) {
+    return true;
+  } else {
+    return false;
+  }
+}

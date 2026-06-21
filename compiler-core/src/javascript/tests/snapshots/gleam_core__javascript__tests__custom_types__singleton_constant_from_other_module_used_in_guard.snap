@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\nimport wibble.{Wobble}\n\npub fn go(x) {\n  case x {\n    _ if x == #(wibble.Wibble) -> 1\n    _ if x == #(Wobble) -> 2\n    _ -> 3\n  }\n}\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+pub type Wibble { Wibble Wobble }
+
+-- main.gleam
+
+import wibble.{Wobble}
+
+pub fn go(x) {
+  case x {
+    _ if x == #(wibble.Wibble) -> 1
+    _ if x == #(Wobble) -> 2
+    _ -> 3
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { isEqual } from "../gleam.mjs";
+import * as $wibble from "../wibble.mjs";
+import { Wibble$Wobble$const } from "../wibble.mjs";
+
+export function go(x) {
+  if (isEqual(x, [$wibble.Wibble$Wibble$const])) {
+    return 1;
+  } else if (isEqual(x, [Wibble$Wobble$const])) {
+    return 2;
+  } else {
+    return 3;
+  }
+}
