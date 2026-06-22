@@ -46,6 +46,7 @@ use ecow::{EcoString, eco_format};
 use hexpm::version::Version;
 use itertools::Itertools;
 use name::{check_argument_names, check_name_case};
+use regex::Regex;
 use std::{
     collections::{HashMap, HashSet},
     ops::Deref,
@@ -54,6 +55,9 @@ use std::{
 use vec1::Vec1;
 
 use self::imports::Importer;
+
+static EXTERNAL_MODULE_PATTERN: OnceLock<Regex> = OnceLock::new();
+static EXTERNAL_FUNCTION_PATTERN: OnceLock<Regex> = OnceLock::new();
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum Inferred<T> {
@@ -850,14 +854,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     ) {
         use regex::Regex;
 
-        static MODULE: OnceLock<Regex> = OnceLock::new();
-        static FUNCTION: OnceLock<Regex> = OnceLock::new();
-
         let (module, function) = match external_javascript {
             None => return,
             Some((module, function, _location)) => (module, function),
         };
-        if !MODULE
+        if !EXTERNAL_MODULE_PATTERN
             .get_or_init(|| Regex::new("^[@a-zA-Z0-9\\./:_-]+$").expect("regex"))
             .is_match(module)
         {
@@ -867,7 +868,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 name: function_name.clone(),
             });
         }
-        if !FUNCTION
+        if !EXTERNAL_FUNCTION_PATTERN
             .get_or_init(|| Regex::new("^[a-zA-Z_][a-zA-Z0-9_]*$").expect("regex"))
             .is_match(function)
         {

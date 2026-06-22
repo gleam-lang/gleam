@@ -14,6 +14,7 @@ use gleam_core::{
     warning::WarningEmitterIO,
 };
 use gleam_language_server::{DownloadDependencies, Locker, MakeLocker};
+use regex::Regex;
 use std::{
     collections::HashSet,
     fmt::Debug,
@@ -422,24 +423,23 @@ pub fn write_to_open_file(
     })
 }
 
+static IS_GLEAM_PATH_PATTERN: OnceLock<Regex> = OnceLock::new();
+
 fn is_gleam_path(path: &Utf8Path, dir: impl AsRef<Utf8Path>) -> bool {
-    use regex::Regex;
-
-    static RE: OnceLock<Regex> = OnceLock::new();
-
-    RE.get_or_init(|| {
-        Regex::new(&format!(
-            "^({module}{slash})*{module}\\.gleam$",
-            module = "[a-z][_a-z0-9]*",
-            slash = "(/|\\\\)",
-        ))
-        .expect("is_gleam_path() RE regex")
-    })
-    .is_match(
-        path.strip_prefix(dir.as_ref())
-            .expect("is_gleam_path(): strip_prefix")
-            .as_str(),
-    )
+    IS_GLEAM_PATH_PATTERN
+        .get_or_init(|| {
+            Regex::new(&format!(
+                "^({module}{slash})*{module}\\.gleam$",
+                module = "[a-z][_a-z0-9]*",
+                slash = "(/|\\\\)",
+            ))
+            .expect("is_gleam_path() RE regex")
+        })
+        .is_match(
+            path.strip_prefix(dir.as_ref())
+                .expect("is_gleam_path(): strip_prefix")
+                .as_str(),
+        )
 }
 
 fn is_gleam_build_dir(e: &ignore::DirEntry) -> bool {

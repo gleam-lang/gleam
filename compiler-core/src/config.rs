@@ -14,11 +14,13 @@ use ecow::EcoString;
 use globset::{Glob, GlobSetBuilder};
 use hexpm::version::{self, LowestVersion, Version};
 use http::Uri;
+use regex::Regex;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{self};
 use std::marker::PhantomData;
+use std::sync::OnceLock;
 
 #[cfg(test)]
 use crate::manifest::ManifestPackage;
@@ -1228,10 +1230,9 @@ pub mod map_with_package_name_keys {
     }
 }
 
+static PACKAGE_NAME_PATTERN: OnceLock<Regex> = OnceLock::new();
+
 fn is_valid_package_name(name: &str) -> bool {
-    use regex::Regex;
-    use std::sync::OnceLock;
-    static PACKAGE_NAME_PATTERN: OnceLock<Regex> = OnceLock::new();
     PACKAGE_NAME_PATTERN
         .get_or_init(|| Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex"))
         .is_match(name)
