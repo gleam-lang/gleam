@@ -44,6 +44,10 @@
 - More readable error message when trying to revert an old release.
   ([Moritz Böhme](https://github.com/MoritzBoehme))
 
+- The error message when failing to decrypt the local Hex API key is now more
+  informative and helpful.
+  ([Moritz Böhme](https://github.com/MoritzBoehme))
+
 ### Language server
 
 - The language server now supports go-to-definition, find-references and rename

@@ -232,9 +232,7 @@ It will be used to locally encrypt your Hex API tokens.
             encrypted_credentials.refresh_token.as_bytes(),
             &local_password,
         )
-        .map_err(|e| Error::FailedToDecryptLocalHexApiKey {
-            detail: e.to_string(),
-        })?;
+        .map_err(|_| Error::FailedToDecryptLocalHexApiKey)?;
 
         // Use a refresh token, consuming it to get a new set of tokens.
         let request = hexpm::oauth_refresh_token_request(
