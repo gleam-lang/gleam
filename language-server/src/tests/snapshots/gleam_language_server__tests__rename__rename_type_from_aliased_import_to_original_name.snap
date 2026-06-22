@@ -13,7 +13,7 @@ fn wibble(w: Wibble) -> Wibble { todo }
 -- app.gleam
 
 import mod.{type Wibble as Wobble}
-                 ↑▔▔▔▔▔           
+                           ↑▔▔▔▔▔ 
 
 pub fn main(w: Wobble) -> mod.Wibble { todo }
 

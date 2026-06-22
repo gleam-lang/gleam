@@ -13,7 +13,7 @@ pub fn wibble() {
 -- app.gleam
 
 import mod.{wibble as wobble}
-            ↑▔▔▔▔▔           
+                      ↑▔▔▔▔▔ 
 
 pub fn main() {
   wobble()
