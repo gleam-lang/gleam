@@ -366,3 +366,7 @@
 - Fixed a bug where referencing qualified constructors in constant where a value
   of the same name exists in scope would cause invalid code to be generated.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where variable sized string segment patterns that are discarded
+  are not disallowed by the compiler.
+  ([Lily Rose](https://github.com/LilyRose2798))
