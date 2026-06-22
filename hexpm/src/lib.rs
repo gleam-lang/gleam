@@ -991,10 +991,10 @@ pub struct Dependency {
 
 static USER_AGENT: &str = concat!("Gleam v", env!("CARGO_PKG_VERSION"));
 
-fn validate_package_and_version(package: &str, version: &str) -> Result<(), ApiError> {
-    static PACKAGE_PATTERN: OnceLock<Regex> = OnceLock::new();
-    static VERSION_PATTERN: OnceLock<Regex> = OnceLock::new();
+static PACKAGE_PATTERN: OnceLock<Regex> = OnceLock::new();
+static VERSION_PATTERN: OnceLock<Regex> = OnceLock::new();
 
+fn validate_package_and_version(package: &str, version: &str) -> Result<(), ApiError> {
     let package_pattern = PACKAGE_PATTERN.get_or_init(|| Regex::new(r"^[a-z]\w*$").unwrap());
     let version_pattern =
         VERSION_PATTERN.get_or_init(|| Regex::new(r"^[a-zA-Z-0-9\._-]+$").unwrap());

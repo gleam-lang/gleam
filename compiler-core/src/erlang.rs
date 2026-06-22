@@ -2860,8 +2860,9 @@ fn atom_string(value: EcoString) -> Document<'static> {
     escape_atom_string(value).to_doc()
 }
 
+static ATOM_PATTERN: OnceLock<Regex> = OnceLock::new();
+
 fn atom_pattern() -> &'static Regex {
-    static ATOM_PATTERN: OnceLock<Regex> = OnceLock::new();
     ATOM_PATTERN.get_or_init(|| Regex::new(r"^[a-z][a-z0-9_@]*$").expect("atom RE regex"))
 }
 
@@ -2890,8 +2891,9 @@ pub fn escape_atom_string(value: EcoString) -> EcoString {
     }
 }
 
+static PATTERN: OnceLock<Regex> = OnceLock::new();
+
 fn unicode_escape_sequence_pattern() -> &'static Regex {
-    static PATTERN: OnceLock<Regex> = OnceLock::new();
     PATTERN.get_or_init(|| {
         Regex::new(r#"(\\+)(u)"#).expect("Unicode escape sequence regex cannot be constructed")
     })
