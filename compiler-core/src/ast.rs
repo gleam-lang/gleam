@@ -1005,7 +1005,7 @@ impl TypedImport {
             location,
             imported_name_location,
             name,
-            as_name: _,
+            as_name,
         }) = self
             .unqualified_values
             .iter()
@@ -1018,6 +1018,7 @@ impl TypedImport {
                     is_type: false,
                     location,
                     imported_name_location,
+                    as_name: as_name.as_ref(),
                 },
             ));
         }
@@ -1026,7 +1027,7 @@ impl TypedImport {
             location,
             imported_name_location,
             name,
-            as_name: _,
+            as_name,
         }) = self
             .unqualified_types
             .iter()
@@ -1039,6 +1040,7 @@ impl TypedImport {
                     is_type: true,
                     location,
                     imported_name_location,
+                    as_name: as_name.as_ref(),
                 },
             ));
         }
