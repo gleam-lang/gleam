@@ -368,5 +368,5 @@
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - Fixed a bug that would result in `gleam build` being slower than necessary
-  when compiling a project with no changes.
+  when finding the Gleam files of a package.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
