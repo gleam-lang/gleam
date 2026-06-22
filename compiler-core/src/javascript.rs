@@ -771,7 +771,7 @@ impl<'a, 'doc> Generator<'a> {
                     EXPORT_CONST_SPACE_DOCUMENT,
                     function_name,
                     SPACE_EQUAL_SPACE_VALUE_SPACE_ARROW,
-                    contents.clone().nest(arena, INDENT),
+                    contents.nest(arena, INDENT),
                 ]);
             } else {
                 contents = docvec![
@@ -1364,7 +1364,7 @@ pub fn module(config: ModuleConfig<'_>) -> (String, Option<SourceMap>) {
     (output, source_map)
 }
 
-pub fn ts_declaration<'a, 'doc>(module: &'a TypedModule) -> String {
+pub fn ts_declaration(module: &TypedModule) -> String {
     let arena = DocumentArena::new();
     let document = typescript::TypeScriptGenerator::new(module).compile(&arena);
     document.to_pretty_string(80)

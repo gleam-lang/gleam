@@ -498,7 +498,7 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
         definitions.push(docvec![
             arena,
             head,
-            type_name.clone(),
+            type_name,
             SPACE_EQUAL_SPACE_DOCUMENT,
             definition,
             SEMICOLON_DOCUMENT,
@@ -704,7 +704,7 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
                 EMPTY_BREAK_DOCUMENT
             },
             CLOSE_PAREN_COLON_SPACE_DOCUMENT,
-            type_name_with_generics.clone(),
+            *type_name_with_generics,
             SEMICOLON_DOCUMENT
         ]
         .group(arena)
@@ -782,7 +782,7 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
                         arena,
                         EMPTY_BREAK_DOCUMENT,
                         VALUE_COLON_SPACE_DOCUMENT,
-                        type_name_with_generics.clone(),
+                        *type_name_with_generics,
                     ]
                     .nest(arena, INDENT),
                     TRAILING_COMMA_BREAK_DOCUMENT,
@@ -813,7 +813,7 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
                             arena,
                             EMPTY_BREAK_DOCUMENT,
                             VALUE_COLON_SPACE_DOCUMENT,
-                            type_name_with_generics.clone(),
+                            *type_name_with_generics,
                         ]
                         .nest(arena, INDENT),
                         TRAILING_COMMA_BREAK_DOCUMENT,
@@ -852,7 +852,7 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
                         arena,
                         EMPTY_BREAK_DOCUMENT,
                         VALUE_COLON_SPACE_DOCUMENT,
-                        type_name_with_generics.clone(),
+                        *type_name_with_generics,
                     ]
                     .nest(arena, INDENT),
                     TRAILING_COMMA_BREAK_DOCUMENT,

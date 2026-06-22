@@ -148,7 +148,7 @@ impl<'a, 'doc> Import<'a, 'doc> {
                 TIMES_SPACE_AS_SPACE_DOCUMENT,
                 alias,
                 SPACE_FROM_SPACE_DOUBLE_QUOTE_DOCUMENT,
-                path.clone(),
+                path,
                 DOUBLE_QUOTE_SEMICOLON_DOCUMENT,
                 LINE_DOCUMENT
             ]
