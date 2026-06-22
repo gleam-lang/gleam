@@ -17,7 +17,7 @@ fn wibble() {
 -- app.gleam
 
 import mod.{Constructor as C}
-            ↑▔▔▔▔▔▔▔▔▔▔      
+                           ↑ 
 
 pub fn main() {
   #(C(75), mod.Constructor(57))

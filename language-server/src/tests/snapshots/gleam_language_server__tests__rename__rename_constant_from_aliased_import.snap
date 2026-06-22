@@ -15,7 +15,7 @@ fn wibble() {
 -- app.gleam
 
 import mod.{something as smth}
-            ↑▔▔▔▔▔▔▔▔         
+                         ↑▔▔▔ 
 
 pub fn main() {
   smth + mod.something
