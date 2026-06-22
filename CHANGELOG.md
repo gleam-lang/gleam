@@ -35,6 +35,9 @@
   JavaScript target, allowing for faster comparison in most cases.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- `gleam build` is now up to 15% faster recompiling a project with no changes.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - The build tool now generates Hexdocs URLs using the new format of

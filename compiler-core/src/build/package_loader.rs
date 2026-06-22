@@ -6,6 +6,7 @@ mod tests;
 
 use std::{
     collections::{HashMap, HashSet},
+    sync::OnceLock,
     time::{Duration, SystemTime},
 };
 
@@ -1782,8 +1783,7 @@ impl GleamFile {
 
     fn is_gleam_path(path: &Utf8Path, dir: &Utf8Path) -> bool {
         use regex::Regex;
-        use std::cell::OnceCell;
-        const RE: OnceCell<Regex> = OnceCell::new();
+        static RE: OnceLock<Regex> = OnceLock::new();
 
         RE.get_or_init(|| {
             Regex::new(&format!(
