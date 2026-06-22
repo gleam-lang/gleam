@@ -429,9 +429,28 @@ pub struct UnqualifiedImport<'a> {
     /// The location excluding the potential `as ...` clause, or the `type` keyword.
     /// For example, in `type Wibble as Wobble`, it covers `Wibble`.
     pub imported_name_location: &'a SrcSpan,
+    pub as_name: Option<&'a EcoString>,
 }
 
 impl<'a> UnqualifiedImport<'a> {
+    /// If the import is aliased, it is the start of the alias. Otherwise, it is
+    /// the start of the imported name.
+    ///
+    /// For example, in `type Wibble as Wobble`, the used name will start at
+    /// `Wobble`. In `type Wibble`, it will start at `Wibble`.
+    pub fn used_name_start(&self) -> u32 {
+        match self.as_name {
+            // For aliases, the location span will cover the whole of `type
+            // Wibble as Wobble`.
+            // So, the used name will start 6 chars (length of `Wobble`) before
+            // the span ends.
+            Some(as_name) => self.location.end - as_name.len() as u32,
+            // For non-aliased imports, use the start of the imported name
+            // location. It covers `Wibble` in `type Wibble as Wobble`.
+            None => self.imported_name_location.start,
+        }
+    }
+
     pub fn name_kind(&self) -> Named {
         let is_upname = match self.name.chars().next() {
             Some(c) => c.is_uppercase(),
