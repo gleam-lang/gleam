@@ -1400,7 +1400,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                         (_, _) => {
                             docvec![
                                 arena,
-                                start_doc.clone(),
+                                start_doc,
                                 SPACE_PLUS_SPACE_DOCUMENT,
                                 self.read_size_to_doc(arena, size).expect("empty size")
                             ]
@@ -1601,7 +1601,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                 let end = if from.is_zero() {
                     size
                 } else {
-                    docvec![arena, start.clone(), SPACE_PLUS_SPACE_DOCUMENT, size]
+                    docvec![arena, start, SPACE_PLUS_SPACE_DOCUMENT, size]
                 };
                 (start, end)
             };
@@ -1998,7 +1998,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                 (Some(start), Some(end)) => (start + end).to_doc(arena),
                 (_, _) => docvec![
                     arena,
-                    start_doc.clone(),
+                    start_doc,
                     SPACE_PLUS_SPACE_DOCUMENT,
                     self.read_size_to_doc(arena, size).expect("empty size")
                 ],
@@ -2041,7 +2041,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
             (Some(start), Some(end)) => (start + end).to_doc(arena),
             (_, _) => docvec![
                 arena,
-                start_doc.clone(),
+                start_doc,
                 SPACE_PLUS_SPACE_DOCUMENT,
                 self.read_size_to_doc(arena, size).expect("empty size")
             ],

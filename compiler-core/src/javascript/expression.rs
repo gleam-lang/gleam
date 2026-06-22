@@ -1395,8 +1395,8 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                     self.bin_op_with_doc_operands(
                         arena,
                         *operator,
-                        left_document.clone(),
-                        right_document.clone(),
+                        left_document,
+                        right_document,
                         &left.type_(),
                     )
                     .surround(arena, OPEN_PAREN_DOCUMENT, CLOSE_PAREN_DOCUMENT),
@@ -2391,6 +2391,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn singleton_equal(
         &mut self,
         arena: &'doc DocumentArena<'a, 'doc>,
@@ -2624,7 +2625,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                     module,
                     line,
                     function,
-                    message.clone(),
+                    *message,
                     fields
                 ]
             ),
