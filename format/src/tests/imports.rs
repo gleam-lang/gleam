@@ -31,6 +31,10 @@ fn discarded_import_with_unqualified() {
 fn redundant_as_name_is_removed() {
     assert_format_rewrite!("import wibble/wobble as wobble", "import wibble/wobble\n");
     assert_format_rewrite!("import wibble as wibble", "import wibble\n");
+    assert_format_rewrite!(
+        "import wibble.{Wibble as Wibble}",
+        "import wibble.{Wibble}\n",
+    );
 }
 
 #[test]
