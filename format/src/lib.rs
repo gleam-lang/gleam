@@ -414,6 +414,7 @@ impl<'a, 'doc> Formatter<'a> {
             arena,
             match &unqualified_import.as_name {
                 None => EMPTY_DOCUMENT,
+                Some(s) if s == &unqualified_import.name => EMPTY_DOCUMENT,
                 Some(s) => " as ".to_doc(arena).append(arena, s.as_str()),
             },
         )
