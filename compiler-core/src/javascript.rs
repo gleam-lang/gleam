@@ -138,7 +138,7 @@ impl<'a, 'doc> Generator<'a> {
             module,
             src_path,
             tracker: UsageTracker::default(),
-            module_scope: Default::default(),
+            module_scope: im::HashMap::new(),
             typescript,
             source_map_builder: if source_map {
                 let module_name = module.name.clone();

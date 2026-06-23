@@ -29,7 +29,7 @@ pub struct Printer {
 
 impl Printer {
     pub fn new() -> Self {
-        Default::default()
+        Self::default()
     }
 
     pub fn with_names(&mut self, names: im::HashMap<u64, EcoString>) {

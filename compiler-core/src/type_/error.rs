@@ -30,7 +30,7 @@ pub struct Problems {
 
 impl Problems {
     pub fn new() -> Self {
-        Default::default()
+        Self::default()
     }
 
     /// Sort the warnings and errors by their location.

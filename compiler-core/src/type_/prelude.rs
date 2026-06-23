@@ -256,7 +256,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         match t {
             PreludeType::BitArray => {
                 let v = TypeConstructor {
-                    origin: Default::default(),
+                    origin: SrcSpan::default(),
                     parameters: vec![],
                     type_: bit_array(),
                     module: PRELUDE_MODULE_NAME.into(),
@@ -322,7 +322,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                 let _ = prelude.types.insert(
                     BOOL.into(),
                     TypeConstructor {
-                        origin: Default::default(),
+                        origin: SrcSpan::default(),
                         parameters: vec![],
                         type_: bool(),
                         module: PRELUDE_MODULE_NAME.into(),
@@ -337,7 +337,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                 let _ = prelude.types.insert(
                     FLOAT.into(),
                     TypeConstructor {
-                        origin: Default::default(),
+                        origin: SrcSpan::default(),
                         parameters: vec![],
                         type_: float(),
                         module: PRELUDE_MODULE_NAME.into(),
@@ -354,7 +354,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     TypeConstructor {
                         parameters: vec![],
                         type_: int(),
-                        origin: Default::default(),
+                        origin: SrcSpan::default(),
                         module: PRELUDE_MODULE_NAME.into(),
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
@@ -368,7 +368,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                 let _ = prelude.types.insert(
                     LIST.into(),
                     TypeConstructor {
-                        origin: Default::default(),
+                        origin: SrcSpan::default(),
                         parameters: vec![list_parameter.clone()],
                         type_: list(list_parameter),
                         module: PRELUDE_MODULE_NAME.into(),
@@ -399,7 +399,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                 let _ = prelude.types.insert(
                     NIL.into(),
                     TypeConstructor {
-                        origin: Default::default(),
+                        origin: SrcSpan::default(),
                         parameters: vec![],
                         type_: nil(),
                         module: PRELUDE_MODULE_NAME.into(),
@@ -430,7 +430,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                 let _ = prelude.types.insert(
                     RESULT.into(),
                     TypeConstructor {
-                        origin: Default::default(),
+                        origin: SrcSpan::default(),
                         parameters: vec![result_value.clone(), result_error.clone()],
                         type_: result(result_value.clone(), result_error.clone()),
                         module: PRELUDE_MODULE_NAME.into(),
@@ -508,7 +508,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                 let _ = prelude.types.insert(
                     STRING.into(),
                     TypeConstructor {
-                        origin: Default::default(),
+                        origin: SrcSpan::default(),
                         parameters: vec![],
                         type_: string(),
                         module: PRELUDE_MODULE_NAME.into(),
@@ -523,7 +523,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                 let _ = prelude.types.insert(
                     UTF_CODEPOINT.into(),
                     TypeConstructor {
-                        origin: Default::default(),
+                        origin: SrcSpan::default(),
                         parameters: vec![],
                         type_: utf_codepoint(),
                         module: PRELUDE_MODULE_NAME.into(),

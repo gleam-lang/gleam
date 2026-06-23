@@ -177,7 +177,7 @@ fn do_compile_package(project: Project, target: Target) -> Result<(), Error> {
         name: "library".into(),
         version: Version::new(1, 0, 0),
         target,
-        ..Default::default()
+        ..PackageConfig::default()
     };
 
     let target = match target {

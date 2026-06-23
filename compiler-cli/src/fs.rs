@@ -96,7 +96,7 @@ pub struct ProjectIO {
 impl ProjectIO {
     pub fn new() -> Self {
         Self {
-            beam_compiler: Default::default(),
+            beam_compiler: Arc::new(Mutex::new(None)),
         }
     }
 

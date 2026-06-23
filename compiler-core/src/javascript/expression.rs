@@ -162,7 +162,7 @@ impl Scope {
     fn new(user_variables: im::HashMap<EcoString, usize>) -> Self {
         Self {
             user_variables,
-            ..Default::default()
+            ..Self::default()
         }
     }
 

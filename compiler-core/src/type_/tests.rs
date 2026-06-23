@@ -571,7 +571,7 @@ pub fn module_error_with_target(
     let (error, names) = match outcome {
         Outcome::Ok(_) => panic!("should infer an error"),
         Outcome::PartialFailure(ast, errors) => (errors.into(), ast.names),
-        Outcome::TotalFailure(errors) => (errors.into(), Default::default()),
+        Outcome::TotalFailure(errors) => (errors.into(), Names::new()),
     };
 
     let error = Error::Type {
@@ -611,7 +611,7 @@ pub fn internal_module_error_with_target(
     let (error, names) = match outcome {
         Outcome::Ok(_) => panic!("should infer an error"),
         Outcome::PartialFailure(ast, errors) => (errors.into(), ast.names),
-        Outcome::TotalFailure(errors) => (errors.into(), Default::default()),
+        Outcome::TotalFailure(errors) => (errors.into(), Names::new()),
     };
 
     let error = Error::Type {
@@ -688,19 +688,19 @@ fn field_map_reorder_test() {
         arguments: vec![
             CallArg {
                 implicit: None,
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
                 implicit: None,
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
                 implicit: None,
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("3"),
             },
@@ -709,19 +709,19 @@ fn field_map_reorder_test() {
         expected_arguments: vec![
             CallArg {
                 implicit: None,
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
                 implicit: None,
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
                 implicit: None,
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("3"),
             },
@@ -735,19 +735,19 @@ fn field_map_reorder_test() {
         arguments: vec![
             CallArg {
                 implicit: None,
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
                 implicit: None,
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
                 implicit: None,
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: Some("last".into()),
                 value: int("3"),
             },
@@ -756,19 +756,19 @@ fn field_map_reorder_test() {
         expected_arguments: vec![
             CallArg {
                 implicit: None,
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
                 implicit: None,
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
                 implicit: None,
-                location: Default::default(),
+                location: SrcSpan::default(),
                 label: Some("last".into()),
                 value: int("3"),
             },
@@ -784,8 +784,8 @@ fn infer_module_type_retention_test() {
         name: "ok".into(),
         definitions: vec![],
         type_info: (),
-        names: Default::default(),
-        unused_definition_positions: Default::default(),
+        names: Names::new(),
+        unused_definition_positions: HashSet::new(),
     };
     let direct_dependencies = HashMap::from_iter(vec![]);
     let ids = UniqueIdGenerator::new();
@@ -2942,10 +2942,10 @@ fn assert_suitable_main_function_not_module_function() {
         type_: fn_(vec![], int()),
         variant: ValueConstructorVariant::ModuleConstant {
             documentation: None,
-            location: Default::default(),
+            location: SrcSpan::default(),
             module: "module".into(),
             literal: Constant::Int {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 value: "1".into(),
                 int_value: 1.into(),
             },
@@ -2976,7 +2976,7 @@ fn assert_suitable_main_function_wrong_arity() {
             field_map: None,
             arity: 1,
             documentation: None,
-            location: Default::default(),
+            location: SrcSpan::default(),
             module: "module".into(),
             external_erlang: None,
             external_javascript: None,
@@ -3007,7 +3007,7 @@ fn assert_suitable_main_function_ok() {
             field_map: None,
             arity: 0,
             documentation: None,
-            location: Default::default(),
+            location: SrcSpan::default(),
             module: "module".into(),
             external_erlang: None,
             external_javascript: None,
@@ -3038,7 +3038,7 @@ fn assert_suitable_main_function_erlang_not_supported() {
             field_map: None,
             arity: 0,
             documentation: None,
-            location: Default::default(),
+            location: SrcSpan::default(),
             module: "module".into(),
             external_erlang: Some(("wibble".into(), "wobble".into())),
             external_javascript: Some(("wobble".into(), "wibble".into())),
@@ -3069,7 +3069,7 @@ fn assert_suitable_main_function_javascript_not_supported() {
             field_map: None,
             arity: 0,
             documentation: None,
-            location: Default::default(),
+            location: SrcSpan::default(),
             module: "module".into(),
             external_erlang: Some(("wibble".into(), "wobble".into())),
             external_javascript: Some(("wobble".into(), "wibble".into())),

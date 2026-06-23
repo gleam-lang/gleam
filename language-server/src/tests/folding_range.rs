@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 The Gleam contributors
 
-use lsp_types::{FoldingRange, FoldingRangeKind, FoldingRangeParams};
+use lsp_types::{
+    FoldingRange, FoldingRangeKind, FoldingRangeParams, PartialResultParams, WorkDoneProgressParams,
+};
 
 use super::*;
 
@@ -9,8 +11,8 @@ fn folding_ranges(tester: TestProject<'_>) -> Vec<FoldingRange> {
     tester.at(Position::default(), |engine, param, _| {
         let params = FoldingRangeParams {
             text_document: param.text_document,
-            work_done_progress_params: Default::default(),
-            partial_result_params: Default::default(),
+            work_done_progress_params: WorkDoneProgressParams::default(),
+            partial_result_params: PartialResultParams::default(),
         };
         let response = engine.folding_range(params);
 

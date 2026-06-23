@@ -27,9 +27,9 @@ fn parse_and_order(
                 .map(|name| Arg {
                     names: crate::ast::ArgNames::Named {
                         name: EcoString::from(*name),
-                        location: Default::default(),
+                        location: SrcSpan::default(),
                     },
-                    location: Default::default(),
+                    location: SrcSpan::default(),
                     annotation: None,
                     type_: (),
                 })
@@ -37,7 +37,7 @@ fn parse_and_order(
             body: crate::parse::parse_statement_sequence(src)
                 .expect("syntax error")
                 .to_vec(),
-            location: Default::default(),
+            location: SrcSpan::default(),
             body_start: None,
             return_annotation: None,
             publicity: Publicity::Public,
@@ -63,7 +63,7 @@ fn parse_and_order(
             let const_value = crate::parse::parse_const_value(value).expect("syntax error");
             ModuleConstant {
                 documentation: None,
-                location: Default::default(),
+                location: SrcSpan::default(),
                 publicity: Publicity::Public,
                 name: EcoString::from(*name),
                 name_location: SrcSpan::default(),

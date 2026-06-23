@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2024 The Gleam contributors
 
-use lsp_types::{DefinitionParams, Location, Position, Range, TypeDefinitionParams, Uri as Url};
+use lsp_types::{
+    DefinitionParams, Location, PartialResultParams, Position, Range, TypeDefinitionParams,
+    Uri as Url, WorkDoneProgressParams,
+};
 
 use super::*;
 
@@ -9,8 +12,8 @@ fn definition(tester: &TestProject<'_>, position: Position) -> Option<Location> 
     tester.at(position, |engine, param, _| {
         let params = DefinitionParams {
             text_document_position_params: param,
-            work_done_progress_params: Default::default(),
-            partial_result_params: Default::default(),
+            work_done_progress_params: WorkDoneProgressParams::default(),
+            partial_result_params: PartialResultParams::default(),
         };
         let response = engine.goto_definition(params);
         response.result.unwrap()
@@ -27,8 +30,8 @@ fn type_definition(tester: &TestProject<'_>, position: Position) -> Vec<Location
     tester.at(position, |engine, param, _| {
         let params = TypeDefinitionParams {
             text_document_position_params: param,
-            work_done_progress_params: Default::default(),
-            partial_result_params: Default::default(),
+            work_done_progress_params: WorkDoneProgressParams::default(),
+            partial_result_params: PartialResultParams::default(),
         };
         let response = engine.goto_type_definition(params);
 
@@ -447,8 +450,8 @@ fn main() {
 
     let params = DefinitionParams {
         text_document_position_params: position_param.clone(),
-        work_done_progress_params: Default::default(),
-        partial_result_params: Default::default(),
+        work_done_progress_params: WorkDoneProgressParams::default(),
+        partial_result_params: PartialResultParams::default(),
     };
     let response = engine.goto_definition(params.clone());
     let response = response.result.unwrap();
@@ -521,8 +524,8 @@ fn main() {
 
     let params = DefinitionParams {
         text_document_position_params: position_param.clone(),
-        work_done_progress_params: Default::default(),
-        partial_result_params: Default::default(),
+        work_done_progress_params: WorkDoneProgressParams::default(),
+        partial_result_params: PartialResultParams::default(),
     };
 
     let response = engine.goto_definition(params.clone());

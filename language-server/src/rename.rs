@@ -75,7 +75,7 @@ pub fn rename_local_variable(
     kind: VariableReferenceKind,
 ) -> RenameOutcome {
     let new_name = EcoString::from(&params.new_name);
-    if name::check_name_case(Default::default(), &new_name, Named::Variable).is_err() {
+    if name::check_name_case(SrcSpan::default(), &new_name, Named::Variable).is_err() {
         return RenameOutcome::InvalidName { name: new_name };
     }
 
@@ -518,7 +518,7 @@ pub fn rename_type_variable(
     name: EcoString,
 ) -> RenameOutcome {
     let new_name = EcoString::from(&params.new_name);
-    if name::check_name_case(Default::default(), &new_name, Named::TypeVariable).is_err() {
+    if name::check_name_case(SrcSpan::default(), &new_name, Named::TypeVariable).is_err() {
         return RenameOutcome::InvalidName { name: new_name };
     }
 

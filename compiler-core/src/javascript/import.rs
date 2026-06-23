@@ -124,8 +124,8 @@ impl<'a, 'doc> Import<'a, 'doc> {
     fn new(path: EcoString) -> Self {
         Self {
             path,
-            aliases: Default::default(),
-            unqualified: Default::default(),
+            aliases: HashSet::new(),
+            unqualified: vec![],
         }
     }
 

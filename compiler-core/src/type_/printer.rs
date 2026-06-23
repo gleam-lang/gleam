@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2024 The Gleam contributors
 
-use bimap::BiMap;
+use bimap::{BiHashMap, BiMap};
 use ecow::{EcoString, eco_format};
 use im::HashMap;
 use std::{collections::HashSet, sync::Arc};
@@ -164,11 +164,11 @@ fn compare_arguments(arguments: &[Arc<Type>], parameters: &[Arc<Type>]) -> bool 
 impl Names {
     pub fn new() -> Self {
         Self {
-            local_types: Default::default(),
-            imported_modules: Default::default(),
-            type_variables: Default::default(),
-            local_value_constructors: Default::default(),
-            reexport_aliases: Default::default(),
+            local_types: BiHashMap::new(),
+            imported_modules: HashMap::new(),
+            type_variables: HashMap::new(),
+            local_value_constructors: BiHashMap::new(),
+            reexport_aliases: HashMap::new(),
         }
     }
 
@@ -408,8 +408,8 @@ impl<'a> Printer<'a> {
     pub fn new(names: &'a Names) -> Self {
         Printer {
             names,
-            uid: Default::default(),
-            printed_type_variables: Default::default(),
+            uid: 0,
+            printed_type_variables: HashMap::new(),
             printed_type_variable_names: names.type_variables.values().cloned().collect(),
         }
     }
@@ -435,9 +435,9 @@ impl<'a> Printer<'a> {
     pub fn new_without_type_variables(names: &'a Names) -> Self {
         Printer {
             names,
-            uid: Default::default(),
-            printed_type_variables: Default::default(),
-            printed_type_variable_names: Default::default(),
+            uid: 0,
+            printed_type_variables: HashMap::new(),
+            printed_type_variable_names: HashSet::new(),
         }
     }
 

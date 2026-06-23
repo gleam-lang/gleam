@@ -28,7 +28,7 @@ impl Feedback {
     /// No feedback at all.
     ///
     pub fn none() -> Feedback {
-        Default::default()
+        Feedback::default()
     }
 
     /// Add all the content of another feedback to this feedback.

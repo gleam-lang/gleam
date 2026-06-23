@@ -637,7 +637,7 @@ impl<'a, IO> Completer<'a, IO> {
                     range: Range { start, end },
                     new_text: name.to_string(),
                 })),
-                ..Default::default()
+                ..CompletionItem::default()
             })
             .collect()
     }
@@ -682,7 +682,7 @@ impl<'a, IO> Completer<'a, IO> {
                     detail: Some("Type".into()),
                     kind: Some(CompletionItemKind::Class),
                     sort_text,
-                    ..Default::default()
+                    ..CompletionItem::default()
                 });
             }
         }
@@ -909,7 +909,7 @@ impl<'a, IO> Completer<'a, IO> {
                     detail: Some(PRELUDE_MODULE_NAME.into()),
                     kind: Some(kind),
                     sort_text,
-                    ..Default::default()
+                    ..CompletionItem::default()
                 });
             };
 
@@ -1219,7 +1219,7 @@ impl<'a, IO> Completer<'a, IO> {
                     detail,
                     kind: Some(CompletionItemKind::Field),
                     sort_text,
-                    ..Default::default()
+                    ..CompletionItem::default()
                 }
             })
             .collect()
@@ -1274,7 +1274,7 @@ impl<'a, IO> Completer<'a, IO> {
                 TypeMatch::Matching,
             )),
             text_edit: cursor_surrounding.to_text_edit(label),
-            ..Default::default()
+            ..CompletionItem::default()
         }
     }
 
@@ -1321,7 +1321,7 @@ impl<'a, IO> Completer<'a, IO> {
             documentation,
             sort_text: Some(sort_text(priority, &label, type_match)),
             text_edit: cursor_surrounding.to_text_edit(label),
-            ..Default::default()
+            ..CompletionItem::default()
         }
     }
 
@@ -1334,7 +1334,7 @@ impl<'a, IO> Completer<'a, IO> {
             kind: Some(CompletionItemKind::Field),
             detail: Some(type_),
             sort_text: Some(sort_text(CompletionKind::FieldAccessor, label, type_match)),
-            ..Default::default()
+            ..CompletionItem::default()
         }
     }
 }
@@ -1385,7 +1385,7 @@ fn type_completion(
         detail: Some("Type".into()),
         sort_text: Some(sort_text(priority, &label, TypeMatch::Unknown)),
         text_edit: cursor_surrounding.to_text_edit(completion_text),
-        ..Default::default()
+        ..CompletionItem::default()
     }
 }
 
@@ -1510,7 +1510,7 @@ impl<'a> LocalCompletion<'a> {
                 range: insert_range,
                 new_text: label.clone(),
             })),
-            ..Default::default()
+            ..CompletionItem::default()
         }
     }
 }

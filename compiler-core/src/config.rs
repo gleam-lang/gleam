@@ -722,19 +722,19 @@ fn locked_version(name: &'static str, version: &'static str) -> (EcoString, Vers
 impl Default for PackageConfig {
     fn default() -> Self {
         Self {
-            name: Default::default(),
+            name: EcoString::new(),
             version: default_version(),
-            gleam_version: Default::default(),
-            description: Default::default(),
-            documentation: Default::default(),
-            dependencies: Default::default(),
-            erlang: Default::default(),
-            javascript: Default::default(),
-            repository: Default::default(),
-            dev_dependencies: Default::default(),
-            licences: Default::default(),
-            links: Default::default(),
-            internal_modules: Default::default(),
+            gleam_version: None,
+            description: EcoString::new(),
+            documentation: Docs::default(),
+            dependencies: HashMap::new(),
+            erlang: ErlangConfig::default(),
+            javascript: JavaScriptConfig::default(),
+            repository: None,
+            dev_dependencies: HashMap::new(),
+            licences: vec![],
+            links: vec![],
+            internal_modules: None,
             target: Target::Erlang,
         }
     }
