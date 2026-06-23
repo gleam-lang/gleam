@@ -281,6 +281,23 @@
   `lustre`, with a 10% smaller peak memory footprint.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Formatter now removes import aliases if the aliased name is the
+  same as the original name.
+
+  For example,
+
+  ```gleam
+  import wibble.{Wibble as Wibble}
+  ```
+
+  becomes
+
+  ```gleam
+  import wibble.{Wibble}
+  ```
+
+  ([Daniel Venable](https://github.com/DanielVenable))
+
 ### Bug fixes
 
 - When using the language server to extract a function from within an anonymous
