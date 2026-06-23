@@ -1218,7 +1218,7 @@ fn download_git_package_in_place(
     project_paths: &ProjectPaths,
 ) -> Result<GitCheckout, Error> {
     let clone_path = project_paths.build_packages_package(package_name);
-    prepare_git_clone(&clone_path, repo, false)?;
+    prepare_git_clone(&clone_path, repo, CloneFormat::WorkTree)?;
     let _ = execute_command(git_command(&clone_path).arg("checkout").arg(ref_))?;
     let output = execute_command(git_command(&clone_path).arg("rev-parse").arg("HEAD"))?;
     let commit = git_stdout(output);
@@ -1234,7 +1234,7 @@ fn download_git_package_to_staged_path(
     subdir: &Utf8Path,
 ) -> Result<GitCheckout, Error> {
     let clone_path = project_paths.build_git_repo(&git_repo_dir_name(repo));
-    prepare_git_clone(&clone_path, repo, true)?;
+    prepare_git_clone(&clone_path, repo, CloneFormat::Bare)?;
 
     let commit = resolve_git_ref(&clone_path, repo, ref_)?;
 
@@ -1277,16 +1277,22 @@ fn download_git_package_to_staged_path(
     })
 }
 
+#[derive(Clone, Copy)]
+enum CloneFormat {
+    /// A regular clone with a checked-out work tree.
+    WorkTree,
+    /// A bare repository with no work tree.
+    Bare,
+}
+
 /// Initialise (or reuse) a git clone at the given path and fetch from the
-/// remote repository. When `bare` is set the clone is a bare repository with
-/// no work tree.
-fn prepare_git_clone(clone_path: &Utf8Path, repo: &str, bare: bool) -> Result<()> {
+/// remote repository.
+fn prepare_git_clone(clone_path: &Utf8Path, repo: &str, format: CloneFormat) -> Result<()> {
     // If the clone path exists but is not the kind of git repo we expect, we
     // need to remove the directory.
-    let reusable = if bare {
-        fs::is_bare_git_repo_root(clone_path)
-    } else {
-        fs::is_git_work_tree_root(clone_path)
+    let reusable = match format {
+        CloneFormat::Bare => fs::is_bare_git_repo_root(clone_path),
+        CloneFormat::WorkTree => fs::is_git_work_tree_root(clone_path),
     };
 
     if !reusable {
@@ -1297,7 +1303,7 @@ fn prepare_git_clone(clone_path: &Utf8Path, repo: &str, bare: bool) -> Result<()
 
     let mut init = git_command(clone_path);
     let _ = init.arg("init");
-    if bare {
+    if matches!(format, CloneFormat::Bare) {
         let _ = init.arg("--bare");
     }
     let _ = execute_command(&mut init)?;
