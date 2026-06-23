@@ -151,8 +151,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     name.clone(),
                     LocalVariable {
                         location,
-                        origin: origin.clone(),
-                        type_: type_.clone(),
+                        origin,
+                        type_,
                         usage: Usage::UnusedSoFar,
                         scope: Scope::CurrentBitArrayPattern,
                     },
@@ -805,7 +805,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 };
                 self.insert_variable(
                     &name,
-                    pattern.type_().clone(),
+                    pattern.type_(),
                     location,
                     VariableOrigin {
                         syntax: VariableSyntax::AssignmentPattern(full_location),
@@ -1188,7 +1188,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     Deprecation::Deprecated { message } => {
                         self.problems.warning(Warning::DeprecatedItem {
                             location,
-                            message: message.clone(),
+                            message,
                             layer: Layer::Value,
                         })
                     }
@@ -1215,7 +1215,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         .instantiate(constructor_type, &mut hashmap![], self.hydrator);
                 match instantiated_constructor_type.deref() {
                     Type::Fn { arguments, return_ } => {
-                        self.unify_types(type_.clone(), return_.clone(), location);
+                        self.unify_types(type_, return_.clone(), location);
 
                         if let Some((variable_to_infer, inferred_variant)) =
                             subject_variable.zip(return_.custom_type_inferred_variant())
@@ -1597,7 +1597,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         };
 
         let unit = segment.unit();
-        let bits = size.clone() * unit;
+        let bits = size * unit;
 
         // If the size is above the JS limit we raise a warning.
         if bits > BigInt::from(52) {

@@ -230,7 +230,7 @@ impl Creator {
         let github = root.join(".github");
         let workflows = github.join("workflows");
         let me = Self {
-            root: root.clone(),
+            root,
             src,
             test,
             github,

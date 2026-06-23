@@ -1193,7 +1193,7 @@ impl<'ast> ast::visit::Visit<'ast> for ScopeVariableCollector {
     ) {
         self.visit_typed_pattern(pattern);
         if !name.starts_with('_') {
-            _ = self.variables.insert(name.clone(), pattern.type_().clone());
+            _ = self.variables.insert(name.clone(), pattern.type_());
         }
     }
 }
@@ -2990,7 +2990,7 @@ impl<'a> ConvertFromUse<'a> {
                 } else if needs_space_before_callback {
                     format!(" {callback_start}")
                 } else {
-                    callback_start.to_string()
+                    callback_start
                 },
             )
         } else {
@@ -6693,7 +6693,7 @@ impl<'a> GenerateFunction<'a> {
                     argument_names.generate_label_and_name(call_argument, argument_type);
                 let pretty_type = printer.print_type(argument_type);
                 if let Some(label) = label {
-                    let label = label_names.rename_to_avoid_shadowing(label.clone());
+                    let label = label_names.rename_to_avoid_shadowing(label);
                     format!("{label} {name}: {pretty_type}")
                 } else {
                     format!("{name}: {pretty_type}")

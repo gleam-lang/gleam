@@ -583,7 +583,7 @@ impl TypeAst {
                     if let Some(arg) = arguments
                         .iter()
                         .zip(arg_types)
-                        .find_map(|(arg, arg_type)| arg.find_node(byte_index, arg_type.clone()))
+                        .find_map(|(arg, arg_type)| arg.find_node(byte_index, arg_type))
                     {
                         return Some(arg);
                     }
@@ -604,7 +604,7 @@ impl TypeAst {
                         if let Some(arg) = arguments
                             .iter()
                             .zip(arg_types)
-                            .find_map(|(arg, arg_type)| arg.find_node(byte_index, arg_type.clone()))
+                            .find_map(|(arg, arg_type)| arg.find_node(byte_index, arg_type))
                         {
                             return Some(arg);
                         }
@@ -634,7 +634,7 @@ impl TypeAst {
                     if let Some(e) = elements
                         .iter()
                         .zip(elem_types)
-                        .find_map(|(e, e_type)| e.find_node(byte_index, e_type.clone()))
+                        .find_map(|(e, e_type)| e.find_node(byte_index, e_type))
                     {
                         return Some(e);
                     }

@@ -3,6 +3,7 @@
 
 #![warn(
     clippy::all,
+    clippy::redundant_clone,
     clippy::dbg_macro,
     clippy::todo,
     clippy::mem_forget,

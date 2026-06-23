@@ -145,8 +145,7 @@ impl<'a, 'doc> Generator<'a> {
                 let output_path = format!("{module_name}.mjs");
                 let module_alias = module_name.split('/').next_back().unwrap_or(&module_name);
                 let input_path = format!("{module_alias}.gleam",);
-                let mut source_map_builder =
-                    sourcemap::SourceMapBuilder::new(Some(&output_path.clone()));
+                let mut source_map_builder = sourcemap::SourceMapBuilder::new(Some(&output_path));
                 let _ = source_map_builder.add_source(&input_path);
                 Some(Rc::new(RefCell::new(DebugIgnore(source_map_builder))))
             } else {
