@@ -31,10 +31,6 @@ fn discarded_import_with_unqualified() {
 fn redundant_as_name_is_removed() {
     assert_format_rewrite!("import wibble/wobble as wobble", "import wibble/wobble\n");
     assert_format_rewrite!("import wibble as wibble", "import wibble\n");
-    assert_format_rewrite!(
-        "import wibble.{Wibble as Wibble}",
-        "import wibble.{Wibble}\n",
-    );
 }
 
 #[test]
@@ -223,5 +219,18 @@ import gleam/dynamic.{type Dynamic}
 import gleam/io
 import gleam/list
 "#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5869
+#[test]
+fn redundant_as_name_is_removed_in_unqualified_imports() {
+    assert_format_rewrite!(
+        "import wibble.{Wibble as Wibble}",
+        "import wibble.{Wibble}\n",
+    );
+    assert_format_rewrite!(
+        "import wibble.{type Wibble as Wibble}",
+        "import wibble.{type Wibble}\n",
     );
 }
