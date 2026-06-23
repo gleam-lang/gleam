@@ -282,9 +282,7 @@
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - Formatter now removes import aliases if the aliased name is the
-  same as the original name.
-
-  For example,
+  same as the original name. For example,
 
   ```gleam
   import wibble.{Wibble as Wibble}
