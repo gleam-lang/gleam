@@ -312,7 +312,7 @@ where
             locked,
             remote,
             exact_only,
-            optional_dependencies: RefCell::new(Default::default()),
+            optional_dependencies: RefCell::new(HashMap::new()),
         }
     }
 
@@ -384,7 +384,7 @@ where
             )));
         }
 
-        let mut deps: Map<PackageName, PubgrubRange> = Default::default();
+        let mut deps: Map<PackageName, PubgrubRange> = Map::default();
         for (name, dependency) in &release.requirements {
             let mut range = dependency.requirement.to_pubgrub().clone();
             let mut opt_deps = self.optional_dependencies.borrow_mut();

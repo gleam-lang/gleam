@@ -11,6 +11,7 @@ use crate::{
     io::{FileSystemWriter, memory::InMemoryFileSystem},
     line_numbers,
     parse::extra::ModuleExtra,
+    type_::References,
     warning::NullWarningEmitterIO,
 };
 
@@ -57,20 +58,20 @@ fn write_cache(
         name: name.into(),
         origin: Origin::Src,
         package: "my_package".into(),
-        types: Default::default(),
-        types_value_constructors: Default::default(),
-        values: Default::default(),
-        accessors: Default::default(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        values: HashMap::new(),
+        accessors: HashMap::new(),
         line_numbers: line_numbers.clone(),
         is_internal: false,
         src_path: Utf8PathBuf::from(format!("/src/{}.gleam", name)),
         warnings: vec![],
         minimum_required_version: Version::new(0, 1, 0),
-        type_aliases: Default::default(),
-        documentation: Default::default(),
+        type_aliases: HashMap::new(),
+        documentation: vec![],
         contains_echo: false,
-        references: Default::default(),
-        inline_functions: Default::default(),
+        references: References::default(),
+        inline_functions: HashMap::new(),
     };
     let path = Utf8Path::new("/artefact").join(format!("{artefact_name}.cache"));
     fs.write_bytes(&path, &metadata::encode(&cache).unwrap())

@@ -79,6 +79,7 @@ use crate::parse::extra::ModuleExtra;
 use crate::type_::Deprecation;
 use crate::type_::error::{VariableDeclaration, VariableOrigin, VariableSyntax};
 use crate::type_::expression::{Implementations, Purity};
+use crate::type_::printer::Names;
 use crate::warning::{DeprecatedSyntaxWarning, WarningEmitter};
 use camino::Utf8PathBuf;
 use ecow::EcoString;
@@ -87,7 +88,7 @@ use lexer::{LexResult, Spanned};
 use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 pub use token::Token;
@@ -261,12 +262,12 @@ where
             documentation: vec![],
             type_info: (),
             definitions,
-            names: Default::default(),
-            unused_definition_positions: Default::default(),
+            names: Names::new(),
+            unused_definition_positions: HashSet::new(),
         };
         Ok(Parsed {
             module,
-            extra: Default::default(),
+            extra: ModuleExtra::new(),
         })
     }
 

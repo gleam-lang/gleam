@@ -82,11 +82,11 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
 
 fn bit_array_segment_option_module(option: TypedConstantBitArraySegmentOption) -> ModuleInterface {
     constant_module(Constant::BitArray {
-        location: Default::default(),
+        location: SrcSpan::default(),
         segments: vec![BitArraySegment {
-            location: Default::default(),
+            location: SrcSpan::default(),
             value: Box::new(Constant::Int {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 value: "1".into(),
                 int_value: 1.into(),
             }),
@@ -163,7 +163,7 @@ fn module_with_private_type() {
             TypeConstructor {
                 type_: type_::list(type_::int()),
                 publicity: Publicity::Private,
-                origin: Default::default(),
+                origin: SrcSpan::default(),
                 module: "the/module".into(),
                 parameters: vec![],
                 deprecation: Deprecation::NotDeprecated,
@@ -200,7 +200,7 @@ fn module_with_app_type() {
             TypeConstructor {
                 type_: type_::list(type_::int()),
                 publicity: Publicity::Public,
-                origin: Default::default(),
+                origin: SrcSpan::default(),
                 module: "the/module".into(),
                 parameters: vec![],
                 deprecation: Deprecation::NotDeprecated,
@@ -237,7 +237,7 @@ fn module_with_fn_type() {
             TypeConstructor {
                 type_: type_::fn_(vec![type_::nil(), type_::float()], type_::int()),
                 publicity: Publicity::Public,
-                origin: Default::default(),
+                origin: SrcSpan::default(),
                 module: "the/module".into(),
                 parameters: vec![],
                 deprecation: Deprecation::NotDeprecated,
@@ -274,7 +274,7 @@ fn module_with_tuple_type() {
             TypeConstructor {
                 type_: type_::tuple(vec![type_::nil(), type_::float(), type_::int()]),
                 publicity: Publicity::Public,
-                origin: Default::default(),
+                origin: SrcSpan::default(),
                 module: "the/module".into(),
                 parameters: vec![],
                 deprecation: Deprecation::NotDeprecated,
@@ -317,7 +317,7 @@ fn module_with_generic_type() {
                 TypeConstructor {
                     type_: type_::tuple(vec![t1.clone(), t1.clone(), t2.clone()]),
                     publicity: Publicity::Public,
-                    origin: Default::default(),
+                    origin: SrcSpan::default(),
                     module: "the/module".into(),
                     parameters: vec![t1, t2],
                     deprecation: Deprecation::NotDeprecated,
@@ -359,7 +359,7 @@ fn module_with_type_links() {
                 TypeConstructor {
                     type_,
                     publicity: Publicity::Public,
-                    origin: Default::default(),
+                    origin: SrcSpan::default(),
                     module: "a".into(),
                     parameters: vec![],
                     deprecation: Deprecation::NotDeprecated,
@@ -401,7 +401,7 @@ fn module_with_type_constructor_documentation() {
                 TypeConstructor {
                     type_,
                     publicity: Publicity::Public,
-                    origin: Default::default(),
+                    origin: SrcSpan::default(),
                     module: "a".into(),
                     parameters: vec![],
                     deprecation: Deprecation::NotDeprecated,
@@ -1050,7 +1050,7 @@ fn private_accessors() {
 #[test]
 fn constant_int() {
     let module = constant_module(Constant::Int {
-        location: Default::default(),
+        location: SrcSpan::default(),
         value: "100".into(),
         int_value: 100.into(),
     });
@@ -1061,7 +1061,7 @@ fn constant_int() {
 #[test]
 fn constant_float() {
     let module = constant_module(Constant::Float {
-        location: Default::default(),
+        location: SrcSpan::default(),
         value: "1.0".into(),
         float_value: LiteralFloatValue::ONE,
     });
@@ -1072,7 +1072,7 @@ fn constant_float() {
 #[test]
 fn constant_string() {
     let module = constant_module(Constant::String {
-        location: Default::default(),
+        location: SrcSpan::default(),
         value: "hello".into(),
     });
 
@@ -1083,7 +1083,7 @@ fn constant_string() {
 fn constant_tuple() {
     let int_float_tuple_type = type_::tuple(vec![type_::int(), type_::float()]);
     let module = constant_module(Constant::Tuple {
-        location: Default::default(),
+        location: SrcSpan::default(),
         type_: type_::tuple(vec![
             type_::int(),
             type_::float(),
@@ -1091,26 +1091,26 @@ fn constant_tuple() {
         ]),
         elements: vec![
             Constant::Int {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 value: "1".into(),
                 int_value: 1.into(),
             },
             Constant::Float {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 value: "1.0".into(),
                 float_value: LiteralFloatValue::ONE,
             },
             Constant::Tuple {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 type_: int_float_tuple_type,
                 elements: vec![
                     Constant::Int {
-                        location: Default::default(),
+                        location: SrcSpan::default(),
                         value: "1".into(),
                         int_value: 1.into(),
                     },
                     Constant::Float {
-                        location: Default::default(),
+                        location: SrcSpan::default(),
                         value: "1.0".into(),
                         float_value: LiteralFloatValue::ONE,
                     },
@@ -1125,36 +1125,36 @@ fn constant_tuple() {
 #[test]
 fn constant_list() {
     let module = constant_module(Constant::List {
-        location: Default::default(),
+        location: SrcSpan::default(),
         type_: type_::int(),
         elements: vec![
             Constant::Int {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 value: "1".into(),
                 int_value: 1.into(),
             },
             Constant::Int {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 value: "2".into(),
                 int_value: 2.into(),
             },
             Constant::Int {
-                location: Default::default(),
+                location: SrcSpan::default(),
                 value: "3".into(),
                 int_value: 3.into(),
             },
         ],
         tail: Some(Box::new(Constant::List {
-            location: Default::default(),
+            location: SrcSpan::default(),
             type_: type_::list(type_::int()),
             elements: vec![
                 Constant::Int {
-                    location: Default::default(),
+                    location: SrcSpan::default(),
                     value: "4".into(),
                     int_value: 4.into(),
                 },
                 Constant::Int {
-                    location: Default::default(),
+                    location: SrcSpan::default(),
                     value: "5".into(),
                     int_value: 5.into(),
                 },
@@ -1169,16 +1169,16 @@ fn constant_list() {
 #[test]
 fn constant_record() {
     let module = constant_module(Constant::Record {
-        location: Default::default(),
+        location: SrcSpan::default(),
         module: None,
         name: "".into(),
         arguments: Some(vec![
             CallArg {
                 implicit: None,
                 label: None,
-                location: Default::default(),
+                location: SrcSpan::default(),
                 value: Constant::Float {
-                    location: Default::default(),
+                    location: SrcSpan::default(),
                     value: "0.0".into(),
                     float_value: LiteralFloatValue::ZERO,
                 },
@@ -1186,9 +1186,9 @@ fn constant_record() {
             CallArg {
                 implicit: None,
                 label: None,
-                location: Default::default(),
+                location: SrcSpan::default(),
                 value: Constant::Int {
-                    location: Default::default(),
+                    location: SrcSpan::default(),
                     value: "1".into(),
                     int_value: 1.into(),
                 },
@@ -1205,13 +1205,13 @@ fn constant_record() {
 #[test]
 fn constant_var() {
     let one_original = Constant::Int {
-        location: Default::default(),
+        location: SrcSpan::default(),
         value: "1".into(),
         int_value: 1.into(),
     };
 
     let one = Constant::Var {
-        location: Default::default(),
+        location: SrcSpan::default(),
         module: None,
         name: "one_original".into(),
         type_: type_::int(),
@@ -1309,7 +1309,7 @@ fn constant_var() {
 #[test]
 fn constant_bit_array() {
     let module = constant_module(Constant::BitArray {
-        location: Default::default(),
+        location: SrcSpan::default(),
         segments: vec![],
     });
     assert_eq!(roundtrip(&module), module);
@@ -1318,7 +1318,7 @@ fn constant_bit_array() {
 #[test]
 fn constant_bit_array_unit() {
     let module = bit_array_segment_option_module(BitArrayOption::Unit {
-        location: Default::default(),
+        location: SrcSpan::default(),
         value: 234,
     });
     assert_eq!(roundtrip(&module), module);
@@ -1327,7 +1327,7 @@ fn constant_bit_array_unit() {
 #[test]
 fn constant_bit_array_float() {
     let module = bit_array_segment_option_module(BitArrayOption::Float {
-        location: Default::default(),
+        location: SrcSpan::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
@@ -1335,7 +1335,7 @@ fn constant_bit_array_float() {
 #[test]
 fn constant_bit_array_int() {
     let module = bit_array_segment_option_module(BitArrayOption::Int {
-        location: Default::default(),
+        location: SrcSpan::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
@@ -1343,9 +1343,9 @@ fn constant_bit_array_int() {
 #[test]
 fn constant_bit_array_size() {
     let module = bit_array_segment_option_module(BitArrayOption::Size {
-        location: Default::default(),
+        location: SrcSpan::default(),
         value: Box::new(Constant::Int {
-            location: Default::default(),
+            location: SrcSpan::default(),
             value: "1".into(),
             int_value: 1.into(),
         }),
@@ -1357,9 +1357,9 @@ fn constant_bit_array_size() {
 #[test]
 fn constant_bit_array_size_short_form() {
     let module = bit_array_segment_option_module(BitArrayOption::Size {
-        location: Default::default(),
+        location: SrcSpan::default(),
         value: Box::new(Constant::Int {
-            location: Default::default(),
+            location: SrcSpan::default(),
             value: "1".into(),
             int_value: 1.into(),
         }),
@@ -1371,7 +1371,7 @@ fn constant_bit_array_size_short_form() {
 #[test]
 fn constant_bit_array_bit_arry() {
     let module = bit_array_segment_option_module(BitArrayOption::Bits {
-        location: Default::default(),
+        location: SrcSpan::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
@@ -1379,7 +1379,7 @@ fn constant_bit_array_bit_arry() {
 #[test]
 fn constant_bit_array_utf8() {
     let module = bit_array_segment_option_module(BitArrayOption::Utf8 {
-        location: Default::default(),
+        location: SrcSpan::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
@@ -1387,7 +1387,7 @@ fn constant_bit_array_utf8() {
 #[test]
 fn constant_bit_array_utf16() {
     let module = bit_array_segment_option_module(BitArrayOption::Utf16 {
-        location: Default::default(),
+        location: SrcSpan::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
@@ -1395,7 +1395,7 @@ fn constant_bit_array_utf16() {
 #[test]
 fn constant_bit_array_utf32() {
     let module = bit_array_segment_option_module(BitArrayOption::Utf32 {
-        location: Default::default(),
+        location: SrcSpan::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
@@ -1403,7 +1403,7 @@ fn constant_bit_array_utf32() {
 #[test]
 fn constant_bit_array_utf8codepoint() {
     let module = bit_array_segment_option_module(BitArrayOption::Utf8Codepoint {
-        location: Default::default(),
+        location: SrcSpan::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
@@ -1411,7 +1411,7 @@ fn constant_bit_array_utf8codepoint() {
 #[test]
 fn constant_bit_array_utf16codepoint() {
     let module = bit_array_segment_option_module(BitArrayOption::Utf16Codepoint {
-        location: Default::default(),
+        location: SrcSpan::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
@@ -1419,7 +1419,7 @@ fn constant_bit_array_utf16codepoint() {
 #[test]
 fn constant_bit_array_utf32codepoint() {
     let module = bit_array_segment_option_module(BitArrayOption::Utf32Codepoint {
-        location: Default::default(),
+        location: SrcSpan::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
@@ -1427,7 +1427,7 @@ fn constant_bit_array_utf32codepoint() {
 #[test]
 fn constant_bit_array_signed() {
     let module = bit_array_segment_option_module(BitArrayOption::Signed {
-        location: Default::default(),
+        location: SrcSpan::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
@@ -1435,7 +1435,7 @@ fn constant_bit_array_signed() {
 #[test]
 fn constant_bit_array_unsigned() {
     let module = bit_array_segment_option_module(BitArrayOption::Unsigned {
-        location: Default::default(),
+        location: SrcSpan::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
@@ -1443,7 +1443,7 @@ fn constant_bit_array_unsigned() {
 #[test]
 fn constant_bit_array_big() {
     let module = bit_array_segment_option_module(BitArrayOption::Big {
-        location: Default::default(),
+        location: SrcSpan::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
@@ -1451,7 +1451,7 @@ fn constant_bit_array_big() {
 #[test]
 fn constant_bit_array_little() {
     let module = bit_array_segment_option_module(BitArrayOption::Little {
-        location: Default::default(),
+        location: SrcSpan::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
@@ -1459,7 +1459,7 @@ fn constant_bit_array_little() {
 #[test]
 fn constant_bit_array_native() {
     let module = bit_array_segment_option_module(BitArrayOption::Native {
-        location: Default::default(),
+        location: SrcSpan::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
@@ -1477,7 +1477,7 @@ fn deprecated_type() {
             TypeConstructor {
                 type_: type_::list(type_::int()),
                 publicity: Publicity::Public,
-                origin: Default::default(),
+                origin: SrcSpan::default(),
                 module: "the/module".into(),
                 parameters: vec![],
                 deprecation: Deprecation::Deprecated {
@@ -1807,7 +1807,7 @@ fn type_with_inferred_variant() {
                 publicity: Publicity::Internal {
                     attribute_location: Some(SrcSpan::new(0, 10)),
                 },
-                origin: Default::default(),
+                origin: SrcSpan::default(),
                 module: "the/module".into(),
                 parameters: vec![],
                 deprecation: Deprecation::NotDeprecated,
@@ -1853,7 +1853,7 @@ fn module_with_type_aliases() {
                 arity: 1,
                 deprecation: Deprecation::NotDeprecated,
                 documentation: Some("Some documentation".into()),
-                origin: Default::default(),
+                origin: SrcSpan::default(),
                 parameters: vec![type_::generic_var(0)],
             },
         )]

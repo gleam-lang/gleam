@@ -381,7 +381,7 @@ impl InMemoryFile {
     pub fn directory() -> Self {
         Self {
             node: InMemoryFileNode::Directory,
-            ..Default::default()
+            ..Self::default()
         }
     }
 
@@ -418,7 +418,7 @@ impl InMemoryFile {
 impl Default for InMemoryFile {
     fn default() -> Self {
         Self {
-            node: InMemoryFileNode::File(Default::default()),
+            node: InMemoryFileNode::File(Rc::new(RefCell::new(vec![]))),
             // We use a fixed time here so that the tests are deterministic. In
             // future we may want to inject this in some fashion.
             modification_time: SystemTime::UNIX_EPOCH + Duration::from_secs(663112800),

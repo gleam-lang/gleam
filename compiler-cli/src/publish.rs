@@ -987,7 +987,7 @@ fn release_metadata_as_erlang() {
 fn prevent_publish_local_dependency() {
     let config = PackageConfig {
         dependencies: [("provided".into(), Requirement::path("./path/to/package"))].into(),
-        ..Default::default()
+        ..PackageConfig::default()
     };
     assert_eq!(
         metadata_config(&config, &HashMap::new(), &[], &[]),
@@ -1005,7 +1005,7 @@ fn prevent_publish_git_dependency() {
             Requirement::git("https://github.com/gleam-lang/gleam.git", "da6e917"),
         )]
         .into(),
-        ..Default::default()
+        ..PackageConfig::default()
     };
     assert_eq!(
         metadata_config(&config, &HashMap::new(), &[], &[]),

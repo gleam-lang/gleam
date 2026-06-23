@@ -1685,7 +1685,7 @@ impl<'a> Inputs<'a> {
     ) -> Self {
         Self {
             package,
-            collection: Default::default(),
+            collection: HashMap::new(),
             already_defined_modules,
         }
     }

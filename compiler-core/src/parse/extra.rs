@@ -19,7 +19,7 @@ pub struct ModuleExtra {
 
 impl ModuleExtra {
     pub fn new() -> Self {
-        Default::default()
+        Self::default()
     }
 
     /// Detects if a byte index is in a comment context

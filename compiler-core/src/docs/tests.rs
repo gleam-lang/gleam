@@ -20,6 +20,7 @@ use crate::{
     config::{DocsPage, PackageConfig, Repository},
     docs::{DocContext, search_item_for_module, search_item_for_type, search_item_for_value},
     io::{FileSystemWriter, memory::InMemoryFileSystem},
+    parse::extra::ModuleExtra,
     paths::ProjectPaths,
     type_,
     uid::UniqueIdGenerator,
@@ -164,8 +165,8 @@ fn compile_documentation(
         input_path: "/".into(),
         origin: Origin::Src,
         ast: module,
-        extra: Default::default(),
-        dependencies: Default::default(),
+        extra: ModuleExtra::new(),
+        dependencies: vec![],
     };
 
     let source_links = SourceLinker::new(&paths, &config, &build_module);
@@ -1297,8 +1298,8 @@ fn generate_search_data(module_name: &str, module_src: &str) -> EcoString {
         input_path: "/".into(),
         origin: Origin::Src,
         ast: module,
-        extra: Default::default(),
-        dependencies: Default::default(),
+        extra: ModuleExtra::new(),
+        dependencies: vec![],
     };
 
     let source_links = SourceLinker::new(&paths, &config, &build_module);

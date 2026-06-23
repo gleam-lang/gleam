@@ -11,6 +11,7 @@ use crate::error::{DefinedModuleOrigin, FailedModule, SkipReason, SkippedModule}
 use crate::io::files_with_extension;
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
+use crate::type_::printer::Names;
 use crate::{
     Error, Result, Warning,
     ast::{SrcSpan, TypedModule, UntypedModule},
@@ -720,7 +721,7 @@ fn analyse(
                 let _ = failed_modules.insert(
                     name.clone(),
                     FailedModule {
-                        names: Default::default(),
+                        names: Box::new(Names::new()),
                         path: path.clone(),
                         src: code.clone(),
                         errors,

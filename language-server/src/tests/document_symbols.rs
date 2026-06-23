@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2024 The Gleam contributors
 
 use insta::assert_debug_snapshot;
-use lsp_types::{DocumentSymbol, DocumentSymbolParams};
+use lsp_types::{
+    DocumentSymbol, DocumentSymbolParams, PartialResultParams, WorkDoneProgressParams,
+};
 
 use super::*;
 
@@ -10,8 +12,8 @@ fn doc_symbols(tester: TestProject<'_>) -> Vec<DocumentSymbol> {
     tester.at(Position::default(), |engine, param, _| {
         let params = DocumentSymbolParams {
             text_document: param.text_document,
-            work_done_progress_params: Default::default(),
-            partial_result_params: Default::default(),
+            work_done_progress_params: WorkDoneProgressParams::default(),
+            partial_result_params: PartialResultParams::default(),
         };
         let response = engine.document_symbol(params);
 

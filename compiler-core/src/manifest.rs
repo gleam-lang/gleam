@@ -223,10 +223,10 @@ impl ManifestPackage {
 impl Default for ManifestPackage {
     fn default() -> Self {
         Self {
-            name: Default::default(),
-            build_tools: Default::default(),
-            otp_app: Default::default(),
-            requirements: Default::default(),
+            name: EcoString::new(),
+            build_tools: vec![],
+            otp_app: None,
+            requirements: vec![],
             version: Version::new(1, 0, 0),
             source: ManifestPackageSource::Hex {
                 outer_checksum: Base16Checksum(vec![]),

@@ -142,7 +142,7 @@ pub fn compile_package(
     let package: Package = package_from_module(module);
     serde_json::to_string_pretty(&PackageInterface::from_package(
         &package,
-        &Default::default(),
+        &im::HashMap::new(),
     ))
     .expect("to json")
 }

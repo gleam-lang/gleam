@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 The Gleam contributors
 
-use lsp_types::{Contents, Hover, HoverParams, MarkedString, Position, Range};
+use lsp_types::{
+    Contents, Hover, HoverParams, MarkedString, Position, Range, WorkDoneProgressParams,
+};
 
 use super::*;
 
@@ -9,7 +11,7 @@ fn hover(tester: TestProject<'_>, position: Position) -> Option<Hover> {
     tester.at(position, |engine, param, _| {
         let params = HoverParams {
             text_document_position_params: param,
-            work_done_progress_params: Default::default(),
+            work_done_progress_params: WorkDoneProgressParams::default(),
         };
         let response = engine.hover(params);
 
