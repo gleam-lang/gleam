@@ -90,7 +90,7 @@ pub fn tree(paths: &ProjectPaths, options: TreeOptions) -> Result<()> {
 
     // Get the manifest packages and add the root package to the vec
     let mut packages = manifest.packages.iter().cloned().collect_vec();
-    packages.append(&mut vec![root_package.clone()]);
+    packages.push(root_package);
 
     list_package_and_dependencies_tree(std::io::stdout(), options, packages.clone(), config.name)
 }
@@ -148,13 +148,8 @@ fn list_package_and_dependencies_tree<W: std::io::Write>(
 
     if let Some(package) = package {
         let tree = Vec::from([eco_format!("{0} v{1}", package.name, package.version)]);
-        let tree = list_dependencies_tree(
-            tree.clone(),
-            package.clone(),
-            packages,
-            EcoString::new(),
-            invert,
-        );
+        let tree =
+            list_dependencies_tree(tree, package.clone(), packages, EcoString::new(), invert);
 
         tree.iter()
             .try_for_each(|line| writeln!(buffer, "{line}"))

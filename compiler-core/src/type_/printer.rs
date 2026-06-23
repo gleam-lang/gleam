@@ -208,7 +208,7 @@ impl Names {
 
     /// Record a type variable in this module.
     pub fn type_variable_in_scope(&mut self, id: u64, local_alias: EcoString) {
-        _ = self.type_variables.insert(id, local_alias.clone());
+        _ = self.type_variables.insert(id, local_alias);
     }
 
     /// Record an imported module in this module.
@@ -309,7 +309,7 @@ impl Names {
         _ = self.local_value_constructors.remove_by_right(&local_alias);
         _ = self
             .local_value_constructors
-            .insert((module_name.clone(), value_name), local_alias.clone());
+            .insert((module_name, value_name), local_alias.clone());
     }
 
     /// Get the name and optional module qualifier for a named constructor.

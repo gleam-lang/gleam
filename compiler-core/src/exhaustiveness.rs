@@ -251,8 +251,7 @@ impl Branch {
                         rest: _,
                     } => {
                         if let Some(variable) = std::mem::take(prefix_name) {
-                            self.body
-                                .assign_literal_string(variable.clone(), prefix.clone());
+                            self.body.assign_literal_string(variable, prefix.clone());
                         }
                         return true;
                     }
@@ -2563,15 +2562,11 @@ impl<'a> Compiler<'a> {
         branch_mode: &BranchMode,
     ) -> RuntimeCheck {
         match (kind, branch_mode) {
-            (RuntimeCheckKind::Int { int_value }, _) => RuntimeCheck::Int {
-                int_value: int_value.clone(),
-            },
+            (RuntimeCheckKind::Int { int_value }, _) => RuntimeCheck::Int { int_value },
             (RuntimeCheckKind::Float { float_value }, _) => RuntimeCheck::Float { float_value },
-            (RuntimeCheckKind::String { value }, _) => RuntimeCheck::String {
-                value: value.clone(),
-            },
+            (RuntimeCheckKind::String { value }, _) => RuntimeCheck::String { value },
             (RuntimeCheckKind::StringPrefix { prefix }, _) => RuntimeCheck::StringPrefix {
-                prefix: prefix.clone(),
+                prefix,
                 rest: self.fresh_variable(string()),
             },
             (RuntimeCheckKind::Tuple { .. }, BranchMode::Tuple { elements }) => {

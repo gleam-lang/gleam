@@ -1508,7 +1508,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 )),
             ) => {
                 self.problems.error(Error::UnknownModuleValue {
-                    name: name.clone(),
+                    name,
                     module_name: module_name.clone(),
                     location,
                     value_constructors,
@@ -1926,7 +1926,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let left = self.infer(left);
         let right = self.infer(right);
         let unify_left = unify(input_type.clone(), left.type_());
-        let unify_right = unify(input_type.clone(), right.type_());
+        let unify_right = unify(input_type, right.type_());
 
         if unify_left.is_ok() && unify_right.is_ok() {
             // We only want to warn for redundant comparisons if it makes sense
@@ -2145,7 +2145,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         } = assignment;
         let value = self.expr_in_new_scope(|this| this.infer(value));
         let type_ = value.type_();
-        let kind = self.infer_assignment_kind(kind.clone());
+        let kind = self.infer_assignment_kind(kind);
 
         // Ensure the pattern matches the type of the value
         let mut pattern_typer = pattern::PatternTyper::new(
@@ -2172,7 +2172,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .map(|type_| self.instantiate(type_, &mut hashmap![]))
             {
                 Ok(annotated_type) => {
-                    if let Err(error) = unify(annotated_type, type_.clone())
+                    if let Err(error) = unify(annotated_type, type_)
                         .map_err(|e| convert_unify_error(e, value.type_defining_location()))
                     {
                         self.problems.error(error);
@@ -2606,18 +2606,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         // so the whole expression has to be inferred as a regular
                         // record access.
                         Ok(variable) => {
-                            self.infer_guard_record_access(variable, label.clone(), label_location)
+                            self.infer_guard_record_access(variable, label, label_location)
                         }
                     }
                 } else {
                     // If it doesn't this has to be a regular record access and
                     // we try and infer it as such.
                     let inferred_container = self.infer_clause_guard(*container.clone());
-                    self.infer_guard_record_access(
-                        inferred_container,
-                        label.clone(),
-                        label_location,
-                    )
+                    self.infer_guard_record_access(inferred_container, label, label_location)
                 };
 
                 match result {
@@ -3133,7 +3129,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         spread_start: u32,
     ) -> Result<TypedExpr, Error> {
         // infer the constructor being used
-        let typed_constructor = self.infer_or_error(constructor.clone())?;
+        let typed_constructor = self.infer_or_error(constructor)?;
         let (module, name) = match &typed_constructor {
             TypedExpr::ModuleSelect {
                 module_alias,
@@ -4075,7 +4071,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 } else {
                     self.problems.error(convert_unify_error(
                         UnifyError::CouldNotUnify {
-                            expected: expected_type.clone(),
+                            expected: expected_type,
                             given: typed_record_type,
                             situation: None,
                         },
@@ -4129,7 +4125,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         } else {
                             self.problems.error(self.unknown_field_error(
                                 field_map.fields.keys().cloned().collect(),
-                                expected_type.clone(),
+                                expected_type,
                                 argument.location,
                                 label.clone(),
                                 FieldAccessUsage::Other,
@@ -4206,8 +4202,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                                 Error::UnsafeRecordUpdate {
                                     location: record.base.location(),
                                     reason: UnsafeRecordUpdateReason::IncompatibleFieldTypes {
-                                        constructed_variant: expected_type.clone(),
-                                        record_variant: typed_record_type.clone(),
+                                        constructed_variant: expected_type,
+                                        record_variant: typed_record_type,
                                         expected_field_type: expected,
                                         record_field_type: given,
                                         field,
@@ -4794,7 +4790,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         arity: usize,
     ) -> TypedExpr {
         match self.infer_var(
-            name.clone(),
+            name,
             location,
             ValueUsage::Call { arity },
             ReferenceRegistration::Register,

@@ -302,7 +302,7 @@ impl PackageConfig {
                 Version::parse(COMPILER_VERSION).expect("Parse compiler semantic version");
 
             // We ignore the pre-release and build metadata when checking compatibility
-            let mut version_without_pre = compiler_version.clone();
+            let mut version_without_pre = compiler_version;
             version_without_pre.pre = vec![];
             version_without_pre.build = None;
             if !range.contains(&version_without_pre) {

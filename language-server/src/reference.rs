@@ -409,7 +409,7 @@ pub fn reference_for_ast_node(
         } => Some(Referenced::Label {
             type_module: current_module.clone(),
             type_name,
-            label: label.clone(),
+            label,
             location,
         }),
 

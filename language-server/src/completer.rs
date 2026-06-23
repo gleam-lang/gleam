@@ -1619,6 +1619,6 @@ impl<'ast> Visit<'ast> for LocalCompletion<'_> {
         pattern: &'ast Pattern<Arc<Type>>,
     ) {
         self.visit_typed_pattern(pattern);
-        self.push_completion(name, pattern.type_().clone());
+        self.push_completion(name, pattern.type_());
     }
 }

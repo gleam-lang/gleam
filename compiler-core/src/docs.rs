@@ -125,7 +125,7 @@ pub fn generate_html<IO: FileSystemReader>(
             .chain(repo_link)
             .chain([Link {
                 name: "Hex".into(),
-                path: format!("https://hex.pm/packages/{0}", config.name).to_string(),
+                path: format!("https://hex.pm/packages/{0}", config.name),
             }])
             .collect(),
         DocContext::Build => doc_links.chain(repo_link).collect(),
@@ -338,7 +338,7 @@ pub fn generate_html<IO: FileSystemReader>(
 
     files.push(OutputFile {
         path: Utf8PathBuf::from("search-data.json"),
-        content: Content::Text(search_data_json.to_string()),
+        content: Content::Text(search_data_json),
     });
 
     files.push(OutputFile {

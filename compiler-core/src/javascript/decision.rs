@@ -1292,11 +1292,9 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
         };
 
         match self.variable_assignment {
-            VariableAssignment::Declare => {
-                let_doc(arena, local_variable_name.clone(), assigned_value)
-            }
+            VariableAssignment::Declare => let_doc(arena, local_variable_name, assigned_value),
             VariableAssignment::Reassign => {
-                reassignment_doc(arena, local_variable_name.clone(), assigned_value)
+                reassignment_doc(arena, local_variable_name, assigned_value)
             }
         }
     }

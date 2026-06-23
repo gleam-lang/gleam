@@ -3727,7 +3727,7 @@ where
                 match self.parse_const_value()? {
                     Some(value) if value.location() == SrcSpan { start, end } => {
                         return Ok(Some(RecordUpdateArg {
-                            label: name.clone(),
+                            label: name,
                             location: SrcSpan { start, end },
                             value,
                         }));

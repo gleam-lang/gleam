@@ -161,7 +161,7 @@ It will be used to locally encrypt your Hex API tokens.
             if password.chars().count() < required_length {
                 println!("\nPlease use a password at least {required_length} characters long.\n")
             } else {
-                self.local_password = Some(password.clone());
+                self.local_password = Some(password);
                 return Ok(());
             }
         }

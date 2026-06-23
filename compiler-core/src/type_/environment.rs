@@ -1084,7 +1084,7 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
                 // of the function, in which case accept the extra link.
                 if let Ok(mut type_) = type_.try_borrow_mut() {
                     *type_ = TypeVar::Link {
-                        type_: collapse_links(t.clone()),
+                        type_: collapse_links(t),
                     }
                 }
                 Ok(())

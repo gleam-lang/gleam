@@ -209,7 +209,7 @@ impl Hydrator {
                     Deprecation::Deprecated { message } => {
                         problems.warning(Warning::DeprecatedItem {
                             location: *location,
-                            message: message.clone(),
+                            message,
                             layer: Layer::Type,
                         })
                     }

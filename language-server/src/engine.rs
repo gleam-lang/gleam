@@ -422,11 +422,10 @@ where
                     record_type,
                     ..
                 } => {
-                    completer.expected_type = Some(field_type.clone());
+                    completer.expected_type = Some(field_type);
                     let mut completions = vec![];
                     completions.append(&mut completer.completion_values());
-                    completions
-                        .append(&mut completer.completion_field_accessors(record_type.clone()));
+                    completions.append(&mut completer.completion_field_accessors(record_type));
                     Some(completions)
                 }
 

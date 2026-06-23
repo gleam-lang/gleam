@@ -1090,7 +1090,7 @@ pub fn visit_type_ast_fn<'a, V>(
                 .cloned(),
         );
     }
-    v.visit_type_ast(return_, return_type.clone());
+    v.visit_type_ast(return_, return_type);
 }
 
 pub fn visit_type_ast_var<'a, V>(_v: &mut V, _location: &'a SrcSpan, _name: &'a EcoString)
@@ -1519,10 +1519,7 @@ pub fn visit_typed_expr_fn<'a, V>(
         }
     }
     if let Some(return_) = return_annotation {
-        v.visit_type_ast(
-            return_,
-            type_.fn_types().map(|(_, return_)| return_.clone()),
-        );
+        v.visit_type_ast(return_, type_.fn_types().map(|(_, return_)| return_));
     }
 
     for statement in body {

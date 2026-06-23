@@ -1337,7 +1337,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             shared_accessors,
             // TODO: improve the ownership here so that we can use the
             // `return_type_constructor` below rather than looking it up twice.
-            type_: type_.clone(),
+            type_,
             variant_specific_accessors,
             variant_positional_accessors: positional_accessors,
         };
@@ -1880,7 +1880,6 @@ fn generalise_module_constant(
         deprecation,
         implementations,
     } = constant;
-    let type_ = type_.clone();
     let type_ = type_::generalise(type_);
     let variant = ValueConstructorVariant::ModuleConstant {
         documentation: doc.as_ref().map(|(_, doc)| doc.clone()),
