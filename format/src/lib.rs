@@ -758,7 +758,7 @@ impl<'a, 'doc> Formatter<'a> {
                 // ^ See how here we're adding the missing indentation to the
                 //   final break so that the final comment is as indented as the
                 //   list's items.
-                .append(arena, comment)
+                .append(arena, comment.nest(arena, INDENT))
                 .append(arena, LINE_DOCUMENT)
                 .append(arena, CLOSE_SQUARE_DOCUMENT)
                 .force_break(arena),
@@ -815,7 +815,7 @@ impl<'a, 'doc> Formatter<'a> {
                 .group(arena),
             Some(comments) => tuple_doc
                 .append(arena, TRAILING_COMMA_BREAK_DOCUMENT.nest(arena, INDENT))
-                .append(arena, comments)
+                .append(arena, comments.nest(arena, INDENT))
                 .append(arena, LINE_DOCUMENT)
                 .append(arena, CLOSE_PAREN_DOCUMENT)
                 .force_break(arena),

@@ -366,3 +366,18 @@ fn const_lists_with_empty_lines_are_always_broken() {
 "
     );
 }
+
+#[test]
+fn const_list_trailing_comment_indent() {
+    assert_format!(
+        "const list = [
+  1,
+  2,
+  3,
+  // 4,
+  // 5,
+  // 6,
+]
+"
+    );
+}
