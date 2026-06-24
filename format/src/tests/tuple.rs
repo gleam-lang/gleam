@@ -114,3 +114,18 @@ fn nested_literal_tuple_with_needless_block_is_not_changed() {
 "#
     );
 }
+
+#[test]
+fn multi_line_tuple_trailing_comment() {
+    assert_format!(
+        "const tuple = #(
+  1,
+  2,
+  3,
+  // 4,
+  // 5,
+  // 6,
+)
+"
+    );
+}
