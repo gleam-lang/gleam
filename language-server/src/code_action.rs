@@ -10724,17 +10724,6 @@ enum StatementPosition {
     NotTail,
 }
 
-#[derive(Clone, Debug)]
-enum ReturnValue {
-    /// The function is called for its side effects, and the return value is
-    /// not used.
-    Unbound(Arc<Type>),
-    /// A list of values which need to be returned from the extracted function.
-    /// These are the variables defined in the extracted code which are used
-    /// outside of the extracted section.
-    Bound(Vec<(EcoString, Arc<Type>)>),
-}
-
 impl<'a> ExtractFunction<'a> {
     pub fn new(
         module: &'a Module,
@@ -10820,11 +10809,11 @@ impl<'a> ExtractFunction<'a> {
                     .location()
                     .merge(&statements.last().location());
 
-                self.extract_code_in_tail_position(
+                self.extract_unbound_statements(
                     *full_location,
                     location,
-                    statements.last().type_(),
                     extracted.parameters,
+                    statements.last().type_(),
                     end,
                 )
             }
@@ -10877,11 +10866,11 @@ impl<'a> ExtractFunction<'a> {
                 } else {
                     expression.type_()
                 };
-                self.extract_code_in_tail_position(
+                self.extract_unbound_statements(
                     expression.location(),
                     expression.location(),
-                    expression_type,
                     extracted.parameters,
+                    expression_type,
                     end,
                 )
             }
@@ -10890,12 +10879,22 @@ impl<'a> ExtractFunction<'a> {
                 position: StatementPosition::NotTail,
                 type_,
             } => {
-                let return_value = if extracted.returned_variables.is_empty() {
-                    ReturnValue::Unbound(type_)
+                if extracted.returned_variables.is_empty() {
+                    self.extract_unbound_statements(
+                        location,
+                        location,
+                        extracted.parameters,
+                        type_,
+                        end,
+                    );
                 } else {
-                    ReturnValue::Bound(extracted.returned_variables)
+                    self.extract_bound_statements(
+                        location,
+                        extracted.parameters,
+                        extracted.returned_variables,
+                        end,
+                    )
                 };
-                self.extract_statements(location, extracted.parameters, return_value, end)
             }
 
             ExtractedValue::Use {
@@ -10907,11 +10906,11 @@ impl<'a> ExtractFunction<'a> {
                 location,
                 position: StatementPosition::Tail,
                 type_,
-            } => self.extract_code_in_tail_position(
+            } => self.extract_unbound_statements(
                 location,
                 location,
-                type_,
                 extracted.parameters,
+                type_,
                 end,
             ),
             ExtractedValue::PipelineSteps {
@@ -11142,14 +11141,28 @@ impl<'a> ExtractFunction<'a> {
         self.edits.insert(function_end, function);
     }
 
-    /// Extracts code from the end of a function or block. This could either be
-    /// a single expression, or multiple statements followed by a final expression.
-    fn extract_code_in_tail_position(
+    /// Extracts a function whose return value does not get bound to a variable
+    /// in the calling function.
+    ///
+    /// There are two cases:
+    /// 1. The function is in tail position, and its return value is used as the
+    ///    return value of the calling function.
+    /// 2. The function's return value is unused in the calling function, and so
+    ///    does not get bound to a variable.
+    ///
+    /// # Parameters
+    ///
+    /// In most cases, `location` and `code_location` are the same. They differ
+    /// only when the code being extracted is a single block expression. In
+    /// that case, the code being replaced in the calling function (`location`)
+    /// includes the braces around the block, while the code being put into the
+    /// body of the extracted function (`code_location`) does not.
+    fn extract_unbound_statements(
         &mut self,
         location: SrcSpan,
         code_location: SrcSpan,
-        type_: Arc<Type>,
         parameters: Vec<(EcoString, Arc<Type>)>,
+        return_type: Arc<Type>,
         function_end: u32,
     ) {
         let expression_code = code_at(self.module, code_location);
@@ -11170,7 +11183,7 @@ impl<'a> ExtractFunction<'a> {
             .iter()
             .map(|(name, type_)| eco_format!("{name}: {}", printer.print_type(type_)))
             .join(", ");
-        let return_type = printer.print_type(&type_);
+        let return_type = printer.print_type(&return_type);
 
         let function = format!(
             "\n\nfn {name}({parameters}) -> {return_type} {{
@@ -11181,99 +11194,77 @@ impl<'a> ExtractFunction<'a> {
         self.edits.insert(function_end, function);
     }
 
-    fn extract_statements(
+    /// Extracts a function that does get bound to one or more variables in the
+    /// calling function.
+    ///
+    /// For example, in the code
+    ///
+    /// ```gleam
+    /// pub fn main() {
+    ///   let a = 10
+    /// //^ Select from here
+    ///   let b = 20
+    ///   let c = a + b
+    ///   //          ^ Until here
+    ///
+    ///   echo a
+    ///   echo b
+    ///   echo c
+    /// }
+    /// ```
+    ///
+    /// multiple values defined in the extracted block are used in the calling
+    /// function. So, the extracted function must return multiple values that
+    /// are bound to variables: `let #(a, b, c) = function()`.
+    ///
+    /// There is a special case when there is only one value being bound, as it
+    /// is unnecessary to create a single-element tuple. For example:
+    ///
+    /// ```gleam
+    /// pub fn main() {
+    ///   let a = 10
+    /// //^ Select from here
+    ///   let b = 20
+    ///   let c = a + b
+    ///   //          ^ Until here
+    ///
+    ///   echo c
+    /// }
+    /// ```
+    ///
+    /// Here, the return value of the extracted function will be bound to a
+    /// single variable in the calling function: `let c = function()`.
+    fn extract_bound_statements(
         &mut self,
         location: SrcSpan,
         parameters: Vec<(EcoString, Arc<Type>)>,
-        return_value: ReturnValue,
+        returned_variables: Vec<(EcoString, Arc<Type>)>,
         function_end: u32,
     ) {
         let code = code_at(self.module, location);
 
+        let (return_type, return_value) = match returned_variables.as_slice() {
+            [(returned_name, type_)] => (type_.clone(), returned_name.clone()),
+            _ => {
+                let returned_names = returned_variables
+                    .iter()
+                    .map(|(name, _type)| name)
+                    .join(", ");
+                let return_value = eco_format!("#({returned_names})");
+
+                let returned_types = returned_variables
+                    .into_iter()
+                    .map(|(_name, type_)| type_)
+                    .collect();
+                let type_ = type_::tuple(returned_types);
+
+                (type_, return_value)
+            }
+        };
+
         let name = self.function_name();
         let arguments = parameters.iter().map(|(name, _)| name).join(", ");
-
-        // Here, we decide what value to return from the function. There are
-        // three cases:
-        // The first is when the extracted code is purely for side-effects, and
-        // does not produce any values which are needed outside of the extracted
-        // code. For example:
-        //
-        // ```gleam
-        // pub fn main() {
-        //   let message = "Something important"
-        // //^ Select from here
-        //   io.println("Something important")
-        //   io.println("Something else which is repeated")
-        //   //                                           ^ Until here
-        //
-        //   do_final_thing()
-        // }
-        // ```
-        //
-        // In this case, the extracted function can return its last statement
-        // (here of type `Nil`) but the value won't be assigned to in the
-        // original function.
-        //
-        // The next is when we need just a single value defined in the extracted
-        // function, such as in this piece of code:
-        //
-        // ```gleam
-        // pub fn main() {
-        //   let a = 10
-        // //^ Select from here
-        //   let b = 20
-        //   let c = a + b
-        //   //          ^ Until here
-        //
-        //   echo c
-        // }
-        // ```
-        //
-        // Here, we can just return the single value, `c`.
-        //
-        // The last situation is when we need multiple defined values, such as
-        // in the following code:
-        //
-        // ```gleam
-        // pub fn main() {
-        //   let a = 10
-        // //^ Select from here
-        //   let b = 20
-        //   let c = a + b
-        //   //          ^ Until here
-        //
-        //   echo a
-        //   echo b
-        //   echo c
-        // }
-        // ```
-        //
-        // In this case, we must return a tuple containing `a`, `b` and `c` in
-        // order for the calling function to have access to the correct values.
-        let (return_type, returned_variables, call) = match return_value {
-            ReturnValue::Unbound(type_) => (type_, None, format!("{name}({arguments})")),
-            ReturnValue::Bound(return_values) => match return_values.as_slice() {
-                [(returned_name, type_)] => (
-                    type_.clone(),
-                    Some(returned_name.clone()),
-                    format!("let {returned_name} = {name}({arguments})"),
-                ),
-                _ => {
-                    let returned_names = return_values.iter().map(|(name, _type)| name).join(", ");
-                    let returned_variables = eco_format!("#({returned_names})");
-                    let call = format!("let {returned_variables} = {name}({arguments})");
-
-                    let returned_types = return_values
-                        .into_iter()
-                        .map(|(_name, type_)| type_)
-                        .collect();
-                    let type_ = type_::tuple(returned_types);
-
-                    (type_, Some(returned_variables), call)
-                }
-            },
-        };
+        let call = format!("let {return_value} = {name}({arguments})");
 
         self.edits.replace(location, call);
 
@@ -11283,16 +11274,12 @@ impl<'a> ExtractFunction<'a> {
             .iter()
             .map(|(name, type_)| eco_format!("{name}: {}", printer.print_type(type_)))
             .join(", ");
-
         let return_type = printer.print_type(&return_type);
-        let return_value = match returned_variables {
-            Some(returned_variables) => format!("\n  {returned_variables}"),
-            None => "".to_string(),
-        };
 
         let function = format!(
             "\n\nfn {name}({parameters}) -> {return_type} {{
-  {code}{return_value}
+  {code}
+  {return_value}
 }}"
         );
 
@@ -11665,7 +11652,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
                             ..
                         },
                     parameters,
-                    returned_variables: return_value,
+                    returned_variables,
                 }) if location.contains_span(statement_location) => {
                     let use_line_range = self.edits.src_span_to_lsp_range(*use_line_location);
 
@@ -11682,7 +11669,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
                                 type_: statement.type_(),
                             },
                             parameters: parameters.to_vec(),
-                            returned_variables: return_value.clone(),
+                            returned_variables: returned_variables.to_vec(),
                         });
                     }
                 }
