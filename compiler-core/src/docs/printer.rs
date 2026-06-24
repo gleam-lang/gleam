@@ -7,20 +7,18 @@ use std::{
 };
 
 use ecow::{EcoString, eco_format};
-use itertools::Itertools;
 
 use crate::{
     ast::{
         ArgNames, CustomType, Function, Publicity, RecordConstructorArg, SrcSpan, TypeAlias,
         TypedArg, TypedDefinitions, TypedModuleConstant, TypedRecordConstructor,
     },
-    docvec,
-    pretty::{Document, Documentable, break_, join, line, nil, zero_width_string},
     type_::{
         Deprecation, PRELUDE_MODULE_NAME, PRELUDE_PACKAGE_NAME, Type, TypeVar,
         printer::{Names, PrintMode},
     },
 };
+use pretty_arena::*;
 
 use super::{
     Dependency, DependencyKind, DocsValues, TypeConstructor, TypeConstructorArg, TypeDefinition,
@@ -62,8 +60,8 @@ pub struct Printer<'a> {
     dependencies: &'a HashMap<EcoString, Dependency>,
 }
 
-impl Printer<'_> {
-    pub fn new<'a>(
+impl<'a, 'doc> Printer<'a> {
+    pub fn new(
         package: EcoString,
         module: EcoString,
         names: &'a Names,
@@ -88,12 +86,13 @@ impl Printer<'_> {
         self.options = options;
     }
 
-    pub fn type_definitions<'a>(
+    pub fn type_definitions(
         &mut self,
         source_links: &SourceLinker,
         definitions: &'a TypedDefinitions,
     ) -> Vec<TypeDefinition<'a>> {
         let mut type_definitions = vec![];
+        let arena = DocumentArena::new();
 
         for CustomType {
             location,
@@ -113,9 +112,15 @@ impl Printer<'_> {
 
             type_definitions.push(TypeDefinition {
                 name,
-                definition: print(self.custom_type(name, parameters, constructors, *opaque)),
+                definition: print(self.custom_type(
+                    &arena,
+                    name,
+                    parameters,
+                    constructors,
+                    *opaque,
+                )),
                 raw_definition: self
-                    .raw(|this| this.custom_type(name, parameters, constructors, *opaque)),
+                    .raw(|this| this.custom_type(&arena, name, parameters, constructors, *opaque)),
                 documentation: markdown_documentation(documentation),
                 text_documentation: text_documentation(documentation),
                 deprecation_message: match deprecation {
@@ -128,8 +133,9 @@ impl Printer<'_> {
                     constructors
                         .iter()
                         .map(|constructor| TypeConstructor {
-                            definition: print(self.record_constructor(constructor)),
-                            raw_definition: self.raw(|this| this.record_constructor(constructor)),
+                            definition: print(self.record_constructor(&arena, constructor)),
+                            raw_definition: self
+                                .raw(|this| this.record_constructor(&arena, constructor)),
                             documentation: markdown_documentation(&constructor.documentation),
                             text_documentation: text_documentation(&constructor.documentation),
                             arguments: constructor
@@ -167,8 +173,14 @@ impl Printer<'_> {
             }
             type_definitions.push(TypeDefinition {
                 name,
-                definition: print(self.type_alias(name, type_, parameters).group()),
-                raw_definition: self.raw(|this| this.type_alias(name, type_, parameters).group()),
+                definition: print(
+                    self.type_alias(&arena, name, type_, parameters)
+                        .group(&arena),
+                ),
+                raw_definition: self.raw(|this| {
+                    this.type_alias(&arena, name, type_, parameters)
+                        .group(&arena)
+                }),
                 documentation: markdown_documentation(documentation),
                 text_documentation: text_documentation(documentation),
                 constructors: vec![],
@@ -186,10 +198,10 @@ impl Printer<'_> {
     }
 
     /// Print a definition without HTML highlighting, such as for search data
-    fn raw<'a, F>(&mut self, definition: F) -> String
-    where
-        F: FnOnce(&mut Self) -> Document<'a>,
-    {
+    fn raw<'doc1, 'a1: 'doc1>(
+        &mut self,
+        definition: impl FnOnce(&mut Self) -> Document<'a1, 'doc1>,
+    ) -> String {
         let options = self.options;
         // Turn off highlighting for this definition
         self.options = PrintOptions {
@@ -202,12 +214,13 @@ impl Printer<'_> {
         format!("```\n{result}\n```")
     }
 
-    pub fn value_definitions<'a>(
+    pub fn value_definitions(
         &mut self,
         source_links: &SourceLinker,
         definitions: &'a TypedDefinitions,
     ) -> Vec<DocsValues<'a>> {
         let mut value_definitions = vec![];
+        let arena = DocumentArena::new();
 
         for Function {
             location,
@@ -233,9 +246,9 @@ impl Printer<'_> {
 
             value_definitions.push(DocsValues {
                 name,
-                definition: print(self.function_signature(name, arguments, return_type)),
+                definition: print(self.function_signature(&arena, name, arguments, return_type)),
                 raw_definition: self
-                    .raw(|this| this.function_signature(name, arguments, return_type)),
+                    .raw(|this| this.function_signature(&arena, name, arguments, return_type)),
                 documentation: markdown_documentation(documentation),
                 text_documentation: text_documentation(documentation),
                 source_url: source_links.url(*location),
@@ -262,8 +275,8 @@ impl Printer<'_> {
 
             value_definitions.push(DocsValues {
                 name,
-                definition: print(self.constant(name, type_)),
-                raw_definition: self.raw(|this| this.constant(name, type_)),
+                definition: print(self.constant(&arena, name, type_)),
+                raw_definition: self.raw(|this| this.constant(&arena, name, type_)),
                 documentation: markdown_documentation(documentation),
                 text_documentation: text_documentation(documentation),
                 source_url: source_links.url(*location),
@@ -278,171 +291,225 @@ impl Printer<'_> {
         value_definitions
     }
 
-    fn custom_type<'a>(
+    fn custom_type(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         name: &'a str,
         parameters: &'a [(SrcSpan, EcoString)],
         constructors: &'a [TypedRecordConstructor],
         opaque: bool,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let arguments = if parameters.is_empty() {
-            nil()
+            EMPTY_DOCUMENT
         } else {
             Self::wrap_arguments(
+                arena,
                 parameters
                     .iter()
-                    .map(|(_, parameter)| self.variable(parameter)),
+                    .map(|(_, parameter)| self.variable(arena, parameter)),
             )
         };
 
-        let keywords = if opaque {
-            "pub opaque type "
-        } else {
-            "pub type "
-        };
-
-        let type_head = docvec![self.keyword(keywords), self.title(name), arguments];
+        let type_head = docvec![
+            arena,
+            self.keyword(
+                arena,
+                if opaque {
+                    PUB_OPAQUE_TYPE_SPACE_DOCUMENT
+                } else {
+                    PUB_TYPE_SPACE_DOCUMENT
+                }
+            ),
+            self.title(arena, name),
+            arguments
+        ];
 
         if constructors.is_empty() || opaque {
             return type_head;
         }
 
-        let constructors = constructors
-            .iter()
-            .map(|constructor| {
-                line()
-                    .append(self.record_constructor(constructor))
-                    .nest(INDENT)
-            })
-            .collect_vec();
+        let constructors = arena.concat(constructors.iter().map(|constructor| {
+            LINE_DOCUMENT
+                .append(arena, self.record_constructor(arena, constructor))
+                .nest(arena, INDENT)
+        }));
 
-        docvec![type_head, " {", constructors, line(), "}"]
+        docvec![
+            arena,
+            type_head,
+            SPACE_OPEN_CURLY_DOCUMENT,
+            constructors,
+            LINE_DOCUMENT,
+            CLOSE_CURLY_DOCUMENT
+        ]
     }
 
-    pub fn record_constructor<'a>(
+    pub fn record_constructor(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         constructor: &'a TypedRecordConstructor,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         if constructor.arguments.is_empty() {
-            return self.title(&constructor.name);
+            return self.title(arena, &constructor.name);
         }
 
         let arguments = constructor.arguments.iter().map(
             |RecordConstructorArg { label, type_, .. }| match label {
                 Some((_, label)) => self
-                    .variable(label)
-                    .append(": ")
-                    .append(self.type_(type_, PrintMode::Normal)),
-                None => self.type_(type_, PrintMode::Normal),
+                    .variable(arena, label)
+                    .append(arena, COLON_SPACE_DOCUMENT)
+                    .append(arena, self.type_(arena, type_, PrintMode::Normal)),
+                None => self.type_(arena, type_, PrintMode::Normal),
             },
         );
 
-        let arguments = Self::wrap_arguments(arguments);
+        let arguments = Self::wrap_arguments(arena, arguments);
 
-        docvec![self.title(&constructor.name), arguments].group()
+        docvec![arena, self.title(arena, &constructor.name), arguments].group(arena)
     }
 
-    fn type_alias<'a>(
+    fn type_alias(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         name: &'a str,
         type_: &Type,
         parameters: &[(SrcSpan, EcoString)],
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         let parameters = if parameters.is_empty() {
-            nil()
+            EMPTY_DOCUMENT
         } else {
             let arguments = parameters
                 .iter()
-                .map(|(_, parameter)| self.variable(parameter));
-            Self::wrap_arguments(arguments)
+                .map(|(_, parameter)| self.variable(arena, parameter));
+            Self::wrap_arguments(arena, arguments)
         };
 
         docvec![
-            self.keyword("pub type "),
-            self.title(name),
+            arena,
+            self.keyword(arena, PUB_TYPE_SPACE_DOCUMENT),
+            self.title(arena, name),
             parameters,
-            " =",
-            line()
-                .append(self.type_(type_, PrintMode::ExpandAliases))
-                .nest(INDENT)
+            SPACE_EQUAL_DOCUMENT,
+            LINE_DOCUMENT
+                .append(arena, self.type_(arena, type_, PrintMode::ExpandAliases))
+                .nest(arena, INDENT)
         ]
     }
 
-    fn constant<'a>(&mut self, name: &'a str, type_: &Type) -> Document<'a> {
+    fn constant(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        name: &'a str,
+        type_: &Type,
+    ) -> Document<'a, 'doc> {
         self.register_local_type_variable_names(type_);
 
         docvec![
-            self.keyword("pub const "),
-            self.title(name),
-            ": ",
-            self.type_(type_, PrintMode::Normal)
+            arena,
+            self.keyword(arena, PUB_CONST_SPACE_DOCUMENT),
+            self.title(arena, name),
+            COLON_SPACE_DOCUMENT,
+            self.type_(arena, type_, PrintMode::Normal)
         ]
     }
 
-    fn function_signature<'a>(
+    fn function_signature(
         &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         name: &'a str,
         arguments: &'a [TypedArg],
         return_type: &Type,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         for argument in arguments {
             self.register_local_type_variable_names(&argument.type_);
         }
         self.register_local_type_variable_names(return_type);
 
         let arguments = if arguments.is_empty() {
-            "()".to_doc()
+            OPEN_CLOSE_PAREN_DOCUMENT
         } else {
-            Self::wrap_arguments(arguments.iter().map(|argument| {
-                let name = self.variable(self.argument_name(argument));
-                docvec![name, ": ", self.type_(&argument.type_, PrintMode::Normal)].group()
-            }))
+            Self::wrap_arguments(
+                arena,
+                arguments.iter().map(|argument| {
+                    let name = self.variable(arena, self.argument_name(arena, argument));
+                    docvec![
+                        arena,
+                        name,
+                        COLON_SPACE_DOCUMENT,
+                        self.type_(arena, &argument.type_, PrintMode::Normal)
+                    ]
+                    .group(arena)
+                }),
+            )
         };
 
         docvec![
-            self.keyword("pub fn "),
-            self.title(name),
+            arena,
+            self.keyword(arena, PUB_FN_SPACE_DOCUMENT),
+            self.title(arena, name),
             arguments,
-            " -> ",
-            self.type_(return_type, PrintMode::Normal)
+            SPACE_RIGHT_ARROW_SPACE_DOCUMENT,
+            self.type_(arena, return_type, PrintMode::Normal)
         ]
-        .group()
+        .group(arena)
     }
 
-    fn argument_name<'a>(&self, arg: &'a TypedArg) -> Document<'a> {
+    fn argument_name(
+        &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        arg: &'a TypedArg,
+    ) -> Document<'a, 'doc> {
         match &arg.names {
-            ArgNames::Named { name, .. } => name.to_doc(),
-            ArgNames::NamedLabelled { label, name, .. } => docvec![label, " ", name],
+            ArgNames::Named { name, .. } => name.to_doc(arena),
+            ArgNames::NamedLabelled { label, name, .. } => {
+                docvec![arena, label, SPACE_DOCUMENT, name]
+            }
             // We remove the underscore from discarded function arguments since we don't want to
             // expose this kind of detail: https://github.com/gleam-lang/gleam/issues/2561
             ArgNames::Discard { name, .. } => match name.strip_prefix('_').unwrap_or(name) {
-                "" => "arg".to_doc(),
-                name => name.to_doc(),
+                "" => LOWERCASE_ARG_DOCUMENT,
+                name => name.to_doc(arena),
             },
             ArgNames::LabelledDiscard { label, name, .. } => {
-                docvec![label, " ", name.strip_prefix('_').unwrap_or(name).to_doc()]
+                docvec![
+                    arena,
+                    label,
+                    SPACE_DOCUMENT,
+                    name.strip_prefix('_').unwrap_or(name).to_doc(arena)
+                ]
             }
         }
     }
 
-    fn wrap_arguments<'a>(arguments: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
-        break_("(", "(")
-            .append(join(arguments, break_(",", ", ")))
-            .nest_if_broken(INDENT)
-            .append(break_(",", ""))
-            .append(")")
+    fn wrap_arguments(
+        arena: &'doc DocumentArena<'a, 'doc>,
+        arguments: impl IntoIterator<Item = Document<'a, 'doc>>,
+    ) -> Document<'a, 'doc> {
+        OPEN_PAREN_BREAK_DOCUMENT
+            .append(arena, arena.join(arguments, COMMA_BREAK_DOCUMENT))
+            .nest_if_broken(arena, INDENT)
+            .append(arena, TRAILING_COMMA_BREAK_DOCUMENT)
+            .append(arena, CLOSE_PAREN_DOCUMENT)
     }
 
-    fn type_arguments<'a>(arguments: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
-        break_("", "")
-            .append(join(arguments, break_(",", ", ")))
-            .nest_if_broken(INDENT)
-            .append(break_(",", ""))
-            .group()
-            .surround("(", ")")
+    fn type_arguments(
+        arena: &'doc DocumentArena<'a, 'doc>,
+        arguments: impl IntoIterator<Item = Document<'a, 'doc>>,
+    ) -> Document<'a, 'doc> {
+        EMPTY_BREAK_DOCUMENT
+            .append(arena, arena.join(arguments, COMMA_BREAK_DOCUMENT))
+            .nest_if_broken(arena, INDENT)
+            .append(arena, TRAILING_COMMA_BREAK_DOCUMENT)
+            .group(arena)
+            .surround(arena, OPEN_PAREN_DOCUMENT, CLOSE_PAREN_DOCUMENT)
     }
 
-    fn type_(&mut self, type_: &Type, print_mode: PrintMode) -> Document<'static> {
+    fn type_(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        type_: &Type,
+        print_mode: PrintMode,
+    ) -> Document<'a, 'doc> {
         match type_ {
             Type::Named {
                 package,
@@ -458,7 +525,7 @@ impl Printer<'_> {
                     // is aliasing that internal type, rather than showing it as
                     // aliasing itself.
                     PrintMode::ExpandAliases if *package == self.package => {
-                        self.named_type_name(publicity, package, module, name)
+                        self.named_type_name(arena, publicity, package, module, name)
                     }
                     // If we are printing a type alias which aliases an internal
                     // type from a different package, we still want to print the
@@ -471,9 +538,9 @@ impl Printer<'_> {
                         if let Some((module, alias)) =
                             self.names.reexport_alias(module.clone(), name.clone())
                         {
-                            self.named_type_name(&Publicity::Public, package, module, alias)
+                            self.named_type_name(arena, &Publicity::Public, package, module, alias)
                         } else {
-                            self.named_type_name(publicity, package, module, name)
+                            self.named_type_name(arena, publicity, package, module, name)
                         }
                     }
                 };
@@ -481,37 +548,45 @@ impl Printer<'_> {
                 if arguments.is_empty() {
                     name
                 } else {
-                    name.append(Self::type_arguments(
-                        arguments
-                            .iter()
-                            .map(|argument| self.type_(argument, PrintMode::Normal)),
-                    ))
+                    name.append(
+                        arena,
+                        Self::type_arguments(
+                            arena,
+                            arguments
+                                .iter()
+                                .map(|argument| self.type_(arena, argument, PrintMode::Normal)),
+                        ),
+                    )
                 }
             }
             Type::Fn { arguments, return_ } => docvec![
-                self.keyword("fn"),
+                arena,
+                self.keyword(arena, FN_DOCUMENT),
                 Self::type_arguments(
+                    arena,
                     arguments
                         .iter()
-                        .map(|argument| self.type_(argument, PrintMode::Normal))
+                        .map(|argument| self.type_(arena, argument, PrintMode::Normal))
                 ),
-                " -> ",
-                self.type_(return_, PrintMode::Normal)
+                SPACE_RIGHT_ARROW_SPACE_DOCUMENT,
+                self.type_(arena, return_, PrintMode::Normal)
             ],
             Type::Tuple { elements } => docvec![
-                "#",
+                arena,
+                HASHTAG_DOCUMENT,
                 Self::type_arguments(
+                    arena,
                     elements
                         .iter()
-                        .map(|element| self.type_(element, PrintMode::Normal))
+                        .map(|element| self.type_(arena, element, PrintMode::Normal))
                 ),
             ],
             Type::Var { type_ } => match type_.as_ref().borrow().deref() {
-                TypeVar::Link { type_ } => self.type_(type_, PrintMode::Normal),
+                TypeVar::Link { type_ } => self.type_(arena, type_, PrintMode::Normal),
 
                 TypeVar::Unbound { id } | TypeVar::Generic { id } => {
                     let name = self.type_variable(*id);
-                    self.variable(name)
+                    self.variable(arena, name)
                 }
             },
         }
@@ -561,24 +636,29 @@ impl Printer<'_> {
 
     fn named_type_name(
         &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         publicity: &Publicity,
         package: &str,
         module: &str,
         name: &EcoString,
-    ) -> Document<'static> {
+    ) -> Document<'a, 'doc> {
         // There's no documentation page for the prelude
         if package == PRELUDE_PACKAGE_NAME && module == PRELUDE_MODULE_NAME {
-            return self.title(name);
+            return self.title(arena, name);
         }
 
         // Internal types don't get linked
         if !publicity.is_public() {
-            return docvec![self.comment("@internal ".to_doc()), self.title(name)];
+            return docvec![
+                arena,
+                self.comment(arena, INTERNAL_ATTRIBUTE_SPACE_DOCUMENT),
+                self.title(arena, name)
+            ];
         }
 
         // Linking to a type within the same page
         if package == self.package && module == self.module {
-            return self.link(eco_format!("#{name}"), self.title(name), None);
+            return self.link(arena, eco_format!("#{name}"), self.title(arena, name), None);
         }
 
         // Linking to a module within the package
@@ -622,14 +702,16 @@ impl Printer<'_> {
             path.push(module_name);
 
             let qualified_name = docvec![
-                self.variable(EcoString::from(module_name)),
-                ".",
-                self.title(name)
+                arena,
+                self.variable(arena, EcoString::from(module_name)),
+                DOT_DOCUMENT,
+                self.title(arena, name)
             ];
 
             let title = eco_format!("{module}.{{type {name}}}");
 
             return self.link(
+                arena,
                 eco_format!("{path}.html#{name}", path = path.join("/")),
                 qualified_name,
                 Some(title),
@@ -638,9 +720,10 @@ impl Printer<'_> {
 
         let module_name = module.split('/').next_back().unwrap_or(module);
         let qualified_name = docvec![
-            self.variable(EcoString::from(module_name)),
-            ".",
-            self.title(name)
+            arena,
+            self.variable(arena, EcoString::from(module_name)),
+            DOT_DOCUMENT,
+            self.title(arena, name)
         ];
         let title = eco_format!("{module}.{{type {name}}}");
 
@@ -651,6 +734,7 @@ impl Printer<'_> {
                 kind: DependencyKind::Hex,
                 version,
             }) => self.link(
+                arena,
                 eco_format!(
                     "https://{package}.hexdocs.pm/{version}/{module}.html#{name}",
                     package = package.replace('_', "-")
@@ -658,7 +742,7 @@ impl Printer<'_> {
                 qualified_name,
                 Some(title),
             ),
-            Some(_) | None => self.span_with_title(qualified_name, title),
+            Some(_) | None => self.span_with_title(arena, qualified_name, title),
         }
     }
 
@@ -705,45 +789,68 @@ impl Printer<'_> {
         }
     }
 
-    fn keyword<'a>(&self, keyword: impl Documentable<'a>) -> Document<'a> {
-        self.colour_span(keyword, "keyword")
-    }
-
-    fn comment<'a>(&self, name: impl Documentable<'a>) -> Document<'a> {
-        self.colour_span(name, "comment")
-    }
-
-    fn title<'a>(&self, name: impl Documentable<'a>) -> Document<'a> {
-        self.colour_span(name, "title")
-    }
-
-    fn variable<'a>(&self, name: impl Documentable<'a>) -> Document<'a> {
-        self.colour_span(name, "variable")
-    }
-
-    fn colour_span<'a>(
+    fn keyword(
         &self,
-        name: impl Documentable<'a>,
-        colour_class: &'static str,
-    ) -> Document<'a> {
+        arena: &'doc DocumentArena<'a, 'doc>,
+        keyword: Document<'static, 'static>,
+    ) -> Document<'a, 'doc> {
+        self.colour_span(arena, keyword, ColourClass::Keyword)
+    }
+
+    fn comment(
+        &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        name: impl Documentable<'a, 'doc>,
+    ) -> Document<'a, 'doc> {
+        self.colour_span(arena, name, ColourClass::Comment)
+    }
+
+    fn title(
+        &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        name: impl Documentable<'a, 'doc>,
+    ) -> Document<'a, 'doc> {
+        self.colour_span(arena, name, ColourClass::Title)
+    }
+
+    fn variable(
+        &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        name: impl Documentable<'a, 'doc>,
+    ) -> Document<'a, 'doc> {
+        self.colour_span(arena, name, ColourClass::Variable)
+    }
+
+    fn colour_span(
+        &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        name: impl Documentable<'a, 'doc>,
+        colour_class: ColourClass,
+    ) -> Document<'a, 'doc> {
         if !self.options.print_highlighting {
-            return name.to_doc();
+            return name.to_doc(arena);
         }
 
-        name.to_doc().surround(
-            zero_width_string(eco_format!(r#"<span class="hljs-{colour_class}">"#)),
-            zero_width_string("</span>".into()),
-        )
+        let open_tag = match colour_class {
+            ColourClass::Variable => ZERO_WIDTH_OPEN_VARIABLE_COLOUR_SPAN,
+            ColourClass::Title => ZERO_WIDTH_OPEN_TITLE_COLOUR_SPAN,
+            ColourClass::Keyword => ZERO_WIDTH_OPEN_KEYWORD_COLOUR_SPAN,
+            ColourClass::Comment => ZERO_WIDTH_OPEN_COMMENT_COLOUR_SPAN,
+        };
+
+        name.to_doc(arena)
+            .surround(arena, open_tag, ZERO_WIDTH_CLOSED_SPAN_TAG_DOCUMENT)
     }
 
-    fn link<'a>(
+    fn link(
         &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
         href: EcoString,
-        name: impl Documentable<'a>,
+        name: impl Documentable<'a, 'doc>,
         title: Option<EcoString>,
-    ) -> Document<'a> {
+    ) -> Document<'a, 'doc> {
         if !self.options.print_html {
-            return name.to_doc();
+            return name.to_doc(arena);
         }
 
         let opening_tag = if let Some(title) = title {
@@ -752,27 +859,41 @@ impl Printer<'_> {
             eco_format!(r#"<a href="{href}">"#)
         };
 
-        name.to_doc().surround(
-            zero_width_string(opening_tag),
-            zero_width_string("</a>".into()),
+        name.to_doc(arena).surround(
+            arena,
+            arena.zero_width_string(opening_tag),
+            ZERO_WIDTH_CLOSED_A_TAG_DOCUMENT,
         )
     }
 
-    fn span_with_title<'a>(&self, name: impl Documentable<'a>, title: EcoString) -> Document<'a> {
+    fn span_with_title(
+        &self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        name: impl Documentable<'a, 'doc>,
+        title: EcoString,
+    ) -> Document<'a, 'doc> {
         if !self.options.print_html {
-            return name.to_doc();
+            return name.to_doc(arena);
         }
 
-        name.to_doc().surround(
-            zero_width_string(eco_format!(r#"<span title="{title}">"#)),
-            zero_width_string("</span>".into()),
+        name.to_doc(arena).surround(
+            arena,
+            arena.zero_width_string(eco_format!(r#"<span title="{title}">"#)),
+            ZERO_WIDTH_CLOSED_SPAN_TAG_DOCUMENT,
         )
     }
+}
+
+enum ColourClass {
+    Variable,
+    Title,
+    Keyword,
+    Comment,
 }
 
 const MAX_COLUMNS: isize = 65;
 const INDENT: isize = 2;
 
-fn print(doc: Document<'_>) -> String {
+fn print<'a, 'doc>(doc: Document<'a, 'doc>) -> String {
     doc.to_pretty_string(MAX_COLUMNS)
 }

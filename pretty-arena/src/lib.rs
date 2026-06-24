@@ -201,6 +201,7 @@ impl<'string, 'doc> Document<'string, 'doc> {
             | PrintableDocument::Str { .. }
             | PrintableDocument::EcoString { .. }
             | PrintableDocument::ZeroWidthString { .. }
+            | PrintableDocument::ZeroWidthStr { .. }
             | PrintableDocument::CursorPositionObserver { .. } => self,
 
             PrintableDocument::Line(_)
@@ -316,6 +317,7 @@ impl<'string, 'doc> Document<'string, 'doc> {
             | PrintableDocument::Str { .. }
             | PrintableDocument::EcoString { .. }
             | PrintableDocument::ZeroWidthString { .. }
+            | PrintableDocument::ZeroWidthStr { .. }
             | PrintableDocument::CursorPositionObserver { .. } => {
                 Document(arena.documents.alloc(PrintableDocument::Join(self, new)))
             }
@@ -360,6 +362,7 @@ impl<'string, 'doc> Document<'string, 'doc> {
             // still printed and so are not empty. (Unless their string contents
             // is also empty)
             PrintableDocument::ZeroWidthString { string } => string.is_empty(),
+            PrintableDocument::ZeroWidthStr { string } => string.is_empty(),
             PrintableDocument::CursorPositionObserver { .. } => true,
         }
     }
@@ -478,6 +481,9 @@ enum PrintableDocument<'string, 'doc> {
     ZeroWidthString {
         string: EcoString,
     },
+    ZeroWidthStr {
+        string: &'string str,
+    },
 
     /// A node that gets notified of the cursor position as it is being formatted.
     /// This allows for processes outside of the final output to be notified of
@@ -551,6 +557,7 @@ pub enum NestMode {
     /// wubble"
     Set,
 }
+
 macro_rules! const_str {
     ($name:ident, $string:expr, $graphemes:expr) => {
         pub const $name: $crate::Document<'static, 'static> = {
@@ -559,6 +566,13 @@ macro_rules! const_str {
                 graphemes: $graphemes,
             })
         };
+    };
+}
+
+macro_rules! const_zero_width_str {
+    ($name:ident, $string:expr) => {
+        pub const $name: $crate::Document<'static, 'static> =
+            { $crate::Document(&$crate::PrintableDocument::ZeroWidthStr { string: $string }) };
     };
 }
 
@@ -700,6 +714,7 @@ const_str!(
 );
 const_str!(QUOTE_COMMA_SPACE_QUOTE_DOCUMENT, "\", \"", 4);
 const_str!(INTERNAL_ATTRIBUTE_DOCUMENT, "@internal", 9);
+const_str!(INTERNAL_ATTRIBUTE_SPACE_DOCUMENT, "@internal ", 9);
 const_str!(TRUE_LOWERCASE_DOCUMENT, "true", 4);
 const_str!(FALSE_LOWERCASE_DOCUMENT, "false", 5);
 const_str!(OPEN_CLOSE_CURLY_DOCUMENT, "{}", 2);
@@ -914,6 +929,30 @@ const_str!(SPACE_GT_INT_SPACE_DOCUMENT, " > ", 3);
 const_str!(SPACE_GT_EQ_INT_SPACE_DOCUMENT, " >= ", 4);
 const_str!(CAMEL_CASE_REMAINDER_INT_DOCUMENT, "remainderInt", 12);
 const_str!(PURE_JAVASCRIPT_COMMENT_DOCUMENT, "/* @__PURE__ */ ", 16);
+const_str!(LOWERCASE_ARG_DOCUMENT, "arg", 3);
+const_str!(PUB_TYPE_SPACE_DOCUMENT, "pub type ", 9);
+const_str!(PUB_FN_SPACE_DOCUMENT, "pub fn ", 7);
+const_str!(PUB_CONST_SPACE_DOCUMENT, "pub const ", 10);
+const_str!(PUB_OPAQUE_TYPE_SPACE_DOCUMENT, "pub opaque type ", 16);
+
+const_zero_width_str!(ZERO_WIDTH_CLOSED_SPAN_TAG_DOCUMENT, "</span>");
+const_zero_width_str!(ZERO_WIDTH_CLOSED_A_TAG_DOCUMENT, "</a>");
+const_zero_width_str!(
+    ZERO_WIDTH_OPEN_VARIABLE_COLOUR_SPAN,
+    r#"<span class="hljs-variable">"#
+);
+const_zero_width_str!(
+    ZERO_WIDTH_OPEN_TITLE_COLOUR_SPAN,
+    r#"<span class="hljs-title">"#
+);
+const_zero_width_str!(
+    ZERO_WIDTH_OPEN_KEYWORD_COLOUR_SPAN,
+    r#"<span class="hljs-keyword">"#
+);
+const_zero_width_str!(
+    ZERO_WIDTH_OPEN_COMMENT_COLOUR_SPAN,
+    r#"<span class="hljs-comment">"#
+);
 
 const_break!(EMPTY_BREAK_DOCUMENT, "", "");
 const_break!(BREAKABLE_SPACE_DOCUMENT, "", " ");
@@ -1239,6 +1278,10 @@ fn format<'string, 'doc>(
                 // We write the string, but do not increment the length
                 writer.write_str(string)?;
             }
+            PrintableDocument::ZeroWidthStr { string } => {
+                // We write the string, but do not increment the length
+                writer.write_str(string)?;
+            }
 
             // If multiple documents need to be printed, then they are all
             // pushed to the front of the queue and will be printed one by one.
@@ -1411,6 +1454,7 @@ fn fits<'string, 'doc>(
 
             // Zero width strings do nothing: they do not contribute to line length
             PrintableDocument::ZeroWidthString { .. }
+            | PrintableDocument::ZeroWidthStr { .. }
             | PrintableDocument::CursorPositionObserver { .. } => {}
 
             // If we get to a break we need to first see if it has to be
