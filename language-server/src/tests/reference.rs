@@ -300,6 +300,55 @@ pub fn main() {
         find_position_of("wobble()"),
     );
 }
+
+#[test]
+fn references_for_function_from_import() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub fn wibble() {
+  wibble()
+}
+"
+        ),
+        "
+import mod.{wibble}
+
+pub fn main() {
+  let value = wibble()
+  mod.wibble()
+  value
+}
+",
+        find_position_of("wibble"),
+    );
+}
+
+#[test]
+fn references_for_function_from_import_alias() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub fn wibble() {
+  wibble()
+}
+"
+        ),
+        "
+import mod.{wibble as wobble}
+
+pub fn main() {
+  let value = wobble()
+  mod.wibble()
+  value
+}
+",
+        find_position_of("wobble"),
+    );
+}
+
 #[test]
 fn references_for_private_constant() {
     assert_references!(
@@ -438,6 +487,56 @@ pub fn main() {
 }
 ",
         find_position_of("wobble +"),
+    );
+}
+
+#[test]
+fn references_for_constant_from_import() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub const wibble = 10
+
+fn wobble() {
+  wibble
+}
+"
+        ),
+        "
+import mod.{wibble}
+
+pub fn main() {
+  let value = mod.wibble
+  wibble + value
+}
+",
+        find_position_of("wibble"),
+    );
+}
+
+#[test]
+fn references_for_constant_from_import_alias() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub const wibble = 10
+
+fn wobble() {
+  wibble
+}
+"
+        ),
+        "
+import mod.{wibble as wobble}
+
+pub fn main() {
+  let value = mod.wibble
+  wobble + value
+}
+",
+        find_position_of("wobble"),
     );
 }
 
@@ -582,6 +681,56 @@ pub fn main() {
 }
 ",
         find_position_of("Wobble").nth_occurrence(2),
+    );
+}
+
+#[test]
+fn references_for_type_variant_from_import() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub type Wibble { Wibble }
+
+fn wobble() {
+  Wibble
+}
+"
+        ),
+        "
+import mod.{Wibble}
+
+pub fn main() {
+  let value = mod.Wibble
+  Wibble
+}
+",
+        find_position_of("Wibble"),
+    );
+}
+
+#[test]
+fn references_for_type_variant_from_import_alias() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub type Wibble { Wibble }
+
+fn wobble() {
+  Wibble
+}
+"
+        ),
+        "
+import mod.{Wibble as Wobble}
+
+pub fn main() {
+  let value = mod.Wibble
+  Wobble
+}
+",
+        find_position_of("Wobble"),
     );
 }
 
@@ -804,6 +953,54 @@ pub fn main() -> Wobble {
 }
 ",
         find_position_of("-> Wobble").under_char('W'),
+    );
+}
+
+#[test]
+fn references_for_type_from_import() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub type Wibble { Wibble }
+
+fn wobble() -> Wibble {
+  todo
+}
+"
+        ),
+        "
+import mod.{type Wibble}
+
+pub fn main() -> Wibble {
+  let _: mod.Wibble = todo
+}
+",
+        find_position_of("Wibble"),
+    );
+}
+
+#[test]
+fn references_for_type_from_import_alias() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub type Wibble { Wibble }
+
+fn wobble() -> Wibble {
+  todo
+}
+"
+        ),
+        "
+import mod.{type Wibble as Wobble}
+
+pub fn main() -> Wobble {
+  let _: mod.Wibble = todo
+}
+",
+        find_position_of("Wobble"),
     );
 }
 
@@ -1356,5 +1553,173 @@ pub fn main(w: Wibble) {
 }
 ",
         find_position_of("wobble: Int").under_char('w')
+    );
+}
+
+#[test]
+fn references_for_value_from_import_imported_name() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub fn wibble() {
+  wibble()
+}
+"
+        ),
+        "
+import mod.{wibble as wobble}
+
+pub fn main() {
+  let value = wobble()
+  mod.wibble()
+  value
+}
+",
+        find_position_of("wibble"),
+    );
+}
+
+#[test]
+fn references_for_value_from_import_as() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub fn wibble() {
+  wibble()
+}
+"
+        ),
+        "
+import mod.{wibble as wobble}
+
+pub fn main() {
+  let value = wobble()
+  mod.wibble()
+  value
+}
+",
+        find_position_of("as"),
+    );
+}
+
+#[test]
+fn references_for_value_from_import_alias_name() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub fn wibble() {
+  wibble()
+}
+"
+        ),
+        "
+import mod.{wibble as wobble}
+
+pub fn main() {
+  let value = wobble()
+  mod.wibble()
+  value
+}
+",
+        find_position_of("wobble"),
+    );
+}
+
+#[test]
+fn references_for_type_from_import_type() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub type Wibble { Wibble }
+
+fn wobble() -> Wibble {
+  todo
+}
+"
+        ),
+        "
+import mod.{type Wibble as Wobble}
+
+pub fn main() -> Wobble {
+  let _: mod.Wibble = todo
+}
+",
+        find_position_of("type"),
+    );
+}
+
+#[test]
+fn references_for_type_from_import_imported_name() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub type Wibble { Wibble }
+
+fn wobble() -> Wibble {
+  todo
+}
+"
+        ),
+        "
+import mod.{type Wibble as Wobble}
+
+pub fn main() -> Wobble {
+  let _: mod.Wibble = todo
+}
+",
+        find_position_of("Wibble"),
+    );
+}
+
+#[test]
+fn references_for_type_from_import_as() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub type Wibble { Wibble }
+
+fn wobble() -> Wibble {
+  todo
+}
+"
+        ),
+        "
+import mod.{type Wibble as Wobble}
+
+pub fn main() -> Wobble {
+  let _: mod.Wibble = todo
+}
+",
+        find_position_of("as"),
+    );
+}
+
+#[test]
+fn references_for_type_from_import_clias_name() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub type Wibble { Wibble }
+
+fn wobble() -> Wibble {
+  todo
+}
+"
+        ),
+        "
+import mod.{type Wibble as Wobble}
+
+pub fn main() -> Wobble {
+  let _: mod.Wibble = todo
+}
+",
+        find_position_of("Wobble"),
     );
 }

@@ -887,12 +887,14 @@ where
                     Referenced::ModuleValue {
                         module,
                         location,
+                        name_start,
                         target_kind,
                         ..
                     }
                     | Referenced::ModuleType {
                         module,
                         location,
+                        name_start,
                         target_kind,
                         ..
                     },
@@ -903,6 +905,21 @@ where
                         RenameTarget::Unqualified | RenameTarget::Definition => true,
                     };
                     if rename_allowed {
+                        // The location field is sometimes larger than the
+                        // location of the actual name. In most cases they are
+                        // the same, but in import statements that are for types
+                        // and/or are aliased, the location is larger than the
+                        // name.
+                        //
+                        // For example, in `import m.{type Wibble as Wobble}`,
+                        // location will cover `type Wibble as Wobble` but
+                        // the name is just `Wobble`. In every case (including
+                        // non-imports), the name is at the very end of the
+                        // location span.
+                        let location = SrcSpan {
+                            start: name_start,
+                            end: location.end,
+                        };
                         success_response(location)
                     } else {
                         None
@@ -1133,12 +1150,7 @@ where
                     ))
                 }
             },
-            Some(Referenced::ModuleType {
-                module,
-                name,
-                location,
-                ..
-            }) if location.contains(byte_index) => match search_scope {
+            Some(Referenced::ModuleType { module, name, .. }) => match search_scope {
                 FindReferencesSearchScope::AllModules => Some(find_module_references(
                     module,
                     name,
@@ -1310,6 +1322,8 @@ where
                     module: module_name,
                     is_type,
                     location,
+                    imported_name_location: _,
+                    as_name: _,
                 }) => this
                     .compiler
                     .get_module_interface(module_name.as_str())

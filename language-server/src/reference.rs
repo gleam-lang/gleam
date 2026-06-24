@@ -12,7 +12,7 @@ use gleam_core::{
         self, ArgNames, AssignName, BitArraySize, ClauseGuard, CustomType, Function,
         ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
     },
-    build::Located,
+    build::{Located, UnqualifiedImport},
     reference::RecordLabel,
     type_::{
         ModuleInterface, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant,
@@ -41,6 +41,12 @@ pub enum Referenced {
         module: EcoString,
         name: EcoString,
         location: SrcSpan,
+        /// The starting position of the name.
+        ///
+        /// For example, when location covers an aliased import statement, e.g.
+        /// `wibble as wobble`, this will point to the start of `wobble`.
+        /// In all other cases, this is the same as `location.start`.
+        name_start: u32,
         name_kind: Named,
         target_kind: RenameTarget,
     },
@@ -48,6 +54,14 @@ pub enum Referenced {
         module: EcoString,
         name: EcoString,
         location: SrcSpan,
+        /// The starting position of the name.
+        ///
+        /// For example, when location covers an aliased import statement, e.g.
+        /// `type Wibble as Wobble`, this will point to the start of `Wobble`.
+        /// When location covers a non-aliased import statement, e.g. `type
+        /// Wibble`, this will point to the start of `Wibble`.
+        /// In all other cases, this is the same as `location.start`.
+        name_start: u32,
         target_kind: RenameTarget,
     },
     TypeVariable {
@@ -161,6 +175,7 @@ pub fn reference_for_ast_node(
             module: module.clone(),
             name: name.clone(),
             location: *location,
+            name_start: location.start,
             name_kind: Named::Function,
             target_kind: RenameTarget::Unqualified,
         }),
@@ -181,6 +196,7 @@ pub fn reference_for_ast_node(
             module: module_name.clone(),
             name: label.clone(),
             location: SrcSpan::new(*field_start, location.end),
+            name_start: *field_start,
             name_kind: Named::Function,
             target_kind: RenameTarget::Qualified,
         }),
@@ -197,6 +213,7 @@ pub fn reference_for_ast_node(
             module: current_module.clone(),
             name: name.clone(),
             location: *location,
+            name_start: location.start,
             name_kind: Named::Function,
             target_kind: RenameTarget::Definition,
         }),
@@ -216,6 +233,7 @@ pub fn reference_for_ast_node(
             module: module.clone(),
             name: name.clone(),
             location: *location,
+            name_start: location.start,
             name_kind: Named::CustomTypeVariant,
             target_kind: RenameTarget::Unqualified,
         }),
@@ -234,6 +252,7 @@ pub fn reference_for_ast_node(
             module: module_name.clone(),
             name: label.clone(),
             location: SrcSpan::new(*field_start, location.end),
+            name_start: *field_start,
             name_kind: Named::CustomTypeVariant,
             target_kind: RenameTarget::Qualified,
         }),
@@ -245,6 +264,7 @@ pub fn reference_for_ast_node(
             module: current_module.clone(),
             name: name.clone(),
             location: *name_location,
+            name_start: name_location.start,
             name_kind: Named::CustomTypeVariant,
             target_kind: RenameTarget::Definition,
         }),
@@ -257,6 +277,7 @@ pub fn reference_for_ast_node(
             module: constructor.module.clone(),
             name: constructor.name.clone(),
             location: *location,
+            name_start: location.start,
             name_kind: Named::CustomTypeVariant,
             target_kind: if module_select.is_some() {
                 RenameTarget::Qualified
@@ -287,6 +308,7 @@ pub fn reference_for_ast_node(
                     module,
                     name,
                     location,
+                    name_start: location.start,
                     target_kind,
                 })
             }
@@ -312,6 +334,7 @@ pub fn reference_for_ast_node(
             module: current_module.clone(),
             name: name.clone(),
             location: *name_location,
+            name_start: name_location.start,
             target_kind: RenameTarget::Definition,
         }),
         Located::ModuleName {
@@ -375,9 +398,40 @@ pub fn reference_for_ast_node(
             module: module_name.clone(),
             name: label.clone(),
             location: SrcSpan::new(*field_start, location.end),
+            name_start: *field_start,
             name_kind: Named::Function,
             target_kind: RenameTarget::Qualified,
         }),
+
+        Located::UnqualifiedImport(
+            import @ UnqualifiedImport {
+                name,
+                module,
+                is_type,
+                location,
+                imported_name_location: _,
+                as_name: _,
+            },
+        ) => {
+            if is_type {
+                Some(Referenced::ModuleType {
+                    module: module.clone(),
+                    name: name.clone(),
+                    location: *location,
+                    name_start: import.used_name_start(),
+                    target_kind: RenameTarget::Unqualified,
+                })
+            } else {
+                Some(Referenced::ModuleValue {
+                    module: module.clone(),
+                    name: name.clone(),
+                    location: *location,
+                    name_start: import.used_name_start(),
+                    name_kind: import.name_kind(),
+                    target_kind: RenameTarget::Unqualified,
+                })
+            }
+        }
 
         Located::RecordLabelUsage {
             record_type,
@@ -419,7 +473,6 @@ pub fn reference_for_ast_node(
         | Located::Statement(_)
         | Located::Expression { .. }
         | Located::FunctionBody(_)
-        | Located::UnqualifiedImport(_)
         | Located::Label { .. }
         | Located::Constant(_)
         | Located::ModuleFunction(_)
