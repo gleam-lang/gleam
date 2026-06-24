@@ -10675,6 +10675,8 @@ enum ExtractedValue<'a> {
     Statements {
         location: SrcSpan,
         position: StatementPosition,
+        /// The type of the final statement.
+        type_: Arc<Type>,
     },
     /// We're extracting a single use statement. We need this special case to
     /// properly handle the statements inside of them.
@@ -10716,51 +10718,21 @@ impl ExtractedValue<'_> {
     }
 }
 
-/// When we are extracting multiple statements, there are two possible cases:
-/// The first is if we are extracting statements in the middle of a function.
-/// In this case, we will need to return some number of arguments, or `Nil`.
-/// For example:
-///
-/// ```gleam
-/// pub fn main() {
-///   let message = "Hello!"
-///   let log_message = "[INFO] " <> message
-/// //^ Select from here
-///   io.println(log_message)
-///   //                    ^ Until here
-///
-///   do_some_more_things()
-/// }
-/// ```
-///
-/// Here, the extracted function doesn't bind any variables which we need
-/// afterwards, it purely performs side effects. In this case we can just return
-/// `Nil` from the new function.
-///
-/// However, consider the following:
-///
-/// ```gleam
-/// pub fn main() {
-///   let a = 1
-///   let b = 2
-/// //^ Select from here
-///   a + b
-///   //  ^ Until here
-/// }
-/// ```
-///
-/// Here, despite us not needing any variables from the extracted code, there
-/// is one key difference: the `a + b` expression is at the end of the function,
-/// and so its value is returned from the entire function. This is known as the
-/// "tail" position. In that case, we can't return `Nil` as that would make the
-/// `main` function return `Nil` instead of the result of the addition. If we
-/// extract the tail-position statement, we need to return that last value rather
-/// than `Nil`.
-///
 #[derive(Debug)]
 enum StatementPosition {
-    Tail { type_: Arc<Type> },
+    Tail,
     NotTail,
+}
+
+#[derive(Clone, Debug)]
+enum ReturnValue {
+    /// The function is called for its side effects, and the return value is
+    /// not used.
+    Unbound(Arc<Type>),
+    /// A list of values which need to be returned from the extracted function.
+    /// These are the variables defined in the extracted code which are used
+    /// outside of the extracted section.
+    Bound(Vec<(EcoString, Arc<Type>)>),
 }
 
 impl<'a> ExtractFunction<'a> {
@@ -10916,12 +10888,15 @@ impl<'a> ExtractFunction<'a> {
             ExtractedValue::Statements {
                 location,
                 position: StatementPosition::NotTail,
-            } => self.extract_statements(
-                location,
-                extracted.parameters,
-                extracted.returned_variables,
-                end,
-            ),
+                type_,
+            } => {
+                let return_value = if extracted.returned_variables.is_empty() {
+                    ReturnValue::Unbound(type_)
+                } else {
+                    ReturnValue::Bound(extracted.returned_variables)
+                };
+                self.extract_statements(location, extracted.parameters, return_value, end)
+            }
 
             ExtractedValue::Use {
                 location,
@@ -10930,7 +10905,8 @@ impl<'a> ExtractFunction<'a> {
             }
             | ExtractedValue::Statements {
                 location,
-                position: StatementPosition::Tail { type_ },
+                position: StatementPosition::Tail,
+                type_,
             } => self.extract_code_in_tail_position(
                 location,
                 location,
@@ -11209,12 +11185,13 @@ impl<'a> ExtractFunction<'a> {
         &mut self,
         location: SrcSpan,
         parameters: Vec<(EcoString, Arc<Type>)>,
-        returned_variables: Vec<(EcoString, Arc<Type>)>,
+        return_value: ReturnValue,
         function_end: u32,
     ) {
         let code = code_at(self.module, location);
 
-        let returns_anything = !returned_variables.is_empty();
+        let name = self.function_name();
+        let arguments = parameters.iter().map(|(name, _)| name).join(", ");
 
         // Here, we decide what value to return from the function. There are
         // three cases:
@@ -11234,9 +11211,9 @@ impl<'a> ExtractFunction<'a> {
         // }
         // ```
         //
-        // It doesn't make sense to return any values from this function, since
-        // no values from the extract code are used afterwards, so we simply
-        // return `Nil`.
+        // In this case, the extracted function can return its last statement
+        // (here of type `Nil`) but the value won't be assigned to in the
+        // original function.
         //
         // The next is when we need just a single value defined in the extracted
         // function, such as in this piece of code:
@@ -11274,32 +11251,30 @@ impl<'a> ExtractFunction<'a> {
         //
         // In this case, we must return a tuple containing `a`, `b` and `c` in
         // order for the calling function to have access to the correct values.
-        let (return_type, return_value) = match returned_variables.as_slice() {
-            [] => (type_::nil(), "Nil".into()),
-            [(name, type_)] => (type_.clone(), name.clone()),
-            _ => {
-                let values = returned_variables.iter().map(|(name, _)| name).join(", ");
-                let type_ = type_::tuple(
-                    returned_variables
+        let (return_type, returned_variables, call) = match return_value {
+            ReturnValue::Unbound(type_) => (type_, None, format!("{name}({arguments})")),
+            ReturnValue::Bound(return_values) => match return_values.as_slice() {
+                [(returned_name, type_)] => (
+                    type_.clone(),
+                    Some(returned_name.clone()),
+                    format!("let {returned_name} = {name}({arguments})"),
+                ),
+                _ => {
+                    let returned_names = return_values.iter().map(|(name, _type)| name).join(", ");
+                    let returned_variables = eco_format!("#({returned_names})");
+                    let call = format!("let {returned_variables} = {name}({arguments})");
+
+                    let returned_types = return_values
                         .into_iter()
-                        .map(|(_, type_)| type_)
-                        .collect(),
-                );
+                        .map(|(_name, type_)| type_)
+                        .collect();
+                    let type_ = type_::tuple(returned_types);
 
-                (type_, eco_format!("#({values})"))
-            }
+                    (type_, Some(returned_variables), call)
+                }
+            },
         };
 
-        let name = self.function_name();
-        let arguments = parameters.iter().map(|(name, _)| name).join(", ");
-
-        // If any values are returned from the extracted function, we need to
-        // bind them so that they are accessible in the current scope.
-        let call = if returns_anything {
-            format!("let {return_value} = {name}({arguments})")
-        } else {
-            format!("{name}({arguments})")
-        };
         self.edits.replace(location, call);
 
         let mut printer = Printer::new(&self.module.ast.names);
@@ -11310,11 +11285,14 @@ impl<'a> ExtractFunction<'a> {
             .join(", ");
 
         let return_type = printer.print_type(&return_type);
+        let return_value = match returned_variables {
+            Some(returned_variables) => format!("\n  {returned_variables}"),
+            None => "".to_string(),
+        };
 
         let function = format!(
             "\n\nfn {name}({parameters}) -> {return_type} {{
-  {code}
-  {return_value}
+  {code}{return_value}
 }}"
         );
 
@@ -11648,9 +11626,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
             // it will be in tail position there and the extracted function should
             // return its returned value.
             let position = if statement.is_use() || is_in_tail_position {
-                StatementPosition::Tail {
-                    type_: statement.type_(),
-                }
+                StatementPosition::Tail
             } else {
                 StatementPosition::NotTail
             };
@@ -11665,6 +11641,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
                             Some(ExtractedFunction::new(ExtractedValue::Statements {
                                 location: statement_location,
                                 position,
+                                type_: statement.type_(),
                             }))
                         }
                         TypedStatement::Use(use_) => {
@@ -11688,7 +11665,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
                             ..
                         },
                     parameters,
-                    returned_variables,
+                    returned_variables: return_value,
                 }) if location.contains_span(statement_location) => {
                     let use_line_range = self.edits.src_span_to_lsp_range(*use_line_location);
 
@@ -11702,9 +11679,10 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
                             value: ExtractedValue::Statements {
                                 location: statement_location,
                                 position,
+                                type_: statement.type_(),
                             },
                             parameters: parameters.to_vec(),
-                            returned_variables: returned_variables.to_vec(),
+                            returned_variables: return_value.clone(),
                         });
                     }
                 }
@@ -11718,6 +11696,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
                     *value = ExtractedValue::Statements {
                         location: value.location().merge(&statement_location),
                         position,
+                        type_: statement.type_(),
                     };
                 }
 
@@ -11736,11 +11715,13 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
                         ExtractedValue::Statements {
                             location,
                             position: extracted_position,
+                            type_: extracted_type,
                         },
                     ..
                 }) => {
                     *location = location.merge(&statement_location);
                     *extracted_position = position;
+                    *extracted_type = statement.type_();
                 }
                 Some(ExtractedFunction {
                     value: value @ ExtractedValue::PipelineSteps { .. },
@@ -11752,6 +11733,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
                     *value = ExtractedValue::Statements {
                         location: value.location(),
                         position,
+                        type_: statement.type_(),
                     }
                 }
             }
