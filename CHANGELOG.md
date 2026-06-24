@@ -274,6 +274,35 @@
   hovered call and not only the final one.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- When using the "Extract function" code action on statements whose values are
+  unused, the extracted function will return the last statement. For example:
+
+  ```gleam
+  fn main() {
+  //↓ start selection here
+    echo "line 2"
+    echo "line 3"
+  //            ↑ end selection here
+    echo "line 4"
+  }
+  ```
+
+  will be turned into
+
+  ```gleam
+  fn main() {
+    function()
+    echo "line 4"
+  }
+
+  fn function() -> String {
+    echo "line 2"
+    echo "line 3"
+  }
+  ```
+
+  ([Gavin Morrow](https://github.com/gavinmorrow))
+
 ### Formatter
 
 - Performance of the formatter has been improved.

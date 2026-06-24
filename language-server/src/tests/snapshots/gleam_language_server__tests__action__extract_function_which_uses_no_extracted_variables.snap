@@ -20,8 +20,7 @@ pub fn do_things(a, b) {
   a
 }
 
-fn function(a: Int, b: Int) -> Nil {
+fn function(a: Int, b: Int) -> Int {
   let x = a + b
   echo x
-  Nil
 }

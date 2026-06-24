@@ -24,8 +24,7 @@ pub fn wibble() {
     echo wobble as "4"
 }
 
-fn function(wobble: a) -> Nil {
+fn function(wobble: a) -> a {
   echo wobble as "2"
     echo wobble as "3"
-  Nil
 }
