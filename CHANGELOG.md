@@ -566,3 +566,7 @@
 - Fixed a bug where an incorrect `package-interface.json` would be generated for
   certain type aliases.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the language server would incorrectly rename values and
+  types with a same-named import alias.
+  ([Andrey Kozhev](https://github.com/ankddev))
