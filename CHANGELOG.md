@@ -35,6 +35,10 @@
   JavaScript target, allowing for faster comparison in most cases.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The use of pipes to turn the Gleam code `a |> b(c)` into `b(c)(a)` has been
+  deprecated.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - The build tool now generates Hexdocs URLs using the new format of

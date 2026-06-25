@@ -1490,6 +1490,29 @@ The imported value could not be used in this module anyway."
                         extra_labels: vec![],
                     }),
                 },
+
+                type_::Warning::PipeIntoCallWhichReturnsFunction { location } => Diagnostic {
+                    title: "Deprecated pipe use".into(),
+                    text: wrap(
+                        "This use of pipelines is deprecated, as it creates \
+ambiguity in pipe syntax. Currently `a |> b(c)` can desugar to either `b(a, c)` or \
+`b(a)(c)` depending on the type of `b`. The latter syntax is deprecated, and should \
+not be used.",
+                    ),
+                    hint: Some(
+                        "Add an extra set of parentheses after the call, like `a |> b(c)()`".into(),
+                    ),
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        label: diagnostic::Label {
+                            text: Some("This should have an extra set of parentheses".into()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
             },
 
             Warning::EmptyModule { path: _, name } => Diagnostic {
