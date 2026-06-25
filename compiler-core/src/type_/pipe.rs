@@ -144,6 +144,12 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                             // Without lifting purity tracking into the type system,
                             // we have no idea whether it's pure or not!
                             self.expr_typer.purity = self.expr_typer.purity.merge(Purity::Unknown);
+
+                            // This syntax is deprecated.
+                            self.expr_typer
+                                .problems
+                                .warning(Warning::PipeIntoCallWhichReturnsFunction { location });
+
                             (
                                 PipelineAssignmentKind::FunctionCall,
                                 self.infer_apply_to_call_pipe(fun, arguments, location),

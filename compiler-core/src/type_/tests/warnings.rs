@@ -3949,7 +3949,7 @@ fn make_panic() {
 }
 
 fn impure(x) {
-  x |> make_panic()
+  x |> make_panic()()
 }
 
 pub fn main() {
@@ -5078,6 +5078,36 @@ fn constant_used_in_todo_message_counts_as_used() {
         "
 const wibble = 1
 pub const wobble = todo as wibble
+"
+    );
+}
+
+#[test]
+fn piping_into_call_which_returns_function() {
+    assert_warning!(
+        "
+pub fn main() {
+  1 |> wibble(2)
+}
+
+fn wibble(a) {
+  fn(b) { #(a, b) }
+}
+"
+    );
+}
+
+#[test]
+fn no_warning_when_extra_brackets_are_added_to_call_returning_function() {
+    assert_no_warnings!(
+        "
+pub fn main() {
+  1 |> wibble(2)()
+}
+
+fn wibble(a) {
+  fn(b) { #(a, b) }
+}
 "
     );
 }
