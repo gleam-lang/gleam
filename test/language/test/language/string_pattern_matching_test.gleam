@@ -244,3 +244,19 @@ pub fn string_prefix_multibyte_falls_through_to_shorter_test() {
   assert classify("🫥z") == "z"
   assert classify("abc") == "other"
 }
+
+// https://github.com/gleam-lang/gleam/issues/5856
+pub fn disjoint_string_prefixes_with_guard_test() {
+  let classify = fn(input: String) -> String {
+    case input {
+      "aa" <> rest if rest == "x" -> rest
+      "b" <> _ -> "b-start"
+      _ -> "other"
+    }
+  }
+
+  assert classify("aax") == "x"
+  assert classify("aay") == "other"
+  assert classify("bcd") == "b-start"
+  assert classify("zzz") == "other"
+}

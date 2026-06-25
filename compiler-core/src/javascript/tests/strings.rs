@@ -420,3 +420,19 @@ pub fn classify(input: String) -> String {
 "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5856
+#[test]
+fn disjoint_string_prefixes_with_guard() {
+    assert_js!(
+        r#"
+pub fn classify(input: String) -> String {
+  case input {
+    "aa" <> rest if rest == "x" -> rest
+    "b" <> _ -> "b-start"
+    _ -> "other"
+  }
+}
+"#,
+    );
+}
