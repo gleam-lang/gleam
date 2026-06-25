@@ -754,6 +754,7 @@ const_str!(DOLLAR_IS_DOCUMENT, "$is", 3);
 const_str!(VALUE_INSTANCE_OF_SPACE_DOCUMENT, "value instanceof ", 17);
 const_str!(DOLLAR_DOCUMENT, "$", 1);
 const_str!(CLOSE_PAREN_ARROW_DOCUMENT, ") =>", 4);
+const_str!(CLOSE_PAREN_SLIM_ARROW_DOCUMENT, ") ->", 4);
 const_str!(SPACE_EQUAL_SPACE_OPEN_PAREN_DOCUMENT, " = (", 4);
 const_str!(DOLLAR_CONST_SEMICOLON_DOCUMENT, "$const;", 7);
 const_str!(DOLLAR_CONST_DOCUMENT, "$const", 6);
@@ -934,6 +935,7 @@ const_str!(PUB_TYPE_SPACE_DOCUMENT, "pub type ", 9);
 const_str!(PUB_FN_SPACE_DOCUMENT, "pub fn ", 7);
 const_str!(PUB_CONST_SPACE_DOCUMENT, "pub const ", 10);
 const_str!(PUB_OPAQUE_TYPE_SPACE_DOCUMENT, "pub opaque type ", 16);
+const_str!(FN_OPEN_PAREN_DOCUMENT, "fn(", 3);
 
 const_zero_width_str!(ZERO_WIDTH_CLOSED_SPAN_TAG_DOCUMENT, "</span>");
 const_zero_width_str!(ZERO_WIDTH_CLOSED_A_TAG_DOCUMENT, "</a>");

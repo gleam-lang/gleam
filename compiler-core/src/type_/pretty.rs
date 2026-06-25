@@ -2,11 +2,8 @@
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
 use super::{Type, TypeVar};
-use crate::{
-    docvec,
-    pretty::{nil, *},
-};
 use ecow::EcoString;
+use pretty_arena::*;
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -27,7 +24,7 @@ pub struct Printer {
     printed_types: im::HashMap<EcoString, EcoString>,
 }
 
-impl Printer {
+impl<'a, 'doc> Printer {
     pub fn new() -> Self {
         Self::default()
     }
@@ -39,21 +36,19 @@ impl Printer {
     /// Render a Type as a well formatted string.
     ///
     pub fn pretty_print(&mut self, type_: &Type, initial_indent: usize) -> String {
-        let mut buffer = String::with_capacity(initial_indent);
-        for _ in 0..initial_indent {
-            buffer.push(' ');
-        }
-        buffer
-            .to_doc()
-            .append(self.print(type_))
-            .nest(initial_indent as isize)
+        let arena = DocumentArena::new();
+
+        EcoString::from(" ".repeat(initial_indent))
+            .to_doc(&arena)
+            .append(&arena, self.print(&arena, type_))
+            .nest(&arena, initial_indent as isize)
             .to_pretty_string(80)
     }
 
     // TODO: have this function return a Document that borrows from the Type.
     // Is this possible? The lifetime would have to go through the Arc<Refcell<Type>>
     // for TypeVar::Link'd types.
-    pub fn print<'a>(&mut self, type_: &Type) -> Document<'a> {
+    fn print(&mut self, arena: &'doc DocumentArena<'a, 'doc>, type_: &Type) -> Document<'a, 'doc> {
         match type_ {
             Type::Named {
                 name,
@@ -62,36 +57,42 @@ impl Printer {
                 ..
             } => {
                 let doc = if self.name_clashes_if_unqualified(name, module) {
-                    qualify_type_name(module, name)
+                    qualify_type_name(arena, module, name)
                 } else {
                     let _ = self.printed_types.insert(name.clone(), module.clone());
-                    name.to_doc()
+                    name.to_doc(arena)
                 };
                 if arguments.is_empty() {
                     doc
                 } else {
-                    doc.append("(")
-                        .append(self.arguments_to_gleam_doc(arguments))
-                        .append(")")
+                    docvec![
+                        arena,
+                        doc,
+                        OPEN_PAREN_DOCUMENT,
+                        self.arguments_to_gleam_doc(arena, arguments),
+                        CLOSE_PAREN_DOCUMENT
+                    ]
                 }
             }
 
-            Type::Fn { arguments, return_ } => "fn("
-                .to_doc()
-                .append(self.arguments_to_gleam_doc(arguments))
-                .append(") ->")
+            Type::Fn { arguments, return_ } => FN_OPEN_PAREN_DOCUMENT
+                .append(arena, self.arguments_to_gleam_doc(arena, arguments))
+                .append(arena, CLOSE_PAREN_SLIM_ARROW_DOCUMENT)
                 .append(
-                    break_("", " ")
-                        .append(self.print(return_))
-                        .nest(INDENT)
-                        .group(),
+                    arena,
+                    BREAKABLE_SPACE_DOCUMENT
+                        .append(arena, self.print(arena, return_))
+                        .nest(arena, INDENT)
+                        .group(arena),
                 ),
 
-            Type::Var { type_, .. } => self.type_var_doc(&type_.borrow()),
+            Type::Var { type_, .. } => self.type_var_doc(arena, &type_.borrow()),
 
-            Type::Tuple { elements, .. } => {
-                self.arguments_to_gleam_doc(elements).surround("#(", ")")
-            }
+            Type::Tuple { elements, .. } => self.arguments_to_gleam_doc(arena, elements).surround(
+                arena,
+                OPEN_TUPLE_DOCUMENT,
+                CLOSE_PAREN_DOCUMENT,
+            ),
         }
     }
 
@@ -103,24 +104,34 @@ impl Printer {
         }
     }
 
-    fn type_var_doc<'a>(&mut self, type_: &TypeVar) -> Document<'a> {
+    fn type_var_doc(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        type_: &TypeVar,
+    ) -> Document<'a, 'doc> {
         match type_ {
-            TypeVar::Link { type_, .. } => self.print(type_),
-            TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => self.generic_type_var(*id),
+            TypeVar::Link { type_, .. } => self.print(arena, type_),
+            TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => {
+                self.generic_type_var(arena, *id)
+            }
         }
     }
 
-    pub fn generic_type_var<'a>(&mut self, id: u64) -> Document<'a> {
+    pub fn generic_type_var(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        id: u64,
+    ) -> Document<'a, 'doc> {
         match self.names.get(&id) {
             Some(n) => {
                 let _ = self.printed_types.insert(n.clone(), "".into());
-                n.to_doc()
+                n.to_doc(arena)
             }
             None => {
                 let n = self.next_letter();
                 let _ = self.names.insert(id, n.clone());
                 let _ = self.printed_types.insert(n.clone(), "".into());
-                n.to_doc()
+                n.to_doc(arena)
             }
         }
     }
@@ -147,25 +158,41 @@ impl Printer {
         chars.into_iter().rev().collect()
     }
 
-    fn arguments_to_gleam_doc(&mut self, arguments: &[Arc<Type>]) -> Document<'static> {
+    fn arguments_to_gleam_doc(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        arguments: &[Arc<Type>],
+    ) -> Document<'a, 'doc> {
         if arguments.is_empty() {
-            return nil();
+            return EMPTY_DOCUMENT;
         }
 
-        let arguments = join(
-            arguments.iter().map(|type_| self.print(type_).group()),
-            break_(",", ", "),
+        let arguments = arena.join(
+            arguments
+                .iter()
+                .map(|type_| self.print(arena, type_).group(arena)),
+            COMMA_BREAK_DOCUMENT,
         );
-        break_("", "")
-            .append(arguments)
-            .nest(INDENT)
-            .append(break_(",", ""))
-            .group()
+
+        EMPTY_BREAK_DOCUMENT
+            .append(arena, arguments)
+            .nest(arena, INDENT)
+            .append(arena, TRAILING_COMMA_BREAK_DOCUMENT)
+            .group(arena)
     }
 }
 
-fn qualify_type_name(module: &str, type_name: &str) -> Document<'static> {
-    docvec![EcoString::from(module), ".", EcoString::from(type_name)]
+fn qualify_type_name<'a, 'doc>(
+    arena: &'doc DocumentArena<'a, 'doc>,
+    module: &str,
+    type_name: &str,
+) -> Document<'a, 'doc> {
+    docvec![
+        arena,
+        EcoString::from(module),
+        ".",
+        EcoString::from(type_name)
+    ]
 }
 
 #[test]
