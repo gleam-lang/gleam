@@ -12465,11 +12465,11 @@ fn extract_function_first_few_statements_inside_of_use() {
         EXTRACT_FUNCTION,
         r#"
 pub fn wibble() {
-    use wobble <- result.map(todo)
-    echo wobble as "1"
-    echo wobble as "2"
-    echo wobble as "3"
-    echo wobble as "4"
+  use wobble <- result.map(todo)
+  echo wobble as "1"
+  echo wobble as "2"
+  echo wobble as "3"
+  echo wobble as "4"
 }
 "#,
         find_position_of("echo").select_until(find_position_of("2\""))
@@ -12482,11 +12482,11 @@ fn extract_function_middle_few_statements_inside_of_use() {
         EXTRACT_FUNCTION,
         r#"
 pub fn wibble() {
-    use wobble <- result.map(todo)
-    echo wobble as "1"
-    echo wobble as "2"
-    echo wobble as "3"
-    echo wobble as "4"
+  use wobble <- result.map(todo)
+  echo wobble as "1"
+  echo wobble as "2"
+  echo wobble as "3"
+  echo wobble as "4"
 }
 "#,
         find_position_of("echo")
@@ -12501,11 +12501,11 @@ fn extract_function_last_few_statements_inside_of_use() {
         EXTRACT_FUNCTION,
         r#"
 pub fn wibble() {
-    use wobble <- result.map(todo)
-    echo wobble as "1"
-    echo wobble as "2"
-    echo wobble as "3"
-    echo wobble as "4"
+  use wobble <- result.map(todo)
+  echo wobble as "1"
+  echo wobble as "2"
+  echo wobble as "3"
+  echo wobble as "4"
 }
 "#,
         find_position_of("echo")
@@ -12520,11 +12520,11 @@ fn extract_function_all_statements_inside_of_use() {
         EXTRACT_FUNCTION,
         r#"
 pub fn wibble() {
-    use wobble <- result.map(todo)
-    echo wobble as "1"
-    echo wobble as "2"
-    echo wobble as "3"
-    echo wobble as "4"
+  use wobble <- result.map(todo)
+  echo wobble as "1"
+  echo wobble as "2"
+  echo wobble as "3"
+  echo wobble as "4"
 }
 "#,
         find_position_of("echo").select_until(find_position_of("4\""))

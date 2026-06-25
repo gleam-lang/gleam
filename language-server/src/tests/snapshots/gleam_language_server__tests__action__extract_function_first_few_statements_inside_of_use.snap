@@ -1,30 +1,30 @@
 ---
 source: language-server/src/tests/action.rs
-expression: "\npub fn wibble() {\n    use wobble <- result.map(todo)\n    echo wobble as \"1\"\n    echo wobble as \"2\"\n    echo wobble as \"3\"\n    echo wobble as \"4\"\n}\n"
+expression: "\npub fn wibble() {\n  use wobble <- result.map(todo)\n  echo wobble as \"1\"\n  echo wobble as \"2\"\n  echo wobble as \"3\"\n  echo wobble as \"4\"\n}\n"
 ---
 ----- BEFORE ACTION
 
 pub fn wibble() {
-    use wobble <- result.map(todo)
-    echo wobble as "1"
-    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
-    echo wobble as "2"
-▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑ 
-    echo wobble as "3"
-    echo wobble as "4"
+  use wobble <- result.map(todo)
+  echo wobble as "1"
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  echo wobble as "2"
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑ 
+  echo wobble as "3"
+  echo wobble as "4"
 }
 
 
 ----- AFTER ACTION
 
 pub fn wibble() {
-    use wobble <- result.map(todo)
-    function(wobble)
-    echo wobble as "3"
-    echo wobble as "4"
+  use wobble <- result.map(todo)
+  function(wobble)
+  echo wobble as "3"
+  echo wobble as "4"
 }
 
 fn function(wobble: a) -> a {
   echo wobble as "1"
-    echo wobble as "2"
+  echo wobble as "2"
 }
