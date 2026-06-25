@@ -430,3 +430,7 @@
 - Fixed a bug where after removing dependencies with `gleam remove` if a
   removed dependency is still used the build would succeed, resulting in
   runtime crash due to missing files.
+
+- Fixed a bug where pattern matching on overlapping string prefixes with guards
+  could generate incorrect JavaScript.
+  ([John Downey](https://github.com/jtdowney))

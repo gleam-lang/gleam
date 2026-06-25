@@ -256,3 +256,183 @@ pub fn main() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5856
+#[test]
+fn overlapping_string_prefixes_with_guard() {
+    assert_js!(
+        r#"
+pub fn classify(input: String, flag: Bool) -> String {
+  case input {
+    "aa" <> _rest if flag -> "wibble"
+    "a" <> _rest if flag -> "wobble"
+    "a" <> _rest -> "woo"
+    _ -> "other"
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5856
+#[test]
+fn string_prefix_binding_rest_with_guard() {
+    assert_js!(
+        r#"
+pub fn classify(input: String, flag: Bool) -> String {
+  case input {
+    "aa" <> rest if flag -> rest
+    "a" <> rest -> rest
+    _ -> "other"
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5856
+#[test]
+fn non_overlapping_sibling_string_prefix() {
+    assert_js!(
+        r#"
+pub fn classify(input: String, a: Bool, b: Bool) -> String {
+  case input {
+    "aa" <> _ if a -> "aa"
+    "a" <> _ if b -> "a-guard"
+    "ac" <> _ -> "ac"
+    _ -> "other"
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5856
+#[test]
+fn exact_string_after_longer_prefix() {
+    assert_js!(
+        r#"
+pub fn classify(input: String, a: Bool, b: Bool) -> String {
+  case input {
+    "aa" <> _ if a -> "aa-prefix"
+    "a" <> _ if b -> "a-prefix"
+    "a" -> "exact-a"
+    _ -> "other"
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5856
+#[test]
+fn string_prefix_name_binding_after_longer_prefix() {
+    assert_js!(
+        r#"
+pub fn classify(input: String, flag: Bool) -> String {
+  case input {
+    "aa" <> _ if flag -> "aa"
+    "a" as first <> rest -> rest <> first
+    _ -> "other"
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5856
+#[test]
+fn string_prefix_guard_on_bound_variable_falls_through() {
+    assert_js!(
+        r#"
+pub fn classify(input: String) -> String {
+  case input {
+    "aa" <> rest if rest == "x" -> "aa-x"
+    "a" <> rest -> rest
+    _ -> "other"
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5856
+#[test]
+fn string_prefix_nested_guard_falls_through_to_shorter() {
+    assert_js!(
+        r#"
+pub fn classify(input: String, flag: Bool) -> String {
+  case input {
+    "w" <> _ if flag -> "w"
+    "wibble" <> rest if rest == "x" -> rest
+    "wib" <> rest -> rest
+    _ -> "other"
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5856
+#[test]
+fn string_prefix_name_binding_falls_through_to_shorter() {
+    assert_js!(
+        r#"
+pub fn classify(input: String) -> String {
+  case input {
+    "aa" <> rest if rest == "x" -> rest
+    "a" as first <> rest -> rest <> first
+    _ -> "other"
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5856
+#[test]
+fn string_prefix_discard_falls_through_to_shorter() {
+    assert_js!(
+        r#"
+pub fn classify(input: String) -> String {
+  case input {
+    "aa" <> rest if rest == "x" -> rest
+    "a" <> _ -> "short"
+    _ -> "other"
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5856
+#[test]
+fn string_prefix_multibyte_falls_through_to_shorter() {
+    assert_js!(
+        r#"
+pub fn classify(input: String) -> String {
+  case input {
+    "🫥a" <> rest if rest == "x" -> rest
+    "🫥" <> rest -> rest
+    _ -> "other"
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5856
+#[test]
+fn disjoint_string_prefixes_with_guard() {
+    assert_js!(
+        r#"
+pub fn classify(input: String) -> String {
+  case input {
+    "aa" <> rest if rest == "x" -> rest
+    "b" <> _ -> "b-start"
+    _ -> "other"
+  }
+}
+"#,
+    );
+}

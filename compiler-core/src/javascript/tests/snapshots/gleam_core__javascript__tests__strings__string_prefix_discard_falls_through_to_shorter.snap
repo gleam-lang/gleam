@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\npub fn classify(input: String) -> String {\n  case input {\n    \"aa\" <> rest if rest == \"x\" -> rest\n    \"a\" <> _ -> \"short\"\n    _ -> \"other\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn classify(input: String) -> String {
+  case input {
+    "aa" <> rest if rest == "x" -> rest
+    "a" <> _ -> "short"
+    _ -> "other"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function classify(input) {
+  if (input.startsWith("aa")) {
+    let rest = input.slice(2);
+    if (rest === "x") {
+      return rest;
+    } else {
+      return "short";
+    }
+  } else if (input.charCodeAt(0) === 97) {
+    return "short";
+  } else {
+    return "other";
+  }
+}

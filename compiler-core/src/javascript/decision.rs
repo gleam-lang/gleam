@@ -1289,6 +1289,11 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
             } => self
                 .get_segment_value(arena, variable_name)
                 .unwrap_or_else(|| self.read_action_to_doc(arena, bit_array, read_action)),
+            BoundValue::StringSlice { subject, prefix } => {
+                let subject_value = self.get_value(subject);
+                let prefix_size = utf16_no_escape_len(prefix);
+                docvec![arena, subject_value, ".slice(", prefix_size, ")"]
+            }
         };
 
         match self.variable_assignment {

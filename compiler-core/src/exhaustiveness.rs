@@ -136,8 +136,16 @@ struct Branch {
     ///
     alternative_index: usize,
     checks: Vec<PatternCheck>,
-    guard: Option<usize>,
+    guard: Option<BranchGuard>,
     body: Body,
+}
+
+/// A branch's guard, holding the index of the clause it belongs to and whether
+/// it references variables bound by the branch's patterns.
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+struct BranchGuard {
+    clause_index: usize,
+    uses_pattern_bindings: bool,
 }
 
 impl Branch {
@@ -145,13 +153,13 @@ impl Branch {
         clause_index: usize,
         alternative_index: usize,
         checks: Vec<PatternCheck>,
-        has_guard: bool,
+        guard: Option<BranchGuard>,
     ) -> Self {
         Self {
             clause_index,
             alternative_index,
             checks,
-            guard: if has_guard { Some(clause_index) } else { None },
+            guard,
             body: Body::new(clause_index),
         }
     }
@@ -328,6 +336,26 @@ impl Branch {
                         None => return false,
                     },
 
+                    // A guaranteed-match slice binds the prefix name (if any) and
+                    // the rest variable (if any) to the correctly sliced string.
+                    Pattern::StringPrefixSlice {
+                        prefix,
+                        prefix_name,
+                        rest_name,
+                    } => {
+                        let prefix = prefix.clone();
+                        let prefix_name_val = std::mem::take(prefix_name);
+                        let rest_name_val = std::mem::take(rest_name);
+                        if let Some(name) = prefix_name_val {
+                            self.body.assign_literal_string(name, prefix.clone());
+                        }
+                        if let Some(name) = rest_name_val {
+                            self.body
+                                .assign_string_slice(name, check.var.clone(), prefix);
+                        }
+                        return false;
+                    }
+
                     // All other patterns are not unconditional, so we just keep them.
                     Pattern::Int { .. }
                     | Pattern::Float { .. }
@@ -388,6 +416,13 @@ pub enum BoundValue {
         bit_array: Variable,
         read_action: ReadAction,
     },
+
+    /// `let a = subject.slice(N)`
+    ///
+    StringSlice {
+        subject: Variable,
+        prefix: EcoString,
+    },
 }
 
 impl Body {
@@ -407,6 +442,11 @@ impl Body {
     fn assign_literal_string(&mut self, variable: EcoString, value: EcoString) {
         self.bindings
             .push((variable, BoundValue::LiteralString(value)));
+    }
+
+    fn assign_string_slice(&mut self, variable: EcoString, subject: Variable, prefix: EcoString) {
+        self.bindings
+            .push((variable, BoundValue::StringSlice { subject, prefix }));
     }
 
     fn assign_bit_array_slice(
@@ -469,6 +509,11 @@ pub enum Pattern {
         prefix_name: Option<EcoString>,
         rest: Id<Pattern>,
     },
+    StringPrefixSlice {
+        prefix: EcoString,
+        prefix_name: Option<EcoString>,
+        rest_name: Option<EcoString>,
+    },
     Assign {
         name: EcoString,
         pattern: Id<Pattern>,
@@ -506,7 +551,10 @@ impl Pattern {
             // These patterns are unconditional: they will always match and be moved
             // out of a branch's checks. So there's no corresponding runtime check
             // we can perform for them.
-            Pattern::Discard | Pattern::Variable { .. } | Pattern::Assign { .. } => return None,
+            Pattern::Discard
+            | Pattern::Variable { .. }
+            | Pattern::Assign { .. }
+            | Pattern::StringPrefixSlice { .. } => return None,
             Pattern::Int { int_value, .. } => RuntimeCheckKind::Int {
                 int_value: int_value.clone(),
             },
@@ -574,6 +622,7 @@ impl Pattern {
             | Self::Float { .. }
             | Self::String { .. }
             | Self::StringPrefix { .. }
+            | Self::StringPrefixSlice { .. }
             | Self::Assign { .. }
             | Self::Variable { .. }
             | Self::Tuple { .. }
@@ -2362,13 +2411,13 @@ impl<'a> Compiler<'a> {
                 // if the condition evaluates to `True` we can run its body.
                 // Otherwise, we'll have to keep looking at the remaining branches
                 // to know what to do if this branch doesn't match.
-                Some(guard) => {
+                Some(BranchGuard { clause_index, .. }) => {
                     let if_true = first_branch.body.clone();
                     // All the remaining branches will be compiled and end up
                     // in the path of the tree to choose if the guard is false.
                     let _ = branches.pop_front();
                     let if_false = self.compile(branches);
-                    Decision::guard(guard, if_true, if_false)
+                    Decision::guard(clause_index, if_true, if_false)
                 }
             },
         }
@@ -2600,6 +2649,7 @@ impl<'a> Compiler<'a> {
     ///
     fn new_checks(
         &mut self,
+        subject: &Variable,
         for_pattern: &Pattern,
         after_succeding_check: &RuntimeCheck,
     ) -> Vec<PatternCheck> {
@@ -2697,10 +2747,25 @@ impl<'a> Compiler<'a> {
             // we know it already starts with `"wibble"` we can just check that the remaining
             // part after that starts with the missing part of the prefix:
             // `prefix0 is "st" <> rest1`.
+            //
+            // The opposite can also happen. The prefix we've already checked might be longer
+            // than (and start with) the pattern's prefix. This comes up when an earlier branch
+            // matched the longer prefix under a guard that then failed, so control falls
+            // through to this shorter-prefix branch. For example we might be checking the
+            // pattern `"wib" <> rest1` knowing that `"wibble" <> rest0` already succeeded.
+            //
+            // This rests on an invariant established by `check_overlaps`. A shorter prefix is
+            // only ever paired with an already-succeeded longer prefix when that longer prefix
+            // starts with it. Two disjoint prefixes (say `"b"` reached after `"aaa" <> rest0`
+            // succeeded) are never routed here together. So when `prefix1.strip_prefix(prefix0)`
+            // returns `None` below it is precisely because `prefix0` starts with `prefix1`, and
+            // the pattern's prefix is therefore already guaranteed to match. If it binds nothing
+            // we're done. Otherwise we rebind its `rest1` to the value with the (shorter) prefix
+            // stripped off.
             (
                 Pattern::StringPrefix {
                     prefix: prefix1,
-                    prefix_name: _,
+                    prefix_name,
                     rest: rest1,
                 },
                 RuntimeCheck::StringPrefix {
@@ -2708,13 +2773,40 @@ impl<'a> Compiler<'a> {
                     rest: rest0,
                 },
             ) => {
-                let remaining = prefix1.strip_prefix(prefix0.as_str()).unwrap_or(prefix1);
-                // If the prefixes are exactly the same then the only remaining check
-                // is for the two remaining bits to be the same.
-                if remaining.is_empty() {
-                    vec![rest0.is(*rest1)]
+                if let Some(remaining) = prefix1.strip_prefix(prefix0.as_str()) {
+                    // The pattern's prefix extends (or equals) the one we've already checked.
+                    // If the prefixes are exactly the same then the only remaining check is
+                    // for the two remaining bits to be the same.
+                    if remaining.is_empty() {
+                        vec![rest0.is(*rest1)]
+                    } else {
+                        vec![rest0.is(self.string_prefix_pattern(remaining, *rest1))]
+                    }
+                } else if prefix_name.is_none() && matches!(self.pattern(*rest1), Pattern::Discard)
+                {
+                    // The prefix we've already checked is longer than the pattern's prefix, so
+                    // the pattern is guaranteed to match. As it binds nothing there's nothing
+                    // left to do.
+                    vec![]
                 } else {
-                    vec![rest0.is(self.string_prefix_pattern(remaining, *rest1))]
+                    // The pattern is guaranteed to match but it does bind something. Use
+                    // StringPrefixSlice so the backend only emits the slice, not a redundant
+                    // startsWith check.
+                    let rest_pattern = self.pattern(*rest1);
+                    let rest_name = if let Pattern::Variable { name } = rest_pattern {
+                        Some(name.clone())
+                    } else if matches!(rest_pattern, Pattern::Discard) {
+                        None
+                    } else {
+                        unreachable!("rest should be Variable or Discard, got {rest_pattern:?}")
+                    };
+                    let pattern = self.patterns.alloc(Pattern::StringPrefixSlice {
+                        prefix: prefix1.clone(),
+                        prefix_name: prefix_name.clone(),
+                        rest_name,
+                    });
+
+                    vec![subject.is(pattern)]
                 }
             }
 
@@ -2925,39 +3017,44 @@ impl BranchSplitter {
             .to_runtime_check_kind()
             .expect("no unconditional patterns left");
 
-        let indices_of_overlapping_checks = self.indices_of_overlapping_checks(&kind);
-        if indices_of_overlapping_checks.is_empty() {
-            // This is a new choice we haven't yet discovered as it is not overlapping
-            // with any of the existing ones. So we add it as a possible new path
-            // we might have to go down to in the decision tree.
+        let CheckOverlaps {
+            overlapping,
+            needs_new_choice,
+        } = self.check_overlaps(&kind);
+
+        // The branch is relevant to every existing choice its check overlaps
+        // with, so we add it (together with any newly discovered checks) to all
+        // of those paths. For a string prefix this also includes any longer
+        // prefixes that start with it. When one of those matched but a guard
+        // then failed, control falls through to this shorter prefix.
+        for index in overlapping.iter() {
+            let (overlapping_check, branches) = self
+                .choices
+                .get_mut(*index)
+                .expect("check to already be a choice");
+
+            let mut branch = branch.clone();
+            for new_check in compiler.new_checks(&pattern_check.var, &pattern, overlapping_check) {
+                branch.add_check(new_check);
+            }
+            branches.push_back(branch);
+        }
+
+        // Unless the check is fully subsumed by an existing choice, we also add
+        // it as a new path we might have to go down to in the decision tree.
+        // A shorter prefix still needs its own choice even when it overlaps
+        // earlier longer prefixes, so it can match values outside those.
+        if needs_new_choice {
             self.save_index_of_new_choice(kind.clone());
 
             let check = compiler.fresh_runtime_check(kind, branch_mode);
-            for new_check in compiler.new_checks(&pattern, &check) {
+            for new_check in compiler.new_checks(&pattern_check.var, &pattern, &check) {
                 branch.add_check(new_check);
             }
             let mut branches = self.fallback.clone();
             branches.push_back(branch);
 
             self.choices.push((check, branches));
-        } else {
-            // Otherwise, we know that the check for this branch overlaps with
-            // (possibly more than one) existing checks and so is relevant only
-            // as part of those existing paths.
-            // We'll add the branch with its newly discovered checks only to those
-            // paths.
-            for index in indices_of_overlapping_checks.iter() {
-                let (overlapping_check, branches) = self
-                    .choices
-                    .get_mut(*index)
-                    .expect("check to already be a choice");
-
-                let mut branch = branch.clone();
-                for new_check in compiler.new_checks(&pattern, overlapping_check) {
-                    branch.add_check(new_check);
-                }
-                branches.push_back(branch);
-            }
         }
 
         // Then we have to update all variant checks with any new name/module
@@ -2970,7 +3067,7 @@ impl BranchSplitter {
             ..
         } = pattern
         {
-            for index in indices_of_overlapping_checks {
+            for index in overlapping {
                 let (check, _) = self
                     .choices
                     .get_mut(index)
@@ -3083,18 +3180,35 @@ impl BranchSplitter {
         };
     }
 
-    fn indices_of_overlapping_checks(&self, kind: &RuntimeCheckKind) -> Vec<usize> {
+    fn choice_has_guard_using_pattern_bindings(&self, index: usize) -> bool {
+        self.choices.get(index).is_some_and(|(_, branches)| {
+            branches.iter().any(|branch| {
+                branch
+                    .guard
+                    .is_some_and(|guard| guard.uses_pattern_bindings)
+            })
+        })
+    }
+
+    fn check_overlaps(&self, kind: &RuntimeCheckKind) -> CheckOverlaps {
         match kind {
             // All these checks will only overlap with a check that is exactly the
             // same, so we just look up their index in the `indices` map using the
-            // kind as the lookup.
+            // kind as the lookup. An identical existing choice fully subsumes this
+            // one, so we only need a new choice when there isn't one already.
             RuntimeCheckKind::Int { .. }
             | RuntimeCheckKind::Float { .. }
             | RuntimeCheckKind::Tuple { .. }
             | RuntimeCheckKind::Variant { .. }
             | RuntimeCheckKind::EmptyList
             | RuntimeCheckKind::NonEmptyList => {
-                self.indices.get(kind).cloned().into_iter().collect_vec()
+                let overlapping = self.indices.get(kind).cloned().into_iter().collect_vec();
+                let needs_new_choice = overlapping.is_empty();
+
+                CheckOverlaps {
+                    overlapping,
+                    needs_new_choice,
+                }
             }
 
             // String patterns are a bit more tricky as they might end up overlapping
@@ -3117,7 +3231,57 @@ impl BranchSplitter {
             // That is, we look for a prefix of the pattern we're checking in the prefix
             // trie.
             RuntimeCheckKind::StringPrefix { prefix: value } => {
-                ancestors_values(&self.prefix_indices, value).collect_vec()
+                // A prefix pattern overlaps with any of its own prefixes, and also with a
+                // longer prefix it is itself a prefix of. Once that longer prefix matched,
+                // this shorter one is guaranteed to match too.
+                match self.prefix_indices.get_ancestor(value.as_str()) {
+                    // One of `value`'s own (shorter) prefixes is already a choice. Any
+                    // value that could match `value` is routed into that choice first, so
+                    // `value` doesn't need its own. It just joins that choice (and any
+                    // longer prefixes nested under it whose guard could fall through to it).
+                    Some(_) => {
+                        let overlapping = overlap_candidates(&self.prefix_indices, value)
+                            .filter(|&(prefix, index)| {
+                                if value.starts_with(prefix) {
+                                    // An ancestor (or the prefix itself). `value` extends it,
+                                    // so it always belongs in that choice.
+                                    true
+                                } else {
+                                    // A longer prefix which is only relevant as a fall-through
+                                    // target, which only happens when it can match its prefix
+                                    // but fail a guard.
+                                    prefix.starts_with(value.as_str())
+                                        && self.choice_has_guard_using_pattern_bindings(index)
+                                }
+                            })
+                            .map(|(_, index)| index)
+                            .collect_vec();
+
+                        CheckOverlaps {
+                            overlapping,
+                            needs_new_choice: false,
+                        }
+                    }
+                    // No shorter prefix of `value` is a choice yet, so `value` needs its
+                    // own choice to match values outside any longer prefixes. It is added to
+                    // an existing longer prefix only when that prefix can match but fail a
+                    // guard, so control has to fall through to this shorter prefix rather
+                    // than escaping to the next choice.
+                    None => {
+                        let overlapping = descendant_candidates(&self.prefix_indices, value)
+                            .filter(|&(prefix, index)| {
+                                prefix.starts_with(value.as_str())
+                                    && self.choice_has_guard_using_pattern_bindings(index)
+                            })
+                            .map(|(_, index)| index)
+                            .collect_vec();
+
+                        CheckOverlaps {
+                            overlapping,
+                            needs_new_choice: true,
+                        }
+                    }
+                }
             }
 
             // Strings are almost exactly the same, except they could also have an exact
@@ -3125,20 +3289,64 @@ impl BranchSplitter {
             // another string pattern (if they're matching on the same value), or with
             // one or more string prefix patterns with a matching prefix.
             RuntimeCheckKind::String { value } => {
+                // Unlike a prefix pattern, an exact literal can only overlap with one of
+                // its own prefixes. A longer prefix can never match an exact literal (the
+                // literal is too short), so we leave those out.
                 let first_index = self.indices.get(kind).cloned();
-                first_index
+                let overlapping = first_index
                     .into_iter()
-                    .chain(ancestors_values(&self.prefix_indices, value))
-                    .collect_vec()
+                    .chain(
+                        overlap_candidates(&self.prefix_indices, value)
+                            .filter(|&(prefix, _)| value.starts_with(prefix))
+                            .map(|(_, index)| index),
+                    )
+                    .collect_vec();
+                let needs_new_choice = overlapping.is_empty();
+
+                CheckOverlaps {
+                    overlapping,
+                    needs_new_choice,
+                }
             }
         }
     }
 }
 
-fn ancestors_values(trie: &Trie<String, usize>, key: &str) -> impl Iterator<Item = usize> {
+/// Describes how a branch's runtime check relates to the choices discovered so
+/// far when splitting branches.
+struct CheckOverlaps {
+    /// The indices of the existing choices this branch is relevant to and so
+    /// must be added to
+    overlapping: Vec<usize>,
+    /// Whether the check also needs to become a new choice of its own. A new choice is a
+    /// fresh branch of the decision tree, carrying its own runtime check.
+    ///
+    /// For example, suppose `"wib" <> _` is reached after `"wibble" <> _` is already a
+    /// choice. A string can start with `"wib"` without starting with `"wibble"`
+    /// (for example `"wibz"`), so `"wib"` is not subsumed and needs its own choice to
+    /// match those values. With the order reversed, `"wibble"` would route through
+    /// the existing `"wib"` choice and need no choice of its own.
+    needs_new_choice: bool,
+}
+
+fn overlap_candidates<'a>(
+    trie: &'a Trie<String, usize>,
+    key: &str,
+) -> impl Iterator<Item = (&'a str, usize)> {
     trie.get_ancestor(key)
         .into_iter()
-        .flat_map(|ancestor| ancestor.values().copied())
+        .flat_map(|ancestor| ancestor.iter())
+        .map(|(prefix, index)| (prefix.as_str(), *index))
+}
+
+fn descendant_candidates<'a>(
+    trie: &'a Trie<String, usize>,
+    key: &str,
+) -> impl Iterator<Item = (&'a str, usize)> {
+    trie.get_raw_descendant(key)
+        .into_iter()
+        .flat_map(|descendant| descendant.iter())
+        .map(|(prefix, index)| (prefix.as_str(), *index))
 }
 
 #[derive(Debug)]
@@ -3318,8 +3526,22 @@ impl CaseToCompile {
                 checks.push(var.is(pattern))
             }
 
-            let has_guard = branch.guard.is_some();
-            let branch = Branch::new(self.number_of_clauses, alternative_index, checks, has_guard);
+            let guard = branch.guard.as_ref().map(|guard| {
+                let referenced = guard.referenced_variables();
+                let uses_pattern_bindings = patterns.iter().any(|pattern| {
+                    pattern
+                        .bound_variables()
+                        .iter()
+                        .any(|bound| referenced.contains(&bound.name()))
+                });
+
+                BranchGuard {
+                    clause_index: self.number_of_clauses,
+                    uses_pattern_bindings,
+                }
+            });
+
+            let branch = Branch::new(self.number_of_clauses, alternative_index, checks, guard);
             self.branches.push(branch);
         }
 
@@ -3338,7 +3560,7 @@ impl CaseToCompile {
             .subject_variables
             .first()
             .expect("wrong number of subject variables for pattern");
-        let branch = Branch::new(self.number_of_clauses, 0, vec![var.is(pattern)], false);
+        let branch = Branch::new(self.number_of_clauses, 0, vec![var.is(pattern)], None);
         self.number_of_clauses += 1;
         self.branches.push(branch);
     }

@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\npub fn classify(input: String, a: Bool, b: Bool) -> String {\n  case input {\n    \"aa\" <> _ if a -> \"aa-prefix\"\n    \"a\" <> _ if b -> \"a-prefix\"\n    \"a\" -> \"exact-a\"\n    _ -> \"other\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn classify(input: String, a: Bool, b: Bool) -> String {
+  case input {
+    "aa" <> _ if a -> "aa-prefix"
+    "a" <> _ if b -> "a-prefix"
+    "a" -> "exact-a"
+    _ -> "other"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function classify(input, a, b) {
+  if (input.startsWith("aa") && a) {
+    return "aa-prefix";
+  } else if (input.charCodeAt(0) === 97) {
+    if (b) {
+      return "a-prefix";
+    } else {
+      let $ = input.slice(1);
+      if ($ === "") {
+        return "exact-a";
+      } else {
+        return "other";
+      }
+    }
+  } else {
+    return "other";
+  }
+}
