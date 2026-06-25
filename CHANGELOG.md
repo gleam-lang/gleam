@@ -431,3 +431,6 @@
   removed dependency is still used the build would succeed, resulting in
   runtime crash due to missing files.
   ([Andrey Kozhev](https://github.com/ankddev))
+
+- The build tool will no longer panic when unable to lock the build directory.
+  ([Louis Pilfold](https://github.com/lpil))

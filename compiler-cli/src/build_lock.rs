@@ -60,9 +60,16 @@ impl BuildLock {
             err: Some(e.to_string()),
         })?;
 
-        if !file.try_lock_with_pid().expect("Trying directory locking") {
+        let lock_error = |error: fslock::Error| Error::FileIo {
+            kind: FileKind::File,
+            action: FileIoAction::Lock,
+            path: lock_path.clone(),
+            err: Some(error.to_string()),
+        };
+
+        if !file.try_lock_with_pid().map_err(lock_error)? {
             telemetry.waiting_for_build_directory_lock();
-            file.lock_with_pid().expect("Directory locking")
+            file.lock_with_pid().map_err(lock_error)?
         }
 
         Ok(Guard(file))
