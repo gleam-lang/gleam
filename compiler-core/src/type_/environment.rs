@@ -48,9 +48,11 @@ pub struct Environment<'a> {
     pub ids: UniqueIdGenerator,
     previous_id: u64,
     /// Names of types or values that have been imported an unqualified fashion
-    /// from other modules. Used to prevent multiple imports using the same name.
-    pub unqualified_imported_names: HashMap<EcoString, SrcSpan>,
-    pub unqualified_imported_types: HashMap<EcoString, SrcSpan>,
+    /// from other modules, along with whether it has import alias. Used to
+    /// prevent multiple imports using the same name and to check if an item has
+    /// an import alias.
+    pub unqualified_imported_names: HashMap<EcoString, (bool, SrcSpan)>,
+    pub unqualified_imported_types: HashMap<EcoString, (bool, SrcSpan)>,
     pub importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
 
     /// Modules that have been imported by the current module, along with the
