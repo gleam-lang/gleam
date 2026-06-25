@@ -9,7 +9,7 @@ use crate::{
     reference::{EntityKind, ReferenceKind},
     type_::{
         Environment, Error, ModuleInterface, Problems, ValueConstructorVariant, Warning,
-        error::InvalidImportKind,
+        environment, error::InvalidImportKind,
     },
 };
 
@@ -88,6 +88,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         module: &ModuleInterface,
     ) {
         let imported_name = import.as_name.as_ref().unwrap_or(&import.name);
+        let import_location = import.location;
 
         // Register the unqualified import if it is a type constructor
         let Some(type_info) = module.get_importable_type(&import.name) else {
@@ -130,6 +131,16 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             imported_name,
             import.name_location(),
             ReferenceKind::Import(alias_location),
+        );
+
+        // Register the type so we know whether it was imported with an import
+        // alias
+        let _ = self.environment.unqualified_imported_types.insert(
+            imported_name.clone(),
+            environment::UnqualifiedImport {
+                location: import_location,
+                has_alias: import.as_name.is_some(),
+            },
         );
 
         if let Err(e) = self
@@ -243,7 +254,10 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         };
 
         // Check if value already was imported
-        if let Some(previous) = self.environment.unqualified_imported_names.get(used_name) {
+        if let Some(environment::UnqualifiedImport {
+            location: previous, ..
+        }) = self.environment.unqualified_imported_names.get(used_name)
+        {
             self.problems.error(Error::DuplicateImport {
                 location,
                 previous_location: *previous,
@@ -253,11 +267,15 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         }
 
         // Register the name as imported so it can't be imported a
-        // second time in future
-        let _ = self
-            .environment
-            .unqualified_imported_names
-            .insert(used_name.clone(), location);
+        // second time in future and so we know whether it was imported with an
+        // import alias
+        let _ = self.environment.unqualified_imported_names.insert(
+            used_name.clone(),
+            environment::UnqualifiedImport {
+                location,
+                has_alias: import.as_name.is_some(),
+            },
+        );
     }
 
     /// Check for invalid imports, such as `src` importing `test` or `dev`.
