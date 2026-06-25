@@ -704,6 +704,7 @@ pub enum FileIoAction {
     UpdatePermissions,
     FindParent,
     ReadMetadata,
+    Lock,
 }
 
 impl FileIoAction {
@@ -711,6 +712,7 @@ impl FileIoAction {
         match self {
             FileIoAction::Link(..) => "link",
             FileIoAction::Open => "open",
+            FileIoAction::Lock => "lock",
             FileIoAction::Copy(..) => "copy",
             FileIoAction::Read => "read",
             FileIoAction::Parse => "parse",
@@ -732,6 +734,7 @@ impl FileIoAction {
             FileIoAction::Open
             | FileIoAction::Copy(..)
             | FileIoAction::Read
+            | FileIoAction::Lock
             | FileIoAction::Parse
             | FileIoAction::Delete
             | FileIoAction::Create
@@ -752,6 +755,7 @@ impl FileIoAction {
 
             FileIoAction::Open
             | FileIoAction::Read
+            | FileIoAction::Lock
             | FileIoAction::Parse
             | FileIoAction::Delete
             | FileIoAction::Create
