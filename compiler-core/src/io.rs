@@ -422,13 +422,14 @@ pub trait TarUnpacker {
         archive: Archive<GzDecoder<Entry<'_, WrappedReader>>>,
     ) -> Result<()> {
         tracing::debug!(path = ?path, "unpacking tar archive");
-        self.io_result_unpack(path, archive)
-            .map_err(|e| Error::FileIo {
-                action: FileIoAction::WriteTo,
-                kind: FileKind::Directory,
-                path: path.to_path_buf(),
-                err: Some(e.to_string()),
-            })
+        self.io_result_unpack(path, archive).map_err(|e| {
+            Error::io(
+                e,
+                FileKind::Directory,
+                path.to_path_buf(),
+                FileIoAction::WriteTo,
+            )
+        })
     }
 }
 

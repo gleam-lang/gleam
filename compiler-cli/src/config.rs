@@ -74,11 +74,9 @@ pub fn read(config_path: Utf8PathBuf) -> Result<PackageConfig, Error> {
 pub fn ensure_config_exists(paths: &ProjectPaths) -> Result<(), Error> {
     let path = paths.root_config();
     if !path.is_file() {
-        return Err(Error::FileIo {
-            action: FileIoAction::Read,
+        return Err(Error::FileNotFound {
             kind: FileKind::File,
             path,
-            err: Some("File not found".into()),
         });
     }
     Ok(())

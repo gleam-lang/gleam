@@ -33,13 +33,10 @@ mod tests;
 
 /// Return the current directory as a UTF-8 Path
 pub fn get_current_directory() -> Result<Utf8PathBuf, Error> {
-    let curr_dir = std::env::current_dir().map_err(|e| Error::FileIo {
-        kind: FileKind::Directory,
-        action: FileIoAction::Open,
-        path: ".".into(),
-        err: Some(e.to_string()),
-    })?;
-    Utf8PathBuf::from_path_buf(curr_dir.clone()).map_err(|_| Error::NonUtf8Path { path: curr_dir })
+    let current_dir = std::env::current_dir()
+        .map_err(|e| Error::io(e, FileKind::Directory, ".".into(), FileIoAction::Open))?;
+    Utf8PathBuf::from_path_buf(current_dir.clone())
+        .map_err(|_| Error::NonUtf8Path { path: current_dir })
 }
 
 // Return the first directory with a gleam.toml as a UTF-8 Path
@@ -159,22 +156,26 @@ impl FileSystemReader for ProjectIO {
 }
 
 fn is_same_file(left: &Utf8Path, right: &Utf8Path) -> Result<bool, Error> {
-    same_file::is_same_file(left, right).map_err(|e| Error::FileIo {
-        action: FileIoAction::ReadMetadata,
-        kind: FileKind::File,
-        path: left.to_path_buf(),
-        err: Some(e.to_string()),
+    same_file::is_same_file(left, right).map_err(|e| {
+        Error::io(
+            e,
+            FileKind::File,
+            left.to_path_buf(),
+            FileIoAction::ReadMetadata,
+        )
     })
 }
 
 pub fn modification_time(path: &Utf8Path) -> std::result::Result<SystemTime, Error> {
     path.metadata()
         .map(|m| m.modified().unwrap_or_else(|_| SystemTime::now()))
-        .map_err(|e| Error::FileIo {
-            action: FileIoAction::ReadMetadata,
-            kind: FileKind::File,
-            path: path.to_path_buf(),
-            err: Some(e.to_string()),
+        .map_err(|e| {
+            Error::io(
+                e,
+                FileKind::File,
+                path.to_path_buf(),
+                FileIoAction::ReadMetadata,
+            )
         })
 }
 
@@ -362,11 +363,13 @@ pub fn make_executable(path: impl AsRef<Utf8Path>) -> Result<(), Error> {
     tracing::debug!(path = ?path.as_ref(), "setting_permissions");
 
     std::fs::set_permissions(path.as_ref(), std::fs::Permissions::from_mode(0o755)).map_err(
-        |e| Error::FileIo {
-            action: FileIoAction::UpdatePermissions,
-            kind: FileKind::File,
-            path: path.as_ref().to_path_buf(),
-            err: Some(e.to_string()),
+        |e| {
+            Error::io(
+                e,
+                FileKind::File,
+                path.as_ref().to_path_buf(),
+                FileIoAction::UpdatePermissions,
+            )
         },
     )?;
     Ok(())
@@ -573,22 +576,26 @@ pub fn mkdir(path: impl AsRef<Utf8Path> + Debug) -> Result<(), Error> {
 
     tracing::debug!(path=?path, "creating_directory");
 
-    std::fs::create_dir_all(path.as_ref()).map_err(|err| Error::FileIo {
-        kind: FileKind::Directory,
-        path: Utf8PathBuf::from(path.as_ref()),
-        action: FileIoAction::Create,
-        err: Some(err.to_string()),
+    std::fs::create_dir_all(path.as_ref()).map_err(|err| {
+        Error::io(
+            err,
+            FileKind::Directory,
+            path.as_ref().to_path_buf(),
+            FileIoAction::Create,
+        )
     })
 }
 
 pub fn read_dir(path: impl AsRef<Utf8Path> + Debug) -> Result<ReadDirUtf8, Error> {
     tracing::debug!(path=?path,"reading_directory");
 
-    Utf8Path::read_dir_utf8(path.as_ref()).map_err(|e| Error::FileIo {
-        action: FileIoAction::Read,
-        kind: FileKind::Directory,
-        path: Utf8PathBuf::from(path.as_ref()),
-        err: Some(e.to_string()),
+    Utf8Path::read_dir_utf8(path.as_ref()).map_err(|e| {
+        Error::io(
+            e,
+            FileKind::Directory,
+            path.as_ref().to_path_buf(),
+            FileIoAction::Read,
+        )
     })
 }
 
@@ -605,12 +612,8 @@ pub fn read(path: impl AsRef<Utf8Path>) -> Result<String, Error> {
     let path = path.as_ref();
     tracing::debug!(path=?path,"reading_file");
 
-    std::fs::read_to_string(path).map_err(|err| Error::FileIo {
-        action: FileIoAction::Read,
-        kind: FileKind::File,
-        path: Utf8PathBuf::from(path),
-        err: Some(err.to_string()),
-    })
+    std::fs::read_to_string(path)
+        .map_err(|err| Error::io(err, FileKind::File, path.to_path_buf(), FileIoAction::Read))
 }
 
 pub fn open_file(path: impl AsRef<Utf8Path>) -> Result<File, Error> {
@@ -629,24 +632,16 @@ pub fn read_bytes(path: impl AsRef<Utf8Path>) -> Result<Vec<u8>, Error> {
     let path = path.as_ref();
     tracing::debug!(path=?path,"reading_file");
 
-    std::fs::read(path).map_err(|err| Error::FileIo {
-        action: FileIoAction::Read,
-        kind: FileKind::File,
-        path: Utf8PathBuf::from(path),
-        err: Some(err.to_string()),
-    })
+    std::fs::read(path)
+        .map_err(|err| Error::io(err, FileKind::File, path.to_path_buf(), FileIoAction::Read))
 }
 
 pub fn reader(path: impl AsRef<Utf8Path>) -> Result<WrappedReader, Error> {
     let path = path.as_ref();
     tracing::debug!(path=?path,"opening_file_reader");
 
-    let reader = File::open(path).map_err(|err| Error::FileIo {
-        action: FileIoAction::Open,
-        kind: FileKind::File,
-        path: Utf8PathBuf::from(path),
-        err: Some(err.to_string()),
-    })?;
+    let reader = File::open(path)
+        .map_err(|err| Error::io(err, FileKind::File, path.to_path_buf(), FileIoAction::Open))?;
 
     Ok(WrappedReader::new(path, Box::new(reader)))
 }
@@ -654,12 +649,8 @@ pub fn reader(path: impl AsRef<Utf8Path>) -> Result<WrappedReader, Error> {
 pub fn buffered_reader<P: AsRef<Utf8Path>>(path: P) -> Result<impl BufRead, Error> {
     let path = path.as_ref();
     tracing::debug!(path=?path,"opening_file_buffered_reader");
-    let reader = File::open(path).map_err(|err| Error::FileIo {
-        action: FileIoAction::Open,
-        kind: FileKind::File,
-        path: Utf8PathBuf::from(path),
-        err: Some(err.to_string()),
-    })?;
+    let reader = File::open(path)
+        .map_err(|err| Error::io(err, FileKind::File, path.to_path_buf(), FileIoAction::Open))?;
     Ok(BufReader::new(reader))
 }
 
@@ -669,11 +660,13 @@ pub fn copy(path: impl AsRef<Utf8Path>, to: impl AsRef<Utf8Path>) -> Result<(), 
     tracing::debug!(from=?path, to=?to, "copying_file");
 
     std::fs::copy(path, to)
-        .map_err(|err| Error::FileIo {
-            action: FileIoAction::Copy(Some(to.to_path_buf())),
-            kind: FileKind::File,
-            path: Utf8PathBuf::from(path),
-            err: Some(err.to_string()),
+        .map_err(|err| {
+            Error::io(
+                err,
+                FileKind::File,
+                path.to_path_buf(),
+                FileIoAction::Copy(Some(to.to_path_buf())),
+            )
         })
         .map(|_| ())
 }
@@ -690,11 +683,20 @@ pub fn copy_dir(path: impl AsRef<Utf8Path>, to: impl AsRef<Utf8Path>) -> Result<
             .copy_inside(false)
             .content_only(true),
     )
-    .map_err(|err| Error::FileIo {
-        action: FileIoAction::Copy(Some(to.to_path_buf())),
-        kind: FileKind::Directory,
-        path: Utf8PathBuf::from(path),
-        err: Some(err.to_string()),
+    .map_err(|err| {
+        if let fs_extra::error::ErrorKind::NotFound = err.kind {
+            Error::FileNotFound {
+                kind: FileKind::Directory,
+                path: path.to_path_buf(),
+            }
+        } else {
+            Error::FileIo {
+                action: FileIoAction::Copy(Some(to.to_path_buf())),
+                kind: FileKind::Directory,
+                path: path.to_path_buf(),
+                err: Some(err.to_string()),
+            }
+        }
     })
     .map(|_| ())
 }
@@ -710,11 +712,13 @@ pub fn symlink_dir(src: impl AsRef<Utf8Path>, dest: impl AsRef<Utf8Path>) -> Res
     #[cfg(not(target_family = "windows"))]
     let result = std::os::unix::fs::symlink(&src, dest);
 
-    result.map_err(|err| Error::FileIo {
-        action: FileIoAction::Link(dest.to_path_buf()),
-        kind: FileKind::File,
-        path: src,
-        err: Some(err.to_string()),
+    result.map_err(|err| {
+        Error::io(
+            err,
+            FileKind::File,
+            src.to_path_buf(),
+            FileIoAction::Link(dest.to_path_buf()),
+        )
     })?;
     Ok(())
 }
@@ -724,11 +728,13 @@ pub fn hardlink(from: impl AsRef<Utf8Path>, to: impl AsRef<Utf8Path>) -> Result<
     let to = to.as_ref();
     tracing::debug!(from=?from, to=?to, "hardlinking");
     std::fs::hard_link(from, to)
-        .map_err(|err| Error::FileIo {
-            action: FileIoAction::Link(to.to_path_buf()),
-            kind: FileKind::File,
-            path: Utf8PathBuf::from(from),
-            err: Some(err.to_string()),
+        .map_err(|err| {
+            Error::io(
+                err,
+                FileKind::File,
+                from.to_path_buf(),
+                FileIoAction::Link(to.to_path_buf()),
+            )
         })
         .map(|_| ())
 }
@@ -804,11 +810,13 @@ pub fn git_init(path: &Utf8Path) -> Result<(), Error> {
 
 pub fn canonicalise(path: &Utf8Path) -> Result<Utf8PathBuf, Error> {
     std::fs::canonicalize(path)
-        .map_err(|err| Error::FileIo {
-            action: FileIoAction::Canonicalise,
-            kind: FileKind::File,
-            path: Utf8PathBuf::from(path),
-            err: Some(err.to_string()),
+        .map_err(|err| {
+            Error::io(
+                err,
+                FileKind::File,
+                path.to_path_buf(),
+                FileIoAction::Canonicalise,
+            )
         })
         .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf8 Path"))
 }
@@ -872,11 +880,13 @@ impl<W: Write + io::Seek> ZipArchive<W> {
                 path: zip_path,
                 error: e.to_string(),
             })?;
-        let mut file = File::open(disc_path).map_err(|e| Error::FileIo {
-            kind: FileKind::File,
-            action: FileIoAction::Open,
-            path: disc_path.to_path_buf(),
-            err: Some(e.to_string()),
+        let mut file = File::open(disc_path).map_err(|e| {
+            Error::io(
+                e,
+                FileKind::File,
+                disc_path.to_path_buf(),
+                FileIoAction::Open,
+            )
         })?;
         let _: u64 = io::copy(&mut file, &mut self.zip).map_err(|e| Error::FileIo {
             kind: FileKind::File,

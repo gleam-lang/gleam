@@ -190,6 +190,9 @@ pub enum Error {
         err: Option<String>,
     },
 
+    #[error("{path:?} does not exist")]
+    FileNotFound { kind: FileKind, path: Utf8PathBuf },
+
     #[error("Non Utf-8 Path: {path}")]
     NonUtf8Path { path: PathBuf },
 
@@ -521,6 +524,24 @@ impl Error {
         E: std::error::Error,
     {
         Self::Http(error.to_string())
+    }
+
+    pub fn io(
+        error: std::io::Error,
+        kind: FileKind,
+        path: Utf8PathBuf,
+        action: FileIoAction,
+    ) -> Error {
+        if error.kind() == std::io::ErrorKind::NotFound {
+            Error::FileNotFound { kind, path }
+        } else {
+            Error::FileIo {
+                kind,
+                action,
+                path,
+                err: Some(error.to_string()),
+            }
+        }
     }
 
     pub fn hex(error: hexpm::ApiError) -> Error {
@@ -1874,6 +1895,23 @@ https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-fo
                 }
                 vec![Diagnostic {
                     title: "File IO failure".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: None,
+                }]
+            }
+
+            Error::FileNotFound { kind, path } => {
+                let text = format!(
+                    "This {} was not found:
+
+    {}",
+                    kind.text(),
+                    path
+                );
+                vec![Diagnostic {
+                    title: "File not found".into(),
                     text,
                     hint: None,
                     level: Level::Error,

@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/error/tests.rs
+expression: error
+---
+error: File not found
+
+This file was not found:
+
+    /file
