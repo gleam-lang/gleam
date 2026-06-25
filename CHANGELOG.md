@@ -303,6 +303,10 @@
 
   ([Gavin Morrow](https://github.com/gavinmorrow))
 
+- The "Generate Variant" code action now includes the name of the type to be
+  generated in its title.
+  ([0xda157](https://github.com/0xda157))
+
 ### Formatter
 
 - Performance of the formatter has been improved.
