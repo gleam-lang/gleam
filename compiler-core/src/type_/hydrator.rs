@@ -186,7 +186,10 @@ impl Hydrator {
                             module_alias: module_alias.clone(),
                             module_location: *module_location,
                         }
-                    } else if name != &type_name {
+                    } else if let Some((has_alias, _)) =
+                        &environment.unqualified_imported_types.get(name)
+                        && *has_alias
+                    {
                         ReferenceKind::Alias
                     } else {
                         ReferenceKind::Unqualified
