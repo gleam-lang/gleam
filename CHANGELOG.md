@@ -307,6 +307,10 @@
 
   ([Gavin Morrow](https://github.com/gavinmorrow))
 
+- The language server now offers a code action to fix the new deprecated pipeline
+  syntax.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 - Performance of the formatter has been improved.

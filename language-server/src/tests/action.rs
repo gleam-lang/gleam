@@ -207,6 +207,7 @@ const WRAP_IN_ANONYMOUS_FUNCTION: &str = "Wrap in anonymous function";
 const UNWRAP_ANONYMOUS_FUNCTION: &str = "Remove anonymous function wrapper";
 const REMOVE_REDUNDANT_RECORD_UPDATE: &str = "Remove redundant record update";
 const DISCARD_UNUSED_VARIABLE: &str = "Discard unused variable";
+const ADD_EXTRA_PARENTHESES: &str = "Add extra parentheses";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range_selector:expr $(,)?) => {
@@ -15398,5 +15399,24 @@ fn convert_to_function_call_on_last_step_single_line() {
   [1, 2, 3] |> echo |> wibble |> wobble
 }",
         find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn fix_deprecated_pipe_syntax() {
+    assert_code_action!(
+        ADD_EXTRA_PARENTHESES,
+        "
+pub fn main() {
+  1 |> wibble(2)
+}
+
+pub fn wibble(a) {
+  fn(b) {
+    #(a, b)
+  }
+}
+",
+        find_position_of("wibble").under_char('i').to_selection()
     );
 }

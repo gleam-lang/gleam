@@ -12913,3 +12913,52 @@ impl<'a> DiscardUnusedVariable<'a> {
         action
     }
 }
+
+pub fn code_action_fix_deprecated_pipe(
+    module: &Module,
+    line_numbers: &LineNumbers,
+    params: &CodeActionParams,
+    actions: &mut Vec<CodeAction>,
+) {
+    let uri = &params.text_document.uri;
+    let mut deprecated_pipes: Vec<&SrcSpan> = module
+        .ast
+        .type_info
+        .warnings
+        .iter()
+        .filter_map(|warning| {
+            if let type_::Warning::PipeIntoCallWhichReturnsFunction { location } = warning {
+                Some(location)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    if deprecated_pipes.is_empty() {
+        return;
+    }
+
+    // Sort spans by start position, with longer spans coming first
+    deprecated_pipes.sort_by_key(|span| (span.start, -(span.len() as i64)));
+
+    for location in deprecated_pipes {
+        let range = src_span_to_lsp_range(*location, line_numbers);
+
+        // Check if the cursor is within this span
+        if !within(params.range, range) {
+            continue;
+        }
+
+        let edit = TextEdit {
+            range: Range::new(range.end, range.end),
+            new_text: "()".into(),
+        };
+
+        CodeActionBuilder::new("Add extra parentheses")
+            .kind(CodeActionKind::QuickFix)
+            .changes(uri.clone(), vec![edit])
+            .preferred(true)
+            .push_to(actions);
+    }
+}
