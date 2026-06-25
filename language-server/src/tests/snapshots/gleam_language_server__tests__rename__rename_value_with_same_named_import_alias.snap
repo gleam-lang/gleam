@@ -26,7 +26,7 @@ pub type Wibble {
 import app.{Wobble as Wibble}
 
 pub fn go() {
-  Wobble
+  Wibble
 }
 
 
