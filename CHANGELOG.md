@@ -429,6 +429,10 @@
 
   ([Daniel Venable](https://github.com/DanielVenable))
 
+- The "Generate Variant" code action now includes the name of the type to add
+  the variant to in its title.
+  ([0xda157](https://github.com/0xda157))
+
 ### Formatter
 
 - Performance of the formatter has been improved.

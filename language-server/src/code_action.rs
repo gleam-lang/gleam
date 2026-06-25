@@ -6920,6 +6920,7 @@ pub struct GenerateVariant<'a, IO> {
     params: &'a CodeActionParams,
     line_numbers: &'a LineNumbers,
     variant_to_generate: Option<VariantToGenerate<'a>>,
+    printer: Printer<'a>,
 }
 
 struct VariantToGenerate<'a> {
@@ -6964,6 +6965,9 @@ struct VariantToGenerate<'a> {
     /// The module this variant will be added to.
     ///
     module_name: EcoString,
+
+    /// The type to add this variant to.
+    type_: Arc<Type>,
 
     /// The arguments actually supplied as input to the variant, if any.
     /// A variant to generate might as well be just a name passed as an argument
@@ -7061,6 +7065,7 @@ impl<'a, IO> GenerateVariant<'a, IO> {
             compiler,
             line_numbers,
             variant_to_generate: None,
+            printer: Printer::new(&module.ast.names),
         }
     }
 
@@ -7069,6 +7074,7 @@ impl<'a, IO> GenerateVariant<'a, IO> {
 
         let Some(VariantToGenerate {
             name,
+            type_,
             constructors,
             arguments_types,
             given_arguments,
@@ -7127,9 +7133,12 @@ impl<'a, IO> GenerateVariant<'a, IO> {
             );
         }
 
-        let mut builder = CodeActionBuilder::new("Generate variant")
-            .kind(CodeActionKind::QuickFix)
-            .preferred(true);
+        let mut builder = CodeActionBuilder::new(&format!(
+            "Generate `{}` variant",
+            self.printer.print_type(type_)
+        ))
+        .kind(CodeActionKind::QuickFix)
+        .preferred(true);
 
         match edits {
             GenerateVariantEdits::GenerateInCurrentModule {
@@ -7290,6 +7299,7 @@ impl<'a, IO> GenerateVariant<'a, IO> {
             arguments_types,
             given_arguments,
             module_name,
+            type_: custom_type,
             end_position,
             type_braces,
             variant_start: function_name_location.start,
