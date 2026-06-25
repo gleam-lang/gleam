@@ -6,13 +6,13 @@
 pub struct Versions {
     /// All packages in the repository
     #[prost(message, repeated, tag = "1")]
-    pub packages: ::prost::alloc::vec::Vec<VersionsPackage>,
+    pub packages: ::prost::alloc::vec::Vec<Package>,
     /// Name of repository
     #[prost(string, required, tag = "2")]
     pub repository: ::prost::alloc::string::String,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct VersionsPackage {
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Package {
     /// Package name
     #[prost(string, required, tag = "1")]
     pub name: ::prost::alloc::string::String,
@@ -20,9 +20,11 @@ pub struct VersionsPackage {
     #[prost(string, repeated, tag = "2")]
     pub versions: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     /// Zero-based indexes of retired versions in the versions field, see package.proto
-    ///
-    /// If set, the name of the package repository (NEVER USED, DEPRECATED)
-    /// string repository = 4;
     #[prost(int32, repeated, tag = "3")]
     pub retired: ::prost::alloc::vec::Vec<i32>,
+    /// If set, the name of the package repository (NEVER USED, DEPRECATED)
+    /// string repository = 4;
+    /// Zero-based indexes of versions with security advisories in the versions field, see package.proto
+    #[prost(int32, repeated, tag = "5")]
+    pub with_advisories: ::prost::alloc::vec::Vec<i32>,
 }

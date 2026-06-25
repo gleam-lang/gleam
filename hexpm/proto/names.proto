@@ -18,4 +18,13 @@ message Package {
 
   // If set, the name of the package repository (NEVER USED, DEPRECATED)
   // string repository = 2;
+
+  optional Timestamp updated_at = 3;
+}
+
+// Based on google.protobuf.Timestamp
+// https://github.com/protocolbuffers/protobuf/blob/v3.15.8/src/google/protobuf/timestamp.proto#L136:L147
+message Timestamp {
+  required int64 seconds = 1;
+  required int32 nanos = 2;
 }
