@@ -193,7 +193,6 @@ const INTERPOLATE_STRING: &str = "Interpolate string";
 const FILL_UNUSED_FIELDS: &str = "Fill unused fields";
 const REMOVE_ALL_ECHOS_FROM_THIS_MODULE: &str = "Remove all `echo`s from this module";
 const WRAP_IN_BLOCK: &str = "Wrap in block";
-const GENERATE_VARIANT: &str = "Generate variant";
 const REMOVE_BLOCK: &str = "Remove block";
 const REMOVE_OPAQUE_FROM_PRIVATE_TYPE: &str = "Remove opaque from private type";
 const COLLAPSE_NESTED_CASE: &str = "Collapse nested case";
@@ -210,6 +209,10 @@ const DISCARD_UNUSED_VARIABLE: &str = "Discard unused variable";
 const ADD_EXTRA_PARENTHESES: &str = "Add extra parentheses";
 const CONVERT_TO_DOCUMENTATION_COMMENT: &str = "Convert to documentation comment";
 const CONVERT_TO_REGULAR_COMMENT: &str = "Convert to regular comment";
+
+fn generate_variant_message(type_name: &str) -> String {
+    format!("Generate `{type_name}` variant")
+}
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range_selector:expr $(,)?) => {
@@ -292,6 +295,23 @@ macro_rules! assert_no_code_actions {
         );
         assert_eq!(expected, result);
     };
+
+    ($title:expr, $code:literal, $range_selector:expr $(,)?) => {
+        let project = TestProject::for_source($code);
+        assert_no_code_actions!($title, project, $range_selector);
+    };
+
+    ($title:expr, $project:expr, $range_selector:expr $(,)?) => {
+        let expected: Vec<lsp_types::CodeAction> = vec![];
+        let result = actions_with_title(
+            vec![$title],
+            &$project,
+            Origin::Src,
+            LSP_TEST_ROOT_PACKAGE_NAME,
+            $range_selector
+        );
+        assert_eq!(expected, result);
+    };
 }
 
 #[test]
@@ -323,7 +343,7 @@ pub fn main() {
 #[test]
 fn generate_variant_with_fields_in_same_module() {
     assert_code_action!(
-        GENERATE_VARIANT,
+        &generate_variant_message("Wibble"),
         r#"
 pub type Wibble {
   Wibble
@@ -339,7 +359,7 @@ pub fn main() -> Wibble {
 #[test]
 fn generate_variant_with_no_fields_in_same_module() {
     assert_code_action!(
-        GENERATE_VARIANT,
+        &generate_variant_message("Wibble"),
         r#"
 pub type Wibble {
   Wibble
@@ -355,7 +375,7 @@ pub fn main() -> Wibble {
 #[test]
 fn generate_variant_with_labels_in_same_module() {
     assert_code_action!(
-        GENERATE_VARIANT,
+        &generate_variant_message("Wibble"),
         r#"
 pub type Wibble {
   Wibble
@@ -371,7 +391,7 @@ pub fn main() -> Wibble {
 #[test]
 fn generate_variant_from_pattern_with_fields() {
     assert_code_action!(
-        GENERATE_VARIANT,
+        &generate_variant_message("Wibble"),
         r#"
 pub type Wibble {
   Wibble
@@ -391,7 +411,7 @@ pub fn main() -> Wibble {
 #[test]
 fn generate_variant_from_pattern_with_labelled_fields() {
     assert_code_action!(
-        GENERATE_VARIANT,
+        &generate_variant_message("Wibble"),
         r#"
 pub type Wibble {
   Wibble
@@ -411,7 +431,7 @@ pub fn main() -> Wibble {
 #[test]
 fn generate_variant_from_pattern_with_no_fields() {
     assert_code_action!(
-        GENERATE_VARIANT,
+        &generate_variant_message("Wibble"),
         r#"
 pub type Wibble {
   Wibble
@@ -441,7 +461,7 @@ pub fn new() -> other.Wibble { todo }
 "#;
 
     assert_code_action!(
-        GENERATE_VARIANT,
+        &generate_variant_message("other.Wibble"),
         TestProject::for_source(src).add_module("other", "pub type Wibble"),
         find_position_of("Wobble").to_selection()
     );
@@ -461,7 +481,7 @@ pub fn new() -> other.Wibble { todo }
 "#;
 
     assert_code_action!(
-        GENERATE_VARIANT,
+        &generate_variant_message("other.Wibble"),
         TestProject::for_source(src).add_module(
             "other",
             "pub type Wibble {
@@ -486,7 +506,7 @@ pub fn new() -> other.Wibble { todo }
 "#;
 
     assert_code_action!(
-        GENERATE_VARIANT,
+        &generate_variant_message("other.Wibble"),
         TestProject::for_source(src).add_module(
             "other",
             "pub type Wibble {
@@ -509,7 +529,7 @@ pub fn main() -> other.Wibble {
 pub fn new() -> other.Wibble { todo }
 "#;
     assert_code_action!(
-        GENERATE_VARIANT,
+        &generate_variant_message("other.Wibble"),
         TestProject::for_source(src).add_module("other", "pub type Wibble"),
         find_position_of("Wobble").to_selection()
     );
@@ -518,7 +538,7 @@ pub fn new() -> other.Wibble { todo }
 #[test]
 fn do_not_generate_variant_if_one_with_the_same_name_exists() {
     assert_no_code_actions!(
-        GENERATE_VARIANT,
+        &generate_variant_message("Wibble"),
         r#"
 pub fn main() -> Wibble {
   let assert Wobble = new()
@@ -546,7 +566,7 @@ pub fn main() -> Wibble {
 pub fn new() -> Wibble { todo }
 "#;
     assert_no_code_actions!(
-        GENERATE_VARIANT,
+        &generate_variant_message("Wibble"),
         TestProject::for_source(src).add_module("other", "pub type Wibble { Wobble(String) }"),
         find_position_of("Wobble").to_selection()
     );
@@ -564,7 +584,7 @@ pub fn main() -> Wibble {
 pub fn new() -> Wibble { todo }
 "#;
     assert_no_code_actions!(
-        GENERATE_VARIANT,
+        &generate_variant_message("Wibble"),
         TestProject::for_source(src).add_module("other", "pub type Wibble { Wobble(String) }"),
         find_position_of("Wobble").to_selection()
     );
