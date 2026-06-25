@@ -398,9 +398,8 @@
       function(wobble)
       echo wobble as "2"
   }
-  fn function(wobble: a) -> Nil {
+  fn function(wobble: a) -> a {
     echo wobble as "1"
-    Nil
   }
   ```
 
