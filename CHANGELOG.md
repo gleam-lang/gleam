@@ -401,3 +401,7 @@
 - Fixed a bug where after removing dependencies with `gleam remove` if a
   removed dependency is still used the build would succeed, resulting in
   runtime crash due to missing files.
+
+- Fixed a bug where the language server would incorrectly rename values and
+  types with a same-named import alias.
+  ([Andrey Kozhev](https://github.com/ankddev))
