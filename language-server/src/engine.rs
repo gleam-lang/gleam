@@ -41,7 +41,7 @@ use std::{
 use crate::{
     code_action::{
         DiscardUnusedVariable, RemoveRedundantRecordUpdate, ReplaceUnderscoreWithType,
-        type_errors_for_module,
+        code_action_fix_deprecated_pipe, type_errors_for_module,
     },
     reference::find_module_references_in_module,
     rename::{rename_module_alias, rename_module_occurrences, rename_type_variable},
@@ -554,6 +554,7 @@ where
                 .code_actions(),
             );
             actions.extend(DiscardUnusedVariable::new(module, &lines, &params).code_actions());
+            code_action_fix_deprecated_pipe(module, &lines, &params, &mut actions);
 
             actions.sort_by_key(|one| {
                 let preferred_key = if one.is_preferred == Some(true) { 0 } else { 1 };

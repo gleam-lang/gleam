@@ -1,0 +1,29 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  1 |> wibble(2)\n}\n\npub fn wibble(a) {\n  fn(b) {\n    #(a, b)\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  1 |> wibble(2)
+        ↑       
+}
+
+pub fn wibble(a) {
+  fn(b) {
+    #(a, b)
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  1 |> wibble(2)()
+}
+
+pub fn wibble(a) {
+  fn(b) {
+    #(a, b)
+  }
+}
