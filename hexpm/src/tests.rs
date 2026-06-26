@@ -450,6 +450,7 @@ fn expected_package_exfmt() -> Package {
     Package {
         name: "exfmt".to_string(),
         repository: "hexpm".to_string(),
+        advisories: vec![],
         releases: vec![
             Release {
                 version: Version::try_from("0.0.0").unwrap(),
@@ -459,6 +460,7 @@ fn expected_package_exfmt() -> Package {
                     82, 48, 191, 145, 92, 172, 0, 108, 238, 71, 57, 23, 101, 177, 161, 83, 91, 182,
                     18, 232, 249, 225, 29, 12, 246, 5, 215, 165, 32, 57, 179, 110,
                 ],
+                security_advisories: vec![],
                 meta: (),
             },
             Release {
@@ -469,6 +471,7 @@ fn expected_package_exfmt() -> Package {
                     111, 246, 240, 176, 118, 229, 12, 15, 164, 61, 186, 3, 89, 106, 153, 225, 247,
                     52, 245, 8, 216, 139, 21, 232, 200, 16, 214, 59, 241, 188, 9, 6,
                 ],
+                security_advisories: vec![],
                 meta: (),
             },
             Release {
@@ -479,6 +482,7 @@ fn expected_package_exfmt() -> Package {
                     149, 9, 192, 229, 84, 162, 110, 207, 161, 43, 31, 0, 126, 168, 14, 243, 31, 43,
                     195, 238, 100, 91, 78, 100, 213, 181, 101, 154, 106, 168, 170, 107,
                 ],
+                security_advisories: vec![],
                 meta: (),
             },
             Release {
@@ -489,6 +493,7 @@ fn expected_package_exfmt() -> Package {
                     157, 229, 28, 212, 92, 249, 14, 240, 235, 104, 31, 12, 160, 199, 83, 195, 154,
                     105, 222, 37, 221, 80, 181, 183, 113, 240, 234, 107, 144, 85, 255, 65,
                 ],
+                security_advisories: vec![],
                 meta: (),
             },
             Release {
@@ -499,6 +504,7 @@ fn expected_package_exfmt() -> Package {
                     112, 250, 133, 189, 183, 192, 54, 218, 115, 55, 216, 97, 204, 201, 191, 168,
                     250, 133, 138, 252, 202, 240, 74, 197, 228, 235, 81, 18, 241, 7, 155, 38,
                 ],
+                security_advisories: vec![],
                 meta: (),
             },
             Release {
@@ -509,6 +515,7 @@ fn expected_package_exfmt() -> Package {
                     131, 20, 29, 160, 171, 124, 7, 125, 210, 88, 17, 189, 199, 49, 191, 190, 14,
                     162, 38, 247, 52, 176, 189, 17, 7, 188, 151, 152, 24, 64, 170, 29,
                 ],
+                security_advisories: vec![],
                 meta: (),
             },
             Release {
@@ -519,6 +526,7 @@ fn expected_package_exfmt() -> Package {
                     109, 162, 185, 169, 26, 4, 62, 60, 167, 54, 182, 161, 140, 197, 75, 113, 183,
                     117, 247, 201, 218, 228, 14, 160, 115, 157, 196, 51, 108, 16, 96, 217,
                 ],
+                security_advisories: vec![],
                 meta: (),
             },
             Release {
@@ -529,6 +537,7 @@ fn expected_package_exfmt() -> Package {
                     97, 50, 95, 212, 242, 59, 245, 177, 140, 78, 79, 180, 108, 174, 119, 176, 24,
                     80, 218, 152, 178, 227, 152, 242, 32, 126, 72, 67, 222, 0, 173, 170,
                 ],
+                security_advisories: vec![],
                 meta: (),
             },
             Release {
@@ -539,6 +548,7 @@ fn expected_package_exfmt() -> Package {
                     246, 178, 237, 214, 217, 158, 143, 52, 130, 186, 64, 50, 94, 175, 161, 81, 68,
                     186, 4, 73, 53, 226, 235, 144, 209, 84, 231, 136, 165, 119, 122, 126,
                 ],
+                security_advisories: vec![],
                 meta: (),
             },
             Release {
@@ -549,6 +559,7 @@ fn expected_package_exfmt() -> Package {
                     151, 86, 157, 218, 218, 131, 240, 119, 198, 216, 202, 240, 65, 17, 57, 228, 84,
                     252, 59, 207, 246, 49, 22, 21, 52, 47, 51, 139, 190, 9, 95, 109,
                 ],
+                security_advisories: vec![],
                 meta: (),
             },
         ],
@@ -891,6 +902,7 @@ fn get_package_release_response_ok() {
                 "app": "cowboy"
             }
         },
+        "security_advisories": [],
         "meta": {
             "app": "clint",
             "build_tools": ["mix"]
@@ -903,6 +915,7 @@ fn get_package_release_response_ok() {
         resp,
         Release {
             version: Version::new(0, 0, 1),
+            security_advisories: vec![],
             requirements: [
                 (
                     "plug".into(),

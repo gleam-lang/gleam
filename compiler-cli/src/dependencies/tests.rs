@@ -641,10 +641,12 @@ fn provided_local_to_hex() {
     let hex_package = hexpm::Package {
         name: "package".into(),
         repository: "local".into(),
+        advisories: vec![],
         releases: vec![hexpm::Release {
             version: Version::new(1, 0, 0),
             retirement_status: None,
             outer_checksum: vec![],
+            security_advisories: vec![],
             meta: (),
             requirements: [
                 (
@@ -700,11 +702,13 @@ fn provided_git_to_hex() {
     let hex_package = hexpm::Package {
         name: "package".into(),
         repository: "local".into(),
+        advisories: vec![],
         releases: vec![hexpm::Release {
             version: Version::new(1, 0, 0),
             retirement_status: None,
             outer_checksum: vec![],
             meta: (),
+            security_advisories: vec![],
             requirements: [
                 (
                     "req_1".into(),
