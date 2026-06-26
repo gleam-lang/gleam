@@ -281,8 +281,6 @@ pub fn api_unretire_release_response(response: http::Response<Vec<u8>>) -> Resul
 /// the package registry.
 ///
 /// https://github.com/hexpm/specifications/blob/main/registry-v2.md
-///
-/// TODO: Where are the API docs for this?
 pub fn repository_v2_get_versions_request(
     credentials: Option<&Credentials>,
     config: &Config,
@@ -411,7 +409,6 @@ pub fn repository_v2_package_parse_body(
 }
 
 /// Create a request to download a version of a package as a tarball
-/// TODO: Where are the API docs for this?
 pub fn repository_get_package_tarball_request(
     name: &str,
     version: &str,
