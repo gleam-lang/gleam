@@ -907,12 +907,14 @@ impl ProvidedPackage {
             requirements,
             retirement_status: None,
             outer_checksum: vec![],
+            security_advisories: vec![],
             meta: (),
         };
         hexpm::Package {
             name: name.as_str().into(),
             repository: "local".into(),
             releases: vec![release],
+            advisories: vec![],
         }
     }
 
