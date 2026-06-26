@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/requirement.rs
+expression: error.to_string()
+---
+TOML parse error at line 2, column 24
+  |
+2 |             monorepo = { git = "https://github.com/gleam-lang/gleam.git", ref = "main", path = "../escape" }
+  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+paths must not contain .. segments

@@ -17,7 +17,25 @@ use std::{
 };
 use tar::{Archive, Entry};
 
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::{Utf8Component, Utf8Path, Utf8PathBuf};
+
+/// Validates that a path is safe to use as a relative path.
+pub fn validate_safe_relative_path(path: &Utf8Path) -> Result<(), &'static str> {
+    // Absolute paths are not permitted.
+    // On Windows paths starting with \\ are drive-relative, so absolute as
+    // far as we are concerned.
+    if path.is_absolute() || (cfg!(windows) && path.starts_with("\\")) {
+        return Err("paths must be relative");
+    }
+
+    for component in path.components() {
+        if component == Utf8Component::ParentDir {
+            return Err("paths must not contain .. segments");
+        }
+    }
+
+    Ok(())
+}
 
 /// Takes in a source path and a target path and determines a relative path
 /// from source -> target.

@@ -83,3 +83,6 @@ ignore = "0"
 num-bigint = { version = "0.4.6", features = ["serde"] }
 # Unicode grapheme traversal
 unicode-segmentation = "1.13.2"
+# Checksums
+xxhash-rust = { version = "0", features = ["xxh3"] }
+

@@ -402,6 +402,7 @@ fn missing_local_packages() {
             ("local3".into(), Version::parse("3.0.0").unwrap()),
         ]
         .into(),
+        git: HashMap::new(),
     }
     .missing_local_packages(&manifest, "root");
     extra.sort();
@@ -441,6 +442,7 @@ fn extra_local_packages() {
             ("local3".into(), Version::parse("3.0.0").unwrap()),
         ]
         .into(),
+        git: HashMap::new(),
     }
     .extra_local_packages(&Manifest {
         requirements: HashMap::new(),
@@ -554,7 +556,7 @@ fn provide_conflicting_package() {
     let result = provide_package(
         "hello_world".into(),
         Utf8PathBuf::from("./test/other"),
-        ProvidedPackageSource::Local {
+        SourceContext::Local {
             path: Utf8Path::new("./test/other").to_path_buf(),
         },
         &project_paths,
@@ -683,6 +685,7 @@ fn provided_git_to_hex() {
         source: ProvidedPackageSource::Git {
             repo: "https://github.com/gleam-lang/gleam.git".into(),
             commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+            path: None,
         },
         requirements: [
             (
@@ -779,6 +782,7 @@ fn provided_git_to_manifest() {
         source: ProvidedPackageSource::Git {
             repo: "https://github.com/gleam-lang/gleam.git".into(),
             commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+            path: None,
         },
         requirements: [
             (
@@ -802,6 +806,7 @@ fn provided_git_to_manifest() {
         source: ManifestPackageSource::Git {
             repo: "https://github.com/gleam-lang/gleam.git".into(),
             commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+            path: None,
         },
     };
 
@@ -809,6 +814,308 @@ fn provided_git_to_manifest() {
         provided_package.to_manifest_package("package"),
         manifest_package
     );
+}
+
+#[test]
+fn provided_git_path_package_resolves_repo_relative_path() {
+    let repo_root = fs::canonicalise(Utf8Path::new("./test")).unwrap();
+    let result = resolve_git_path_package(
+        &"hello_world".into(),
+        Utf8Path::new("../hello_world"),
+        &"https://github.com/gleam-lang/wibble.git".into(),
+        &repo_root.join("hello_world"),
+        &repo_root,
+    );
+    assert_eq!(
+        result,
+        Ok((repo_root.join("hello_world"), "hello_world".into()))
+    );
+}
+
+#[test]
+fn provided_git_path_package_child_uses_canonical_parent_location() {
+    let tmp = tempfile::tempdir().unwrap();
+    let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
+    let repo = base.join("repo");
+    fs::mkdir(&repo.join("packages").join("package_a")).unwrap();
+    fs::mkdir(&repo.join("packages").join("package_b")).unwrap();
+    fs::write(
+        &repo.join("packages").join("package_a").join("gleam.toml"),
+        r#"
+name = "package_a"
+version = "0.1.0"
+
+[dependencies]
+package_b = { path = "../package_b" }
+"#,
+    )
+    .unwrap();
+    fs::write(
+        &repo.join("packages").join("package_b").join("gleam.toml"),
+        r#"
+name = "package_b"
+version = "0.2.0"
+"#,
+    )
+    .unwrap();
+
+    let mut provided = HashMap::new();
+    let project_paths = crate::project_paths_at_current_directory_without_toml();
+    let repo_root = fs::canonicalise(&repo).unwrap();
+    let result = provide_package(
+        "package_a".into(),
+        fs::canonicalise(&repo.join("packages").join("package_a")).unwrap(),
+        SourceContext::Git {
+            repo: "https://github.com/gleam-lang/wibble.git".into(),
+            commit: "95cd2c2f45907e5571e9b5fcdfb27ff35cdcdd29".into(),
+            path: Some("packages/package_a".into()),
+            repo_root: &repo_root,
+        },
+        &project_paths,
+        &mut provided,
+        &mut vec!["root".into()],
+    );
+    assert_eq!(
+        result,
+        Ok(hexpm::version::Range::new("== 0.1.0".into()).unwrap())
+    );
+    let package = provided.get("package_b").unwrap();
+    assert_eq!(
+        package.source,
+        ProvidedPackageSource::Git {
+            repo: "https://github.com/gleam-lang/wibble.git".into(),
+            commit: "95cd2c2f45907e5571e9b5fcdfb27ff35cdcdd29".into(),
+            path: Some("packages/package_b".into()),
+        }
+    );
+}
+
+#[test]
+fn provided_git_path_package_rejects_missing_directory() {
+    let tmp = tempfile::tempdir().unwrap();
+    let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
+    let repo = base.join("repo");
+    fs::mkdir(&repo.join("parent")).unwrap();
+
+    let repo_root = fs::canonicalise(&repo).unwrap();
+    let result = resolve_git_path_package(
+        &"missing".into(),
+        Utf8Path::new("../missing"),
+        &"https://github.com/gleam-lang/wibble.git".into(),
+        &repo_root.join("parent"),
+        &repo_root,
+    );
+    assert_eq!(
+        result,
+        Err(Error::GitDependencyPathNotFound {
+            package: "missing".into(),
+            path: "../missing".into(),
+            repo: "https://github.com/gleam-lang/wibble.git".into(),
+        })
+    );
+}
+
+#[test]
+fn resolve_git_subdir_accepts_directory_inside_repo() {
+    let tmp = tempfile::tempdir().unwrap();
+    let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
+    let clone = base.join("clone");
+    fs::mkdir(&clone.join("sub")).unwrap();
+
+    let expected = fs::canonicalise(&clone).unwrap().join("sub");
+    assert_eq!(
+        resolve_git_subdir(&clone, Utf8Path::new("sub")),
+        Some(expected)
+    );
+}
+
+#[test]
+fn resolve_git_subdir_rejects_missing_directory() {
+    let tmp = tempfile::tempdir().unwrap();
+    let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
+    let clone = base.join("clone");
+    fs::mkdir(&clone).unwrap();
+
+    assert_eq!(resolve_git_subdir(&clone, Utf8Path::new("missing")), None);
+}
+
+#[cfg(unix)]
+#[test]
+fn resolve_git_subdir_rejects_symlink_escaping_repo() {
+    let tmp = tempfile::tempdir().unwrap();
+    let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
+    let clone = base.join("clone");
+    let outside = base.join("outside");
+    fs::mkdir(&clone).unwrap();
+    fs::mkdir(&outside).unwrap();
+    std::os::unix::fs::symlink(outside.as_std_path(), clone.join("escape").as_std_path()).unwrap();
+
+    assert_eq!(resolve_git_subdir(&clone, Utf8Path::new("escape")), None);
+}
+
+#[test]
+fn provided_git_path_package_rejects_escaping_path() {
+    let tmp = tempfile::tempdir().unwrap();
+    let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
+    let repo = base.join("repo");
+    let outside = base.join("outside");
+    fs::mkdir(&repo.join("parent")).unwrap();
+    fs::mkdir(&outside).unwrap();
+
+    let repo_root = fs::canonicalise(&repo).unwrap();
+    let result = resolve_git_path_package(
+        &"package_a".into(),
+        Utf8Path::new("../../outside"),
+        &"https://github.com/gleam-lang/wibble.git".into(),
+        &repo_root.join("parent"),
+        &repo_root,
+    );
+    assert_eq!(
+        result,
+        Err(Error::GitDependencyPathNotFound {
+            package: "package_a".into(),
+            path: "../../outside".into(),
+            repo: "https://github.com/gleam-lang/wibble.git".into(),
+        })
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn provided_git_path_package_rejects_symlink_escaping_repo() {
+    let tmp = tempfile::tempdir().unwrap();
+    let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
+    let repo = base.join("repo");
+    let outside = base.join("outside");
+    fs::mkdir(&repo.join("parent")).unwrap();
+    fs::mkdir(&outside).unwrap();
+    std::os::unix::fs::symlink(outside.as_std_path(), repo.join("escape").as_std_path()).unwrap();
+
+    let repo_root = fs::canonicalise(&repo).unwrap();
+    let result = resolve_git_path_package(
+        &"escape".into(),
+        Utf8Path::new("../escape"),
+        &"https://github.com/gleam-lang/wibble.git".into(),
+        &repo_root.join("parent"),
+        &repo_root,
+    );
+    assert_eq!(
+        result,
+        Err(Error::GitDependencyPathNotFound {
+            package: "escape".into(),
+            path: "../escape".into(),
+            repo: "https://github.com/gleam-lang/wibble.git".into(),
+        })
+    );
+}
+
+#[test]
+fn git_repo_dir_name_uses_repo_basename_and_hash_of_full_url() {
+    assert_eq!(
+        git_repo_dir_name("https://github.com/gleam-lang/gleam"),
+        "gleam-4d40009bf5eb0110"
+    );
+    assert_eq!(
+        git_repo_dir_name("https://github.com/gleam-lang/gleam.git"),
+        "gleam-ea2aeaa3761e8bc6"
+    );
+    assert_eq!(
+        git_repo_dir_name("git@github.com:gleam-lang/gleam.git"),
+        "gleam-102c9e1e5cf87965"
+    );
+    assert_eq!(
+        git_repo_dir_name("C:\\src\\gleam.git"),
+        "gleam-ab03c1f252f639da"
+    );
+}
+
+#[test]
+fn git_staging_path_is_clone_path_with_staging_suffix() {
+    let paths = ProjectPaths::new("/app".into());
+    let repo = "https://github.com/gleam-lang/gleam.git";
+    assert_eq!(
+        paths.build_git_repo(&git_repo_dir_name(repo)),
+        Utf8PathBuf::from("/app/build/git/gleam-ea2aeaa3761e8bc6")
+    );
+    assert_eq!(
+        git_staging_path(&paths, repo, "wibble"),
+        Utf8PathBuf::from("/app/build/git/gleam-ea2aeaa3761e8bc6-wibble-staging")
+    );
+}
+
+#[test]
+fn git_checkout_cleanup_deletes_staging_directory() {
+    let tmp = tempfile::tempdir().unwrap();
+    let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
+    let staging_path = base.join("clone-staging");
+    fs::mkdir(&staging_path).unwrap();
+    fs::write(&staging_path.join("gleam.toml"), "name = \"wibble\"").unwrap();
+
+    let checkout = GitCheckout::Staged {
+        commit: "95cd2c2f45907e5571e9b5fcdfb27ff35cdcdd29".into(),
+        staging_path: staging_path.clone(),
+    };
+    assert_eq!(checkout.cleanup(), Ok(()));
+
+    assert!(!staging_path.exists());
+}
+
+#[test]
+fn git_checkout_cleanup_without_staging_is_noop() {
+    let checkout = GitCheckout::InPlace {
+        commit: "95cd2c2f45907e5571e9b5fcdfb27ff35cdcdd29".into(),
+    };
+    assert_eq!(checkout.cleanup(), Ok(()));
+}
+
+#[test]
+fn remove_unused_git_clones_sweeps_unexpected_directories() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
+    let paths = ProjectPaths::new(root);
+    let repo = "https://github.com/gleam-lang/gleam.git";
+
+    let expected_clone = paths.build_git_repo(&git_repo_dir_name(repo));
+    let stale_clone = paths.build_git_repo("other-0011223344556677");
+    let stale_staging = paths.build_git_repo(&format!("{}-staging", git_repo_dir_name(repo)));
+    fs::mkdir(&expected_clone).unwrap();
+    fs::mkdir(&stale_clone).unwrap();
+    fs::mkdir(&stale_staging).unwrap();
+
+    let manifest = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![ManifestPackage {
+            name: "wibble".into(),
+            version: Version::new(1, 0, 0),
+            build_tools: ["gleam".into()].into(),
+            otp_app: None,
+            requirements: vec![],
+            source: ManifestPackageSource::Git {
+                repo: repo.into(),
+                commit: "95cd2c2f45907e5571e9b5fcdfb27ff35cdcdd29".into(),
+                path: Some("wibble".into()),
+            },
+        }],
+    };
+
+    assert_eq!(remove_unused_git_clones(&paths, &manifest), Ok(()));
+
+    assert!(expected_clone.is_dir());
+    assert!(!stale_clone.exists());
+    assert!(!stale_staging.exists());
+}
+
+#[test]
+fn remove_unused_git_clones_missing_directory_is_noop() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
+    let paths = ProjectPaths::new(root);
+    let manifest = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![],
+    };
+
+    assert_eq!(remove_unused_git_clones(&paths, &manifest), Ok(()));
 }
 
 #[test]

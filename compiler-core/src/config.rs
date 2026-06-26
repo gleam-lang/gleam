@@ -1018,8 +1018,8 @@ pub struct DocsPage {
     pub source: Utf8PathBuf,
 }
 
-mod package_scoped_path {
-    use camino::{Utf8Component, Utf8PathBuf};
+pub(crate) mod package_scoped_path {
+    use camino::Utf8PathBuf;
     use serde::{Deserialize, Deserializer, de::Error as _};
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<Utf8PathBuf, D::Error>
@@ -1027,16 +1027,17 @@ mod package_scoped_path {
         D: Deserializer<'de>,
     {
         let path = Utf8PathBuf::deserialize(deserializer)?;
-        // Absolute paths are not permitted.
-        // On Windows paths starting with \\ are drive-relative, so absolute as
-        // far as we are concerned.
-        if path.is_absolute() || (cfg!(windows) && path.starts_with("\\")) {
-            return Err(D::Error::custom("paths must be relative"));
-        }
-        for component in path.components() {
-            if component == Utf8Component::ParentDir {
-                return Err(D::Error::custom("paths must not contain .. segments"));
-            }
+        crate::io::validate_safe_relative_path(&path).map_err(D::Error::custom)?;
+        Ok(path)
+    }
+
+    pub fn optional_deserialize<'de, D>(deserializer: D) -> Result<Option<Utf8PathBuf>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let path = Option::<Utf8PathBuf>::deserialize(deserializer)?;
+        if let Some(path) = &path {
+            crate::io::validate_safe_relative_path(path).map_err(D::Error::custom)?;
         }
         Ok(path)
     }
