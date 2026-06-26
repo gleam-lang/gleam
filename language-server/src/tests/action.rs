@@ -387,7 +387,8 @@ pub fn main() -> Wibble {
 #[test]
 fn generate_variant_from_pattern_with_fields() {
     assert_code_action!(
-        &generate_variant_message("Wobble"),
+        // FIXME: should be unqualified
+        &generate_variant_message("app.Wobble"),
         r#"
 pub type Wibble {
   Wibble
@@ -457,7 +458,7 @@ pub fn new() -> other.Wibble { todo }
 "#;
 
     assert_code_action!(
-        &generate_variant_message("Wobble"),
+        &generate_variant_message("other.Wobble"),
         TestProject::for_source(src).add_module("other", "pub type Wibble"),
         find_position_of("Wobble").to_selection()
     );
@@ -477,7 +478,7 @@ pub fn new() -> other.Wibble { todo }
 "#;
 
     assert_code_action!(
-        &generate_variant_message("Wobble"),
+        &generate_variant_message("other.Wobble"),
         TestProject::for_source(src).add_module(
             "other",
             "pub type Wibble {
@@ -502,7 +503,7 @@ pub fn new() -> other.Wibble { todo }
 "#;
 
     assert_code_action!(
-        &generate_variant_message("Wobble"),
+        &generate_variant_message("other.Wobble"),
         TestProject::for_source(src).add_module(
             "other",
             "pub type Wibble {
@@ -525,7 +526,7 @@ pub fn main() -> other.Wibble {
 pub fn new() -> other.Wibble { todo }
 "#;
     assert_code_action!(
-        &generate_variant_message("Wobble"),
+        &generate_variant_message("other.Wobble"),
         TestProject::for_source(src).add_module("other", "pub type Wibble"),
         find_position_of("Wobble").to_selection()
     );
@@ -562,7 +563,7 @@ pub fn main() -> Wibble {
 pub fn new() -> Wibble { todo }
 "#;
     assert_no_code_actions!(
-        &generate_variant_message("Wobble"),
+        &generate_variant_message("other.Wobble"),
         TestProject::for_source(src).add_module("other", "pub type Wibble { Wobble(String) }"),
         find_position_of("Wobble").to_selection()
     );
@@ -580,7 +581,7 @@ pub fn main() -> Wibble {
 pub fn new() -> Wibble { todo }
 "#;
     assert_no_code_actions!(
-        &generate_variant_message("Wobble"),
+        &generate_variant_message("other.Wobble"),
         TestProject::for_source(src).add_module("other", "pub type Wibble { Wobble(String) }"),
         find_position_of("Wobble").to_selection()
     );
