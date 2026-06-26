@@ -7126,7 +7126,7 @@ impl<'a, IO> GenerateVariant<'a, IO> {
             );
         }
 
-        let mut builder = CodeActionBuilder::new(&format!("Generate {name} variant"))
+        let mut builder = CodeActionBuilder::new(&format!("Generate `{name}` variant"))
             .kind(CodeActionKind::QuickFix)
             .preferred(true);
 
