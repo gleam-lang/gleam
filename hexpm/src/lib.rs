@@ -281,8 +281,6 @@ pub fn api_unretire_release_response(response: http::Response<Vec<u8>>) -> Resul
 /// the package registry.
 ///
 /// https://github.com/hexpm/specifications/blob/main/registry-v2.md
-///
-/// TODO: Where are the API docs for this?
 pub fn repository_v2_get_versions_request(
     credentials: Option<&Credentials>,
     config: &Config,
@@ -395,15 +393,25 @@ pub fn repository_v2_package_parse_body(
         verify_payload(signed, public_key).map_err(|_| ApiError::IncorrectPayloadSignature)?;
 
     let package = proto::package::Package::decode(payload.as_slice())?;
-    let releases = package
-        .releases
-        .clone()
+    let proto::package::Package {
+        name,
+        repository,
+        advisories: proto_advisories,
+        releases: proto_releases,
+    } = package;
+
+    let advisories = proto_advisories
         .into_iter()
-        .map(proto_to_release)
+        .map(proto_to_security_advisory)
+        .collect::<Result<Vec<_>, _>>()?;
+    let releases = proto_releases
+        .into_iter()
+        .map(|release| proto_to_release(release, &advisories))
         .collect::<Result<Vec<_>, _>>()?;
     let package = Package {
-        name: package.name,
-        repository: package.repository,
+        name,
+        repository,
+        advisories,
         releases,
     };
 
@@ -411,7 +419,6 @@ pub fn repository_v2_package_parse_body(
 }
 
 /// Create a request to download a version of a package as a tarball
-/// TODO: Where are the API docs for this?
 pub fn repository_get_package_tarball_request(
     name: &str,
     version: &str,
@@ -869,7 +876,10 @@ fn proto_to_dep(dep: proto::package::Dependency) -> Result<(String, Dependency),
     ))
 }
 
-fn proto_to_release(release: proto::package::Release) -> Result<Release<()>, ApiError> {
+fn proto_to_release(
+    release: proto::package::Release,
+    package_advisories: &[SecurityAdvisory],
+) -> Result<Release<()>, ApiError> {
     let dependencies = release
         .dependencies
         .clone()
@@ -878,23 +888,79 @@ fn proto_to_release(release: proto::package::Release) -> Result<Release<()>, Api
         .collect::<Result<HashMap<_, _>, _>>()?;
     let version = Version::try_from(release.version.as_str())
         .expect("Failed to parse version format from Hex");
+    let security_advisories = package_advisories
+        .iter()
+        .enumerate()
+        .filter_map(|(index, advisory)| {
+            if release.advisory_indexes.contains(&(index as u32)) {
+                Some(advisory.clone())
+            } else {
+                None
+            }
+        })
+        .collect();
     Ok(Release {
         version,
         outer_checksum: release.outer_checksum.unwrap_or_default(),
         retirement_status: proto_to_retirement_status(release.retired),
         requirements: dependencies,
+        security_advisories,
         meta: (),
     })
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Package {
-    pub name: String,
-    pub repository: String,
-    pub releases: Vec<Release<()>>,
+fn proto_to_security_advisory(
+    advisory: proto::package::SecurityAdvisory,
+) -> Result<SecurityAdvisory, ApiError> {
+    let proto::package::SecurityAdvisory {
+        id,
+        summary,
+        aliases,
+        api_url,
+        cvss_score,
+        html_url,
+        severity,
+    } = advisory;
+    // We use this instead of just `SecurityAdvisory::severity()` to save `None`
+    // state, since otherwise it will be lost.
+    let severity = severity
+        .and_then(|severity| severity.try_into().ok())
+        .map(proto_to_advisory_severity);
+    Ok(SecurityAdvisory {
+        id,
+        summary,
+        html_url,
+        severity,
+        cvss_score,
+        api_url,
+        aliases,
+    })
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
+fn proto_to_advisory_severity(severity: proto::package::AdvisorySeverity) -> AdvisorySeverity {
+    use proto::package::AdvisorySeverity::*;
+    match severity {
+        SeverityNone => AdvisorySeverity::None,
+        SeverityLow => AdvisorySeverity::Low,
+        SeverityMedium => AdvisorySeverity::Medium,
+        SeverityHigh => AdvisorySeverity::High,
+        SeverityCritical => AdvisorySeverity::Critical,
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Package {
+    /// Name of package
+    pub name: String,
+    /// Name of repository
+    pub repository: String,
+    /// All releases of the package
+    pub releases: Vec<Release<()>>,
+    /// All security advisories affecting any release of the package
+    pub advisories: Vec<SecurityAdvisory>,
+}
+
+#[derive(Debug, PartialEq, Clone, serde::Deserialize)]
 pub struct Release<Meta> {
     /// Release version
     pub version: Version,
@@ -907,6 +973,8 @@ pub struct Release<Meta> {
     /// required when encoding but optional when decoding
     #[serde(alias = "checksum", deserialize_with = "deserialize_checksum")]
     pub outer_checksum: Vec<u8>,
+    /// Security advisories affecting this release of the package
+    pub security_advisories: Vec<SecurityAdvisory>,
     /// This is not present in all API endpoints so may be absent sometimes.
     pub meta: Meta,
 }
@@ -971,6 +1039,63 @@ impl RetirementReason {
             RetirementReason::Security => "security",
             RetirementReason::Deprecated => "deprecated",
             RetirementReason::Renamed => "renamed",
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, serde::Deserialize)]
+pub struct SecurityAdvisory {
+    /// Advisory identifier (e.g. GHSA-xxxx-xxxx-xxxx or CVE-xxxx-xxxxx)
+    pub id: String,
+    /// Short description of the advisory
+    pub summary: String,
+    /// OSV web URL for the advisory
+    pub html_url: String,
+    /// Severity of the advisory
+    pub severity: Option<AdvisorySeverity>,
+    /// CVSS score (0.0–10.0)
+    pub cvss_score: Option<f32>,
+    /// OSV API URL for the advisory
+    pub api_url: String,
+    /// Other identifiers for the same vulnerability (e.g. a CVE id when the
+    /// primary id is a GHSA id, or vice versa).
+    pub aliases: Vec<String>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum AdvisorySeverity {
+    None,
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+impl<'de> serde::Deserialize<'de> for AdvisorySeverity {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s: &str = serde::de::Deserialize::deserialize(deserializer)?;
+        match s {
+            "none" => Ok(AdvisorySeverity::None),
+            "low" => Ok(AdvisorySeverity::Low),
+            "medium" => Ok(AdvisorySeverity::Medium),
+            "high" => Ok(AdvisorySeverity::High),
+            "critical" => Ok(AdvisorySeverity::Critical),
+            _ => Err(serde::de::Error::custom("unknown advisory severity type")),
+        }
+    }
+}
+
+impl AdvisorySeverity {
+    pub fn to_str(&self) -> &'static str {
+        match self {
+            AdvisorySeverity::None => "none",
+            AdvisorySeverity::Low => "low",
+            AdvisorySeverity::Medium => "medium",
+            AdvisorySeverity::High => "high",
+            AdvisorySeverity::Critical => "critical",
         }
     }
 }
