@@ -17,6 +17,8 @@ members = [
   "hexpm",
   "pretty-arena",
   "format",
+  "erlang-term-format",
+  "erlang-abstract-format",
 ]
 
 # common dependencies
@@ -81,5 +83,6 @@ opener = "0"
 ignore = "0"
 # Parsing of arbitrary width int values
 num-bigint = { version = "0.4.6", features = ["serde"] }
+num-traits = "0.2.19"
 # Unicode grapheme traversal
 unicode-segmentation = "1.13.2"
