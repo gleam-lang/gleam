@@ -1,0 +1,92 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2014 The Hex Team
+
+syntax = "proto2";
+
+package policy;
+
+import "package.proto";
+
+message Policy {
+  // Name of repository
+  required string repository = 1;
+
+  // Policy name within the repository
+  // (matches ^[a-z0-9][a-z0-9_\-\.]*[a-z0-9]$, length 3..64)
+  required string name = 2;
+
+  // Optional, free-form description (admin-set, surfaced in CLI/UI)
+  optional string description = 3;
+
+  // Whether the policy is publicly readable or restricted to org members.
+  // Read at the edge to decide whether to enforce auth on the fetch.
+  // Adding new Visibility values is a breaking change — old clients will
+  // treat unknown values as PRIVATE per the fail-closed rule.
+  required Visibility visibility = 4;
+
+  // One entry per repository the policy constrains (in practice "hexpm" and
+  // the org's own repository). A candidate release is matched to the entry
+  // whose repository equals the release's repository; a release from a
+  // repository with no matching entry is unconstrained by this policy.
+  repeated RepositoryPolicy repositories = 5;
+}
+
+enum Visibility {
+  // PRIVATE is the safe default; unknown enum values must be treated as PRIVATE.
+  VISIBILITY_PRIVATE = 0;
+  VISIBILITY_PUBLIC = 1;
+}
+
+message RepositoryPolicy {
+  // Repository this entry applies to (e.g. "hexpm" or the org's repository).
+  required string repository = 1;
+
+  // Baseline limits applied to every release in this repository. Unset = no
+  // restriction. Restrictions never apply to releases permitted by an ALLOW
+  // override (those bypass all limits).
+  optional Restriction restriction = 2;
+
+  // Per-package final say, evaluated against each release in this repository.
+  // An ALLOW override permits the release immediately and bypasses
+  // `restriction`; a DENY override blocks it. When multiple overrides match a
+  // release, the one with the most specific requirement wins.
+  repeated Override overrides = 3;
+}
+
+message Restriction {
+  // Advisory limit. If set, deny any release whose maximum advisory severity
+  // is at least this value. Unset = no advisory limit.
+  optional package.AdvisorySeverity advisory_min_severity = 1;
+
+  // Retirement limit. If non-empty, deny any release retired with a reason in
+  // this set. Empty = no retirement limit.
+  repeated package.RetirementReason retirement_reasons = 2 [packed = true];
+
+  // Minimum release age. Same duration grammar as the Hex cooldown config
+  // ("7d", "2w", "1mo", "0"). Unset or "0" = no minimum age. If multiple
+  // active policies declare cooldowns, the effective cooldown is the strictest.
+  optional string cooldown = 3;
+}
+
+message PackageRef {
+  // Package name.
+  required string package = 1;
+
+  // Optional version requirement (e.g. "~> 1.7"). Unset = the whole package.
+  optional string requirement = 2;
+}
+
+message Override {
+  // Whether this override permits or blocks the matching release.
+  required OverrideAction action = 1;
+
+  // The package (and optional requirement) the override applies to.
+  required PackageRef ref = 2;
+}
+
+enum OverrideAction {
+  // Permit the release and bypass `restriction`.
+  OVERRIDE_ACTION_ALLOW = 0;
+  // Block the release.
+  OVERRIDE_ACTION_DENY = 1;
+}
