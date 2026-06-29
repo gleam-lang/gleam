@@ -60,32 +60,67 @@ fn init_client() -> Result<&'static Client, Error> {
         return Ok(client);
     }
 
-    let certificate_path = match std::env::var("GLEAM_CACERTS_PATH") {
-        Ok(path) => {
-            tracing::trace!("Using GLEAM_CACERTS_PATH environment variable");
-            path
-        }
-        Err(_) => {
-            return Ok(REQWEST_CLIENT.get_or_init(|| {
-                Client::builder()
-                    .build()
-                    .expect("Failed to create reqwest client")
-            }));
-        }
-    };
+    let client = build_client()?;
+    Ok(REQWEST_CLIENT.get_or_init(|| client))
+}
 
-    let certificate_bytes = fs::read_bytes(&certificate_path)?;
-    let certificate = Certificate::from_pem(&certificate_bytes).map_err(|error| Error::FileIo {
-        kind: FileKind::File,
-        action: FileIoAction::Parse,
-        path: Utf8PathBuf::from(&certificate_path),
-        err: Some(error.to_string()),
-    })?;
+/// Build the HTTP client with an appropriate certificate trust store.
+///
+/// On most platforms reqwest's default `rustls` configuration uses
+/// `rustls-platform-verifier`, which delegates to the operating system's trust
+/// manager. This respects OS-installed and enterprise root certificates along
+/// with the system's own trust decisions.
+///
+/// On Android that verifier reaches the trust manager by calling into the JVM,
+/// and without it panics on the first request (see issue #5823). There we read
+/// the same system trust store from the filesystem and configure those roots
+/// explicitly instead.
+fn build_client() -> Result<Client, Error> {
+    if cfg!(target_os = "android") {
+        let mut certificates = system_certificates();
+        if let Ok(certificate_path) = std::env::var("GLEAM_CACERTS_PATH") {
+            let certificate = read_certificate(&certificate_path)?;
+            certificates.push(certificate);
+        }
 
-    Ok(REQWEST_CLIENT.get_or_init(|| {
+        Client::builder()
+            .tls_certs_only(certificates)
+            .build()
+            .map_err(Error::http)
+    } else {
+        let Ok(certificate_path) = std::env::var("GLEAM_CACERTS_PATH") else {
+            return Client::builder().build().map_err(Error::http);
+        };
+
+        tracing::trace!("Using GLEAM_CACERTS_PATH environment variable");
+        let certificate = read_certificate(&certificate_path)?;
         Client::builder()
             .add_root_certificate(certificate)
             .build()
-            .expect("Failed to create reqwest client")
-    }))
+            .map_err(Error::http)
+    }
+}
+
+fn read_certificate(path: &str) -> Result<Certificate, Error> {
+    let bytes = fs::read_bytes(path)?;
+    Certificate::from_pem(&bytes).map_err(|error| Error::FileIo {
+        kind: FileKind::File,
+        action: FileIoAction::Parse,
+        path: Utf8PathBuf::from(path),
+        err: Some(error.to_string()),
+    })
+}
+
+/// Load the system trust store (only used on Android)
+fn system_certificates() -> Vec<Certificate> {
+    let loaded = rustls_native_certs::load_native_certs();
+    for error in &loaded.errors {
+        tracing::warn!("Failed to load a system certificate: {error}");
+    }
+
+    loaded
+        .certs
+        .iter()
+        .filter_map(|certificate| Certificate::from_der(certificate.as_ref()).ok())
+        .collect()
 }

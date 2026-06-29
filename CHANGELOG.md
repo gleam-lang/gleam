@@ -437,3 +437,7 @@
 - The formatter now properly indents multiline trailing comments inside of
   multiline lists and tuples.
   ([0xda157](https://github.com/0xda157))
+
+- Fixed a bug where the compiler would panic on the first HTTPS request on
+  Android.
+  ([John Downey](https://github.com/jtdowney))
