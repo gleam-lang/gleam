@@ -6919,6 +6919,7 @@ pub struct GenerateVariant<'a, IO> {
     params: &'a CodeActionParams,
     line_numbers: &'a LineNumbers,
     variant_to_generate: Option<VariantToGenerate<'a>>,
+    printer: Printer<'a>,
 }
 
 struct VariantToGenerate<'a> {
@@ -7060,6 +7061,7 @@ impl<'a, IO> GenerateVariant<'a, IO> {
             compiler,
             line_numbers,
             variant_to_generate: None,
+            printer: Printer::new(&module.ast.names),
         }
     }
 
@@ -7126,9 +7128,13 @@ impl<'a, IO> GenerateVariant<'a, IO> {
             );
         }
 
-        let mut builder = CodeActionBuilder::new("Generate variant")
-            .kind(CodeActionKind::QuickFix)
-            .preferred(true);
+        let mut builder = CodeActionBuilder::new(&format!(
+            "Generate `{}` variant",
+            self.printer
+                .print_constructor(module_name, &EcoString::from(*name))
+        ))
+        .kind(CodeActionKind::QuickFix)
+        .preferred(true);
 
         match edits {
             GenerateVariantEdits::GenerateInCurrentModule {
