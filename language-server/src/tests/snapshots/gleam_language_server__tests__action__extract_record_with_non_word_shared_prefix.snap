@@ -1,0 +1,31 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub type Book {\n  Book(\n    name: String,\n    author: String,\n    copies_sold: Int,\n    copyright_year: Int,\n  )\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Book {
+  Book(
+    name: String,
+    author: String,
+    copies_sold: Int,
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    copyright_year: Int,
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑
+  )
+}
+
+
+----- AFTER ACTION
+
+pub type Book {
+  Book(
+    name: String,
+    author: String,
+    record: Record,
+  )
+}
+
+pub type Record {
+  Record(copies_sold: Int, copyright_year: Int)
+}
