@@ -1460,7 +1460,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             },
                             label.clone(),
                             label_location,
-                            LabelSyntax::Longhand,
+                            LabelSyntax::RecordAccess,
                         );
                     }
                     // If this is actually record access and not module access,

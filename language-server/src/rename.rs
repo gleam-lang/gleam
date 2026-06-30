@@ -325,7 +325,9 @@ fn rename_label_references_in_module(
             LabelSyntax::Shorthand => {
                 edits.replace(reference.location, format!("{new_name}: {label}"));
             }
-            LabelSyntax::Longhand => edits.replace(reference.location, new_name.to_string()),
+            LabelSyntax::Argument | LabelSyntax::RecordAccess => {
+                edits.replace(reference.location, new_name.to_string())
+            }
         }
     }
 

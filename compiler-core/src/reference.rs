@@ -211,9 +211,11 @@ pub struct LabelReference {
 /// The syntax used to write a record field label where it is used.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum LabelSyntax {
-    /// The label is written out on its own, as in `Wibble(label: value)` or
-    /// `record.label`, so renaming it is a simple replacement.
-    Longhand,
+    /// The label is part of a call, pattern, or record update argument, as in
+    /// `Wibble(label: value)`.
+    Argument,
+    /// The label is part of a record access expression, as in `record.label`.
+    RecordAccess,
     /// The label shorthand syntax (`label:`), which stands for both the label
     /// and a variable with the same name. Renaming the field then has to
     /// expand it so the value keeps its name: `wibble:` becomes

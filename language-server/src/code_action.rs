@@ -22,7 +22,8 @@ use gleam_core::{
     exhaustiveness::CompiledCase,
     parse::{extra::ModuleExtra, lexer::string_to_keyword},
     paths::ProjectPaths,
-    strings::to_snake_case,
+    reference::{LabelKey, LabelOwner, LabelSyntax},
+    strings::{to_snake_case, to_upper_camel_case},
     type_::{
         self, Error as TypeError, FieldMap, ModuleValueConstructor, Opaque, Type, TypeVar,
         TypedCallArg, ValueConstructor,
@@ -40,7 +41,10 @@ use num_bigint::BigInt;
 use src_span::{LineNumbers, SrcSpan};
 use vec1::{Vec1, vec1};
 
-use crate::engine::{completely_within, position_within};
+use crate::{
+    engine::{completely_within, position_within},
+    lsp_range_to_src_span,
+};
 
 use super::{
     TextEdits,
@@ -13492,5 +13496,176 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
         }
 
         self.insert_int(string_value, int_value, location);
+    }
+}
+
+/// Provides the "extract record" code action, to refactor a group of fields
+/// into a new record.
+pub fn extract_record(
+    module: &Module,
+    line_numbers: &LineNumbers,
+    params: &CodeActionParams,
+    code_actions: &mut Vec<CodeAction>,
+) {
+    let mut edits = TextEdits::new(line_numbers);
+
+    let span = lsp_range_to_src_span(params.range, line_numbers);
+
+    let Some(type_) = module
+        .ast
+        .definitions
+        .custom_types
+        .iter()
+        .find(|type_| type_.full_location().contains_span(span))
+    else {
+        return;
+    };
+
+    let Some(constructor) = type_
+        .constructors
+        .iter()
+        .find(|constructor| constructor.location.contains_span(span))
+    else {
+        return;
+    };
+
+    let extracted_arguments = constructor
+        .arguments
+        .iter()
+        .filter(|argument| {
+            span.contains(argument.location.start) || span.contains(argument.location.end)
+        })
+        .collect_vec();
+
+    if extracted_arguments.is_empty() {
+        return;
+    }
+
+    // Attempt to figure out what this new record should be named. If the
+    // extracted fields share a prefix (whole words only), that is likely a good
+    // descriptor for the fields together. So two fields called `author_name`
+    // and `author_url` become a record called `Author` with fields `name` and
+    // `url`. If there's not common prefix, we just generate a placeholder name,
+    // `Record`.
+    let shared_prefix = find_shared_prefix(&extracted_arguments);
+    let (record_name, to_strip) = match shared_prefix {
+        Some(shared) => {
+            let together = shared.join("_");
+            (to_upper_camel_case(&together), eco_format!("{together}_"))
+        }
+        None => ("Record".into(), "".into()),
+    };
+
+    let fields = extracted_arguments
+        .iter()
+        .map(|argument| {
+            // Extract the type annotation from the original argument
+            let annotation_location = argument.ast.location();
+            let annotation = module
+                .code
+                .get(annotation_location.start as usize..annotation_location.end as usize)
+                .expect("Location must be valid");
+
+            if let Some((_, label)) = &argument.label {
+                let new_label = label.strip_prefix(to_strip.as_str()).unwrap_or(label);
+                eco_format!("{new_label}: {annotation}")
+            } else {
+                annotation.into()
+            }
+        })
+        .join(", ");
+
+    let new_type = format!(
+        "\n\npub type {record_name} {{
+  {record_name}({fields})
+}}"
+    );
+
+    edits.insert(type_.end_position, new_type);
+
+    // Replace the fields with a new single field referencing the extracted
+    // record
+    let (Some(first_argument), Some(last_argument)) =
+        (extracted_arguments.first(), extracted_arguments.last())
+    else {
+        return;
+    };
+    let new_field_name = to_snake_case(&record_name);
+    let new_field = format!("{}: {record_name}", new_field_name);
+    let extracted_location =
+        SrcSpan::new(first_argument.location.start, last_argument.location.end);
+    edits.replace(extracted_location, new_field);
+
+    // Any place that references the old fields needs to be updated from
+    // `record.old_field` to `record.extracted.new_field.
+    let label_references = &module.ast.type_info.references.label_references;
+
+    for argument in extracted_arguments.iter() {
+        let Some((_, label)) = &argument.label else {
+            continue;
+        };
+
+        let Some(references) = label_references.get(&LabelKey {
+            owner: LabelOwner::Record {
+                module: module.name.clone(),
+                name: constructor.name.clone(),
+            },
+            label: label.clone(),
+        }) else {
+            continue;
+        };
+
+        let new_label_name = label.strip_prefix(to_strip.as_str()).unwrap_or(label);
+        let label_replacement = format!("{new_field_name}.{new_label_name}");
+
+        for reference in references {
+            match reference.syntax {
+                // For code using the field outside of record access, it's not
+                // straightforward to refactor it, so we ignore that case for
+                // now.
+                LabelSyntax::Argument | LabelSyntax::Shorthand => {}
+                LabelSyntax::RecordAccess => {
+                    edits.replace(reference.location, label_replacement.clone());
+                }
+            }
+        }
+    }
+
+    CodeActionBuilder::new("Extract record")
+        .kind(CodeActionKind::RefactorExtract)
+        .changes(
+            params.text_document.uri.clone(),
+            std::mem::take(&mut edits.edits),
+        )
+        .preferred(false)
+        .push_to(code_actions);
+}
+
+/// Find the words that are shared at the beginning of a set of record field
+/// names.
+fn find_shared_prefix<'a>(
+    arguments: &[&'a ast::RecordConstructorArg<Arc<Type>>],
+) -> Option<Vec<&'a str>> {
+    let (first, arguments) = arguments.split_first()?;
+    let mut shared_prefix = first.label.as_ref()?.1.split('_').collect_vec();
+
+    for argument in arguments {
+        let mut name_parts = argument.label.as_ref()?.1.split('_');
+        let mut all_so_far = true;
+        shared_prefix.retain(|shared| {
+            let matches = name_parts.next() == Some(shared);
+            if matches {
+                all_so_far
+            } else {
+                all_so_far = false;
+                false
+            }
+        })
+    }
+
+    if shared_prefix.is_empty() {
+        None
+    } else {
+        Some(shared_prefix)
     }
 }
