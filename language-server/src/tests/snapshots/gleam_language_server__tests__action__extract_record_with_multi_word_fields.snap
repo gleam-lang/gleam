@@ -1,0 +1,41 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub type NewsPost {\n  NewsPost(\n    title: String,\n    subtitle: String,\n    author_first_name: String,\n    author_last_name: String,\n    author_url: String,\n  )\n}\n\npub fn display_post(post: NewsPost) -> String {\n  post.title <> \" - \" <> post.author_last_name <> \", \" <> post.author_first_name\n}\n"
+---
+----- BEFORE ACTION
+
+pub type NewsPost {
+  NewsPost(
+    title: String,
+    subtitle: String,
+    author_first_name: String,
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    author_last_name: String,
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    author_url: String,
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑
+  )
+}
+
+pub fn display_post(post: NewsPost) -> String {
+  post.title <> " - " <> post.author_last_name <> ", " <> post.author_first_name
+}
+
+
+----- AFTER ACTION
+
+pub type NewsPost {
+  NewsPost(
+    title: String,
+    subtitle: String,
+    author: Author,
+  )
+}
+
+pub type Author {
+  Author(first_name: String, last_name: String, url: String)
+}
+
+pub fn display_post(post: NewsPost) -> String {
+  post.title <> " - " <> post.author.last_name <> ", " <> post.author.first_name
+}

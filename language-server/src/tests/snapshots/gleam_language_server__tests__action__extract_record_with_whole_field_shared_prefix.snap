@@ -1,0 +1,37 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub type City {\n  City(\n    name: String,\n    population: Int,\n    population_density: Float,\n  )\n}\n\npub fn info(city: City) -> #(Int, Float) {\n  #(city.population, city.population_density)\n}\n"
+---
+----- BEFORE ACTION
+
+pub type City {
+  City(
+    name: String,
+    population: Int,
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    population_density: Float,
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑
+  )
+}
+
+pub fn info(city: City) -> #(Int, Float) {
+  #(city.population, city.population_density)
+}
+
+
+----- AFTER ACTION
+
+pub type City {
+  City(
+    name: String,
+    population: Population,
+  )
+}
+
+pub type Population {
+  Population(population: Int, density: Float)
+}
+
+pub fn info(city: City) -> #(Int, Float) {
+  #(city.population.population, city.population.density)
+}
