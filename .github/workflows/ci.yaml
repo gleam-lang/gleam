@@ -125,7 +125,7 @@ jobs:
           key: v1-${{ matrix.target }}
 
       - name: Install Gleam
-        uses: clechasseur/rs-cargo@f70e2971062221e0bf7f22705c890b78f9e1e84f # v5.0.5
+        uses: clechasseur/rs-cargo@b897b7d2f083c6274295825fdbd5a39b825c3f82 # v5.0.6
         with:
           command: install
           args: "--path gleam-bin --target ${{ matrix.target }} --debug --locked --force"
@@ -150,7 +150,7 @@ jobs:
         if: ${{ matrix.run-integration-tests }}
 
       - name: Run tests
-        uses: clechasseur/rs-cargo@f70e2971062221e0bf7f22705c890b78f9e1e84f # v5.0.5
+        uses: clechasseur/rs-cargo@b897b7d2f083c6274295825fdbd5a39b825c3f82 # v5.0.6
         with:
           command: test
           # We only want to run `test-{output,commands}` when running integration tests.
