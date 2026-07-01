@@ -20,6 +20,7 @@ use crate::{
 use camino::Utf8Path;
 
 mod assert;
+mod binops;
 mod bit_arrays;
 mod case;
 mod conditional_compilation;
@@ -32,6 +33,7 @@ mod functions;
 mod guards;
 mod inlining;
 mod let_assert;
+mod lists;
 mod numbers;
 mod panic;
 mod patterns;
@@ -40,6 +42,7 @@ mod records;
 mod reserved;
 mod strings;
 mod todo;
+mod tuples;
 mod type_params;
 mod use_;
 mod variables;

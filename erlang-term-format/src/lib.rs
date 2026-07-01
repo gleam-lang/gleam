@@ -1,0 +1,571 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
+use num_bigint::{BigInt, Sign};
+use num_traits::ToPrimitive;
+
+#[cfg(test)]
+#[macro_use]
+extern crate pretty_assertions;
+
+/// A data structure used to encode values into the Erlang Term Format:
+/// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html.
+///
+#[derive(Debug)]
+pub struct Etf {
+    bytes: Vec<u8>,
+}
+
+#[must_use]
+#[derive(Debug)]
+pub struct List {
+    size_index: usize,
+    used: bool,
+    // TODO: Get rid of me, I only need this for debugging while things do not
+    // fully work to avoid the test runner just giving up.
+    dummy: bool,
+}
+
+impl List {
+    pub fn new(size_index: usize) -> Self {
+        Self {
+            size_index,
+            used: false,
+            dummy: true,
+        }
+    }
+
+    pub fn consume(mut self) {
+        self.used = true;
+    }
+}
+
+impl Drop for List {
+    fn drop(&mut self) {
+        assert!(self.dummy || self.used, "list not closed");
+    }
+}
+
+impl Etf {
+    pub fn new() -> Self {
+        Self { bytes: vec![131] }
+    }
+
+    /// Get the binary representation of the data structure built so far.
+    pub fn into_vec(self) -> Vec<u8> {
+        self.bytes
+    }
+
+    fn push(&mut self, byte: u8) {
+        self.bytes.push(byte);
+    }
+
+    fn extend(&mut self, bytes: impl IntoIterator<Item = u8>) {
+        self.bytes.extend(bytes);
+    }
+
+    /// Pushes a single raw byte.
+    ///
+    pub fn raw_byte(&mut self, byte: u8) {
+        self.push(byte);
+    }
+
+    /// Pushes the etf of an empty list.
+    /// - If you need to build lists with a number of items that is not known in
+    ///   advance you can use `start_list` and `end_list`.
+    ///
+    /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#nil_ext
+    pub fn empty_list(&mut self) {
+        self.nil()
+    }
+
+    /// Start building a list with a number of item that is not known in
+    /// advance.
+    ///
+    /// Once you've then pushed all the items, you _must_ complete the list by
+    /// calling `end_list` with the number of items that were pushed.
+    ///
+    /// ```ignore
+    /// // [1, 2, 3]
+    /// let list = etf.start_list()
+    /// etf.small_integer(1);
+    /// etf.small_integer(2);
+    /// etf.small_integer(3);
+    /// etf.end_list(list, 3)
+    /// ```
+    ///
+    /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#list_ext
+    pub fn start_list(&mut self) -> List {
+        self.push(108);
+        let size_index = self.bytes.len();
+        self.push(0);
+        self.push(0);
+        self.push(0);
+        self.push(0);
+        List::new(size_index)
+    }
+
+    pub fn end_list(&mut self, list: List, items: u32) {
+        self.nil();
+        self.bytes[list.size_index..list.size_index + 4].copy_from_slice(&items.to_be_bytes());
+        list.consume();
+    }
+
+    /// Pushes the most compact etf representation of the given atom.
+    pub fn atom(&mut self, atom: &str) {
+        if atom.len() <= 255 {
+            self.small_atom_utf8(atom);
+        } else {
+            self.atom_utf8(atom);
+        }
+    }
+
+    /// Pushes the most compact etf representation of the given bigint number.
+    pub fn bigint(&mut self, value: BigInt) {
+        if let Some(value) = value.to_u8() {
+            self.small_integer(value);
+        } else if let Some(value) = value.to_i32() {
+            self.integer(value);
+        } else {
+            self.small_big(value);
+        }
+    }
+
+    /// Pushes the most compact etf representation of the given usize number.
+    ///
+    pub fn usize(&mut self, value: usize) {
+        if let Some(value) = value.to_u8() {
+            self.small_integer(value);
+        } else {
+            self.integer(value as i32);
+        }
+    }
+
+    /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#small_integer_ext
+    fn small_integer(&mut self, value: u8) {
+        self.push(97);
+        self.push(value);
+    }
+
+    /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#integer_ext
+    fn integer(&mut self, value: i32) {
+        self.push(98);
+        self.extend(value.to_be_bytes());
+    }
+
+    /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#new_float_ext
+    fn new_float(&mut self, value: f64) {
+        self.push(70);
+        self.extend(value.to_be_bytes());
+    }
+
+    /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#small_tuple_ext
+    pub fn small_tuple(&mut self, arity: u8) {
+        self.push(104);
+        self.push(arity);
+    }
+
+    /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#large_tuple_ext
+    pub fn large_tuple(&mut self, arity: u32) {
+        self.push(105);
+        self.extend(arity.to_be_bytes());
+    }
+
+    /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#nil_ext
+    fn nil(&mut self) {
+        self.push(106);
+    }
+
+    /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#binary_ext
+    pub fn binary(&mut self, bytes_count: u32, bytes: impl IntoIterator<Item = u8>) {
+        self.push(109);
+        self.extend(bytes_count.to_be_bytes());
+        self.extend(bytes);
+    }
+
+    /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#small_big_ext
+    fn small_big(&mut self, number: BigInt) {
+        let (sign, bytes) = number.to_bytes_le();
+        self.push(110);
+        self.push(bytes.len() as u8);
+        match sign {
+            Sign::NoSign | Sign::Plus => self.push(0),
+            Sign::Minus => self.push(1),
+        }
+        self.extend(bytes);
+    }
+
+    /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#large_big_ext
+    fn large_big(&mut self, number: BigInt) {
+        let (sign, bytes) = number.to_bytes_le();
+        self.push(111);
+        self.extend((bytes.len() as u32).to_be_bytes());
+        match sign {
+            Sign::NoSign | Sign::Plus => self.push(0),
+            Sign::Minus => self.push(1),
+        }
+        self.extend(bytes);
+    }
+
+    /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#small_atom_utf8_ext
+    fn small_atom_utf8(&mut self, name: &str) {
+        self.push(119);
+        self.push(name.len() as u8);
+        self.extend(name.bytes());
+    }
+
+    /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#atom_utf8_ext
+    fn atom_utf8(&mut self, name: &str) {
+        self.push(118);
+        self.extend((name.len() as u16).to_be_bytes());
+        self.extend(name.bytes());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{ops::Neg, str::FromStr};
+
+    use num_bigint::BigInt;
+
+    use crate::Etf;
+
+    #[test]
+    fn small_atom() {
+        let mut etf = Etf::new();
+        etf.atom("atom");
+        assert_eq!(etf.into_vec(), [131, 119, 4, 97, 116, 111, 109])
+    }
+
+    #[test]
+    fn small_atom_utf8() {
+        let mut etf = Etf::new();
+        etf.atom("ksiąskę");
+        assert_eq!(
+            etf.into_vec(),
+            [131, 119, 9, 107, 115, 105, 196, 133, 115, 107, 196, 153]
+        )
+    }
+
+    #[test]
+    fn atom() {
+        let mut etf = Etf::new();
+        etf.atom(&"ą".repeat(128));
+        assert_eq!(
+            etf.into_vec(),
+            [
+                131, 118, 1, 0, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196,
+                133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196,
+                133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196,
+                133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196,
+                133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196,
+                133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196,
+                133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196,
+                133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196,
+                133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196,
+                133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196,
+                133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196,
+                133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196,
+                133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196,
+                133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196,
+                133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196,
+                133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196, 133, 196,
+                133, 196, 133
+            ]
+        )
+    }
+
+    #[test]
+    fn small_integer() {
+        let mut etf = Etf::new();
+        etf.small_integer(1);
+        assert_eq!(etf.into_vec(), [131, 97, 1]);
+    }
+
+    #[test]
+    fn integer() {
+        let mut etf = Etf::new();
+        etf.integer(-2);
+        assert_eq!(etf.into_vec(), [131, 98, 255, 255, 255, 254]);
+    }
+
+    #[test]
+    fn integer_2() {
+        let mut etf = Etf::new();
+        etf.integer(1048576);
+        assert_eq!(etf.into_vec(), [131, 98, 0, 16, 0, 0]);
+    }
+
+    #[test]
+    fn float() {
+        let mut etf = Etf::new();
+        etf.new_float(1.2);
+        assert_eq!(etf.into_vec(), [131, 70, 63, 243, 51, 51, 51, 51, 51, 51])
+    }
+
+    #[test]
+    fn small_big() {
+        let mut etf = Etf::new();
+
+        etf.small_big(BigInt::from(123123123123123123 as i64));
+        assert_eq!(
+            etf.into_vec(),
+            [131, 110, 8, 0, 179, 243, 99, 1, 212, 107, 181, 1]
+        );
+    }
+
+    #[test]
+    fn negative_small_big() {
+        let mut etf = Etf::new();
+        etf.small_big(BigInt::from(-123123123123123123 as i64));
+        assert_eq!(
+            etf.into_vec(),
+            [131, 110, 8, 1, 179, 243, 99, 1, 212, 107, 181, 1]
+        );
+    }
+
+    #[test]
+    fn empty_list() {
+        let mut etf = Etf::new();
+        etf.nil();
+        assert_eq!(etf.into_vec(), [131, 106]);
+    }
+
+    #[test]
+    fn proper_list_with_a_single_item() {
+        let mut etf = Etf::new();
+        let list = etf.start_list();
+        etf.small_integer(1);
+        etf.end_list(list, 1);
+        assert_eq!(etf.into_vec(), [131, 108, 0, 0, 0, 1, 97, 1, 106])
+    }
+
+    #[test]
+    fn proper_list() {
+        let mut etf = Etf::new();
+        let list = etf.start_list();
+        etf.small_integer(1);
+        etf.small_tuple(0);
+        etf.small_integer(2);
+        etf.end_list(list, 3);
+        assert_eq!(
+            etf.into_vec(),
+            [131, 108, 0, 0, 0, 3, 97, 1, 104, 0, 97, 2, 106]
+        )
+    }
+
+    #[test]
+    fn empty_binary() {
+        let mut etf = Etf::new();
+        etf.binary(0, vec![]);
+        assert_eq!(etf.into_vec(), [131, 109, 0, 0, 0, 0])
+    }
+    #[test]
+    fn binary() {
+        let mut etf = Etf::new();
+        etf.binary(3, vec![1, 2, 3]);
+        assert_eq!(etf.into_vec(), [131, 109, 0, 0, 0, 3, 1, 2, 3])
+    }
+
+    #[test]
+    fn small_empty_tuple() {
+        let mut etf = Etf::new();
+        etf.small_tuple(0);
+        assert_eq!(etf.into_vec(), [131, 104, 0])
+    }
+
+    #[test]
+    fn small_single_item_tuple() {
+        let mut etf = Etf::new();
+        etf.small_tuple(1);
+        etf.small_integer(1);
+        assert_eq!(etf.into_vec(), [131, 104, 1, 97, 1])
+    }
+
+    #[test]
+    fn small_tuple() {
+        let mut etf = Etf::new();
+        etf.small_tuple(3);
+        etf.new_float(1.1);
+        etf.integer(-1);
+        etf.small_integer(11);
+
+        assert_eq!(
+            etf.into_vec(),
+            [
+                131, 104, 3, 70, 63, 241, 153, 153, 153, 153, 153, 154, 98, 255, 255, 255, 255, 97,
+                11
+            ]
+        )
+    }
+
+    #[test]
+    fn small_nested_tuple() {
+        let mut etf = Etf::new();
+        etf.small_tuple(2);
+
+        etf.small_tuple(2);
+        etf.small_integer(1);
+        etf.small_integer(11);
+
+        etf.small_tuple(1);
+        etf.new_float(1.1);
+
+        assert_eq!(
+            etf.into_vec(),
+            [
+                131, 104, 2, 104, 2, 97, 1, 97, 11, 104, 1, 70, 63, 241, 153, 153, 153, 153, 153,
+                154
+            ]
+        )
+    }
+
+    #[test]
+    fn large_tuple() {
+        let mut etf = Etf::new();
+        etf.large_tuple(500);
+        for _ in 1..=500 {
+            etf.small_integer(1);
+        }
+
+        assert_eq!(
+            etf.into_vec(),
+            [
+                131, 105, 0, 0, 1, 244, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97,
+                1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1, 97, 1
+            ]
+        )
+    }
+
+    #[test]
+    fn large_big() {
+        let mut etf = Etf::new();
+        etf.large_big(BigInt::from_str(&"1".repeat(1500)).unwrap());
+        assert_eq!(
+            etf.into_vec(),
+            [
+                131, 111, 0, 0, 2, 111, 0, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 1, 169, 242, 20, 147,
+                190, 32, 128, 194, 36, 247, 163, 33, 20, 52, 44, 99, 21, 192, 66, 245, 84, 128, 97,
+                156, 59, 26, 49, 215, 19, 60, 165, 65, 99, 28, 91, 91, 132, 187, 191, 48, 27, 217,
+                244, 127, 22, 229, 191, 10, 184, 4, 38, 105, 182, 90, 90, 141, 23, 179, 148, 140,
+                187, 169, 145, 218, 132, 199, 136, 139, 1, 228, 120, 218, 220, 103, 20, 164, 155,
+                60, 1, 158, 242, 71, 1, 60, 69, 6, 13, 244, 52, 42, 222, 129, 25, 127, 251, 133,
+                199, 37, 61, 61, 94, 35, 52, 38, 9, 114, 0, 173, 92, 189, 59, 8, 14, 253, 129, 64,
+                238, 18, 222, 214, 221, 45, 236, 250, 62, 255, 237, 241, 149, 145, 143, 93, 41, 2,
+                156, 28, 29, 102, 103, 8, 227, 146, 128, 117, 183, 231, 113, 20, 148, 190, 253, 95,
+                114, 208, 224, 186, 125, 28, 74, 117, 131, 197, 189, 238, 208, 96, 253, 134, 27,
+                108, 58, 63, 97, 183, 248, 49, 174, 205, 42, 129, 196, 241, 71, 237, 83, 136, 127,
+                61, 225, 107, 199, 146, 30, 212, 53, 215, 141, 147, 198, 3, 37, 170, 175, 29, 43,
+                85, 98, 73, 198, 113, 9, 121, 149, 228, 107, 200, 16, 159, 117, 150, 91, 90, 121,
+                11, 5, 27, 25, 110, 69, 194, 57, 21, 91, 173, 149, 40, 5, 126, 101, 113, 247, 14,
+                130, 154, 249, 36, 143, 183, 129, 4, 174, 108, 164, 122, 95, 105, 77, 243, 58, 158,
+                223, 166, 79, 103, 131, 161, 110, 57, 79, 214, 142, 141, 39, 101, 6, 176, 22, 182,
+                89, 247, 229, 80, 244, 24, 62, 101, 128, 174, 253, 86, 233, 138, 130, 115, 157, 80,
+                21, 83, 187, 222, 43, 19, 105, 97, 230, 7, 167, 25, 6, 69, 207, 149, 32, 199, 44,
+                85, 27, 223, 133, 46, 234, 3, 59, 113, 228, 246, 29, 157, 4, 83, 207, 234, 85, 122,
+                148, 64, 125, 49, 48, 123, 226, 213, 154, 212, 102, 6, 154, 91, 67, 242, 232, 99,
+                154, 238, 73, 72, 122, 170, 27, 110, 83, 110, 146, 159, 87, 87, 163, 151, 196, 47,
+                134, 198, 170, 197, 189, 176, 82, 247, 130, 95, 159, 217, 228, 52, 214, 63, 247,
+                169, 152, 216, 23, 182, 142, 26, 218, 248, 47, 161, 238, 180, 122, 54, 239, 38, 95,
+                65, 114, 128, 93, 233, 71, 177, 101, 2, 236, 244, 88, 249, 104, 210, 4, 249, 5,
+                172, 107, 216, 222, 165, 242, 106, 222, 22, 158, 50, 13
+            ]
+        );
+    }
+
+    #[test]
+    fn negative_large_big() {
+        let mut etf = Etf::new();
+        etf.large_big(BigInt::from_str(&"1".repeat(1500)).unwrap().neg());
+        assert_eq!(
+            etf.into_vec(),
+            [
+                131, 111, 0, 0, 2, 111, 1, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28,
+                199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 113, 28, 199, 1, 169, 242, 20, 147,
+                190, 32, 128, 194, 36, 247, 163, 33, 20, 52, 44, 99, 21, 192, 66, 245, 84, 128, 97,
+                156, 59, 26, 49, 215, 19, 60, 165, 65, 99, 28, 91, 91, 132, 187, 191, 48, 27, 217,
+                244, 127, 22, 229, 191, 10, 184, 4, 38, 105, 182, 90, 90, 141, 23, 179, 148, 140,
+                187, 169, 145, 218, 132, 199, 136, 139, 1, 228, 120, 218, 220, 103, 20, 164, 155,
+                60, 1, 158, 242, 71, 1, 60, 69, 6, 13, 244, 52, 42, 222, 129, 25, 127, 251, 133,
+                199, 37, 61, 61, 94, 35, 52, 38, 9, 114, 0, 173, 92, 189, 59, 8, 14, 253, 129, 64,
+                238, 18, 222, 214, 221, 45, 236, 250, 62, 255, 237, 241, 149, 145, 143, 93, 41, 2,
+                156, 28, 29, 102, 103, 8, 227, 146, 128, 117, 183, 231, 113, 20, 148, 190, 253, 95,
+                114, 208, 224, 186, 125, 28, 74, 117, 131, 197, 189, 238, 208, 96, 253, 134, 27,
+                108, 58, 63, 97, 183, 248, 49, 174, 205, 42, 129, 196, 241, 71, 237, 83, 136, 127,
+                61, 225, 107, 199, 146, 30, 212, 53, 215, 141, 147, 198, 3, 37, 170, 175, 29, 43,
+                85, 98, 73, 198, 113, 9, 121, 149, 228, 107, 200, 16, 159, 117, 150, 91, 90, 121,
+                11, 5, 27, 25, 110, 69, 194, 57, 21, 91, 173, 149, 40, 5, 126, 101, 113, 247, 14,
+                130, 154, 249, 36, 143, 183, 129, 4, 174, 108, 164, 122, 95, 105, 77, 243, 58, 158,
+                223, 166, 79, 103, 131, 161, 110, 57, 79, 214, 142, 141, 39, 101, 6, 176, 22, 182,
+                89, 247, 229, 80, 244, 24, 62, 101, 128, 174, 253, 86, 233, 138, 130, 115, 157, 80,
+                21, 83, 187, 222, 43, 19, 105, 97, 230, 7, 167, 25, 6, 69, 207, 149, 32, 199, 44,
+                85, 27, 223, 133, 46, 234, 3, 59, 113, 228, 246, 29, 157, 4, 83, 207, 234, 85, 122,
+                148, 64, 125, 49, 48, 123, 226, 213, 154, 212, 102, 6, 154, 91, 67, 242, 232, 99,
+                154, 238, 73, 72, 122, 170, 27, 110, 83, 110, 146, 159, 87, 87, 163, 151, 196, 47,
+                134, 198, 170, 197, 189, 176, 82, 247, 130, 95, 159, 217, 228, 52, 214, 63, 247,
+                169, 152, 216, 23, 182, 142, 26, 218, 248, 47, 161, 238, 180, 122, 54, 239, 38, 95,
+                65, 114, 128, 93, 233, 71, 177, 101, 2, 236, 244, 88, 249, 104, 210, 4, 249, 5,
+                172, 107, 216, 222, 165, 242, 106, 222, 22, 158, 50, 13
+            ]
+        );
+    }
+}

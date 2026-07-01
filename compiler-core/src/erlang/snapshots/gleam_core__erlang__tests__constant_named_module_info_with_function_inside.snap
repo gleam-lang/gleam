@@ -18,15 +18,12 @@ pub fn main() {
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--define(FILEPATH, "project/test/my/mod.gleam").
 -export([function/0, main/0]).
 
--file("project/test/my/mod.gleam", 2).
 -spec function() -> integer().
 function() ->
     1.
 
--file("project/test/my/mod.gleam", 8).
 -spec main() -> integer().
 main() ->
     function().
