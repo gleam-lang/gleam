@@ -79,12 +79,12 @@ jobs:
             run-integration-tests: true
     steps:
       - name: Checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
       - name: Install musl-tools incl. musl-gcc
-        uses: awalsh128/cache-apt-pkgs-action@acb598e5ddbc6f68a970c5da0688d2f3a9f04d05 # v1.6.0
+        uses: awalsh128/cache-apt-pkgs-action@5513791f75b039e2a79653b1a92238d3fb8d99b4 # v1.6.2
         with:
           # musl-tools provide `musl-gcc` which is required for `ring` which is required for `rustls` et al.
           packages: musl-tools
@@ -125,7 +125,7 @@ jobs:
           key: v1-${{ matrix.target }}
 
       - name: Install Gleam
-        uses: clechasseur/rs-cargo@f70e2971062221e0bf7f22705c890b78f9e1e84f # v5.0.5
+        uses: clechasseur/rs-cargo@b897b7d2f083c6274295825fdbd5a39b825c3f82 # v5.0.6
         with:
           command: install
           args: "--path gleam-bin --target ${{ matrix.target }} --debug --locked --force"
@@ -150,7 +150,7 @@ jobs:
         if: ${{ matrix.run-integration-tests }}
 
       - name: Run tests
-        uses: clechasseur/rs-cargo@f70e2971062221e0bf7f22705c890b78f9e1e84f # v5.0.5
+        uses: clechasseur/rs-cargo@b897b7d2f083c6274295825fdbd5a39b825c3f82 # v5.0.6
         with:
           command: test
           # We only want to run `test-{output,commands}` when running integration tests.
@@ -320,7 +320,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
@@ -347,7 +347,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
@@ -365,7 +365,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
@@ -396,7 +396,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
@@ -429,7 +429,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
