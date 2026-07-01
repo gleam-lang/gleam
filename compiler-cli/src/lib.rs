@@ -420,7 +420,7 @@ pub enum Command {
         packages: Vec<String>,
     },
 
-    /// Delete any build artifacts for this project
+    /// Delete any build artefacts for this project
     Clean,
 
     /// Run the language server, to be used by editors

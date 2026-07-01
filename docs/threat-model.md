@@ -136,7 +136,7 @@ attempt to inject malicious code into the subtree of one of our Hex packages.
 A bad actor could attempt to cause a malicious or modified binary to be
 published to GitHub Releases, or replace release assets after build.
 
-- The release workflow uses GitHub OIDC and artifact attestations to produce
+- The release workflow uses GitHub OIDC and artefact attestations to produce
   provenance for release assets, published alongside release archives as
   `.sigstore` files.
 - Checksums are provided for release archives for users' integrity checking.
