@@ -1443,7 +1443,7 @@ fn provide_git_package(
         SourceContext::Git {
             repo: repo.into(),
             commit: commit.clone(),
-            path: path.clone(),
+            path,
             repo_root: &repo_root,
         },
         project_paths,
