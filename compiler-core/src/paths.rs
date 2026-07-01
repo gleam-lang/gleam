@@ -136,7 +136,7 @@ impl ProjectPaths {
     }
 
     /// A path to a special file that contains the version of gleam
-    /// that last built the artifacts along with build-impacting
+    /// that last built the artefacts along with build-impacting
     /// configuration, such as whether to generate source maps. If
     /// this file does not match the current version of gleam we
     /// will rebuild from scratch
