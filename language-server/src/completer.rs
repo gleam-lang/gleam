@@ -1110,14 +1110,14 @@ impl<'a, IO> Completer<'a, IO> {
     pub fn completion_field_accessors(&'a self, type_: Arc<Type>) -> Vec<CompletionItem> {
         if let Type::Named {
             publicity,
-            module: type_module,
+            package: type_package,
             ..
         } = type_.as_ref()
             && publicity.is_internal()
-            && *type_module != self.module.name
+            && *type_package != self.module.ast.type_info.package
         {
             // If we're asking for field completions for an internal type that
-            // is not defined in the current module we don't want to show
+            // is not defined in the current package, we don't want to show
             // anything. This makes it a lot harder to inadvertently rely on
             // internal implementation details without noticing.
             return vec![];
