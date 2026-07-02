@@ -2714,3 +2714,28 @@ pub fn wobble() -> wibble.Wobble {
         Position::new(3, 25)
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5937
+#[test]
+fn completions_for_imported_internal_record_fields_in_same_package() {
+    let code = "
+import mod
+
+fn fun(wibble: mod.Wibble) {
+  wibble.
+  //     ^ `mod` is in the same package so we expect completions here, even though
+  //       `Wibble` is internal.
+}
+";
+    let r#mod = "
+@internal
+pub type Wibble {
+  Wibble(wibble: String, wobble: Int)
+}
+";
+
+    assert_completion!(
+        TestProject::for_source(code).add_module("mod", r#mod),
+        Position::new(4, 9)
+    );
+}

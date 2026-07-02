@@ -460,3 +460,7 @@
 - Fixed a bug where the compiler would panic on the first HTTPS request on
   Android.
   ([John Downey](https://github.com/jtdowney))
+
+- Fixed a bug where the language server would not show autocomplete for record
+  fields of internal types within the same package.
+  ([Surya Rose](https://github.com/GearsDatapacks))

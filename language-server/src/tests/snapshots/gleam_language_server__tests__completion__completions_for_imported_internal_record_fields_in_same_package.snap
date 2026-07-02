@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "\nimport mod\n\nfn fun(wibble: mod.Wibble) {\n  wibble.\n  //     ^ `mod` is in the same package so we expect completions here, even though\n  //       `Wibble` is internal.\n}\n"
+---
+
+import mod
+
+fn fun(wibble: mod.Wibble) {
+  wibble.|
+  //     ^ `mod` is in the same package so we expect completions here, even though
+  //       `Wibble` is internal.
+}
+
+
+----- Completion content -----
+wibble
+  kind:   Field
+  detail: String
+  sort:   2_wibble
+wobble
+  kind:   Field
+  detail: Int
+  sort:   2_wobble
