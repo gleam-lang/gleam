@@ -4818,6 +4818,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         return_annotation: Option<TypeAst>,
         location: SrcSpan,
     ) -> TypedExpr {
+        // The pass below speculatively infers the call arguments to discover
+        // their types, which are used to type any unannotated parameters of
+        // the function literal being called. The arguments are then inferred
+        // in `do_infer_call_with_known_fun`, so any diagnostics recorded here
+        // would be reported twice, compounding to 2^N copies for N nested
+        // `use`s. To prevent that we discard any problems this pass records
+        // and restore the inference state, so the real pass behaves as if this
+        // one never ran.
+        // https://github.com/gleam-lang/gleam/issues/3899
+        let problems_before_speculation = std::mem::take(self.problems);
+        let previous_panics = self.previous_panics;
+        let already_warned_for_unreachable_code = self.already_warned_for_unreachable_code;
+        let purity = self.purity;
+
         let typed_call_arguments: Vec<Arc<Type>> = call_arguments
             .iter()
             .map(|argument| {
@@ -4828,6 +4842,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .type_()
             })
             .collect_vec();
+
+        *self.problems = problems_before_speculation;
+        self.previous_panics = previous_panics;
+        self.already_warned_for_unreachable_code = already_warned_for_unreachable_code;
+        self.purity = purity;
+
         self.infer_fn(
             arguments,
             &typed_call_arguments,

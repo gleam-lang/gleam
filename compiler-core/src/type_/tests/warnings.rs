@@ -5111,3 +5111,58 @@ fn wibble(a) {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3899
+#[test]
+fn deprecated_value_in_use_with_fn_literal_rhs_warns_once() {
+    assert_warning!(
+        r#"
+@deprecated("Don't use this!")
+pub fn wibble() {
+  Nil
+}
+
+pub fn main() {
+  use <- fn(f) { f() }
+  wibble()
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3899
+#[test]
+fn deprecated_value_in_nested_use_with_fn_literal_rhs_warns_once() {
+    assert_warning!(
+        r#"
+@deprecated("Don't use this!")
+pub fn wibble() {
+  Nil
+}
+
+pub fn main() {
+  use <- fn(f) { f() }
+  use <- fn(f) { f() }
+  wibble()
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3899
+#[test]
+fn unreachable_code_in_use_with_fn_literal_rhs_warns_once() {
+    assert_warning!(
+        "
+pub fn wibble() {
+  Nil
+}
+
+pub fn main() {
+  use <- fn(f) { f() }
+  panic
+  wibble()
+}
+"
+    );
+}
