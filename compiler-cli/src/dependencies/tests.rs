@@ -891,6 +891,66 @@ version = "0.2.0"
 }
 
 #[test]
+fn provided_git_path_package_to_repo_root_has_no_path() {
+    let tmp = tempfile::tempdir().unwrap();
+    let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
+    let repo = base.join("repo");
+    fs::mkdir(&repo.join("backends").join("package_a")).unwrap();
+    fs::write(
+        &repo.join("gleam.toml"),
+        r#"
+name = "package_b"
+version = "0.2.0"
+"#,
+    )
+    .unwrap();
+    fs::write(
+        &repo.join("backends").join("package_a").join("gleam.toml"),
+        r#"
+name = "package_a"
+version = "0.1.0"
+
+[dependencies]
+package_b = { path = "../.." }
+"#,
+    )
+    .unwrap();
+
+    let mut provided = HashMap::new();
+    let project_paths = crate::project_paths_at_current_directory_without_toml();
+    let repo_root = fs::canonicalise(&repo).unwrap();
+    let result = provide_package(
+        "package_a".into(),
+        fs::canonicalise(&repo.join("backends").join("package_a")).unwrap(),
+        SourceContext::Git {
+            repo: "https://github.com/gleam-lang/wibble.git".into(),
+            commit: "95cd2c2f45907e5571e9b5fcdfb27ff35cdcdd29".into(),
+            path: Some("backends/package_a".into()),
+            repo_root: &repo_root,
+        },
+        &project_paths,
+        &mut provided,
+        &mut vec!["root".into()],
+    );
+    assert_eq!(
+        result,
+        Ok(hexpm::version::Range::new("== 0.1.0".into()).unwrap())
+    );
+    // A path dependency resolving to the repository root must match how the
+    // same package is provided when declared directly as a git dependency
+    // with no path (`None`), otherwise it is reported as a conflict.
+    let package = provided.get("package_b").unwrap();
+    assert_eq!(
+        package.source,
+        ProvidedPackageSource::Git {
+            repo: "https://github.com/gleam-lang/wibble.git".into(),
+            commit: "95cd2c2f45907e5571e9b5fcdfb27ff35cdcdd29".into(),
+            path: None,
+        }
+    );
+}
+
+#[test]
 fn provided_git_path_package_rejects_missing_directory() {
     let tmp = tempfile::tempdir().unwrap();
     let base = Utf8PathBuf::from_path_buf(tmp.path().to_path_buf()).unwrap();
