@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn wibble() {\n  Nil\n}\n\npub fn main() {\n  use <- fn(f) { f() }\n  panic\n  wibble()\n}\n"
+---
+----- SOURCE CODE
+
+pub fn wibble() {
+  Nil
+}
+
+pub fn main() {
+  use <- fn(f) { f() }
+  panic
+  wibble()
+}
+
+
+----- WARNING
+warning: Unreachable code
+  ┌─ /src/warning/wrn.gleam:9:3
+  │
+9 │   wibble()
+  │   ^^^^^^^^
+
+This code is unreachable because it comes after a `panic`.

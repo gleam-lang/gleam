@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n@deprecated(\"Don't use this!\")\npub fn wibble() {\n  Nil\n}\n\npub fn main() {\n  use <- fn(f) { f() }\n  use <- fn(f) { f() }\n  wibble()\n}\n"
+---
+----- SOURCE CODE
+
+@deprecated("Don't use this!")
+pub fn wibble() {
+  Nil
+}
+
+pub fn main() {
+  use <- fn(f) { f() }
+  use <- fn(f) { f() }
+  wibble()
+}
+
+
+----- WARNING
+warning: Deprecated value used
+   ┌─ /src/warning/wrn.gleam:10:3
+   │
+10 │   wibble()
+   │   ^^^^^^ This value has been deprecated
+
+It was deprecated with this message: Don't use this!

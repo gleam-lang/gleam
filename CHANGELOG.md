@@ -475,3 +475,7 @@
 - Fixed a bug where the language server would not show autocomplete for record
   fields of internal types within the same package.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where warnings and errors in the arguments of a call to a
+  function literal would be reported multiple times.
+  ([John Downey](https://github.com/jtdowney))
