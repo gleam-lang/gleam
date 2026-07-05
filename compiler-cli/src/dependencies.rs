@@ -1524,13 +1524,23 @@ fn provide_package(
                 } => {
                     let (child_path, child_repo_path) =
                         resolve_git_path_package(&name, &path, repo, &package_path, repo_root)?;
+                    // A path dependency resolving to the repository root has an
+                    // empty repo-relative path. Normalise it to `None` so it
+                    // matches a package declared directly as a git dependency
+                    // with no path.
+                    let child_repo_path = if child_repo_path.as_str().is_empty() {
+                        None
+                    } else {
+                        Some(child_repo_path)
+                    };
+
                     provide_package(
                         name.clone(),
                         child_path,
                         SourceContext::Git {
                             repo: repo.clone(),
                             commit: commit.clone(),
-                            path: Some(child_repo_path),
+                            path: child_repo_path,
                             repo_root,
                         },
                         project_paths,
