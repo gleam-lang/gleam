@@ -483,3 +483,7 @@
 - Fixed a bug where pattern matching on overlapping string prefixes with guards
   could generate incorrect JavaScript.
   ([John Downey](https://github.com/jtdowney))
+
+- Fixed a bug where running `gleam docs build` on non-Erlang target projects
+  with a warm cache would not produce the module pages.
+  ([Matt Champagne](https://github.com/han-tyumi))
