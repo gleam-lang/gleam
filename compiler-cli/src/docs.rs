@@ -61,7 +61,7 @@ pub fn build(paths: &ProjectPaths, options: BuildOptions) -> Result<()> {
     // documentation for our package.
     crate::fs::delete_directory(&paths.build_directory_for_package(
         Mode::Prod,
-        options.target.unwrap_or(Target::Erlang),
+        options.target.unwrap_or(config.target),
         &config.name,
     ))?;
 
