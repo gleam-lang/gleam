@@ -1,0 +1,15 @@
+---
+source: language-server/src/tests/action.rs
+expression: "/// wibble\n\n/// wobble"
+---
+----- BEFORE ACTION
+/// wibble
+    ↑     
+
+/// wobble
+
+
+----- AFTER ACTION
+// wibble
+
+/// wobble

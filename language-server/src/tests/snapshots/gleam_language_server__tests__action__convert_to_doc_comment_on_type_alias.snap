@@ -1,0 +1,13 @@
+---
+source: language-server/src/tests/action.rs
+expression: "// wobble\ntype Wibble = Int"
+---
+----- BEFORE ACTION
+// wobble
+   ↑     
+type Wibble = Int
+
+
+----- AFTER ACTION
+/// wobble
+type Wibble = Int

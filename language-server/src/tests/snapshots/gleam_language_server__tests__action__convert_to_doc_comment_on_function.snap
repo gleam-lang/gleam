@@ -1,0 +1,17 @@
+---
+source: language-server/src/tests/action.rs
+expression: "// wobble\nfn wibble() {\n    todo\n}"
+---
+----- BEFORE ACTION
+// wobble
+   ↑     
+fn wibble() {
+    todo
+}
+
+
+----- AFTER ACTION
+/// wobble
+fn wibble() {
+    todo
+}

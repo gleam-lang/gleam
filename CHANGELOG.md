@@ -347,6 +347,49 @@
 
   ([Gavin Morrow](https://github.com/gavinmorrow))
 
+- The language server now has "Convert to documentation comment" and
+  "Convert to regular comment" code actions. For example:
+
+  ```gleam
+  // Module description.
+  // Code action available here.
+
+  // Comment before function.
+  // Another code action here.
+  pub fn wibble() {
+    // No code action here.
+    todo
+  }
+
+  /// Doc comment.
+  /// Another code action here.
+  pub fn wobble () {
+    todo
+  }
+  ```
+
+  Triggering the code actions in all of these places will result in:
+
+  ```gleam
+  //// Module description.
+  //// Code action available here.
+
+  /// Comment before function.
+  /// Another code action here.
+  pub fn wibble() {
+    // No code action here.
+    todo
+  }
+
+  // Doc comment.
+  // Another code action here.
+  pub fn wobble () {
+    todo
+  }
+  ```
+
+  ([Daniel Venable](https://github.com/DanielVenable))
+
 ### Formatter
 
 - Performance of the formatter has been improved.

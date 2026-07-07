@@ -208,6 +208,8 @@ const UNWRAP_ANONYMOUS_FUNCTION: &str = "Remove anonymous function wrapper";
 const REMOVE_REDUNDANT_RECORD_UPDATE: &str = "Remove redundant record update";
 const DISCARD_UNUSED_VARIABLE: &str = "Discard unused variable";
 const ADD_EXTRA_PARENTHESES: &str = "Add extra parentheses";
+const CONVERT_TO_DOCUMENTATION_COMMENT: &str = "Convert to documentation comment";
+const CONVERT_TO_REGULAR_COMMENT: &str = "Convert to regular comment";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range_selector:expr $(,)?) => {
@@ -15418,5 +15420,184 @@ pub fn wibble(a) {
 }
 ",
         find_position_of("wibble").under_char('i').to_selection()
+    );
+}
+
+#[test]
+fn convert_to_doc_comment_on_function() {
+    assert_code_action!(
+        CONVERT_TO_DOCUMENTATION_COMMENT,
+        "// wobble
+fn wibble() {
+    todo
+}",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_doc_comment_on_type() {
+    assert_code_action!(
+        CONVERT_TO_DOCUMENTATION_COMMENT,
+        "// wobble
+type Wibble {
+    Wibble
+}",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_doc_comment_on_constant() {
+    assert_code_action!(
+        CONVERT_TO_DOCUMENTATION_COMMENT,
+        "// wobble
+const wibble: Int = 42",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_doc_comment_on_type_alias() {
+    assert_code_action!(
+        CONVERT_TO_DOCUMENTATION_COMMENT,
+        "// wobble
+type Wibble = Int",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_doc_comment_on_variant_constructor_definition() {
+    assert_code_action!(
+        CONVERT_TO_DOCUMENTATION_COMMENT,
+        "type Wibble {
+    // wobble
+    Wibble(Int)
+}",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_doc_comment_on_record_label_definition() {
+    assert_code_action!(
+        CONVERT_TO_DOCUMENTATION_COMMENT,
+        "type Wibble {
+    Wibble(
+        // wobble
+        wibble: Int,
+    )
+}",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn no_convert_to_doc_comment_triggered_on_doc_comment() {
+    assert_no_code_actions!(
+        CONVERT_TO_DOCUMENTATION_COMMENT,
+        "/// wobble
+fn wibble() {
+    todo
+}",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn no_convert_to_doc_comment_inside_function() {
+    assert_no_code_actions!(
+        CONVERT_TO_DOCUMENTATION_COMMENT,
+        "fn wibble() {
+    // wobble
+    todo
+}",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn no_convert_to_doc_comment_before_import() {
+    assert_no_code_actions!(
+        CONVERT_TO_DOCUMENTATION_COMMENT,
+        "// wobble
+import wibble",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_module_doc_comment() {
+    assert_code_action!(
+        CONVERT_TO_DOCUMENTATION_COMMENT,
+        "// wobble
+
+import wibble
+",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_regular_comment() {
+    assert_code_action!(
+        CONVERT_TO_REGULAR_COMMENT,
+        "/// wobble
+fn wibble() {
+    todo
+}",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn convert_module_doc_comment_to_regular_comment() {
+    assert_code_action!(
+        CONVERT_TO_REGULAR_COMMENT,
+        "//// wobble
+
+import wibble
+",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn convert_multiline_comment_with_doc_comment() {
+    assert_code_action!(
+        CONVERT_TO_DOCUMENTATION_COMMENT,
+        "// wibble
+// wobble
+// wibble
+fn wibble() {
+    todo
+}",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_doc_comment_no_affect_other_comment() {
+    assert_code_action!(
+        CONVERT_TO_DOCUMENTATION_COMMENT,
+        "// wibble
+
+// wobble
+fn wibble() {
+    todo
+}",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_regular_comment_no_affect_other_comment() {
+    assert_code_action!(
+        CONVERT_TO_REGULAR_COMMENT,
+        "/// wibble
+
+/// wobble",
+        find_position_of("wibble").to_selection()
     );
 }
