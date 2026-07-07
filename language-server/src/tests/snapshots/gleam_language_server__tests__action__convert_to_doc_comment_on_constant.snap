@@ -1,0 +1,13 @@
+---
+source: language-server/src/tests/action.rs
+expression: "// wobble\nconst wibble: Int = 42"
+---
+----- BEFORE ACTION
+// wobble
+   ↑     
+const wibble: Int = 42
+
+
+----- AFTER ACTION
+/// wobble
+const wibble: Int = 42

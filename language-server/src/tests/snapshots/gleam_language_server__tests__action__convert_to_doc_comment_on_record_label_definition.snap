@@ -1,0 +1,21 @@
+---
+source: language-server/src/tests/action.rs
+expression: "type Wibble {\n    Wibble(\n        // wobble\n        wibble: Int,\n    )\n}"
+---
+----- BEFORE ACTION
+type Wibble {
+    Wibble(
+        // wobble
+           ↑     
+        wibble: Int,
+    )
+}
+
+
+----- AFTER ACTION
+type Wibble {
+    Wibble(
+        /// wobble
+        wibble: Int,
+    )
+}

@@ -12962,3 +12962,140 @@ pub fn code_action_fix_deprecated_pipe(
             .push_to(actions);
     }
 }
+
+/// Code action to switch between doc and regular comments.
+pub struct ConvertBetweenDocAndRegularComment<'a> {
+    module: &'a Module,
+    lines: &'a LineNumbers,
+    params: &'a CodeActionParams,
+}
+
+impl<'a> ConvertBetweenDocAndRegularComment<'a> {
+    pub fn new(module: &'a Module, lines: &'a LineNumbers, params: &'a CodeActionParams) -> Self {
+        Self {
+            module,
+            lines,
+            params,
+        }
+    }
+
+    pub fn code_actions(self) -> Vec<CodeAction> {
+        let line = self.params.range.start.line;
+        let num_slashes = self
+            .count_leading_slashes(line)
+            .expect("Line number should be valid");
+
+        if !(2..=4).contains(&num_slashes) {
+            return vec![];
+        }
+
+        let start_line = self
+            .find_comment_edge((0..line).rev(), num_slashes)
+            .unwrap_or(line);
+        let end_line = self
+            .find_comment_edge(line + 1.., num_slashes)
+            .unwrap_or(line);
+
+        if self.params.range.end.line > end_line {
+            return vec![];
+        }
+
+        let comment = match num_slashes {
+            2 if self.is_module_comment(start_line, end_line) => "////",
+            2 if self.can_have_doc_comment(end_line) => "///",
+            3 | 4 => "//",
+            _ => return vec![],
+        };
+
+        let mut edits = TextEdits::new(self.lines);
+        for line in start_line..=end_line {
+            let start = next_nonwhitespace(
+                &self.module.code,
+                self.line_start(line).expect("Line number should be valid"),
+            );
+            edits.replace(SrcSpan::new(start, start + num_slashes), comment.to_owned());
+        }
+
+        let action_name = if comment == "//" {
+            "Convert to regular comment"
+        } else {
+            "Convert to documentation comment"
+        };
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new(action_name)
+            .kind(CodeActionKind::RefactorRewrite)
+            .changes(self.params.text_document.uri.clone(), edits.edits)
+            .push_to(&mut action);
+        action
+    }
+
+    fn count_leading_slashes(&self, line: u32) -> Option<u32> {
+        let mut count = 0;
+        for c in self.module.code[self.line_start(line)? as usize..].chars() {
+            if c == '/' {
+                count += 1;
+            } else if !c.is_whitespace() || c == '\n' || count > 0 {
+                break;
+            }
+        }
+        Some(count)
+    }
+
+    fn line_start(&self, line: u32) -> Option<u32> {
+        self.lines.line_starts.get(line as usize).copied()
+    }
+
+    /// Find the last line in the range that is part of the same comment.
+    fn find_comment_edge(&self, range: impl Iterator<Item = u32>, num_slashes: u32) -> Option<u32> {
+        range
+            .take_while(|&i| {
+                self.count_leading_slashes(i)
+                    .is_some_and(|n| n == num_slashes)
+            })
+            .last()
+    }
+
+    fn is_module_comment(&self, start_line: u32, end_line: u32) -> bool {
+        previous_nonwhitespace(
+            &self.module.code,
+            self.line_start(start_line)
+                .expect("Line number should be valid"),
+        ) == 0
+            && self
+                .line_start(end_line + 1)
+                .is_none_or(|position| self.module.extra.empty_lines.contains(&position))
+    }
+
+    /// Check if the comment is before a node that can have a doc comment, e.g. a function.
+    fn can_have_doc_comment(&self, end_line: u32) -> bool {
+        self.line_start(end_line + 1).is_some_and(|position| {
+            let next_node = next_nonwhitespace(&self.module.code, position);
+            let definitions = &self.module.ast.definitions;
+            definitions
+                .functions
+                .iter()
+                .any(|function| function.location.contains(next_node))
+                || definitions
+                    .constants
+                    .iter()
+                    .any(|constant| constant.location.contains(next_node))
+                || definitions
+                    .type_aliases
+                    .iter()
+                    .any(|type_alias| type_alias.location.contains(next_node))
+                || definitions.custom_types.iter().any(|custom_type| {
+                    custom_type.location.contains(next_node)
+                        || custom_type.constructors.iter().any(|constructor| {
+                            constructor.location.contains(next_node)
+                                || constructor.arguments.iter().any(|argument| {
+                                    argument
+                                        .label
+                                        .as_ref()
+                                        .is_some_and(|label| label.0.contains(next_node))
+                                })
+                        })
+                })
+        })
+    }
+}

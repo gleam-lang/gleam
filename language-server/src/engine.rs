@@ -51,13 +51,14 @@ use super::{
     DownloadDependencies, MakeLocker,
     code_action::{
         AddAnnotations, AddMissingTypeParameter, AddOmittedLabels, AnnotateTopLevelDefinitions,
-        CodeActionBuilder, CollapseNestedCase, ConvertFromUse, ConvertToFunctionCall,
-        ConvertToPipe, ConvertToUse, CreateUnknownModule, ExpandFunctionCapture, ExtractConstant,
-        ExtractFunction, ExtractVariable, FillInMissingLabelledArgs, FillUnusedFields,
-        FixBinaryOperation, FixTruncatedBitArraySegment, GenerateDynamicDecoder, GenerateFunction,
-        GenerateJsonEncoder, GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase,
-        MergeCaseBranches, PatternMatchOnValue, RedundantTupleInCaseSubject, RemoveBlock,
-        RemoveEchos, RemovePrivateOpaque, RemoveUnreachableCaseClauses, RemoveUnusedImports,
+        CodeActionBuilder, CollapseNestedCase, ConvertBetweenDocAndRegularComment, ConvertFromUse,
+        ConvertToFunctionCall, ConvertToPipe, ConvertToUse, CreateUnknownModule,
+        ExpandFunctionCapture, ExtractConstant, ExtractFunction, ExtractVariable,
+        FillInMissingLabelledArgs, FillUnusedFields, FixBinaryOperation,
+        FixTruncatedBitArraySegment, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
+        GenerateVariant, InlineVariable, InterpolateString, LetAssertToCase, MergeCaseBranches,
+        PatternMatchOnValue, RedundantTupleInCaseSubject, RemoveBlock, RemoveEchos,
+        RemovePrivateOpaque, RemoveUnreachableCaseClauses, RemoveUnusedImports,
         UnwrapAnonymousFunction, UseLabelShorthandSyntax, WrapInAnonymousFunction, WrapInBlock,
         code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_generate_type,
@@ -555,6 +556,9 @@ where
             );
             actions.extend(DiscardUnusedVariable::new(module, &lines, &params).code_actions());
             code_action_fix_deprecated_pipe(module, &lines, &params, &mut actions);
+            actions.extend(
+                ConvertBetweenDocAndRegularComment::new(module, &lines, &params).code_actions(),
+            );
 
             actions.sort_by_key(|one| {
                 let preferred_key = if one.is_preferred == Some(true) { 0 } else { 1 };
