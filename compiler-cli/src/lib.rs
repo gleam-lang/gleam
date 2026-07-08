@@ -799,7 +799,9 @@ pub enum Hex {
         version: String,
     },
 
-    /// Revert a release from Hex
+    /// Revert a release, removing it from Hex.
+    ///
+    /// Releases can only be reverted within 24 hours since they were published.
     ///
     /// This command uses this environment variable:
     ///
