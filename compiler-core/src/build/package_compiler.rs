@@ -239,7 +239,7 @@ where
         //     modules
         // };
 
-        if let Err(error) = self.perform_codegen(&modules) {
+        if let Err(error) = self.perform_codegen(&modules, &cached_module_names) {
             return error.into();
         }
 
@@ -352,7 +352,11 @@ where
         Ok(())
     }
 
-    fn perform_codegen(&mut self, modules: &[Module]) -> Result<()> {
+    fn perform_codegen(
+        &mut self,
+        modules: &[Module],
+        cached_module_names: &[EcoString],
+    ) -> Result<()> {
         if !self.perform_codegen {
             tracing::debug!("skipping_codegen");
             return Ok(());
@@ -370,7 +374,7 @@ where
                 prelude_location,
             ),
             TargetCodegenConfiguration::Erlang { app_file } => {
-                self.perform_erlang_codegen(modules, app_file.as_ref())
+                self.perform_erlang_codegen(modules, cached_module_names, app_file.as_ref())
             }
         }
     }
@@ -378,6 +382,7 @@ where
     fn perform_erlang_codegen(
         &mut self,
         modules: &[Module],
+        cached_module_names: &[EcoString],
         app_file_config: Option<&ErlangAppCodegenConfiguration>,
     ) -> Result<(), Error> {
         let mut written = HashSet::new();
@@ -418,6 +423,7 @@ where
                 io,
                 &self.config,
                 modules,
+                cached_module_names,
                 native_modules,
             )?;
         }

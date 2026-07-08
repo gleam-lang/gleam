@@ -414,6 +414,11 @@
 
 ### Bug fixes
 
+- Fixed a bug where the generated Erlang `.app` file's `modules` list would only
+  contain the modules recompiled by the latest build, becoming empty on a warm
+  rebuild where nothing changed.
+  ([Charlie Tonneslan](https://github.com/c-tonneslan))
+
 - When using the language server to extract a function from within an anonymous
   function, the return value of the extracted function is respected.
 
