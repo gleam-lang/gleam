@@ -263,7 +263,7 @@ where
             None => (params.text_document.uri.clone(), line_numbers),
             Some(name) => {
                 let module = self.compiler.get_source(&name)?;
-                let url = Url::parse(&format!("file:///{}", &module.path))
+                let url = Url::parse(&format!("file:///{}", module.path))
                     .expect("goto definition URL parse");
                 (url, &module.line_numbers)
             }

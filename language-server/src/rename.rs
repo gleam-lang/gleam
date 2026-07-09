@@ -486,7 +486,7 @@ pub fn rename_module_alias(
             ModuleNameReference::Import {
                 module_location: _,
                 import_end,
-            } => edits.insert(*import_end, format!(" as {}", &params.new_name)),
+            } => edits.insert(*import_end, format!(" as {}", params.new_name)),
             ModuleNameReference::AliasedImport {
                 alias_location,
                 module_location: _,
@@ -495,7 +495,7 @@ pub fn rename_module_alias(
                 if params.new_name == original_module_name {
                     edits.delete(SrcSpan::new(alias_location.start - 1, alias_location.end));
                 } else {
-                    edits.replace(*alias_location, format!("as {}", &params.new_name))
+                    edits.replace(*alias_location, format!("as {}", params.new_name))
                 }
             }
             ModuleNameReference::ModuleSelect(location)

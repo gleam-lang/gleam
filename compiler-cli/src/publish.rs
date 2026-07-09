@@ -736,8 +736,8 @@ fn generated_erlang_files(
     }
 
     // src/package.app.src file
-    let app = format!("{}.app", &package.config.name);
-    let appsrc = format!("{}.src", &app);
+    let app = format!("{}.app", package.config.name);
+    let appsrc = format!("{}.src", app);
     files.push((tar_src.join(appsrc), fs::read(ebin.join(app))?));
 
     Ok(files)
