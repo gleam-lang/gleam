@@ -1482,7 +1482,7 @@ fn provide_package(
     match provided.get(&package_name) {
         Some(package) if package.source == package_source => {
             // This package has already been provided from this source, return the version
-            let version = hexpm::version::Range::new(format!("== {}", &package.version))
+            let version = hexpm::version::Range::new(format!("== {}", package.version))
                 .expect("== {version} should be a valid range");
             return Ok(version);
         }
@@ -1574,7 +1574,7 @@ fn provide_package(
     }
     let _ = parents.pop();
     // Add the package to the provided packages dictionary
-    let version = hexpm::version::Range::new(format!("== {}", &config.version))
+    let version = hexpm::version::Range::new(format!("== {}", config.version))
         .expect("== {version} should be a valid range");
     let _ = provided.insert(
         config.name,
