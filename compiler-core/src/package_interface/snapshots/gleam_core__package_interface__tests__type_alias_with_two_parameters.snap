@@ -1,0 +1,40 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+expression: "pub type Wibble(a, b) = Result(a, b)"
+---
+{
+  "name": "my_package",
+  "version": "11.10.9-1.wibble+build",
+  "gleam-version-constraint": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [],
+      "type-aliases": {
+        "Wibble": {
+          "documentation": null,
+          "deprecation": null,
+          "parameters": 2,
+          "alias": {
+            "kind": "named",
+            "name": "Result",
+            "package": "",
+            "module": "gleam",
+            "parameters": [
+              {
+                "kind": "variable",
+                "id": 0
+              },
+              {
+                "kind": "variable",
+                "id": 1
+              }
+            ]
+          }
+        }
+      },
+      "types": {},
+      "constants": {},
+      "functions": {}
+    }
+  }
+}

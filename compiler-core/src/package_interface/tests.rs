@@ -338,3 +338,15 @@ pub type Wibble {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5957
+#[test]
+pub fn type_alias_with_two_parameters() {
+    assert_package_interface!("pub type Wibble(a, b) = Result(a, b)");
+}
+
+// https://github.com/gleam-lang/gleam/issues/5957
+#[test]
+pub fn type_alias_with_two_parameters_in_reverse() {
+    assert_package_interface!("pub type Wibble(a, b) = Result(b, a)");
+}
