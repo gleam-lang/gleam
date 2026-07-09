@@ -501,3 +501,7 @@
 - Fixed a bug where running `gleam docs build` on non-Erlang target projects
   with a warm cache would not produce the module pages.
   ([Matt Champagne](https://github.com/han-tyumi))
+
+- Fixed a bug where an incorrect `package-interface.json` would be generated for
+  certain type aliases.
+  ([Surya Rose](https://github.com/GearsDatapacks))
