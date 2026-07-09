@@ -174,11 +174,17 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
         }
     }
 
+    let otp_version = built
+        .otp_version
+        .expect("OTP version not available after Erlang compilation");
+    let otp_version = otp_version.to_string();
+
     // PowerShell entry point script.
     write_entrypoint_script(
         &out.join(ENTRYPOINT_FILENAME_POWERSHELL),
         ENTRYPOINT_TEMPLATE_POWERSHELL,
         &built.root_package.config.name,
+        &otp_version,
     )?;
 
     // POSIX Shell entry point script.
@@ -186,6 +192,7 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
         &out.join(ENTRYPOINT_FILENAME_POSIX_SHELL),
         ENTRYPOINT_TEMPLATE_POSIX_SHELL,
         &built.root_package.config.name,
+        &otp_version,
     )?;
 
     crate::cli::print_exported(&built.root_package.config.name);
@@ -206,10 +213,13 @@ one of the following scripts:
 
 fn write_entrypoint_script(
     entrypoint_output_path: &Utf8PathBuf,
-    entrypoint_template_path: &str,
+    entrypoint_template: &str,
     package_name: &str,
+    otp_version: &str,
 ) -> Result<()> {
-    let text = entrypoint_template_path.replace("$PACKAGE_NAME_FROM_GLEAM", package_name);
+    let text = entrypoint_template
+        .replace("$PACKAGE_NAME_FROM_GLEAM", package_name)
+        .replace("$OTP_VERSION_FROM_GLEAM", otp_version);
     fs::write(entrypoint_output_path, &text)?;
     fs::make_executable(entrypoint_output_path)?;
     Ok(())

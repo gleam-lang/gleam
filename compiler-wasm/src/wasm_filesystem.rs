@@ -38,6 +38,10 @@ impl BeamCompilerIO for WasmFileSystem {
     ) -> Result<Vec<String>, Error> {
         Ok(Vec::new()) // Always succeed.
     }
+
+    fn otp_version(&self) -> u64 {
+        unimplemented!()
+    }
 }
 
 impl FileSystemWriter for WasmFileSystem {

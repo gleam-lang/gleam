@@ -348,6 +348,8 @@ pub trait BeamCompilerIO {
         modules: &HashSet<Utf8PathBuf>,
         stdio: Stdio,
     ) -> Result<Vec<String>, Error>;
+
+    fn otp_version(&self) -> u64;
 }
 
 /// A trait used to write files.

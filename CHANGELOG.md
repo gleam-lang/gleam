@@ -74,6 +74,10 @@
 
   ([John Downey](https://github.com/jtdowney))
 
+- Erlang shipments now warn when run on a different OTP version than they were
+  built with.
+  ([Joris Hartog](https://github.com/nootr))
+
 ### Language server
 
 - The language server now supports go-to-definition, find-references and rename
