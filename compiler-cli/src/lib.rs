@@ -836,6 +836,7 @@ pub enum Owner {
     ///
     #[command(verbatim_doc_comment)]
     Add {
+        #[arg(long)]
         package: String,
 
         /// The username or email of the additional owner
@@ -860,7 +861,7 @@ pub enum Owner {
         package: String,
 
         /// The username or email of the new owner
-        #[arg(long = "to")]
+        #[arg(long = "user")]
         username_or_email: String,
     },
 }
