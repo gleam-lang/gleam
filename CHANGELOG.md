@@ -69,10 +69,19 @@
 
   ```toml
   [dependencies]
-  my_package = { git = "https://github.com/example/monorepo", ref = "main", path = "packages/my_package" }
+  my_package = {
+    git = "https://github.com/example/monorepo",
+    ref = "main",
+    path = "packages/my_package",
+  }
   ```
 
   ([John Downey](https://github.com/jtdowney))
+
+- The `gleam hex owner transfer` command now uses the flag `--user` instead of
+  the flag `--to`. The `gleam hex owner add` command now takes the package name
+  via the flag `--package`.
+  ([Louis Pilfold](https://github.com/lpil))
 
 ### Language server
 
