@@ -424,21 +424,30 @@ pub fn module_erlang_name(gleam_name: &EcoString) -> EcoString {
 pub struct UnqualifiedImport<'a> {
     pub name: &'a EcoString,
     pub module: &'a EcoString,
-    pub is_type: bool,
     pub location: &'a SrcSpan,
-    /// The location excluding the potential `as ...` clause, or the `type` keyword.
-    /// For example, in `type Wibble as Wobble`, it covers `Wibble`.
-    pub imported_name_location: &'a SrcSpan,
+    /// The position of the original name. For example, in `type Wibble as
+    /// Wobble`, it points to the start of `Wibble`.
+    pub name_position: u32,
     pub as_name: Option<&'a EcoString>,
 }
 
 impl<'a> UnqualifiedImport<'a> {
+    /// The location of the original name, excluding the potential `as ...`
+    /// clause or the `type` keyword. For example, in `type Wibble as Wobble`,
+    /// it covers `Wibble`.
+    pub fn name_location(&self) -> SrcSpan {
+        SrcSpan::new(
+            self.name_position,
+            self.name_position + self.name.len() as u32,
+        )
+    }
+
     /// If the import is aliased, it is the start of the alias. Otherwise, it is
     /// the start of the imported name.
     ///
     /// For example, in `type Wibble as Wobble`, the used name will start at
     /// `Wobble`. In `type Wibble`, it will start at `Wibble`.
-    pub fn used_name_start(&self) -> u32 {
+    pub fn used_name_position(&self) -> u32 {
         match self.as_name {
             // For aliases, the location span will cover the whole of `type
             // Wibble as Wobble`.
@@ -447,7 +456,7 @@ impl<'a> UnqualifiedImport<'a> {
             Some(as_name) => self.location.end - as_name.len() as u32,
             // For non-aliased imports, use the start of the imported name
             // location. It covers `Wibble` in `type Wibble as Wobble`.
-            None => self.imported_name_location.start,
+            None => self.name_position,
         }
     }
 
@@ -462,6 +471,13 @@ impl<'a> UnqualifiedImport<'a> {
         } else {
             Named::Function
         }
+    }
+
+    pub fn is_type(&self) -> bool {
+        // If the position is not at the start location then that means
+        // that there is a `type` keyword before it, along with an amount of
+        // whitespace and optional comments
+        self.name_position != self.location.start
     }
 }
 
@@ -661,24 +677,21 @@ impl<'a> Located<'a> {
                 module: None,
                 span: record.location,
             }),
-            Self::UnqualifiedImport(UnqualifiedImport {
-                module,
-                name,
-                is_type,
-                ..
-            }) => importable_modules.get(*module).and_then(|m| {
-                if *is_type {
-                    m.types.get(*name).map(|t| DefinitionLocation {
-                        module: Some((*module).clone()),
-                        span: t.origin,
-                    })
-                } else {
-                    m.values.get(*name).map(|v| DefinitionLocation {
-                        module: Some((*module).clone()),
-                        span: v.definition_location().span,
-                    })
-                }
-            }),
+            Self::UnqualifiedImport(import @ UnqualifiedImport { module, name, .. }) => {
+                importable_modules.get(*module).and_then(|m| {
+                    if import.is_type() {
+                        m.types.get(*name).map(|t| DefinitionLocation {
+                            module: Some((*module).clone()),
+                            span: t.origin,
+                        })
+                    } else {
+                        m.values.get(*name).map(|v| DefinitionLocation {
+                            module: Some((*module).clone()),
+                            span: v.definition_location().span,
+                        })
+                    }
+                })
+            }
             Self::Arg(_) => None,
             Self::Annotation { type_, .. } => self.type_location(importable_modules, type_.clone()),
             Self::Label { .. } => None,

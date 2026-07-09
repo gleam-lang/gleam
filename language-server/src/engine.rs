@@ -1318,18 +1318,19 @@ where
                 Located::VariantConstructorDefinition(constructor) => {
                     Some(hover_for_constructor(constructor, lines, module))
                 }
-                Located::UnqualifiedImport(UnqualifiedImport {
-                    name,
-                    module: module_name,
-                    is_type,
-                    location,
-                    imported_name_location: _,
-                    as_name: _,
-                }) => this
+                Located::UnqualifiedImport(
+                    import @ UnqualifiedImport {
+                        name,
+                        module: module_name,
+                        location,
+                        name_position: _,
+                        as_name: _,
+                    },
+                ) => this
                     .compiler
                     .get_module_interface(module_name.as_str())
                     .and_then(|module_interface| {
-                        if is_type {
+                        if import.is_type() {
                             module_interface.types.get(name).map(|constructor| {
                                 hover_for_annotation(
                                     *location,

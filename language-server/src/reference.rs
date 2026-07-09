@@ -407,18 +407,17 @@ pub fn reference_for_ast_node(
             import @ UnqualifiedImport {
                 name,
                 module,
-                is_type,
                 location,
-                imported_name_location: _,
+                name_position: _,
                 as_name: _,
             },
         ) => {
-            if is_type {
+            if import.is_type() {
                 Some(Referenced::ModuleType {
                     module: module.clone(),
                     name: name.clone(),
                     location: *location,
-                    name_start: import.used_name_start(),
+                    name_start: import.used_name_position(),
                     target_kind: RenameTarget::Unqualified,
                 })
             } else {
@@ -426,7 +425,7 @@ pub fn reference_for_ast_node(
                     module: module.clone(),
                     name: name.clone(),
                     location: *location,
-                    name_start: import.used_name_start(),
+                    name_start: import.used_name_position(),
                     name_kind: import.name_kind(),
                     target_kind: RenameTarget::Unqualified,
                 })

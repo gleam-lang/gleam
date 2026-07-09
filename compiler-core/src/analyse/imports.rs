@@ -120,7 +120,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         );
 
         let alias_location = SrcSpan {
-            start: import.imported_name_location.end,
+            start: import.name_location().end,
             end: import.location.end,
         };
 
@@ -128,7 +128,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             type_info.module.clone(),
             import.name.clone(),
             imported_name,
-            import.imported_name_location,
+            import.name_location(),
             ReferenceKind::Import(alias_location),
         );
 
@@ -203,7 +203,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                 );
 
                 let alias_location = SrcSpan {
-                    start: import.imported_name_location.end,
+                    start: import.name_location().end,
                     end: import.location.end,
                 };
 
@@ -211,7 +211,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     module.clone(),
                     import_name.clone(),
                     used_name,
-                    import.imported_name_location,
+                    import.name_location(),
                     ReferenceKind::Import(alias_location),
                 );
             }
@@ -227,7 +227,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                 );
 
                 let alias_location = SrcSpan {
-                    start: import.imported_name_location.end,
+                    start: import.name_location().end,
                     end: import.location.end,
                 };
 
@@ -235,7 +235,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     module.clone(),
                     import_name.clone(),
                     used_name,
-                    import.imported_name_location,
+                    import.name_location(),
                     ReferenceKind::Import(alias_location),
                 );
             }
