@@ -2,15 +2,15 @@
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
 use crate::{
+    Result,
     build::{
-        module_erlang_name, package_compiler::StdlibPackage, ErlangAppCodegenConfiguration, Module,
+        ErlangAppCodegenConfiguration, Module, module_erlang_name, package_compiler::StdlibPackage,
     },
     config::PackageConfig,
     erlang,
     io::FileSystemWriter,
     javascript::{self, ModuleConfig},
     line_numbers::LineNumbers,
-    Result,
 };
 use ecow::EcoString;
 use erlang::escape_atom_string;
