@@ -225,7 +225,7 @@ pub fn hex_tarball(paths: &ProjectPaths) -> Result<()> {
         "
 Your hex tarball has been generated in {}.
 ",
-        &path
+        path
     );
     Ok(())
 }

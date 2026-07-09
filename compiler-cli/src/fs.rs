@@ -900,9 +900,9 @@ pub fn get_git_repository_root(mut path: Utf8PathBuf) -> Option<Utf8PathBuf> {
             return Some(path);
         }
 
-        path = match path.parent() {
-            Some(path) => path.into(),
-            None => return None,
+        path = {
+            let path = path.parent()?;
+            path.into()
         }
     }
 }
