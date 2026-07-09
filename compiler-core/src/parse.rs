@@ -3122,7 +3122,7 @@ where
                     let mut import = UnqualifiedImport {
                         name,
                         location,
-                        imported_name_location: location,
+                        name_position: location.start,
                         as_name: None,
                     };
                     if self.maybe_one(&Token::As).is_some() {
@@ -3140,7 +3140,7 @@ where
                     let mut import = UnqualifiedImport {
                         name,
                         location,
-                        imported_name_location: location,
+                        name_position: location.start,
                         as_name: None,
                     };
                     if self.maybe_one(&Token::As).is_some() {
@@ -3158,7 +3158,7 @@ where
                     let mut import = UnqualifiedImport {
                         name,
                         location,
-                        imported_name_location: SrcSpan::new(name_start, end),
+                        name_position: name_start,
                         as_name: None,
                     };
                     if self.maybe_one(&Token::As).is_some() {

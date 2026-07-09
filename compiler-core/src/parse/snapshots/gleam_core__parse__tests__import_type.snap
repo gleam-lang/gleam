@@ -28,11 +28,8 @@ Parsed {
                                     start: 28,
                                     end: 34,
                                 },
-                                imported_name_location: SrcSpan {
-                                    start: 28,
-                                    end: 34,
-                                },
                                 name: "Wobble",
+                                name_position: 28,
                                 as_name: None,
                             },
                         ],
@@ -42,11 +39,8 @@ Parsed {
                                     start: 15,
                                     end: 26,
                                 },
-                                imported_name_location: SrcSpan {
-                                    start: 20,
-                                    end: 26,
-                                },
                                 name: "Wobble",
+                                name_position: 20,
                                 as_name: None,
                             },
                             UnqualifiedImport {
@@ -54,11 +48,8 @@ Parsed {
                                     start: 36,
                                     end: 47,
                                 },
-                                imported_name_location: SrcSpan {
-                                    start: 41,
-                                    end: 47,
-                                },
                                 name: "Wabble",
+                                name_position: 41,
                                 as_name: None,
                             },
                         ],
