@@ -422,7 +422,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     ) -> TypedPattern {
         // Any variables from other parts of the pattern are no longer in scope.
         // Only variables from the bit array pattern itself can be used.
-        for (_, variable) in self.variables.iter_mut() {
+        for variable in self.variables.values_mut() {
             variable.scope = Scope::OtherPattern;
         }
 
