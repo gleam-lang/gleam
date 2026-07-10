@@ -22,13 +22,13 @@ pub fn go(x) {
 go(X) ->
     case X of
         <<"1"/utf8, _/binary>> ->
-            Digit = <<"1"/utf8>>,
+            Digit = ~"1",
             Digit;
 
         <<"2"/utf8, _/binary>> ->
-            Digit = <<"2"/utf8>>,
+            Digit = ~"2",
             Digit;
 
         _ ->
-            <<"Unknown"/utf8>>
+            ~"Unknown"
     end.

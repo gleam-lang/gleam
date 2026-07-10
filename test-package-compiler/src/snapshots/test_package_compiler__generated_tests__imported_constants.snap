@@ -64,8 +64,8 @@ aliased_fn_b() ->
 
 -file("src/two.gleam", 48).
 -spec accessors(one:user()) -> {binary(), integer()}.
--doc(<<" For these statements we use the accessors for the record from the other
- module"/utf8>>).
+-doc(~" For these statements we use the accessors for the record from the other
+ module").
 accessors(User) ->
     Name = erlang:element(2, User),
     Score = erlang:element(3, User),
@@ -73,7 +73,7 @@ accessors(User) ->
 
 -file("src/two.gleam", 55).
 -spec destructure_qualified(one:user()) -> {binary(), integer()}.
--doc(<<" For these statements we use destructure the record"/utf8>>).
+-doc(~" For these statements we use destructure the record").
 destructure_qualified(User) ->
     {user, Name, Score} = User,
     {Name, Score}.

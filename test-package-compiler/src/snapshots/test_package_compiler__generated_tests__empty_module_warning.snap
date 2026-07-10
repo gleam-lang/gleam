@@ -59,7 +59,7 @@ private_function() ->
 -file("src/public.gleam", 4).
 -spec main() -> binary().
 main() ->
-    <<"This module has public definitions"/utf8>>.
+    ~"This module has public definitions".
 
 
 

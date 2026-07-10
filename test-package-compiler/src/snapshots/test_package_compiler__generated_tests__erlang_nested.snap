@@ -16,7 +16,7 @@ expression: "./cases/erlang_nested"
 -file("src/one/two.gleam", 4).
 -spec main() -> binary().
 main() ->
-    <<"Hi there"/utf8>>.
+    ~"Hi there".
 
 
 

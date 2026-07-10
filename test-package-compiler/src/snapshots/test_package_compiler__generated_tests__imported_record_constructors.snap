@@ -93,8 +93,8 @@ aliased_fn_b() ->
 
 -file("src/two.gleam", 61).
 -spec accessors(one@one:user()) -> {binary(), integer()}.
--doc(<<" For these statements we use the accessors for the record from the other
- module"/utf8>>).
+-doc(~" For these statements we use the accessors for the record from the other
+ module").
 accessors(User) ->
     Name = erlang:element(2, User),
     Score = erlang:element(3, User),
@@ -102,7 +102,7 @@ accessors(User) ->
 
 -file("src/two.gleam", 68).
 -spec destructure_qualified(one@one:user()) -> {binary(), integer()}.
--doc(<<" For these statements we use destructure the record"/utf8>>).
+-doc(~" For these statements we use destructure the record").
 destructure_qualified(User) ->
     {user, Name, Score} = User,
     {Name, Score}.
@@ -127,24 +127,24 @@ destructure_aliased(User) ->
 
 -file("src/two.gleam", 89).
 -spec update_qualified(one@one:user()) -> one@one:user().
--doc(<<" For these statements we use update the record"/utf8>>).
+-doc(~" For these statements we use update the record").
 update_qualified(User) ->
-    {user, <<"wibble"/utf8>>, erlang:element(3, User)}.
+    {user, ~"wibble", erlang:element(3, User)}.
 
 -file("src/two.gleam", 93).
 -spec update_qualified_aliased(one@two:user()) -> one@two:user().
 update_qualified_aliased(User) ->
-    {user, <<"wibble"/utf8>>, erlang:element(3, User)}.
+    {user, ~"wibble", erlang:element(3, User)}.
 
 -file("src/two.gleam", 97).
 -spec update_unqualified(one@one:user()) -> one@one:user().
 update_unqualified(User) ->
-    {user, <<"wibble"/utf8>>, erlang:element(3, User)}.
+    {user, ~"wibble", erlang:element(3, User)}.
 
 -file("src/two.gleam", 101).
 -spec update_aliased(one@one:user()) -> one@one:user().
 update_aliased(User) ->
-    {user, <<"wibble"/utf8>>, erlang:element(3, User)}.
+    {user, ~"wibble", erlang:element(3, User)}.
 
 
 

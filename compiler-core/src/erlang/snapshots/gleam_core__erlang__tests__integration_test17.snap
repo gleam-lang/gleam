@@ -19,4 +19,4 @@ pub fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
 -file("project/test/my/mod.gleam", 3).
 -spec create_user(integer()) -> user().
 create_user(User_id) ->
-    {user, User_id, <<""/utf8>>, 22}.
+    {user, User_id, ~"", 22}.

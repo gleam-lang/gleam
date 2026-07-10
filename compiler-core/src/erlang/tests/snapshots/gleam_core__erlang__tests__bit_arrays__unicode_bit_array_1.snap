@@ -17,5 +17,5 @@ expression: "\n    pub fn main() {\n        let emoji = \"\\u{1F600}\"\n        
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> bitstring().
 main() ->
-    Emoji = <<"\x{1F600}"/utf8>>,
+    Emoji = ~"\x{1F600}",
     Arr = <<Emoji/binary>>.

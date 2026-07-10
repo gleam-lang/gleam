@@ -27,7 +27,7 @@ wibble(N) ->
 -spec main() -> list(integer()).
 main() ->
     _pipe = [1, 2, 3],
-    _pipe@1 = echo(_pipe, <<"message!!"/utf8>>, <<"project/test/my/mod.gleam"/utf8>>, 4),
+    _pipe@1 = echo(_pipe, ~"message!!", ~"project/test/my/mod.gleam", 4),
     wibble(_pipe@1).
 
 % ...omitted code from `templates/echo.erl`...

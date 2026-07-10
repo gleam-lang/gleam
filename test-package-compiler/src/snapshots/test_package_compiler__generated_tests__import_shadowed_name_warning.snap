@@ -28,7 +28,7 @@ expression: "./cases/import_shadowed_name_warning"
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([use_type/1]).
 -export_type([shadowing/0]).
--moduledoc(<<" https://github.com/gleam-lang/otp/pull/22"/utf8>>).
+-moduledoc(~" https://github.com/gleam-lang/otp/pull/22").
 
 -type shadowing() :: port.
 

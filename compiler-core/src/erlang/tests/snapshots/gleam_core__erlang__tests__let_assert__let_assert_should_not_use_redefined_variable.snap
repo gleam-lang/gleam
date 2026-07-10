@@ -28,8 +28,8 @@ split_once(X, Y) ->
 -file("project/test/my/mod.gleam", 6).
 -spec main() -> {ok, {binary(), binary()}} | {error, binary()}.
 main() ->
-    String = <<"Hello, world!"/utf8>>,
-    case split_once(String, <<"\n"/utf8>>) of
+    String = ~"Hello, world!",
+    case split_once(String, ~"\n") of
         {ok, {Prefix, String@1}} = _value ->
             _value;
 
@@ -37,9 +37,9 @@ main() ->
             erlang:error(#{
                 gleam_error => let_assert,
                 message => <<"Failed to split: "/utf8, String/binary>>,
-                file => <<"project/test/my/mod.gleam"/utf8>>,
-                module => <<"my/mod"/utf8>>,
-                function => <<"main"/utf8>>,
+                file => ~"project/test/my/mod.gleam",
+                module => ~"my/mod",
+                function => ~"main",
                 line => 8,
                 value => _value@1,
                 start => 148,

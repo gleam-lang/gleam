@@ -27,7 +27,7 @@ fn return_person() {
 -file("project/test/my/mod.gleam", 9).
 -spec return_person() -> person().
 return_person() ->
-    {person, <<"Quinn"/utf8>>, 27}.
+    {person, ~"Quinn", 27}.
 
 -file("project/test/my/mod.gleam", 4).
 -spec main() -> person().

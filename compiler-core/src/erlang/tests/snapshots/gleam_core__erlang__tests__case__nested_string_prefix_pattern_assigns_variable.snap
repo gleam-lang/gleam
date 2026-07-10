@@ -23,13 +23,13 @@ pub fn go(x) {
 go(X) ->
     case X of
         [<<"a"/utf8, Rest/binary>> | _] ->
-            Letter = <<"a"/utf8>>,
+            Letter = ~"a",
             <<Letter/binary, Rest/binary>>;
 
         [<<"b"/utf8, Rest/binary>> | _] ->
-            Letter = <<"b"/utf8>>,
+            Letter = ~"b",
             <<Letter/binary, Rest/binary>>;
 
         _ ->
-            <<""/utf8>>
+            ~""
     end.

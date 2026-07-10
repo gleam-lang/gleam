@@ -29,4 +29,4 @@ identity(A) ->
 -spec main() -> binary().
 main() ->
     Num = identity(1),
-    Word = identity(<<"Word"/utf8>>).
+    Word = identity(~"Word").

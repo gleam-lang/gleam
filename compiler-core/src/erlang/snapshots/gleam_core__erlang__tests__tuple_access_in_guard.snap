@@ -26,8 +26,8 @@ main() ->
     X = [{10, 2}, {1, 2}],
     case X of
         [First | Rest] when erlang:element(1, First) =:= Key ->
-            <<"ok"/utf8>>;
+            ~"ok";
 
         _ ->
-            <<"ko"/utf8>>
+            ~"ko"
     end.

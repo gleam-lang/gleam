@@ -23,7 +23,7 @@ pub fn main(arg) {
 -spec main(binary()) -> integer().
 main(Arg) ->
     case Arg of
-        _ when Arg =:= <<"constant value"/utf8>> ->
+        _ when Arg =:= ~"constant value" ->
             1;
 
         _ ->

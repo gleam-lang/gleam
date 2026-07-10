@@ -26,7 +26,7 @@ count(From, To) ->
             From;
 
         false ->
-            echo(From, nil, <<"project/test/my/mod.gleam"/utf8>>, 6),
+            echo(From, nil, ~"project/test/my/mod.gleam", 6),
             count(From + 1, To)
     end.
 

@@ -19,20 +19,20 @@ expression: "\n     pub fn main() {\n      \"lets\"\n      |> panic as \"pipe\"\
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> any().
 main() ->
-    _pipe = <<"lets"/utf8>>,
+    _pipe = ~"lets",
     _pipe@1 = (erlang:error(#{
         gleam_error => panic,
-        message => <<"pipe"/utf8>>,
-        file => <<"project/test/my/mod.gleam"/utf8>>,
-        module => <<"my/mod"/utf8>>,
-        function => <<"main"/utf8>>,
+        message => ~"pipe",
+        file => ~"project/test/my/mod.gleam",
+        module => ~"my/mod",
+        function => ~"main",
         line => 4
     }))(_pipe),
     (erlang:error(#{
         gleam_error => panic,
-        message => <<"other panic"/utf8>>,
-        file => <<"project/test/my/mod.gleam"/utf8>>,
-        module => <<"my/mod"/utf8>>,
-        function => <<"main"/utf8>>,
+        message => ~"other panic",
+        file => ~"project/test/my/mod.gleam",
+        module => ~"my/mod",
+        function => ~"main",
         line => 5
     }))(_pipe@1).

@@ -26,9 +26,9 @@ expression: "\n        pub type Wibble(a, b) {\n            Wibble(a, b)\n      
 wibble() ->
     erlang:error(#{
         gleam_error => todo,
-        message => <<"`todo` expression evaluated. This code has not yet been implemented."/utf8>>,
-        file => <<"project/test/my/mod.gleam"/utf8>>,
-        module => <<"my/mod"/utf8>>,
-        function => <<"wibble"/utf8>>,
+        message => ~"`todo` expression evaluated. This code has not yet been implemented.",
+        file => ~"project/test/my/mod.gleam",
+        module => ~"my/mod",
+        function => ~"wibble",
         line => 7
     }).

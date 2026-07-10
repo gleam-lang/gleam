@@ -22,13 +22,13 @@ pub fn main(x) {
 main(X) ->
     case X of
         <<"a"/utf8, _/binary>> ->
-            Letter = <<"a"/utf8>>,
+            Letter = ~"a",
             Letter;
 
         <<"b"/utf8, _/binary>> ->
-            Letter = <<"b"/utf8>>,
+            Letter = ~"b",
             Letter;
 
         _ ->
-            <<"wibble"/utf8>>
+            ~"wibble"
     end.

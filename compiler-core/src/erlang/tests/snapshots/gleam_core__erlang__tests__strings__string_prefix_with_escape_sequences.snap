@@ -38,56 +38,56 @@ pub fn go(x) {
 go(X) ->
     _ = case X of
         <<"\f"/utf8, Rest/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\n"/utf8, Rest@1/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\r"/utf8, Rest@2/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\t"/utf8, Rest@3/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\""/utf8, Rest@4/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\\"/utf8, Rest@5/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\f \n \r \t \" \\"/utf8, Rest@6/binary>> ->
-            <<"control chars with prefix assignment"/utf8>>;
+            ~"control chars with prefix assignment";
 
         <<"\x{9}"/utf8, Rest@7/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\x{000009}"/utf8, Rest@8/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\x{21}"/utf8, Rest@9/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\x{100}"/utf8, Rest@10/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\x{1000}"/utf8, Rest@11/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\x{1F600}"/utf8, Rest@12/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\x{1f600}"/utf8, Rest@13/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\x{01F600}"/utf8, Rest@14/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\x{01f600}"/utf8, Rest@15/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\x{9} \x{000009} \x{21} \x{100} \x{1000} \x{1F600} \x{01F600}"/utf8, Rest@16/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         _ ->
-            <<"Unknown"/utf8>>
+            ~"Unknown"
     end.

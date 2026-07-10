@@ -17,4 +17,4 @@ pub fn y_with_dieresis_with_slash() -> String {
 -file("project/test/my/mod.gleam", 2).
 -spec y_with_dieresis_with_slash() -> binary().
 y_with_dieresis_with_slash() ->
-    <<"\\\x{0308}y"/utf8>>.
+    ~"\\\x{0308}y".

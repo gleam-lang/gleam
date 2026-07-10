@@ -16,7 +16,7 @@ expression: "./cases/hello_joe"
 -file("src/hello_joe.gleam", 4).
 -spec main() -> binary().
 main() ->
-    <<"Hello, Joe!"/utf8>>.
+    ~"Hello, Joe!".
 
 
 

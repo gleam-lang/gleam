@@ -17,4 +17,4 @@ pub fn unicode_escape_sequence_6_digits() -> String {
 -file("project/test/my/mod.gleam", 2).
 -spec unicode_escape_sequence_6_digits() -> binary().
 unicode_escape_sequence_6_digits() ->
-    <<"\x{10abcd}"/utf8>>.
+    ~"\x{10abcd}".

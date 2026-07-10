@@ -22,9 +22,9 @@ pub fn go(x) {
 go(X) ->
     case X of
         <<"Hello, "/utf8, Name/binary>> ->
-            Greeting = <<"Hello, "/utf8>>,
+            Greeting = ~"Hello, ",
             Greeting;
 
         _ ->
-            <<"Unknown"/utf8>>
+            ~"Unknown"
     end.
