@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2024 The Gleam contributors
 
-use std::collections::HashMap;
+use std::{assert_matches, collections::HashMap, rc::Rc};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
@@ -12,6 +12,7 @@ use gleam_core::{
     Error,
     build::Runtime,
     config::{DenoConfig, DenoFlag, Docs, ErlangConfig, JavaScriptConfig},
+    dependency::{PackageFetchError, PackageFetcher},
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
     requirement::Requirement,
@@ -1908,4 +1909,201 @@ fn test_ensure_packages_exist_locally_some_missing() {
         }
         _ => panic!("Expected PackagesToUpdateNotExist error"),
     }
+}
+
+struct FakeFetcher {
+    packages: HashMap<String, Rc<hexpm::Package>>,
+}
+
+impl PackageFetcher for FakeFetcher {
+    fn get_dependencies(&self, package: &str) -> Result<Rc<hexpm::Package>, PackageFetchError> {
+        self.packages
+            .get(package)
+            .map(Rc::clone)
+            .ok_or_else(|| PackageFetchError::NotFoundError(package.to_string()))
+    }
+}
+
+fn signed_package(
+    name: &str,
+    version: &str,
+    outer_checksum: Vec<u8>,
+    requirements: &[&str],
+) -> Rc<hexpm::Package> {
+    let requirements = requirements
+        .iter()
+        .map(|name| {
+            let dependency = hexpm::Dependency {
+                requirement: hexpm::version::Range::new("~> 1.0".into()).unwrap(),
+                optional: false,
+                app: None,
+                repository: None,
+            };
+            ((*name).to_string(), dependency)
+        })
+        .collect();
+    Rc::new(hexpm::Package {
+        name: name.into(),
+        repository: "hexpm".into(),
+        releases: vec![hexpm::Release {
+            version: Version::parse(version).unwrap(),
+            requirements,
+            retirement_status: None,
+            outer_checksum,
+            meta: (),
+        }],
+    })
+}
+
+#[test]
+fn verified_releases_reads_signed_metadata() {
+    let fetcher = FakeFetcher {
+        packages: [(
+            "wibble".to_string(),
+            signed_package("wibble", "1.0.0", vec![0x01, 0x02, 0x03], &["gleam_stdlib"]),
+        )]
+        .into_iter()
+        .collect(),
+    };
+    let resolved: HashMap<String, Version> =
+        [("wibble".to_string(), Version::parse("1.0.0").unwrap())]
+            .into_iter()
+            .collect();
+
+    let releases = verified_releases(&fetcher, &resolved, &HashMap::new()).unwrap();
+
+    assert_eq!(
+        releases,
+        [(
+            "wibble".to_string(),
+            VerifiedRelease {
+                outer_checksum: vec![0x01, 0x02, 0x03],
+                requirements: vec!["gleam_stdlib".into()],
+            }
+        )]
+        .into_iter()
+        .collect()
+    );
+}
+
+#[test]
+fn verified_releases_errors_when_version_absent() {
+    let empty = Rc::new(hexpm::Package {
+        name: "wibble".into(),
+        repository: "hexpm".into(),
+        releases: vec![],
+    });
+    let fetcher = FakeFetcher {
+        packages: [("wibble".to_string(), empty)].into_iter().collect(),
+    };
+    let resolved: HashMap<String, Version> =
+        [("wibble".to_string(), Version::parse("1.0.0").unwrap())]
+            .into_iter()
+            .collect();
+
+    assert_matches!(
+        verified_releases(&fetcher, &resolved, &HashMap::new()),
+        Err(Error::DependencyResolutionError(message))
+            if message == "The signed registry metadata for wibble did not include the release 1.0.0"
+    )
+}
+
+#[test]
+fn verified_releases_errors_when_checksum_empty() {
+    let fetcher = FakeFetcher {
+        packages: [(
+            "wibble".to_string(),
+            signed_package("wibble", "1.0.0", vec![], &[]),
+        )]
+        .into_iter()
+        .collect(),
+    };
+    let resolved: HashMap<String, Version> =
+        [("wibble".to_string(), Version::parse("1.0.0").unwrap())]
+            .into_iter()
+            .collect();
+
+    assert_matches!(
+        verified_releases(&fetcher, &resolved, &HashMap::new()),
+        Err(Error::DependencyResolutionError(message))
+            if message == "The signed registry metadata for wibble@1.0.0 did not include a checksum"
+    )
+}
+
+#[test]
+fn verified_releases_skips_provided_packages() {
+    let fetcher = FakeFetcher {
+        packages: [(
+            "wibble".to_string(),
+            signed_package("wibble", "2.0.0", vec![0x0A, 0x0B], &[]),
+        )]
+        .into_iter()
+        .collect(),
+    };
+    let resolved: HashMap<String, Version> = [
+        ("wibble".to_string(), Version::parse("2.0.0").unwrap()),
+        ("wobble".to_string(), Version::parse("1.0.0").unwrap()),
+    ]
+    .into_iter()
+    .collect();
+    let provided: HashMap<EcoString, ProvidedPackage> = [(
+        "wobble".into(),
+        ProvidedPackage {
+            version: Version::new(1, 0, 0),
+            source: ProvidedPackageSource::Local {
+                path: "path/to/wobble".into(),
+            },
+            requirements: HashMap::new(),
+        },
+    )]
+    .into_iter()
+    .collect();
+
+    let releases = verified_releases(&fetcher, &resolved, &provided).unwrap();
+
+    assert_eq!(
+        releases,
+        [(
+            "wibble".to_string(),
+            VerifiedRelease {
+                outer_checksum: vec![0x0A, 0x0B],
+                requirements: vec![],
+            }
+        )]
+        .into_iter()
+        .collect()
+    );
+}
+
+#[test]
+fn hex_manifest_package_uses_verified_checksum_and_requirements() {
+    let verified = VerifiedRelease {
+        outer_checksum: vec![0x01, 0x02, 0x03],
+        requirements: vec!["gleam_stdlib".into()],
+    };
+    let meta = hexpm::ReleaseMeta {
+        app: "wibble_app".into(),
+        build_tools: vec!["gleam".into()],
+    };
+
+    let package = hex_manifest_package(
+        "wibble".into(),
+        Version::parse("1.0.0").unwrap(),
+        verified,
+        meta,
+    );
+
+    assert_eq!(
+        package,
+        ManifestPackage {
+            name: "wibble".into(),
+            version: Version::parse("1.0.0").unwrap(),
+            build_tools: vec!["gleam".into()],
+            otp_app: Some("wibble_app".into()),
+            requirements: vec!["gleam_stdlib".into()],
+            source: ManifestPackageSource::Hex {
+                outer_checksum: Base16Checksum(vec![0x01, 0x02, 0x03]),
+            },
+        }
+    );
 }
