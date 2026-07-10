@@ -3386,7 +3386,7 @@ impl PrettyEaf {
         {
             self.code.push_str(&format!("\"{content}\""))
         } else {
-            self.code.push_str(&format!("<<\"{content}\"/utf8>>",));
+            self.code.push_str(&format!("~\"{content}\"",));
         }
     }
 

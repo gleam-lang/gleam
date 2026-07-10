@@ -22,9 +22,9 @@ expression: "\n          import hero\n          pub fn main() {\n            let
 -file("project/test/my/mod.gleam", 3).
 -spec main() -> boolean().
 main() ->
-    Names = [<<"Tony Stark"/utf8>>, <<"Bruce Wayne"/utf8>>],
+    Names = [~"Tony Stark", ~"Bruce Wayne"],
     case Names of
-        N when N =:= [<<"Tony Stark"/utf8>>, <<"Bruce Wayne"/utf8>>] ->
+        N when N =:= [~"Tony Stark", ~"Bruce Wayne"] ->
             true;
 
         _ ->

@@ -21,7 +21,7 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    Wibble = <<"wobble"/utf8>>,
+    Wibble = ~"wobble",
     case Wibble of
         X when X =:= <<"wob"/utf8, "ble"/utf8>> ->
             1;

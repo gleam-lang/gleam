@@ -20,7 +20,7 @@ fn message() { "Hello!" }
 -file("project/test/my/mod.gleam", 7).
 -spec message() -> binary().
 message() ->
-    <<"Hello!"/utf8>>.
+    ~"Hello!".
 
 -file("project/test/my/mod.gleam", 6).
 -spec wibble(integer(), integer()) -> integer().
@@ -30,6 +30,6 @@ wibble(N, M) ->
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    echo(wibble(1, 2), message(), <<"project/test/my/mod.gleam"/utf8>>, 3).
+    echo(wibble(1, 2), message(), ~"project/test/my/mod.gleam", 3).
 
 % ...omitted code from `templates/echo.erl`...

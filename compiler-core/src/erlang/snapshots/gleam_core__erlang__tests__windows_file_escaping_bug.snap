@@ -11,9 +11,9 @@ expression: "pub fn main() { panic }"
 main() ->
     erlang:error(#{
         gleam_error => panic,
-        message => <<"`panic` expression evaluated."/utf8>>,
-        file => <<"C:\\root\\project\\test\\my\\mod.gleam"/utf8>>,
-        module => <<"my/mod"/utf8>>,
-        function => <<"main"/utf8>>,
+        message => ~"`panic` expression evaluated.",
+        file => ~"C:\\root\\project\\test\\my\\mod.gleam",
+        module => ~"my/mod",
+        function => ~"main",
         line => 1
     }).

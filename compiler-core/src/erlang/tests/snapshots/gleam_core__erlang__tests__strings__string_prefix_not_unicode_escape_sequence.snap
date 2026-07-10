@@ -31,35 +31,35 @@ pub fn go(x) {
 go(X) ->
     _ = case X of
         <<"\\u{9}"/utf8, Rest/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\\u{000009}"/utf8, Rest@1/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\\u{21}"/utf8, Rest@2/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\\u{100}"/utf8, Rest@3/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\\u{1000}"/utf8, Rest@4/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\\u{1F600}"/utf8, Rest@5/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\\u{1f600}"/utf8, Rest@6/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\\u{01F600}"/utf8, Rest@7/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\\u{01f600}"/utf8, Rest@8/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         <<"\\u{9} \\u{000009} \\u{21} \\u{100} \\u{1000} \\u{1F600} \\u{01F600}"/utf8, Rest@9/binary>> ->
-            <<"test"/utf8>>;
+            ~"test";
 
         _ ->
-            <<"Unknown"/utf8>>
+            ~"Unknown"
     end.

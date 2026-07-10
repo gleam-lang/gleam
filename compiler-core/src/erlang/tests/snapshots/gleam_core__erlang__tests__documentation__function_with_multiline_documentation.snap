@@ -16,8 +16,8 @@ pub fn documented() { 1 }
 
 -file("project/test/my/mod.gleam", 5).
 -spec documented() -> integer().
--doc(<<" Function doc!
+-doc(~" Function doc!
  Hello!!
-"/utf8>>).
+").
 documented() ->
     1.

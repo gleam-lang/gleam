@@ -24,10 +24,10 @@ divide(A, B) ->
         true ->
             erlang:error(#{
                 gleam_error => panic,
-                message => <<"Cannot divide by 0"/utf8>>,
-                file => <<"project/test/my/mod.gleam"/utf8>>,
-                module => <<"my/mod"/utf8>>,
-                function => <<"divide"/utf8>>,
+                message => ~"Cannot divide by 0",
+                file => ~"project/test/my/mod.gleam",
+                module => ~"my/mod",
+                function => ~"divide",
                 line => 5
             });
 

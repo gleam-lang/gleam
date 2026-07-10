@@ -22,6 +22,6 @@ main() ->
     echo(case 1 of
         _ ->
             2
-    end, nil, <<"project/test/my/mod.gleam"/utf8>>, 3).
+    end, nil, ~"project/test/my/mod.gleam", 3).
 
 % ...omitted code from `templates/echo.erl`...

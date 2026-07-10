@@ -19,9 +19,9 @@ pub fn main() {
 main() ->
     erlang:error(#{
         gleam_error => todo,
-        message => <<"testing"/utf8>>,
-        file => <<"project/test/my/mod.gleam"/utf8>>,
-        module => <<"my/mod"/utf8>>,
-        function => <<"main"/utf8>>,
+        message => ~"testing",
+        file => ~"project/test/my/mod.gleam",
+        module => ~"my/mod",
+        function => ~"main",
         line => 3
     }).

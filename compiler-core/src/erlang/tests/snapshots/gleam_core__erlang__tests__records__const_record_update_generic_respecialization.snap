@@ -27,4 +27,4 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 9).
 -spec main() -> {box(integer()), box(binary())}.
 main() ->
-    {{box, <<"score"/utf8>>, 50}, {box, <<"score"/utf8>>, <<"Hello"/utf8>>}}.
+    {{box, ~"score", 50}, {box, ~"score", ~"Hello"}}.

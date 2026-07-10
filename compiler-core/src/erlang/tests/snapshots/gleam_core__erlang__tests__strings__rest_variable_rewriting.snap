@@ -25,5 +25,5 @@ go(X) ->
             X@1;
 
         _ ->
-            <<"Unknown"/utf8>>
+            ~"Unknown"
     end.

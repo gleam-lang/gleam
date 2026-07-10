@@ -23,10 +23,10 @@ x(Y) ->
         _value ->
             erlang:error(#{
                 gleam_error => let_assert,
-                message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
-                file => <<"project/test/my/mod.gleam"/utf8>>,
-                module => <<"my/mod"/utf8>>,
-                function => <<"x"/utf8>>,
+                message => ~"Pattern match failed, no pattern matched the value.",
+                file => ~"project/test/my/mod.gleam",
+                module => ~"my/mod",
+                function => ~"x",
                 line => 2,
                 value => _value,
                 start => 16,

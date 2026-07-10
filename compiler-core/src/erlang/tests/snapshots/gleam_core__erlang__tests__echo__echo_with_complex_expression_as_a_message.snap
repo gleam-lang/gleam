@@ -22,17 +22,17 @@ fn name() { "Giacomo" }
 -file("project/test/my/mod.gleam", 9).
 -spec name() -> binary().
 name() ->
-    <<"Giacomo"/utf8>>.
+    ~"Giacomo".
 
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     echo(1, case name() of
-        <<"Giacomo"/utf8>> ->
-            <<"hello Jak!"/utf8>>;
+        ~"Giacomo" ->
+            ~"hello Jak!";
 
         _ ->
-            <<"hello!"/utf8>>
-    end, <<"project/test/my/mod.gleam"/utf8>>, 3).
+            ~"hello!"
+    end, ~"project/test/my/mod.gleam", 3).
 
 % ...omitted code from `templates/echo.erl`...

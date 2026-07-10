@@ -14,9 +14,9 @@ pub fn main() { 1 }
 -module(my@mod).
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/0]).
--moduledoc(<<" Hello! This is a multi-
+-moduledoc(~" Hello! This is a multi-
  line module comment.
-"/utf8>>).
+").
 
 -file("project/test/my/mod.gleam", 6).
 -spec main() -> integer().

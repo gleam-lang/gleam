@@ -27,7 +27,7 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 5).
 -spec main() -> person().
 main() ->
-    Car = {car, <<"Amphicar"/utf8>>, <<"Model 770"/utf8>>, {person, <<"John Doe"/utf8>>, 27}},
+    Car = {car, ~"Amphicar", ~"Model 770", {person, ~"John Doe", 27}},
     New_p = begin
         _record = erlang:element(4, Car),
         {person, erlang:element(2, _record), 28}

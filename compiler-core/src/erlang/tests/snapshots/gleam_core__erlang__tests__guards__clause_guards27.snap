@@ -20,8 +20,8 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    case <<"test"/utf8>> of
-        X when X =:= <<"test"/utf8>> ->
+    case ~"test" of
+        X when X =:= ~"test" ->
             1;
 
         _ ->

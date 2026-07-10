@@ -22,11 +22,11 @@ pub fn go(x) {
 -spec go(binary()) -> nil.
 go(X) ->
     case X of
-        <<"a"/utf8, _/binary>> when <<"a"/utf8>> =:= <<"c"/utf8>> ->
-            Rest = <<"a"/utf8>>,
+        <<"a"/utf8, _/binary>> when ~"a" =:= ~"c" ->
+            Rest = ~"a",
             nil;
 
-        <<"b"/utf8, Rest/binary>> when Rest =:= <<"c"/utf8>> ->
+        <<"b"/utf8, Rest/binary>> when Rest =:= ~"c" ->
             nil;
 
         _ ->

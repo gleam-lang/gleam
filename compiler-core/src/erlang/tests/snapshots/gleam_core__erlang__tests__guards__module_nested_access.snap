@@ -22,9 +22,9 @@ expression: "\n          import hero\n          pub fn main() {\n            let
 -file("project/test/my/mod.gleam", 3).
 -spec main() -> boolean().
 main() ->
-    Name = <<"Bruce Wayne"/utf8>>,
+    Name = ~"Bruce Wayne",
     case Name of
-        N when N =:= erlang:element(2, erlang:element(2, {hero, {person, <<"Bruce Wayne"/utf8>>}})) ->
+        N when N =:= erlang:element(2, erlang:element(2, {hero, {person, ~"Bruce Wayne"}})) ->
             true;
 
         _ ->

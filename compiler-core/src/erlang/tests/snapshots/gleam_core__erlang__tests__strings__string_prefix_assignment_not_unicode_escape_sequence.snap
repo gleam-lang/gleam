@@ -31,45 +31,45 @@ pub fn go(x) {
 go(X) ->
     _ = case X of
         <<"\\u{9}"/utf8, Rest/binary>> ->
-            Start = <<"\\u{9}"/utf8>>,
-            <<"test"/utf8>>;
+            Start = ~"\\u{9}",
+            ~"test";
 
         <<"\\u{000009}"/utf8, Rest@1/binary>> ->
-            Start@1 = <<"\\u{000009}"/utf8>>,
-            <<"test"/utf8>>;
+            Start@1 = ~"\\u{000009}",
+            ~"test";
 
         <<"\\u{21}"/utf8, Rest@2/binary>> ->
-            Start@2 = <<"\\u{21}"/utf8>>,
-            <<"test"/utf8>>;
+            Start@2 = ~"\\u{21}",
+            ~"test";
 
         <<"\\u{100}"/utf8, Rest@3/binary>> ->
-            Start@3 = <<"\\u{100}"/utf8>>,
-            <<"test"/utf8>>;
+            Start@3 = ~"\\u{100}",
+            ~"test";
 
         <<"\\u{1000}"/utf8, Rest@4/binary>> ->
-            Start@4 = <<"\\u{1000}"/utf8>>,
-            <<"test"/utf8>>;
+            Start@4 = ~"\\u{1000}",
+            ~"test";
 
         <<"\\u{1F600}"/utf8, Rest@5/binary>> ->
-            Start@5 = <<"\\u{1F600}"/utf8>>,
-            <<"test"/utf8>>;
+            Start@5 = ~"\\u{1F600}",
+            ~"test";
 
         <<"\\u{1f600}"/utf8, Rest@6/binary>> ->
-            Start@6 = <<"\\u{1f600}"/utf8>>,
-            <<"test"/utf8>>;
+            Start@6 = ~"\\u{1f600}",
+            ~"test";
 
         <<"\\u{01F600}"/utf8, Rest@7/binary>> ->
-            Start@7 = <<"\\u{01F600}"/utf8>>,
-            <<"test"/utf8>>;
+            Start@7 = ~"\\u{01F600}",
+            ~"test";
 
         <<"\\u{01f600}"/utf8, Rest@8/binary>> ->
-            Start@8 = <<"\\u{01f600}"/utf8>>,
-            <<"test"/utf8>>;
+            Start@8 = ~"\\u{01f600}",
+            ~"test";
 
         <<"\\u{9} \\u{000009} \\u{21} \\u{100} \\u{1000} \\u{1F600} \\u{01F600}"/utf8, Rest@9/binary>> ->
-            Start@9 = <<"\\u{9} \\u{000009} \\u{21} \\u{100} \\u{1000} \\u{1F600} \\u{01F600}"/utf8>>,
-            <<"test"/utf8>>;
+            Start@9 = ~"\\u{9} \\u{000009} \\u{21} \\u{100} \\u{1000} \\u{1F600} \\u{01F600}",
+            ~"test";
 
         _ ->
-            <<"Unknown"/utf8>>
+            ~"Unknown"
     end.

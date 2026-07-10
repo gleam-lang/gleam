@@ -16,17 +16,17 @@ pub fn go() {
 -file("project/test/my/mod.gleam", 1).
 -spec go() -> binary().
 go() ->
-    case <<"Hello John"/utf8>> of
+    case ~"Hello John" of
         <<"Hello "/utf8, Name/binary>> ->
             Name;
 
         _value ->
             erlang:error(#{
                 gleam_error => let_assert,
-                message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
-                file => <<"project/test/my/mod.gleam"/utf8>>,
-                module => <<"my/mod"/utf8>>,
-                function => <<"go"/utf8>>,
+                message => ~"Pattern match failed, no pattern matched the value.",
+                file => ~"project/test/my/mod.gleam",
+                module => ~"my/mod",
+                function => ~"go",
                 line => 2,
                 value => _value,
                 start => 16,

@@ -27,10 +27,10 @@ assert_answer(X) ->
         false ->
             erlang:error(#{
                 gleam_error => assert,
-                message => <<"Assertion failed."/utf8>>,
-                file => <<"project/test/my/mod.gleam"/utf8>>,
-                module => <<"my/mod"/utf8>>,
-                function => <<"assert_answer"/utf8>>,
+                message => ~"Assertion failed.",
+                file => ~"project/test/my/mod.gleam",
+                module => ~"my/mod",
+                function => ~"assert_answer",
                 line => 6,
                 kind => binary_operator,
                 operator => '==',

@@ -20,10 +20,10 @@ pub fn a(x) {
 a(X) ->
     case X of
         [<<"a"/utf8, _/binary>>, <<"b"/utf8, _/binary>>] ->
-            A = <<"a"/utf8>>,
-            B = <<"b"/utf8>>,
+            A = ~"a",
+            B = ~"b",
             <<A/binary, B/binary>>;
 
         _ ->
-            <<""/utf8>>
+            ~""
     end.

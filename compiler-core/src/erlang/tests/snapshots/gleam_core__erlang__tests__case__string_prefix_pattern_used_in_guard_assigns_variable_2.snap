@@ -22,14 +22,14 @@ pub fn go(x) {
 -spec go(binary()) -> binary().
 go(X) ->
     case X of
-        <<"a"/utf8, Rest/binary>> when (<<"a"/utf8>> =:= <<"c"/utf8>>) andalso (Rest =:= <<"b"/utf8>>) ->
-            Letter = <<"a"/utf8>>,
+        <<"a"/utf8, Rest/binary>> when (~"a" =:= ~"c") andalso (Rest =:= ~"b") ->
+            Letter = ~"a",
             <<Letter/binary, Rest/binary>>;
 
-        <<"b"/utf8, Letter/binary>> when (Letter =:= <<"c"/utf8>>) andalso (<<"b"/utf8>> =:= <<"b"/utf8>>) ->
-            Rest = <<"b"/utf8>>,
+        <<"b"/utf8, Letter/binary>> when (Letter =:= ~"c") andalso (~"b" =:= ~"b") ->
+            Rest = ~"b",
             <<Letter/binary, Rest/binary>>;
 
         _ ->
-            <<""/utf8>>
+            ~""
     end.
