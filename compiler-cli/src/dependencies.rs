@@ -1648,42 +1648,92 @@ fn find_deps_to_unlock(
         .collect()
 }
 
-/// Determine the information to add to the manifest for a specific package
-async fn lookup_package(
-    name: String,
-    version: Version,
+/// The parts of a resolved Hex package taken from the verified registry
+/// metadata.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct VerifiedRelease {
+    outer_checksum: Vec<u8>,
+    requirements: Vec<EcoString>,
+}
+
+/// Collect the signed release details for each resolved Hex package. The
+/// verified `hexpm::Package` was fetched and its signature checked during
+/// resolution. Local and git packages are provided directly and carry no Hex
+/// metadata, so they are skipped.
+fn verified_releases(
+    package_fetcher: &impl dependency::PackageFetcher,
+    resolved: &dependency::PackageVersions,
     provided: &HashMap<EcoString, ProvidedPackage>,
-    credentials: Option<&hexpm::Credentials>,
-) -> Result<ManifestPackage> {
-    match provided.get(name.as_str()) {
-        Some(provided_package) => Ok(provided_package.to_manifest_package(name.as_str())),
-        None => {
-            let config = hexpm::Config::new();
-            let release =
-                hex::get_package_release(&name, &version, credentials, &config, &HttpClient::new())
-                    .await?;
-            let build_tools = release
-                .meta
-                .build_tools
+) -> Result<HashMap<String, VerifiedRelease>> {
+    resolved
+        .iter()
+        .filter(|(name, _)| !provided.contains_key(name.as_str()))
+        .map(|(name, version)| {
+            let package = package_fetcher
+                .get_dependencies(name)
+                .map_err(|error| Error::DependencyResolutionError(error.to_string()))?;
+            let release = package
+                .releases
                 .iter()
-                .map(|s| EcoString::from(s.as_str()))
-                .collect_vec();
+                .find(|release| &release.version == version)
+                .ok_or_else(|| {
+                    Error::DependencyResolutionError(format!(
+                        "The signed registry metadata for {name} did not include the release {version}"
+                    ))
+                })?;
+            if release.outer_checksum.is_empty() {
+                return Err(Error::DependencyResolutionError(format!(
+                    "The signed registry metadata for {name}@{version} did not include a checksum"
+                )));
+            }
             let requirements = release
                 .requirements
                 .keys()
-                .map(|s| EcoString::from(s.as_str()))
-                .collect_vec();
-            Ok(ManifestPackage {
-                name: name.into(),
-                version,
-                otp_app: Some(release.meta.app.into()),
-                build_tools,
-                requirements,
-                source: ManifestPackageSource::Hex {
-                    outer_checksum: Base16Checksum(release.outer_checksum),
+                .map(|name| EcoString::from(name.as_str()))
+                .collect();
+            Ok((
+                name.clone(),
+                VerifiedRelease {
+                    outer_checksum: release.outer_checksum.clone(),
+                    requirements,
                 },
-            })
-        }
+            ))
+        })
+        .collect()
+}
+
+async fn lookup_hex_package(
+    name: String,
+    version: Version,
+    verified: VerifiedRelease,
+    credentials: Option<&hexpm::Credentials>,
+) -> Result<ManifestPackage> {
+    let config = hexpm::Config::new();
+    let release =
+        hex::get_package_release(&name, &version, credentials, &config, &HttpClient::new()).await?;
+    Ok(hex_manifest_package(name, version, verified, release.meta))
+}
+
+fn hex_manifest_package(
+    name: String,
+    version: Version,
+    verified: VerifiedRelease,
+    meta: hexpm::ReleaseMeta,
+) -> ManifestPackage {
+    let build_tools = meta
+        .build_tools
+        .iter()
+        .map(|tool| EcoString::from(tool.as_str()))
+        .collect_vec();
+    ManifestPackage {
+        name: name.into(),
+        version,
+        otp_app: Some(meta.app.into()),
+        build_tools,
+        requirements: verified.requirements,
+        source: ManifestPackageSource::Hex {
+            outer_checksum: Base16Checksum(verified.outer_checksum),
+        },
     }
 }
 

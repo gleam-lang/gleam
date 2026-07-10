@@ -39,6 +39,12 @@
   results in incorrect code.
   ([Khalid Belkassmi E.H.](https://github.com/khalidbelk))
 
+- Fixed a bug where the checksum used to verify a downloaded Hex package tarball
+  and the package's requirements were taken from the Hex API response rather
+  than the verified registry metadata, so the registry signature did not guard
+  them.
+  ([John Downey](https://github.com/jtdowney))
+
 ## v1.18.0-rc2 - 2026-07-25
 
 ### Bug fixes

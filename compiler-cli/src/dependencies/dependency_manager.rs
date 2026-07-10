@@ -22,8 +22,9 @@ use crate::{
 
 use super::{
     CheckMajorVersions, LocalPackages, UseManifest, add_missing_packages, is_same_requirements,
-    lookup_package, path_dependency_configs_unchanged, provide_git_package, provide_local_package,
-    read_manifest_from_disc, remove_extra_packages, unlock_packages,
+    lookup_hex_package, path_dependency_configs_unchanged, provide_git_package,
+    provide_local_package, read_manifest_from_disc, remove_extra_packages, unlock_packages,
+    verified_releases,
 };
 
 /// Verifies that all specified packages exist in the manifest.
@@ -307,13 +308,28 @@ where
             &locked,
         )?;
 
+        let verified_releases =
+            verified_releases(&self.package_fetcher, &resolved, &provided_packages)?;
+
         // Convert the hex packages and local packages into manifest packages
         let credentials = crate::hex::read_env_readonly_api_key();
         let manifest_packages =
             self.runtime
                 .block_on(future::try_join_all(resolved.into_iter().map(
-                    |(name, version)| {
-                        lookup_package(name, version, &provided_packages, credentials.as_ref())
+                    |(name, version)| async {
+                        // Local and git packages are provided directly; hex packages
+                        // are looked up and pinned to their signed release metadata.
+                        match provided_packages.get(name.as_str()) {
+                            Some(package) => Ok(package.to_manifest_package(name.as_str())),
+                            None => {
+                                let verified = verified_releases
+                                    .get(&name)
+                                    .cloned()
+                                    .expect("verified_releases covers every resolved hex package");
+                                lookup_hex_package(name, version, verified, credentials.as_ref())
+                                    .await
+                            }
+                        }
                     },
                 )))?;
 
