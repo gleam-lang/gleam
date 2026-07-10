@@ -474,6 +474,18 @@
   definitions for records with a field named `constructor`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler would generate invalid code for `let assert`
+  expression with bit array patterns.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler would evaluate the numerator and denominator
+  of a division in the wrong order.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler would generate Erlang code that raises further
+  warnings for unused values.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a bug where the compiler would raise a warning for truncated int
   segments when compiling a function with a JavaScript external.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
