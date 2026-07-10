@@ -92,6 +92,13 @@
   informative and helpful.
   ([Moritz Böhme](https://github.com/MoritzBoehme))
 
+- The build tool can now authenticate requests to Hex with the API key from the
+  `HEXPM_READ_API_KEY` environment variable, when resolving and downloading
+  dependencies. This raises the request rate limit from the stricter per-IP
+  limit to the higher per-user limit, avoiding "rate limit exceeded" errors
+  when building large projects.
+  ([John Downey](https://github.com/jtdowney))
+
 ### Language server
 
 - The language server now supports go-to-definition, find-references and rename
