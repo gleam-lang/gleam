@@ -335,7 +335,6 @@ mod tests {
         let app = fs
             .read(Utf8Path::new("/ebin/my_app.app"))
             .expect("read .app");
-        assert!(app.contains("my_app@one"), "{app}");
-        assert!(app.contains("my_app@two"), "{app}");
+        insta::assert_snapshot!(app);
     }
 }
