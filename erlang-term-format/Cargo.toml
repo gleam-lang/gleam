@@ -3,8 +3,10 @@
 
 [package]
 name = "erlang-term-format"
+authors = ["Louis Pilfold <louis@lpil.uk>"]
 version = "1.0.0"
 edition = "2024"
+license = "Apache-2.0"
 
 [dependencies]
 num-bigint.workspace = true

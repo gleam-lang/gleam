@@ -3,8 +3,10 @@
 
 [package]
 name = "erlang-abstract-format"
+authors = ["Louis Pilfold <louis@lpil.uk>"]
 version = "1.0.0"
 edition = "2024"
+license = "Apache-2.0"
 
 [dependencies]
 # Encoding values in the erlang term format
