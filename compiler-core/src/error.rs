@@ -1918,8 +1918,8 @@ Did you make a typo? Please try again."
                     title: "Failed to decrypt local Hex API key".into(),
                     text,
                     hint: Some(
-                        "If you have forgotten your local password you can create
-new credentials with `gleam hex authenticate`."
+                        "If you have forgotten your local password you can create a new one
+with `gleam hex authenticate`."
                             .into(),
                     ),
                     level: Level::Error,
