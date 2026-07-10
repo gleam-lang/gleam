@@ -308,11 +308,14 @@ where
         )?;
 
         // Convert the hex packages and local packages into manifest packages
-        let manifest_packages = self.runtime.block_on(future::try_join_all(
-            resolved
-                .into_iter()
-                .map(|(name, version)| lookup_package(name, version, &provided_packages)),
-        ))?;
+        let credentials = crate::hex::read_env_readonly_api_key();
+        let manifest_packages =
+            self.runtime
+                .block_on(future::try_join_all(resolved.into_iter().map(
+                    |(name, version)| {
+                        lookup_package(name, version, &provided_packages, credentials.as_ref())
+                    },
+                )))?;
 
         let manifest = Manifest {
             packages: manifest_packages,

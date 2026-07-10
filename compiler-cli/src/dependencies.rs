@@ -510,7 +510,14 @@ async fn add_missing_packages<Telem: Telemetry>(
     // If we need to download at-least one package
     if missing_hex_packages.peek().is_some() || !missing_git_packages.is_empty() {
         let http = HttpClient::boxed();
-        let downloader = hex::Downloader::new(fs.clone(), fs, http, Untar::boxed(), paths.clone());
+        let downloader = hex::Downloader::new(
+            fs.clone(),
+            fs,
+            http,
+            Untar::boxed(),
+            crate::hex::read_env_readonly_api_key(),
+            paths.clone(),
+        );
         let start = Instant::now();
         telemetry.downloading_package("packages");
         downloader
@@ -1646,13 +1653,15 @@ async fn lookup_package(
     name: String,
     version: Version,
     provided: &HashMap<EcoString, ProvidedPackage>,
+    credentials: Option<&hexpm::Credentials>,
 ) -> Result<ManifestPackage> {
     match provided.get(name.as_str()) {
         Some(provided_package) => Ok(provided_package.to_manifest_package(name.as_str())),
         None => {
             let config = hexpm::Config::new();
             let release =
-                hex::get_package_release(&name, &version, &config, &HttpClient::new()).await?;
+                hex::get_package_release(&name, &version, credentials, &config, &HttpClient::new())
+                    .await?;
             let build_tools = release
                 .meta
                 .build_tools
@@ -1682,6 +1691,7 @@ struct PackageFetcher {
     runtime_cache: RefCell<HashMap<String, Rc<hexpm::Package>>>,
     runtime: tokio::runtime::Handle,
     http: HttpClient,
+    credentials: Option<hexpm::Credentials>,
 }
 
 impl PackageFetcher {
@@ -1690,6 +1700,7 @@ impl PackageFetcher {
             runtime_cache: RefCell::new(HashMap::new()),
             runtime,
             http: HttpClient::new(),
+            credentials: crate::hex::read_env_readonly_api_key(),
         }
     }
 
@@ -1741,7 +1752,8 @@ impl dependency::PackageFetcher for PackageFetcher {
 
         tracing::debug!(package = package, "looking_up_hex_package");
         let config = hexpm::Config::new();
-        let request = hexpm::repository_v2_get_package_request(package, None, &config);
+        let request =
+            hexpm::repository_v2_get_package_request(package, self.credentials.as_ref(), &config);
         let response = self
             .runtime
             .block_on(self.http.send(request))

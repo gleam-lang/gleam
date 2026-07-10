@@ -11,7 +11,7 @@ use gleam_core::{
     paths::ProjectPaths,
 };
 
-pub use auth::HexAuthentication;
+pub use auth::{HexAuthentication, read_env_readonly_api_key};
 
 /// Prepare credentials for user for write actions.
 /// This will prompt for a one-time-password if needed.

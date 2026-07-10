@@ -592,6 +592,18 @@ fn get_package_response_not_found() {
 }
 
 #[test]
+fn get_package_response_unauthorized() {
+    let response = make_response(401, vec![]);
+    let error = crate::repository_v2_get_package_response(
+        response,
+        std::include_bytes!("../test/public_key"),
+    )
+    .unwrap_err();
+
+    assert_eq!(error.to_string(), "Invalid authentication credentials");
+}
+
+#[test]
 fn get_package_from_bytes_ok() {
     let response_body = std::include_bytes!("../test/package_exfmt");
     let mut uncompressed = Vec::new();
@@ -746,6 +758,19 @@ fn get_repository_tarball_response_not_found() {
     let err = crate::repository_get_package_tarball_response(response, &checksum).unwrap_err();
 
     assert_eq!(err.to_string(), "Resource was not found");
+}
+
+#[test]
+fn get_repository_tarball_response_rate_limited() {
+    let checksum = vec![1, 2, 3, 4, 5];
+
+    let response = make_response(429, vec![]);
+    let err = crate::repository_get_package_tarball_response(response, &checksum).unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        "The rate limit for the Hex API has been exceeded"
+    );
 }
 
 #[test]

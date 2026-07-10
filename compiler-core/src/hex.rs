@@ -194,6 +194,7 @@ pub struct Downloader {
     http: DebugIgnore<Box<dyn HttpClient>>,
     untar: DebugIgnore<Box<dyn TarUnpacker>>,
     hex_config: hexpm::Config,
+    credentials: DebugIgnore<Option<hexpm::Credentials>>,
     paths: ProjectPaths,
 }
 
@@ -203,6 +204,7 @@ impl Downloader {
         fs_writer: Box<dyn FileSystemWriter>,
         http: Box<dyn HttpClient>,
         untar: Box<dyn TarUnpacker>,
+        credentials: Option<hexpm::Credentials>,
         paths: ProjectPaths,
     ) -> Self {
         Self {
@@ -211,6 +213,7 @@ impl Downloader {
             http: DebugIgnore(http),
             untar: DebugIgnore(untar),
             hex_config: hexpm::Config::new(),
+            credentials: DebugIgnore(credentials),
             paths,
         }
     }
@@ -244,7 +247,7 @@ impl Downloader {
         let request = hexpm::repository_get_package_tarball_request(
             &package.name,
             &package.version.to_string(),
-            None,
+            self.credentials.as_ref(),
             &self.hex_config,
         );
         let response = self.http.send(request).await?;
@@ -360,6 +363,7 @@ pub async fn publish_documentation<Http: HttpClient>(
 pub async fn get_package_release<Http: HttpClient>(
     name: &str,
     version: &Version,
+    credentials: Option<&hexpm::Credentials>,
     config: &hexpm::Config,
     http: &Http,
 ) -> Result<hexpm::Release<hexpm::ReleaseMeta>> {
@@ -369,7 +373,81 @@ pub async fn get_package_release<Http: HttpClient>(
         version = version.as_str(),
         "looking_up_package_release"
     );
-    let request = hexpm::api_get_package_release_request(name, &version, None, config);
+    let request = hexpm::api_get_package_release_request(name, &version, credentials, config);
     let response = http.send(request).await?;
     hexpm::api_get_package_release_response(response).map_err(Error::hex)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+
+    /// A fake `HttpClient` that records the `authorization` header of the last
+    /// request it was sent and replies with a canned package release.
+    #[derive(Default)]
+    struct AuthorizationCapturingHttpClient {
+        last_authorization: Mutex<Option<String>>,
+    }
+
+    #[async_trait::async_trait]
+    impl HttpClient for AuthorizationCapturingHttpClient {
+        async fn send(
+            &self,
+            request: http::Request<Vec<u8>>,
+        ) -> Result<http::Response<Vec<u8>>, Error> {
+            let authorization = request
+                .headers()
+                .get("authorization")
+                .map(|value| value.to_str().unwrap().to_string());
+            *self.last_authorization.lock().unwrap() = authorization;
+
+            let body = serde_json::json!({
+                "version": "1.0.0",
+                "checksum": "960090c2fb391784bb34267b099dc9315cc1b1f6013e7415bc763cef1905d7d3",
+                "requirements": {},
+                "meta": { "app": "gleam_stdlib", "build_tools": ["gleam"] }
+            })
+            .to_string()
+            .into_bytes();
+
+            Ok(http::Response::builder().status(200).body(body).unwrap())
+        }
+    }
+
+    #[test]
+    fn get_package_release_authenticates_with_api_key() {
+        let http = AuthorizationCapturingHttpClient::default();
+        let credentials = hexpm::Credentials::ApiKey("secret-key".into());
+
+        let _ = futures::executor::block_on(get_package_release(
+            "gleam_stdlib",
+            &Version::new(1, 0, 0),
+            Some(&credentials),
+            &hexpm::Config::new(),
+            &http,
+        ))
+        .unwrap();
+
+        assert_eq!(
+            http.last_authorization.lock().unwrap().as_deref(),
+            Some("secret-key")
+        );
+    }
+
+    #[test]
+    fn get_package_release_is_anonymous_without_api_key() {
+        let http = AuthorizationCapturingHttpClient::default();
+
+        let _ = futures::executor::block_on(get_package_release(
+            "gleam_stdlib",
+            &Version::new(1, 0, 0),
+            None,
+            &hexpm::Config::new(),
+            &http,
+        ))
+        .unwrap();
+
+        assert_eq!(http.last_authorization.lock().unwrap().as_deref(), None);
+    }
 }

@@ -110,7 +110,7 @@ impl RequestBuilder {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Credentials {
     // Short lived credential from OAuth
     OAuthAccessToken(EcoString),
@@ -370,6 +370,8 @@ pub fn repository_v2_get_package_response(
 
     match parts.status {
         StatusCode::OK => (),
+        StatusCode::TOO_MANY_REQUESTS => return Err(ApiError::RateLimited),
+        StatusCode::UNAUTHORIZED => return Err(unauthorised_response(&parts.headers)),
         StatusCode::FORBIDDEN => return Err(ApiError::NotFound),
         StatusCode::NOT_FOUND => return Err(ApiError::NotFound),
         status => {
@@ -438,6 +440,8 @@ pub fn repository_get_package_tarball_response(
     let (parts, body) = response.into_parts();
     match parts.status {
         StatusCode::OK => (),
+        StatusCode::TOO_MANY_REQUESTS => return Err(ApiError::RateLimited),
+        StatusCode::UNAUTHORIZED => return Err(unauthorised_response(&parts.headers)),
         StatusCode::FORBIDDEN => return Err(ApiError::NotFound),
         StatusCode::NOT_FOUND => return Err(ApiError::NotFound),
         status => {
@@ -732,7 +736,7 @@ pub enum ApiError {
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
-    #[error("The rate limit for the Hex API has been exceeded for this IP")]
+    #[error("The rate limit for the Hex API has been exceeded")]
     RateLimited,
 
     #[error("Invalid authentication credentials")]
