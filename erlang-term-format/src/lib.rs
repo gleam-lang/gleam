@@ -72,15 +72,6 @@ impl Etf {
         self.push(byte);
     }
 
-    /// Pushes the etf of an empty list.
-    /// - If you need to build lists with a number of items that is not known in
-    ///   advance you can use `start_list` and `end_list`.
-    ///
-    /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#nil_ext
-    pub fn empty_list(&mut self) {
-        self.nil()
-    }
-
     /// Start building a list with a number of item that is not known in
     /// advance.
     ///
@@ -108,7 +99,7 @@ impl Etf {
     }
 
     pub fn end_list(&mut self, list: List, items: u32) {
-        self.nil();
+        self.empty_list();
         self.bytes[list.size_index..list.size_index + 4].copy_from_slice(&items.to_be_bytes());
         list.consume();
     }
@@ -174,7 +165,7 @@ impl Etf {
     }
 
     /// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#nil_ext
-    fn nil(&mut self) {
+    pub fn empty_list(&mut self) {
         self.push(106);
     }
 
@@ -329,7 +320,7 @@ mod tests {
     #[test]
     fn empty_list() {
         let mut etf = Etf::new();
-        etf.nil();
+        etf.empty_list();
         assert_eq!(etf.into_vec(), [131, 106]);
     }
 
