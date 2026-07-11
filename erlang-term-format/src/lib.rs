@@ -8,20 +8,6 @@ use num_traits::ToPrimitive;
 #[macro_use]
 extern crate pretty_assertions;
 
-/// A data structure used to encode values into the Erlang Term Format:
-/// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html.
-///
-#[derive(Debug)]
-pub struct Etf {
-    bytes: Vec<u8>,
-}
-
-impl Default for Etf {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[must_use]
 #[derive(Debug)]
 pub struct List {
@@ -48,7 +34,21 @@ impl Drop for List {
     }
 }
 
-impl Etf {
+/// A data structure used to encode values into the Erlang Term Format:
+/// https://www.erlang.org/doc/apps/erts/erl_ext_dist.html.
+///
+#[derive(Debug)]
+pub struct Builder {
+    bytes: Vec<u8>,
+}
+
+impl Default for Builder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Builder {
     pub fn new() -> Self {
         Self { bytes: vec![131] }
     }
@@ -104,7 +104,7 @@ impl Etf {
         list.consume();
     }
 
-    /// Pushes the most compact etf representation of the given atom.
+    /// Pushes the most compact representation of the given atom.
     pub fn atom(&mut self, atom: &str) {
         if atom.len() <= 255 {
             self.small_atom_utf8(atom);
@@ -113,7 +113,7 @@ impl Etf {
         }
     }
 
-    /// Pushes the most compact etf representation of the given bigint number.
+    /// Pushes the most compact representation of the given big int.
     pub fn bigint(&mut self, value: BigInt) {
         if let Some(value) = value.to_u8() {
             self.small_integer(value);
@@ -124,7 +124,7 @@ impl Etf {
         }
     }
 
-    /// Pushes the most compact etf representation of the given usize number.
+    /// Pushes the most compact representation of the given usize int.
     ///
     pub fn usize(&mut self, value: usize) {
         if let Some(value) = value.to_u8() {
@@ -221,18 +221,18 @@ mod tests {
 
     use num_bigint::BigInt;
 
-    use crate::Etf;
+    use crate::Builder;
 
     #[test]
     fn small_atom() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.atom("atom");
         assert_eq!(etf.into_vec(), [131, 119, 4, 97, 116, 111, 109])
     }
 
     #[test]
     fn small_atom_utf8() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.atom("ksiąskę");
         assert_eq!(
             etf.into_vec(),
@@ -242,7 +242,7 @@ mod tests {
 
     #[test]
     fn atom() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.atom(&"ą".repeat(128));
         assert_eq!(
             etf.into_vec(),
@@ -270,35 +270,35 @@ mod tests {
 
     #[test]
     fn small_integer() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.small_integer(1);
         assert_eq!(etf.into_vec(), [131, 97, 1]);
     }
 
     #[test]
     fn integer() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.integer(-2);
         assert_eq!(etf.into_vec(), [131, 98, 255, 255, 255, 254]);
     }
 
     #[test]
     fn integer_2() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.integer(1048576);
         assert_eq!(etf.into_vec(), [131, 98, 0, 16, 0, 0]);
     }
 
     #[test]
     fn float() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.new_float(1.2);
         assert_eq!(etf.into_vec(), [131, 70, 63, 243, 51, 51, 51, 51, 51, 51])
     }
 
     #[test]
     fn small_big() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
 
         etf.small_big(BigInt::from(123123123123123123 as i64));
         assert_eq!(
@@ -309,7 +309,7 @@ mod tests {
 
     #[test]
     fn negative_small_big() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.small_big(BigInt::from(-123123123123123123 as i64));
         assert_eq!(
             etf.into_vec(),
@@ -319,14 +319,14 @@ mod tests {
 
     #[test]
     fn empty_list() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.empty_list();
         assert_eq!(etf.into_vec(), [131, 106]);
     }
 
     #[test]
     fn proper_list_with_a_single_item() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         let list = etf.start_list();
         etf.small_integer(1);
         etf.end_list(list, 1);
@@ -335,7 +335,7 @@ mod tests {
 
     #[test]
     fn proper_list() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         let list = etf.start_list();
         etf.small_integer(1);
         etf.small_tuple(0);
@@ -349,27 +349,27 @@ mod tests {
 
     #[test]
     fn empty_binary() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.binary(0, vec![]);
         assert_eq!(etf.into_vec(), [131, 109, 0, 0, 0, 0])
     }
     #[test]
     fn binary() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.binary(3, vec![1, 2, 3]);
         assert_eq!(etf.into_vec(), [131, 109, 0, 0, 0, 3, 1, 2, 3])
     }
 
     #[test]
     fn small_empty_tuple() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.small_tuple(0);
         assert_eq!(etf.into_vec(), [131, 104, 0])
     }
 
     #[test]
     fn small_single_item_tuple() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.small_tuple(1);
         etf.small_integer(1);
         assert_eq!(etf.into_vec(), [131, 104, 1, 97, 1])
@@ -377,7 +377,7 @@ mod tests {
 
     #[test]
     fn small_tuple() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.small_tuple(3);
         etf.new_float(1.1);
         etf.integer(-1);
@@ -394,7 +394,7 @@ mod tests {
 
     #[test]
     fn small_nested_tuple() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.small_tuple(2);
 
         etf.small_tuple(2);
@@ -415,7 +415,7 @@ mod tests {
 
     #[test]
     fn large_tuple() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.large_tuple(500);
         for _ in 1..=500 {
             etf.small_integer(1);
@@ -472,7 +472,7 @@ mod tests {
 
     #[test]
     fn large_big() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.large_big(BigInt::from_str(&"1".repeat(1500)).unwrap());
         assert_eq!(
             etf.into_vec(),
@@ -518,7 +518,7 @@ mod tests {
 
     #[test]
     fn negative_large_big() {
-        let mut etf = Etf::new();
+        let mut etf = Builder::new();
         etf.large_big(BigInt::from_str(&"1".repeat(1500)).unwrap().neg());
         assert_eq!(
             etf.into_vec(),
