@@ -8,9 +8,11 @@ use num_traits::Zero;
 use regex::Regex;
 use std::sync::OnceLock;
 
-macro_rules! pretty_printing_error {
+/// This is to raise an `unreachable` pretty printed error when we try producing
+/// some piece of code that is not allowed in the current position.
+macro_rules! invalid_code_for_position {
     ($this:expr, $expected:literal) => {
-        unreachable!("{}", $this.pretty_error_message($expected))
+        unreachable!("{}", $this.error_with_position($expected))
     };
 }
 
@@ -2233,7 +2235,7 @@ impl Eaf<String> for PrettyEaf {
             segment_size_needs_wrapping,
         }) = self.position.last_mut()
         else {
-            pretty_printing_error!(self, "bit array segment specifier");
+            invalid_code_for_position!(self, "bit array segment specifier");
         };
 
         if *segment_value_needs_wrapping {
@@ -2572,7 +2574,7 @@ impl PrettyEaf {
     fn new_top_level_form(&mut self) {
         self.pop_leftover_items();
         if !self.position.is_empty() {
-            pretty_printing_error!(self, "new top level form");
+            invalid_code_for_position!(self, "top level form");
         }
     }
 
@@ -2587,7 +2589,7 @@ impl PrettyEaf {
     fn new_expression(&mut self) {
         self.pop_leftover_items();
         let Some(position) = self.position.last_mut() else {
-            pretty_printing_error!(self, "new expression");
+            invalid_code_for_position!(self, "expression");
         };
 
         match position {
@@ -2796,7 +2798,7 @@ impl PrettyEaf {
             | PrettyEafPosition::List {
                 kind: ListKind::Pattern,
                 ..
-            } => pretty_printing_error!(self, "new expression"),
+            } => invalid_code_for_position!(self, "expression"),
         }
     }
 
@@ -2811,7 +2813,7 @@ impl PrettyEaf {
     fn new_type(&mut self) {
         self.pop_leftover_items();
         let Some(position) = self.position.last_mut() else {
-            pretty_printing_error!(self, "new type");
+            invalid_code_for_position!(self, "type");
         };
 
         match position {
@@ -2883,7 +2885,7 @@ impl PrettyEaf {
             }
             | PrettyEafPosition::MatchPattern { .. }
             | PrettyEafPosition::TuplePattern { .. } => {
-                pretty_printing_error!(self, "new type")
+                invalid_code_for_position!(self, "type")
             }
         }
     }
@@ -2899,7 +2901,7 @@ impl PrettyEaf {
     fn new_pattern(&mut self) {
         self.pop_leftover_items();
         let Some(position) = self.position.last_mut() else {
-            pretty_printing_error!(self, "new pattern");
+            invalid_code_for_position!(self, "pattern");
         };
 
         match position {
@@ -3012,7 +3014,7 @@ impl PrettyEaf {
             | PrettyEafPosition::CaseClause {
                 expected: ExpectedCaseClauseItem::Body { .. },
             } => {
-                pretty_printing_error!(self, "new pattern");
+                invalid_code_for_position!(self, "pattern");
             }
         }
     }
@@ -3178,7 +3180,7 @@ impl PrettyEaf {
                 // generated, then that's an error!
                 expected: ExpectedCallItem::FunctionToBeCalled,
                 ..
-            } => pretty_printing_error!(self, "pop leftover item"),
+            } => invalid_code_for_position!(self, "pop leftover item"),
         }
     }
 
@@ -3224,7 +3226,7 @@ impl PrettyEaf {
             | PrettyEafPosition::UnionType { .. }
             | PrettyEafPosition::RecordAttribute { .. }
             | PrettyEafPosition::TupleType { .. } => {
-                pretty_printing_error!(self, "escaping string")
+                invalid_code_for_position!(self, "escaping string")
             }
 
             PrettyEafPosition::FunctionCall { .. }
@@ -3283,7 +3285,7 @@ impl PrettyEaf {
     fn new_bit_array_segment(&mut self) -> BitArrayKind {
         self.pop_leftover_items();
         let Some(PrettyEafPosition::BitArray { first, kind }) = self.position.last_mut() else {
-            pretty_printing_error!(self, "bit array segment")
+            invalid_code_for_position!(self, "bit array segment")
         };
 
         if *first {
@@ -3301,7 +3303,7 @@ impl PrettyEaf {
             expected: ExpectedCaseItem::Branches { first },
         }) = self.position.last_mut()
         else {
-            pretty_printing_error!(self, "case clause")
+            invalid_code_for_position!(self, "case clause")
         };
 
         if *first {
@@ -3317,7 +3319,7 @@ impl PrettyEaf {
     fn new_map_field(&mut self) {
         self.pop_leftover_items();
         let Some(PrettyEafPosition::Map { first }) = self.position.last_mut() else {
-            pretty_printing_error!(self, "map field");
+            invalid_code_for_position!(self, "map field");
         };
 
         if *first {
@@ -3583,7 +3585,9 @@ impl PrettyEaf {
         self.code.push_str(&" ".repeat(self.indentation));
     }
 
-    fn pretty_error_message(&self, expected: &str) -> String {
+    /// This produces a pretty printed error message including the current
+    /// position.
+    fn error_with_position(&self, expected: &str) -> String {
         let position = self.position.last();
         format!("tried {expected}, position: {position:?}")
     }
