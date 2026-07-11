@@ -146,6 +146,20 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now offers a code action to rewrite integers in a
+  different base. For example:
+
+  ```gleam
+  pub fn lucky_number() {
+    0b1011
+  //^^^^^^ Hovering this
+  }
+  ```
+
+  The language server is going to show code actions to rewrite it as `11`,
+  `0o13`, or `0xB`.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The "remove unreachable patterns" code action can now be triggered on
   unreachable alternative patterns of a case expression.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

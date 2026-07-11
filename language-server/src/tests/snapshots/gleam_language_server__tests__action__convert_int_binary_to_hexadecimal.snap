@@ -1,0 +1,11 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn main() { 0b1101111 }"
+---
+----- BEFORE ACTION
+pub fn main() { 0b1101111 }
+                ↑          
+
+
+----- AFTER ACTION
+pub fn main() { 0x6f }
