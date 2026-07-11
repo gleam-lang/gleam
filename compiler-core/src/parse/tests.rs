@@ -2510,3 +2510,26 @@ fn error_message_when_using_discard_pattern_for_as_pattern() {
 }"
     );
 }
+
+#[test]
+fn missing_constructor_name_with_multiple_fields() {
+    assert_module_error!(
+        r#"
+pub type Wibble(a) {
+  field: Int,
+  other: a
+}
+"#
+    );
+}
+
+#[test]
+fn lowercase_constructor_name_in_custom_type() {
+    assert_module_error!(
+        r#"
+pub type Wibble {
+  wibble(Int, String)
+}
+"#
+    );
+}

@@ -20,6 +20,6 @@ Each custom type variant must have a constructor:
 
 pub opaque type User {
   User(
-    name: Type,
+    name,
   )
 }

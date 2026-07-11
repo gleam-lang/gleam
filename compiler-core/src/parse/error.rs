@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
-use crate::ast::{SrcSpan, TypeAst};
+use crate::ast::{RecordConstructorArg, SrcSpan, TypeAst};
 use crate::diagnostic::{ExtraLabel, Label};
 use crate::error::{wrap, wrap_format};
 use crate::parse::Token;
@@ -145,12 +145,23 @@ pub enum ParseErrorType {
     RedundantInternalAttribute,          // for a private definition marked as internal
     InvalidModuleTypePattern,            // for patterns that have a dot like: `name.thing`
     ListPatternSpreadFollowedByElements, // When there is a pattern after a spread [..rest, pattern]
+
+    /// This happens when someone forgets to write the type constructor around
+    /// its fields in a custom type definition. For example:
+    ///
+    /// ```gleam
+    /// pub type Wibble {
+    ///   String,
+    ///   field: Int,
+    ///   field_2: a,
+    /// }
+    /// ```
     ExpectedRecordConstructor {
-        name: EcoString,
+        type_name: EcoString,
         public: bool,
         opaque: bool,
-        field: EcoString,
-        field_type: Option<Box<TypeAst>>,
+        /// Those are the fields that have been written.
+        fields: Vec<RecordConstructorArg<()>>,
     },
     CallInClauseGuard, // case x { _ if f() -> 1 }
     IfExpression,
@@ -684,11 +695,10 @@ See: https://tour.gleam.run/flow-control/case-expressions/"
             },
 
             ParseErrorType::ExpectedRecordConstructor {
-                name,
+                type_name,
                 public,
                 opaque,
-                field,
-                field_type,
+                fields,
             } => {
                 let (accessor, opaque) = match *public {
                     true if *opaque => ("pub ", "opaque "),
@@ -696,22 +706,29 @@ See: https://tour.gleam.run/flow-control/case-expressions/"
                     false => ("", ""),
                 };
 
-                let mut annotation = EcoString::new();
-                match field_type {
-                    Some(t) => t.print(&mut annotation),
-                    None => annotation.push_str("Type"),
-                };
+                let fields = fields
+                    .iter()
+                    .map(|field| {
+                        let mut type_ = EcoString::new();
+                        field.ast.print(&mut type_);
+
+                        match field.label.as_ref() {
+                            Some((_, label)) => format!("    {label}: {type_},"),
+                            None => format!("    {type_},"),
+                        }
+                    })
+                    .join("\n");
 
                 ParseErrorDetails {
-                    text: [
-                        "Each custom type variant must have a constructor:\n".into(),
-                        format!("{accessor}{opaque}type {name} {{"),
-                        format!("  {name}("),
-                        format!("    {field}: {annotation},"),
-                        "  )".into(),
-                        "}".into(),
-                    ]
-                    .join("\n"),
+                    text: format!(
+                        "Each custom type variant must have a constructor:
+
+{accessor}{opaque}type {type_name} {{
+  {type_name}(
+{fields}
+  )
+}}"
+                    ),
                     hint: None,
                     label_text: "I was not expecting this".into(),
                     extra_labels: vec![],

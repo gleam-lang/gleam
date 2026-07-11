@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub type Wibble(a) {\n  field: Int,\n  other: a\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble(a) {
+  field: Int,
+  other: a
+}
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:3
+  │  
+3 │ ╭   field: Int,
+4 │ │   other: a
+  │ ╰──────────^ I was not expecting this
+
+Each custom type variant must have a constructor:
+
+pub type Wibble {
+  Wibble(
+    field: Int,
+    other: a,
+  )
+}

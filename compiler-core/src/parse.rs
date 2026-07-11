@@ -2567,90 +2567,65 @@ where
         let documentation = self.take_documentation(start);
         let (name_start, name, parameters, end, name_end) = self.expect_type_name()?;
         let name_location = SrcSpan::new(name_start, name_end);
-        let (constructors, end_position) = if self.maybe_one(&Token::LeftBrace).is_some() {
-            // Custom Type
-            let constructors = Parser::series_of(
-                self,
-                &|p| {
-                    // The only attribute supported on constructors is @deprecated
-                    let mut attributes = Attributes::default();
-                    let attr_loc = Parser::parse_attributes(p, &mut attributes)?;
 
-                    if let Some(attr_span) = attr_loc {
-                        // Expecting all but the deprecated atterbutes to be default
-                        if attributes.external_erlang.is_some()
-                            || attributes.external_javascript.is_some()
-                            || attributes.target.is_some()
-                            || attributes.internal != InternalAttribute::Missing
-                        {
-                            return parse_error(
-                                ParseErrorType::UnknownAttributeRecordVariant,
-                                attr_span,
-                            );
-                        }
-                    }
+        let (constructors, end_position) = match self.tok0.take() {
+            // If we see `type Wibble {`, then we know we're parsing a custom type.
+            Some((_, Token::LeftBrace, _)) => {
+                self.advance();
 
-                    match Parser::maybe_upname(p) {
-                        Some((c_s, c_n, c_e)) => {
-                            let documentation = p.take_documentation(c_s);
-                            let (arguments, arguments_e) =
-                                Parser::parse_type_constructor_arguments(p)?;
-                            let end = arguments_e.max(c_e);
-                            Ok(Some(RecordConstructor {
-                                location: SrcSpan { start: c_s, end },
-                                name_location: SrcSpan {
-                                    start: c_s,
-                                    end: c_e,
-                                },
-                                name: c_n,
-                                arguments,
-                                documentation,
-                                deprecation: attributes.deprecated,
-                            }))
-                        }
-                        _ => Ok(None),
-                    }
-                },
-                // No separator
-                None,
-            )?;
-            let (_, close_end) = self.expect_custom_type_close(&name, public, opaque)?;
-            (constructors, close_end)
-        } else {
-            match self.maybe_one(&Token::Equal) {
-                Some((eq_s, eq_e)) => {
-                    // Type Alias
-                    if opaque {
-                        return parse_error(
-                            ParseErrorType::OpaqueTypeAlias,
-                            SrcSpan { start, end },
-                        );
-                    }
-
-                    match self.parse_type()? {
-                        Some(t) => {
-                            let type_end = t.location().end;
-                            return Ok(Some(Definition::TypeAlias(TypeAlias {
-                                documentation,
-                                location: SrcSpan::new(start, type_end),
-                                publicity: self.publicity(public, attributes.internal)?,
-                                alias: name,
-                                name_location,
-                                parameters,
-                                type_ast: t,
-                                type_: (),
-                                deprecation: std::mem::take(&mut attributes.deprecated),
-                            })));
-                        }
-                        _ => {
-                            return parse_error(
-                                ParseErrorType::ExpectedType,
-                                SrcSpan::new(eq_s, eq_e),
-                            );
-                        }
-                    }
+                // If we see a lowercase name, rather than an uppercase one. We
+                // know there's a syntax error! So now we can try and provide a
+                // nice error message, based on what that wrong code looks like.
+                if let Some((name_start, Token::Name { .. }, name_end)) = &self.tok0 {
+                    return Err(self.invalid_record_constructor_error(
+                        name,
+                        public,
+                        opaque,
+                        *name_start,
+                        *name_end,
+                    ));
                 }
-                _ => (vec![], end),
+
+                let constructors = self.series_of(
+                    &|parser| parser.parse_record_constructor(),
+                    // No separator
+                    None,
+                )?;
+                let close_end = self.expect_custom_type_close()?;
+                (constructors, close_end)
+            }
+
+            // If we see `type Wibble =` then we know we're parsing a type alias.
+            Some((equal_start, Token::Equal, equal_end)) => {
+                self.advance();
+
+                if opaque {
+                    return parse_error(ParseErrorType::OpaqueTypeAlias, SrcSpan { start, end });
+                }
+
+                if let Some(type_) = self.parse_type()? {
+                    return Ok(Some(Definition::TypeAlias(TypeAlias {
+                        documentation,
+                        location: SrcSpan::new(start, type_.location().end),
+                        publicity: self.publicity(public, attributes.internal)?,
+                        alias: name,
+                        name_location,
+                        parameters,
+                        type_ast: type_,
+                        type_: (),
+                        deprecation: std::mem::take(&mut attributes.deprecated),
+                    })));
+                } else {
+                    return parse_error(
+                        ParseErrorType::ExpectedType,
+                        SrcSpan::new(equal_start, equal_end),
+                    );
+                }
+            }
+
+            token @ (Some(_) | None) => {
+                self.tok0 = token;
+                (vec![], end)
             }
         };
 
@@ -2669,6 +2644,189 @@ where
             external_erlang: std::mem::take(&mut attributes.external_erlang),
             external_javascript: std::mem::take(&mut attributes.external_javascript),
         })))
+    }
+
+    fn parse_record_constructor(&mut self) -> Result<Option<RecordConstructor<()>>, ParseError> {
+        // The only attribute supported on constructors is @deprecated
+        let mut attributes = Attributes::default();
+        let attr_loc = self.parse_attributes(&mut attributes)?;
+
+        if let Some(attr_span) = attr_loc {
+            // Expecting all but the deprecated atterbutes to be default
+            if attributes.external_erlang.is_some()
+                || attributes.external_javascript.is_some()
+                || attributes.target.is_some()
+                || attributes.internal != InternalAttribute::Missing
+            {
+                return parse_error(ParseErrorType::UnknownAttributeRecordVariant, attr_span);
+            }
+        }
+
+        match self.maybe_upname() {
+            Some((name_start, constructor_name, name_end)) => {
+                let documentation = self.take_documentation(name_start);
+                let (arguments, arguments_end) = self.parse_record_constructor_arguments()?;
+
+                Ok(Some(RecordConstructor {
+                    location: SrcSpan {
+                        start: name_start,
+                        end: arguments_end.max(name_end),
+                    },
+                    name_location: SrcSpan {
+                        start: name_start,
+                        end: name_end,
+                    },
+                    name: constructor_name,
+                    arguments,
+                    documentation,
+                    deprecation: attributes.deprecated,
+                }))
+            }
+            _ => Ok(None),
+        }
+    }
+
+    /// This takes place when we find a lowercase name as a record constructor
+    /// variant (that name is passed as an argument here).
+    /// We want to look at the following tokens to produce a nice error message:
+    ///
+    /// ```gleam
+    /// pub type Wibble {
+    ///   wibble
+    /// //^^^^^^ Error, this should be uppercase!
+    /// }
+    /// ```
+    ///
+    /// But if the thing looks like a record definition, we want a specialised
+    /// error message:
+    ///
+    /// ```gleam
+    /// pub type Wibble {
+    ///   wibble: Int,
+    ///   wobble: String
+    /// }
+    /// // Suggest wrapping this in a constructor.
+    /// ```
+    ///
+    fn invalid_record_constructor_error(
+        &mut self,
+        type_name: EcoString,
+        public: bool,
+        opaque: bool,
+        name_start: u32,
+        name_end: u32,
+    ) -> ParseError {
+        let fields = self.series_of(
+            &|parser| parser.parse_record_constructor_field(),
+            Some(&Token::Comma),
+        );
+
+        match fields {
+            // If there's a list of fields right inside the type that means the
+            // developer might have forgotten to wrap the thing in a constructor.
+            // Basically writing something like this:
+            //
+            // ```gleam
+            // pub type Wibble {
+            //   String,
+            //   wibble: Int,
+            // }
+            // ```
+            //
+            // So we want to produce a specialised error message pointing them
+            // in the right direction.
+            Ok(fields) if let Some((_, Token::RightBrace, _)) = self.tok0 => ParseError {
+                location: SrcSpan {
+                    start: fields
+                        .first()
+                        .map_or(name_start, |field| field.location.start),
+                    end: fields.last().map_or(name_end, |field| field.location.end),
+                },
+                error: ParseErrorType::ExpectedRecordConstructor {
+                    type_name: type_name.clone(),
+                    public,
+                    opaque,
+                    fields,
+                },
+            },
+
+            // Otherwise we fall back to telling them the lowercase name should
+            // be uppercased!
+            Ok(_) | Err(_) => ParseError {
+                error: ParseErrorType::IncorrectUpName,
+                location: SrcSpan {
+                    start: name_start,
+                    end: name_end,
+                },
+            },
+        }
+    }
+
+    // examples:
+    //   *no args*
+    //   ()
+    //   (a, b)
+    fn parse_record_constructor_arguments(
+        &mut self,
+    ) -> Result<(Vec<RecordConstructorArg<()>>, u32), ParseError> {
+        if self.maybe_one(&Token::LeftParen).is_some() {
+            let arguments = Parser::series_of(
+                self,
+                &|parser| parser.parse_record_constructor_field(),
+                Some(&Token::Comma),
+            )?;
+            let (_, end) = self
+                .expect_one_following_series(&Token::RightParen, "a constructor argument name")?;
+            Ok((arguments, end))
+        } else {
+            Ok((vec![], 0))
+        }
+    }
+
+    fn parse_record_constructor_field(
+        &mut self,
+    ) -> Result<Option<RecordConstructorArg<()>>, ParseError> {
+        match (self.tok0.take(), self.tok1.take()) {
+            (Some((start, Token::Name { name }, name_end)), Some((_, Token::Colon, end))) => {
+                let _ = Parser::next_tok(self);
+                let _ = Parser::next_tok(self);
+                let doc = self.take_documentation(start);
+                match Parser::parse_type(self)? {
+                    Some(type_ast) => {
+                        let end = type_ast.location().end;
+                        Ok(Some(RecordConstructorArg {
+                            label: Some((SrcSpan::new(start, name_end), name)),
+                            ast: type_ast,
+                            location: SrcSpan { start, end },
+                            type_: (),
+                            doc,
+                        }))
+                    }
+                    None => parse_error(ParseErrorType::ExpectedType, SrcSpan { start, end }),
+                }
+            }
+            (t0, t1) => {
+                self.tok0 = t0;
+                self.tok1 = t1;
+                match Parser::parse_type(self)? {
+                    Some(type_ast) => {
+                        let doc = match &self.tok0 {
+                            Some((start, _, _)) => self.take_documentation(*start),
+                            None => None,
+                        };
+                        let type_location = type_ast.location();
+                        Ok(Some(RecordConstructorArg {
+                            label: None,
+                            ast: type_ast,
+                            location: type_location,
+                            type_: (),
+                            doc,
+                        }))
+                    }
+                    None => Ok(None),
+                }
+            }
+        }
     }
 
     // examples:
@@ -2724,72 +2882,6 @@ where
             })
         } else {
             Ok((start, upname, vec![], end, end))
-        }
-    }
-
-    // examples:
-    //   *no args*
-    //   ()
-    //   (a, b)
-    fn parse_type_constructor_arguments(
-        &mut self,
-    ) -> Result<(Vec<RecordConstructorArg<()>>, u32), ParseError> {
-        if self.maybe_one(&Token::LeftParen).is_some() {
-            let arguments = Parser::series_of(
-                self,
-                &|p| match (p.tok0.take(), p.tok1.take()) {
-                    (
-                        Some((start, Token::Name { name }, name_end)),
-                        Some((_, Token::Colon, end)),
-                    ) => {
-                        let _ = Parser::next_tok(p);
-                        let _ = Parser::next_tok(p);
-                        let doc = p.take_documentation(start);
-                        match Parser::parse_type(p)? {
-                            Some(type_ast) => {
-                                let end = type_ast.location().end;
-                                Ok(Some(RecordConstructorArg {
-                                    label: Some((SrcSpan::new(start, name_end), name)),
-                                    ast: type_ast,
-                                    location: SrcSpan { start, end },
-                                    type_: (),
-                                    doc,
-                                }))
-                            }
-                            None => {
-                                parse_error(ParseErrorType::ExpectedType, SrcSpan { start, end })
-                            }
-                        }
-                    }
-                    (t0, t1) => {
-                        p.tok0 = t0;
-                        p.tok1 = t1;
-                        match Parser::parse_type(p)? {
-                            Some(type_ast) => {
-                                let doc = match &p.tok0 {
-                                    Some((start, _, _)) => p.take_documentation(*start),
-                                    None => None,
-                                };
-                                let type_location = type_ast.location();
-                                Ok(Some(RecordConstructorArg {
-                                    label: None,
-                                    ast: type_ast,
-                                    location: type_location,
-                                    type_: (),
-                                    doc,
-                                }))
-                            }
-                            None => Ok(None),
-                        }
-                    }
-                },
-                Some(&Token::Comma),
-            )?;
-            let (_, end) = self
-                .expect_one_following_series(&Token::RightParen, "a constructor argument name")?;
-            Ok((arguments, end))
-        } else {
-            Ok((vec![], 0))
         }
     }
 
@@ -4046,57 +4138,29 @@ where
 
     /// Expect the end to a custom type definiton or handle an incorrect
     /// record constructor definition.
-    ///
-    /// Used for mapping to a more specific error type and message.
-    fn expect_custom_type_close(
-        &mut self,
-        name: &EcoString,
-        public: bool,
-        opaque: bool,
-    ) -> Result<(u32, u32), ParseError> {
+    fn expect_custom_type_close(&mut self) -> Result<u32, ParseError> {
         match self.maybe_one(&Token::RightBrace) {
-            Some((start, end)) => Ok((start, end)),
+            Some((_, end)) => Ok(end),
             None => match self.next_tok() {
                 None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
                 Some((start, token, end)) => {
-                    // If provided a Name, map to a more detailed error
-                    // message to nudge the user.
-                    // Else, handle as an unexpected token.
-                    let field = if let Token::Name { name } = token {
-                        name
-                    } else {
-                        let hint = match (&token, self.tok0.take()) {
-                            (&Token::Fn, _) | (&Token::Pub, Some((_, Token::Fn, _))) => {
-                                let text = "Gleam is not an object oriented programming language so
+                    let hint = match (&token, self.tok0.take()) {
+                        (&Token::Fn, _) | (&Token::Pub, Some((_, Token::Fn, _))) => {
+                            let text = "Gleam is not an object oriented programming language so
 functions are declared separately from types.";
-                                Some(wrap(text).into())
-                            }
-                            (_, _) => None,
-                        };
+                            Some(wrap(text).into())
+                        }
+                        (_, _) => None,
+                    };
 
-                        return parse_error(
-                            ParseErrorType::UnexpectedToken {
-                                token,
-                                expected: vec![
-                                    Token::RightBrace.to_string().into(),
-                                    "a record constructor".into(),
-                                ],
-                                hint,
-                            },
-                            SrcSpan { start, end },
-                        );
-                    };
-                    let field_type = match self.parse_type_annotation(&Token::Colon) {
-                        Ok(Some(annotation)) => Some(Box::new(annotation)),
-                        _ => None,
-                    };
                     parse_error(
-                        ParseErrorType::ExpectedRecordConstructor {
-                            name: name.clone(),
-                            public,
-                            opaque,
-                            field,
-                            field_type,
+                        ParseErrorType::UnexpectedToken {
+                            token,
+                            expected: vec![
+                                Token::RightBrace.to_string().into(),
+                                "a record constructor".into(),
+                            ],
+                            hint,
                         },
                         SrcSpan { start, end },
                     )
