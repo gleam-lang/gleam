@@ -555,6 +555,10 @@
   when finding the Gleam files of a package.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler would not be able to correctly parse negative
+  numbers written in binary, octal, or hexadecimal base.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The formatter now properly formats binary operations in bit array size
   segments.
   ([Andrey Kozhev](https://github.com/ankddev))

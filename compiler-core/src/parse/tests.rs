@@ -2220,6 +2220,21 @@ const wobble = [..wibble]
 }
 
 #[test]
+fn parse_negative_binary_number() {
+    assert_parse_module!("pub fn main() { -0b101 }");
+}
+
+#[test]
+fn parse_negative_octal_number() {
+    assert_parse_module!("pub fn main() { -0o157 }");
+}
+
+#[test]
+fn parse_negative_hexadecimal_number() {
+    assert_parse_module!("pub fn main() { -0x6f }");
+}
+
+#[test]
 fn append_to_const_list() {
     assert_module_error!(
         "

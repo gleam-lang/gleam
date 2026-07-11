@@ -8,6 +8,7 @@ use crate::parse::LiteralFloatValue;
 use crate::parse::error::{LexicalError, LexicalErrorType};
 use crate::parse::token::Token;
 use std::char;
+use std::ops::Neg;
 
 use super::error::InvalidUnicodeEscapeError;
 
@@ -879,27 +880,41 @@ where
 
     fn lex_number(&mut self) -> LexResult {
         let start_pos = self.get_pos();
+
+        // We call this function after making sure that what comes next starts
+        // with what seems to be a valid number. If we see that it starts with
+        // `-` we consume the token and record that the number is negative.
+        let is_negative = if self.chr0 == Some('-') {
+            let _ = self.next_char();
+            true
+        } else {
+            false
+        };
+
         let num = if self.chr0 == Some('0') {
-            if self.chr1 == Some('x') || self.chr1 == Some('X') {
-                // Hex!
-                let _ = self.next_char();
-                let _ = self.next_char();
-                self.lex_number_radix(start_pos, 16, "0x")?
-            } else if self.chr1 == Some('o') || self.chr1 == Some('O') {
-                // Octal!
-                let _ = self.next_char();
-                let _ = self.next_char();
-                self.lex_number_radix(start_pos, 8, "0o")?
-            } else if self.chr1 == Some('b') || self.chr1 == Some('B') {
-                // Binary!
-                let _ = self.next_char();
-                let _ = self.next_char();
-                self.lex_number_radix(start_pos, 2, "0b")?
-            } else {
-                self.lex_decimal_number()?
+            match self.chr1 {
+                Some('x' | 'X') => {
+                    // Hex!
+                    let _ = self.next_char();
+                    let _ = self.next_char();
+                    self.lex_number_radix(start_pos, 16, is_negative, "0x")?
+                }
+                Some('o' | 'O') => {
+                    // Octal!
+                    let _ = self.next_char();
+                    let _ = self.next_char();
+                    self.lex_number_radix(start_pos, 8, is_negative, "0o")?
+                }
+                Some('b' | 'B') => {
+                    // Binary!
+                    let _ = self.next_char();
+                    let _ = self.next_char();
+                    self.lex_number_radix(start_pos, 2, is_negative, "0b")?
+                }
+                _ => self.lex_decimal_number(start_pos, is_negative)?,
             }
         } else {
-            self.lex_decimal_number()?
+            self.lex_decimal_number(start_pos, is_negative)?
         };
 
         if Some('_') == self.chr0 {
@@ -917,7 +932,13 @@ where
     }
 
     // Lex a hex/octal/decimal/binary number without a decimal point.
-    fn lex_number_radix(&mut self, start_pos: u32, radix: u32, prefix: &str) -> LexResult {
+    fn lex_number_radix(
+        &mut self,
+        start_pos: u32,
+        radix: u32,
+        is_negative: bool,
+        prefix: &str,
+    ) -> LexResult {
         let num = self.radix_run(radix);
         if num.is_empty() {
             let location = self.get_pos() - 1;
@@ -941,6 +962,13 @@ where
             let value = format!("{prefix}{num}");
             let int_value = super::parse_int_value(&value).expect("int value to parse as bigint");
             let end_pos = self.get_pos();
+
+            let (value, int_value) = if is_negative {
+                (format!("-{value}"), int_value.neg())
+            } else {
+                (value, int_value)
+            };
+
             Ok((
                 start_pos,
                 Token::Int {
@@ -954,21 +982,24 @@ where
 
     // Lex a normal number, that is, no octal, hex or binary number.
     // This function cannot be reached without the head of the stream being either 0-9 or '-', 0-9
-    fn lex_decimal_number(&mut self) -> LexResult {
-        self.lex_decimal_or_int_number(true)
+    fn lex_decimal_number(&mut self, start_pos: u32, is_negative: bool) -> LexResult {
+        self.lex_decimal_or_int_number(start_pos, is_negative, true)
     }
 
-    fn lex_int_number(&mut self) -> LexResult {
-        self.lex_decimal_or_int_number(false)
+    fn lex_int_number(&mut self, start_pos: u32, is_negative: bool) -> LexResult {
+        self.lex_decimal_or_int_number(start_pos, is_negative, false)
     }
 
-    fn lex_decimal_or_int_number(&mut self, can_lex_decimal: bool) -> LexResult {
-        let start_pos = self.get_pos();
+    fn lex_decimal_or_int_number(
+        &mut self,
+        start_pos: u32,
+        is_negative: bool,
+        can_lex_decimal: bool,
+    ) -> LexResult {
         let mut value = String::new();
-        // consume negative sign
-        if self.chr0 == Some('-') {
-            value.push(self.next_char().expect("lex_normal_number negative"));
-        }
+        if is_negative {
+            value.push('-')
+        };
         // consume first run of digits
         value.push_str(&self.radix_run(10));
 
@@ -1025,7 +1056,7 @@ where
         // It can be nested like: `tuple.1.2.3.4`
         loop {
             if matches!(self.chr0, Some('0'..='9')) {
-                let number = self.lex_int_number()?;
+                let number = self.lex_int_number(self.get_pos(), false)?;
                 self.emit(number);
             } else {
                 break;

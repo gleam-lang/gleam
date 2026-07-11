@@ -1,0 +1,81 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "pub fn main() { -0b101 }"
+---
+Parsed {
+    module: Module {
+        name: "",
+        documentation: [],
+        type_info: (),
+        definitions: [
+            TargetedDefinition {
+                definition: Function(
+                    Function {
+                        location: SrcSpan {
+                            start: 0,
+                            end: 13,
+                        },
+                        body_start: Some(
+                            14,
+                        ),
+                        end_position: 24,
+                        name: Some(
+                            (
+                                SrcSpan {
+                                    start: 7,
+                                    end: 11,
+                                },
+                                "main",
+                            ),
+                        ),
+                        arguments: [],
+                        body: [
+                            Expression(
+                                Int {
+                                    location: SrcSpan {
+                                        start: 16,
+                                        end: 22,
+                                    },
+                                    value: "-0b101",
+                                    int_value: -5,
+                                },
+                            ),
+                        ],
+                        publicity: Public,
+                        deprecation: NotDeprecated,
+                        return_annotation: None,
+                        return_type: (),
+                        documentation: None,
+                        external_erlang: None,
+                        external_javascript: None,
+                        implementations: Implementations {
+                            gleam: true,
+                            can_run_on_erlang: true,
+                            can_run_on_javascript: true,
+                            uses_erlang_externals: false,
+                            uses_javascript_externals: false,
+                        },
+                        purity: Pure,
+                    },
+                ),
+                target: None,
+            },
+        ],
+        names: Names {
+            local_types: {},
+            imported_modules: {},
+            type_variables: {},
+            local_value_constructors: {},
+            reexport_aliases: {},
+        },
+        unused_definition_positions: {},
+    },
+    extra: ModuleExtra {
+        module_comments: [],
+        doc_comments: [],
+        comments: [],
+        empty_lines: [],
+        new_lines: [],
+        trailing_commas: [],
+    },
+}
