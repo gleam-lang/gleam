@@ -23,6 +23,7 @@ export class Cat<I> extends _.CustomType {
   type_: I;
 }
 export function Animal$Cat<I>(type_: I): Animal$<I>;
+export function Animal$isCat<I>(value: Animal$<I>): value is Cat<I>;
 export function Animal$isCat<I>(value: any): value is Animal$<unknown>;
 export function Animal$Cat$0<I>(value: Animal$<I>): I;
 export function Animal$Cat$type_<I>(value: Animal$<I>): I;
@@ -34,6 +35,7 @@ export class Dog<I> extends _.CustomType {
   type_: I;
 }
 export function Animal$Dog<I>(type_: I): Animal$<I>;
+export function Animal$isDog<I>(value: Animal$<I>): value is Dog<I>;
 export function Animal$isDog<I>(value: any): value is Animal$<unknown>;
 export function Animal$Dog$0<I>(value: Animal$<I>): I;
 export function Animal$Dog$type_<I>(value: Animal$<I>): I;

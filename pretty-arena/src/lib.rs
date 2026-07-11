@@ -800,6 +800,7 @@ const_str!(
     18
 );
 const_str!(CLOSE_PAREN_COLON_SPACE_DOCUMENT, "): ", 3);
+const_str!(VALUE_COLON_SPACE, "value: ", 7);
 const_str!(VALUE_COLON_SPACE_ANY_DOCUMENT, "value: any", 10);
 const_str!(
     CLOSE_PAREN_COLON_SPACE_VALUE_IS_SPACE_DOCUMENT,
