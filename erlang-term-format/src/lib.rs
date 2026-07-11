@@ -12,6 +12,7 @@ extern crate pretty_assertions;
 #[derive(Debug)]
 pub struct List {
     size_index: usize,
+    #[cfg(debug_assertions)]
     used: bool,
 }
 
@@ -19,15 +20,29 @@ impl List {
     pub fn new(size_index: usize) -> Self {
         Self {
             size_index,
+
+            #[cfg(debug_assertions)]
             used: false,
         }
     }
+}
 
+#[cfg(debug_assertions)]
+impl List {
     pub fn consume(mut self) {
         self.used = true;
     }
 }
 
+#[cfg(not(debug_assertions))]
+impl List {
+    pub fn consume(self) {}
+}
+
+/// When testing we want to make sure that all lists are always correctly closed
+/// after being consumed. In production builds all of these operations become
+/// no-ops.
+#[cfg(debug_assertions)]
 impl Drop for List {
     fn drop(&mut self) {
         assert!(self.used, "list not closed");
