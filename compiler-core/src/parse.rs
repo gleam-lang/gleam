@@ -2743,7 +2743,7 @@ where
                     end: fields.last().map_or(name_end, |field| field.location.end),
                 },
                 error: ParseErrorType::ExpectedRecordConstructor {
-                    type_name: type_name.clone(),
+                    type_name,
                     public,
                     opaque,
                     fields,
