@@ -490,6 +490,10 @@
   segments when compiling a function with a JavaScript external.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler would produce a confusing error message when
+  writing a constructor with a lowercase name.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - A `gleam@@compile.erl` is no longer left in the build output of
   `gleam compile-package`.
   ([Louis Pilfold](https://github.com/lpil))
