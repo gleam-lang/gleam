@@ -1772,12 +1772,21 @@ impl Eaf<String> for PrettyEaf {
         }
 
         self.new_top_level_form();
-        self.code.push_str(&format!(
-            "-export([{}]).\n",
-            exported
-                .map(|(name, arity)| { format!("{}/{}", quote_atom_name(name.as_ref()), arity) })
-                .join(", ")
-        ));
+
+        self.code.push_str("-export([");
+        let mut first = true;
+        for (name, arity) in exported {
+            if first {
+                first = false;
+            } else {
+                self.code.push_str(", ");
+            }
+
+            self.code.push_str(&quote_atom_name(name.as_ref()));
+            self.code.push('/');
+            self.code.push_str(&arity.to_string())
+        }
+        self.code.push_str("]).\n");
     }
 
     fn export_type_attribute<'a, Name: AsRef<str>>(
@@ -1791,12 +1800,21 @@ impl Eaf<String> for PrettyEaf {
         }
 
         self.new_top_level_form();
-        self.code.push_str(&format!(
-            "-export_type([{}]).\n",
-            exported
-                .map(|(name, arity)| { format!("{}/{}", quote_atom_name(name.as_ref()), arity) })
-                .join(", ")
-        ));
+
+        self.code.push_str("-export_type([");
+        let mut first = true;
+        for (name, arity) in exported {
+            if first {
+                first = false;
+            } else {
+                self.code.push_str(", ");
+            }
+
+            self.code.push_str(&quote_atom_name(name.as_ref()));
+            self.code.push('/');
+            self.code.push_str(&arity.to_string())
+        }
+        self.code.push_str("]).\n");
     }
 
     fn start_doc_attribute(&mut self) -> DocAttribute {
@@ -1824,22 +1842,36 @@ impl Eaf<String> for PrettyEaf {
 
     fn compile_attribute<'a>(&mut self, arguments: impl IntoIterator<Item = &'a str>) {
         self.new_top_level_form();
-        self.code.push_str(&format!(
-            "-compile([{}]).\n",
-            arguments.into_iter().join(", ")
-        ))
+
+        self.code.push_str("-compile([");
+
+        let mut first = true;
+        for argument in arguments {
+            if first {
+                first = false;
+            } else {
+                self.code.push_str(", ");
+            }
+
+            self.code.push_str(argument);
+        }
+        self.code.push_str("]).\n");
     }
 
     fn file_attribute(&mut self, file: &str, line: u32) {
         self.new_top_level_form();
-        self.code
-            .push_str(&format!("\n-file(\"{}\", {}).", file, line));
+        self.code.push_str("\n-file(\"");
+        self.code.push_str(file);
+        self.code.push_str("\", ");
+        self.code.push_str(&line.to_string());
+        self.code.push_str(").");
     }
 
     fn start_record_attribute(&mut self, record_name: &str) -> RecordAttribute {
         self.new_top_level_form();
-        self.code
-            .push_str(&format!("-record({}, {{", quote_atom_name(record_name)));
+        self.code.push_str("-record(");
+        self.code.push_str(&quote_atom_name(record_name));
+        self.code.push_str(", {");
         self.indentation += INDENT;
         self.position
             .push(PrettyEafPosition::RecordAttribute { first: true });
@@ -1863,8 +1895,8 @@ impl Eaf<String> for PrettyEaf {
 
     fn start_function_spec(&mut self, name: &str, _arity: usize) -> FunctionSpec {
         self.new_top_level_form();
-        self.code
-            .push_str(&format!("\n-spec {}", quote_atom_name(name)));
+        self.code.push_str("\n-spec ");
+        self.code.push_str(&quote_atom_name(name));
         self.position.push(PrettyEafPosition::FunctionSpec);
         FunctionSpec {
             representations: PrettyEaf::dummy_list(),
@@ -2111,11 +2143,9 @@ impl Eaf<String> for PrettyEaf {
         };
 
         self.new_expression();
-        self.code.push_str(&format!(
-            "{}:{}",
-            quote_atom_name(&module.0),
-            quote_atom_name(function),
-        ));
+        self.code.push_str(&quote_atom_name(&module.0));
+        self.code.push(':');
+        self.code.push_str(&quote_atom_name(function));
         self.position.push(PrettyEafPosition::FunctionCall {
             expected: ExpectedCallItem::Arguments { first: true },
             called_item_needs_wrapping: false,
@@ -2398,7 +2428,7 @@ impl Eaf<String> for PrettyEaf {
         }
         self.code.push_str(&quote_atom_name(name));
         self.code.push('/');
-        self.code.push_str(&format!("{arity}"));
+        self.code.push_str(&arity.to_string());
     }
 
     fn match_operator(&mut self) {
@@ -2430,7 +2460,7 @@ impl Eaf<String> for PrettyEaf {
     fn int_pattern(&mut self, number: BigInt) {
         self.do_not_wrap_if_segment_value_or_size();
         self.new_pattern();
-        self.code.push_str(&format!("{number}"));
+        self.code.push_str(&number.to_string());
     }
 
     fn float_pattern(&mut self, number: f64) {
@@ -2501,7 +2531,7 @@ impl Eaf<String> for PrettyEaf {
     fn int(&mut self, number: BigInt) {
         self.do_not_wrap_if_segment_value_or_size();
         self.new_expression();
-        self.code.push_str(&format!("{number}"));
+        self.code.push_str(&number.to_string());
     }
 
     fn float(&mut self, number: f64) {
@@ -2675,9 +2705,9 @@ impl PrettyEaf {
                 if !*first {
                     self.code.push(',');
                 }
-                self.code.push('\n');
-                self.code.push_str(&" ".repeat(self.indentation));
                 *first = false;
+                self.code.push('\n');
+                self.push_indentation();
             }
 
             PrettyEafPosition::BitArraySegment {
@@ -3039,7 +3069,7 @@ impl PrettyEaf {
             PrettyEafPosition::AnonymousFunctionStatement { .. } => {
                 self.indentation -= INDENT;
                 self.code.push('\n');
-                self.code.push_str(&" ".repeat(self.indentation));
+                self.push_indentation();
                 self.code.push_str("end")
             }
             // When we're done generating statements for a block we need to add
@@ -3047,7 +3077,7 @@ impl PrettyEaf {
             PrettyEafPosition::Block { .. } => {
                 self.indentation -= INDENT;
                 self.code.push('\n');
-                self.code.push_str(&" ".repeat(self.indentation));
+                self.push_indentation();
                 self.code.push_str("end");
             }
             // When we're done generating code for a function spec we want to
@@ -3135,7 +3165,7 @@ impl PrettyEaf {
             } => {
                 self.indentation -= INDENT;
                 self.code.push('\n');
-                self.code.push_str(&" ".repeat(self.indentation));
+                self.push_indentation();
                 self.code.push_str("end");
             }
 
@@ -3153,13 +3183,13 @@ impl PrettyEaf {
             PrettyEafPosition::Map { .. } => {
                 self.indentation -= INDENT;
                 self.code.push('\n');
-                self.code.push_str(&" ".repeat(self.indentation));
+                self.push_indentation();
                 self.code.push('}');
             }
             PrettyEafPosition::RecordAttribute { .. } => {
                 self.indentation -= INDENT;
                 self.code.push('\n');
-                self.code.push_str(&" ".repeat(self.indentation));
+                self.push_indentation();
                 self.code.push_str("}).");
             }
 
@@ -3386,9 +3416,13 @@ impl PrettyEaf {
             segment_size_needs_wrapping: _,
         }) = self.position.last()
         {
-            self.code.push_str(&format!("\"{content}\""))
+            self.code.push('"');
+            self.code.push_str(&content);
+            self.code.push('"');
         } else {
-            self.code.push_str(&format!("~\"{content}\"",));
+            self.code.push_str("~\"");
+            self.code.push_str(&content);
+            self.code.push('"');
         }
     }
 
@@ -3582,7 +3616,13 @@ impl PrettyEaf {
             self.code.push(',');
         }
         self.code.push('\n');
-        self.code.push_str(&" ".repeat(self.indentation));
+        self.push_indentation();
+    }
+
+    fn push_indentation(&mut self) {
+        for _ in 0..self.indentation {
+            self.code.push(' ');
+        }
     }
 
     /// This produces a pretty printed error message including the current
