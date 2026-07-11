@@ -83,7 +83,7 @@ fn name_with_generics<'a, 'doc>(
 ///
 ///   Examples:
 ///     fn(a) -> String       // `a` is `any`
-///     `fn()` -> Result(a, b)  // `a` and `b` are `any`
+///     fn() -> Result(a, b)  // `a` and `b` are `any`
 ///     fn(a) -> a            // `a` is a generic
 fn collect_generic_usages<'a>(
     mut ids: HashMap<u64, u64>,
@@ -717,11 +717,10 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
         type_name: &'a str,
         type_parameters: &'a [Arc<Type>],
     ) -> Document<'a, 'doc> {
-        let function_name = eco_format!(
-            "{type_name}$is{variant_name}",
-            variant_name = constructor.name
-        )
-        .to_doc(arena);
+        let variant_name = &constructor.name;
+        let function_name = eco_format!("{type_name}$is{variant_name}").to_doc(arena);
+        let type_name_dollar_document = docvec![arena, type_name, DOLLAR_DOCUMENT];
+
         let mut document = docvec![
             arena,
             EXPORT_FUNCTION_SPACE_DOCUMENT,
@@ -731,8 +730,7 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
                 .nest(arena, INDENT),
             TRAILING_COMMA_BREAK_DOCUMENT,
             CLOSE_PAREN_COLON_SPACE_VALUE_IS_SPACE_DOCUMENT,
-            type_name,
-            DOLLAR_DOCUMENT,
+            type_name_dollar_document
         ];
         if !type_parameters.is_empty() {
             for i in 0..type_parameters.len() {
@@ -745,7 +743,28 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
             document = document.append(arena, GT_INT_DOCUMENT);
         }
         document = document.append(arena, SEMICOLON_DOCUMENT);
-        document.group(arena)
+        document = document.group(arena);
+
+        let overload = if !type_parameters.is_empty() {
+            let constructor_types = constructor.arguments.iter().map(|argument| &argument.type_);
+
+            docvec![
+                arena,
+                EXPORT_FUNCTION_SPACE_DOCUMENT,
+                name_with_generics(arena, function_name, type_parameters),
+                OPEN_PAREN_DOCUMENT,
+                VALUE_COLON_SPACE_DOCUMENT,
+                name_with_generics(arena, type_name_dollar_document, type_parameters),
+                CLOSE_PAREN_COLON_SPACE_VALUE_IS_SPACE_DOCUMENT,
+                name_with_generics(arena, variant_name.to_doc(arena), constructor_types),
+                SEMICOLON_DOCUMENT,
+                LINE_DOCUMENT,
+            ]
+        } else {
+            EMPTY_DOCUMENT
+        };
+
+        overload.append(arena, document)
     }
 
     fn variant_fields_definition(

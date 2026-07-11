@@ -28,6 +28,26 @@
   to optimise.
   ([John Downey](https://github.com/jtdowney))
 
+- When producing TypeScript annotations, the compiler now produces overloads to
+  narrow the type of variants of a custom type. For example, given the following
+  type:
+
+  ```gleam
+  pub type Box(value) {
+    Full(value)
+    Empty
+  }
+  ```
+
+  Will now produce these two additional overloads:
+
+  ```ts
+  export function Box$isFull<I>(value: Box$<I>): value is Full<I>;
+  export function Box$isEmpty<I>(value: Box$<I>): value is Empty;
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,

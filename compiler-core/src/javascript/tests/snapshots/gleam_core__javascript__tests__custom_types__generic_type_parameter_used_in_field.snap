@@ -31,6 +31,10 @@ export function Wibble$Wibble<I, J>(
   wobble: _.Result<I, J>,
   wubble: J,
 ): Wibble$<I, J>;
+export function Wibble$isWibble<I, J>(value: Wibble$<I, J>): value is Wibble<
+  I,
+  J
+>;
 export function Wibble$isWibble<I, J>(
   value: any,
 ): value is Wibble$<unknown, unknown>;

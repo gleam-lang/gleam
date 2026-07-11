@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/javascript/tests/typescript.rs
+expression: "\npub type Twin {\n    Jak\n    Tom\n}\n"
+---
+----- SOURCE CODE
+
+pub type Twin {
+    Jak
+    Tom
+}
+
+
+----- TYPESCRIPT DEFINITIONS
+import type * as _ from "../gleam.d.mts";
+
+export class Jak extends _.CustomType {}
+export function Twin$Jak(): Twin$;
+export function Twin$isJak(value: any): value is Twin$;
+
+export class Tom extends _.CustomType {}
+export function Twin$Tom(): Twin$;
+export function Twin$isTom(value: any): value is Twin$;
+
+export type Twin$ = Jak | Tom;
