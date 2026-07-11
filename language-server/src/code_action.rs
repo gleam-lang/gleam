@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 The Gleam contributors
 
-use std::{collections::HashSet, iter, sync::Arc};
+use std::{collections::HashSet, iter, ops::Neg, sync::Arc};
 
 use ecow::{EcoString, eco_format};
 use gleam_core::{
@@ -36,6 +36,7 @@ use lsp_types::{
     CodeAction, CodeActionKind, CodeActionParams, CreateFile, CreateFileOptions, DocumentChange,
     Position, Range, TextEdit, Uri as Url,
 };
+use num_bigint::BigInt;
 use vec1::{Vec1, vec1};
 
 use crate::engine::{completely_within, position_within};
@@ -13097,5 +13098,125 @@ impl<'a> ConvertBetweenDocAndRegularComment<'a> {
                         })
                 })
         })
+    }
+}
+
+/// Code action to convert integers to a different base from the current one.
+///
+pub struct ConvertIntToDifferentBase<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    /// This is gonna hold the base the hovered integer is written in, and its
+    /// decimal value. And its position in the source code.
+    int: Option<(SrcSpan, Base, BigInt)>,
+}
+
+enum Base {
+    Binary,
+    Octal,
+    Decimal,
+    Hexadecimal,
+}
+
+impl<'a> ConvertIntToDifferentBase<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            int: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some((location, base, int)) = self.int else {
+            return vec![];
+        };
+
+        let missing_bases = match base {
+            Base::Binary => [Base::Decimal, Base::Octal, Base::Hexadecimal],
+            Base::Octal => [Base::Decimal, Base::Binary, Base::Hexadecimal],
+            Base::Decimal => [Base::Binary, Base::Octal, Base::Hexadecimal],
+            Base::Hexadecimal => [Base::Decimal, Base::Binary, Base::Octal],
+        };
+
+        let is_negative = int < BigInt::ZERO;
+        let int = if is_negative { int.neg() } else { int };
+
+        let mut action = Vec::with_capacity(3);
+        for base in missing_bases {
+            let minus = if is_negative { "-" } else { "" };
+            let converted_number = match base {
+                Base::Binary => format!("{minus}0b{:b}", int),
+                Base::Octal => format!("{minus}0o{:o}", int),
+                Base::Decimal => format!("{minus}{}", int),
+                Base::Hexadecimal => format!("{minus}0x{:x}", int),
+            };
+            let title = format!("Convert to `{converted_number}`");
+            self.edits.replace(location, converted_number);
+
+            CodeActionBuilder::new(&title)
+                .kind(CodeActionKind::RefactorRewrite)
+                .changes(
+                    self.params.text_document.uri.clone(),
+                    self.edits.edits.drain(..).collect(),
+                )
+                .preferred(false)
+                .push_to(&mut action);
+        }
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
+    fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
+        // We skip all the functions the cursor is not inside of.
+        // This is gonna make it faster to find the int we're hovering, if any.
+        let fun_range = self.edits.src_span_to_lsp_range(fun.full_location());
+        if within(self.params.range, fun_range) {
+            ast::visit::visit_typed_function(self, fun);
+        }
+    }
+
+    fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
+        // We skip all the expression's the cursor is not inside of.
+        // This is gonna make it faster to find the int we're hovering, if any.
+        let expression_range = self.edits.src_span_to_lsp_range(expr.location());
+        if within(self.params.range, expression_range) {
+            ast::visit::visit_typed_expr(self, expr);
+        }
+    }
+
+    fn visit_typed_expr_int(
+        &mut self,
+        location: &'ast SrcSpan,
+        _type_: &'ast Arc<Type>,
+        string_value: &'ast EcoString,
+        int_value: &'ast BigInt,
+    ) {
+        let int_range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, int_range) {
+            return;
+        }
+
+        let string_value = string_value.trim_start_matches('-');
+        let base = if string_value.starts_with("0b") {
+            Base::Binary
+        } else if string_value.starts_with("0o") {
+            Base::Octal
+        } else if string_value.starts_with("0x") {
+            Base::Hexadecimal
+        } else {
+            Base::Decimal
+        };
+
+        self.int = Some((*location, base, int_value.clone()))
     }
 }

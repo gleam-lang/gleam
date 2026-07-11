@@ -114,9 +114,10 @@ pub trait Visit<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
-        value: &'ast EcoString,
+        string_value: &'ast EcoString,
+        int_value: &'ast BigInt,
     ) {
-        visit_typed_expr_int(self, location, type_, value);
+        visit_typed_expr_int(self, location, type_, string_value, int_value);
     }
 
     fn visit_typed_expr_float(
@@ -1261,8 +1262,8 @@ where
             location,
             type_,
             value,
-            int_value: _,
-        } => v.visit_typed_expr_int(location, type_, value),
+            int_value,
+        } => v.visit_typed_expr_int(location, type_, value, int_value),
         TypedExpr::Float {
             location,
             type_,
@@ -1428,7 +1429,8 @@ pub fn visit_typed_expr_int<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
     _type_: &'a Arc<Type>,
-    _value: &'a EcoString,
+    _string_value: &'a EcoString,
+    _int_value: &'a BigInt,
 ) where
     V: Visit<'a> + ?Sized,
 {

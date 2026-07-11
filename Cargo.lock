@@ -1316,6 +1316,7 @@ dependencies = [
  "insta",
  "itertools",
  "lsp-server",
+ "num-bigint",
  "serde",
  "serde_json",
  "strum",
