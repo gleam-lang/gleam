@@ -39,8 +39,8 @@ impl ErlangModuleName {
 
 #[must_use]
 /// Represents an open function that has yet to be closed.
-/// A function definition is started with `Eaf::start_function` and _must_ be
-/// closed using `Eaf::end_function`.
+/// A function definition is started with `ErlangBuilder::start_function` and
+/// _must_ be closed using `ErlangBuilder::end_function`.
 pub struct Function {
     clauses: erlang_term_format::List,
     statements: erlang_term_format::List,
@@ -187,7 +187,8 @@ pub enum BitArraySegmentSpecifier {
     Unit(u8),
 }
 
-/// Defines the operations to describe the content of an Erlang module.
+/// A trait defining operations to describe the content of an Erlang module.
+///
 /// This might look strange in places, for example why is there a `start_tuple`
 /// and `end_tuple` function, but lists are built using `cons_list` and not a
 /// `start_list` and `end_list` function?
@@ -200,8 +201,8 @@ pub enum BitArraySegmentSpecifier {
 /// it's gonna be handy:
 /// https://www.erlang.org/doc/apps/erts/absform.html
 ///
-pub trait Eaf<Output> {
-    /// Creates a new `Eaf` data structure to generate Erlang code.
+pub trait ErlangBuilder<Output> {
+    /// Creates a new `ErlangBuilder` data structure to generate Erlang code.
     /// If a module name is provided this will also automatically take care of
     /// generating the appropriate `-module` annotation at the very beginning.
     ///
@@ -210,7 +211,8 @@ pub trait Eaf<Output> {
     ///
     fn new(module_name: Option<ErlangModuleName>) -> Self;
 
-    /// Consumes the given `Eaf` turning it into some other representation.
+    /// Consumes the given `ErlangBuilder` turning it into some other
+    /// representation.
     /// For example that might be a binary representation, or a textual pretty
     /// printed one.
     ///
@@ -221,7 +223,7 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// eaf.export_attribute(vec![("wibble", 1), ("wobble", 2)]);
+    /// builder.export_attribute(vec![("wibble", 1), ("wobble", 2)]);
     /// ```
     ///
     /// Corresponds to:
@@ -240,7 +242,7 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// eaf.export_attribute(vec![("wibble", 1), ("wobble", 2)]);
+    /// builder.export_attribute(vec![("wibble", 1), ("wobble", 2)]);
     /// ```
     ///
     /// Corresponds to:
@@ -262,9 +264,9 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let doc = eaf.start_doc_attribute();
-    /// eaf.atom("false");
-    /// eaf.close_doc_attribute(doc);
+    /// let doc = builder.start_doc_attribute();
+    /// builder.atom("false");
+    /// builder.close_doc_attribute(doc);
     /// ```
     ///
     /// Corresponds to:
@@ -283,9 +285,9 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let doc = eaf.start_moduledoc_attribute();
-    /// eaf.atom("false");
-    /// eaf.close_doc_attribute(doc);
+    /// let doc = builder.start_moduledoc_attribute();
+    /// builder.atom("false");
+    /// builder.close_doc_attribute(doc);
     /// ```
     ///
     /// Corresponds to:
@@ -308,7 +310,7 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// eaf.compile_attribute(vec!["no_warn", "inline"]);
+    /// builder.compile_attribute(vec!["no_warn", "inline"]);
     /// ```
     ///
     /// Corresponds to:
@@ -323,7 +325,7 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// eaf.file_attribute("wibble.gleam", 2.into());
+    /// builder.file_attribute("wibble.gleam", 2.into());
     /// ```
     ///
     /// Correspods to:
@@ -341,11 +343,11 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let record = eaf.start_record_attribute("wobble");
-    /// eaf.record_field();
-    /// eaf.atom("wibble");
-    /// eaf.literal_atom_type("ok");
-    /// eaf.close_record_attribute(record);
+    /// let record = builder.start_record_attribute("wobble");
+    /// builder.record_field();
+    /// builder.atom("wibble");
+    /// builder.literal_atom_type("ok");
+    /// builder.close_record_attribute(record);
     /// ```
     ///
     /// Corresponds to:
@@ -380,12 +382,12 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let spec = eaf.start_function_spec("wibble", 1)
-    /// let function_type = eaf.start_function_type();
-    /// eaf.int_type();
-    /// let function_type eaf.end_function_type_arguments(function_type);
-    /// eaf.variable_type("A");
-    /// eaf.end_function_type(function_type);
+    /// let spec = builder.start_function_spec("wibble", 1)
+    /// let function_type = builder.start_function_type();
+    /// builder.int_type();
+    /// let function_type builder.end_function_type_arguments(function_type);
+    /// builder.variable_type("A");
+    /// builder.end_function_type(function_type);
     /// ```
     ///
     /// Corresponds to:
@@ -408,16 +410,16 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let spec = eaf.start_type_spec(false, "wibble", ["A"]);
+    /// let spec = builder.start_type_spec(false, "wibble", ["A"]);
     ///
-    /// let union = eaf.start_union_type();
-    /// eaf.literal_atom_type("nil");
+    /// let union = builder.start_union_type();
+    /// builder.literal_atom_type("nil");
     ///
-    /// let list = eaf.start_named_type("list");
-    /// eaf.type_variable("A")
-    /// eaf.close_named_type();
+    /// let list = builder.start_named_type("list");
+    /// builder.type_variable("A")
+    /// builder.close_named_type();
     ///
-    /// eaf.end_uniont_type(union);
+    /// builder.end_uniont_type(union);
     /// ```
     ///
     /// Corresponds to:
@@ -442,12 +444,12 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let function_type = eaf.start_function_type();
-    /// eaf.int_type();
-    /// eaf.variable_type("A");
-    /// let function_type eaf.end_function_type_arguments(function_type);
-    /// eaf.variable_type("A");
-    /// eaf.end_function_type(function_type);
+    /// let function_type = builder.start_function_type();
+    /// builder.int_type();
+    /// builder.variable_type("A");
+    /// let function_type builder.end_function_type_arguments(function_type);
+    /// builder.variable_type("A");
+    /// builder.end_function_type(function_type);
     /// ```
     ///
     /// Corresponds to:
@@ -481,8 +483,8 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let integer = eaf.start_named_type("integer");
-    /// eaf.end_named_type(integer);
+    /// let integer = builder.start_named_type("integer");
+    /// builder.end_named_type(integer);
     /// ```
     ///
     /// Corresponds to:
@@ -500,8 +502,8 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let type_ = eaf.start_remote_named_type("wibble", "wobble");
-    /// eaf.end_named_type(type_);
+    /// let type_ = builder.start_remote_named_type("wibble", "wobble");
+    /// builder.end_named_type(type_);
     /// ```
     ///
     /// Corresponds to:
@@ -523,10 +525,10 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let tuple = eaf.start_tuple_type();
-    /// eaf.literal_atom_type("nil");
-    /// eaf.literal_atom_type("ok");
-    /// eaf.end_tuple_type(tuple);
+    /// let tuple = builder.start_tuple_type();
+    /// builder.literal_atom_type("nil");
+    /// builder.literal_atom_type("ok");
+    /// builder.end_tuple_type(tuple);
     /// ```
     ///
     /// Corresponds to the following Erlang type:
@@ -549,10 +551,10 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let ok_or_error = eaf.start_union_type();
-    /// eaf.literal_atom_type("ok");
-    /// eaf.literal_atom_type("error");
-    /// eaf.end_union_type(ok_or_error);
+    /// let ok_or_error = builder.start_union_type();
+    /// builder.literal_atom_type("ok");
+    /// builder.literal_atom_type("error");
+    /// builder.end_union_type(ok_or_error);
     /// ```
     ///
     /// Corresponds to:
@@ -574,11 +576,11 @@ pub trait Eaf<Output> {
     /// could do it like this:
     ///
     /// ```ignore
-    /// let function = eaf.start_function_type();
-    /// eaf.type_variable("A");
-    /// let function = eaf.end_function_type_arguments();
-    /// eaf.type_variable("A");
-    /// eaf.end_function(function);
+    /// let function = builder.start_function_type();
+    /// builder.type_variable("A");
+    /// let function = builder.end_function_type_arguments();
+    /// builder.type_variable("A");
+    /// builder.end_function(function);
     /// ```
     ///
     /// And it corresponds to:
@@ -595,10 +597,10 @@ pub trait Eaf<Output> {
     /// be defined like this:
     ///
     /// ```ignore
-    /// let function = eaf.start_function_type();
-    /// let function = eaf.end_function_type_arguments();
-    /// eaf.literal_atom_type("nil");
-    /// eaf.end_function(function);
+    /// let function = builder.start_function_type();
+    /// let function = builder.end_function_type_arguments();
+    /// builder.literal_atom_type("nil");
+    /// builder.end_function(function);
     /// ```
     ///
     /// And it corresponds to:
@@ -617,9 +619,9 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let function = eaf.start_function("first_name", 0, vec![]);
-    /// eaf.string("Giacomo");
-    /// eaf.end_function(function);
+    /// let function = builder.start_function("first_name", 0, vec![]);
+    /// builder.string("Giacomo");
+    /// builder.end_function(function);
     /// ```
     ///
     /// Corresponds to:
@@ -642,9 +644,9 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let function = eaf.start_anonymous_function([]);
-    /// eaf.string("Erlang rocks");
-    /// eaf.end_anonymous_function(function);
+    /// let function = builder.start_anonymous_function([]);
+    /// builder.string("Erlang rocks");
+    /// builder.end_anonymous_function(function);
     /// ```
     ///
     /// Corresponds to:
@@ -670,10 +672,10 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let block = eaf.start_block();
-    /// eaf.string("Giacomo");
-    /// eaf.int(1);
-    /// eaf.end_block(block);
+    /// let block = builder.start_block();
+    /// builder.string("Giacomo");
+    /// builder.int(1);
+    /// builder.end_block(block);
     /// ```
     ///
     /// Corresponds to:
@@ -699,9 +701,9 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let call = eaf.start_remote_call("io", "format");
-    /// eaf.string("Giacomo");
-    /// eaf.end_call(call);
+    /// let call = builder.start_remote_call("io", "format");
+    /// builder.string("Giacomo");
+    /// builder.end_call(call);
     /// ```
     ///
     /// Corresponds to:
@@ -719,11 +721,11 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let call = eaf.start_call();
-    /// eaf.atom("wibble")
-    /// eaf.string("Hello");
-    /// eaf.string("Giacomo");
-    /// eaf.end_call(call);
+    /// let call = builder.start_call();
+    /// builder.atom("wibble")
+    /// builder.string("Hello");
+    /// builder.string("Giacomo");
+    /// builder.end_call(call);
     /// ```
     ///
     /// Corresponds to:
@@ -745,10 +747,10 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let tuple = eaf.start_tuple();
-    /// eaf.string("Hello");
-    /// eaf.int(1);
-    /// eaf.end_tuple(tuple);
+    /// let tuple = builder.start_tuple();
+    /// builder.string("Hello");
+    /// builder.int(1);
+    /// builder.end_tuple(tuple);
     /// ```
     ///
     /// Corresponds to:
@@ -771,15 +773,15 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let map = eaf.start_map();
+    /// let map = builder.start_map();
     ///
-    /// eaf.map_field();
-    /// eaf.atom("gleam_error")
-    /// eaf.atom("todo");
+    /// builder.map_field();
+    /// builder.atom("gleam_error")
+    /// builder.atom("todo");
     ///
-    /// eaf.map_field();
-    /// eaf.atom("line");
-    /// eaf.int(6.into());
+    /// builder.map_field();
+    /// builder.atom("line");
+    /// builder.int(6.into());
     /// ```
     ///
     /// Corresponds to:
@@ -810,19 +812,19 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let bit_array = eaf.start_bit_array();
+    /// let bit_array = builder.start_bit_array();
     ///
-    /// eaf.bit_array_segment();
-    /// eaf.int(1);
-    /// eaf.atom("default");
-    /// eaf.atom("default");
+    /// builder.bit_array_segment();
+    /// builder.int(1);
+    /// builder.atom("default");
+    /// builder.atom("default");
     ///
-    /// eaf.bit_array_segment();
-    /// eaf.string("hello");
-    /// eaf.atom("deafult");
-    /// eaf.atom("default");
+    /// builder.bit_array_segment();
+    /// builder.string("hello");
+    /// builder.atom("deafult");
+    /// builder.atom("default");
     ///
-    /// eaf.end_bit_array(bit_array);
+    /// builder.end_bit_array(bit_array);
     /// ```
     ///
     /// Corresponds to:
@@ -879,11 +881,11 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// eaf.cons_list();
-    /// eaf.variable("Hello");
-    /// eaf.cons_list();
-    /// eaf.string("Giacomo");
-    /// eaf.empty_list();
+    /// builder.cons_list();
+    /// builder.variable("Hello");
+    /// builder.cons_list();
+    /// builder.string("Giacomo");
+    /// builder.empty_list();
     /// ```
     ///
     /// Corresponds to:
@@ -911,17 +913,17 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let case = eaf.start_case();
-    /// eaf.variable("wibble");
+    /// let case = builder.start_case();
+    /// builder.variable("wibble");
     ///
-    /// let clause = eaf.start_case_clause();
-    /// eaf.discard_pattern();
-    /// let clause = eaf.end_clause_pattern();
-    /// let clause = eaf.end_clause_guards();
-    /// eaf.int(1.into());
-    /// eaf.end_clause_body();
+    /// let clause = builder.start_case_clause();
+    /// builder.discard_pattern();
+    /// let clause = builder.end_clause_pattern();
+    /// let clause = builder.end_clause_guards();
+    /// builder.int(1.into());
+    /// builder.end_clause_body();
     ///
-    /// eaf.end_case(case);
+    /// builder.end_case(case);
     /// ```
     ///
     /// Corresponds to:
@@ -978,8 +980,8 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// eaf.unary_operator("-");
-    /// eaf.variable("X");
+    /// builder.unary_operator("-");
+    /// builder.variable("X");
     /// ```
     ///
     /// Corresponds to:
@@ -995,9 +997,9 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// eaf.binary_operator("+");
-    /// eaf.variable("X");
-    /// eaf.int(1);
+    /// builder.binary_operator("+");
+    /// builder.variable("X");
+    /// builder.int(1);
     /// ```
     ///
     /// Corresponds to:
@@ -1012,8 +1014,8 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// eaf.function_reference(None, "wibble", 1);
-    /// eaf.function_reference(Some("io"), "format", 2);
+    /// builder.function_reference(None, "wibble", 1);
+    /// builder.function_reference(Some("io"), "format", 2);
     /// ```
     ///
     /// Correspond to:
@@ -1033,9 +1035,9 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// eaf.match_operator();
-    /// eaf.variable_pattern("X");
-    /// eaf.int(1);
+    /// builder.match_operator();
+    /// builder.variable_pattern("X");
+    /// builder.int(1);
     /// ```
     ///
     /// Corresponds to:
@@ -1054,9 +1056,9 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// eaf.match_pattern();
-    /// eaf.int_pattern(1);
-    /// eaf.variable_pattern("X");
+    /// builder.match_pattern();
+    /// builder.int_pattern(1);
+    /// builder.variable_pattern("X");
     /// ```
     ///
     /// Corresponds to:
@@ -1144,10 +1146,10 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let tuple = eaf.start_tuple_pattern();
-    /// eaf.int_pattern(1);
-    /// eaf.discard_pattern();
-    /// eaf.end_tuple(tuple);
+    /// let tuple = builder.start_tuple_pattern();
+    /// builder.int_pattern(1);
+    /// builder.discard_pattern();
+    /// builder.end_tuple(tuple);
     /// ```
     ///
     /// Corresponds to the following pattern:
@@ -1168,19 +1170,19 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let bit_array = eaf.start_bit_array_pattern();
+    /// let bit_array = builder.start_bit_array_pattern();
     ///
-    /// eaf.bit_array_pattern_segment();
-    /// eaf.int_pattern(1);
-    /// eaf.atom("default");
-    /// eaf.atom("default");
+    /// builder.bit_array_pattern_segment();
+    /// builder.int_pattern(1);
+    /// builder.atom("default");
+    /// builder.atom("default");
     ///
-    /// eaf.bit_array_pattern_segment();
-    /// eaf.discard_pattern();
-    /// eaf.atom("deafult");
-    /// eaf.atom("default");
+    /// builder.bit_array_pattern_segment();
+    /// builder.discard_pattern();
+    /// builder.atom("deafult");
+    /// builder.atom("default");
     ///
-    /// eaf.end_bit_array_pattern(bit_array);
+    /// builder.end_bit_array_pattern(bit_array);
     /// ```
     ///
     /// Corresponds to the following pattern:
@@ -1203,11 +1205,11 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// eaf.cons_list_pattern();
-    /// eaf.discard_pattern();
-    /// eaf.cons_list_pattern();
-    /// eaf.string("Louis");
-    /// eaf.empty_list_pattern();
+    /// builder.cons_list_pattern();
+    /// builder.discard_pattern();
+    /// builder.cons_list_pattern();
+    /// builder.string("Louis");
+    /// builder.empty_list_pattern();
     /// ```
     ///
     /// Corresponds to the following pattern:
@@ -1233,7 +1235,7 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// eaf.string("ksiąskę");
+    /// builder.string("ksiąskę");
     /// ```
     ///
     /// Corresponds to:
@@ -1252,7 +1254,7 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// eaf.int(BigInt::from(2))
+    /// builder.int(BigInt::from(2))
     /// ```
     ///
     /// Corresponds to:
@@ -1268,7 +1270,7 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// eaf.float(1.2)
+    /// builder.float(1.2)
     /// ```
     ///
     /// Corresponds to:
@@ -1284,7 +1286,7 @@ pub trait Eaf<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// eaf.atom("wibble")
+    /// builder.atom("wibble")
     /// ```
     ///
     /// Corresponds to:
@@ -1296,23 +1298,22 @@ pub trait Eaf<Output> {
     fn atom(&mut self, name: &str);
 }
 
-/// A structure that implements the EAF trait but rather than producing the
-/// Erlang abstract format binary, it will produce a nice and readable Erlang
-/// source string that can be used for testing.
+/// A structure that implements the `ErlangBuilder` trait and produces a nice
+/// and readable Erlang source string.
 #[derive(Debug)]
-pub struct PrettyEaf {
+pub struct ErlangSourceBuilder {
     code: String,
     /// This keeps track of what we're generating
-    position: Vec<PrettyEafPosition>,
+    position: Vec<ErlangSourceBuilderPosition>,
     /// The current indentation to use when generating stuff like case
     /// expressions, block statements, etc.
     indentation: usize,
 }
 
 /// This is used to keep track of the current position when generating pretty
-/// printed code from an `Eaf`.
+/// printed code from an `ErlangSourceBuilder`.
 #[derive(Debug)]
-pub enum PrettyEafPosition {
+enum ErlangSourceBuilderPosition {
     /// We're generating a top level documentation attribute like `-doc(false)`,
     /// or `-moduledoc(~"wibble wobble")`.
     DocAttribute,
@@ -1406,10 +1407,7 @@ pub enum PrettyEafPosition {
 
     /// We're generating code for a unary operator. We're waiting for the
     /// expression to apply the operator to.
-    UnaryOperator {
-        /// This is true if the operator is `-`.
-        is_number_negation: bool,
-    },
+    UnaryOperator,
 
     /// We're generating a tuple.
     Tuple {
@@ -1511,7 +1509,7 @@ pub enum PrettyEafPosition {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum ListKind {
+enum ListKind {
     /// We're generating a list pattern.
     Pattern,
     /// We're generating a list expression.
@@ -1519,7 +1517,7 @@ pub enum ListKind {
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub enum BitArrayKind {
+enum BitArrayKind {
     /// We're generating a bit array pattern.
     Pattern,
     /// We're generating a bit array expression.
@@ -1531,7 +1529,7 @@ pub enum BitArrayKind {
 /// after two expressions are generated. So we need to keep track of what we're
 /// expecting to be generated next.
 #[derive(Debug)]
-pub enum MapFieldExpectedItem {
+enum MapFieldExpectedItem {
     Key,
     Value,
 }
@@ -1541,7 +1539,7 @@ pub enum MapFieldExpectedItem {
 /// It is implicitly over after those two things are generated.
 /// So we need to keep track of which we're expecting to be generated next.
 #[derive(Debug)]
-pub enum ExpectedRecordFieldItem {
+enum ExpectedRecordFieldItem {
     Name,
     Type,
 }
@@ -1551,7 +1549,7 @@ pub enum ExpectedRecordFieldItem {
 /// finally we will be generating the statements making up the clause's body.
 ///
 #[derive(Debug)]
-pub enum ExpectedCaseClauseItem {
+enum ExpectedCaseClauseItem {
     Pattern,
     Guards {
         /// This is true if no guard has been generated yet.
@@ -1568,7 +1566,7 @@ pub enum ExpectedCaseClauseItem {
 /// expression.
 ///
 #[derive(Debug)]
-pub enum ExpectedCaseItem {
+enum ExpectedCaseItem {
     /// We're waiting for the expression to be matched on to be generated.
     Subject,
     /// We've generated the expression to be matched on, and now are waiting for
@@ -1587,7 +1585,7 @@ pub enum ExpectedCaseItem {
 /// pretty print the output.
 ///
 #[derive(Debug)]
-pub enum ExpectedBinaryOperatorSide {
+enum ExpectedBinaryOperatorSide {
     Left,
     Right,
     BinaryOperatorIsOver,
@@ -1598,7 +1596,7 @@ pub enum ExpectedBinaryOperatorSide {
 /// This keeps track of which one we're expecting to be generated next.
 ///
 #[derive(Debug)]
-pub enum BitArraySegmentExpectedItem {
+enum BitArraySegmentExpectedItem {
     Value {
         /// This is telling us if the value of the segment has to be a pattern
         /// or an expression.
@@ -1613,7 +1611,7 @@ pub enum BitArraySegmentExpectedItem {
 /// current module, or any expression), and its arguments.
 ///
 #[derive(Debug)]
-pub enum ExpectedCallItem {
+enum ExpectedCallItem {
     /// We're waiting for the function to be called to be generated
     FunctionToBeCalled,
     /// The function to be called was generated, now we're waiting for its
@@ -1625,7 +1623,7 @@ pub enum ExpectedCallItem {
 /// arguments of the function, and the return type.
 ///
 #[derive(Debug)]
-pub enum ExpectedFunctionTypeItem {
+enum ExpectedFunctionTypeItem {
     Arguments { first: bool },
     ReturnType,
 }
@@ -1635,7 +1633,7 @@ pub enum ExpectedFunctionTypeItem {
 /// see.
 ///
 #[derive(Debug)]
-pub enum TypeSpecExpectedItem {
+enum TypeSpecExpectedItem {
     TypeDefinition,
     TypeSpecIsOver,
 }
@@ -1643,7 +1641,7 @@ pub enum TypeSpecExpectedItem {
 /// A match operator is made of two sides: `X = 1`. A pattern and an expression.
 ///
 #[derive(Debug)]
-pub enum ExpectedMatchSide {
+enum ExpectedMatchSide {
     /// We're waiting for the pattern on the left hand side of an assignment to
     /// be generated.
     Pattern,
@@ -1656,7 +1654,7 @@ pub enum ExpectedMatchSide {
 /// A pattern and a variable pattern for the name.
 ///
 #[derive(Debug)]
-pub enum ExpectedMatchPatternSide {
+enum ExpectedMatchPatternSide {
     /// We're waiting for the pattern on the left hand side of the match pattern
     /// to be generated.
     Left,
@@ -1671,7 +1669,7 @@ pub enum ExpectedMatchPatternSide {
 /// the list is actually over.
 ///
 #[derive(Debug)]
-pub enum ExpectedListItem {
+enum ExpectedListItem {
     First,
     Rest,
     ListIsOver,
@@ -1715,16 +1713,16 @@ static UNICODE_ESCAPE_SEQUENCE_PATTERN: OnceLock<Regex> = OnceLock::new();
 ///
 ///   ```ignore
 ///   // X = 1
-///   eaf.match_operator()
-///   eaf.variable_pattern("X")
-///   eaf.int(1)
+///   builder.match_operator()
+///   builder.variable_pattern("X")
+///   builder.int(1)
 ///   ```
 ///
 ///   Notice how here we don't have a `start_match_operator` and
 ///   `end_match_operator`. As you'll see in the implementation these will
 ///   require a bit of extra book-keeping in the `new_x` functions.
 ///
-impl Eaf<String> for PrettyEaf {
+impl ErlangBuilder<String> for ErlangSourceBuilder {
     fn new(module: Option<ErlangModuleName>) -> Self {
         Self {
             code: if let Some(module) = module {
@@ -1802,18 +1800,20 @@ impl Eaf<String> for PrettyEaf {
     fn start_doc_attribute(&mut self) -> DocAttribute {
         self.new_top_level_form();
         self.code.push_str("-doc(");
-        self.position.push(PrettyEafPosition::DocAttribute);
+        self.position
+            .push(ErlangSourceBuilderPosition::DocAttribute);
         DocAttribute {
-            items: PrettyEaf::dummy_list(),
+            items: ErlangSourceBuilder::dummy_list(),
         }
     }
 
     fn start_moduledoc_attribute(&mut self) -> DocAttribute {
         self.new_top_level_form();
         self.code.push_str("-moduledoc(");
-        self.position.push(PrettyEafPosition::DocAttribute);
+        self.position
+            .push(ErlangSourceBuilderPosition::DocAttribute);
         DocAttribute {
-            items: PrettyEaf::dummy_list(),
+            items: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -1856,10 +1856,10 @@ impl Eaf<String> for PrettyEaf {
         self.code.push_str(", {");
         self.indentation += INDENT;
         self.position
-            .push(PrettyEafPosition::RecordAttribute { first: true });
+            .push(ErlangSourceBuilderPosition::RecordAttribute { first: true });
 
         RecordAttribute {
-            fields: PrettyEaf::dummy_list(),
+            fields: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -1870,18 +1870,20 @@ impl Eaf<String> for PrettyEaf {
 
     fn record_field(&mut self) {
         self.new_record_field();
-        self.position.push(PrettyEafPosition::RecordField {
-            expected: ExpectedRecordFieldItem::Name,
-        });
+        self.position
+            .push(ErlangSourceBuilderPosition::RecordField {
+                expected: ExpectedRecordFieldItem::Name,
+            });
     }
 
     fn start_function_spec(&mut self, name: &str, _arity: usize) -> FunctionSpec {
         self.new_top_level_form();
         self.code.push_str("\n-spec ");
         self.code.push_str(&quote_atom_name(name));
-        self.position.push(PrettyEafPosition::FunctionSpec);
+        self.position
+            .push(ErlangSourceBuilderPosition::FunctionSpec);
         FunctionSpec {
-            representations: PrettyEaf::dummy_list(),
+            representations: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -1913,7 +1915,7 @@ impl Eaf<String> for PrettyEaf {
             self.code.push_str(type_variable.as_ref())
         }
         self.code.push_str(") :: ");
-        self.position.push(PrettyEafPosition::TypeSpec {
+        self.position.push(ErlangSourceBuilderPosition::TypeSpec {
             expected: TypeSpecExpectedItem::TypeDefinition,
         });
     }
@@ -1921,22 +1923,24 @@ impl Eaf<String> for PrettyEaf {
     fn start_function_type(&mut self) -> FunctionTypeArguments {
         self.new_type();
 
-        let needs_wrapping = if let Some(PrettyEafPosition::FunctionSpec) = self.position.last() {
-            self.code.push('(');
-            false
-        } else {
-            self.code.push_str("fun((");
-            true
-        };
+        let needs_wrapping =
+            if let Some(ErlangSourceBuilderPosition::FunctionSpec) = self.position.last() {
+                self.code.push('(');
+                false
+            } else {
+                self.code.push_str("fun((");
+                true
+            };
 
-        self.position.push(PrettyEafPosition::FunctionType {
-            expected: ExpectedFunctionTypeItem::Arguments { first: true },
-            needs_wrapping,
-        });
+        self.position
+            .push(ErlangSourceBuilderPosition::FunctionType {
+                expected: ExpectedFunctionTypeItem::Arguments { first: true },
+                needs_wrapping,
+            });
 
         FunctionTypeArguments {
-            types: PrettyEaf::dummy_list(),
-            arguments: PrettyEaf::dummy_list(),
+            types: ErlangSourceBuilder::dummy_list(),
+            arguments: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -1959,26 +1963,26 @@ impl Eaf<String> for PrettyEaf {
     fn start_named_type(&mut self, name: &str) -> NamedType {
         self.new_type();
         self.position
-            .push(PrettyEafPosition::NamedType { first: true });
+            .push(ErlangSourceBuilderPosition::NamedType { first: true });
         self.code.push_str(&quote_atom_name(name));
         self.code.push('(');
 
         NamedType {
-            types: PrettyEaf::dummy_list(),
+            types: ErlangSourceBuilder::dummy_list(),
         }
     }
 
     fn start_remote_named_type(&mut self, module: ErlangModuleName, name: &str) -> NamedType {
         self.new_type();
         self.position
-            .push(PrettyEafPosition::NamedType { first: true });
+            .push(ErlangSourceBuilderPosition::NamedType { first: true });
         self.code.push_str(&quote_atom_name(&module.0));
         self.code.push(':');
         self.code.push_str(&quote_atom_name(name));
         self.code.push('(');
 
         NamedType {
-            types: PrettyEaf::dummy_list(),
+            types: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -1990,11 +1994,11 @@ impl Eaf<String> for PrettyEaf {
     fn start_tuple_type(&mut self) -> TupleType {
         self.new_type();
         self.position
-            .push(PrettyEafPosition::TupleType { first: true });
+            .push(ErlangSourceBuilderPosition::TupleType { first: true });
         self.code.push('{');
 
         TupleType {
-            items: PrettyEaf::dummy_list(),
+            items: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -2006,10 +2010,10 @@ impl Eaf<String> for PrettyEaf {
     fn start_union_type(&mut self) -> UnionType {
         self.new_type();
         self.position
-            .push(PrettyEafPosition::UnionType { first: true });
+            .push(ErlangSourceBuilderPosition::UnionType { first: true });
 
         UnionType {
-            alternatives: PrettyEaf::dummy_list(),
+            alternatives: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -2051,11 +2055,11 @@ impl Eaf<String> for PrettyEaf {
         self.code.push_str(") ->");
         self.indentation += INDENT;
         self.position
-            .push(PrettyEafPosition::FunctionStatement { first: true });
+            .push(ErlangSourceBuilderPosition::FunctionStatement { first: true });
 
         Function {
-            clauses: PrettyEaf::dummy_list(),
-            statements: PrettyEaf::dummy_list(),
+            clauses: ErlangSourceBuilder::dummy_list(),
+            statements: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -2079,11 +2083,11 @@ impl Eaf<String> for PrettyEaf {
         self.code.push_str(") ->");
         self.indentation += INDENT;
         self.position
-            .push(PrettyEafPosition::AnonymousFunctionStatement { first: true });
+            .push(ErlangSourceBuilderPosition::AnonymousFunctionStatement { first: true });
 
         Function {
-            clauses: PrettyEaf::dummy_list(),
-            statements: PrettyEaf::dummy_list(),
+            clauses: ErlangSourceBuilder::dummy_list(),
+            statements: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -2097,10 +2101,11 @@ impl Eaf<String> for PrettyEaf {
         self.new_expression();
         self.code.push_str("begin");
         self.indentation += INDENT;
-        self.position.push(PrettyEafPosition::Block { first: true });
+        self.position
+            .push(ErlangSourceBuilderPosition::Block { first: true });
 
         Block {
-            statements: PrettyEaf::dummy_list(),
+            statements: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -2116,7 +2121,7 @@ impl Eaf<String> for PrettyEaf {
         // it is going to need to be wrapped in parentheses to be valid in
         // OTP 28: it is not ok to write `wibble()()`, but we have to write
         // `(wibble())()`.
-        if let Some(PrettyEafPosition::FunctionCall {
+        if let Some(ErlangSourceBuilderPosition::FunctionCall {
             expected: ExpectedCallItem::FunctionToBeCalled,
             called_item_needs_wrapping,
         }) = self.position.last_mut()
@@ -2128,12 +2133,13 @@ impl Eaf<String> for PrettyEaf {
         self.code.push_str(&quote_atom_name(&module.0));
         self.code.push(':');
         self.code.push_str(&quote_atom_name(function));
-        self.position.push(PrettyEafPosition::FunctionCall {
-            expected: ExpectedCallItem::Arguments { first: true },
-            called_item_needs_wrapping: false,
-        });
+        self.position
+            .push(ErlangSourceBuilderPosition::FunctionCall {
+                expected: ExpectedCallItem::Arguments { first: true },
+                called_item_needs_wrapping: false,
+            });
         Call {
-            arguments: PrettyEaf::dummy_list(),
+            arguments: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -2144,7 +2150,7 @@ impl Eaf<String> for PrettyEaf {
         // it is going to need to be wrapped in parentheses to be valid in
         // OTP 28: it is not ok to write `wibble()()`, but we have to write
         // `(wibble())()`.
-        if let Some(PrettyEafPosition::FunctionCall {
+        if let Some(ErlangSourceBuilderPosition::FunctionCall {
             expected: ExpectedCallItem::FunctionToBeCalled,
             called_item_needs_wrapping,
         }) = self.position.last_mut()
@@ -2153,12 +2159,13 @@ impl Eaf<String> for PrettyEaf {
         };
 
         self.new_expression();
-        self.position.push(PrettyEafPosition::FunctionCall {
-            expected: ExpectedCallItem::FunctionToBeCalled,
-            called_item_needs_wrapping: false,
-        });
+        self.position
+            .push(ErlangSourceBuilderPosition::FunctionCall {
+                expected: ExpectedCallItem::FunctionToBeCalled,
+                called_item_needs_wrapping: false,
+            });
         Call {
-            arguments: PrettyEaf::dummy_list(),
+            arguments: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -2170,10 +2177,11 @@ impl Eaf<String> for PrettyEaf {
     fn start_tuple(&mut self) -> Tuple {
         self.new_expression();
         self.code.push('{');
-        self.position.push(PrettyEafPosition::Tuple { first: true });
+        self.position
+            .push(ErlangSourceBuilderPosition::Tuple { first: true });
 
         Tuple {
-            items: PrettyEaf::dummy_list(),
+            items: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -2186,9 +2194,10 @@ impl Eaf<String> for PrettyEaf {
         self.new_expression();
         self.code.push_str("#{");
         self.indentation += INDENT;
-        self.position.push(PrettyEafPosition::Map { first: true });
+        self.position
+            .push(ErlangSourceBuilderPosition::Map { first: true });
         Map {
-            items: PrettyEaf::dummy_list(),
+            items: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -2199,7 +2208,7 @@ impl Eaf<String> for PrettyEaf {
 
     fn map_field(&mut self) {
         self.new_map_field();
-        self.position.push(PrettyEafPosition::MapField {
+        self.position.push(ErlangSourceBuilderPosition::MapField {
             expected: MapFieldExpectedItem::Key,
         });
     }
@@ -2208,13 +2217,13 @@ impl Eaf<String> for PrettyEaf {
         self.do_not_wrap_if_segment_value_or_size();
         self.new_expression();
         self.code.push_str("<<");
-        self.position.push(PrettyEafPosition::BitArray {
+        self.position.push(ErlangSourceBuilderPosition::BitArray {
             kind: BitArrayKind::Expression,
             first: true,
         });
 
         BitArray {
-            segments: PrettyEaf::dummy_list(),
+            segments: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -2225,15 +2234,16 @@ impl Eaf<String> for PrettyEaf {
 
     fn bit_array_segment(&mut self) {
         let kind = self.new_bit_array_segment();
-        self.position.push(PrettyEafPosition::BitArraySegment {
-            expected: BitArraySegmentExpectedItem::Value { kind },
-            // We assume all values are going to have to be wrapped, better
-            // be safe than sorry!
-            // We will turn this off only for certain expressions we know
-            // are safe to not wrap, like bare integers and strings.
-            segment_value_needs_wrapping: true,
-            segment_size_needs_wrapping: true,
-        })
+        self.position
+            .push(ErlangSourceBuilderPosition::BitArraySegment {
+                expected: BitArraySegmentExpectedItem::Value { kind },
+                // We assume all values are going to have to be wrapped, better
+                // be safe than sorry!
+                // We will turn this off only for certain expressions we know
+                // are safe to not wrap, like bare integers and strings.
+                segment_value_needs_wrapping: true,
+                segment_size_needs_wrapping: true,
+            })
     }
 
     fn bit_array_segment_specifiers(
@@ -2241,7 +2251,7 @@ impl Eaf<String> for PrettyEaf {
         specifiers: impl IntoIterator<Item = BitArraySegmentSpecifier>,
     ) {
         self.pop_leftover_items();
-        let Some(PrettyEafPosition::BitArraySegment {
+        let Some(ErlangSourceBuilderPosition::BitArraySegment {
             expected: BitArraySegmentExpectedItem::Specifiers,
             segment_value_needs_wrapping,
             segment_size_needs_wrapping,
@@ -2308,12 +2318,12 @@ impl Eaf<String> for PrettyEaf {
     fn start_case(&mut self) -> Case {
         self.new_expression();
         self.code.push_str("case ");
-        self.position.push(PrettyEafPosition::Case {
+        self.position.push(ErlangSourceBuilderPosition::Case {
             expected: ExpectedCaseItem::Subject,
         });
 
         Case {
-            branches: PrettyEaf::dummy_list(),
+            branches: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -2324,19 +2334,19 @@ impl Eaf<String> for PrettyEaf {
 
     fn start_case_clause(&mut self) -> ClausePattern {
         self.new_case_clause();
-        self.position.push(PrettyEafPosition::CaseClause {
+        self.position.push(ErlangSourceBuilderPosition::CaseClause {
             expected: ExpectedCaseClauseItem::Pattern,
         });
         ClausePattern {
-            pattern: PrettyEaf::dummy_list(),
-            guards: PrettyEaf::dummy_list(),
-            body: PrettyEaf::dummy_list(),
+            pattern: ErlangSourceBuilder::dummy_list(),
+            guards: ErlangSourceBuilder::dummy_list(),
+            body: ErlangSourceBuilder::dummy_list(),
         }
     }
 
     fn end_clause_pattern(&mut self, clause_pattern: ClausePattern) -> ClauseGuards {
         self.close_currently_open_item();
-        self.position.push(PrettyEafPosition::CaseClause {
+        self.position.push(ErlangSourceBuilderPosition::CaseClause {
             expected: ExpectedCaseClauseItem::Guards { first: true },
         });
         clause_pattern.pattern.consume();
@@ -2349,7 +2359,7 @@ impl Eaf<String> for PrettyEaf {
     fn end_clause_guards(&mut self, clause_guards: ClauseGuards) -> ClauseBody {
         self.close_currently_open_item();
         self.indentation += INDENT;
-        self.position.push(PrettyEafPosition::CaseClause {
+        self.position.push(ErlangSourceBuilderPosition::CaseClause {
             expected: ExpectedCaseClauseItem::Body { first: true },
         });
 
@@ -2374,9 +2384,8 @@ impl Eaf<String> for PrettyEaf {
         self.new_expression();
         self.code.push_str(operator);
         self.code.push(' ');
-        self.position.push(PrettyEafPosition::UnaryOperator {
-            is_number_negation: operator == "-",
-        })
+        self.position
+            .push(ErlangSourceBuilderPosition::UnaryOperator)
     }
 
     fn binary_operator(&mut self, operator: &'static str) {
@@ -2387,18 +2396,19 @@ impl Eaf<String> for PrettyEaf {
         // side), then we want to wrap it in parentheses to avoid precedence
         // confusion!
         let needs_wrapping = match self.position.last() {
-            Some(PrettyEafPosition::BinaryOperator { .. }) => {
+            Some(ErlangSourceBuilderPosition::BinaryOperator { .. }) => {
                 self.code.push('(');
                 true
             }
             Some(_) | None => false,
         };
 
-        self.position.push(PrettyEafPosition::BinaryOperator {
-            expected: ExpectedBinaryOperatorSide::Left,
-            needs_wrapping,
-            operator,
-        })
+        self.position
+            .push(ErlangSourceBuilderPosition::BinaryOperator {
+                expected: ExpectedBinaryOperatorSide::Left,
+                needs_wrapping,
+                operator,
+            })
     }
 
     fn function_reference(&mut self, module: Option<ErlangModuleName>, name: &str, arity: usize) {
@@ -2415,16 +2425,18 @@ impl Eaf<String> for PrettyEaf {
 
     fn match_operator(&mut self) {
         self.new_expression();
-        self.position.push(PrettyEafPosition::MatchOperator {
-            expected: ExpectedMatchSide::Pattern,
-        });
+        self.position
+            .push(ErlangSourceBuilderPosition::MatchOperator {
+                expected: ExpectedMatchSide::Pattern,
+            });
     }
 
     fn match_pattern(&mut self) {
         self.new_pattern();
-        self.position.push(PrettyEafPosition::MatchPattern {
-            expected: ExpectedMatchPatternSide::Left,
-        })
+        self.position
+            .push(ErlangSourceBuilderPosition::MatchPattern {
+                expected: ExpectedMatchPatternSide::Left,
+            })
     }
 
     fn variable_pattern(&mut self, name: &str) {
@@ -2467,9 +2479,9 @@ impl Eaf<String> for PrettyEaf {
         self.new_pattern();
         self.code.push('{');
         self.position
-            .push(PrettyEafPosition::TuplePattern { first: true });
+            .push(ErlangSourceBuilderPosition::TuplePattern { first: true });
         TuplePattern {
-            items: PrettyEaf::dummy_list(),
+            items: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -2481,13 +2493,13 @@ impl Eaf<String> for PrettyEaf {
     fn start_bit_array_pattern(&mut self) -> BitArrayPattern {
         self.new_pattern();
         self.code.push_str("<<");
-        self.position.push(PrettyEafPosition::BitArray {
+        self.position.push(ErlangSourceBuilderPosition::BitArray {
             kind: BitArrayKind::Pattern,
             first: true,
         });
 
         BitArrayPattern {
-            segments: PrettyEaf::dummy_list(),
+            segments: ErlangSourceBuilder::dummy_list(),
         }
     }
 
@@ -2529,7 +2541,7 @@ impl Eaf<String> for PrettyEaf {
         // That's how we can tell in the Erlang Abstract Format that the size
         // should be the default value, but it's not actually spelled out in
         // textual Erlang code.
-        if let Some(PrettyEafPosition::BitArraySegment {
+        if let Some(ErlangSourceBuilderPosition::BitArraySegment {
             expected: expected @ BitArraySegmentExpectedItem::Size,
             segment_value_needs_wrapping,
             segment_size_needs_wrapping,
@@ -2568,7 +2580,7 @@ fn format_float(number: f64) -> String {
 
 const INDENT: usize = 4;
 
-impl PrettyEaf {
+impl ErlangSourceBuilder {
     fn dummy_list() -> erlang_term_format::List {
         erlang_term_format::List::new(0)
     }
@@ -2605,17 +2617,17 @@ impl PrettyEaf {
         };
 
         match position {
-            PrettyEafPosition::DocAttribute => (),
+            ErlangSourceBuilderPosition::DocAttribute => (),
 
-            PrettyEafPosition::RecordField {
+            ErlangSourceBuilderPosition::RecordField {
                 expected: expected @ ExpectedRecordFieldItem::Name,
             } => *expected = ExpectedRecordFieldItem::Type,
 
-            PrettyEafPosition::Case {
+            ErlangSourceBuilderPosition::Case {
                 expected: expected @ ExpectedCaseItem::Subject,
             } => *expected = ExpectedCaseItem::Branches { first: true },
 
-            PrettyEafPosition::FunctionCall {
+            ErlangSourceBuilderPosition::FunctionCall {
                 expected: expected @ ExpectedCallItem::FunctionToBeCalled,
                 called_item_needs_wrapping,
             } => {
@@ -2625,7 +2637,7 @@ impl PrettyEaf {
                 *expected = ExpectedCallItem::Arguments { first: true }
             }
 
-            PrettyEafPosition::FunctionCall {
+            ErlangSourceBuilderPosition::FunctionCall {
                 expected: ExpectedCallItem::Arguments { first },
                 called_item_needs_wrapping,
             } => {
@@ -2640,7 +2652,7 @@ impl PrettyEaf {
                 }
                 *first = false;
             }
-            PrettyEafPosition::Tuple { first } => {
+            ErlangSourceBuilderPosition::Tuple { first } => {
                 if !*first {
                     self.code.push_str(", ");
                 }
@@ -2649,12 +2661,12 @@ impl PrettyEaf {
 
             // We're expecting the list's head. We don't have to add
             // anything!
-            PrettyEafPosition::List {
+            ErlangSourceBuilderPosition::List {
                 expected: expected @ ExpectedListItem::First,
                 kind: ListKind::Expression,
             } => *expected = ExpectedListItem::Rest,
 
-            PrettyEafPosition::List {
+            ErlangSourceBuilderPosition::List {
                 expected: expected @ ExpectedListItem::Rest,
                 kind: ListKind::Expression,
             } => {
@@ -2662,12 +2674,12 @@ impl PrettyEaf {
                 self.code.push_str(" | ")
             }
 
-            PrettyEafPosition::BinaryOperator {
+            ErlangSourceBuilderPosition::BinaryOperator {
                 expected: expected @ ExpectedBinaryOperatorSide::Left,
                 ..
             } => *expected = ExpectedBinaryOperatorSide::Right,
 
-            PrettyEafPosition::BinaryOperator {
+            ErlangSourceBuilderPosition::BinaryOperator {
                 expected: expected @ ExpectedBinaryOperatorSide::Right,
                 operator,
                 ..
@@ -2678,10 +2690,10 @@ impl PrettyEaf {
                 self.code.push(' ');
             }
 
-            PrettyEafPosition::FunctionStatement { first }
-            | PrettyEafPosition::AnonymousFunctionStatement { first }
-            | PrettyEafPosition::Block { first }
-            | PrettyEafPosition::CaseClause {
+            ErlangSourceBuilderPosition::FunctionStatement { first }
+            | ErlangSourceBuilderPosition::AnonymousFunctionStatement { first }
+            | ErlangSourceBuilderPosition::Block { first }
+            | ErlangSourceBuilderPosition::CaseClause {
                 expected: ExpectedCaseClauseItem::Body { first },
             } => {
                 if !*first {
@@ -2692,7 +2704,7 @@ impl PrettyEaf {
                 self.push_indentation();
             }
 
-            PrettyEafPosition::BitArraySegment {
+            ErlangSourceBuilderPosition::BitArraySegment {
                 expected:
                     expected @ BitArraySegmentExpectedItem::Value {
                         kind: BitArrayKind::Expression,
@@ -2706,7 +2718,7 @@ impl PrettyEaf {
                 *expected = BitArraySegmentExpectedItem::Size
             }
 
-            PrettyEafPosition::BitArraySegment {
+            ErlangSourceBuilderPosition::BitArraySegment {
                 expected: expected @ BitArraySegmentExpectedItem::Size,
                 segment_value_needs_wrapping,
                 segment_size_needs_wrapping,
@@ -2725,7 +2737,7 @@ impl PrettyEaf {
                 }
             }
 
-            PrettyEafPosition::CaseClause {
+            ErlangSourceBuilderPosition::CaseClause {
                 expected:
                     ExpectedCaseClauseItem::Guards {
                         first: first @ true,
@@ -2735,7 +2747,7 @@ impl PrettyEaf {
                 self.code.push_str(" when ");
             }
 
-            PrettyEafPosition::MapField { expected } => match expected {
+            ErlangSourceBuilderPosition::MapField { expected } => match expected {
                 MapFieldExpectedItem::Key => *expected = MapFieldExpectedItem::Value,
                 // We've generated a key and now the value is being generated.
                 // So we need to add the `=>` separating key and value and we
@@ -2749,7 +2761,7 @@ impl PrettyEaf {
             // We were expecting an expression and someone is about to generate
             // it, we can pop this off the stack and need to add the ` = `
             // separating the previous pattern from this new expression.
-            PrettyEafPosition::MatchOperator {
+            ErlangSourceBuilderPosition::MatchOperator {
                 expected: ExpectedMatchSide::Expression,
             } => {
                 self.code.push_str(" = ");
@@ -2757,57 +2769,57 @@ impl PrettyEaf {
             }
             // We were expecting an expression and someone generated it, we can
             // now pop this off the stack.
-            PrettyEafPosition::UnaryOperator { .. } => {
+            ErlangSourceBuilderPosition::UnaryOperator { .. } => {
                 self.position.pop();
             }
 
             // Expressions are not allowed in any of these positions.
-            PrettyEafPosition::Case {
+            ErlangSourceBuilderPosition::Case {
                 expected: ExpectedCaseItem::Branches { .. },
             }
-            | PrettyEafPosition::List {
+            | ErlangSourceBuilderPosition::List {
                 expected: ExpectedListItem::ListIsOver,
                 kind: ListKind::Expression,
             }
-            | PrettyEafPosition::BitArray { .. }
-            | PrettyEafPosition::MatchOperator {
+            | ErlangSourceBuilderPosition::BitArray { .. }
+            | ErlangSourceBuilderPosition::MatchOperator {
                 expected: ExpectedMatchSide::Pattern,
             }
-            | PrettyEafPosition::CaseClause {
+            | ErlangSourceBuilderPosition::CaseClause {
                 expected: ExpectedCaseClauseItem::Pattern,
             }
-            | PrettyEafPosition::TuplePattern { .. }
-            | PrettyEafPosition::MatchPattern { .. }
-            | PrettyEafPosition::FunctionSpec
-            | PrettyEafPosition::TypeSpec { .. }
-            | PrettyEafPosition::NamedType { .. }
-            | PrettyEafPosition::FunctionType { .. }
-            | PrettyEafPosition::UnionType { .. }
-            | PrettyEafPosition::RecordField {
+            | ErlangSourceBuilderPosition::TuplePattern { .. }
+            | ErlangSourceBuilderPosition::MatchPattern { .. }
+            | ErlangSourceBuilderPosition::FunctionSpec
+            | ErlangSourceBuilderPosition::TypeSpec { .. }
+            | ErlangSourceBuilderPosition::NamedType { .. }
+            | ErlangSourceBuilderPosition::FunctionType { .. }
+            | ErlangSourceBuilderPosition::UnionType { .. }
+            | ErlangSourceBuilderPosition::RecordField {
                 expected: ExpectedRecordFieldItem::Type,
             }
-            | PrettyEafPosition::TupleType { .. }
-            | PrettyEafPosition::Map { .. }
-            | PrettyEafPosition::RecordAttribute { .. }
-            | PrettyEafPosition::CaseClause {
+            | ErlangSourceBuilderPosition::TupleType { .. }
+            | ErlangSourceBuilderPosition::Map { .. }
+            | ErlangSourceBuilderPosition::RecordAttribute { .. }
+            | ErlangSourceBuilderPosition::CaseClause {
                 expected: ExpectedCaseClauseItem::Guards { first: false },
             }
-            | PrettyEafPosition::BitArraySegment {
+            | ErlangSourceBuilderPosition::BitArraySegment {
                 expected: BitArraySegmentExpectedItem::Specifiers,
                 ..
             }
-            | PrettyEafPosition::BitArraySegment {
+            | ErlangSourceBuilderPosition::BitArraySegment {
                 expected:
                     BitArraySegmentExpectedItem::Value {
                         kind: BitArrayKind::Pattern,
                     },
                 ..
             }
-            | PrettyEafPosition::BinaryOperator {
+            | ErlangSourceBuilderPosition::BinaryOperator {
                 expected: ExpectedBinaryOperatorSide::BinaryOperatorIsOver,
                 ..
             }
-            | PrettyEafPosition::List {
+            | ErlangSourceBuilderPosition::List {
                 kind: ListKind::Pattern,
                 ..
             } => invalid_code_for_position!(self, "expression"),
@@ -2829,74 +2841,74 @@ impl PrettyEaf {
         };
 
         match position {
-            PrettyEafPosition::FunctionSpec => {}
-            PrettyEafPosition::FunctionType {
+            ErlangSourceBuilderPosition::FunctionSpec => {}
+            ErlangSourceBuilderPosition::FunctionType {
                 expected: ExpectedFunctionTypeItem::ReturnType,
                 needs_wrapping: _,
             } => {}
 
-            PrettyEafPosition::TypeSpec {
+            ErlangSourceBuilderPosition::TypeSpec {
                 expected: expected @ TypeSpecExpectedItem::TypeDefinition,
             } => {
                 *expected = TypeSpecExpectedItem::TypeSpecIsOver;
             }
 
-            PrettyEafPosition::FunctionType {
+            ErlangSourceBuilderPosition::FunctionType {
                 expected: ExpectedFunctionTypeItem::Arguments { first },
                 needs_wrapping: _,
             }
-            | PrettyEafPosition::TupleType { first }
-            | PrettyEafPosition::NamedType { first } => {
+            | ErlangSourceBuilderPosition::TupleType { first }
+            | ErlangSourceBuilderPosition::NamedType { first } => {
                 if !*first {
                     self.code.push_str(", ")
                 }
                 *first = false
             }
 
-            PrettyEafPosition::UnionType { first } => {
+            ErlangSourceBuilderPosition::UnionType { first } => {
                 if !*first {
                     self.code.push_str(" | ")
                 }
                 *first = false
             }
 
-            PrettyEafPosition::RecordField {
+            ErlangSourceBuilderPosition::RecordField {
                 expected: ExpectedRecordFieldItem::Type,
             } => {
                 self.code.push_str(" :: ");
                 self.position.pop();
             }
 
-            PrettyEafPosition::FunctionCall { .. }
-            | PrettyEafPosition::Block { .. }
-            | PrettyEafPosition::Tuple { .. }
-            | PrettyEafPosition::BitArray { .. }
-            | PrettyEafPosition::BitArraySegment { .. }
-            | PrettyEafPosition::List { .. }
-            | PrettyEafPosition::FunctionStatement { .. }
-            | PrettyEafPosition::AnonymousFunctionStatement { .. }
-            | PrettyEafPosition::DocAttribute
-            | PrettyEafPosition::UnaryOperator { .. }
-            | PrettyEafPosition::Case { .. }
-            | PrettyEafPosition::BinaryOperator { .. }
-            | PrettyEafPosition::CaseClause { .. }
-            | PrettyEafPosition::Map { .. }
-            | PrettyEafPosition::MapField { .. }
-            | PrettyEafPosition::RecordField {
+            ErlangSourceBuilderPosition::FunctionCall { .. }
+            | ErlangSourceBuilderPosition::Block { .. }
+            | ErlangSourceBuilderPosition::Tuple { .. }
+            | ErlangSourceBuilderPosition::BitArray { .. }
+            | ErlangSourceBuilderPosition::BitArraySegment { .. }
+            | ErlangSourceBuilderPosition::List { .. }
+            | ErlangSourceBuilderPosition::FunctionStatement { .. }
+            | ErlangSourceBuilderPosition::AnonymousFunctionStatement { .. }
+            | ErlangSourceBuilderPosition::DocAttribute
+            | ErlangSourceBuilderPosition::UnaryOperator { .. }
+            | ErlangSourceBuilderPosition::Case { .. }
+            | ErlangSourceBuilderPosition::BinaryOperator { .. }
+            | ErlangSourceBuilderPosition::CaseClause { .. }
+            | ErlangSourceBuilderPosition::Map { .. }
+            | ErlangSourceBuilderPosition::MapField { .. }
+            | ErlangSourceBuilderPosition::RecordField {
                 expected: ExpectedRecordFieldItem::Name,
             }
-            | PrettyEafPosition::MatchOperator {
+            | ErlangSourceBuilderPosition::MatchOperator {
                 expected: ExpectedMatchSide::Expression,
             }
-            | PrettyEafPosition::RecordAttribute { .. }
-            | PrettyEafPosition::TypeSpec {
+            | ErlangSourceBuilderPosition::RecordAttribute { .. }
+            | ErlangSourceBuilderPosition::TypeSpec {
                 expected: TypeSpecExpectedItem::TypeSpecIsOver,
             }
-            | PrettyEafPosition::MatchOperator {
+            | ErlangSourceBuilderPosition::MatchOperator {
                 expected: ExpectedMatchSide::Pattern,
             }
-            | PrettyEafPosition::MatchPattern { .. }
-            | PrettyEafPosition::TuplePattern { .. } => {
+            | ErlangSourceBuilderPosition::MatchPattern { .. }
+            | ErlangSourceBuilderPosition::TuplePattern { .. } => {
                 invalid_code_for_position!(self, "type")
             }
         }
@@ -2919,12 +2931,12 @@ impl PrettyEaf {
         match position {
             // We're expecting the list's head. We don't have to add
             // anything!
-            PrettyEafPosition::List {
+            ErlangSourceBuilderPosition::List {
                 kind: ListKind::Pattern,
                 expected: expected @ ExpectedListItem::First,
             } => *expected = ExpectedListItem::Rest,
 
-            PrettyEafPosition::List {
+            ErlangSourceBuilderPosition::List {
                 kind: ListKind::Pattern,
                 expected: expected @ ExpectedListItem::Rest,
             } => {
@@ -2932,7 +2944,7 @@ impl PrettyEaf {
                 self.code.push_str(" | ")
             }
 
-            PrettyEafPosition::BitArraySegment {
+            ErlangSourceBuilderPosition::BitArraySegment {
                 segment_value_needs_wrapping,
                 segment_size_needs_wrapping: _,
                 expected:
@@ -2948,7 +2960,7 @@ impl PrettyEaf {
 
             // We were waiting for the pattern to be generated, now we're done
             // and can start generating an expression for the right-hand side.
-            PrettyEafPosition::MatchOperator {
+            ErlangSourceBuilderPosition::MatchOperator {
                 expected: expected @ ExpectedMatchSide::Pattern,
             } => {
                 *expected = ExpectedMatchSide::Expression;
@@ -2958,17 +2970,17 @@ impl PrettyEaf {
             // We don't change this ourselves since the pattern has to be closed
             // explicitly calling `end_clause_pattern`.
             // We don't have to do anything here!
-            PrettyEafPosition::CaseClause {
+            ErlangSourceBuilderPosition::CaseClause {
                 expected: ExpectedCaseClauseItem::Pattern,
             } => (),
-            PrettyEafPosition::TuplePattern { first } => {
+            ErlangSourceBuilderPosition::TuplePattern { first } => {
                 if *first {
                     *first = false;
                 } else {
                     self.code.push_str(", ")
                 }
             }
-            PrettyEafPosition::MatchPattern { expected } => match expected {
+            ErlangSourceBuilderPosition::MatchPattern { expected } => match expected {
                 ExpectedMatchPatternSide::Left => *expected = ExpectedMatchPatternSide::Right,
                 // The right hand side is about to be generated so we have to
                 // push the ` = ` to separate it from the left hand side, and we
@@ -2980,16 +2992,16 @@ impl PrettyEaf {
                 }
             },
 
-            PrettyEafPosition::FunctionCall { .. }
-            | PrettyEafPosition::Block { .. }
-            | PrettyEafPosition::FunctionStatement { .. }
-            | PrettyEafPosition::AnonymousFunctionStatement { .. }
-            | PrettyEafPosition::List {
+            ErlangSourceBuilderPosition::FunctionCall { .. }
+            | ErlangSourceBuilderPosition::Block { .. }
+            | ErlangSourceBuilderPosition::FunctionStatement { .. }
+            | ErlangSourceBuilderPosition::AnonymousFunctionStatement { .. }
+            | ErlangSourceBuilderPosition::List {
                 kind: ListKind::Expression,
                 ..
             }
-            | PrettyEafPosition::BitArray { .. }
-            | PrettyEafPosition::BitArraySegment {
+            | ErlangSourceBuilderPosition::BitArray { .. }
+            | ErlangSourceBuilderPosition::BitArraySegment {
                 expected:
                     BitArraySegmentExpectedItem::Size
                     | BitArraySegmentExpectedItem::Specifiers
@@ -2998,32 +3010,32 @@ impl PrettyEaf {
                     },
                 ..
             }
-            | PrettyEafPosition::UnaryOperator { .. }
-            | PrettyEafPosition::BinaryOperator { .. }
-            | PrettyEafPosition::Case { .. }
-            | PrettyEafPosition::Map { .. }
-            | PrettyEafPosition::MapField { .. }
-            | PrettyEafPosition::MatchOperator {
+            | ErlangSourceBuilderPosition::UnaryOperator { .. }
+            | ErlangSourceBuilderPosition::BinaryOperator { .. }
+            | ErlangSourceBuilderPosition::Case { .. }
+            | ErlangSourceBuilderPosition::Map { .. }
+            | ErlangSourceBuilderPosition::MapField { .. }
+            | ErlangSourceBuilderPosition::MatchOperator {
                 expected: ExpectedMatchSide::Expression,
             }
-            | PrettyEafPosition::Tuple { .. }
-            | PrettyEafPosition::FunctionType { .. }
-            | PrettyEafPosition::FunctionSpec
-            | PrettyEafPosition::TypeSpec { .. }
-            | PrettyEafPosition::NamedType { .. }
-            | PrettyEafPosition::UnionType { .. }
-            | PrettyEafPosition::TupleType { .. }
-            | PrettyEafPosition::RecordField { .. }
-            | PrettyEafPosition::DocAttribute
-            | PrettyEafPosition::RecordAttribute { .. }
-            | PrettyEafPosition::List {
+            | ErlangSourceBuilderPosition::Tuple { .. }
+            | ErlangSourceBuilderPosition::FunctionType { .. }
+            | ErlangSourceBuilderPosition::FunctionSpec
+            | ErlangSourceBuilderPosition::TypeSpec { .. }
+            | ErlangSourceBuilderPosition::NamedType { .. }
+            | ErlangSourceBuilderPosition::UnionType { .. }
+            | ErlangSourceBuilderPosition::TupleType { .. }
+            | ErlangSourceBuilderPosition::RecordField { .. }
+            | ErlangSourceBuilderPosition::DocAttribute
+            | ErlangSourceBuilderPosition::RecordAttribute { .. }
+            | ErlangSourceBuilderPosition::List {
                 kind: ListKind::Pattern,
                 expected: ExpectedListItem::ListIsOver,
             }
-            | PrettyEafPosition::CaseClause {
+            | ErlangSourceBuilderPosition::CaseClause {
                 expected: ExpectedCaseClauseItem::Guards { .. },
             }
-            | PrettyEafPosition::CaseClause {
+            | ErlangSourceBuilderPosition::CaseClause {
                 expected: ExpectedCaseClauseItem::Body { .. },
             } => {
                 invalid_code_for_position!(self, "pattern");
@@ -3041,14 +3053,14 @@ impl PrettyEaf {
             // When we're done generating statements for a function we need to
             // add one final `.` to the last statement. Then we also want to
             // add an empty line to make our code breath a bit better.
-            PrettyEafPosition::FunctionStatement { .. } => {
+            ErlangSourceBuilderPosition::FunctionStatement { .. } => {
                 self.indentation -= INDENT;
                 self.code.push_str(".\n")
             }
             // When we're done generating statements for an anonymous function
             // we need to add the closing `end` after the last statement on a
             // new line.
-            PrettyEafPosition::AnonymousFunctionStatement { .. } => {
+            ErlangSourceBuilderPosition::AnonymousFunctionStatement { .. } => {
                 self.indentation -= INDENT;
                 self.code.push('\n');
                 self.push_indentation();
@@ -3056,7 +3068,7 @@ impl PrettyEaf {
             }
             // When we're done generating statements for a block we need to add
             // the closing `end`, and reduce the nesting level.
-            PrettyEafPosition::Block { .. } => {
+            ErlangSourceBuilderPosition::Block { .. } => {
                 self.indentation -= INDENT;
                 self.code.push('\n');
                 self.push_indentation();
@@ -3065,10 +3077,10 @@ impl PrettyEaf {
             // When we're done generating code for a function spec we want to
             // add a `.` and go to a new line so we can start generating the
             // function itself.
-            PrettyEafPosition::FunctionSpec => self.code.push_str(".\n"),
+            ErlangSourceBuilderPosition::FunctionSpec => self.code.push_str(".\n"),
             // When we're done generating the arguments of a function we need
             // to add the closed parentheses for the function call!
-            PrettyEafPosition::FunctionCall {
+            ErlangSourceBuilderPosition::FunctionCall {
                 expected: ExpectedCallItem::Arguments { first },
                 called_item_needs_wrapping,
             } => {
@@ -3089,29 +3101,30 @@ impl PrettyEaf {
 
             // When we're done generating the items of a tuple we need
             // to add the closed curly brace to actually close the tuple.
-            PrettyEafPosition::TupleType { .. }
-            | PrettyEafPosition::Tuple { .. }
-            | PrettyEafPosition::TuplePattern { .. } => self.code.push('}'),
+            ErlangSourceBuilderPosition::TupleType { .. }
+            | ErlangSourceBuilderPosition::Tuple { .. }
+            | ErlangSourceBuilderPosition::TuplePattern { .. } => self.code.push('}'),
             // When we're done generating a bit array we can add its closing
             // element.
-            PrettyEafPosition::BitArray { .. } => self.code.push_str(">>"),
+            ErlangSourceBuilderPosition::BitArray { .. } => self.code.push_str(">>"),
 
             // When the function type arguments are over we add what we need for
             // the return type.
-            PrettyEafPosition::FunctionType {
+            ErlangSourceBuilderPosition::FunctionType {
                 expected: ExpectedFunctionTypeItem::Arguments { .. },
                 needs_wrapping,
             } => {
                 // After popping the argument, we now need to wait for the
                 // return type!
-                self.position.push(PrettyEafPosition::FunctionType {
-                    expected: ExpectedFunctionTypeItem::ReturnType,
-                    needs_wrapping,
-                });
+                self.position
+                    .push(ErlangSourceBuilderPosition::FunctionType {
+                        expected: ExpectedFunctionTypeItem::ReturnType,
+                        needs_wrapping,
+                    });
                 self.code.push_str(") -> ")
             }
             // When a named type is over we need to add the closing parentheses.
-            PrettyEafPosition::NamedType { .. } => self.code.push(')'),
+            ErlangSourceBuilderPosition::NamedType { .. } => self.code.push(')'),
             // If we close a function type we need to check what the current
             // state is. If we were generating this for a type spec we're done.
             // But if we were generating this as a type inside another we need to
@@ -3128,7 +3141,7 @@ impl PrettyEaf {
             // %                                     ^ We're adding this bit here!
             // wobble() -> fun wibble/0.
             // ```
-            PrettyEafPosition::FunctionType {
+            ErlangSourceBuilderPosition::FunctionType {
                 expected: ExpectedFunctionTypeItem::ReturnType,
                 needs_wrapping,
             } => {
@@ -3137,12 +3150,12 @@ impl PrettyEaf {
                 }
             }
             // There's nothing left to do when a union type ends.
-            PrettyEafPosition::UnionType { .. } => (),
+            ErlangSourceBuilderPosition::UnionType { .. } => (),
             // When a doc attribute is closed we need to add the closed
             // parentheses and a newline.
-            PrettyEafPosition::DocAttribute => self.code.push_str(").\n"),
+            ErlangSourceBuilderPosition::DocAttribute => self.code.push_str(").\n"),
             // When a case expression is over, we need to add the closing `end`.
-            PrettyEafPosition::Case {
+            ErlangSourceBuilderPosition::Case {
                 expected: ExpectedCaseItem::Branches { .. },
             } => {
                 self.indentation -= INDENT;
@@ -3151,7 +3164,7 @@ impl PrettyEaf {
                 self.code.push_str("end");
             }
 
-            PrettyEafPosition::CaseClause { expected } => match expected {
+            ErlangSourceBuilderPosition::CaseClause { expected } => match expected {
                 ExpectedCaseClauseItem::Pattern => (),
                 // When the guards of a case clause are over we need to add the
                 // arrow before the body is generated.
@@ -3162,32 +3175,32 @@ impl PrettyEaf {
             },
             // We're done with a map, we can add the closed parentheses and
             // reduce nesting.
-            PrettyEafPosition::Map { .. } => {
+            ErlangSourceBuilderPosition::Map { .. } => {
                 self.indentation -= INDENT;
                 self.code.push('\n');
                 self.push_indentation();
                 self.code.push('}');
             }
-            PrettyEafPosition::RecordAttribute { .. } => {
+            ErlangSourceBuilderPosition::RecordAttribute { .. } => {
                 self.indentation -= INDENT;
                 self.code.push('\n');
                 self.push_indentation();
                 self.code.push_str("}).");
             }
 
-            PrettyEafPosition::MapField { .. }
-            | PrettyEafPosition::RecordField { .. }
-            | PrettyEafPosition::MatchPattern { .. }
-            | PrettyEafPosition::UnaryOperator { .. }
-            | PrettyEafPosition::List { .. }
-            | PrettyEafPosition::BinaryOperator { .. }
-            | PrettyEafPosition::MatchOperator { .. }
-            | PrettyEafPosition::TypeSpec { .. }
-            | PrettyEafPosition::BitArraySegment { .. }
-            | PrettyEafPosition::Case {
+            ErlangSourceBuilderPosition::MapField { .. }
+            | ErlangSourceBuilderPosition::RecordField { .. }
+            | ErlangSourceBuilderPosition::MatchPattern { .. }
+            | ErlangSourceBuilderPosition::UnaryOperator { .. }
+            | ErlangSourceBuilderPosition::List { .. }
+            | ErlangSourceBuilderPosition::BinaryOperator { .. }
+            | ErlangSourceBuilderPosition::MatchOperator { .. }
+            | ErlangSourceBuilderPosition::TypeSpec { .. }
+            | ErlangSourceBuilderPosition::BitArraySegment { .. }
+            | ErlangSourceBuilderPosition::Case {
                 expected: ExpectedCaseItem::Subject,
             }
-            | PrettyEafPosition::FunctionCall {
+            | ErlangSourceBuilderPosition::FunctionCall {
                 // If we try and close a function for which no called item was
                 // generated, then that's an error!
                 expected: ExpectedCallItem::FunctionToBeCalled,
@@ -3231,34 +3244,34 @@ impl PrettyEaf {
             .expect("escaping string in the top level scope");
 
         match position {
-            PrettyEafPosition::FunctionSpec
-            | PrettyEafPosition::TypeSpec { .. }
-            | PrettyEafPosition::FunctionType { .. }
-            | PrettyEafPosition::NamedType { .. }
-            | PrettyEafPosition::UnionType { .. }
-            | PrettyEafPosition::RecordAttribute { .. }
-            | PrettyEafPosition::TupleType { .. } => {
+            ErlangSourceBuilderPosition::FunctionSpec
+            | ErlangSourceBuilderPosition::TypeSpec { .. }
+            | ErlangSourceBuilderPosition::FunctionType { .. }
+            | ErlangSourceBuilderPosition::NamedType { .. }
+            | ErlangSourceBuilderPosition::UnionType { .. }
+            | ErlangSourceBuilderPosition::RecordAttribute { .. }
+            | ErlangSourceBuilderPosition::TupleType { .. } => {
                 invalid_code_for_position!(self, "escaping string")
             }
 
-            PrettyEafPosition::FunctionCall { .. }
-            | PrettyEafPosition::FunctionStatement { .. }
-            | PrettyEafPosition::AnonymousFunctionStatement { .. }
-            | PrettyEafPosition::List { .. }
-            | PrettyEafPosition::UnaryOperator { .. }
-            | PrettyEafPosition::Tuple { .. }
-            | PrettyEafPosition::TuplePattern { .. }
-            | PrettyEafPosition::BitArray { .. }
-            | PrettyEafPosition::BitArraySegment { .. }
-            | PrettyEafPosition::Block { .. }
-            | PrettyEafPosition::BinaryOperator { .. }
-            | PrettyEafPosition::Case { .. }
-            | PrettyEafPosition::CaseClause { .. }
-            | PrettyEafPosition::Map { .. }
-            | PrettyEafPosition::MapField { .. }
-            | PrettyEafPosition::MatchPattern { .. }
-            | PrettyEafPosition::RecordField { .. }
-            | PrettyEafPosition::MatchOperator { .. } => {
+            ErlangSourceBuilderPosition::FunctionCall { .. }
+            | ErlangSourceBuilderPosition::FunctionStatement { .. }
+            | ErlangSourceBuilderPosition::AnonymousFunctionStatement { .. }
+            | ErlangSourceBuilderPosition::List { .. }
+            | ErlangSourceBuilderPosition::UnaryOperator { .. }
+            | ErlangSourceBuilderPosition::Tuple { .. }
+            | ErlangSourceBuilderPosition::TuplePattern { .. }
+            | ErlangSourceBuilderPosition::BitArray { .. }
+            | ErlangSourceBuilderPosition::BitArraySegment { .. }
+            | ErlangSourceBuilderPosition::Block { .. }
+            | ErlangSourceBuilderPosition::BinaryOperator { .. }
+            | ErlangSourceBuilderPosition::Case { .. }
+            | ErlangSourceBuilderPosition::CaseClause { .. }
+            | ErlangSourceBuilderPosition::Map { .. }
+            | ErlangSourceBuilderPosition::MapField { .. }
+            | ErlangSourceBuilderPosition::MatchPattern { .. }
+            | ErlangSourceBuilderPosition::RecordField { .. }
+            | ErlangSourceBuilderPosition::MatchOperator { .. } => {
                 // When pretty printing we want the resulting code to be regular
                 // executable Erlang code.
                 // If we're tasked with escaping the content of a literal string
@@ -3283,7 +3296,7 @@ impl PrettyEaf {
                     .into()
             }
 
-            PrettyEafPosition::DocAttribute => {
+            ErlangSourceBuilderPosition::DocAttribute => {
                 // Escaping strings generated inside doc attributes is a little
                 // different: since their content doesn't come from a Gleam
                 // literal string but freeform text, their content might contain
@@ -3296,7 +3309,8 @@ impl PrettyEaf {
     #[must_use]
     fn new_bit_array_segment(&mut self) -> BitArrayKind {
         self.pop_leftover_items();
-        let Some(PrettyEafPosition::BitArray { first, kind }) = self.position.last_mut() else {
+        let Some(ErlangSourceBuilderPosition::BitArray { first, kind }) = self.position.last_mut()
+        else {
             invalid_code_for_position!(self, "bit array segment")
         };
 
@@ -3311,7 +3325,7 @@ impl PrettyEaf {
 
     fn new_case_clause(&mut self) {
         self.pop_leftover_items();
-        let Some(PrettyEafPosition::Case {
+        let Some(ErlangSourceBuilderPosition::Case {
             expected: ExpectedCaseItem::Branches { first },
         }) = self.position.last_mut()
         else {
@@ -3330,7 +3344,7 @@ impl PrettyEaf {
 
     fn new_map_field(&mut self) {
         self.pop_leftover_items();
-        let Some(PrettyEafPosition::Map { first }) = self.position.last_mut() else {
+        let Some(ErlangSourceBuilderPosition::Map { first }) = self.position.last_mut() else {
             invalid_code_for_position!(self, "map field");
         };
 
@@ -3363,12 +3377,12 @@ impl PrettyEaf {
         // If we're about to generate a bit array segment value, or a size,
         // then we can skip the wrapping, otherwise this is not needed at all!
         match self.position.last_mut() {
-            Some(PrettyEafPosition::BitArraySegment {
+            Some(ErlangSourceBuilderPosition::BitArraySegment {
                 segment_value_needs_wrapping,
                 expected: BitArraySegmentExpectedItem::Value { .. },
                 ..
             }) => *segment_value_needs_wrapping = false,
-            Some(PrettyEafPosition::BitArraySegment {
+            Some(ErlangSourceBuilderPosition::BitArraySegment {
                 segment_size_needs_wrapping,
                 expected: BitArraySegmentExpectedItem::Size,
                 ..
@@ -3385,7 +3399,7 @@ impl PrettyEaf {
         // output slightly different code: rather than a bit array we want to
         // output a regular string with no modifiers which are going to be added
         // later as the segment is created
-        if let Some(PrettyEafPosition::BitArraySegment {
+        if let Some(ErlangSourceBuilderPosition::BitArraySegment {
             // the call to `new_expression` at the beginning is going to advance
             // the state to expect the `::Size`, that means the code we are
             // outputting now was expected to be the the `::Value` of the bit
@@ -3414,7 +3428,7 @@ impl PrettyEaf {
             // If we were expecting the rest of a list and we generate a new
             // cons cell we can keep adding commas to separate items: we want
             // to show `[1, 2, 3]` rather than `[1 | [2 | [3 | []]]]`
-            Some(PrettyEafPosition::List {
+            Some(ErlangSourceBuilderPosition::List {
                 kind,
                 expected: expected @ ExpectedListItem::Rest,
             }) if *kind == list_kind => {
@@ -3429,7 +3443,7 @@ impl PrettyEaf {
                     ListKind::Expression => self.new_expression(),
                 }
                 self.code.push('[');
-                self.position.push(PrettyEafPosition::List {
+                self.position.push(ErlangSourceBuilderPosition::List {
                     kind: list_kind,
                     expected: ExpectedListItem::First,
                 });
@@ -3443,7 +3457,7 @@ impl PrettyEaf {
             // If we were building a cons list and were expecting the end of the
             // list then we have to special case this: we don't want to render
             // it as: `[1, 2 | []]`, but as `[1, 2]`.
-            Some(PrettyEafPosition::List {
+            Some(ErlangSourceBuilderPosition::List {
                 kind,
                 expected: ExpectedListItem::Rest,
             }) if *kind == list_kind => {
@@ -3475,7 +3489,7 @@ impl PrettyEaf {
         };
 
         match position {
-            PrettyEafPosition::TypeSpec {
+            ErlangSourceBuilderPosition::TypeSpec {
                 expected: TypeSpecExpectedItem::TypeSpecIsOver,
             } => {
                 self.code.push_str(".\n");
@@ -3488,7 +3502,7 @@ impl PrettyEaf {
             // are built as a list of cons cells, so we can't really
             // tell when a list is over until we get to the next
             // expression.
-            PrettyEafPosition::List {
+            ErlangSourceBuilderPosition::List {
                 expected: ExpectedListItem::ListIsOver,
                 ..
             } => {
@@ -3505,7 +3519,7 @@ impl PrettyEaf {
             // the current item and notice there's a closed operator left).
             // Also, just like lists, we might still need to add some
             // parentheses _after_ the operator is over.
-            PrettyEafPosition::BinaryOperator {
+            ErlangSourceBuilderPosition::BinaryOperator {
                 expected: ExpectedBinaryOperatorSide::BinaryOperatorIsOver,
                 needs_wrapping,
                 ..
@@ -3523,72 +3537,73 @@ impl PrettyEaf {
 
             // All of these items are not leftovers. They are either still open,
             // require manual closing, or things that don't need closing at all!
-            PrettyEafPosition::NamedType { .. }
-            | PrettyEafPosition::UnionType { .. }
-            | PrettyEafPosition::TupleType { .. }
-            | PrettyEafPosition::FunctionStatement { .. }
-            | PrettyEafPosition::AnonymousFunctionStatement { .. }
-            | PrettyEafPosition::DocAttribute
-            | PrettyEafPosition::FunctionSpec
-            | PrettyEafPosition::Tuple { .. }
-            | PrettyEafPosition::TuplePattern { .. }
-            | PrettyEafPosition::BitArray { .. }
-            | PrettyEafPosition::Map { .. }
-            | PrettyEafPosition::Block { .. }
-            | PrettyEafPosition::UnaryOperator { .. }
-            | PrettyEafPosition::FunctionType {
+            ErlangSourceBuilderPosition::NamedType { .. }
+            | ErlangSourceBuilderPosition::UnionType { .. }
+            | ErlangSourceBuilderPosition::TupleType { .. }
+            | ErlangSourceBuilderPosition::FunctionStatement { .. }
+            | ErlangSourceBuilderPosition::AnonymousFunctionStatement { .. }
+            | ErlangSourceBuilderPosition::DocAttribute
+            | ErlangSourceBuilderPosition::FunctionSpec
+            | ErlangSourceBuilderPosition::Tuple { .. }
+            | ErlangSourceBuilderPosition::TuplePattern { .. }
+            | ErlangSourceBuilderPosition::BitArray { .. }
+            | ErlangSourceBuilderPosition::Map { .. }
+            | ErlangSourceBuilderPosition::Block { .. }
+            | ErlangSourceBuilderPosition::UnaryOperator { .. }
+            | ErlangSourceBuilderPosition::FunctionType {
                 expected:
                     ExpectedFunctionTypeItem::Arguments { .. } | ExpectedFunctionTypeItem::ReturnType,
                 ..
             }
-            | PrettyEafPosition::TypeSpec {
+            | ErlangSourceBuilderPosition::TypeSpec {
                 expected: TypeSpecExpectedItem::TypeDefinition,
             }
-            | PrettyEafPosition::MapField {
+            | ErlangSourceBuilderPosition::MapField {
                 expected: MapFieldExpectedItem::Key | MapFieldExpectedItem::Value,
             }
-            | PrettyEafPosition::List {
+            | ErlangSourceBuilderPosition::List {
                 expected: ExpectedListItem::First | ExpectedListItem::Rest,
                 ..
             }
-            | PrettyEafPosition::BitArraySegment {
+            | ErlangSourceBuilderPosition::BitArraySegment {
                 expected:
                     BitArraySegmentExpectedItem::Size
                     | BitArraySegmentExpectedItem::Specifiers
                     | BitArraySegmentExpectedItem::Value { .. },
                 ..
             }
-            | PrettyEafPosition::FunctionCall {
+            | ErlangSourceBuilderPosition::FunctionCall {
                 expected: ExpectedCallItem::Arguments { .. } | ExpectedCallItem::FunctionToBeCalled,
                 ..
             }
-            | PrettyEafPosition::MatchPattern {
+            | ErlangSourceBuilderPosition::MatchPattern {
                 expected: ExpectedMatchPatternSide::Left | ExpectedMatchPatternSide::Right,
             }
-            | PrettyEafPosition::Case {
+            | ErlangSourceBuilderPosition::Case {
                 expected: ExpectedCaseItem::Subject | ExpectedCaseItem::Branches { .. },
             }
-            | PrettyEafPosition::CaseClause {
+            | ErlangSourceBuilderPosition::CaseClause {
                 expected:
                     ExpectedCaseClauseItem::Pattern
                     | ExpectedCaseClauseItem::Guards { .. }
                     | ExpectedCaseClauseItem::Body { .. },
             }
-            | PrettyEafPosition::BinaryOperator {
+            | ErlangSourceBuilderPosition::BinaryOperator {
                 expected: ExpectedBinaryOperatorSide::Left | ExpectedBinaryOperatorSide::Right,
                 ..
             }
-            | PrettyEafPosition::RecordAttribute { .. }
-            | PrettyEafPosition::MatchOperator {
+            | ErlangSourceBuilderPosition::RecordAttribute { .. }
+            | ErlangSourceBuilderPosition::MatchOperator {
                 expected: ExpectedMatchSide::Expression | ExpectedMatchSide::Pattern,
             }
-            | PrettyEafPosition::RecordField { .. } => (),
+            | ErlangSourceBuilderPosition::RecordField { .. } => (),
         }
     }
 
     fn new_record_field(&mut self) {
         self.pop_leftover_items();
-        let Some(PrettyEafPosition::RecordAttribute { first }) = self.position.last_mut() else {
+        let Some(ErlangSourceBuilderPosition::RecordAttribute { first }) = self.position.last_mut()
+        else {
             panic!("tried generating record field outside of record attribute");
         };
 

@@ -60,7 +60,7 @@ flate2.workspace = true
 futures.workspace = true
 hexpm = { path = "../hexpm" }
 pretty-arena = { path = "../pretty-arena" }
-erlang-abstract-format = { path = "../erlang-abstract-format" }
+erlang-generation = { path = "../erlang-generation" }
 http.workspace = true
 im.workspace = true
 itertools.workspace = true
