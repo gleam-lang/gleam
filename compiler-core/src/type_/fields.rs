@@ -239,7 +239,7 @@ impl FieldMapBuilder {
                 label: label.clone(),
                 location,
             });
-        };
+        }
         self.any_labels = true;
         Ok(())
     }

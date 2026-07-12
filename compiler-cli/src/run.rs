@@ -66,7 +66,7 @@ pub fn setup(
         return Err(Error::InvalidModuleName {
             module: mod_path.to_owned(),
         });
-    };
+    }
 
     let telemetry: &'static dyn Telemetry = if no_print_progress {
         &NullTelemetry
@@ -280,7 +280,7 @@ fn run_javascript_deno_command(
 
     // Enable unstable features and APIs
     if config.javascript.deno.unstable {
-        args.push("--unstable".into())
+        args.push("--unstable".into());
     }
 
     // Enable location API
@@ -291,19 +291,19 @@ fn run_javascript_deno_command(
     // Set deno permissions
     if config.javascript.deno.allow_all {
         // Allow all
-        args.push("--allow-all".into())
+        args.push("--allow-all".into());
     } else {
         // Allow env
         add_deno_flag(&mut args, "--allow-env", &config.javascript.deno.allow_env);
 
         // Allow sys
         if config.javascript.deno.allow_sys {
-            args.push("--allow-sys".into())
+            args.push("--allow-sys".into());
         }
 
         // Allow hrtime
         if config.javascript.deno.allow_hrtime {
-            args.push("--allow-hrtime".into())
+            args.push("--allow-hrtime".into());
         }
 
         // Allow net
@@ -311,7 +311,7 @@ fn run_javascript_deno_command(
 
         // Allow ffi
         if config.javascript.deno.allow_ffi {
-            args.push("--allow-ffi".into())
+            args.push("--allow-ffi".into());
         }
 
         // Allow read

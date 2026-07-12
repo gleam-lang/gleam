@@ -1662,7 +1662,7 @@ fn unify_unbound_type(type_: &Type, own_id: u64) -> Result<(), UnifyError> {
     match type_ {
         Type::Named { arguments, .. } => {
             for argument in arguments {
-                unify_unbound_type(argument, own_id)?
+                unify_unbound_type(argument, own_id)?;
             }
             Ok(())
         }
@@ -1676,7 +1676,7 @@ fn unify_unbound_type(type_: &Type, own_id: u64) -> Result<(), UnifyError> {
 
         Type::Tuple { elements, .. } => {
             for element in elements {
-                unify_unbound_type(element, own_id)?
+                unify_unbound_type(element, own_id)?;
             }
             Ok(())
         }

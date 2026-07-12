@@ -831,7 +831,7 @@ fn path_dependency_configs_unchanged(
             if config_time <= fingerprint_time {
                 continue;
             }
-        };
+        }
 
         let config_text = fs::read(&config_path)?;
         let current_fingerprint = SourceFingerprint::new(&config_text).to_numerical_string();
@@ -1512,7 +1512,7 @@ fn provide_package(
             path: package_path.to_path_buf(),
             found: config.name.into(),
         });
-    };
+    }
     // Walk the requirements of the package
     let mut requirements = HashMap::new();
     parents.push(package_name);

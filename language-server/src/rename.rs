@@ -91,20 +91,20 @@ pub fn rename_local_variable(
 
     match kind {
         VariableReferenceKind::Variable => {
-            edits.replace(definition_location, params.new_name.clone())
+            edits.replace(definition_location, params.new_name.clone());
         }
         VariableReferenceKind::LabelShorthand => {
-            edits.insert(definition_location.end, format!(" {}", params.new_name))
+            edits.insert(definition_location.end, format!(" {}", params.new_name));
         }
     }
 
     for reference in references {
         match reference.kind {
             VariableReferenceKind::Variable => {
-                edits.replace(reference.location, params.new_name.clone())
+                edits.replace(reference.location, params.new_name.clone());
             }
             VariableReferenceKind::LabelShorthand => {
-                edits.insert(reference.location.end, format!(" {}", params.new_name))
+                edits.insert(reference.location.end, format!(" {}", params.new_name));
             }
         }
     }
@@ -327,7 +327,7 @@ fn rename_label_references_in_module(
             // would break that, so we expand the shorthand and keep the original
             // name as the value: `wibble:` becomes `new_name: wibble`.
             LabelSyntax::Shorthand => {
-                edits.replace(reference.location, format!("{new_name}: {label}"))
+                edits.replace(reference.location, format!("{new_name}: {label}"));
             }
             LabelSyntax::Longhand => edits.replace(reference.location, new_name.to_string()),
         }
@@ -365,7 +365,7 @@ fn alias_references_in_module(
         match reference.kind {
             ReferenceKind::Qualified { .. } => {}
             ReferenceKind::Unqualified | ReferenceKind::Alias => {
-                edits.replace(reference.location, params.new_name.clone())
+                edits.replace(reference.location, params.new_name.clone());
             }
             ReferenceKind::Import(alias_location) => {
                 // If old name is equal to original name, we can just remove
@@ -495,7 +495,7 @@ pub fn rename_module_alias(
                 if params.new_name == original_module_name {
                     edits.delete(SrcSpan::new(alias_location.start - 1, alias_location.end));
                 } else {
-                    edits.replace(*alias_location, format!("as {}", params.new_name))
+                    edits.replace(*alias_location, format!("as {}", params.new_name));
                 }
             }
             ModuleNameReference::ModuleSelect(location)
@@ -532,7 +532,7 @@ pub fn rename_type_variable(
     let references = FindTypeVariableReferences::find_in_module(&module.ast, location, &name);
 
     for reference in references {
-        edits.replace(reference, params.new_name.clone())
+        edits.replace(reference, params.new_name.clone());
     }
 
     RenameOutcome::Renamed {
@@ -604,7 +604,7 @@ pub fn rename_module_occurrences(
                 // to change.
                 ModuleNameReference::AliasedModuleSelect(_) => {}
                 ModuleNameReference::ModuleSelect(location) => {
-                    edits.replace(*location, last_component_of_new_name.clone())
+                    edits.replace(*location, last_component_of_new_name.clone());
                 }
             }
         }

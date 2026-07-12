@@ -1810,7 +1810,7 @@ impl TypedExpr {
             let Some(label) = argument.label.as_ref() else {
                 continue;
             };
-            unchanged_arguments.push((label.clone(), argument.value.type_()))
+            unchanged_arguments.push((label.clone(), argument.value.type_()));
         }
         Some(unchanged_arguments)
     }

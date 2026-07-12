@@ -173,10 +173,10 @@ impl<'a> CallGraphBuilder<'a> {
             Statement::Assert(assert) => {
                 self.expression(&assert.value);
                 if let Some(message) = &assert.message {
-                    self.expression(message)
+                    self.expression(message);
                 }
             }
-        };
+        }
     }
 
     fn expression(&mut self, expression: &'a UntypedExpr) {
@@ -185,13 +185,13 @@ impl<'a> CallGraphBuilder<'a> {
 
             UntypedExpr::Todo { message, .. } => {
                 if let Some(msg_expr) = message {
-                    self.expression(msg_expr)
+                    self.expression(msg_expr);
                 }
             }
 
             UntypedExpr::Panic { message, .. } => {
                 if let Some(msg_expr) = message {
-                    self.expression(msg_expr)
+                    self.expression(msg_expr);
                 }
             }
 
@@ -295,7 +295,7 @@ impl<'a> CallGraphBuilder<'a> {
                 let names = self.names.clone();
                 for argument in arguments {
                     if let Some(name) = argument.names.get_variable_name() {
-                        self.define(name)
+                        self.define(name);
                     }
                 }
                 self.statements(body);
@@ -468,7 +468,7 @@ impl<'a> CallGraphBuilder<'a> {
 
             Constant::Todo { message, .. } => {
                 if let Some(message) = message {
-                    self.constant(message)
+                    self.constant(message);
                 }
             }
 

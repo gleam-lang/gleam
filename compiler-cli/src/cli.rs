@@ -42,15 +42,15 @@ impl Telemetry for Reporter {
     }
 
     fn downloading_package(&self, name: &str) {
-        print_downloading(name)
+        print_downloading(name);
     }
 
     fn packages_downloaded(&self, start: Instant, count: usize) {
-        print_packages_downloaded(start, count)
+        print_packages_downloaded(start, count);
     }
 
     fn resolving_package_versions(&self) {
-        print_resolving_versions()
+        print_resolving_versions();
     }
 
     fn running(&self, name: &str) {
@@ -58,11 +58,11 @@ impl Telemetry for Reporter {
     }
 
     fn waiting_for_build_directory_lock(&self) {
-        print_waiting_for_build_directory_lock()
+        print_waiting_for_build_directory_lock();
     }
 
     fn resolved_package_versions(&self, changes: &PackageChanges) {
-        print_package_changes(changes)
+        print_package_changes(changes);
     }
 }
 
@@ -103,19 +103,19 @@ pub fn ask_password(question: &str) -> Result<EcoString, Error> {
 }
 
 pub fn print_publishing(name: &str, version: &Version) {
-    print_colourful_prefix("Publishing", &format!("{name} v{version}"))
+    print_colourful_prefix("Publishing", &format!("{name} v{version}"));
 }
 
 pub fn print_published(detail: &str) {
-    print_colourful_prefix("Published", detail)
+    print_colourful_prefix("Published", detail);
 }
 
 pub fn print_retired(package: &str, version: &str) {
-    print_colourful_prefix("Retired", &format!("{package} {version}"))
+    print_colourful_prefix("Retired", &format!("{package} {version}"));
 }
 
 pub fn print_unretired(package: &str, version: &str) {
-    print_colourful_prefix("Unretired", &format!("{package} {version}"))
+    print_colourful_prefix("Unretired", &format!("{package} {version}"));
 }
 
 pub fn print_publishing_documentation() {
@@ -123,39 +123,39 @@ pub fn print_publishing_documentation() {
 }
 
 fn print_downloading(text: &str) {
-    print_colourful_prefix("Downloading", text)
+    print_colourful_prefix("Downloading", text);
 }
 
 fn print_waiting_for_build_directory_lock() {
-    print_colourful_prefix("Waiting", "for build directory lock")
+    print_colourful_prefix("Waiting", "for build directory lock");
 }
 
 fn print_resolving_versions() {
-    print_colourful_prefix("Resolving", "versions")
+    print_colourful_prefix("Resolving", "versions");
 }
 
 fn print_compiling(text: &str) {
-    print_colourful_prefix("Compiling", text)
+    print_colourful_prefix("Compiling", text);
 }
 
 pub(crate) fn print_exported(text: &str) {
-    print_colourful_prefix("Exported", text)
+    print_colourful_prefix("Exported", text);
 }
 
 pub(crate) fn print_checking(text: &str) {
-    print_colourful_prefix("Checking", text)
+    print_colourful_prefix("Checking", text);
 }
 
 pub(crate) fn print_compiled(duration: Duration) {
-    print_colourful_prefix("Compiled", &format!("in {}", seconds(duration)))
+    print_colourful_prefix("Compiled", &format!("in {}", seconds(duration)));
 }
 
 pub(crate) fn print_checked(duration: Duration) {
-    print_colourful_prefix("Checked", &format!("in {}", seconds(duration)))
+    print_colourful_prefix("Checked", &format!("in {}", seconds(duration)));
 }
 
 pub(crate) fn print_running(text: &str) {
-    print_colourful_prefix("Running", text)
+    print_colourful_prefix("Running", text);
 }
 
 pub(crate) fn print_package_changes(changes: &PackageChanges) {
@@ -179,19 +179,19 @@ pub(crate) fn print_package_changes(changes: &PackageChanges) {
 }
 
 fn print_added(text: &str) {
-    print_colourful_prefix("Added", text)
+    print_colourful_prefix("Added", text);
 }
 
 fn print_changed(text: &str) {
-    print_colourful_prefix("Changed", text)
+    print_colourful_prefix("Changed", text);
 }
 
 fn print_removed(text: &str) {
-    print_colourful_prefix("Removed", text)
+    print_colourful_prefix("Removed", text);
 }
 
 pub(crate) fn print_generating_documentation() {
-    print_colourful_prefix("Generating", "documentation")
+    print_colourful_prefix("Generating", "documentation");
 }
 
 pub(crate) fn print_transferring_ownership() {
@@ -216,7 +216,7 @@ fn print_packages_downloaded(start: Instant, count: usize) {
         1 => format!("1 package in {elapsed}"),
         _ => format!("{count} packages in {elapsed}"),
     };
-    print_colourful_prefix("Downloaded", &msg)
+    print_colourful_prefix("Downloaded", &msg);
 }
 
 pub fn seconds(duration: Duration) -> String {

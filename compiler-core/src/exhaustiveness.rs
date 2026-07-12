@@ -461,7 +461,7 @@ impl Body {
                 bit_array,
                 read_action: value,
             },
-        ))
+        ));
     }
 
     fn assign_segment_constant_value(&mut self, name: EcoString, value: &BitArrayMatchedValue) {
@@ -478,7 +478,7 @@ impl Body {
             }
         };
 
-        self.bindings.push((name, value))
+        self.bindings.push((name, value));
     }
 }
 
@@ -1269,14 +1269,14 @@ impl MatchTest {
         let offset_other = other.read_action.from.constant_bits()?.to_usize()?;
         if offset_one > offset_other {
             return None;
-        };
+        }
 
         // The second requirement is that: `o1 + s1 > o2`
         let size_one = self.read_action.size.constant_bits()?.to_usize()?;
         let size_other = other.read_action.size.constant_bits()?.to_usize()?;
         if offset_one + size_one <= offset_other {
             return None;
-        };
+        }
 
         // At this point we know that both are interfering, so we compare the
         // overlapping slice of bits they're matching against.
@@ -1998,7 +1998,7 @@ impl ReadSize {
             }
 
             ReadSize::ConstantBits(..) | ReadSize::RemainingBits | ReadSize::RemainingBytes => (),
-        };
+        }
     }
 
     fn can_be_negative(&self) -> bool {
@@ -2564,9 +2564,9 @@ impl<'a> Compiler<'a> {
                 let mut remaining_choices = vec![];
                 for choice in choices.into_iter() {
                     if choice.0.is_ignored() {
-                        ignored_checks.push(choice.0)
+                        ignored_checks.push(choice.0);
                     } else {
-                        remaining_choices.push(choice)
+                        remaining_choices.push(choice);
                     }
                 }
 
@@ -3011,7 +3011,7 @@ impl BranchSplitter {
         if let Pattern::BitArray { tests } = pattern {
             self.add_checked_bit_array_branch(pattern_check, tests, branch, compiler);
             return;
-        };
+        }
 
         let kind = pattern
             .to_runtime_check_kind()
@@ -3367,7 +3367,7 @@ impl ConstructorSpecialiser {
             // it the same as an external type.
             Opaque::Opaque if current_module != type_module => return Vec::new(),
             Opaque::Opaque | Opaque::NotOpaque => {}
-        };
+        }
 
         let specialiser = Self::new(constructors.type_parameters_ids.as_slice(), type_arguments);
         constructors
@@ -3523,7 +3523,7 @@ impl CaseToCompile {
                     .subject_variables
                     .get(i)
                     .expect("wrong number of subjects");
-                checks.push(var.is(pattern))
+                checks.push(var.is(pattern));
             }
 
             let guard = branch.guard.as_ref().map(|guard| {
@@ -3763,7 +3763,7 @@ impl CaseToCompile {
                     };
                     tests.push_back(BitArrayTest::Size(SizeTest { operator, size }));
                 }
-            };
+            }
 
             let type_ = match &segment.type_ {
                 type_ if type_.is_int() => ReadType::Int,
@@ -4098,7 +4098,7 @@ fn representable_with_bits(value: &BigInt, bits: u32, signed: bool) -> bool {
     // No number is representable in 0 bits.
     if bits == 0 {
         return false;
-    };
+    }
 
     let required_bits = match (value.sign(), signed) {
         // Zero always needs one bit.

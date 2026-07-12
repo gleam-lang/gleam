@@ -270,7 +270,7 @@ impl Names {
         if print_mode == PrintMode::ExpandAliases {
             if let Some((module, _)) = self.imported_modules.get(module) {
                 return NameContextInformation::Qualified(module, name.as_str());
-            };
+            }
 
             return NameContextInformation::Unimported(module, name);
         }
@@ -294,7 +294,7 @@ impl Names {
         // This type is from a module that has been imported
         if let Some((module, _)) = self.imported_modules.get(module) {
             return NameContextInformation::Qualified(module, name.as_str());
-        };
+        }
 
         NameContextInformation::Unimported(module, name)
     }
@@ -328,7 +328,7 @@ impl Names {
         // This value is from a module that has been imported
         if let Some((module, _)) = self.imported_modules.get(module) {
             return NameContextInformation::Qualified(module, name.as_str());
-        };
+        }
 
         NameContextInformation::Unimported(module, name)
     }
@@ -517,7 +517,7 @@ impl<'a> Printer<'a> {
             Type::Var { type_, .. } => match *type_.borrow() {
                 TypeVar::Link { ref type_, .. } => self.print(type_, buffer, print_mode),
                 TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => {
-                    buffer.push_str(&self.type_variable(id))
+                    buffer.push_str(&self.type_variable(id));
                 }
             },
 
@@ -593,7 +593,7 @@ impl<'a> Printer<'a> {
             if rest == 0 {
                 break;
             }
-            rest -= 1
+            rest -= 1;
         }
 
         self.uid += 1;

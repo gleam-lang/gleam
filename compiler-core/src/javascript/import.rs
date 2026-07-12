@@ -38,7 +38,7 @@ impl<'a, 'doc> Imports<'a, 'doc> {
             .entry(path.clone())
             .or_insert_with(|| Import::new(path.clone()));
         import.aliases.extend(aliases);
-        import.unqualified.extend(unqualified_imports)
+        import.unqualified.extend(unqualified_imports);
     }
 
     pub fn into_doc(

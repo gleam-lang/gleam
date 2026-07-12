@@ -79,11 +79,11 @@ impl Hydrator {
     }
 
     pub fn disallow_new_type_variables(&mut self) {
-        self.permit_new_type_variables = false
+        self.permit_new_type_variables = false;
     }
 
     pub fn permit_holes(&mut self, flag: bool) {
-        self.permit_holes = flag
+        self.permit_holes = flag;
     }
 
     /// A rigid type is a generic type that was specified as being generic in
@@ -211,7 +211,7 @@ impl Hydrator {
                             location: *location,
                             message,
                             layer: Layer::Type,
-                        })
+                        });
                     }
                 }
 

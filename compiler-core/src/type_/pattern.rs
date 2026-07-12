@@ -179,7 +179,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 self.problems.error(convert_unify_error(error, location));
                                 self.error_encountered = true;
                             }
-                        };
+                        }
                         unify_constructor_variants(Arc::make_mut(&mut initial.type_), &type_);
                     }
 
@@ -435,7 +435,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
         if let Some(s) = last_segment {
             let typed_last_segment = self.infer_pattern_segment(s, true);
-            typed_segments.push(typed_last_segment)
+            typed_segments.push(typed_last_segment);
         }
 
         TypedPattern::BitArray {
@@ -466,7 +466,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     self.track_feature_usage(FeatureKind::UnannotatedFloatSegment, *location);
                     segment.options.push(BitArrayOption::Float {
                         location: SrcSpan::default(),
-                    })
+                    });
                 }
 
                 Pattern::Int { .. }
@@ -640,7 +640,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             | Pattern::BitArray { .. }
             | Pattern::StringPrefix { .. }
             | Pattern::Invalid { .. } => {}
-        };
+        }
 
         let typed_segment = BitArraySegment {
             location: segment.location,
@@ -772,7 +772,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             .insert(right.clone(), right_location);
                         self.check_name_case(right_location, right, Named::Discard);
                     }
-                };
+                }
 
                 Pattern::StringPrefix {
                     location,
@@ -1141,7 +1141,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     implicit: Some(ImplicitCallArgOrigin::PatternFieldSpread),
                                 });
                             }
-                        };
+                        }
                     }
                 }
 
@@ -1190,7 +1190,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             location,
                             message,
                             layer: Layer::Value,
-                        })
+                        });
                     }
                 }
 
@@ -1328,7 +1328,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         && let Some(label) = &arg.label
                         && let Some(field) = field_map.fields.get(label)
                     {
-                        index = *field as usize
+                        index = *field as usize;
                     }
                 }
 
@@ -1441,7 +1441,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         location,
                         ReferenceKind::Unqualified,
                     ),
-                };
+                }
 
                 self.environment.increment_usage(&name);
                 let type_ = self.environment.instantiate(
@@ -1515,7 +1515,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         feature_kind,
                         minimum_required_version: minimum_required_version.clone(),
                         wrongfully_allowed_version: lowest_allowed_version,
-                    })
+                    });
             }
         }
 
@@ -1557,7 +1557,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             BitArraySize::Int { .. } | BitArraySize::Variable { .. } => (),
             BitArraySize::BinaryOperator { location, .. }
             | BitArraySize::Block { location, .. } => {
-                self.track_feature_usage(FeatureKind::ExpressionInSegmentSize, *location)
+                self.track_feature_usage(FeatureKind::ExpressionInSegmentSize, *location);
             }
         }
     }

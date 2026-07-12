@@ -103,10 +103,10 @@ where
                 // Transform windows EOL into \n
                 let _ = self.shift();
                 // using the position from the \r
-                self.chr0 = Some((i, '\n'))
+                self.chr0 = Some((i, '\n'));
             } else {
                 // Transform MAC EOL into \n
-                self.chr0 = Some((i, '\n'))
+                self.chr0 = Some((i, '\n'));
             }
         }
 
@@ -156,7 +156,7 @@ where
             let mut check_for_minus = false;
             if self.is_upname_start(c) {
                 let name = self.lex_upname()?;
-                self.emit(name)
+                self.emit(name);
             } else if self.is_name_start(c) {
                 check_for_minus = true;
                 let name = self.lex_name()?;
@@ -207,7 +207,7 @@ where
                                     end: tok_end + 1,
                                 },
                             });
-                        };
+                        }
                         self.emit((tok_start, Token::EqualEqual, tok_end));
                     }
                     _ => {
@@ -844,7 +844,7 @@ where
         let start_pos = self.get_pos();
 
         while self.is_name_continuation() {
-            name.push(self.next_char().expect("lex_name continue"))
+            name.push(self.next_char().expect("lex_name continue"));
         }
 
         let end_pos = self.get_pos();

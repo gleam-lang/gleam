@@ -222,19 +222,19 @@ impl<'a, 'doc> Generator<'a> {
 
         if self.tracker.ok_used {
             self.register_prelude_usage(arena, &mut imports, "Ok", None);
-        };
+        }
 
         if self.tracker.error_used {
             self.register_prelude_usage(arena, &mut imports, "Error", None);
-        };
+        }
 
         if self.tracker.list_used {
             self.register_prelude_usage(arena, &mut imports, "toList", None);
-        };
+        }
 
         if self.tracker.list_empty_class_used || self.tracker.echo_used {
             self.register_prelude_usage(arena, &mut imports, "Empty", Some("$Empty"));
-        };
+        }
 
         if self.tracker.list_empty_const_used {
             self.register_prelude_usage(
@@ -243,39 +243,39 @@ impl<'a, 'doc> Generator<'a> {
                 "List$Empty$const",
                 Some("$List$Empty$const"),
             );
-        };
+        }
 
         if self.tracker.list_non_empty_class_used || self.tracker.echo_used {
             self.register_prelude_usage(arena, &mut imports, "NonEmpty", Some("$NonEmpty"));
-        };
+        }
 
         if self.tracker.prepend_used {
             self.register_prelude_usage(arena, &mut imports, "prepend", Some("listPrepend"));
-        };
+        }
 
         if self.tracker.custom_type_used || self.tracker.echo_used {
             self.register_prelude_usage(arena, &mut imports, "CustomType", Some("$CustomType"));
-        };
+        }
 
         if self.tracker.make_error_used {
             self.register_prelude_usage(arena, &mut imports, "makeError", None);
-        };
+        }
 
         if self.tracker.int_remainder_used {
             self.register_prelude_usage(arena, &mut imports, "remainderInt", None);
-        };
+        }
 
         if self.tracker.float_division_used {
             self.register_prelude_usage(arena, &mut imports, "divideFloat", None);
-        };
+        }
 
         if self.tracker.int_division_used {
             self.register_prelude_usage(arena, &mut imports, "divideInt", None);
-        };
+        }
 
         if self.tracker.object_equality_used {
             self.register_prelude_usage(arena, &mut imports, "isEqual", None);
-        };
+        }
 
         if self.tracker.bit_array_literal_used {
             self.register_prelude_usage(arena, &mut imports, "toBitArray", None);
@@ -780,7 +780,7 @@ impl<'a, 'doc> Generator<'a> {
                     index,
                     CLOSE_SQUARE_SEMICOLON_DOCUMENT
                 ]
-                .group(arena)
+                .group(arena);
             }
 
             functions.push(docvec![
@@ -873,7 +873,7 @@ impl<'a, 'doc> Generator<'a> {
 
         if constructor.arguments.is_empty() {
             return docvec![arena, doc, head, CLOSE_CURLY_DOCUMENT];
-        };
+        }
 
         let parameters = arena.join(
             constructor
@@ -938,19 +938,19 @@ impl<'a, 'doc> Generator<'a> {
 
         for custom_type in &self.module.definitions.custom_types {
             if let Some(mut new_definitions) = self.custom_type_definition(arena, custom_type) {
-                definitions.append(&mut new_definitions)
+                definitions.append(&mut new_definitions);
             }
         }
 
         for constant in &self.module.definitions.constants {
             if let Some(definition) = self.module_constant(arena, constant) {
-                definitions.push(definition)
+                definitions.push(definition);
             }
         }
 
         for function in &self.module.definitions.functions {
             if let Some(definition) = self.module_function(arena, function) {
-                definitions.push(definition)
+                definitions.push(definition);
             }
         }
 
@@ -989,7 +989,7 @@ impl<'a, 'doc> Generator<'a> {
                     name,
                     module,
                     external_function,
-                )
+                );
             }
         }
 
@@ -1073,7 +1073,7 @@ impl<'a, 'doc> Generator<'a> {
             },
         };
         if publicity.is_importable() {
-            imports.register_export(maybe_escape_identifier_string(name))
+            imports.register_export(maybe_escape_identifier_string(name));
         }
         imports.register_module(EcoString::from(module), [], [member]);
     }
@@ -1249,7 +1249,7 @@ impl<'a, 'doc> Generator<'a> {
 
     fn register_module_definitions_in_scope(&mut self) {
         for constant in &self.module.definitions.constants {
-            self.register_in_scope(&constant.name)
+            self.register_in_scope(&constant.name);
         }
 
         for function in &self.module.definitions.functions {
@@ -1260,7 +1260,7 @@ impl<'a, 'doc> Generator<'a> {
 
         for import in &self.module.definitions.imports {
             for unqualified_value in &import.unqualified_values {
-                self.register_in_scope(unqualified_value.used_name())
+                self.register_in_scope(unqualified_value.used_name());
             }
         }
     }

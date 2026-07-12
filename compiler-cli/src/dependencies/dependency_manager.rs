@@ -177,7 +177,7 @@ where
                     _ = config.dev_dependencies.insert(package, requirement);
                 } else {
                     _ = config.dependencies.insert(package, requirement);
-                };
+                }
             }
         }
 

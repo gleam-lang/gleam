@@ -69,7 +69,7 @@ impl BuildLock {
 
         if !file.try_lock_with_pid().map_err(lock_error)? {
             telemetry.waiting_for_build_directory_lock();
-            file.lock_with_pid().map_err(lock_error)?
+            file.lock_with_pid().map_err(lock_error)?;
         }
 
         Ok(Guard(file))

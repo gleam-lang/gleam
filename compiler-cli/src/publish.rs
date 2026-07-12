@@ -136,7 +136,7 @@ HTML documentation will work:
     git tag {tag_name}
     git push origin {tag_name}
 "
-            )
+            );
         }
     }
     Ok(())

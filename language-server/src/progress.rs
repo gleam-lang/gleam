@@ -50,7 +50,7 @@ impl<'a> ConnectionProgressReporter<'a> {
         self.connection
             .sender
             .send(lsp_server::Message::Notification(notification))
-            .expect("send_work_done_notification send")
+            .expect("send_work_done_notification send");
     }
 }
 
