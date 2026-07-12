@@ -2647,7 +2647,7 @@ impl ErlangSourceBuilder {
             }
             // We were expecting an expression and someone generated it, we can
             // now pop this off the stack.
-            ErlangSourceBuilderPosition::UnaryOperator { .. } => {
+            ErlangSourceBuilderPosition::UnaryOperator => {
                 self.position.pop();
             }
 
@@ -2766,7 +2766,7 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::FunctionStatement { .. }
             | ErlangSourceBuilderPosition::AnonymousFunctionStatement { .. }
             | ErlangSourceBuilderPosition::DocAttribute
-            | ErlangSourceBuilderPosition::UnaryOperator { .. }
+            | ErlangSourceBuilderPosition::UnaryOperator
             | ErlangSourceBuilderPosition::Case { .. }
             | ErlangSourceBuilderPosition::BinaryOperator { .. }
             | ErlangSourceBuilderPosition::CaseClause { .. }
@@ -2888,7 +2888,7 @@ impl ErlangSourceBuilder {
                     },
                 ..
             }
-            | ErlangSourceBuilderPosition::UnaryOperator { .. }
+            | ErlangSourceBuilderPosition::UnaryOperator
             | ErlangSourceBuilderPosition::BinaryOperator { .. }
             | ErlangSourceBuilderPosition::Case { .. }
             | ErlangSourceBuilderPosition::Map { .. }
@@ -3069,7 +3069,7 @@ impl ErlangSourceBuilder {
             ErlangSourceBuilderPosition::MapField { .. }
             | ErlangSourceBuilderPosition::RecordField { .. }
             | ErlangSourceBuilderPosition::MatchPattern { .. }
-            | ErlangSourceBuilderPosition::UnaryOperator { .. }
+            | ErlangSourceBuilderPosition::UnaryOperator
             | ErlangSourceBuilderPosition::List { .. }
             | ErlangSourceBuilderPosition::BinaryOperator { .. }
             | ErlangSourceBuilderPosition::MatchOperator { .. }
@@ -3136,7 +3136,7 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::FunctionStatement { .. }
             | ErlangSourceBuilderPosition::AnonymousFunctionStatement { .. }
             | ErlangSourceBuilderPosition::List { .. }
-            | ErlangSourceBuilderPosition::UnaryOperator { .. }
+            | ErlangSourceBuilderPosition::UnaryOperator
             | ErlangSourceBuilderPosition::Tuple { .. }
             | ErlangSourceBuilderPosition::TuplePattern { .. }
             | ErlangSourceBuilderPosition::BitArray { .. }
@@ -3427,7 +3427,7 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::BitArray { .. }
             | ErlangSourceBuilderPosition::Map { .. }
             | ErlangSourceBuilderPosition::Block { .. }
-            | ErlangSourceBuilderPosition::UnaryOperator { .. }
+            | ErlangSourceBuilderPosition::UnaryOperator
             | ErlangSourceBuilderPosition::FunctionType {
                 expected:
                     ExpectedFunctionTypeItem::Arguments { .. } | ExpectedFunctionTypeItem::ReturnType,

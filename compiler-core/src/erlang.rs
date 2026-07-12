@@ -314,7 +314,7 @@ impl<'a> Generator<'a> {
             // In that case all type variables are phantom type variables!
             ([], _) if let Some((module, type_name, _)) = external_erlang => {
                 let type_ =
-                    builder.start_remote_named_type(ErlangModuleName::new(&module), type_name);
+                    builder.start_remote_named_type(ErlangModuleName::new(module), type_name);
                 for type_variable in phantom_type_variables {
                     builder.type_variable(&type_variable);
                 }
@@ -637,7 +637,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 let open_function =
                     builder.start_function(&function_name, arity, arguments.clone());
                 let call = builder
-                    .start_remote_call(ErlangModuleName::new(&module), external_function_name);
+                    .start_remote_call(ErlangModuleName::new(module), external_function_name);
                 for argument in arguments {
                     builder.variable(&argument);
                 }
@@ -957,14 +957,14 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 ..
             } => match type_::collapse_links(type_.clone()).as_ref() {
                 Type::Fn { arguments, .. } => builder.function_reference(
-                    Some(ErlangModuleName::new(&module)),
+                    Some(ErlangModuleName::new(module)),
                     escape_erlang_existing_name(name),
                     arguments.len(),
                 ),
 
                 Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
                     let name = escape_erlang_existing_name(name);
-                    let call = builder.start_remote_call(ErlangModuleName::new(&module), name);
+                    let call = builder.start_remote_call(ErlangModuleName::new(module), name);
                     builder.end_call(call);
                 }
             },
@@ -1962,7 +1962,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 if *module == self.module_generator.module.name {
                     builder.function_reference(None, name, *arity)
                 } else {
-                    builder.function_reference(Some(ErlangModuleName::new(&module)), name, *arity)
+                    builder.function_reference(Some(ErlangModuleName::new(module)), name, *arity)
                 }
             }
 
@@ -1978,7 +1978,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 name,
                 ..
             } => builder.function_reference(
-                Some(ErlangModuleName::new(&module)),
+                Some(ErlangModuleName::new(module)),
                 escape_erlang_existing_name(name),
                 *arity,
             ),
@@ -2001,7 +2001,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             FunctionCall::Call { module, name } => {
                 let call = if module != self.module_generator.module.name {
                     builder.start_remote_call(
-                        ErlangModuleName::new(&module),
+                        ErlangModuleName::new(module),
                         escape_erlang_existing_name(name),
                     )
                 } else {
@@ -2056,7 +2056,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             FunctionCall::Call { module, name } => {
                 let call = if module != self.module_generator.module.name {
                     builder.start_remote_call(
-                        ErlangModuleName::new(&module),
+                        ErlangModuleName::new(module),
                         escape_erlang_existing_name(name),
                     )
                 } else {
