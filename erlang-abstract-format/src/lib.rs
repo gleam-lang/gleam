@@ -32,26 +32,8 @@ pub struct ErlangModuleName(EcoString);
 impl ErlangModuleName {
     #[inline]
     /// Creates a new erlang module name from a Gleam module name.
-    pub fn new(gleam_module_name: EcoString) -> Self {
-        Self(gleam_module_name.replace("/", "@"))
-    }
-}
-
-impl From<&EcoString> for ErlangModuleName {
-    fn from(value: &EcoString) -> Self {
-        Self::new(value.clone())
-    }
-}
-
-impl From<EcoString> for ErlangModuleName {
-    fn from(value: EcoString) -> Self {
-        Self::new(value)
-    }
-}
-
-impl From<&str> for ErlangModuleName {
-    fn from(value: &str) -> Self {
-        Self::new(value.into())
+    pub fn new(gleam_module_name: &str) -> Self {
+        Self(gleam_module_name.replace("/", "@").into())
     }
 }
 

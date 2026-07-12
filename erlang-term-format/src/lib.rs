@@ -235,6 +235,43 @@ impl Builder {
 }
 
 #[cfg(test)]
+/// We want to test all of these functions against the actual values produced by
+/// Erlang when turning some data into a binary.
+///
+/// All the bytes you see in the assertions here were produced using the
+/// following bit of Erlang:
+///
+/// ```erl
+/// Binary = term_to_binary(SomeErlangData),
+/// io:format("~w~n", [Binary]).
+/// ```
+///
+/// This will turn any data structure into its binary representation and print
+/// its bytes we can then copy paste in these tests.
+///
+/// For example: if I were to test that a list of two atoms is correctly turned
+/// into its binary representation I would write the following:
+///
+/// ```erl
+/// Binary = term_to_binary([nil, ok]),
+/// io:format("~w~n", [Binary]).
+/// ```
+///
+/// And write a test like this:
+///
+/// ```ignore
+/// let mut etf = Builder::new();
+/// let list = etf.start_list();
+/// etf.atom("nil");
+/// etf.atom("ok");
+/// etf.end_list(list, 2);
+///
+/// assert_eq!(
+///     etf.into_vec(),
+///     [... the bytes I got from the Erlang code ...]
+/// )
+/// ```
+///
 mod tests {
     use std::{ops::Neg, str::FromStr};
 
