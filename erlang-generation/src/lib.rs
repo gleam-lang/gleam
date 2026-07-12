@@ -41,134 +41,89 @@ impl ErlangModuleName {
 /// Represents an open function that has yet to be closed.
 /// A function definition is started with `ErlangBuilder::start_function` and
 /// _must_ be closed using `ErlangBuilder::end_function`.
-pub struct Function {
-    clauses: erlang_term_format::List,
-    statements: erlang_term_format::List,
-}
+pub struct Function {}
 
 #[must_use]
 /// Represents an open function call that has yet to be closed.
-pub struct Call {
-    arguments: erlang_term_format::List,
-}
+pub struct Call {}
 
 #[must_use]
 /// Represents an open case expression that has yet to be closed.
-pub struct Case {
-    branches: erlang_term_format::List,
-}
+pub struct Case {}
 
 #[must_use]
 /// Represents an open case clause pattern that has yet to be generated.
-pub struct ClausePattern {
-    pattern: erlang_term_format::List,
-    guards: erlang_term_format::List,
-    body: erlang_term_format::List,
-}
+pub struct ClausePattern {}
 
 #[must_use]
 /// Represents a set of clause guards that has yet to be closed.
-pub struct ClauseGuards {
-    guards: erlang_term_format::List,
-    body: erlang_term_format::List,
-}
+pub struct ClauseGuards {}
 
 #[must_use]
 /// Represents an open clause body that has yet to be closed.
-pub struct ClauseBody {
-    body: erlang_term_format::List,
-}
+pub struct ClauseBody {}
 
 #[must_use]
 /// Represents an open tuple that has yet to be closed.
-pub struct Tuple {
-    items: erlang_term_format::List,
-}
+pub struct Tuple {}
 
 #[must_use]
 /// Represents an open map that has yet to be closed.
-pub struct Map {
-    items: erlang_term_format::List,
-}
+pub struct Map {}
 
 #[must_use]
 /// Represents an open bit array that has yet to be closed.
-pub struct BitArray {
-    segments: erlang_term_format::List,
-}
+pub struct BitArray {}
 
 #[must_use]
 /// Represents an open bit array pattern that has yet to be closed.
-pub struct BitArrayPattern {
-    segments: erlang_term_format::List,
-}
+pub struct BitArrayPattern {}
 
 #[must_use]
 /// Represents an open tuple type that has yet to be closed.
-pub struct TupleType {
-    items: erlang_term_format::List,
-}
+pub struct TupleType {}
 
 #[must_use]
 /// Represents an open tuple pattern that has yet to be closed.
-pub struct TuplePattern {
-    items: erlang_term_format::List,
-}
+pub struct TuplePattern {}
 
 #[must_use]
 /// Represents an open doc/moduledoc attribute.
-pub struct DocAttribute {
-    items: erlang_term_format::List,
-}
+pub struct DocAttribute {}
 
 #[must_use]
 /// Represents an open record attribute.
-pub struct RecordAttribute {
-    fields: erlang_term_format::List,
-}
+pub struct RecordAttribute {}
 
 #[must_use]
 /// Represents an open function type annotation that has yet to be closed after
 /// generating the arguments types and the return type.
-pub struct FunctionType {
-    types: erlang_term_format::List,
-}
+pub struct FunctionType {}
 
 #[must_use]
 /// Represents an open named type that has yet to be closed after generating
 /// the types it takes as an argument (if any).
-pub struct NamedType {
-    types: erlang_term_format::List,
-}
+pub struct NamedType {}
 
 #[must_use]
 /// Represents an open alternative type that has yet to be closed after
 /// generating all of its alternatives.
-pub struct UnionType {
-    alternatives: erlang_term_format::List,
-}
+pub struct UnionType {}
 
 #[must_use]
 /// Represents an open function type annotation that has yet to be closed after
 /// generating the arguments types and the return type.
-pub struct FunctionSpec {
-    representations: erlang_term_format::List,
-}
+pub struct FunctionSpec {}
 
 #[must_use]
 /// Represents an open block that has yet to be closed after generating the
 /// statements that go inside it.
-pub struct Block {
-    statements: erlang_term_format::List,
-}
+pub struct Block {}
 
 #[must_use]
 /// Represents an open list of arguments' types in a function type annotation
 /// that has yet to be closed.
-pub struct FunctionTypeArguments {
-    types: erlang_term_format::List,
-    arguments: erlang_term_format::List,
-}
+pub struct FunctionTypeArguments {}
 
 /// All the possible specifiers that can be used in a bit array segment.
 pub enum BitArraySegmentSpecifier {
@@ -1802,9 +1757,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.code.push_str("-doc(");
         self.position
             .push(ErlangSourceBuilderPosition::DocAttribute);
-        DocAttribute {
-            items: ErlangSourceBuilder::dummy_list(),
-        }
+        DocAttribute {}
     }
 
     fn start_moduledoc_attribute(&mut self) -> DocAttribute {
@@ -1812,14 +1765,11 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.code.push_str("-moduledoc(");
         self.position
             .push(ErlangSourceBuilderPosition::DocAttribute);
-        DocAttribute {
-            items: ErlangSourceBuilder::dummy_list(),
-        }
+        DocAttribute {}
     }
 
-    fn end_doc_attribute(&mut self, attribute: DocAttribute) {
+    fn end_doc_attribute(&mut self, _attribute: DocAttribute) {
         self.close_currently_open_item();
-        attribute.items.consume();
     }
 
     fn compile_attribute<'a>(&mut self, arguments: impl IntoIterator<Item = &'a str>) {
@@ -1858,14 +1808,11 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.position
             .push(ErlangSourceBuilderPosition::RecordAttribute { first: true });
 
-        RecordAttribute {
-            fields: ErlangSourceBuilder::dummy_list(),
-        }
+        RecordAttribute {}
     }
 
-    fn end_record_attribute(&mut self, record: RecordAttribute) {
+    fn end_record_attribute(&mut self, _record: RecordAttribute) {
         self.close_currently_open_item();
-        record.fields.consume();
     }
 
     fn record_field(&mut self) {
@@ -1882,14 +1829,11 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.code.push_str(&quote_atom_name(name));
         self.position
             .push(ErlangSourceBuilderPosition::FunctionSpec);
-        FunctionSpec {
-            representations: ErlangSourceBuilder::dummy_list(),
-        }
+        FunctionSpec {}
     }
 
-    fn end_function_spec(&mut self, function_spec: FunctionSpec) {
+    fn end_function_spec(&mut self, _function_spec: FunctionSpec) {
         self.close_currently_open_item();
-        function_spec.representations.consume();
     }
 
     fn type_spec<Name: AsRef<str>>(
@@ -1938,26 +1882,20 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
                 needs_wrapping,
             });
 
-        FunctionTypeArguments {
-            types: ErlangSourceBuilder::dummy_list(),
-            arguments: ErlangSourceBuilder::dummy_list(),
-        }
+        FunctionTypeArguments {}
     }
 
     fn end_function_type_arguments(
         &mut self,
-        function_type: FunctionTypeArguments,
+        _function_type: FunctionTypeArguments,
     ) -> FunctionType {
         self.close_currently_open_item();
-        function_type.arguments.consume();
-        FunctionType {
-            types: function_type.types,
-        }
+
+        FunctionType {}
     }
 
-    fn end_function_type(&mut self, function_type: FunctionType) {
+    fn end_function_type(&mut self, _function_type: FunctionType) {
         self.close_currently_open_item();
-        function_type.types.consume();
     }
 
     fn start_named_type(&mut self, name: &str) -> NamedType {
@@ -1967,9 +1905,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.code.push_str(&quote_atom_name(name));
         self.code.push('(');
 
-        NamedType {
-            types: ErlangSourceBuilder::dummy_list(),
-        }
+        NamedType {}
     }
 
     fn start_remote_named_type(&mut self, module: ErlangModuleName, name: &str) -> NamedType {
@@ -1981,14 +1917,11 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.code.push_str(&quote_atom_name(name));
         self.code.push('(');
 
-        NamedType {
-            types: ErlangSourceBuilder::dummy_list(),
-        }
+        NamedType {}
     }
 
-    fn end_named_type(&mut self, named_type: NamedType) {
+    fn end_named_type(&mut self, _named_type: NamedType) {
         self.close_currently_open_item();
-        named_type.types.consume();
     }
 
     fn start_tuple_type(&mut self) -> TupleType {
@@ -1997,14 +1930,11 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
             .push(ErlangSourceBuilderPosition::TupleType { first: true });
         self.code.push('{');
 
-        TupleType {
-            items: ErlangSourceBuilder::dummy_list(),
-        }
+        TupleType {}
     }
 
-    fn end_tuple_type(&mut self, tuple: TupleType) {
+    fn end_tuple_type(&mut self, _tuple: TupleType) {
         self.close_currently_open_item();
-        tuple.items.consume();
     }
 
     fn start_union_type(&mut self) -> UnionType {
@@ -2012,14 +1942,11 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.position
             .push(ErlangSourceBuilderPosition::UnionType { first: true });
 
-        UnionType {
-            alternatives: ErlangSourceBuilder::dummy_list(),
-        }
+        UnionType {}
     }
 
-    fn end_union_type(&mut self, union_type: UnionType) {
+    fn end_union_type(&mut self, _union_type: UnionType) {
         self.close_currently_open_item();
-        union_type.alternatives.consume();
     }
 
     fn type_variable(&mut self, name: &str) {
@@ -2057,10 +1984,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.position
             .push(ErlangSourceBuilderPosition::FunctionStatement { first: true });
 
-        Function {
-            clauses: ErlangSourceBuilder::dummy_list(),
-            statements: ErlangSourceBuilder::dummy_list(),
-        }
+        Function {}
     }
 
     fn start_anonymous_function<Name: AsRef<str>>(
@@ -2085,16 +2009,11 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.position
             .push(ErlangSourceBuilderPosition::AnonymousFunctionStatement { first: true });
 
-        Function {
-            clauses: ErlangSourceBuilder::dummy_list(),
-            statements: ErlangSourceBuilder::dummy_list(),
-        }
+        Function {}
     }
 
-    fn end_function(&mut self, function: Function) {
+    fn end_function(&mut self, _function: Function) {
         self.close_currently_open_item();
-        function.clauses.consume();
-        function.statements.consume();
     }
 
     fn start_block(&mut self) -> Block {
@@ -2104,14 +2023,11 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.position
             .push(ErlangSourceBuilderPosition::Block { first: true });
 
-        Block {
-            statements: ErlangSourceBuilder::dummy_list(),
-        }
+        Block {}
     }
 
-    fn end_block(&mut self, block: Block) {
+    fn end_block(&mut self, _block: Block) {
         self.close_currently_open_item();
-        block.statements.consume();
     }
 
     fn start_remote_call(&mut self, module: ErlangModuleName, function: &str) -> Call {
@@ -2138,9 +2054,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
                 expected: ExpectedCallItem::Arguments { first: true },
                 called_item_needs_wrapping: false,
             });
-        Call {
-            arguments: ErlangSourceBuilder::dummy_list(),
-        }
+        Call {}
     }
 
     fn start_call(&mut self) -> Call {
@@ -2164,14 +2078,11 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
                 expected: ExpectedCallItem::FunctionToBeCalled,
                 called_item_needs_wrapping: false,
             });
-        Call {
-            arguments: ErlangSourceBuilder::dummy_list(),
-        }
+        Call {}
     }
 
-    fn end_call(&mut self, call: Call) {
+    fn end_call(&mut self, _call: Call) {
         self.close_currently_open_item();
-        call.arguments.consume();
     }
 
     fn start_tuple(&mut self) -> Tuple {
@@ -2180,14 +2091,11 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.position
             .push(ErlangSourceBuilderPosition::Tuple { first: true });
 
-        Tuple {
-            items: ErlangSourceBuilder::dummy_list(),
-        }
+        Tuple {}
     }
 
-    fn end_tuple(&mut self, tuple: Tuple) {
+    fn end_tuple(&mut self, _tuple: Tuple) {
         self.close_currently_open_item();
-        tuple.items.consume();
     }
 
     fn start_map(&mut self) -> Map {
@@ -2196,14 +2104,11 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.indentation += INDENT;
         self.position
             .push(ErlangSourceBuilderPosition::Map { first: true });
-        Map {
-            items: ErlangSourceBuilder::dummy_list(),
-        }
+        Map {}
     }
 
-    fn end_map(&mut self, map: Map) {
+    fn end_map(&mut self, _map: Map) {
         self.close_currently_open_item();
-        map.items.consume();
     }
 
     fn map_field(&mut self) {
@@ -2222,14 +2127,11 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
             first: true,
         });
 
-        BitArray {
-            segments: ErlangSourceBuilder::dummy_list(),
-        }
+        BitArray {}
     }
 
-    fn end_bit_array(&mut self, bit_array: BitArray) {
+    fn end_bit_array(&mut self, _bit_array: BitArray) {
         self.close_currently_open_item();
-        bit_array.segments.consume();
     }
 
     fn bit_array_segment(&mut self) {
@@ -2322,14 +2224,11 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
             expected: ExpectedCaseItem::Subject,
         });
 
-        Case {
-            branches: ErlangSourceBuilder::dummy_list(),
-        }
+        Case {}
     }
 
-    fn end_case(&mut self, case: Case) {
+    fn end_case(&mut self, _case: Case) {
         self.close_currently_open_item();
-        case.branches.consume();
     }
 
     fn start_case_clause(&mut self) -> ClausePattern {
@@ -2337,41 +2236,30 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.position.push(ErlangSourceBuilderPosition::CaseClause {
             expected: ExpectedCaseClauseItem::Pattern,
         });
-        ClausePattern {
-            pattern: ErlangSourceBuilder::dummy_list(),
-            guards: ErlangSourceBuilder::dummy_list(),
-            body: ErlangSourceBuilder::dummy_list(),
-        }
+        ClausePattern {}
     }
 
-    fn end_clause_pattern(&mut self, clause_pattern: ClausePattern) -> ClauseGuards {
+    fn end_clause_pattern(&mut self, _clause_pattern: ClausePattern) -> ClauseGuards {
         self.close_currently_open_item();
         self.position.push(ErlangSourceBuilderPosition::CaseClause {
             expected: ExpectedCaseClauseItem::Guards { first: true },
         });
-        clause_pattern.pattern.consume();
-        ClauseGuards {
-            guards: clause_pattern.guards,
-            body: clause_pattern.body,
-        }
+
+        ClauseGuards {}
     }
 
-    fn end_clause_guards(&mut self, clause_guards: ClauseGuards) -> ClauseBody {
+    fn end_clause_guards(&mut self, _clause_guards: ClauseGuards) -> ClauseBody {
         self.close_currently_open_item();
         self.indentation += INDENT;
         self.position.push(ErlangSourceBuilderPosition::CaseClause {
             expected: ExpectedCaseClauseItem::Body { first: true },
         });
 
-        clause_guards.guards.consume();
-        ClauseBody {
-            body: clause_guards.body,
-        }
+        ClauseBody {}
     }
 
-    fn end_clause_body(&mut self, clause_body: ClauseBody) {
+    fn end_clause_body(&mut self, _clause_body: ClauseBody) {
         self.close_currently_open_item();
-        clause_body.body.consume();
     }
 
     fn variable(&mut self, name: &str) {
@@ -2480,14 +2368,11 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.code.push('{');
         self.position
             .push(ErlangSourceBuilderPosition::TuplePattern { first: true });
-        TuplePattern {
-            items: ErlangSourceBuilder::dummy_list(),
-        }
+        TuplePattern {}
     }
 
-    fn end_tuple_pattern(&mut self, tuple: TuplePattern) {
+    fn end_tuple_pattern(&mut self, _tuple: TuplePattern) {
         self.close_currently_open_item();
-        tuple.items.consume();
     }
 
     fn start_bit_array_pattern(&mut self) -> BitArrayPattern {
@@ -2498,14 +2383,11 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
             first: true,
         });
 
-        BitArrayPattern {
-            segments: ErlangSourceBuilder::dummy_list(),
-        }
+        BitArrayPattern {}
     }
 
-    fn end_bit_array_pattern(&mut self, bit_array: BitArrayPattern) {
+    fn end_bit_array_pattern(&mut self, _bit_array: BitArrayPattern) {
         self.close_currently_open_item();
-        bit_array.segments.consume();
     }
 
     fn cons_list_pattern(&mut self) {
@@ -2581,10 +2463,6 @@ fn format_float(number: f64) -> String {
 const INDENT: usize = 4;
 
 impl ErlangSourceBuilder {
-    fn dummy_list() -> erlang_term_format::List {
-        erlang_term_format::List::new(0)
-    }
-
     /// This has to be called before generating any new top level form: those
     /// are specs like `-spec`, `-type`, `-opaque`, doc attributes like
     /// `-doc` and `-moduledoc`, and function definitions.
