@@ -19,7 +19,9 @@ use crate::{
 };
 use camino::Utf8Path;
 use ecow::{EcoString, eco_format};
-use erlang_abstract_format::{BitArraySegmentSpecifier, Eaf, ErlangModuleName, PrettyEaf};
+use erlang_generation::{
+    BitArraySegmentSpecifier, ErlangBuilder, ErlangModuleName, ErlangSourceBuilder,
+};
 use itertools::Itertools;
 use num_bigint::BigInt;
 use num_traits::Signed;
@@ -32,10 +34,10 @@ use std::{collections::HashMap, ops::Deref, sync::Arc};
 #[must_use]
 struct RuntimeError {
     /// This is the map that is going to be thrown by the `erlang:error` call.
-    error_map: erlang_abstract_format::Map,
+    error_map: erlang_generation::Map,
     /// This is the call to `erlang:error` that will throw the error, with the
     /// map as an argument.
-    erlang_error_call: erlang_abstract_format::Call,
+    erlang_error_call: erlang_generation::Call,
 }
 
 /// Represents all the different kind of runtime errors that Gleam can raise.
@@ -211,7 +213,7 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn module_document<Output>(&mut self, eaf: &mut impl Eaf<Output>) {
+    fn module_document<Output>(&mut self, builder: &mut impl ErlangBuilder<Output>) {
         // We need to know which private functions are referenced in importable
         // constants so that we can export them anyway in the generated Erlang.
         // This is because otherwise when the constant is used in another module it
@@ -221,7 +223,7 @@ impl<'a> Generator<'a> {
 
         // We add a `-compile` attribute at the top of each module to instruct
         // the Erlang compiler.
-        eaf.compile_attribute([
+        builder.compile_attribute([
             "no_auto_import",
             "nowarn_ignored",
             "nowarn_unused_vars",
@@ -232,49 +234,53 @@ impl<'a> Generator<'a> {
 
         // We then need to add an `-export` attribute for all the module's
         // public functions.
-        eaf.export_attribute(
+        builder.export_attribute(
             (self.module.definitions.functions.iter())
                 .filter_map(|function| function_export(function, &overridden_publicity)),
         );
         // We do the same but with types.
-        eaf.export_type_attribute(self.module.definitions.custom_types.iter().map(type_export));
+        builder.export_type_attribute(self.module.definitions.custom_types.iter().map(type_export));
 
         // We also add a `-module_doc` comment at the beginning of the module
         // with its documentation.
-        self.module_documentation(eaf);
+        self.module_documentation(builder);
 
         // Then we generate `-type` definitions for the module's types.
         for custom_type in &self.module.definitions.custom_types {
-            self.type_definition(eaf, custom_type);
+            self.type_definition(builder, custom_type);
         }
 
         // And finally generate all the functions that the module defined.
         for function in &self.module.definitions.functions {
-            FunctionGenerator::new(function, self).module_function(eaf, function);
+            FunctionGenerator::new(function, self).module_function(builder, function);
         }
     }
 
-    fn module_documentation<Output>(&mut self, eaf: &mut impl Eaf<Output>) {
+    fn module_documentation<Output>(&mut self, builder: &mut impl ErlangBuilder<Output>) {
         if self.module.type_info.is_internal {
             // The module is internal so we need to add a `-moduledoc(false).`
             // attribute to make sure its documentation is hidden.
-            let doc = eaf.start_moduledoc_attribute();
-            eaf.atom("false");
-            eaf.end_doc_attribute(doc);
+            let doc = builder.start_moduledoc_attribute();
+            builder.atom("false");
+            builder.end_doc_attribute(doc);
         } else if self.module.documentation.is_empty() {
             // The module is not internal, but it has no docs.
             // We don't have to do anything.
         } else {
             // The module has some documentation that we're going to include
             // with a `-moduledoc` attribute.
-            let doc = eaf.start_moduledoc_attribute();
+            let doc = builder.start_moduledoc_attribute();
             let documentation = &self.module.documentation.iter().join("\n");
-            eaf.string(documentation);
-            eaf.end_doc_attribute(doc);
+            builder.string(documentation);
+            builder.end_doc_attribute(doc);
         };
     }
 
-    fn type_definition<Output>(&self, eaf: &mut impl Eaf<Output>, custom_type: &TypedCustomType) {
+    fn type_definition<Output>(
+        &self,
+        builder: &mut impl ErlangBuilder<Output>,
+        custom_type: &TypedCustomType,
+    ) {
         let TypedCustomType {
             name,
             constructors,
@@ -287,7 +293,7 @@ impl<'a> Generator<'a> {
         let name = erl_safe_type_name(to_snake_case(name));
 
         // We start the type spec.
-        eaf.type_spec(
+        builder.type_spec(
             *opaque,
             &name,
             typed_parameters
@@ -307,42 +313,43 @@ impl<'a> Generator<'a> {
             // it corresponds to in Erlang.
             // In that case all type variables are phantom type variables!
             ([], _) if let Some((module, type_name, _)) = external_erlang => {
-                let type_ = eaf.start_remote_named_type(ErlangModuleName::new(&module), type_name);
+                let type_ =
+                    builder.start_remote_named_type(ErlangModuleName::new(&module), type_name);
                 for type_variable in phantom_type_variables {
-                    eaf.type_variable(&type_variable);
+                    builder.type_variable(&type_variable);
                 }
-                eaf.end_named_type(type_);
+                builder.end_named_type(type_);
             }
             // This is an external type with no external annotation and no
             // phantom type variables. It is just `any()`.
             ([], false) => {
-                let any = eaf.start_named_type("any");
-                eaf.end_named_type(any);
+                let any = builder.start_named_type("any");
+                builder.end_named_type(any);
             }
             // This is an external type with no external annotation and some
             // phantom type variables, we need to add an alternative to use
             // them: `any() | {gleam_phantom, A, B, ...}`
             ([], true) => {
-                let union = eaf.start_union_type();
-                let any = eaf.start_named_type("any");
-                eaf.end_named_type(any);
-                self.phantom_type(eaf, phantom_type_variables);
-                eaf.end_union_type(union);
+                let union = builder.start_union_type();
+                let any = builder.start_named_type("any");
+                builder.end_named_type(any);
+                self.phantom_type(builder, phantom_type_variables);
+                builder.end_union_type(union);
             }
             // This is an external type with a single constructor, no need to
             // make it a union.
-            ([constructor], false) => self.constructor_type(eaf, constructor),
+            ([constructor], false) => self.constructor_type(builder, constructor),
             // This is an external type with multiple constructors, we have to
             // turn it into a union!
             (constructors, has_phantom_type_variables) => {
-                let union = eaf.start_union_type();
+                let union = builder.start_union_type();
                 for constructor in constructors {
-                    self.constructor_type(eaf, constructor);
+                    self.constructor_type(builder, constructor);
                 }
                 if has_phantom_type_variables {
-                    self.phantom_type(eaf, phantom_type_variables);
+                    self.phantom_type(builder, phantom_type_variables);
                 }
-                eaf.end_union_type(union);
+                builder.end_union_type(union);
             }
         }
     }
@@ -361,24 +368,24 @@ impl<'a> Generator<'a> {
     ///
     fn constructor_type<Output>(
         &self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         constructor: &RecordConstructor<Arc<Type>>,
     ) {
         let constructor_atom = to_snake_case(&constructor.name);
         if constructor.arguments.is_empty() {
             // A constructor with no fields becomes a regular atom on the Erlang
             // target.
-            eaf.literal_atom_type(&constructor_atom);
+            builder.literal_atom_type(&constructor_atom);
         } else {
             // Othwerwise, it is a tuple tagged with the atom with the
             // constructor name.
             let generator = TypeGenerator::new(&self.module.name);
-            let tuple = eaf.start_tuple_type();
-            eaf.literal_atom_type(&constructor_atom);
+            let tuple = builder.start_tuple_type();
+            builder.literal_atom_type(&constructor_atom);
             for argument in &constructor.arguments {
-                generator.type_(eaf, &argument.type_);
+                generator.type_(builder, &argument.type_);
             }
-            eaf.end_tuple_type(tuple);
+            builder.end_tuple_type(tuple);
         }
     }
 
@@ -406,15 +413,15 @@ impl<'a> Generator<'a> {
     ///
     fn phantom_type<Output>(
         &self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         phantom_type_variables: Vec<EcoString>,
     ) {
-        let phantom_tuple = eaf.start_tuple_type();
-        eaf.literal_atom_type("gleam_phantom");
+        let phantom_tuple = builder.start_tuple_type();
+        builder.literal_atom_type("gleam_phantom");
         for phantom_type_variable in phantom_type_variables {
-            eaf.type_variable(&phantom_type_variable);
+            builder.type_variable(&phantom_type_variable);
         }
-        eaf.end_tuple_type(phantom_tuple);
+        builder.end_tuple_type(phantom_tuple);
     }
 }
 
@@ -569,7 +576,11 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     /// if there's no code to be generated at all!
     /// For example if the function is unused, or if the function is a private
     /// Erlang external (in which case, it would be inlined instead).
-    fn module_function<Output>(&mut self, eaf: &mut impl Eaf<Output>, function: &'a TypedFunction) {
+    fn module_function<Output>(
+        &mut self,
+        builder: &mut impl ErlangBuilder<Output>,
+        function: &'a TypedFunction,
+    ) {
         // We don't generate any code for unused functions.
         if self
             .module_generator
@@ -595,14 +606,14 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         let function_name = EcoString::from(escape_erlang_existing_name(self.function_name));
 
         // Then we add the function's documentation and type annotation.
-        eaf.file_attribute(
+        builder.file_attribute(
             &self.module_generator.module_source_path,
             self.module_generator
                 .line_numbers
                 .line_number(function.location.start),
         );
-        self.function_spec_attribute(eaf, &function_name, function);
-        self.function_doc_attribute(eaf, function);
+        self.function_spec_attribute(builder, &function_name, function);
+        self.function_doc_attribute(builder, function);
 
         // Finally we start generating code for the function itself, how we do
         // it depends if the function is external or not.
@@ -612,9 +623,9 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // its statements.
             None => {
                 let arguments = self.function_arguments_names(&function.arguments, false);
-                let open_function = eaf.start_function(&function_name, arity, arguments);
-                self.statement_sequence(eaf, &function.body);
-                eaf.end_function(open_function);
+                let open_function = builder.start_function(&function_name, arity, arguments);
+                self.statement_sequence(builder, &function.body);
+                builder.end_function(open_function);
             }
 
             // An external function consists of just a remote call being
@@ -623,14 +634,15 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 let arguments = self
                     .function_arguments_names(&function.arguments, true)
                     .collect_vec();
-                let open_function = eaf.start_function(&function_name, arity, arguments.clone());
-                let call =
-                    eaf.start_remote_call(ErlangModuleName::new(&module), external_function_name);
+                let open_function =
+                    builder.start_function(&function_name, arity, arguments.clone());
+                let call = builder
+                    .start_remote_call(ErlangModuleName::new(&module), external_function_name);
                 for argument in arguments {
-                    eaf.variable(&argument);
+                    builder.variable(&argument);
                 }
-                eaf.end_call(call);
-                eaf.end_function(open_function);
+                builder.end_call(call);
+                builder.end_function(open_function);
             }
         }
     }
@@ -639,7 +651,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     ///
     fn function_spec_attribute<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         function_name: &EcoString,
         function: &'a Function<Arc<Type>, TypedExpr>,
     ) {
@@ -657,18 +669,22 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         let generator = TypeGenerator::new(module_name).with_var_usages(var_usages);
 
         // We can then start generating the function spec.
-        let spec = eaf.start_function_spec(function_name, function.arguments.len());
-        let function_type = eaf.start_function_type();
+        let spec = builder.start_function_spec(function_name, function.arguments.len());
+        let function_type = builder.start_function_type();
         for argument in &function.arguments {
-            generator.type_(eaf, &argument.type_)
+            generator.type_(builder, &argument.type_)
         }
-        let function_type = eaf.end_function_type_arguments(function_type);
-        generator.type_(eaf, &function.return_type);
-        eaf.end_function_type(function_type);
-        eaf.end_function_spec(spec);
+        let function_type = builder.end_function_type_arguments(function_type);
+        generator.type_(builder, &function.return_type);
+        builder.end_function_type(function_type);
+        builder.end_function_spec(spec);
     }
 
-    fn function_doc_attribute<Output>(&self, eaf: &mut impl Eaf<Output>, function: &TypedFunction) {
+    fn function_doc_attribute<Output>(
+        &self,
+        builder: &mut impl ErlangBuilder<Output>,
+        function: &TypedFunction,
+    ) {
         // If a function is marked as internal or comes from an internal module
         // we want to hide its documentation in the Erlang shell!
         // So the doc directive will look like this: `-doc(false).`
@@ -676,15 +692,15 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             self.module_generator.module.type_info.is_internal || function.publicity.is_internal();
 
         if is_internal {
-            let attribute = eaf.start_doc_attribute();
-            eaf.atom("false");
-            eaf.end_doc_attribute(attribute);
+            let attribute = builder.start_doc_attribute();
+            builder.atom("false");
+            builder.end_doc_attribute(attribute);
         } else if let Some((_, documentation)) = &function.documentation
             && !documentation.is_empty()
         {
-            let attribute = eaf.start_doc_attribute();
-            eaf.string(documentation);
-            eaf.end_doc_attribute(attribute);
+            let attribute = builder.start_doc_attribute();
+            builder.string(documentation);
+            builder.end_doc_attribute(attribute);
         }
     }
 
@@ -742,18 +758,18 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
     fn statement_sequence<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         statements: &'a [TypedStatement],
     ) {
         // We go over each statement one by one and produce the code they need.
         for i in 0..statements.len() {
             match statements.get(i).expect("statement in range") {
-                Statement::Expression(expression) => self.expr(eaf, expression),
-                Statement::Use(use_) => self.expr(eaf, &use_.call),
-                Statement::Assert(assert) => self.assert(eaf, assert),
+                Statement::Expression(expression) => self.expr(builder, expression),
+                Statement::Use(use_) => self.expr(builder, &use_.call),
+                Statement::Assert(assert) => self.assert(builder, assert),
                 Statement::Assignment(assignment) => match &assignment.kind {
                     AssignmentKind::Let | AssignmentKind::Generated => {
-                        self.let_(eaf, &assignment.value, &assignment.pattern)
+                        self.let_(builder, &assignment.value, &assignment.pattern)
                     }
                     // Let asserts are slightly different from everything else:
                     // A let assert is compiled to a case expression where we
@@ -783,7 +799,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                         message, location, ..
                     } => {
                         return self.let_assert(
-                            eaf,
+                            builder,
                             &assignment.value,
                             &assignment.pattern,
                             message.as_ref(),
@@ -796,17 +812,21 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         }
     }
 
-    fn expr<Output>(&mut self, eaf: &mut impl Eaf<Output>, expression: &'a TypedExpr) {
+    fn expr<Output>(
+        &mut self,
+        builder: &mut impl ErlangBuilder<Output>,
+        expression: &'a TypedExpr,
+    ) {
         match expression {
             //
             // Simple scalar values, and blocks.
             //
-            TypedExpr::Int { int_value, .. } => eaf.int(int_value.clone()),
-            TypedExpr::Float { float_value, .. } => eaf.float(float_value.value()),
-            TypedExpr::String { value, .. } => eaf.string(value),
+            TypedExpr::Int { int_value, .. } => builder.int(int_value.clone()),
+            TypedExpr::Float { float_value, .. } => builder.float(float_value.value()),
+            TypedExpr::String { value, .. } => builder.string(value),
             TypedExpr::Var {
                 name, constructor, ..
-            } => self.var(eaf, name, constructor),
+            } => self.var(builder, name, constructor),
             TypedExpr::Block { statements, .. } => {
                 // If the block has a single expression we don't bother wrapping
                 // it in an additional `begin ... end` block.
@@ -814,11 +834,11 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 if statements.len() == 1
                     && let Statement::Expression(expression) = statements.first()
                 {
-                    self.maybe_block_expr(eaf, expression);
+                    self.maybe_block_expr(builder, expression);
                 } else {
-                    let block = eaf.start_block();
-                    self.statement_sequence(eaf, statements);
-                    eaf.end_block(block)
+                    let block = builder.start_block();
+                    self.statement_sequence(builder, statements);
+                    builder.end_block(block)
                 }
             }
 
@@ -826,60 +846,60 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // Operators.
             //
             TypedExpr::NegateBool { value, .. } => {
-                eaf.unary_operator("not");
-                self.maybe_block_expr(eaf, value)
+                builder.unary_operator("not");
+                self.maybe_block_expr(builder, value)
             }
             TypedExpr::NegateInt { value, .. } => {
-                eaf.unary_operator("-");
-                self.maybe_block_expr(eaf, value)
+                builder.unary_operator("-");
+                self.maybe_block_expr(builder, value)
             }
             TypedExpr::BinOp {
                 operator,
                 left,
                 right,
                 ..
-            } => self.bin_op(eaf, operator, left, right),
+            } => self.bin_op(builder, operator, left, right),
 
             //
             // BitArrays, Lists, and Tuples.
             //
             TypedExpr::BitArray { segments, .. } => {
-                let bit_array = eaf.start_bit_array();
+                let bit_array = builder.start_bit_array();
                 for segment in segments {
-                    self.bit_array_expression_segment(eaf, segment);
+                    self.bit_array_expression_segment(builder, segment);
                 }
-                eaf.end_bit_array(bit_array);
+                builder.end_bit_array(bit_array);
             }
             TypedExpr::List { elements, tail, .. } => {
                 // We generate all the items of the list as cons cells.
                 for element in elements {
-                    eaf.cons_list();
-                    self.maybe_block_expr(eaf, element);
+                    builder.cons_list();
+                    self.maybe_block_expr(builder, element);
                 }
                 // Finally we close the list with the tail, or an empty list
                 // (so that we're sure we're building proper Erlang lists).
                 if let Some(tail) = tail {
-                    self.maybe_block_expr(eaf, tail);
+                    self.maybe_block_expr(builder, tail);
                 } else {
-                    eaf.empty_list();
+                    builder.empty_list();
                 }
             }
             TypedExpr::Tuple { elements, .. } => {
-                let tuple = eaf.start_tuple();
+                let tuple = builder.start_tuple();
                 for element in elements {
-                    self.maybe_block_expr(eaf, element);
+                    self.maybe_block_expr(builder, element);
                 }
-                eaf.end_tuple(tuple)
+                builder.end_tuple(tuple)
             }
 
             //
             // Accessing data inside tuples, and records.
             // They're all tuple accesses at the end of the day!
             //
-            TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(eaf, tuple, *index),
+            TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(builder, tuple, *index),
             TypedExpr::RecordAccess { record, index, .. }
             | TypedExpr::PositionalAccess { record, index, .. } => {
-                self.tuple_index(eaf, record, index + 1)
+                self.tuple_index(builder, record, index + 1)
             }
 
             //
@@ -888,7 +908,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             TypedExpr::ModuleSelect {
                 constructor: ModuleValueConstructor::Record { name, arity: 0, .. },
                 ..
-            } => eaf.atom(&to_snake_case(name)),
+            } => builder.atom(&to_snake_case(name)),
             TypedExpr::RecordUpdate {
                 updated_record_assigned_name,
                 updated_record,
@@ -899,14 +919,14 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 // If the record value itself needs to be bound to a variable
                 // before the update, we define it.
                 if let Some(name) = updated_record_assigned_name.as_ref() {
-                    eaf.match_operator();
-                    eaf.variable_pattern(
+                    builder.match_operator();
+                    builder.variable_pattern(
                         &self.new_erlang_variable(name, updated_record.location()),
                     );
-                    self.maybe_block_expr(eaf, updated_record);
+                    self.maybe_block_expr(builder, updated_record);
                 }
                 // Then a record update is simply a call!
-                self.call(eaf, constructor, arguments)
+                self.call(builder, constructor, arguments)
             }
 
             //
@@ -917,15 +937,15 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             } => {
                 let outer_scope = self.taken_names.clone();
                 let argument_names = self.function_arguments_names(arguments, false);
-                let function = eaf.start_anonymous_function(argument_names);
-                self.statement_sequence(eaf, body);
-                eaf.end_function(function);
+                let function = builder.start_anonymous_function(argument_names);
+                self.statement_sequence(builder, body);
+                builder.end_function(function);
                 self.taken_names = outer_scope;
             }
             TypedExpr::ModuleSelect {
                 constructor: ModuleValueConstructor::Record { name, arity, .. },
                 ..
-            } => self.record_builder_anonymous_function(eaf, name, *arity as usize),
+            } => self.record_builder_anonymous_function(builder, name, *arity as usize),
             TypedExpr::ModuleSelect {
                 type_,
                 constructor:
@@ -936,7 +956,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     | ModuleValueConstructor::Fn { module, name, .. },
                 ..
             } => match type_::collapse_links(type_.clone()).as_ref() {
-                Type::Fn { arguments, .. } => eaf.function_reference(
+                Type::Fn { arguments, .. } => builder.function_reference(
                     Some(ErlangModuleName::new(&module)),
                     escape_erlang_existing_name(name),
                     arguments.len(),
@@ -944,21 +964,21 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
                 Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
                     let name = escape_erlang_existing_name(name);
-                    let call = eaf.start_remote_call(ErlangModuleName::new(&module), name);
-                    eaf.end_call(call);
+                    let call = builder.start_remote_call(ErlangModuleName::new(&module), name);
+                    builder.end_call(call);
                 }
             },
 
             //
             // Calling functions.
             //
-            TypedExpr::Call { fun, arguments, .. } => self.call(eaf, fun, arguments),
+            TypedExpr::Call { fun, arguments, .. } => self.call(builder, fun, arguments),
             TypedExpr::Pipeline {
                 first_value,
                 assignments,
                 finally,
                 ..
-            } => self.pipeline(eaf, first_value, assignments, finally),
+            } => self.pipeline(builder, first_value, assignments, finally),
 
             //
             // Todo, panic, and echo.
@@ -967,23 +987,23 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 message, location, ..
             } => {
                 let error = self.start_runtime_error(
-                    eaf,
+                    builder,
                     RuntimeErrorKind::Todo,
                     *location,
                     message.as_deref(),
                 );
-                self.end_runtime_error(eaf, error);
+                self.end_runtime_error(builder, error);
             }
             TypedExpr::Panic {
                 location, message, ..
             } => {
                 let error = self.start_runtime_error(
-                    eaf,
+                    builder,
                     RuntimeErrorKind::Panic,
                     *location,
                     message.as_deref(),
                 );
-                self.end_runtime_error(eaf, error);
+                self.end_runtime_error(builder, error);
             }
             TypedExpr::Echo {
                 expression,
@@ -991,7 +1011,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 message,
                 ..
             } => self.echo(
-                eaf,
+                builder,
                 *location,
                 message.as_deref(),
                 EchoPrintedValue::Expression {
@@ -1007,14 +1027,14 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             TypedExpr::ModuleSelect {
                 constructor: ModuleValueConstructor::Constant { literal, .. },
                 ..
-            } => self.inlined_constant(eaf, literal),
+            } => self.inlined_constant(builder, literal),
 
             //
             // Control flow.
             //
             TypedExpr::Case {
                 subjects, clauses, ..
-            } => self.case(eaf, subjects, clauses),
+            } => self.case(builder, subjects, clauses),
 
             //
             // Something went wrong!
@@ -1027,92 +1047,92 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
     fn echo<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         echo_location: SrcSpan,
         message: Option<&'a TypedExpr>,
         printed_value: EchoPrintedValue<'a>,
     ) {
         self.module_generator.echo_used = true;
 
-        let call = eaf.start_call();
-        eaf.atom("echo");
+        let call = builder.start_call();
+        builder.atom("echo");
 
         // Echo has 4 arguments: the expression to print...
         match printed_value {
-            EchoPrintedValue::PipeStep { name } => eaf.variable(&name),
-            EchoPrintedValue::Expression { value } => self.maybe_block_expr(eaf, value),
+            EchoPrintedValue::PipeStep { name } => builder.variable(&name),
+            EchoPrintedValue::Expression { value } => self.maybe_block_expr(builder, value),
         }
         // ...the message to print (or nil if there's no message)...
         if let Some(message) = message {
-            self.maybe_block_expr(eaf, message);
+            self.maybe_block_expr(builder, message);
         } else {
-            eaf.atom("nil")
+            builder.atom("nil")
         }
 
         // ...the filepath of this module...
-        eaf.string(&self.module_generator.module_source_path);
+        builder.string(&self.module_generator.module_source_path);
 
         // ...and the line number of the expression.
-        eaf.int(
+        builder.int(
             self.module_generator
                 .line_numbers
                 .line_number(echo_location.start)
                 .into(),
         );
 
-        eaf.end_call(call);
+        builder.end_call(call);
     }
 
     /// This starts a call to `erlang:error` with a map representing a Gleam
     /// runtime error of the given kind.
     /// Some fields are mandatory and always added, but if you need to add more
-    /// fields you can still do so by calling `eaf.map_field()`.
+    /// fields you can still do so by calling `builder.map_field()`.
     ///
     /// After you're done generating those additional fields remember you _must_
     /// call `end_runtime_error` before generating any other piece of code!
     ///
     fn start_runtime_error<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         error_kind: RuntimeErrorKind,
         location: SrcSpan,
         message: Option<&'a TypedExpr>,
     ) -> RuntimeError {
-        let call = eaf.start_remote_call(ErlangModuleName::new("erlang"), "error");
-        let map = eaf.start_map();
+        let call = builder.start_remote_call(ErlangModuleName::new("erlang"), "error");
+        let map = builder.start_map();
 
-        eaf.map_field();
-        eaf.atom("gleam_error");
-        eaf.atom(match error_kind {
+        builder.map_field();
+        builder.atom("gleam_error");
+        builder.atom(match error_kind {
             RuntimeErrorKind::Todo => "todo",
             RuntimeErrorKind::Panic => "panic",
             RuntimeErrorKind::Assert => "assert",
             RuntimeErrorKind::LetAssert => "let_assert",
         });
 
-        eaf.map_field();
-        eaf.atom("message");
+        builder.map_field();
+        builder.atom("message");
         if let Some(message) = message {
-            self.maybe_block_expr(eaf, message);
+            self.maybe_block_expr(builder, message);
         } else {
-            eaf.string(error_kind.default_error_message())
+            builder.string(error_kind.default_error_message())
         }
 
-        eaf.map_field();
-        eaf.atom("file");
-        eaf.string(&self.module_generator.module_source_path);
+        builder.map_field();
+        builder.atom("file");
+        builder.string(&self.module_generator.module_source_path);
 
-        eaf.map_field();
-        eaf.atom("module");
-        eaf.string(&self.module_generator.module.name);
+        builder.map_field();
+        builder.atom("module");
+        builder.string(&self.module_generator.module.name);
 
-        eaf.map_field();
-        eaf.atom("function");
-        eaf.string(self.function_name);
+        builder.map_field();
+        builder.atom("function");
+        builder.string(self.function_name);
 
-        eaf.map_field();
-        eaf.atom("line");
-        eaf.int(
+        builder.map_field();
+        builder.atom("line");
+        builder.int(
             self.module_generator
                 .line_numbers
                 .line_number(location.start)
@@ -1126,35 +1146,43 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     }
 
     /// This closes an open runtime error.
-    fn end_runtime_error<Output>(&self, eaf: &mut impl Eaf<Output>, runtime_error: RuntimeError) {
-        eaf.end_map(runtime_error.error_map);
-        eaf.end_call(runtime_error.erlang_error_call);
+    fn end_runtime_error<Output>(
+        &self,
+        builder: &mut impl ErlangBuilder<Output>,
+        runtime_error: RuntimeError,
+    ) {
+        builder.end_map(runtime_error.error_map);
+        builder.end_call(runtime_error.erlang_error_call);
     }
 
-    fn maybe_block_expr<Output>(&mut self, eaf: &mut impl Eaf<Output>, expression: &'a TypedExpr) {
+    fn maybe_block_expr<Output>(
+        &mut self,
+        builder: &mut impl ErlangBuilder<Output>,
+        expression: &'a TypedExpr,
+    ) {
         if needs_begin_end_wrapping(expression) {
-            let block = eaf.start_block();
-            self.expr(eaf, expression);
-            eaf.end_block(block);
+            let block = builder.start_block();
+            self.expr(builder, expression);
+            builder.end_block(block);
         } else {
-            self.expr(eaf, expression);
+            self.expr(builder, expression);
         }
     }
 
     fn let_<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         value: &'a TypedExpr,
         pattern: &'a TypedPattern,
     ) {
-        eaf.match_operator();
-        PatternGenerator::new(self).pattern(eaf, pattern);
-        self.maybe_block_expr(eaf, value)
+        builder.match_operator();
+        PatternGenerator::new(self).pattern(builder, pattern);
+        self.maybe_block_expr(builder, value)
     }
 
     fn let_assert<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         value: &'a TypedExpr,
         pattern: &'a TypedPattern,
         message: Option<&'a TypedExpr>,
@@ -1164,31 +1192,31 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // If the pattern will never fail, like a tuple or a simple variable, we
         // simply treat it as if it were a `let` assignment.
         if pattern.always_matches() {
-            self.let_(eaf, value, pattern);
-            self.statement_sequence(eaf, following_statements);
+            self.let_(builder, value, pattern);
+            self.statement_sequence(builder, following_statements);
             return;
         }
 
         // Otherwise we turn the let assert into a case expression with two
         // branches: one for the asserted pattern, and one catch all to throw an
         // exception in case the pattern doesn't match.
-        let case = eaf.start_case();
-        self.maybe_block_expr(eaf, value);
+        let case = builder.start_case();
+        self.maybe_block_expr(builder, value);
 
         // This is the first branch for when the asserted pattern matches: it's
         // going to run all the remaining statements in its body.
         if !following_statements.is_empty() {
             // If there's statements after this let assert we want to generate
             // them.
-            let clause = eaf.start_case_clause();
+            let clause = builder.start_case_clause();
             let mut generator = PatternGenerator::new(self);
-            generator.pattern(eaf, pattern);
-            let clause = eaf.end_clause_pattern(clause);
-            let clause = eaf.end_clause_guards(clause);
+            generator.pattern(builder, pattern);
+            let clause = builder.end_clause_pattern(clause);
+            let clause = builder.end_clause_guards(clause);
             let variables_to_add_later = generator.variables_to_add_later;
-            self.pattern_assignments(eaf, variables_to_add_later);
-            self.statement_sequence(eaf, following_statements);
-            eaf.end_clause_body(clause);
+            self.pattern_assignments(builder, variables_to_add_later);
+            self.statement_sequence(builder, following_statements);
+            builder.end_clause_body(clause);
         } else {
             // If there's no statements following the let assert, that means
             // that it's the last statement in the block and we need to return
@@ -1203,57 +1231,58 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             //   _ -> erlang:error(...)
             // end
             // ```
-            let clause = eaf.start_case_clause();
+            let clause = builder.start_case_clause();
             let matched_value_name = self.new_throwaway_variable();
-            eaf.match_pattern();
+            builder.match_pattern();
             let mut generator = PatternGenerator::new(self);
-            generator.pattern(eaf, pattern);
-            eaf.variable_pattern(&matched_value_name);
+            generator.pattern(builder, pattern);
+            builder.variable_pattern(&matched_value_name);
 
-            let clause = eaf.end_clause_pattern(clause);
-            let clause = eaf.end_clause_guards(clause);
-            eaf.variable(&matched_value_name);
-            eaf.end_clause_body(clause);
+            let clause = builder.end_clause_pattern(clause);
+            let clause = builder.end_clause_guards(clause);
+            builder.variable(&matched_value_name);
+            builder.end_clause_body(clause);
         }
 
         // This is the catch all branch to throw an error otherwise.
-        let clause = eaf.start_case_clause();
+        let clause = builder.start_case_clause();
         let value_name = self.new_throwaway_variable();
-        eaf.variable_pattern(&value_name);
-        let clause = eaf.end_clause_pattern(clause);
-        let clause = eaf.end_clause_guards(clause);
-        let error = self.start_runtime_error(eaf, RuntimeErrorKind::LetAssert, location, message);
+        builder.variable_pattern(&value_name);
+        let clause = builder.end_clause_pattern(clause);
+        let clause = builder.end_clause_guards(clause);
+        let error =
+            self.start_runtime_error(builder, RuntimeErrorKind::LetAssert, location, message);
 
         // We want to add some additional fields to the error map:
-        eaf.map_field();
-        eaf.atom("value");
-        eaf.variable(&value_name);
+        builder.map_field();
+        builder.atom("value");
+        builder.variable(&value_name);
 
-        eaf.map_field();
-        eaf.atom("start");
-        eaf.int(location.start.into());
+        builder.map_field();
+        builder.atom("start");
+        builder.int(location.start.into());
 
-        eaf.map_field();
-        eaf.atom("end");
-        eaf.int(value.location().end.into());
+        builder.map_field();
+        builder.atom("end");
+        builder.int(value.location().end.into());
 
-        eaf.map_field();
-        eaf.atom("pattern_start");
-        eaf.int(pattern.location().start.into());
+        builder.map_field();
+        builder.atom("pattern_start");
+        builder.int(pattern.location().start.into());
 
-        eaf.map_field();
-        eaf.atom("pattern_end");
-        eaf.int(pattern.location().end.into());
+        builder.map_field();
+        builder.atom("pattern_end");
+        builder.int(pattern.location().end.into());
 
-        self.end_runtime_error(eaf, error);
-        eaf.end_clause_body(clause);
+        self.end_runtime_error(builder, error);
+        builder.end_clause_body(clause);
 
-        eaf.end_case(case);
+        builder.end_case(case);
     }
 
     fn pipeline<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         first_value: &'a TypedPipelineAssignment,
         assignments: &'a [(TypedPipelineAssignment, PipelineAssignmentKind)],
         finally: &'a TypedExpr,
@@ -1277,9 +1306,9 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // A pipeline step always ends up assigned to a variable.
             // So we start by generating `_pipe = ...`, followed by the
             // expression.
-            eaf.match_operator();
+            builder.match_operator();
             let name = self.new_erlang_variable(&assignment.name, assignment.location);
-            eaf.variable_pattern(&name);
+            builder.variable_pattern(&name);
 
             // In case of a pipe we need to manually pass the previous step to
             // echo as an argument.
@@ -1291,7 +1320,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             } = assignment.value.as_ref()
             {
                 self.echo(
-                    eaf,
+                    builder,
                     *location,
                     message.as_deref(),
                     EchoPrintedValue::PipeStep {
@@ -1301,7 +1330,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     },
                 )
             } else {
-                self.maybe_block_expr(eaf, &assignment.value);
+                self.maybe_block_expr(builder, &assignment.value);
                 previous_step_variable_name = Some(name);
             };
         }
@@ -1317,7 +1346,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         } = finally
         {
             self.echo(
-                eaf,
+                builder,
                 *location,
                 message.as_deref(),
                 EchoPrintedValue::PipeStep {
@@ -1326,11 +1355,15 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 },
             )
         } else {
-            self.expr(eaf, finally)
+            self.expr(builder, finally)
         }
     }
 
-    fn assert<Output>(&mut self, eaf: &mut impl Eaf<Output>, assert: &'a TypedAssert) {
+    fn assert<Output>(
+        &mut self,
+        builder: &mut impl ErlangBuilder<Output>,
+        assert: &'a TypedAssert,
+    ) {
         let Assert {
             value,
             location,
@@ -1352,10 +1385,10 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     // Writing asserts on binops requires some extra care, check
                     // out their docs!
                     BinOp::And => {
-                        return self.assert_and(eaf, left, right, message.as_ref(), *location);
+                        return self.assert_and(builder, left, right, message.as_ref(), *location);
                     }
                     BinOp::Or => {
-                        return self.assert_or(eaf, left, right, message.as_ref(), *location);
+                        return self.assert_or(builder, left, right, message.as_ref(), *location);
                     }
 
                     BinOp::Eq => "=:=",
@@ -1384,9 +1417,9 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 // track of those names.
                 let left = if !left.is_var() {
                     let name = self.new_throwaway_variable();
-                    eaf.match_operator();
-                    eaf.variable_pattern(&name);
-                    self.maybe_block_expr(eaf, left);
+                    builder.match_operator();
+                    builder.variable_pattern(&name);
+                    self.maybe_block_expr(builder, left);
                     AssertionExpression::from_throwaway_variable(name, left)
                 } else {
                     AssertionExpression::from_expression(left)
@@ -1394,47 +1427,47 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
                 let right = if !right.is_var() {
                     let name = self.new_throwaway_variable();
-                    eaf.match_operator();
-                    eaf.variable_pattern(&name);
-                    self.maybe_block_expr(eaf, right);
+                    builder.match_operator();
+                    builder.variable_pattern(&name);
+                    self.maybe_block_expr(builder, right);
                     AssertionExpression::from_throwaway_variable(name, right)
                 } else {
                     AssertionExpression::from_expression(right)
                 };
 
-                let case = eaf.start_case();
+                let case = builder.start_case();
 
                 // Then we need to apply the operator. If any of the two sides
                 // has been bound to a variable we can use that name directly!
-                eaf.binary_operator(erlang_operator);
-                self.runtime_value(eaf, &left);
-                self.runtime_value(eaf, &right);
+                builder.binary_operator(erlang_operator);
+                self.runtime_value(builder, &left);
+                self.runtime_value(builder, &right);
 
                 // If the operator evaluates to true the assertion succeeded.
                 // We can just return nil.
-                let clause = eaf.start_case_clause();
-                eaf.atom_pattern("true");
-                let clause = eaf.end_clause_pattern(clause);
-                let clause = eaf.end_clause_guards(clause);
-                eaf.atom("nil");
-                eaf.end_clause_body(clause);
+                let clause = builder.start_case_clause();
+                builder.atom_pattern("true");
+                let clause = builder.end_clause_pattern(clause);
+                let clause = builder.end_clause_guards(clause);
+                builder.atom("nil");
+                builder.end_clause_body(clause);
 
                 // Otherwise we want to throw a runtime error!
-                let clause = eaf.start_case_clause();
-                eaf.atom_pattern("false");
-                let clause = eaf.end_clause_pattern(clause);
-                let clause = eaf.end_clause_guards(clause);
+                let clause = builder.start_case_clause();
+                builder.atom_pattern("false");
+                let clause = builder.end_clause_pattern(clause);
+                let clause = builder.end_clause_guards(clause);
                 self.assert_binary_operator_error(
-                    eaf,
+                    builder,
                     *operator,
                     left,
                     right,
                     message.as_ref(),
                     *location,
                 );
-                eaf.end_clause_body(clause);
+                builder.end_clause_body(clause);
 
-                eaf.end_case(case);
+                builder.end_case(case);
             }
 
             TypedExpr::Call { fun, arguments, .. } => {
@@ -1447,9 +1480,9 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 for argument in arguments {
                     let argument = if !argument.value.is_var() {
                         let name = self.new_throwaway_variable();
-                        eaf.match_operator();
-                        eaf.variable_pattern(&name);
-                        self.maybe_block_expr(eaf, &argument.value);
+                        builder.match_operator();
+                        builder.variable_pattern(&name);
+                        self.maybe_block_expr(builder, &argument.value);
                         AssertionExpression::from_throwaway_variable(name, &argument.value)
                     } else {
                         AssertionExpression::from_expression(&argument.value)
@@ -1457,27 +1490,33 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     call_arguments.push(argument);
                 }
 
-                let case = eaf.start_case();
-                self.call_in_assert(eaf, fun, &call_arguments);
+                let case = builder.start_case();
+                self.call_in_assert(builder, fun, &call_arguments);
 
                 // If the operator evaluates to true the assertion succeeded.
                 // We can just return nil.
-                let clause = eaf.start_case_clause();
-                eaf.atom_pattern("true");
-                let clause = eaf.end_clause_pattern(clause);
-                let clause = eaf.end_clause_guards(clause);
-                eaf.atom("nil");
-                eaf.end_clause_body(clause);
+                let clause = builder.start_case_clause();
+                builder.atom_pattern("true");
+                let clause = builder.end_clause_pattern(clause);
+                let clause = builder.end_clause_guards(clause);
+                builder.atom("nil");
+                builder.end_clause_body(clause);
 
                 // Otherwise we want to throw a runtime error!
-                let clause = eaf.start_case_clause();
-                eaf.atom_pattern("false");
-                let clause = eaf.end_clause_pattern(clause);
-                let clause = eaf.end_clause_guards(clause);
-                self.assert_call_error(eaf, value, &call_arguments, message.as_ref(), *location);
-                eaf.end_clause_body(clause);
+                let clause = builder.start_case_clause();
+                builder.atom_pattern("false");
+                let clause = builder.end_clause_pattern(clause);
+                let clause = builder.end_clause_guards(clause);
+                self.assert_call_error(
+                    builder,
+                    value,
+                    &call_arguments,
+                    message.as_ref(),
+                    *location,
+                );
+                builder.end_clause_body(clause);
 
-                eaf.end_case(case);
+                builder.end_case(case);
             }
 
             TypedExpr::Int { .. }
@@ -1502,32 +1541,32 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. }
             | TypedExpr::Invalid { .. } => {
-                let case = eaf.start_case();
-                self.maybe_block_expr(eaf, value);
+                let case = builder.start_case();
+                self.maybe_block_expr(builder, value);
 
                 // If the expression evaluates to true the assertion succeeded.
                 // We can just return nil.
-                let clause = eaf.start_case_clause();
-                eaf.atom_pattern("true");
-                let clause = eaf.end_clause_pattern(clause);
-                let clause = eaf.end_clause_guards(clause);
-                eaf.atom("nil");
-                eaf.end_clause_body(clause);
+                let clause = builder.start_case_clause();
+                builder.atom_pattern("true");
+                let clause = builder.end_clause_pattern(clause);
+                let clause = builder.end_clause_guards(clause);
+                builder.atom("nil");
+                builder.end_clause_body(clause);
 
                 // Otherwise we want to throw a runtime error!
-                let clause = eaf.start_case_clause();
-                eaf.atom_pattern("false");
-                let clause = eaf.end_clause_pattern(clause);
-                let clause = eaf.end_clause_guards(clause);
+                let clause = builder.start_case_clause();
+                builder.atom_pattern("false");
+                let clause = builder.end_clause_pattern(clause);
+                let clause = builder.end_clause_guards(clause);
                 self.assert_expression_error(
-                    eaf,
+                    builder,
                     AssertionExpression::from_expression(value).evaluated_to_bool(false),
                     message.as_ref(),
                     *location,
                 );
-                eaf.end_clause_body(clause);
+                builder.end_clause_body(clause);
 
-                eaf.end_case(case);
+                builder.end_case(case);
             }
         }
     }
@@ -1560,72 +1599,72 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     ///
     fn assert_and<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         left: &'a TypedExpr,
         right: &'a TypedExpr,
         message: Option<&'a TypedExpr>,
         location: SrcSpan,
     ) {
-        let case = eaf.start_case();
-        self.maybe_block_expr(eaf, left);
+        let case = builder.start_case();
+        self.maybe_block_expr(builder, left);
 
         // In case the first expression is true, we get to evaluate the second
         // one as well, then we will be able to tell if the assertion failed or
         // not!
-        let clause = eaf.start_case_clause();
-        eaf.atom_pattern("true");
-        let clause = eaf.end_clause_pattern(clause);
-        let clause = eaf.end_clause_guards(clause);
+        let clause = builder.start_case_clause();
+        builder.atom_pattern("true");
+        let clause = builder.end_clause_pattern(clause);
+        let clause = builder.end_clause_guards(clause);
         {
             // Now we have to match on the right hand side!
-            let case = eaf.start_case();
-            self.maybe_block_expr(eaf, right);
+            let case = builder.start_case();
+            self.maybe_block_expr(builder, right);
 
             // If it's true the assertion succeded! We can return `nil`.
-            let clause = eaf.start_case_clause();
-            eaf.atom_pattern("true");
-            let clause = eaf.end_clause_pattern(clause);
-            let clause = eaf.end_clause_guards(clause);
-            eaf.atom("nil");
-            eaf.end_clause_body(clause);
+            let clause = builder.start_case_clause();
+            builder.atom_pattern("true");
+            let clause = builder.end_clause_pattern(clause);
+            let clause = builder.end_clause_guards(clause);
+            builder.atom("nil");
+            builder.end_clause_body(clause);
 
             // If it's false the assertion failed! The left hand side was true
             // but this one evaluated to false :(
-            let clause = eaf.start_case_clause();
-            eaf.atom_pattern("false");
-            let clause = eaf.end_clause_pattern(clause);
-            let clause = eaf.end_clause_guards(clause);
+            let clause = builder.start_case_clause();
+            builder.atom_pattern("false");
+            let clause = builder.end_clause_pattern(clause);
+            let clause = builder.end_clause_guards(clause);
             self.assert_binary_operator_error(
-                eaf,
+                builder,
                 BinOp::And,
                 AssertionExpression::from_expression(left).evaluated_to_bool(true),
                 AssertionExpression::from_expression(right).evaluated_to_bool(false),
                 message,
                 location,
             );
-            eaf.end_clause_body(clause);
-            eaf.end_case(case);
+            builder.end_clause_body(clause);
+            builder.end_case(case);
         }
-        eaf.end_clause_body(clause);
+        builder.end_clause_body(clause);
 
         // In case the first expression is false, we want to fail fast. We are
         // short circuiting without evaluating the right hand side! This side
         // just build an error.
-        let clause = eaf.start_case_clause();
-        eaf.atom_pattern("false");
-        let clause = eaf.end_clause_pattern(clause);
-        let clause = eaf.end_clause_guards(clause);
+        let clause = builder.start_case_clause();
+        builder.atom_pattern("false");
+        let clause = builder.end_clause_pattern(clause);
+        let clause = builder.end_clause_guards(clause);
         self.assert_binary_operator_error(
-            eaf,
+            builder,
             BinOp::And,
             AssertionExpression::from_expression(left).evaluated_to_bool(false),
             AssertionExpression::from_expression(right).was_unevaluated(),
             message,
             location,
         );
-        eaf.end_clause_body(clause);
+        builder.end_clause_body(clause);
 
-        eaf.end_case(case);
+        builder.end_case(case);
     }
 
     /// Similar to `&&`, `||` is also short-circuiting in Gleam. However, if `||`
@@ -1638,161 +1677,161 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     /// need to store the values of them in variables beforehand.
     fn assert_or<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         left: &'a TypedExpr,
         right: &'a TypedExpr,
         message: Option<&'a TypedExpr>,
         location: SrcSpan,
     ) {
-        let case = eaf.start_case();
-        eaf.binary_operator("orelse");
-        self.maybe_block_expr(eaf, left);
-        self.maybe_block_expr(eaf, right);
+        let case = builder.start_case();
+        builder.binary_operator("orelse");
+        self.maybe_block_expr(builder, left);
+        self.maybe_block_expr(builder, right);
 
         // If the result is true, then the assertion succeeded, we can return
         // nil.
-        let clause = eaf.start_case_clause();
-        eaf.atom_pattern("true");
-        let clause = eaf.end_clause_pattern(clause);
-        let clause = eaf.end_clause_guards(clause);
-        eaf.atom("nil");
-        eaf.end_clause_body(clause);
+        let clause = builder.start_case_clause();
+        builder.atom_pattern("true");
+        let clause = builder.end_clause_pattern(clause);
+        let clause = builder.end_clause_guards(clause);
+        builder.atom("nil");
+        builder.end_clause_body(clause);
 
         // But if it fails we know that both sides of the assertion resulted in
         // a false value. In that case we throw an error.
 
-        let clause = eaf.start_case_clause();
-        eaf.atom_pattern("false");
-        let clause = eaf.end_clause_pattern(clause);
-        let clause = eaf.end_clause_guards(clause);
+        let clause = builder.start_case_clause();
+        builder.atom_pattern("false");
+        let clause = builder.end_clause_pattern(clause);
+        let clause = builder.end_clause_guards(clause);
         self.assert_binary_operator_error(
-            eaf,
+            builder,
             BinOp::Or,
             AssertionExpression::from_expression(left).evaluated_to_bool(false),
             AssertionExpression::from_expression(right).evaluated_to_bool(false),
             message,
             location,
         );
-        eaf.end_clause_body(clause);
+        builder.end_clause_body(clause);
 
-        eaf.end_case(case);
+        builder.end_case(case);
     }
 
     /// This generates the code that throws a runtime error whan an `assert`
     /// that is checking the result of a binary operator fails.
     fn assert_binary_operator_error<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         operator: BinOp,
         left: AssertionExpression<'a>,
         right: AssertionExpression<'a>,
         message: Option<&'a TypedExpr>,
         location: SrcSpan,
     ) {
-        let error = self.start_runtime_error(eaf, RuntimeErrorKind::Assert, location, message);
+        let error = self.start_runtime_error(builder, RuntimeErrorKind::Assert, location, message);
 
-        eaf.map_field();
-        eaf.atom("kind");
-        eaf.atom("binary_operator");
+        builder.map_field();
+        builder.atom("kind");
+        builder.atom("binary_operator");
 
-        eaf.map_field();
-        eaf.atom("operator");
-        eaf.atom(operator.name());
+        builder.map_field();
+        builder.atom("operator");
+        builder.atom(operator.name());
 
-        eaf.map_field();
-        eaf.atom("left");
-        self.assertion_expression_map(eaf, &left);
+        builder.map_field();
+        builder.atom("left");
+        self.assertion_expression_map(builder, &left);
 
-        eaf.map_field();
-        eaf.atom("right");
-        self.assertion_expression_map(eaf, &right);
+        builder.map_field();
+        builder.atom("right");
+        self.assertion_expression_map(builder, &right);
 
-        eaf.map_field();
-        eaf.atom("start");
-        eaf.int(location.start.into());
+        builder.map_field();
+        builder.atom("start");
+        builder.int(location.start.into());
 
-        eaf.map_field();
-        eaf.atom("end");
-        eaf.int(right.location.end.into());
+        builder.map_field();
+        builder.atom("end");
+        builder.int(right.location.end.into());
 
-        eaf.map_field();
-        eaf.atom("expression_start");
-        eaf.int(left.location.start.into());
+        builder.map_field();
+        builder.atom("expression_start");
+        builder.int(left.location.start.into());
 
-        self.end_runtime_error(eaf, error);
+        self.end_runtime_error(builder, error);
     }
 
     /// This generates the code that throws a runtime error whan an `assert`
     /// that is checking the result of an arbitrary expression fails.
     fn assert_expression_error<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         expression: AssertionExpression<'a>,
         message: Option<&'a TypedExpr>,
         location: SrcSpan,
     ) {
-        let error = self.start_runtime_error(eaf, RuntimeErrorKind::Assert, location, message);
+        let error = self.start_runtime_error(builder, RuntimeErrorKind::Assert, location, message);
 
-        eaf.map_field();
-        eaf.atom("kind");
-        eaf.atom("expression");
+        builder.map_field();
+        builder.atom("kind");
+        builder.atom("expression");
 
         // If assert fails on an expression's result then we know it must have
         // evaluated to false!
-        eaf.map_field();
-        eaf.atom("expression");
-        self.assertion_expression_map(eaf, &expression);
+        builder.map_field();
+        builder.atom("expression");
+        self.assertion_expression_map(builder, &expression);
 
-        eaf.map_field();
-        eaf.atom("start");
-        eaf.int(location.start.into());
+        builder.map_field();
+        builder.atom("start");
+        builder.int(location.start.into());
 
-        eaf.map_field();
-        eaf.atom("end");
-        eaf.int(expression.location.end.into());
+        builder.map_field();
+        builder.atom("end");
+        builder.int(expression.location.end.into());
 
-        eaf.map_field();
-        eaf.atom("expression_start");
-        eaf.int(expression.location.start.into());
+        builder.map_field();
+        builder.atom("expression_start");
+        builder.int(expression.location.start.into());
 
-        self.end_runtime_error(eaf, error);
+        self.end_runtime_error(builder, error);
     }
 
     fn assert_call_error<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         call: &'a TypedExpr,
         arguments: &[AssertionExpression<'a>],
         message: Option<&'a TypedExpr>,
         location: SrcSpan,
     ) {
-        let error = self.start_runtime_error(eaf, RuntimeErrorKind::Assert, location, message);
+        let error = self.start_runtime_error(builder, RuntimeErrorKind::Assert, location, message);
 
-        eaf.map_field();
-        eaf.atom("kind");
-        eaf.atom("function_call");
+        builder.map_field();
+        builder.atom("kind");
+        builder.atom("function_call");
 
-        eaf.map_field();
-        eaf.atom("arguments");
+        builder.map_field();
+        builder.atom("arguments");
         for argument in arguments {
-            eaf.cons_list();
-            self.assertion_expression_map(eaf, argument);
+            builder.cons_list();
+            self.assertion_expression_map(builder, argument);
         }
-        eaf.empty_list();
+        builder.empty_list();
 
-        eaf.map_field();
-        eaf.atom("start");
-        eaf.int(location.start.into());
+        builder.map_field();
+        builder.atom("start");
+        builder.int(location.start.into());
 
-        eaf.map_field();
-        eaf.atom("end");
-        eaf.int(call.location().end.into());
+        builder.map_field();
+        builder.atom("end");
+        builder.int(call.location().end.into());
 
-        eaf.map_field();
-        eaf.atom("expression_start");
-        eaf.int(call.location().start.into());
+        builder.map_field();
+        builder.atom("expression_start");
+        builder.int(call.location().start.into());
 
-        self.end_runtime_error(eaf, error);
+        self.end_runtime_error(builder, error);
     }
 
     /// Given an expression being asserted on. This generates the code for an
@@ -1800,7 +1839,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     /// its location in the source code.
     fn assertion_expression_map<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         expression: &AssertionExpression<'a>,
     ) {
         let AssertionExpression {
@@ -1809,31 +1848,31 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             location,
         } = expression;
 
-        let map = eaf.start_map();
+        let map = builder.start_map();
 
-        eaf.map_field();
-        eaf.atom("kind");
-        eaf.atom(match kind {
+        builder.map_field();
+        builder.atom("kind");
+        builder.atom(match kind {
             AssertedExpressionKind::Literal => "literal",
             AssertedExpressionKind::Expression => "expression",
             AssertedExpressionKind::Unevaluated => "unevaluated",
         });
 
         if runtime_value.is_some() {
-            eaf.map_field();
-            eaf.atom("value");
-            self.runtime_value(eaf, expression);
+            builder.map_field();
+            builder.atom("value");
+            self.runtime_value(builder, expression);
         }
 
-        eaf.map_field();
-        eaf.atom("start");
-        eaf.int(location.start.into());
+        builder.map_field();
+        builder.atom("start");
+        builder.int(location.start.into());
 
-        eaf.map_field();
-        eaf.atom("end");
-        eaf.int(location.end.into());
+        builder.map_field();
+        builder.atom("end");
+        builder.int(location.end.into());
 
-        eaf.end_map(map);
+        builder.end_map(map);
     }
 
     /// This takes a value that is in an assertion (and might have been bound
@@ -1842,7 +1881,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     ///
     fn runtime_value<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         expression: &AssertionExpression<'a>,
     ) {
         match expression
@@ -1850,28 +1889,30 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             .as_ref()
             .expect("trying to reference unevaluated assert value")
         {
-            AssertedExpressionRuntimeValue::KnownBool(true) => eaf.atom("true"),
-            AssertedExpressionRuntimeValue::KnownBool(false) => eaf.atom("false"),
-            AssertedExpressionRuntimeValue::Variable(name) => eaf.variable(name),
-            AssertedExpressionRuntimeValue::Expression(expr) => self.maybe_block_expr(eaf, expr),
+            AssertedExpressionRuntimeValue::KnownBool(true) => builder.atom("true"),
+            AssertedExpressionRuntimeValue::KnownBool(false) => builder.atom("false"),
+            AssertedExpressionRuntimeValue::Variable(name) => builder.variable(name),
+            AssertedExpressionRuntimeValue::Expression(expr) => {
+                self.maybe_block_expr(builder, expr)
+            }
         }
     }
 
     fn tuple_index<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         tuple: &'a TypedExpr,
         index: u64,
     ) {
-        let call = eaf.start_remote_call(ErlangModuleName::new("erlang"), "element");
-        eaf.int((index + 1).into());
-        self.maybe_block_expr(eaf, tuple);
-        eaf.end_call(call);
+        let call = builder.start_remote_call(ErlangModuleName::new("erlang"), "element");
+        builder.int((index + 1).into());
+        self.maybe_block_expr(builder, tuple);
+        builder.end_call(call);
     }
 
     fn var<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         name: &'a str,
         constructor: &'a ValueConstructor,
     ) {
@@ -1897,19 +1938,19 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 // }
                 // ```
                 Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
-                    eaf.atom(&to_snake_case(record_name))
+                    builder.atom(&to_snake_case(record_name))
                 }
                 Type::Fn { arguments, .. } => {
-                    self.record_builder_anonymous_function(eaf, record_name, arguments.len())
+                    self.record_builder_anonymous_function(builder, record_name, arguments.len())
                 }
             },
 
             ValueConstructorVariant::LocalVariable { location, .. } => {
-                eaf.variable(&self.local_var_name(location))
+                builder.variable(&self.local_var_name(location))
             }
 
             ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                self.inlined_constant(eaf, literal)
+                self.inlined_constant(builder, literal)
             }
 
             ValueConstructorVariant::ModuleFn {
@@ -1919,16 +1960,16 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             } => {
                 let name = escape_erlang_existing_name(name);
                 if *module == self.module_generator.module.name {
-                    eaf.function_reference(None, name, *arity)
+                    builder.function_reference(None, name, *arity)
                 } else {
-                    eaf.function_reference(Some(ErlangModuleName::new(&module)), name, *arity)
+                    builder.function_reference(Some(ErlangModuleName::new(&module)), name, *arity)
                 }
             }
 
             ValueConstructorVariant::ModuleFn { arity, module, .. }
                 if *module == self.module_generator.module.name =>
             {
-                eaf.function_reference(None, escape_erlang_existing_name(name), *arity)
+                builder.function_reference(None, escape_erlang_existing_name(name), *arity)
             }
 
             ValueConstructorVariant::ModuleFn {
@@ -1936,7 +1977,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 module,
                 name,
                 ..
-            } => eaf.function_reference(
+            } => builder.function_reference(
                 Some(ErlangModuleName::new(&module)),
                 escape_erlang_existing_name(name),
                 *arity,
@@ -1946,43 +1987,43 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
     fn call<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         fun: &'a TypedExpr,
         arguments: &'a [TypedCallArg],
     ) {
         match how_to_call(fun) {
             // If we're building a record then we want to just output a
             // tagged tuple, there's no function call at all!
-            FunctionCall::BuildRecord { name } => self.build_record(eaf, name, arguments),
+            FunctionCall::BuildRecord { name } => self.build_record(builder, name, arguments),
             // If we're calling some module function like `io.println`, `main`,
             // `list.map` then we can call the function using its name (and
             // module name if it comes from a different module).
             FunctionCall::Call { module, name } => {
                 let call = if module != self.module_generator.module.name {
-                    eaf.start_remote_call(
+                    builder.start_remote_call(
                         ErlangModuleName::new(&module),
                         escape_erlang_existing_name(name),
                     )
                 } else {
-                    let call = eaf.start_call();
-                    eaf.atom(escape_erlang_existing_name(name));
+                    let call = builder.start_call();
+                    builder.atom(escape_erlang_existing_name(name));
                     call
                 };
                 for argument in arguments {
-                    self.maybe_block_expr(eaf, &argument.value);
+                    self.maybe_block_expr(builder, &argument.value);
                 }
-                eaf.end_call(call)
+                builder.end_call(call)
             }
             // If we're calling anything else (like an anonymous function, or
             // the result of another function call) we generate its code and
             // call that result directly.
             FunctionCall::DirectCall => {
-                let call = eaf.start_call();
-                self.maybe_block_expr(eaf, fun);
+                let call = builder.start_call();
+                self.maybe_block_expr(builder, fun);
                 for argument in arguments {
-                    self.maybe_block_expr(eaf, &argument.value);
+                    self.maybe_block_expr(builder, &argument.value);
                 }
-                eaf.end_call(call);
+                builder.end_call(call);
             }
         }
     }
@@ -1998,7 +2039,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     ///
     fn call_in_assert<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         fun: &'a TypedExpr,
         arguments: &[AssertionExpression<'a>],
     ) {
@@ -2014,31 +2055,31 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // module name if it comes from a different module).
             FunctionCall::Call { module, name } => {
                 let call = if module != self.module_generator.module.name {
-                    eaf.start_remote_call(
+                    builder.start_remote_call(
                         ErlangModuleName::new(&module),
                         escape_erlang_existing_name(name),
                     )
                 } else {
-                    let call = eaf.start_call();
-                    eaf.atom(escape_erlang_existing_name(name));
+                    let call = builder.start_call();
+                    builder.atom(escape_erlang_existing_name(name));
                     call
                 };
                 for argument in arguments {
-                    self.runtime_value(eaf, argument);
+                    self.runtime_value(builder, argument);
                 }
-                eaf.end_call(call)
+                builder.end_call(call)
             }
 
             // If we're calling anything else (like an anonymous function, or
             // the result of another function call) we generate its code and
             // call that result directly.
             FunctionCall::DirectCall => {
-                let call = eaf.start_call();
-                self.maybe_block_expr(eaf, fun);
+                let call = builder.start_call();
+                self.maybe_block_expr(builder, fun);
                 for argument in arguments {
-                    self.runtime_value(eaf, argument);
+                    self.runtime_value(builder, argument);
                 }
-                eaf.end_call(call);
+                builder.end_call(call);
             }
         }
     }
@@ -2052,48 +2093,48 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     /// record. This function will take care of turning it to snake case!
     fn build_record<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         record_name: &str,
         arguments: &'a [TypedCallArg],
     ) {
         if arguments.is_empty() {
-            eaf.atom(&to_snake_case(record_name))
+            builder.atom(&to_snake_case(record_name))
         } else {
-            let tuple = eaf.start_tuple();
-            eaf.atom(&to_snake_case(record_name));
+            let tuple = builder.start_tuple();
+            builder.atom(&to_snake_case(record_name));
             for argument in arguments {
-                self.maybe_block_expr(eaf, &argument.value);
+                self.maybe_block_expr(builder, &argument.value);
             }
-            eaf.end_tuple(tuple)
+            builder.end_tuple(tuple)
         }
     }
 
     fn case<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         subjects: &'a [TypedExpr],
         clauses: &'a [TypedClause],
     ) {
-        let case = eaf.start_case();
+        let case = builder.start_case();
 
         // If there's more than a single subject we will need to wrap those in a
         // tuple and start matching on tuple patterns. That's because Erlang
         // doesn't support matching on multiple subjects like Gleam.
         match subjects {
-            [subject] => self.maybe_block_expr(eaf, subject),
+            [subject] => self.maybe_block_expr(builder, subject),
             subjects => {
-                let tuple = eaf.start_tuple();
+                let tuple = builder.start_tuple();
                 for subject in subjects {
-                    self.maybe_block_expr(eaf, subject);
+                    self.maybe_block_expr(builder, subject);
                 }
-                eaf.end_tuple(tuple);
+                builder.end_tuple(tuple);
             }
         }
 
         for clause in clauses {
             let taken_names_before_clause = self.taken_names.clone();
 
-            self.clause_branch(eaf, &clause.pattern, clause);
+            self.clause_branch(builder, &clause.pattern, clause);
 
             // Erlang doesn't support alternative patterns so we're gonna have
             // to turn those into separate branches!
@@ -2123,22 +2164,22 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             //
             for pattern in &clause.alternative_patterns {
                 self.taken_names = taken_names_before_clause.clone();
-                self.clause_branch(eaf, pattern, clause);
+                self.clause_branch(builder, pattern, clause);
             }
         }
 
-        eaf.end_case(case);
+        builder.end_case(case);
     }
 
     /// Given a pattern and the branch it belongs to this generates an Erlang
     /// case clause for that pattern.
     fn clause_branch<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         patterns: &'a Vec<Pattern<Arc<Type>>>,
         clause: &'a Clause<TypedExpr, Arc<Type>>,
     ) {
-        let clause_pattern = eaf.start_case_clause();
+        let clause_pattern = builder.start_case_clause();
 
         // We start by generating the case clause pattern. If we're matching on
         // multiple subjects (and so patterns has more that a single item) those
@@ -2146,35 +2187,35 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // That's how we match on multiple things on the Erlang target.
         let mut pattern_generator = PatternGenerator::new(self);
         match patterns.as_slice() {
-            [pattern] => pattern_generator.pattern(eaf, pattern),
+            [pattern] => pattern_generator.pattern(builder, pattern),
             patterns => {
-                let tuple = eaf.start_tuple_pattern();
+                let tuple = builder.start_tuple_pattern();
                 for pattern in patterns {
-                    pattern_generator.pattern(eaf, pattern);
+                    pattern_generator.pattern(builder, pattern);
                 }
-                eaf.end_tuple_pattern(tuple);
+                builder.end_tuple_pattern(tuple);
             }
         };
 
         let variables_to_add_later = pattern_generator.variables_to_add_later;
 
-        let clause_guards = eaf.end_clause_pattern(clause_pattern);
+        let clause_guards = builder.end_clause_pattern(clause_pattern);
         if let Some(guard) = clause.guard.as_ref() {
-            self.clause_guard(eaf, guard, &variables_to_add_later);
+            self.clause_guard(builder, guard, &variables_to_add_later);
         }
 
         // Finally we can generate the clause body. If the clause is
         // followed by a single block then we want it to be a statements
         // sequence (and not wrapped in a begin ... end block as we usually
         // would when generating code for a block expression).
-        let clause_body = eaf.end_clause_guards(clause_guards);
-        self.pattern_assignments(eaf, variables_to_add_later);
+        let clause_body = builder.end_clause_guards(clause_guards);
+        self.pattern_assignments(builder, variables_to_add_later);
         if let TypedExpr::Block { statements, .. } = &clause.then {
-            self.statement_sequence(eaf, statements);
+            self.statement_sequence(builder, statements);
         } else {
-            self.expr(eaf, &clause.then);
+            self.expr(builder, &clause.then);
         }
-        eaf.end_clause_body(clause_body);
+        builder.end_clause_body(clause_body);
     }
 
     /// Erlang doesn't have a special constant declaration syntax; so each Gleam
@@ -2182,15 +2223,19 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     ///
     /// This function produces the code of a constant expression.
     ///
-    fn inlined_constant<Output>(&mut self, eaf: &mut impl Eaf<Output>, literal: &'a TypedConstant) {
+    fn inlined_constant<Output>(
+        &mut self,
+        builder: &mut impl ErlangBuilder<Output>,
+        literal: &'a TypedConstant,
+    ) {
         match literal {
-            Constant::Int { int_value, .. } => eaf.int(int_value.clone()),
-            Constant::Float { float_value, .. } => eaf.float(float_value.value()),
-            Constant::String { value, .. } => eaf.string(value),
+            Constant::Int { int_value, .. } => builder.int(int_value.clone()),
+            Constant::Float { float_value, .. } => builder.float(float_value.value()),
+            Constant::String { value, .. } => builder.string(value),
             Constant::Var {
                 name, constructor, ..
             } => self.var(
-                eaf,
+                builder,
                 name,
                 constructor
                     .as_ref()
@@ -2198,46 +2243,46 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             ),
 
             Constant::Tuple { elements, .. } => {
-                let tuple = eaf.start_tuple();
+                let tuple = builder.start_tuple();
                 for element in elements {
-                    self.inlined_constant(eaf, element)
+                    self.inlined_constant(builder, element)
                 }
-                eaf.end_tuple(tuple);
+                builder.end_tuple(tuple);
             }
 
             Constant::List { elements, tail, .. } => {
                 for element in elements {
-                    eaf.cons_list();
-                    self.inlined_constant(eaf, element)
+                    builder.cons_list();
+                    self.inlined_constant(builder, element)
                 }
                 match tail {
                     // If there's no tail we simply add an empty list cell to
                     // end the cons list.
-                    None => eaf.empty_list(),
+                    None => builder.empty_list(),
                     Some(tail) => match tail.list_elements() {
                         // If there's a tail and we don't statically know the
                         // elements it's made of, we add it as a regular Erlang
                         // tail and it will be `[1, 2 | Tail]`.
-                        None => self.inlined_constant(eaf, tail),
+                        None => self.inlined_constant(builder, tail),
                         // But if we can tell it has some fixed amount of
                         // constant elements, then those are inlined too!
                         Some(list_elements) => {
                             for element in list_elements {
-                                eaf.cons_list();
-                                self.inlined_constant(eaf, element);
+                                builder.cons_list();
+                                self.inlined_constant(builder, element);
                             }
-                            eaf.empty_list();
+                            builder.empty_list();
                         }
                     },
                 }
             }
 
             Constant::BitArray { segments, .. } => {
-                let bit_array = eaf.start_bit_array();
+                let bit_array = builder.start_bit_array();
                 for segment in segments {
-                    self.bit_array_constant_segment(eaf, segment);
+                    self.bit_array_constant_segment(builder, segment);
                 }
-                eaf.end_bit_array(bit_array);
+                builder.end_bit_array(bit_array);
             }
 
             Constant::Record {
@@ -2251,12 +2296,12 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     // This is a regular record call, we're building a record as
                     // usual as a tagged tuple.
                     Some(arguments) => {
-                        let tuple = eaf.start_tuple();
-                        eaf.atom(&to_snake_case(&tag));
+                        let tuple = builder.start_tuple();
+                        builder.atom(&to_snake_case(&tag));
                         for argument in arguments {
-                            self.inlined_constant(eaf, &argument.value);
+                            self.inlined_constant(builder, &argument.value);
                         }
-                        eaf.end_tuple(tuple);
+                        builder.end_tuple(tuple);
                     }
                     // Otherwise we are either referencing a record constructor
                     // function, or building a record that has no fields:
@@ -2274,17 +2319,17 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     // ```
                     None => match type_::collapse_links(type_.clone()).deref() {
                         Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
-                            eaf.atom(&to_snake_case(&tag))
+                            builder.atom(&to_snake_case(&tag))
                         }
                         Type::Fn { arguments, .. } => {
-                            self.record_builder_anonymous_function(eaf, &tag, arguments.len())
+                            self.record_builder_anonymous_function(builder, &tag, arguments.len())
                         }
                     },
                 }
             }
 
             Constant::StringConcatenation { left, right, .. } => {
-                self.constant_string_concatenate(eaf, left, right)
+                self.constant_string_concatenate(builder, left, right)
             }
 
             Constant::RecordUpdate { .. } => {
@@ -2299,28 +2344,28 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
     fn bit_array_constant_segment<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         segment: &'a TypedConstantBitArraySegment,
     ) {
-        eaf.bit_array_segment();
-        self.inlined_constant(eaf, &segment.value);
+        builder.bit_array_segment();
+        self.inlined_constant(builder, &segment.value);
         match segment.size() {
             Some(TypedConstant::Int { int_value, .. }) if int_value.is_negative() => {
-                eaf.int(BigInt::ZERO)
+                builder.int(BigInt::ZERO)
             }
-            Some(size) => self.inlined_constant(eaf, size),
-            None => eaf.atom("default"),
+            Some(size) => self.inlined_constant(builder, size),
+            None => builder.atom("default"),
         };
-        self.bit_array_segment_specifiers(eaf, segment);
+        self.bit_array_segment_specifiers(builder, segment);
     }
 
     fn bit_array_segment_specifiers<Output, Expr>(
         &self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         segment: &'a BitArraySegment<Expr, Arc<Type>>,
     ) {
         let options = segment.options.iter();
-        eaf.bit_array_segment_specifiers(options.filter_map(|option| match option {
+        builder.bit_array_segment_specifiers(options.filter_map(|option| match option {
             BitArrayOption::Utf8 { .. } | BitArrayOption::Utf8Codepoint { .. } => {
                 Some(BitArraySegmentSpecifier::Utf8)
             }
@@ -2346,7 +2391,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
     fn constant_string_concatenate<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         left: &'a TypedConstant,
         right: &'a TypedConstant,
     ) {
@@ -2354,7 +2399,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         items.push_back(left);
         items.push_back(right);
 
-        let bit_array = eaf.start_bit_array();
+        let bit_array = builder.start_bit_array();
         while let Some(segment) = items.pop_front() {
             match segment {
                 // When concatenating constant strings we flatten out all
@@ -2401,29 +2446,29 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 | Constant::Todo { .. } => (),
             }
 
-            eaf.bit_array_segment();
-            self.inlined_constant(eaf, segment);
-            eaf.atom("default");
-            eaf.bit_array_segment_specifiers([BitArraySegmentSpecifier::Utf8]);
+            builder.bit_array_segment();
+            self.inlined_constant(builder, segment);
+            builder.atom("default");
+            builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Utf8]);
         }
-        eaf.end_bit_array(bit_array);
+        builder.end_bit_array(bit_array);
     }
 
     fn string_concatenate<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         left: &'a TypedExpr,
         right: &'a TypedExpr,
     ) {
-        let bit_array = eaf.start_bit_array();
-        self.string_concatenate_argument(eaf, left);
-        self.string_concatenate_argument(eaf, right);
-        eaf.end_bit_array(bit_array);
+        let bit_array = builder.start_bit_array();
+        self.string_concatenate_argument(builder, left);
+        self.string_concatenate_argument(builder, right);
+        builder.end_bit_array(bit_array);
     }
 
     fn string_concatenate_argument<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         value: &'a TypedExpr,
     ) {
         // String concatenation is basically building a bit array with two
@@ -2432,10 +2477,10 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // the `/utf8` specifier instead!
         // In both cases the size is alwaus automatic, so we generate the
         // `default` atom.
-        eaf.bit_array_segment();
-        self.maybe_block_expr(eaf, value);
-        eaf.atom("default");
-        eaf.bit_array_segment_specifiers(if produces_literal_string(value) {
+        builder.bit_array_segment();
+        self.maybe_block_expr(builder, value);
+        builder.atom("default");
+        builder.bit_array_segment_specifiers(if produces_literal_string(value) {
             [BitArraySegmentSpecifier::Utf8]
         } else {
             [BitArraySegmentSpecifier::Binary]
@@ -2444,7 +2489,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
     fn bin_op<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         name: &'a BinOp,
         left: &'a TypedExpr,
         right: &'a TypedExpr,
@@ -2464,38 +2509,38 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
             // Division needs some extra case, in Gleam dividing by 0 results
             // in 0; while in Erlang that's an exception.
-            BinOp::DivFloat => return self.float_division(eaf, left, right),
-            BinOp::DivInt => return self.int_division(eaf, left, right, "div"),
-            BinOp::RemainderInt => return self.int_division(eaf, left, right, "rem"),
+            BinOp::DivFloat => return self.float_division(builder, left, right),
+            BinOp::DivInt => return self.int_division(builder, left, right, "div"),
+            BinOp::RemainderInt => return self.int_division(builder, left, right, "rem"),
 
             // String concatenation is not a binop at all! It's just building a
             // bit array.
-            BinOp::Concatenate => return self.string_concatenate(eaf, left, right),
+            BinOp::Concatenate => return self.string_concatenate(builder, left, right),
         };
 
-        eaf.binary_operator(operator);
-        self.maybe_block_expr(eaf, left);
-        self.maybe_block_expr(eaf, right);
+        builder.binary_operator(operator);
+        self.maybe_block_expr(builder, left);
+        self.maybe_block_expr(builder, right);
     }
 
     fn float_division<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         left: &'a TypedExpr,
         right: &'a TypedExpr,
     ) {
         match how_to_divide(left, right) {
-            HowToDivide::ReplaceWithZero => eaf.float(0.0),
+            HowToDivide::ReplaceWithZero => builder.float(0.0),
             HowToDivide::EvaluateLeftAndReturnZero => {
                 // We first evaluate the left hand side, and ignore its return
                 // value, and then we return zero directly!
-                self.maybe_block_expr(eaf, left);
-                eaf.float(0.0);
+                self.maybe_block_expr(builder, left);
+                builder.float(0.0);
             }
             HowToDivide::PlainErlangDivision => {
-                eaf.binary_operator("/");
-                self.maybe_block_expr(eaf, left);
-                self.maybe_block_expr(eaf, right);
+                builder.binary_operator("/");
+                self.maybe_block_expr(builder, left);
+                self.maybe_block_expr(builder, right);
             }
             HowToDivide::MatchOnRight {
                 is_left_hand_side_pure,
@@ -2504,104 +2549,75 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 // result in a variable to use later.
                 let left_name = if !is_left_hand_side_pure {
                     let left_name = self.new_throwaway_variable();
-                    eaf.match_operator();
-                    eaf.variable_pattern(&left_name);
-                    self.maybe_block_expr(eaf, left);
+                    builder.match_operator();
+                    builder.variable_pattern(&left_name);
+                    self.maybe_block_expr(builder, left);
                     Some(left_name)
                 } else {
                     None
                 };
 
-                let case = eaf.start_case();
-                self.maybe_block_expr(eaf, right);
+                let case = builder.start_case();
+                self.maybe_block_expr(builder, right);
 
                 // +0.0 -> +0.0
-                let clause = eaf.start_case_clause();
-                eaf.float_pattern(0.0);
-                let guards = eaf.end_clause_pattern(clause);
-                let body = eaf.end_clause_guards(guards);
-                eaf.float(0.0);
-                eaf.end_clause_body(body);
+                let clause = builder.start_case_clause();
+                builder.float_pattern(0.0);
+                let guards = builder.end_clause_pattern(clause);
+                let body = builder.end_clause_guards(guards);
+                builder.float(0.0);
+                builder.end_clause_body(body);
 
                 // -0.0 -> -0.0
-                let clause = eaf.start_case_clause();
-                eaf.float_pattern(-0.0);
-                let guards = eaf.end_clause_pattern(clause);
-                let body = eaf.end_clause_guards(guards);
-                eaf.float(-0.0);
-                eaf.end_clause_body(body);
+                let clause = builder.start_case_clause();
+                builder.float_pattern(-0.0);
+                let guards = builder.end_clause_pattern(clause);
+                let body = builder.end_clause_guards(guards);
+                builder.float(-0.0);
+                builder.end_clause_body(body);
 
                 // _value -> left / _value
                 let denominator = self.new_throwaway_variable();
-                let clause = eaf.start_case_clause();
-                eaf.variable_pattern(&denominator);
-                let guards = eaf.end_clause_pattern(clause);
-                let body = eaf.end_clause_guards(guards);
-                eaf.binary_operator("/");
+                let clause = builder.start_case_clause();
+                builder.variable_pattern(&denominator);
+                let guards = builder.end_clause_pattern(clause);
+                let body = builder.end_clause_guards(guards);
+                builder.binary_operator("/");
                 // If we had bound the left hand side to a variabe we just
                 // reference it, otherwise we will generate the code for the
                 // numerator.
                 if let Some(left_name) = left_name {
-                    eaf.variable(&left_name);
+                    builder.variable(&left_name);
                 } else {
-                    self.maybe_block_expr(eaf, left);
+                    self.maybe_block_expr(builder, left);
                 }
-                eaf.variable(&denominator);
-                eaf.end_clause_body(body);
+                builder.variable(&denominator);
+                builder.end_clause_body(body);
 
-                eaf.end_case(case);
+                builder.end_case(case);
             }
         }
-
-        //if right.is_non_zero_compile_time_number() {
-        //    eaf.binary_operator("/");
-        //    self.maybe_block_expr(eaf, left);
-        //    self.maybe_block_expr(eaf, right);
-        //} else if left.is_literal() && right.is_zero_compile_time_number() {
-        //    eaf.float(0.0);
-        //} else {
-        //    let left = {
-        //        self.expr(eaf, left);
-        //        nil()
-        //    };
-        //    let right = {
-        //        self.expr(eaf, right);
-        //        nil()
-        //    };
-        //    let denominator = self.new_throwaway_variable();
-        //    let clauses = docvec![
-        //        line(),
-        //        "+0.0 -> +0.0;",
-        //        line(),
-        //        "-0.0 -> -0.0;",
-        //        line(),
-        //        denominator.clone(),
-        //        " -> ",
-        //        binop_documents(left, "/", denominator.to_doc())
-        //    ];
-        //    let _ = docvec!["case ", right, " of", clauses.nest(INDENT), line(), "end"];
-        //}
     }
 
     fn int_division<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         left: &'a TypedExpr,
         right: &'a TypedExpr,
         op: &'static str,
     ) {
         match how_to_divide(left, right) {
-            HowToDivide::ReplaceWithZero => eaf.int(BigInt::ZERO),
+            HowToDivide::ReplaceWithZero => builder.int(BigInt::ZERO),
             HowToDivide::EvaluateLeftAndReturnZero => {
                 // We first evaluate the left hand side, and ignore its return
                 // value, and then we return zero directly!
-                self.maybe_block_expr(eaf, left);
-                eaf.int(BigInt::ZERO);
+                self.maybe_block_expr(builder, left);
+                builder.int(BigInt::ZERO);
             }
             HowToDivide::PlainErlangDivision => {
-                eaf.binary_operator(op);
-                self.maybe_block_expr(eaf, left);
-                self.maybe_block_expr(eaf, right);
+                builder.binary_operator(op);
+                self.maybe_block_expr(builder, left);
+                self.maybe_block_expr(builder, right);
             }
             HowToDivide::MatchOnRight {
                 is_left_hand_side_pure,
@@ -2622,44 +2638,44 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 //
                 let left_name = if !is_left_hand_side_pure {
                     let left_name = self.new_throwaway_variable();
-                    eaf.match_operator();
-                    eaf.variable_pattern(&left_name);
-                    self.maybe_block_expr(eaf, left);
+                    builder.match_operator();
+                    builder.variable_pattern(&left_name);
+                    self.maybe_block_expr(builder, left);
                     Some(left_name)
                 } else {
                     None
                 };
 
-                let case = eaf.start_case();
-                self.maybe_block_expr(eaf, right);
+                let case = builder.start_case();
+                self.maybe_block_expr(builder, right);
 
                 // 0 -> 0
-                let clause = eaf.start_case_clause();
-                eaf.int_pattern(BigInt::ZERO);
-                let guards = eaf.end_clause_pattern(clause);
-                let body = eaf.end_clause_guards(guards);
-                eaf.int(BigInt::ZERO);
-                eaf.end_clause_body(body);
+                let clause = builder.start_case_clause();
+                builder.int_pattern(BigInt::ZERO);
+                let guards = builder.end_clause_pattern(clause);
+                let body = builder.end_clause_guards(guards);
+                builder.int(BigInt::ZERO);
+                builder.end_clause_body(body);
 
                 // _value -> left div _value
                 let denominator = self.new_throwaway_variable();
-                let clause = eaf.start_case_clause();
-                eaf.variable_pattern(&denominator);
-                let guards = eaf.end_clause_pattern(clause);
-                let body = eaf.end_clause_guards(guards);
-                eaf.binary_operator(op);
+                let clause = builder.start_case_clause();
+                builder.variable_pattern(&denominator);
+                let guards = builder.end_clause_pattern(clause);
+                let body = builder.end_clause_guards(guards);
+                builder.binary_operator(op);
                 // If we had bound the left hand side to a variabe we just
                 // reference it, otherwise we will generate the code for the
                 // numerator.
                 if let Some(left_name) = left_name {
-                    eaf.variable(&left_name);
+                    builder.variable(&left_name);
                 } else {
-                    self.maybe_block_expr(eaf, left);
+                    self.maybe_block_expr(builder, left);
                 }
-                eaf.variable(&denominator);
-                eaf.end_clause_body(body);
+                builder.variable(&denominator);
+                builder.end_clause_body(body);
 
-                eaf.end_case(case);
+                builder.end_case(case);
             }
         }
     }
@@ -2673,7 +2689,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     ///
     fn bit_array_expression_segment<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         segment: &'a TypedExprBitArraySegment,
     ) {
         // Literal strings can have the `utf8`, `utf16`, or `utf32` options just
@@ -2730,15 +2746,15 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 ExpressionSegmentStringEncoding::Utf8 => {
                     // Gleam strings are utf8 encoded binaries, so we just need
                     // to add the binary option and we can call it a day.
-                    eaf.bit_array_segment();
-                    self.maybe_block_expr(eaf, &segment.value);
-                    eaf.atom("default");
-                    eaf.bit_array_segment_specifiers([BitArraySegmentSpecifier::Binary]);
+                    builder.bit_array_segment();
+                    self.maybe_block_expr(builder, &segment.value);
+                    builder.atom("default");
+                    builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Binary]);
                     return;
                 }
             };
 
-            eaf.bit_array_segment();
+            builder.bit_array_segment();
 
             // For utf16 and utf32 we need an explicit conversion using erlang's
             // `unicode:characters_to_binary`. The segment value will be
@@ -2747,29 +2763,29 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // unicode:characters_to_binary(<segment_value>, utf8, {utf16, big})
             // ```
             let call =
-                eaf.start_remote_call(ErlangModuleName::new("unicode"), "characters_to_binary");
+                builder.start_remote_call(ErlangModuleName::new("unicode"), "characters_to_binary");
             {
-                self.maybe_block_expr(eaf, &segment.value);
-                eaf.atom("utf8");
-                let tuple = eaf.start_tuple();
-                eaf.atom(&format!("utf{size}"));
+                self.maybe_block_expr(builder, &segment.value);
+                builder.atom("utf8");
+                let tuple = builder.start_tuple();
+                builder.atom(&format!("utf{size}"));
                 match endiannes {
-                    Endianness::Big => eaf.atom("big"),
-                    Endianness::Little => eaf.atom("little"),
+                    Endianness::Big => builder.atom("big"),
+                    Endianness::Little => builder.atom("little"),
                 }
-                eaf.end_tuple(tuple);
+                builder.end_tuple(tuple);
             }
-            eaf.end_call(call);
+            builder.end_call(call);
 
-            eaf.atom("default");
-            eaf.bit_array_segment_specifiers([BitArraySegmentSpecifier::Binary]);
+            builder.atom("default");
+            builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Binary]);
         } else {
             // If the bit array segment doesn't need any special handling we use the
             // regular printing functions to format its value and options.
-            eaf.bit_array_segment();
-            self.maybe_block_expr(eaf, &segment.value);
-            self.bit_array_expression_segment_size(eaf, segment);
-            self.bit_array_segment_specifiers(eaf, segment);
+            builder.bit_array_segment();
+            self.maybe_block_expr(builder, &segment.value);
+            self.bit_array_expression_segment_size(builder, segment);
+            self.bit_array_segment_specifiers(builder, segment);
         }
     }
 
@@ -2780,11 +2796,11 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     /// size!
     fn bit_array_expression_segment_size<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         segment: &'a TypedExprBitArraySegment,
     ) {
         let Some(size) = segment.size() else {
-            eaf.atom("default");
+            builder.atom("default");
             return;
         };
 
@@ -2793,46 +2809,46 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // negative value must be turned to zero instead:
         if let TypedExpr::Int { int_value, .. } = &size {
             if int_value.is_negative() {
-                eaf.int(BigInt::ZERO)
+                builder.int(BigInt::ZERO)
             } else {
-                eaf.int(int_value.clone());
+                builder.int(int_value.clone());
             }
         } else {
-            let call = eaf.start_remote_call(ErlangModuleName::new("erlang"), "max");
-            eaf.int(BigInt::ZERO);
-            self.maybe_block_expr(eaf, size);
-            eaf.end_call(call);
+            let call = builder.start_remote_call(ErlangModuleName::new("erlang"), "max");
+            builder.int(BigInt::ZERO);
+            self.maybe_block_expr(builder, size);
+            builder.end_call(call);
         }
     }
 
     fn clause_guard<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         guard: &'a TypedClauseGuard,
         assignments: &HashMap<EcoString, AliasedLiteral>,
     ) {
         match guard {
             ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to code generation"),
 
-            ClauseGuard::ModuleSelect { literal, .. } => self.inlined_constant(eaf, literal),
-            ClauseGuard::Constant(constant) => self.inlined_constant(eaf, constant),
+            ClauseGuard::ModuleSelect { literal, .. } => self.inlined_constant(builder, literal),
+            ClauseGuard::Constant(constant) => self.inlined_constant(builder, constant),
 
-            ClauseGuard::Block { value, .. } => self.clause_guard(eaf, value, assignments),
+            ClauseGuard::Block { value, .. } => self.clause_guard(builder, value, assignments),
 
             ClauseGuard::TupleIndex { tuple, index, .. } => {
-                self.clause_guard_tuple_index(eaf, tuple, *index)
+                self.clause_guard_tuple_index(builder, tuple, *index)
             }
 
             ClauseGuard::FieldAccess {
                 container, index, ..
             } => self.clause_guard_tuple_index(
-                eaf,
+                builder,
                 container,
                 index.expect("Unable to find index") + 1,
             ),
             ClauseGuard::Not { expression, .. } => {
-                eaf.unary_operator("not");
-                self.clause_guard(eaf, expression, assignments);
+                builder.unary_operator("not");
+                self.clause_guard(builder, expression, assignments);
             }
 
             ClauseGuard::BinaryOperator {
@@ -2857,13 +2873,18 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     BinOp::DivInt => "div",
                     BinOp::RemainderInt => "rem",
                     BinOp::Concatenate => {
-                        return self.clause_guard_string_concatenate(eaf, left, right, assignments);
+                        return self.clause_guard_string_concatenate(
+                            builder,
+                            left,
+                            right,
+                            assignments,
+                        );
                     }
                 };
 
-                eaf.binary_operator(operator);
-                self.clause_guard(eaf, left, assignments);
-                self.clause_guard(eaf, right, assignments);
+                builder.binary_operator(operator);
+                self.clause_guard(builder, left, assignments);
+                self.clause_guard(builder, right, assignments);
             }
 
             // Only local variables are supported and the typer ensures that all
@@ -2878,11 +2899,11 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 // generated code the variable is only defined later, so just
                 // referencing its name would result in an error.
                 match assignments.get(name) {
-                    Some(AliasedLiteral::String { value, .. }) => eaf.string(value),
-                    Some(AliasedLiteral::Int { value, .. }) => eaf.int(value.clone()),
-                    Some(AliasedLiteral::Float { value, .. }) => eaf.float(value.value()),
+                    Some(AliasedLiteral::String { value, .. }) => builder.string(value),
+                    Some(AliasedLiteral::Int { value, .. }) => builder.int(value.clone()),
+                    Some(AliasedLiteral::Float { value, .. }) => builder.float(value.value()),
                     None => {
-                        eaf.variable(&self.local_var_name(definition_location));
+                        builder.variable(&self.local_var_name(definition_location));
                     }
                 }
             }
@@ -2891,32 +2912,32 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
     fn clause_guard_tuple_index<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         tuple: &'a TypedClauseGuard,
         index: u64,
     ) {
-        let call = eaf.start_remote_call(ErlangModuleName::new("erlang"), "element");
-        eaf.int((index + 1).into());
-        self.clause_guard(eaf, tuple, &HashMap::new());
-        eaf.end_call(call);
+        let call = builder.start_remote_call(ErlangModuleName::new("erlang"), "element");
+        builder.int((index + 1).into());
+        self.clause_guard(builder, tuple, &HashMap::new());
+        builder.end_call(call);
     }
 
     fn clause_guard_string_concatenate<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         left: &'a TypedClauseGuard,
         right: &'a TypedClauseGuard,
         assignments: &HashMap<EcoString, AliasedLiteral>,
     ) {
-        let bit_array = eaf.start_bit_array();
-        self.clause_guard_string_concatenate_argument(eaf, left, assignments);
-        self.clause_guard_string_concatenate_argument(eaf, right, assignments);
-        eaf.end_bit_array(bit_array);
+        let bit_array = builder.start_bit_array();
+        self.clause_guard_string_concatenate_argument(builder, left, assignments);
+        self.clause_guard_string_concatenate_argument(builder, right, assignments);
+        builder.end_bit_array(bit_array);
     }
 
     fn clause_guard_string_concatenate_argument<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         guard: &'a TypedClauseGuard,
         assignments: &HashMap<EcoString, AliasedLiteral>,
     ) {
@@ -2926,10 +2947,10 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // the `/utf8` specifier instead!
         // In both cases the size is alwaus automatic, so we generate the
         // `default` atom.
-        eaf.bit_array_segment();
-        self.clause_guard(eaf, guard, assignments);
-        eaf.atom("default");
-        eaf.bit_array_segment_specifiers(if guard_produces_literal_string(guard) {
+        builder.bit_array_segment();
+        self.clause_guard(builder, guard, assignments);
+        builder.atom("default");
+        builder.bit_array_segment_specifiers(if guard_produces_literal_string(guard) {
             [BitArraySegmentSpecifier::Utf8]
         } else {
             [BitArraySegmentSpecifier::Binary]
@@ -2963,27 +2984,27 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     ///
     fn record_builder_anonymous_function<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         record_name: &str,
         arguments: usize,
     ) {
         let arguments = (0..arguments)
             .map(|_| self.new_throwaway_variable())
             .collect_vec();
-        let function = eaf.start_anonymous_function(&arguments);
+        let function = builder.start_anonymous_function(&arguments);
 
         if arguments.is_empty() {
-            eaf.atom(&to_snake_case(record_name))
+            builder.atom(&to_snake_case(record_name))
         } else {
-            let tuple = eaf.start_tuple();
-            eaf.atom(&to_snake_case(record_name));
+            let tuple = builder.start_tuple();
+            builder.atom(&to_snake_case(record_name));
             for argument in arguments {
-                eaf.variable(&argument);
+                builder.variable(&argument);
             }
-            eaf.end_tuple(tuple)
+            builder.end_tuple(tuple)
         }
 
-        eaf.end_function(function);
+        builder.end_function(function);
     }
 
     /// After generating a pattern we might have to generate additional variable
@@ -2991,7 +3012,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     /// This adds those variable to the current body.
     fn pattern_assignments<Output>(
         &mut self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         variables_to_add_later: HashMap<EcoString, AliasedLiteral>,
     ) {
         let variables_to_add_later = variables_to_add_later
@@ -2999,19 +3020,19 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             .sorted_by(|(one, _), (other, _)| one.cmp(other));
 
         for (gleam_name, value) in variables_to_add_later {
-            eaf.match_operator();
+            builder.match_operator();
             match value {
                 AliasedLiteral::String { location, value } => {
-                    eaf.variable_pattern(&self.new_erlang_variable(&gleam_name, location));
-                    eaf.string(&value);
+                    builder.variable_pattern(&self.new_erlang_variable(&gleam_name, location));
+                    builder.string(&value);
                 }
                 AliasedLiteral::Float { location, value } => {
-                    eaf.variable_pattern(&self.new_erlang_variable(&gleam_name, location));
-                    eaf.float(value.value());
+                    builder.variable_pattern(&self.new_erlang_variable(&gleam_name, location));
+                    builder.float(value.value());
                 }
                 AliasedLiteral::Int { location, value } => {
-                    eaf.variable_pattern(&self.new_erlang_variable(&gleam_name, location));
-                    eaf.int(value.clone());
+                    builder.variable_pattern(&self.new_erlang_variable(&gleam_name, location));
+                    builder.int(value.clone());
                 }
             }
         }
@@ -3152,28 +3173,6 @@ fn how_to_call<'a>(function: &'a TypedExpr) -> FunctionCall<'a> {
             }
         },
 
-        //TypedExpr::Fn { kind, body, .. } if kind.is_capture() => {
-        //    if let Statement::Expression(TypedExpr::Call {
-        //        fun,
-        //        arguments: inner_arguments,
-        //        ..
-        //    }) = body.first()
-        //    {
-        //        let mut merged_arguments = Vec::with_capacity(inner_arguments.len());
-        //        for arg in inner_arguments {
-        //            if let TypedExpr::Var { name, .. } = &arg.value
-        //                && name == CAPTURE_VARIABLE
-        //            {
-        //                merged_arguments.push(arguments.swap_remove(0))
-        //            } else {
-        //                merged_arguments.push(self.maybe_block_expr(eaf, &arg.value))
-        //            }
-        //        }
-        //        self.docs_arguments_call(eaf, fun, merged_arguments)
-        //    } else {
-        //        panic!("Erl printing: Capture was not a call")
-        //    }
-        //}
         TypedExpr::Fn { .. }
         | TypedExpr::Call { .. }
         | TypedExpr::Todo { .. }
@@ -3264,19 +3263,19 @@ fn how_to_divide(left: &TypedExpr, right: &TypedExpr) -> HowToDivide {
 }
 
 pub fn record_definition(record_name: &str, fields: &[(&str, Arc<Type>)]) -> String {
-    let mut eaf = PrettyEaf::new(None);
+    let mut builder = ErlangSourceBuilder::new(None);
 
-    let record = eaf.start_record_attribute(&to_snake_case(record_name));
+    let record = builder.start_record_attribute(&to_snake_case(record_name));
 
     let type_printer = TypeGenerator::new("").var_as_any();
     for (field_name, field_type) in fields {
-        eaf.record_field();
-        eaf.atom(field_name);
-        type_printer.type_(&mut eaf, field_type);
+        builder.record_field();
+        builder.atom(field_name);
+        type_printer.type_(&mut builder, field_type);
     }
 
-    eaf.end_record_attribute(record);
-    eaf.into_output()
+    builder.end_record_attribute(record);
+    builder.into_output()
 }
 
 pub fn module<'a>(
@@ -3285,10 +3284,10 @@ pub fn module<'a>(
     root: &'a Utf8Path,
 ) -> String {
     let mut generator = Generator::new(module, line_numbers, root);
-    let mut eaf = PrettyEaf::new(Some(ErlangModuleName::new(&module.name)));
-    generator.module_document(&mut eaf);
+    let mut builder = ErlangSourceBuilder::new(Some(ErlangModuleName::new(&module.name)));
+    generator.module_document(&mut builder);
 
-    let mut output = eaf.into_output();
+    let mut output = builder.into_output();
     if generator.echo_used {
         output.push_str(std::include_str!("../templates/echo.erl"));
     }
@@ -3882,49 +3881,49 @@ impl<'a> TypeGenerator<'a> {
         self
     }
 
-    pub fn type_<Output>(&self, eaf: &mut impl Eaf<Output>, type_: &Type) {
+    pub fn type_<Output>(&self, builder: &mut impl ErlangBuilder<Output>, type_: &Type) {
         match type_ {
-            Type::Var { type_ } => self.type_variable(eaf, &type_.borrow()),
+            Type::Var { type_ } => self.type_variable(builder, &type_.borrow()),
             Type::Named {
                 name,
                 module,
                 arguments,
                 ..
-            } if is_prelude_module(module) => self.prelude_type(eaf, name, arguments),
+            } if is_prelude_module(module) => self.prelude_type(builder, name, arguments),
             Type::Named {
                 name,
                 module,
                 arguments,
                 ..
-            } => self.named_type(eaf, module.into(), name, arguments),
+            } => self.named_type(builder, module.into(), name, arguments),
             Type::Fn { arguments, return_ } => {
-                let function_type = eaf.start_function_type();
+                let function_type = builder.start_function_type();
                 for argument in arguments {
-                    self.type_(eaf, argument);
+                    self.type_(builder, argument);
                 }
-                let function_type = eaf.end_function_type_arguments(function_type);
-                self.type_(eaf, return_);
-                eaf.end_function_type(function_type);
+                let function_type = builder.end_function_type_arguments(function_type);
+                self.type_(builder, return_);
+                builder.end_function_type(function_type);
             }
             Type::Tuple { elements } => {
-                let tuple = eaf.start_tuple_type();
+                let tuple = builder.start_tuple_type();
                 for element in elements {
-                    self.type_(eaf, element)
+                    self.type_(builder, element)
                 }
-                eaf.end_tuple_type(tuple);
+                builder.end_tuple_type(tuple);
             }
         }
     }
 
-    fn type_variable<Output>(&self, eaf: &mut impl Eaf<Output>, type_: &TypeVar) {
+    fn type_variable<Output>(&self, builder: &mut impl ErlangBuilder<Output>, type_: &TypeVar) {
         match type_ {
-            TypeVar::Link { type_ } => self.type_(eaf, type_),
+            TypeVar::Link { type_ } => self.type_(builder, type_),
             TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => {
                 if self.var_as_any || self.type_variable_is_used_exactly_once(*id) {
-                    let any = eaf.start_named_type("any");
-                    eaf.end_named_type(any);
+                    let any = builder.start_named_type("any");
+                    builder.end_named_type(any);
                 } else {
-                    eaf.type_variable(&id_to_type_var_str(*id))
+                    builder.type_variable(&id_to_type_var_str(*id))
                 }
             }
         }
@@ -3943,58 +3942,58 @@ impl<'a> TypeGenerator<'a> {
 
     fn prelude_type<Output>(
         &self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         name: &str,
         arguments: &[Arc<Type>],
     ) {
         match name {
-            "Nil" => eaf.literal_atom_type("nil"),
+            "Nil" => builder.literal_atom_type("nil"),
             "Int" | "UtfCodepoint" => {
-                let integer = eaf.start_named_type("integer");
-                eaf.end_named_type(integer);
+                let integer = builder.start_named_type("integer");
+                builder.end_named_type(integer);
             }
             "String" => {
-                let string = eaf.start_named_type("binary");
-                eaf.end_named_type(string);
+                let string = builder.start_named_type("binary");
+                builder.end_named_type(string);
             }
             "Bool" => {
-                let boolean = eaf.start_named_type("boolean");
-                eaf.end_named_type(boolean);
+                let boolean = builder.start_named_type("boolean");
+                builder.end_named_type(boolean);
             }
             "Float" => {
-                let float = eaf.start_named_type("float");
-                eaf.end_named_type(float);
+                let float = builder.start_named_type("float");
+                builder.end_named_type(float);
             }
             "BitArray" => {
-                let bitstring = eaf.start_named_type("bitstring");
-                eaf.end_named_type(bitstring);
+                let bitstring = builder.start_named_type("bitstring");
+                builder.end_named_type(bitstring);
             }
             "List" => {
-                let list = eaf.start_named_type("list");
+                let list = builder.start_named_type("list");
                 let list_item = arguments
                     .first()
                     .expect("prelude type list with no argument");
-                self.type_(eaf, list_item);
-                eaf.end_named_type(list);
+                self.type_(builder, list_item);
+                builder.end_named_type(list);
             }
             "Result" => {
                 let [ok_type, error_type] = arguments else {
                     panic!("result type with no ok and err types")
                 };
 
-                let result = eaf.start_union_type();
+                let result = builder.start_union_type();
 
-                let ok = eaf.start_tuple_type();
-                eaf.literal_atom_type("ok");
-                self.type_(eaf, ok_type);
-                eaf.end_tuple_type(ok);
+                let ok = builder.start_tuple_type();
+                builder.literal_atom_type("ok");
+                self.type_(builder, ok_type);
+                builder.end_tuple_type(ok);
 
-                let error = eaf.start_tuple_type();
-                eaf.literal_atom_type("error");
-                self.type_(eaf, error_type);
-                eaf.end_tuple_type(error);
+                let error = builder.start_tuple_type();
+                builder.literal_atom_type("error");
+                self.type_(builder, error_type);
+                builder.end_tuple_type(error);
 
-                eaf.end_union_type(result);
+                builder.end_union_type(result);
             }
 
             // Getting here should mean we either forgot a built-in type or there is a
@@ -4005,23 +4004,23 @@ impl<'a> TypeGenerator<'a> {
 
     fn named_type<Output>(
         &self,
-        eaf: &mut impl Eaf<Output>,
+        builder: &mut impl ErlangBuilder<Output>,
         module: EcoString,
         name: &str,
         arguments: &[Arc<Type>],
     ) {
         let name = erl_safe_type_name(to_snake_case(name));
         let type_ = if self.current_module == module {
-            eaf.start_named_type(&name)
+            builder.start_named_type(&name)
         } else {
-            eaf.start_remote_named_type(ErlangModuleName::new(&module), &name)
+            builder.start_remote_named_type(ErlangModuleName::new(&module), &name)
         };
 
         for argument in arguments {
-            self.type_(eaf, argument)
+            self.type_(builder, argument)
         }
 
-        eaf.end_named_type(type_);
+        builder.end_named_type(type_);
     }
 }
 

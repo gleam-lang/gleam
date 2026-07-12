@@ -18,7 +18,7 @@ members = [
   "pretty-arena",
   "format",
   "erlang-term-format",
-  "erlang-abstract-format",
+  "erlang-generation",
 ]
 
 # common dependencies
@@ -88,4 +88,3 @@ num-traits = "0.2.19"
 unicode-segmentation = "1.13.2"
 # Checksums
 xxhash-rust = { version = "0", features = ["xxh3"] }
-
