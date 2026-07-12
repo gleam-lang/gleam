@@ -293,7 +293,7 @@ pub trait ErlangBuilder<Output> {
 
     /// Starts a `-record` attribute.
     /// After this you're supposed to generate a sequence of `record_field`, and
-    /// once you're done you should end it with `edn_record_attribute`.
+    /// once you're done you must end it with `end_record_attribute`.
     ///
     /// For example:
     ///
@@ -329,7 +329,7 @@ pub trait ErlangBuilder<Output> {
 
     /// This starts a function type spec.
     /// Everything that is generated after this call is interpreted as the
-    /// annotated type of the function. So this should be followed by a single
+    /// annotated type of the function. So this must be followed by a single
     /// function type.
     ///
     /// After that is complete, this has to be closed using `end_function_spec`.
@@ -340,7 +340,7 @@ pub trait ErlangBuilder<Output> {
     /// let spec = builder.start_function_spec("wibble", 1)
     /// let function_type = builder.start_function_type();
     /// builder.int_type();
-    /// let function_type builder.end_function_type_arguments(function_type);
+    /// let function_type = builder.end_function_type_arguments(function_type);
     /// builder.variable_type("A");
     /// builder.end_function_type(function_type);
     /// ```
@@ -393,7 +393,7 @@ pub trait ErlangBuilder<Output> {
     /// This starts a function type.
     /// Any code generated after this is gonna be an argument type of the open
     /// function type until `end_function_type_arguments` is called.
-    /// After that you should generate a single type that's gonna be the return
+    /// After that you must generate a single type that's gonna be the return
     /// type, and then end the function.
     ///
     /// For example:
@@ -419,7 +419,7 @@ pub trait ErlangBuilder<Output> {
     /// This means that the next type that is generated is going to be the
     /// return type of the open function type.
     ///
-    /// After that you should call `end_function_type` to close the function
+    /// After that you must call `end_function_type` to close the function
     /// type.
     ///
     fn end_function_type_arguments(&mut self, function_type: FunctionTypeArguments)
@@ -438,14 +438,14 @@ pub trait ErlangBuilder<Output> {
     /// For example:
     ///
     /// ```ignore
-    /// let integer = builder.start_named_type("integer");
-    /// builder.end_named_type(integer);
+    /// let type_ = builder.start_named_type("wibble");
+    /// builder.end_named_type(type_);
     /// ```
     ///
     /// Corresponds to:
     ///
     /// ```erl
-    /// integer().
+    /// wibble().
     /// ```
     ///
     fn start_named_type(&mut self, name: &str) -> NamedType;
@@ -546,10 +546,11 @@ pub trait ErlangBuilder<Output> {
     ///
     fn type_variable(&mut self, name: &str);
 
-    /// This generated the code for a literal atom type.
+    /// This generated the code for a literal atom type (as opposed to the
+    /// type `atom()`).
     ///
-    /// For example, the annotation of a function returning the atom `nil` is
-    /// be defined like this:
+    /// For example, the annotation of a function returning the atom `nil`
+    /// is be defined like this:
     ///
     /// ```ignore
     /// let function = builder.start_function_type();
@@ -711,7 +712,7 @@ pub trait ErlangBuilder<Output> {
     /// Corresponds to:
     ///
     /// ```erl
-    /// { ~"Hello", 1 }.
+    /// {~"Hello", 1}.
     /// ```
     ///
     fn start_tuple(&mut self) -> Tuple;
@@ -847,9 +848,13 @@ pub trait ErlangBuilder<Output> {
     ///
     /// ```erl
     /// [Hello | [ ~"Giacomo" | []]].
-    /// % Which, with some syntax sugar, is how we represent a list with two
-    /// % elements:
-    /// % [Hello, ~"Giacomo"]
+    /// ```
+    ///
+    /// Which, with some syntax sugar, is how we represent a list with two
+    /// elements:
+    ///
+    /// ```erl
+    /// [Hello, ~"Giacomo"]
     /// ```
     ///
     fn cons_list(&mut self);
@@ -904,7 +909,7 @@ pub trait ErlangBuilder<Output> {
     /// `start_case` documentation.
     fn start_case_clause(&mut self) -> ClausePattern;
 
-    /// This ends the case clause's pattern. After this you should generate the
+    /// This ends the case clause's pattern. After this you must generate the
     /// clause guards and then call `end_clause_guards`.
     /// If the clause you're generating has no guards you can immediately call
     /// that function without generating anything inbetween.
@@ -983,7 +988,7 @@ pub trait ErlangBuilder<Output> {
     fn function_reference(&mut self, module: Option<ErlangModuleName>, name: &str, arity: usize);
 
     /// This is used to create the code that corresponds to an assignment.
-    /// A call to this function should always be followed by the generation of
+    /// A call to this function must always be followed by the generation of
     /// a pattern (the left-hand side of the assignment), and of an expression
     /// (the right-hand side of the assignment).
     ///
@@ -1004,7 +1009,7 @@ pub trait ErlangBuilder<Output> {
     fn match_operator(&mut self);
 
     /// This is used to create the code that corresponds to a match pattern.
-    /// A call to this function should always be followed by the generation of
+    /// A call to this function must always be followed by the generation of
     /// a pattern (the left-hand side of the assignment), and of another pattern
     /// (the right-hand side of the assignment).
     ///
@@ -1171,10 +1176,14 @@ pub trait ErlangBuilder<Output> {
     ///
     /// ```erl
     /// [_ | [ ~"Louis" | []]].
-    /// % Which, with some syntax sugar, is how we represent a pattern matching
-    /// % on a list with two elements, where the second element is the string
-    /// % ~"Louis":
-    /// % [_, ~"Louis"]
+    /// ```
+    ///
+    /// Which, with some syntax sugar, is how we represent a pattern matching
+    /// on a list with two elements, where the second element is the string
+    /// `~"Louis"`:
+    ///
+    /// ```erl
+    /// [_, ~"Louis"]
     /// ```
     ///
     fn cons_list_pattern(&mut self);
@@ -1197,9 +1206,13 @@ pub trait ErlangBuilder<Output> {
     ///
     /// ```erl
     /// ~"ksiąskę".
-    /// % Which is the same as <<"ksiąskę"/utf8>>
-    /// % Or the same as writing the bytes directly:
-    /// % <<107, 115, 105, 196, 133, 115, 107, 196, 153>>
+    /// ```
+    ///
+    /// Which is the same as `<<"ksiąskę"/utf8>>`
+    /// Or the same as writing the bytes directly:
+    ///
+    /// ```erl
+    /// <<107, 115, 105, 196, 133, 115, 107, 196, 153>>
     /// ```
     ///
     fn string(&mut self, string: &str);
@@ -1634,7 +1647,7 @@ static UNICODE_ESCAPE_SEQUENCE_PATTERN: OnceLock<Regex> = OnceLock::new();
 
 /// How does pretty printing work? Here's a high level overview of how it works:
 ///
-/// - when a new element is generated we call the `new_x` method.
+/// - When a new element is generated we call the `new_x` method.
 ///   If I'm generating an integer (or any expression) I call `new_expression`;
 ///   if I'm generating a pattern I call `new_pattern`.
 /// - The `new_x` functions make sure that we're allowed to generate that
