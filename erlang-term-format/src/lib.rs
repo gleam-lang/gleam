@@ -121,6 +121,10 @@ impl Builder {
 
     /// Pushes the most compact representation of the given atom.
     pub fn atom(&mut self, atom: &str) {
+        // TODO: we could explore using ATOM_CACHE_REF in future.
+        // Might be able to get slightly faster ETF parsing out of erlc if we
+        // use it:
+        // https://www.erlang.org/doc/apps/erts/erl_ext_dist.html#atom_cache_ref
         if atom.len() <= 255 {
             self.small_atom_utf8(atom);
         } else {
