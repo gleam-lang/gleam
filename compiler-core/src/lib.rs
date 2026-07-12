@@ -25,6 +25,7 @@
     clippy::verbose_file_reads,
     clippy::unnested_or_patterns,
     clippy::default_trait_access,
+    clippy::format_push_string,
     rust_2018_idioms,
     missing_debug_implementations,
     missing_copy_implementations,

@@ -90,6 +90,8 @@ macro_rules! assert_module_error {
     };
 
     ($(($name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
+        use std::fmt::Write as _;
+
         let error = $crate::type_::tests::module_error(
             $src,
             vec![
@@ -99,13 +101,15 @@ macro_rules! assert_module_error {
 
         let mut output = String::from("----- SOURCE CODE\n");
         for (name, src) in [$(($name, $module_src)),*] {
-            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+            let _ = write!(output, "-- {name}.gleam\n{src}\n\n");
         }
-        output.push_str(&format!("-- main.gleam\n{}\n\n----- ERROR\n{error}", $src));
+        let _ = write!(output, "-- main.gleam\n{}\n\n----- ERROR\n{error}", $src);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
     ($(($package:literal, $name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
+        use std::fmt::Write as _;
+
         let error = $crate::type_::tests::module_error(
             $src,
             vec![
@@ -115,9 +119,9 @@ macro_rules! assert_module_error {
 
         let mut output = String::from("----- SOURCE CODE\n");
         for (name, src) in [$(($name, $module_src)),*] {
-            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+            let _ = write!(output, "-- {name}.gleam\n{src}\n\n");
         }
-        output.push_str(&format!("-- main.gleam\n{}\n\n----- ERROR\n{error}", $src));
+        let _ = write!(output, "-- main.gleam\n{}\n\n----- ERROR\n{error}", $src);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -231,6 +235,8 @@ macro_rules! assert_warning {
     };
 
     ($(($name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
+        use std::fmt::Write as _;
+
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![
@@ -243,13 +249,15 @@ macro_rules! assert_warning {
 
         let mut output = String::from("----- SOURCE CODE\n");
         for (name, src) in [$(($name, $module_src)),*] {
-            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+            let _ = write!(output, "-- {name}.gleam\n{src}\n\n");
         }
-        output.push_str(&format!("-- main.gleam\n{}\n\n----- WARNING\n{warning}", $src));
+        let _ = write!(output, "-- main.gleam\n{}\n\n----- WARNING\n{warning}", $src);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr) => {
+        use std::fmt::Write as _;
+
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![$(($package, $name, $module_src)),*],
@@ -260,9 +268,9 @@ macro_rules! assert_warning {
 
         let mut output = String::from("----- SOURCE CODE\n");
         for (name, src) in [$(($name, $module_src)),*] {
-            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+            let _ = write!(output, "-- {name}.gleam\n{src}\n\n");
         }
-        output.push_str(&format!("-- main.gleam\n{}\n\n----- WARNING\n{warning}", $src));
+        let _ = write!(output, "-- main.gleam\n{}\n\n----- WARNING\n{warning}", $src);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }

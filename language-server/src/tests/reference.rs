@@ -94,6 +94,8 @@ macro_rules! assert_references {
     };
 
     ($project:expr, $position:expr $(,)?) => {
+        use std::fmt::Write as _;
+
         let project = $project;
         let src = project.src;
         let position = $position.find_position(src);
@@ -101,19 +103,21 @@ macro_rules! assert_references {
 
         let mut output = String::new();
         for (name, src) in project.root_package_modules.iter() {
-            output.push_str(&format!(
+            let _ = write!(
+                output,
                 "-- {name}.gleam\n{}\n\n",
                 show_references(src, None, result.get(*name).unwrap_or(&Vec::new()))
-            ));
+            );
         }
-        output.push_str(&format!(
+        let _ = write!(
+            output,
             "-- app.gleam\n{}",
             show_references(
                 src,
                 Some(position),
                 result.get("app").unwrap_or(&Vec::new())
             )
-        ));
+        );
 
         insta::assert_snapshot!(insta::internals::AutoName, output, src);
     };

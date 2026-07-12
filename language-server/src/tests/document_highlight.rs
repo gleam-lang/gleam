@@ -86,6 +86,8 @@ macro_rules! assert_highlights {
     };
 
     ($project:expr, $position:expr $(,)?) => {
+        use std::fmt::Write as _;
+
         let project = $project;
         let src = project.src;
         let position = $position.find_position(src);
@@ -99,20 +101,22 @@ macro_rules! assert_highlights {
             } else {
                 &Vec::new()
             };
-            output.push_str(&format!(
+            let _ = write!(
+                output,
                 "-- {name}.gleam\n{}\n\n",
                 show_highlights(src, None, highlights_in_module)
-            ));
+            );
         }
         let highlights_in_app_module = if module_name == "app" {
             &result
         } else {
             &Vec::new()
         };
-        output.push_str(&format!(
+        let _ = write!(
+            output,
             "-- app.gleam\n{}",
             show_highlights(src, Some(position), highlights_in_app_module)
-        ));
+        );
 
         insta::assert_snapshot!(insta::internals::AutoName, output, src);
     };

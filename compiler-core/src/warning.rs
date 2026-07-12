@@ -22,6 +22,7 @@ use debug_ignore::DebugIgnore;
 use ecow::EcoString;
 use itertools::Itertools;
 use std::{
+    fmt::Write as _,
     io::Write,
     sync::{Arc, atomic::Ordering},
 };
@@ -1100,9 +1101,12 @@ Either change the pattern or use `panic` to unconditionally fail.",
                     };
                     let mut text = format!("`{name}` is not a function");
                     match arguments {
-                        0 => text.push_str(&format!(
-                            ", you can just write `{name}` instead of `{name}()`."
-                        )),
+                        0 => {
+                            let _ = write!(
+                                text,
+                                ", you can just write `{name}` instead of `{name}()`."
+                            );
+                        }
                         1 => text.push_str(
                             " and will crash before it can do anything with this argument.",
                         ),
