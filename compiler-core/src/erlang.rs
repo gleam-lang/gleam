@@ -307,8 +307,7 @@ impl<'a> Generator<'a> {
             // it corresponds to in Erlang.
             // In that case all type variables are phantom type variables!
             ([], _) if let Some((module, type_name, _)) = external_erlang => {
-                let type_ =
-                    eaf.start_remote_named_type(ErlangModuleName::new(module.clone()), type_name);
+                let type_ = eaf.start_remote_named_type(ErlangModuleName::new(&module), type_name);
                 for type_variable in phantom_type_variables {
                     eaf.type_variable(&type_variable);
                 }
@@ -625,7 +624,8 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     .function_arguments_names(&function.arguments, true)
                     .collect_vec();
                 let open_function = eaf.start_function(&function_name, arity, arguments.clone());
-                let call = eaf.start_remote_call(module.into(), external_function_name);
+                let call =
+                    eaf.start_remote_call(ErlangModuleName::new(&module), external_function_name);
                 for argument in arguments {
                     eaf.variable(&argument);
                 }
@@ -937,14 +937,14 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 ..
             } => match type_::collapse_links(type_.clone()).as_ref() {
                 Type::Fn { arguments, .. } => eaf.function_reference(
-                    Some(module.into()),
+                    Some(ErlangModuleName::new(&module)),
                     escape_erlang_existing_name(name),
                     arguments.len(),
                 ),
 
                 Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
                     let name = escape_erlang_existing_name(name);
-                    let call = eaf.start_remote_call(module.into(), name);
+                    let call = eaf.start_remote_call(ErlangModuleName::new(&module), name);
                     eaf.end_call(call);
                 }
             },
@@ -1078,7 +1078,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         location: SrcSpan,
         message: Option<&'a TypedExpr>,
     ) -> RuntimeError {
-        let call = eaf.start_remote_call("erlang".into(), "error");
+        let call = eaf.start_remote_call(ErlangModuleName::new("erlang"), "error");
         let map = eaf.start_map();
 
         eaf.map_field();
@@ -1863,7 +1863,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         tuple: &'a TypedExpr,
         index: u64,
     ) {
-        let call = eaf.start_remote_call("erlang".into(), "element");
+        let call = eaf.start_remote_call(ErlangModuleName::new("erlang"), "element");
         eaf.int((index + 1).into());
         self.maybe_block_expr(eaf, tuple);
         eaf.end_call(call);
@@ -1921,7 +1921,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 if *module == self.module_generator.module.name {
                     eaf.function_reference(None, name, *arity)
                 } else {
-                    eaf.function_reference(Some(module.into()), name, *arity)
+                    eaf.function_reference(Some(ErlangModuleName::new(&module)), name, *arity)
                 }
             }
 
@@ -1937,7 +1937,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 name,
                 ..
             } => eaf.function_reference(
-                Some(module.into()),
+                Some(ErlangModuleName::new(&module)),
                 escape_erlang_existing_name(name),
                 *arity,
             ),
@@ -1959,7 +1959,10 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // module name if it comes from a different module).
             FunctionCall::Call { module, name } => {
                 let call = if module != self.module_generator.module.name {
-                    eaf.start_remote_call(module.into(), escape_erlang_existing_name(name))
+                    eaf.start_remote_call(
+                        ErlangModuleName::new(&module),
+                        escape_erlang_existing_name(name),
+                    )
                 } else {
                     let call = eaf.start_call();
                     eaf.atom(escape_erlang_existing_name(name));
@@ -2011,7 +2014,10 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // module name if it comes from a different module).
             FunctionCall::Call { module, name } => {
                 let call = if module != self.module_generator.module.name {
-                    eaf.start_remote_call(module.into(), escape_erlang_existing_name(name))
+                    eaf.start_remote_call(
+                        ErlangModuleName::new(&module),
+                        escape_erlang_existing_name(name),
+                    )
                 } else {
                     let call = eaf.start_call();
                     eaf.atom(escape_erlang_existing_name(name));
@@ -2740,7 +2746,8 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // ```erl
             // unicode:characters_to_binary(<segment_value>, utf8, {utf16, big})
             // ```
-            let call = eaf.start_remote_call("unicode".into(), "characters_to_binary");
+            let call =
+                eaf.start_remote_call(ErlangModuleName::new("unicode"), "characters_to_binary");
             {
                 self.maybe_block_expr(eaf, &segment.value);
                 eaf.atom("utf8");
@@ -2791,7 +2798,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 eaf.int(int_value.clone());
             }
         } else {
-            let call = eaf.start_remote_call("erlang".into(), "max");
+            let call = eaf.start_remote_call(ErlangModuleName::new("erlang"), "max");
             eaf.int(BigInt::ZERO);
             self.maybe_block_expr(eaf, size);
             eaf.end_call(call);
@@ -2888,7 +2895,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         tuple: &'a TypedClauseGuard,
         index: u64,
     ) {
-        let call = eaf.start_remote_call("erlang".into(), "element");
+        let call = eaf.start_remote_call(ErlangModuleName::new("erlang"), "element");
         eaf.int((index + 1).into());
         self.clause_guard(eaf, tuple, &HashMap::new());
         eaf.end_call(call);
@@ -3278,7 +3285,7 @@ pub fn module<'a>(
     root: &'a Utf8Path,
 ) -> String {
     let mut generator = Generator::new(module, line_numbers, root);
-    let mut eaf = PrettyEaf::new(Some(ErlangModuleName::from(&module.name)));
+    let mut eaf = PrettyEaf::new(Some(ErlangModuleName::new(&module.name)));
     generator.module_document(&mut eaf);
 
     let mut output = eaf.into_output();
@@ -4007,7 +4014,7 @@ impl<'a> TypeGenerator<'a> {
         let type_ = if self.current_module == module {
             eaf.start_named_type(&name)
         } else {
-            eaf.start_remote_named_type(ErlangModuleName::new(module), &name)
+            eaf.start_remote_named_type(ErlangModuleName::new(&module), &name)
         };
 
         for argument in arguments {
