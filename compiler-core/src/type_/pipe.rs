@@ -390,7 +390,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 };
                 self.expr_typer.problems.error(error);
             }
-        };
+        }
 
         TypedExpr::Call {
             location: function_location,

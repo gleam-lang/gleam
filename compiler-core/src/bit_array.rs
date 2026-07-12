@@ -193,7 +193,7 @@ where
                     categories.unit = Some(option);
                 }
             }
-        };
+        }
     }
 
     // Some options are not allowed in value mode

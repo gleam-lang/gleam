@@ -113,7 +113,7 @@ impl Manifest {
                     buffer.push_str(&make_relative(root_path, path).as_str().replace('\\', "/"));
                     buffer.push('"');
                 }
-            };
+            }
 
             buffer.push_str(" },\n");
         }
@@ -713,7 +713,7 @@ impl PackageChanges {
                             name: new.name.clone(),
                             old_hash: old_hash.clone(),
                             new_hash: new_hash.clone(),
-                        })
+                        });
                     }
                     (
                         ManifestPackageSource::Hex { .. }

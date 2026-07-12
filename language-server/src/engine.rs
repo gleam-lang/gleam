@@ -1124,7 +1124,7 @@ where
                         reference_locations.push(lsp::Location {
                             uri: uri.clone(),
                             range: src_span_to_lsp_range(reference.location, &lines),
-                        })
+                        });
                     }
 
                     Some(reference_locations)

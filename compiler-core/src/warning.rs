@@ -1113,7 +1113,7 @@ Either change the pattern or use `panic` to unconditionally fail.",
                         _ => text.push_str(
                             " and will crash before it can do anything with these arguments.",
                         ),
-                    };
+                    }
 
                     let hint = match arguments {
                         0 => None,

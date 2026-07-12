@@ -213,7 +213,7 @@ impl<'a> JavaScript<'a> {
             if self.typescript == TypeScriptDeclarations::Emit {
                 self.ts_declaration(writer, module, &js_name)?;
             }
-            self.js_module(writer, module, &js_name, stdlib_package)?
+            self.js_module(writer, module, &js_name, stdlib_package)?;
         }
         self.write_prelude(writer)?;
         Ok(())

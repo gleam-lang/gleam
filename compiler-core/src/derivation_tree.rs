@@ -338,7 +338,7 @@ fn simplify_derivation_tree_outer(
                         package_range.union(other_package_range),
                         required_package.clone(),
                         required_package_range.union(other_required_package_range),
-                    ))
+                    ));
                 }
 
                 _ => {}

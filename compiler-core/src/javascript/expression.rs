@@ -1921,7 +1921,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                                     LOOP_DOLLAR_DOCUMENT,
                                     name.to_doc(arena),
                                     SPACE_EQUAL_SPACE_DOCUMENT
-                                ]
+                                ];
                             }
                             // Render the value given to the function. Even if it is not
                             // assigned we still render it because the expression may
@@ -3494,7 +3494,7 @@ pub fn eco_string_int<'a, 'doc>(
         out.push('-');
     } else if value.starts_with('+') {
         out.push('+');
-    };
+    }
     let value = value.trim_start_matches(['+', '-'].as_ref());
 
     let value = if value.starts_with("0x") {
@@ -3527,7 +3527,7 @@ pub fn float<'a, 'doc>(arena: &'doc DocumentArena<'a, 'doc>, value: &'a str) -> 
         out.push('-');
     } else if value.starts_with('+') {
         out.push('+');
-    };
+    }
     let value = value.trim_start_matches(['+', '-'].as_ref());
 
     let value = value.trim_start_matches(['0', '_']);

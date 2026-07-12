@@ -90,7 +90,7 @@ impl BeamCompilerInstance {
                 },
             }
 
-            buf.clear()
+            buf.clear();
         }
 
         // if we get here, stdout got closed before we got an "ok" or "err".

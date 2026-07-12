@@ -75,7 +75,7 @@ pub(crate) fn main_with_warnings(
     match perform_codegen {
         Codegen::All | Codegen::DepsOnly => telemetry.compiled_package(start.elapsed()),
         Codegen::None => telemetry.checked_package(start.elapsed()),
-    };
+    }
 
     Ok(result)
 }

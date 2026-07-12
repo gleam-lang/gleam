@@ -6,7 +6,7 @@ use std::panic::PanicHookInfo;
 
 pub fn add_handler() {
     std::panic::set_hook(Box::new(move |info: &PanicHookInfo<'_>| {
-        print_compiler_bug_message(info)
+        print_compiler_bug_message(info);
     }));
 }
 

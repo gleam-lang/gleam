@@ -191,7 +191,7 @@ pub fn generate_html<IO: FileSystemReader>(
             &config.name,
             page.path.as_str(),
             content,
-        ))
+        ));
     }
 
     // Generate module documentation pages

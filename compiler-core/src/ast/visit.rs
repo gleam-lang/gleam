@@ -89,11 +89,11 @@ pub trait Visit<'ast> {
     }
 
     fn visit_typed_type_alias(&mut self, type_alias: &'ast TypedTypeAlias) {
-        visit_typed_type_alias(self, type_alias)
+        visit_typed_type_alias(self, type_alias);
     }
 
     fn visit_typed_import(&mut self, import: &'ast TypedImport) {
-        visit_typed_import(self, import)
+        visit_typed_import(self, import);
     }
 
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
@@ -357,7 +357,7 @@ pub trait Visit<'ast> {
     }
 
     fn visit_typed_expr_negate_int(&mut self, location: &'ast SrcSpan, value: &'ast TypedExpr) {
-        visit_typed_expr_negate_int(self, location, value)
+        visit_typed_expr_negate_int(self, location, value);
     }
 
     fn visit_typed_expr_invalid(
@@ -430,7 +430,7 @@ pub trait Visit<'ast> {
         type_: &'ast Arc<Type>,
         tuple: &'ast TypedClauseGuard,
     ) {
-        visit_typed_clause_guard_tuple_index(self, location, index, type_, tuple)
+        visit_typed_clause_guard_tuple_index(self, location, index, type_, tuple);
     }
 
     fn visit_typed_clause_guard_field_access(
@@ -441,7 +441,7 @@ pub trait Visit<'ast> {
         type_: &'ast Arc<Type>,
         container: &'ast TypedClauseGuard,
     ) {
-        visit_typed_clause_guard_field_access(self, label_location, index, label, type_, container)
+        visit_typed_clause_guard_field_access(self, label_location, index, label, type_, container);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -466,7 +466,7 @@ pub trait Visit<'ast> {
             module_name,
             module_alias,
             literal,
-        )
+        );
     }
 
     fn visit_typed_expr_bit_array_segment(&mut self, segment: &'ast TypedExprBitArraySegment) {
@@ -508,7 +508,7 @@ pub trait Visit<'ast> {
     }
 
     fn visit_typed_bit_array_size_int(&mut self, location: &'ast SrcSpan, value: &'ast EcoString) {
-        visit_typed_bit_array_size_int(self, location, value)
+        visit_typed_bit_array_size_int(self, location, value);
     }
 
     fn visit_typed_bit_array_size_variable(
@@ -518,7 +518,7 @@ pub trait Visit<'ast> {
         constructor: &'ast Option<Box<ValueConstructor>>,
         type_: &'ast Arc<Type>,
     ) {
-        visit_typed_bit_array_size_variable(self, location, name, constructor, type_)
+        visit_typed_bit_array_size_variable(self, location, name, constructor, type_);
     }
 
     fn visit_typed_pattern_assign(
@@ -536,7 +536,7 @@ pub trait Visit<'ast> {
         name: &'ast EcoString,
         type_: &'ast Arc<Type>,
     ) {
-        visit_typed_pattern_discard(self, location, name, type_)
+        visit_typed_pattern_discard(self, location, name, type_);
     }
 
     fn visit_typed_pattern_list(
@@ -757,7 +757,7 @@ pub trait Visit<'ast> {
             type_,
             field_map,
             record_constructor,
-        )
+        );
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -782,7 +782,7 @@ pub trait Visit<'ast> {
             arguments,
             type_,
             field_map,
-        )
+        );
     }
 
     fn visit_typed_constant_bit_array(
@@ -873,7 +873,7 @@ pub fn visit_typed_constant_record<'a, V: Visit<'a> + ?Sized>(
     _record_constructor: &'a Option<Box<ValueConstructor>>,
 ) {
     for argument in arguments.iter().flatten() {
-        v.visit_typed_constant(&argument.value)
+        v.visit_typed_constant(&argument.value);
     }
 }
 
@@ -903,7 +903,7 @@ fn visit_typed_constant_list<'a, V: Visit<'a> + ?Sized>(
     tail: &'a Option<Box<TypedConstant>>,
 ) {
     for element in elements {
-        v.visit_typed_constant(element)
+        v.visit_typed_constant(element);
     }
     if let Some(tail) = tail {
         v.visit_typed_constant(tail);
@@ -917,7 +917,7 @@ fn visit_typed_constant_tuple<'a, V: Visit<'a> + ?Sized>(
     _type_: &'a Arc<Type>,
 ) {
     for element in elements {
-        v.visit_typed_constant(element)
+        v.visit_typed_constant(element);
     }
 }
 
@@ -1156,7 +1156,7 @@ pub fn visit_typed_constant<'a, V: Visit<'a> + ?Sized>(v: &mut V, constant: &'a 
             float_value,
         } => v.visit_typed_constant_float(location, value, float_value),
         super::Constant::String { location, value } => {
-            v.visit_typed_constant_string(location, value)
+            v.visit_typed_constant_string(location, value);
         }
         super::Constant::Tuple {
             location,
@@ -1206,7 +1206,7 @@ pub fn visit_typed_constant<'a, V: Visit<'a> + ?Sized>(v: &mut V, constant: &'a 
             field_map,
         ),
         super::Constant::BitArray { location, segments } => {
-            v.visit_typed_constant_bit_array(location, segments)
+            v.visit_typed_constant_bit_array(location, segments);
         }
         super::Constant::Var {
             location,
@@ -1406,7 +1406,7 @@ where
             arguments,
         ),
         TypedExpr::NegateBool { location, value } => {
-            v.visit_typed_expr_negate_bool(location, value)
+            v.visit_typed_expr_negate_bool(location, value);
         }
         TypedExpr::NegateInt { location, value } => v.visit_typed_expr_negate_int(location, value),
         TypedExpr::Invalid {
@@ -1676,10 +1676,10 @@ pub fn visit_typed_expr_echo<'a, V>(
     V: Visit<'a> + ?Sized,
 {
     if let Some(expression) = expression {
-        v.visit_typed_expr(expression)
+        v.visit_typed_expr(expression);
     }
     if let Some(message) = message {
-        v.visit_typed_expr(message)
+        v.visit_typed_expr(message);
     }
 }
 
@@ -1846,7 +1846,7 @@ where
             type_,
             container,
         } => {
-            v.visit_typed_clause_guard_field_access(label_location, index, label, type_, container)
+            v.visit_typed_clause_guard_field_access(label_location, index, label, type_, container);
         }
         super::ClauseGuard::ModuleSelect {
             location,
@@ -2043,7 +2043,7 @@ where
         ),
         Pattern::Tuple { location, elements } => v.visit_typed_pattern_tuple(location, elements),
         Pattern::BitArray { location, segments } => {
-            v.visit_typed_pattern_bit_array(location, segments)
+            v.visit_typed_pattern_bit_array(location, segments);
         }
         Pattern::StringPrefix {
             location,
@@ -2198,7 +2198,7 @@ pub fn visit_typed_pattern_call_arg<'a, V>(v: &mut V, argument: &'a CallArg<Type
 where
     V: Visit<'a> + ?Sized,
 {
-    v.visit_typed_pattern(&argument.value)
+    v.visit_typed_pattern(&argument.value);
 }
 
 pub fn visit_typed_pattern_tuple<'a, V>(

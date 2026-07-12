@@ -659,7 +659,7 @@ impl TypeAst {
                         buffer.push_str(", ");
                     }
                 }
-                buffer.push(')')
+                buffer.push(')');
             }
             TypeAst::Fn(func) => {
                 buffer.push_str("fn(");
@@ -683,7 +683,7 @@ impl TypeAst {
                             buffer.push_str(name);
                         }
                     }
-                };
+                }
 
                 if !constructor.arguments.is_empty() {
                     buffer.push('(');
@@ -905,7 +905,7 @@ impl TypedFunction {
             .find_map(|arg| arg.find_node(byte_index))
         {
             return Some(found_arg);
-        };
+        }
 
         if let Some(found_statement) = self
             .body
@@ -913,7 +913,7 @@ impl TypedFunction {
             .find(|statement| statement.location().contains(byte_index))
         {
             return Some(Located::Statement(found_statement));
-        };
+        }
 
         // Check if location is within the return annotation.
         if let Some(located) = self
@@ -922,7 +922,7 @@ impl TypedFunction {
             .find_map(|annotation| annotation.find_node(byte_index, self.return_type.clone()))
         {
             return Some(located);
-        };
+        }
 
         // Note that the fn `.location` covers the function head, not
         // the entire statement.
@@ -3643,8 +3643,8 @@ impl TypedPattern {
                         },
                         location,
                         type_: type_.clone(),
-                    })
-                };
+                    });
+                }
             }
             Pattern::Constructor { arguments, .. } => {
                 for argument in arguments {
@@ -3653,7 +3653,7 @@ impl TypedPattern {
                             name: BoundVariableName::ShorthandLabel { name: name.clone() },
                             location: argument.location,
                             type_: argument.value.type_(),
-                        })
+                        });
                     } else {
                         argument.value.collect_bound_variables(variables);
                     }
@@ -4402,7 +4402,7 @@ impl GroupedDefinitions {
         let mut this = Self::default();
 
         for definition in definitions {
-            this.add(definition)
+            this.add(definition);
         }
 
         this

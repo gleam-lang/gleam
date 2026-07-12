@@ -1159,7 +1159,7 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
                     arguments1.len(),
                     &t2,
                     arguments2.len(),
-                ))?
+                ))?;
             }
 
             for (i, (a, b)) in arguments1.iter().zip(arguments2).enumerate() {

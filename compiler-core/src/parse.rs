@@ -441,7 +441,7 @@ where
             match self.parse_expression_unit(expression_unit_context)? {
                 Some(unit) => {
                     self.post_process_expression_unit(&unit, is_let_binding)?;
-                    estack.push(unit)
+                    estack.push(unit);
                 }
                 _ if estack.is_empty() => return Ok(None),
                 _ => {
@@ -649,8 +649,8 @@ where
                             Ok(elements) => {
                                 elements_after_tail = Some(elements);
                             }
-                        };
-                    };
+                        }
+                    }
 
                     if tail.is_some() {
                         if !elements_end_with_comma {
@@ -1549,8 +1549,8 @@ where
                                 Ok(elements) => {
                                     elements_after_tail = Some(elements);
                                 }
-                            };
-                        };
+                            }
+                        }
                         Some(tail)
                     }
                     _ => None,
@@ -1604,7 +1604,7 @@ where
                                 start,
                                 end: closing_square_bracket_end,
                             },
-                        })
+                        });
                 }
 
                 Pattern::List {
@@ -2057,7 +2057,7 @@ where
                     self.warnings
                         .push(DeprecatedSyntaxWarning::DeprecatedRecordSpreadPattern {
                             location: spread_location,
-                        })
+                        });
                 }
             }
             let (_, end) = self.expect_one(&Token::RightParen)?;
@@ -2222,7 +2222,7 @@ where
                     end: colon_end,
                 },
             });
-        };
+        }
 
         let return_annotation = self.parse_type_annotation(&Token::RArrow)?;
 
@@ -3138,7 +3138,7 @@ where
                     },
                     location: SrcSpan::new(dot_start, dot_end),
                 });
-            };
+            }
 
             let parsed = self.parse_unqualified_imports()?;
             unqualified_types = parsed.types;
@@ -3201,7 +3201,7 @@ where
                         import.as_name = Some(as_name);
                         import.location.end = end;
                     }
-                    imports.values.push(import)
+                    imports.values.push(import);
                 }
 
                 Some((start, Token::UpName { name }, end)) => {
@@ -3218,7 +3218,7 @@ where
                         import.as_name = Some(as_name);
                         import.location.end = end;
                     }
-                    imports.values.push(import)
+                    imports.values.push(import);
                 }
 
                 Some((start, Token::Type, _)) => {
@@ -3236,7 +3236,7 @@ where
                         import.as_name = Some(as_name);
                         import.location.end = end;
                     }
-                    imports.types.push(import)
+                    imports.types.push(import);
                 }
 
                 t0 => {
@@ -3413,8 +3413,8 @@ where
                             Ok(elements) => {
                                 elements_after_tail = Some(elements);
                             }
-                        };
-                    };
+                        }
+                    }
 
                     if tail.is_some() {
                         // Give a better error when there are two lists being
@@ -4443,8 +4443,8 @@ functions are declared separately from types.";
         // If the sequence ends with a trailing comma we want to keep track of
         // its position.
         if let (Some(Token::Comma), Some((_, end))) = (sep, final_separator) {
-            self.extra.trailing_commas.push(end)
-        };
+            self.extra.trailing_commas.push(end);
+        }
 
         Ok((results, final_separator.is_some()))
     }
@@ -4810,7 +4810,7 @@ fn handle_op<A>(
 fn precedence(t: &Token) -> Option<u8> {
     if t == &Token::Pipe {
         return Some(6);
-    };
+    }
     tok_to_binop(t).map(|op| op.precedence())
 }
 
@@ -5327,7 +5327,7 @@ impl PartialOrd for LiteralFloatValue {
 
 impl Hash for LiteralFloatValue {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.to_bits().hash(state)
+        self.0.to_bits().hash(state);
     }
 }
 

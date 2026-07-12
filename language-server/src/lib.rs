@@ -144,22 +144,22 @@ impl<'a> TextEdits<'a> {
         self.edits.push(TextEdit {
             range: src_span_to_lsp_range(location, self.line_numbers),
             new_text,
-        })
+        });
     }
 
     pub fn insert(&mut self, at: u32, new_text: String) {
-        self.replace(SrcSpan { start: at, end: at }, new_text)
+        self.replace(SrcSpan { start: at, end: at }, new_text);
     }
 
     pub fn delete(&mut self, location: SrcSpan) {
-        self.replace(location, "".to_string())
+        self.replace(location, "".to_string());
     }
 
     fn delete_range(&mut self, range: Range) {
         self.edits.push(TextEdit {
             range,
             new_text: "".into(),
-        })
+        });
     }
 }
 

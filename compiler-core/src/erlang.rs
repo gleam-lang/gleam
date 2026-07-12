@@ -273,7 +273,7 @@ impl<'a> Generator<'a> {
             let documentation = &self.module.documentation.iter().join("\n");
             builder.string(documentation);
             builder.end_doc_attribute(doc);
-        };
+        }
     }
 
     fn type_definition<Output>(
@@ -672,7 +672,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         let spec = builder.start_function_spec(function_name, function.arguments.len());
         let function_type = builder.start_function_type();
         for argument in &function.arguments {
-            generator.type_(builder, &argument.type_)
+            generator.type_(builder, &argument.type_);
         }
         let function_type = builder.end_function_type_arguments(function_type);
         generator.type_(builder, &function.return_type);
@@ -769,7 +769,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 Statement::Assert(assert) => self.assert(builder, assert),
                 Statement::Assignment(assignment) => match &assignment.kind {
                     AssignmentKind::Let | AssignmentKind::Generated => {
-                        self.let_(builder, &assignment.value, &assignment.pattern)
+                        self.let_(builder, &assignment.value, &assignment.pattern);
                     }
                     // Let asserts are slightly different from everything else:
                     // A let assert is compiled to a case expression where we
@@ -838,7 +838,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 } else {
                     let block = builder.start_block();
                     self.statement_sequence(builder, statements);
-                    builder.end_block(block)
+                    builder.end_block(block);
                 }
             }
 
@@ -847,11 +847,11 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             //
             TypedExpr::NegateBool { value, .. } => {
                 builder.unary_operator("not");
-                self.maybe_block_expr(builder, value)
+                self.maybe_block_expr(builder, value);
             }
             TypedExpr::NegateInt { value, .. } => {
                 builder.unary_operator("-");
-                self.maybe_block_expr(builder, value)
+                self.maybe_block_expr(builder, value);
             }
             TypedExpr::BinOp {
                 operator,
@@ -889,7 +889,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 for element in elements {
                     self.maybe_block_expr(builder, element);
                 }
-                builder.end_tuple(tuple)
+                builder.end_tuple(tuple);
             }
 
             //
@@ -899,7 +899,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(builder, tuple, *index),
             TypedExpr::RecordAccess { record, index, .. }
             | TypedExpr::PositionalAccess { record, index, .. } => {
-                self.tuple_index(builder, record, index + 1)
+                self.tuple_index(builder, record, index + 1);
             }
 
             //
@@ -926,7 +926,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     self.maybe_block_expr(builder, updated_record);
                 }
                 // Then a record update is simply a call!
-                self.call(builder, constructor, arguments)
+                self.call(builder, constructor, arguments);
             }
 
             //
@@ -1066,7 +1066,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         if let Some(message) = message {
             self.maybe_block_expr(builder, message);
         } else {
-            builder.atom("nil")
+            builder.atom("nil");
         }
 
         // ...the filepath of this module...
@@ -1115,7 +1115,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         if let Some(message) = message {
             self.maybe_block_expr(builder, message);
         } else {
-            builder.string(error_kind.default_error_message())
+            builder.string(error_kind.default_error_message());
         }
 
         builder.map_field();
@@ -1177,7 +1177,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     ) {
         builder.match_operator();
         PatternGenerator::new(self).pattern(builder, pattern);
-        self.maybe_block_expr(builder, value)
+        self.maybe_block_expr(builder, value);
     }
 
     fn let_assert<Output>(
@@ -1328,11 +1328,11 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                             .to_owned()
                             .expect("echo with no previous step in a pipe"),
                     },
-                )
+                );
             } else {
                 self.maybe_block_expr(builder, &assignment.value);
                 previous_step_variable_name = Some(name);
-            };
+            }
         }
 
         // We also need to do the same thing for the final step of the pipeline.
@@ -1353,9 +1353,9 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     name: previous_step_variable_name
                         .expect("echo with no previous step in a pipe"),
                 },
-            )
+            );
         } else {
-            self.expression(builder, finally)
+            self.expression(builder, finally);
         }
     }
 
@@ -1893,7 +1893,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             AssertedExpressionRuntimeValue::KnownBool(false) => builder.atom("false"),
             AssertedExpressionRuntimeValue::Variable(name) => builder.variable(name),
             AssertedExpressionRuntimeValue::Expression(expr) => {
-                self.maybe_block_expr(builder, expr)
+                self.maybe_block_expr(builder, expr);
             }
         }
     }
@@ -1938,19 +1938,19 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 // }
                 // ```
                 Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
-                    builder.atom(&to_snake_case(record_name))
+                    builder.atom(&to_snake_case(record_name));
                 }
                 Type::Fn { arguments, .. } => {
-                    self.record_builder_anonymous_function(builder, record_name, arguments.len())
+                    self.record_builder_anonymous_function(builder, record_name, arguments.len());
                 }
             },
 
             ValueConstructorVariant::LocalVariable { location, .. } => {
-                builder.variable(&self.local_var_name(location))
+                builder.variable(&self.local_var_name(location));
             }
 
             ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                self.inlined_constant(builder, literal)
+                self.inlined_constant(builder, literal);
             }
 
             ValueConstructorVariant::ModuleFn {
@@ -1960,16 +1960,16 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             } => {
                 let name = escape_erlang_existing_name(name);
                 if *module == self.module_generator.module.name {
-                    builder.function_reference(None, name, *arity)
+                    builder.function_reference(None, name, *arity);
                 } else {
-                    builder.function_reference(Some(ErlangModuleName::new(module)), name, *arity)
+                    builder.function_reference(Some(ErlangModuleName::new(module)), name, *arity);
                 }
             }
 
             ValueConstructorVariant::ModuleFn { arity, module, .. }
                 if *module == self.module_generator.module.name =>
             {
-                builder.function_reference(None, escape_erlang_existing_name(name), *arity)
+                builder.function_reference(None, escape_erlang_existing_name(name), *arity);
             }
 
             ValueConstructorVariant::ModuleFn {
@@ -2012,7 +2012,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 for argument in arguments {
                     self.maybe_block_expr(builder, &argument.value);
                 }
-                builder.end_call(call)
+                builder.end_call(call);
             }
             // If we're calling anything else (like an anonymous function, or
             // the result of another function call) we generate its code and
@@ -2067,7 +2067,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 for argument in arguments {
                     self.runtime_value(builder, argument);
                 }
-                builder.end_call(call)
+                builder.end_call(call);
             }
 
             // If we're calling anything else (like an anonymous function, or
@@ -2098,14 +2098,14 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         arguments: &'a [TypedCallArg],
     ) {
         if arguments.is_empty() {
-            builder.atom(&to_snake_case(record_name))
+            builder.atom(&to_snake_case(record_name));
         } else {
             let tuple = builder.start_tuple();
             builder.atom(&to_snake_case(record_name));
             for argument in arguments {
                 self.maybe_block_expr(builder, &argument.value);
             }
-            builder.end_tuple(tuple)
+            builder.end_tuple(tuple);
         }
     }
 
@@ -2195,7 +2195,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 }
                 builder.end_tuple_pattern(tuple);
             }
-        };
+        }
 
         let variables_to_add_later = pattern_generator.variables_to_add_later;
 
@@ -2245,7 +2245,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             Constant::Tuple { elements, .. } => {
                 let tuple = builder.start_tuple();
                 for element in elements {
-                    self.inlined_constant(builder, element)
+                    self.inlined_constant(builder, element);
                 }
                 builder.end_tuple(tuple);
             }
@@ -2253,7 +2253,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             Constant::List { elements, tail, .. } => {
                 for element in elements {
                     builder.cons_list();
-                    self.inlined_constant(builder, element)
+                    self.inlined_constant(builder, element);
                 }
                 match tail {
                     // If there's no tail we simply add an empty list cell to
@@ -2319,17 +2319,17 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     // ```
                     None => match type_::collapse_links(type_.clone()).deref() {
                         Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
-                            builder.atom(&to_snake_case(&tag))
+                            builder.atom(&to_snake_case(&tag));
                         }
                         Type::Fn { arguments, .. } => {
-                            self.record_builder_anonymous_function(builder, &tag, arguments.len())
+                            self.record_builder_anonymous_function(builder, &tag, arguments.len());
                         }
                     },
                 }
             }
 
             Constant::StringConcatenation { left, right, .. } => {
-                self.constant_string_concatenate(builder, left, right)
+                self.constant_string_concatenate(builder, left, right);
             }
 
             Constant::RecordUpdate { .. } => {
@@ -2351,11 +2351,11 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         self.inlined_constant(builder, &segment.value);
         match segment.size() {
             Some(TypedConstant::Int { int_value, .. }) if int_value.is_negative() => {
-                builder.int(BigInt::ZERO)
+                builder.int(BigInt::ZERO);
             }
             Some(size) => self.inlined_constant(builder, size),
             None => builder.atom("default"),
-        };
+        }
         self.bit_array_segment_specifiers(builder, segment);
     }
 
@@ -2809,7 +2809,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // negative value must be turned to zero instead:
         if let TypedExpr::Int { int_value, .. } = &size {
             if int_value.is_negative() {
-                builder.int(BigInt::ZERO)
+                builder.int(BigInt::ZERO);
             } else {
                 builder.int(int_value.clone());
             }
@@ -2836,7 +2836,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             ClauseGuard::Block { value, .. } => self.clause_guard(builder, value, assignments),
 
             ClauseGuard::TupleIndex { tuple, index, .. } => {
-                self.clause_guard_tuple_index(builder, tuple, *index)
+                self.clause_guard_tuple_index(builder, tuple, *index);
             }
 
             ClauseGuard::FieldAccess {
@@ -2994,14 +2994,14 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         let function = builder.start_anonymous_function(&arguments);
 
         if arguments.is_empty() {
-            builder.atom(&to_snake_case(record_name))
+            builder.atom(&to_snake_case(record_name));
         } else {
             let tuple = builder.start_tuple();
             builder.atom(&to_snake_case(record_name));
             for argument in arguments {
                 builder.variable(&argument);
             }
-            builder.end_tuple(tuple)
+            builder.end_tuple(tuple);
         }
 
         builder.end_function(function);
@@ -3761,23 +3761,23 @@ fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
             ..
         } => match arguments[..] {
             [ref arg_ok, ref arg_err] if is_prelude_module(module) && name == "Result" => {
-                result_type_var_ids(ids, arg_ok, arg_err)
+                result_type_var_ids(ids, arg_ok, arg_err);
             }
             _ => {
                 for argument in arguments {
-                    type_var_ids(argument, ids)
+                    type_var_ids(argument, ids);
                 }
             }
         },
         Type::Fn { arguments, return_ } => {
             for argument in arguments {
-                type_var_ids(argument, ids)
+                type_var_ids(argument, ids);
             }
             type_var_ids(return_, ids);
         }
         Type::Tuple { elements } => {
             for element in elements {
-                type_var_ids(element, ids)
+                type_var_ids(element, ids);
             }
         }
     }
@@ -3908,7 +3908,7 @@ impl<'a> TypeGenerator<'a> {
             Type::Tuple { elements } => {
                 let tuple = builder.start_tuple_type();
                 for element in elements {
-                    self.type_(builder, element)
+                    self.type_(builder, element);
                 }
                 builder.end_tuple_type(tuple);
             }
@@ -3923,7 +3923,7 @@ impl<'a> TypeGenerator<'a> {
                     let any = builder.start_named_type("any");
                     builder.end_named_type(any);
                 } else {
-                    builder.type_variable(&id_to_type_var_str(*id))
+                    builder.type_variable(&id_to_type_var_str(*id));
                 }
             }
         }
@@ -4017,7 +4017,7 @@ impl<'a> TypeGenerator<'a> {
         };
 
         for argument in arguments {
-            self.type_(builder, argument)
+            self.type_(builder, argument);
         }
 
         builder.end_named_type(type_);
@@ -4031,7 +4031,7 @@ fn find_private_functions_referenced_in_importable_constants(
 
     for constant in &module.definitions.constants {
         if constant.publicity.is_importable() {
-            find_referenced_private_functions(&constant.value, &mut overridden_publicity)
+            find_referenced_private_functions(&constant.value, &mut overridden_publicity);
         }
     }
     overridden_publicity

@@ -68,7 +68,7 @@ impl Diagnostic {
         match &self.location {
             Some(location) => self.write_span(location, buffer),
             None => self.write_title(buffer),
-        };
+        }
 
         if !self.text.is_empty() {
             writeln!(buffer, "{}", self.text).expect("write text");

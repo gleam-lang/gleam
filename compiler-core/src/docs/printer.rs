@@ -154,7 +154,7 @@ impl<'a, 'doc> Printer<'a> {
                 },
                 source_url: source_links.url(*location),
                 opaque: *opaque,
-            })
+            });
         }
 
         for TypeAlias {
@@ -190,7 +190,7 @@ impl<'a, 'doc> Printer<'a> {
                     Deprecation::Deprecated { message } => message.to_string(),
                 },
                 opaque: false,
-            })
+            });
         }
 
         type_definitions.sort();
@@ -256,7 +256,7 @@ impl<'a, 'doc> Printer<'a> {
                     Deprecation::NotDeprecated => "".to_string(),
                     Deprecation::Deprecated { message } => message.to_string(),
                 },
-            })
+            });
         }
 
         for TypedModuleConstant {
@@ -284,7 +284,7 @@ impl<'a, 'doc> Printer<'a> {
                     Deprecation::NotDeprecated => "".to_string(),
                     Deprecation::Deprecated { message } => message.to_string(),
                 },
-            })
+            });
         }
 
         value_definitions.sort();
@@ -627,7 +627,7 @@ impl<'a, 'doc> Printer<'a> {
             if rest == 0 {
                 break;
             }
-            rest -= 1
+            rest -= 1;
         }
 
         self.next_type_variable_id += 1;

@@ -1485,7 +1485,7 @@ your app.src file \"{app_ver}\"."
                         }
                         match program.as_str() {
                             "erl" | "erlc" | "escript" => {
-                                text.push_str(&brew_install("Erlang", "erlang"))
+                                text.push_str(&brew_install("Erlang", "erlang"));
                             }
                             "rebar3" => text.push_str(&brew_install("Rebar3", "rebar3")),
                             "deno" => text.push_str(&brew_install("Deno", "deno")),
@@ -3460,7 +3460,7 @@ but no type in scope with that name."
                     text.push_str(hint.as_str());
                 }
                 UnknownTypeHint::AlternativeTypes(_) => {}
-            };
+            }
 
             Diagnostic {
                 title: "Unknown type".into(),
@@ -4647,7 +4647,7 @@ here takes {expected_string}.\n"
                     text.push_str(
                         "The only argument that was supplied is \
 the `use` callback function.\n",
-                    )
+                    );
                 } else {
                     let _ = writeln!(
                         text,
@@ -4659,8 +4659,8 @@ and the final one is the `use` callback function."
                 text.push_str(
                     "All the arguments have already been supplied, \
 so it cannot take the `use` callback function as a final argument.\n",
-                )
-            };
+                );
+            }
 
             text.push_str("\nSee: https://tour.gleam.run/advanced-features/use/");
 
@@ -5250,7 +5250,7 @@ fn wrap_text(text: &str, width: usize) -> Vec<Cow<'_, str>> {
                 let mut new_lines = break_line(line, width);
                 lines.append(&mut new_lines);
             }
-        };
+        }
     }
 
     lines

@@ -138,7 +138,7 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
             Pattern::Int { int_value, .. } => builder.int_pattern(int_value.clone()),
             Pattern::String { value, .. } => builder.string_pattern(value),
             Pattern::Variable { name, location, .. } => {
-                builder.variable_pattern(&self.generator.new_erlang_variable(name, *location))
+                builder.variable_pattern(&self.generator.new_erlang_variable(name, *location));
             }
 
             Pattern::Assign {
@@ -272,10 +272,10 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                     let constructor = constructor.as_ref().expect("variable with no constructor");
                     match &constructor.variant {
                         ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                            self.generator.inlined_constant(builder, literal)
+                            self.generator.inlined_constant(builder, literal);
                         }
                         ValueConstructorVariant::LocalVariable { location, .. } => {
-                            builder.variable(&self.generator.local_var_name(location))
+                            builder.variable(&self.generator.local_var_name(location));
                         }
                         ValueConstructorVariant::ModuleFn { .. }
                         | ValueConstructorVariant::Record { .. } => panic!("invalid segment"),

@@ -305,12 +305,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             for definition in group {
                 match definition {
                     CallGraphNode::Function(function) => {
-                        working_functions.push(self.infer_function(function, &mut env))
+                        working_functions.push(self.infer_function(function, &mut env));
                     }
                     CallGraphNode::ModuleConstant(constant) => {
-                        working_constants.push(self.infer_module_constant(constant, &mut env))
+                        working_constants.push(self.infer_module_constant(constant, &mut env));
                     }
-                };
+                }
             }
 
             // Now that the entire group has been inferred, generalise their types.
@@ -319,7 +319,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     inferred_constant,
                     &mut env,
                     &self.module_name,
-                ))
+                ));
             }
             for inferred_function in working_functions.drain(..) {
                 typed_functions.push(generalise_function(
@@ -350,7 +350,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         // Ensure no exported values have private types in their type signature
         for value in env.module_values.values() {
-            self.check_for_type_leaks(value)
+            self.check_for_type_leaks(value);
         }
 
         // Resolve deferred type variable aliases now that all unification is
@@ -753,7 +753,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         if let Some((module, _, location)) = &external_javascript
             && module.contains('@')
         {
-            self.track_feature_usage(FeatureKind::AtInJavascriptModules, *location)
+            self.track_feature_usage(FeatureKind::AtInJavascriptModules, *location);
         }
 
         // Assert that the inferred type matches the type of any recursive call
@@ -953,7 +953,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 location,
                 module: module_info.name.clone(),
                 package: module_info.package.clone(),
-            })
+            });
         }
 
         Some(Import {
@@ -1729,7 +1729,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         feature_kind,
                         minimum_required_version: minimum_required_version.clone(),
                         wrongfully_allowed_version: lowest_allowed_version,
-                    })
+                    });
             }
         }
 
@@ -1757,7 +1757,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 fn validate_module_name(name: &EcoString) -> Result<(), Error> {
     if is_prelude_module(name) {
         return Err(Error::ReservedModuleName { name: name.clone() });
-    };
+    }
     for segment in name.split('/') {
         if crate::parse::lexer::string_to_keyword(segment).is_some() {
             return Err(Error::KeywordInModuleName {
@@ -2151,7 +2151,7 @@ fn get_compatible_record_fields(constructors: &[TypeValueConstructor]) -> Vec<Re
             label: first_label.clone(),
             type_: first_parameter.type_.clone(),
             documentation,
-        })
+        });
     }
 
     compatible
@@ -2180,20 +2180,20 @@ fn get_type_dependencies(type_: &TypeAst) -> Vec<EcoString> {
             });
 
             for arg in arguments {
-                deps.extend(get_type_dependencies(arg))
+                deps.extend(get_type_dependencies(arg));
             }
         }
         TypeAst::Fn(TypeAstFn {
             arguments, return_, ..
         }) => {
             for arg in arguments {
-                deps.extend(get_type_dependencies(arg))
+                deps.extend(get_type_dependencies(arg));
             }
-            deps.extend(get_type_dependencies(return_))
+            deps.extend(get_type_dependencies(return_));
         }
         TypeAst::Tuple(TypeAstTuple { elements, .. }) => {
             for element in elements {
-                deps.extend(get_type_dependencies(element))
+                deps.extend(get_type_dependencies(element));
             }
         }
     }
@@ -2205,7 +2205,7 @@ fn sorted_type_aliases(aliases: &Vec<UntypedTypeAlias>) -> Result<Vec<&UntypedTy
     let mut deps: Vec<(EcoString, Vec<EcoString>)> = Vec::with_capacity(aliases.len());
 
     for alias in aliases {
-        deps.push((alias.alias.clone(), get_type_dependencies(&alias.type_ast)))
+        deps.push((alias.alias.clone(), get_type_dependencies(&alias.type_ast)));
     }
 
     let sorted_deps = dep_tree::toposort_deps(deps).map_err(|err| {

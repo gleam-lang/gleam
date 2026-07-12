@@ -577,7 +577,7 @@ impl ReferenceTracker {
             EntityKind::ImportedConstructor { module }
             | EntityKind::ImportedType { module }
             | EntityKind::ImportedValue { module } => {
-                self.register_module_reference(module.clone())
+                self.register_module_reference(module.clone());
             }
         }
     }
@@ -639,7 +639,7 @@ impl ReferenceTracker {
             }
             ReferenceKind::Import(_) | ReferenceKind::Definition => {}
             ReferenceKind::Alias | ReferenceKind::Unqualified => {
-                self.register_type_reference_in_call_graph(referenced_name.clone())
+                self.register_type_reference_in_call_graph(referenced_name.clone());
             }
         }
 

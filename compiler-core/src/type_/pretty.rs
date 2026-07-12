@@ -151,7 +151,7 @@ impl<'a, 'doc> Printer {
             if rest == 0 {
                 break;
             }
-            rest -= 1
+            rest -= 1;
         }
 
         self.uid += 1;

@@ -273,7 +273,7 @@ impl DirWalker {
                     });
                 };
 
-                self.walk_queue.push_back(entry.into_path())
+                self.walk_queue.push_back(entry.into_path());
             }
         }
 

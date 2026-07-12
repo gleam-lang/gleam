@@ -132,14 +132,14 @@ impl<'a, 'env> MissingPatternsGenerator<'a, 'env> {
                         self.add_missing_patterns(fallback);
                     }
                     FallbackCheck::RuntimeCheck { check } => {
-                        self.add_missing_patterns_after_check(var, check, fallback)
+                        self.add_missing_patterns_after_check(var, check, fallback);
                     }
                     FallbackCheck::CatchAll { ignored_checks } => {
                         for check in ignored_checks {
                             self.add_missing_patterns_after_check(var, check, fallback);
                         }
                     }
-                };
+                }
             }
         }
     }

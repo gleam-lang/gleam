@@ -158,7 +158,7 @@ pub fn length_utf16(string: &str) -> usize {
     let mut length = 0;
 
     for char in string.chars() {
-        length += char.len_utf16()
+        length += char.len_utf16();
     }
 
     length

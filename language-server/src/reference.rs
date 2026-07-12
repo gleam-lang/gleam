@@ -771,7 +771,7 @@ impl FindVariableReferences {
             }
 
             DefinitionLocation::Regular { .. } | DefinitionLocation::Alternative { .. } => (),
-        };
+        }
     }
 
     pub fn find_in_module(mut self, module: &TypedModule) -> HashSet<VariableReference> {
@@ -979,7 +979,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
         // Handle the suffix in alternative pattern: "prefix" <> name | "other_prefix" <> name
         match right_side_assignment {
             AssignName::Variable(name) => {
-                self.register_alternative_definition(name, right_location)
+                self.register_alternative_definition(name, right_location);
             }
             AssignName::Discard(_) => {}
         }
@@ -1029,7 +1029,7 @@ impl<'ast> Visit<'ast> for FindTypeVariableReferences<'_> {
         if custom_type.full_location().contains_span(self.location) {
             for (location, name) in custom_type.parameters.iter() {
                 if name == self.name {
-                    self.references.push(*location)
+                    self.references.push(*location);
                 }
             }
             ast::visit::visit_typed_custom_type(self, custom_type);
@@ -1046,7 +1046,7 @@ impl<'ast> Visit<'ast> for FindTypeVariableReferences<'_> {
         if type_alias.location.contains_span(self.location) {
             for (location, name) in type_alias.parameters.iter() {
                 if name == self.name {
-                    self.references.push(*location)
+                    self.references.push(*location);
                 }
             }
             ast::visit::visit_typed_type_alias(self, type_alias);

@@ -106,18 +106,18 @@ fn generic_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
         },
         Type::Named { arguments, .. } => {
             for argument in arguments {
-                generic_ids(argument, ids)
+                generic_ids(argument, ids);
             }
         }
         Type::Fn { arguments, return_ } => {
             for argument in arguments {
-                generic_ids(argument, ids)
+                generic_ids(argument, ids);
             }
             generic_ids(return_, ids);
         }
         Type::Tuple { elements } => {
             for element in elements {
-                generic_ids(element, ids)
+                generic_ids(element, ids);
             }
         }
     }
@@ -595,7 +595,7 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
 
         if constructor.arguments.is_empty() {
             return head.append(arena, CLOSE_CURLY_DOCUMENT);
-        };
+        }
 
         let class_body = docvec![
             arena,
@@ -676,7 +676,7 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
                 name,
                 COLON_SPACE_DOCUMENT,
                 self.do_print_force_generic_param(arena, &parameter.type_)
-            ])
+            ]);
         }
 
         let function_name = eco_format!(
@@ -743,7 +743,7 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
                 }
             }
             document = document.append(arena, GT_INT_DOCUMENT);
-        };
+        }
         document = document.append(arena, SEMICOLON_DOCUMENT);
         document.group(arena)
     }
@@ -1227,7 +1227,7 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
     /// Allows an outside module to mark the Gleam prelude as "used"
     ///
     pub fn set_prelude_used(&mut self) {
-        self.tracker.prelude_used = true
+        self.tracker.prelude_used = true;
     }
 
     /// Returns if the Gleam prelude has been used at all during the process

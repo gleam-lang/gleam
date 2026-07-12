@@ -658,7 +658,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.problems.warning(Warning::UnreachableCodeAfterPanic {
                 location,
                 panic_position,
-            })
+            });
         }
     }
 
@@ -708,7 +708,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         } else if discarded.is_pure_value_constructor() {
             self.problems.warning(Warning::UnusedValue {
                 location: discarded.location(),
-            })
+            });
         }
     }
 
@@ -1252,8 +1252,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 self.problems.error(convert_unify_error(
                     error.list_element_mismatch(),
                     element.location(),
-                ))
-            };
+                ));
+            }
             inferred_elements.push(element);
         }
 
@@ -1267,7 +1267,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     self.problems.error(convert_unify_error(
                         error.list_tail_mismatch(),
                         tail.location(),
-                    ))
+                    ));
                 }
                 Some(Box::new(tail))
             }
@@ -1443,7 +1443,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             &constructor.variant,
                             *location,
                             ReferenceKind::Unqualified,
-                        )
+                        );
                     }
                 }
                 record_access
@@ -1631,7 +1631,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             );
                             segment.options.push(BitArrayOption::Float {
                                 location: SrcSpan::default(),
-                            })
+                            });
                         }
 
                         UntypedExpr::Int { .. }
@@ -1668,7 +1668,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     // check if it's `size` option uses any feature that has to
                     // be tracked!
                     self.check_segment_size_expression(&segment.options);
-                };
+                }
 
                 segment
             })
@@ -1712,7 +1712,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             );
                             segment.options.push(BitArrayOption::Float {
                                 location: SrcSpan::default(),
-                            })
+                            });
                         }
 
                         Constant::Int { .. }
@@ -1863,7 +1863,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let expression = self.infer(expression);
         if let Err(error) = unify(type_, expression.type_()) {
             self.problems
-                .error(convert_unify_error(error, expression.location()))
+                .error(convert_unify_error(error, expression.location()));
         }
         expression
     }
@@ -1942,18 +1942,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.problems.error(Error::FloatOperatorOnInts {
                 operator,
                 location: SrcSpan::new(operator_start, operator_start + operator.size()),
-            })
+            });
         } else if operator.is_int_operator() && left.type_().is_float() && right.type_().is_float()
         {
             self.problems.error(Error::IntOperatorOnFloats {
                 operator,
                 location: SrcSpan::new(operator_start, operator_start + operator.size()),
-            })
+            });
         } else if operator == BinOp::AddInt && left.type_().is_string() && right.type_().is_string()
         {
             self.problems.error(Error::StringConcatenationWithAddInt {
                 location: SrcSpan::new(operator_start, operator_start + operator.size()),
-            })
+            });
         } else {
             // In all other cases we just report an error for each of the operands.
             if let Err(error) = unify_left {
@@ -2249,7 +2249,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     | Reachability::Unreachable(UnreachablePatternReason::DuplicatePattern) => {}
                 }
             }
-        };
+        }
 
         Assignment {
             location,
@@ -2378,7 +2378,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.previous_panics = false;
             let (typed_clause, error_typing_patterns) = self.infer_clause(clause, &typed_subjects);
             if error_typing_patterns {
-                patterns_typechecked_successfully = false
+                patterns_typechecked_successfully = false;
             }
             all_clauses_panic = all_clauses_panic && self.previous_panics;
 
@@ -2639,8 +2639,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 let expression = self.infer_clause_guard(*expression);
                 if let Err(error) = unify(bool(), expression.type_()) {
                     self.problems
-                        .error(convert_unify_error(error, expression.location()))
-                };
+                        .error(convert_unify_error(error, expression.location()));
+                }
                 ClauseGuard::Not {
                     location,
                     expression: Box::new(expression),
@@ -2949,7 +2949,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     location: select_location,
                     message: message.clone(),
                     layer: Layer::Value,
-                })
+                });
             }
 
             self.environment
@@ -3272,7 +3272,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // We still want to accumulate errors for all field to come!
                 if let Err(error) = unify(variant.arg_type(index), value.type_()) {
                     self.problems.error(convert_unify_error(error, *location));
-                };
+                }
 
                 if let Some(type_name) = return_type.named_type_name() {
                     self.environment.references.register_label_reference(
@@ -3291,14 +3291,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         value,
                         implicit: None,
                     },
-                ))
+                ));
             } else if variant.has_field(label) {
                 // The variant has this field but it was already removed in a
                 // previous iteration. This means we've found a duplicate field!
                 self.problems.error(Error::DuplicateArgument {
                     location: *location,
                     label: label.clone(),
-                })
+                });
             } else {
                 // Otherwise, it's just an unknown field!
                 self.problems.error(self.unknown_field_error(
@@ -3307,8 +3307,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     *location,
                     label.clone(),
                     FieldAccessUsage::RecordUpdate,
-                ))
-            };
+                ));
+            }
         }
 
         // Generate the remaining copied arguments, making sure they unify with
@@ -3363,7 +3363,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         value: record_access,
                         implicit: Some(ImplicitCallArgOrigin::RecordUpdate),
                     },
-                ))
+                ));
             } else {
                 let (accessor_type, positional_fields) =
                     match collapse_links(record.type_()).as_ref() {
@@ -3457,7 +3457,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         value: record_access,
                         implicit: Some(ImplicitCallArgOrigin::RecordUpdate),
                     },
-                ))
+                ));
             }
         }
 
@@ -3733,7 +3733,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location: *location,
                 message: message.clone(),
                 layer: Layer::Value,
-            })
+            });
         }
 
         self.narrow_implementations(*location, &variant)?;
@@ -3830,7 +3830,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     referenced_name,
                     location,
                     ReferenceKind::Alias,
-                )
+                );
             }
             ValueConstructorVariant::ModuleFn { name, module, .. }
             | ValueConstructorVariant::Record { name, module, .. }
@@ -3841,10 +3841,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     referenced_name,
                     location,
                     kind,
-                )
+                );
             }
             ValueConstructorVariant::LocalVariable { .. } => {
-                self.environment.increment_usage(referenced_name)
+                self.environment.increment_usage(referenced_name);
             }
         }
     }
@@ -4295,8 +4295,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         error
                             .operator_situation(BinOp::Concatenate)
                             .into_error(left.location()),
-                    )
-                };
+                    );
+                }
 
                 let right = self.infer_const(&None, *right);
                 if let Err(error) = unify(string(), right.type_()) {
@@ -4304,8 +4304,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         error
                             .operator_situation(BinOp::Concatenate)
                             .into_error(right.location()),
-                    )
-                };
+                    );
+                }
 
                 Constant::StringConcatenation {
                     location,
@@ -4322,7 +4322,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     let message = self.infer_const(&None, *message);
                     if let Err(error) = unify(string(), message.type_()) {
                         self.problems
-                            .error(convert_unify_error(error, message.location()))
+                            .error(convert_unify_error(error, message.location()));
                     }
                     Box::new(message)
                 });
@@ -4476,7 +4476,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 let value = self.infer_const(&None, value);
                 if let Err(error) = unify(type_.clone(), value.type_()) {
                     self.problems
-                        .error(convert_unify_error(error, value.location()))
+                        .error(convert_unify_error(error, value.location()));
                 }
                 CallArg {
                     label,
@@ -4546,7 +4546,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 },
                 implicit,
                 location,
-            })
+            });
         }
 
         Constant::Record {
@@ -4652,7 +4652,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             let tail = self.infer_const(&None, *tail);
             if let Err(error) = unify(type_.clone(), tail.type_()) {
                 self.problems
-                    .error(convert_unify_error(error, tail.location()))
+                    .error(convert_unify_error(error, tail.location()));
             }
             Some(Box::new(tail))
         } else {
@@ -4954,7 +4954,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 });
             }
             arguments.push(last);
-        };
+        }
 
         // Ensure that the given args have the correct types
         let arguments_count = arguments_types.len();
@@ -4997,7 +4997,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     self.warn_for_unreachable_code(
                         value.location(),
                         PanicPosition::PreviousFunctionArgument,
-                    )
+                    );
                 }
 
                 let value = self.infer_call_argument(
@@ -5078,7 +5078,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 },
                 implicit,
                 location,
-            })
+            });
         }
 
         // We don't want to emit a warning for unreachable function call if the
@@ -5294,7 +5294,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         }
                     }
                     ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => (),
-                };
+                }
             }
 
             if let Ok(body) = Vec1::try_from_vec(body) {
@@ -5324,8 +5324,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         },
                         type_: body_typer.new_unbound_var(),
                         extra_information: None,
-                    }))
-                };
+                    }));
+                }
 
                 Ok((arguments, body.to_vec()))
             } else {
@@ -5407,7 +5407,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         let location = SrcSpan::new(first.location().start, last.location().end);
 
                         self.problems
-                            .warning(Warning::UnreachableCasePattern { location, reason })
+                            .warning(Warning::UnreachableCasePattern { location, reason });
                     }
                 }
             }
@@ -5435,7 +5435,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         feature_kind,
                         minimum_required_version: minimum_required_version.clone(),
                         wrongfully_allowed_version: lowest_allowed_version,
-                    })
+                    });
             }
         }
 
@@ -5476,7 +5476,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             // Blocks and binops were added in Gleam 1.12.0!
             TypedExpr::Block { location, .. } | TypedExpr::BinOp { location, .. } => {
-                self.track_feature_usage(FeatureKind::ExpressionInSegmentSize, *location)
+                self.track_feature_usage(FeatureKind::ExpressionInSegmentSize, *location);
             }
 
             // None of these are currently supported... for now!
@@ -6095,7 +6095,7 @@ impl UseAssignments {
                     };
                     assignments
                         .body_assignments
-                        .push(Statement::Assignment(Box::new(assignment)))
+                        .push(Statement::Assignment(Box::new(assignment)));
                 }
             }
         }
@@ -6248,7 +6248,7 @@ fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
                 },
                 (None, Some(_)) | (Some(_), None) => return StaticComparison::CantTell,
                 (None, None) => (),
-            };
+            }
 
             // If we can tell the two lists have a different number of items
             // then we know it's never going to match.

@@ -188,7 +188,7 @@ pub fn default_global_gleam_cache() -> Utf8PathBuf {
 pub fn unnest(within: &Utf8Path) -> Utf8PathBuf {
     let mut path = Utf8PathBuf::new();
     for _ in within {
-        path = path.join("..")
+        path = path.join("..");
     }
     path
 }

@@ -229,7 +229,7 @@ but it is locked to {locked_version}, which is incompatible.",
                     });
                 }
             }
-        };
+        }
     }
 
     Ok(requirements)

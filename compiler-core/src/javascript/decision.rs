@@ -500,8 +500,8 @@ impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
             let name = self.variables.next_local_var(&ASSIGNMENT_VAR.into());
             let value = self.variables.get_value(var);
             self.variables.bind(name.clone(), var);
-            assignments.push(let_doc(arena, name, value.to_doc(arena)))
-        };
+            assignments.push(let_doc(arena, name, value.to_doc(arena)));
+        }
 
         // Variable storing the character code for the first character of a string.
         // This is only declared if multiple patterns match on just the first
@@ -734,7 +734,7 @@ impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
 
         match &self.kind {
             DecisionKind::Case { .. } => {
-                self.variables.expression_generator.current_scope = old_scope
+                self.variables.expression_generator.current_scope = old_scope;
             }
             DecisionKind::LetAssert { .. } => {}
         }
@@ -1652,9 +1652,9 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
             if *times != 1 {
                 variable = variable
                     .append(arena, SPACE_TIMES_SPACE_DOCUMENT)
-                    .append(arena, *times)
+                    .append(arena, *times);
             }
-            pieces.push(variable.to_doc(arena))
+            pieces.push(variable.to_doc(arena));
         }
 
         for calculation in offset.calculations.iter() {
@@ -1670,9 +1670,9 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
             );
 
             if parenthesise {
-                pieces.push(calculation.surround(arena, OPEN_PAREN_DOCUMENT, CLOSE_PAREN_DOCUMENT))
+                pieces.push(calculation.surround(arena, OPEN_PAREN_DOCUMENT, CLOSE_PAREN_DOCUMENT));
             } else {
-                pieces.push(calculation)
+                pieces.push(calculation);
             }
         }
 
@@ -2081,7 +2081,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
 
             RuntimeCheck::BitArray { test } => {
                 for (segment_name, read_action) in test.referenced_segment_patterns() {
-                    self.set_segment_value(arena, variable, segment_name.clone(), read_action)
+                    self.set_segment_value(arena, variable, segment_name.clone(), read_action);
                 }
             }
 
@@ -2138,7 +2138,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                 .get_segment_value(arena, segment)
                 .expect("segment referenced in a check before being created");
             self.bind_segment(variable_name.clone(), segment.clone());
-            check_assignments.push(let_doc(arena, variable_name, segment_value))
+            check_assignments.push(let_doc(arena, variable_name, segment_value));
         }
         check_assignments
     }

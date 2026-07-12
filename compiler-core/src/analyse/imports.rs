@@ -43,7 +43,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
     ) -> Environment<'context> {
         let mut importer = Self::new(origin, env, problems);
         for import in imports {
-            importer.register_import(import)
+            importer.register_import(import);
         }
         importer.environment
     }
@@ -161,7 +161,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     self.problems.error(Error::UnsupportedExpressionTarget {
                         target: self.environment.target,
                         location,
-                    })
+                    });
                 }
 
                 self.environment.insert_variable(
@@ -240,7 +240,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                 );
             }
             ValueConstructorVariant::LocalVariable { .. } => {}
-        };
+        }
 
         // Check if value already was imported
         if let Some(previous) = self.environment.unqualified_imported_names.get(used_name) {

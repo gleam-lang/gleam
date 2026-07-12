@@ -43,13 +43,13 @@ impl Problems {
     /// Register an error.
     ///
     pub fn error(&mut self, error: Error) {
-        self.errors.push(error)
+        self.errors.push(error);
     }
 
     /// Register a warning.
     ///
     pub fn warning(&mut self, warning: Warning) {
-        self.warnings.push(warning)
+        self.warnings.push(warning);
     }
 
     /// Take all the errors, leaving an empty vector in its place.

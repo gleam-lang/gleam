@@ -137,7 +137,7 @@ where
         self.connection
             .sender
             .send(lsp_server::Message::Response(response))
-            .expect("channel send LSP response")
+            .expect("channel send LSP response");
     }
 
     fn handle_notification(&mut self, notification: Notification) {
@@ -521,7 +521,7 @@ where
         let mut feedback = self.cache_file_in_memory(path.clone(), text);
         if let Ok(Some(project)) = self.router.project_for_path(path.clone()) {
             feedback.append_feedback(project.feedback.open_file(path));
-        };
+        }
         feedback
     }
 
@@ -529,7 +529,7 @@ where
         let mut feedback = self.discard_in_memory_cache(path.clone());
         if let Ok(Some(project)) = self.router.project_for_path(path.clone()) {
             feedback.append_feedback(project.feedback.close_file(&path));
-        };
+        }
         feedback
     }
 }

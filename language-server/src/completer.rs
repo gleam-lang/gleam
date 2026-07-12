@@ -580,7 +580,7 @@ impl<'a, IO> Completer<'a, IO> {
                     .config
                     .dev_dependencies
                     .keys(),
-            )
+            );
         }
 
         let already_imported: std::collections::HashSet<EcoString> =
@@ -742,7 +742,7 @@ impl<'a, IO> Completer<'a, IO> {
                             &cursor_surroundings,
                             TypeCompletionContext::UnqualifiedType,
                             CompletionKind::ImportedModule,
-                        ))
+                        ));
                     }
                 }
             }
@@ -844,7 +844,7 @@ impl<'a, IO> Completer<'a, IO> {
         if !cursor_surroundings.surrounding_text.is_empty() {
             for keyword in ["panic", "todo", "echo"] {
                 if keyword.starts_with(cursor_surroundings.surrounding_text.as_str()) {
-                    completions.push(self.keyword_completion(keyword, &cursor_surroundings))
+                    completions.push(self.keyword_completion(keyword, &cursor_surroundings));
                 }
             }
         }
@@ -896,7 +896,7 @@ impl<'a, IO> Completer<'a, IO> {
                 match match_type(&self.expected_type, &type_) {
                     TypeMatch::Incompatible => return,
                     TypeMatch::Matching | TypeMatch::Unknown => (),
-                };
+                }
 
                 let label = label.to_string();
                 let sort_text = Some(sort_text(
@@ -1011,7 +1011,7 @@ impl<'a, IO> Completer<'a, IO> {
                             value,
                             &cursor_surroundings,
                             CompletionKind::ImportedModule,
-                        ))
+                        ));
                     }
                 }
             }
