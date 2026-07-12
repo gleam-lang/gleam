@@ -47,13 +47,14 @@ pub static CURRENT_PACKAGE: &str = "thepackage";
 #[macro_export]
 macro_rules! assert_js {
     ($(($name:literal, $module_src:literal)),+, $src:literal $(,)?) => {
+        use std::fmt::Write as _;
         let compiled =
             $crate::javascript::tests::compile_js($src, vec![$(($crate::javascript::tests::CURRENT_PACKAGE, $name, $module_src)),*]);
             let mut output = String::from("----- SOURCE CODE\n");
             for (name, src) in [$(($name, $module_src)),*] {
-                output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+                let _ = write!(output, "-- {name}.gleam\n{src}\n\n");
             }
-            output.push_str(&format!("-- main.gleam\n{}\n\n----- COMPILED JAVASCRIPT\n{compiled}", $src));
+            let _ = write!(output, "-- main.gleam\n{}\n\n----- COMPILED JAVASCRIPT\n{compiled}", $src);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
@@ -332,13 +333,11 @@ pub fn source_map_to_string(src: &str, compiled: &str, source_map: SourceMap) ->
             src_line_numbers.byte_index(Position::new(*next_src_line, *next_src_col)) as usize;
         let next_compiled_index =
             compiled_line_numbers.byte_index(Position::new(*next_dst_line, *next_dst_col)) as usize;
-        output.push_str(&format!("{}\n", &src[src_index..next_src_index]));
-        output.push_str("⏷\n");
-        output.push_str(&format!(
-            "{}\n",
-            &compiled[compiled_index..next_compiled_index]
-        ));
-        output.push_str("----- \n");
+
+        output.push_str(&src[src_index..next_src_index]);
+        output.push_str("\n⏷\n");
+        output.push_str(&compiled[compiled_index..next_compiled_index]);
+        output.push_str("\n----- \n");
         prev_compiled_index = next_compiled_index;
     }
     // Print the last mapping. this needs to be done separately because the last mapping
@@ -353,15 +352,17 @@ pub fn source_map_to_string(src: &str, compiled: &str, source_map: SourceMap) ->
             let next_src_index = src_line_numbers
                 .byte_index(Position::new(next_src_token.0, next_src_token.1))
                 as usize;
-            output.push_str(&format!("{}\n", &src[src_index..next_src_index]));
+            output.push_str(&src[src_index..next_src_index]);
+            output.push('\n');
         }
         None => {
             // If there is no next src token, print the rest of the source and compiled code
-            output.push_str(&format!("{}\n", &src[src_index..]));
+            output.push_str(&src[src_index..]);
+            output.push('\n');
         }
     }
     output.push_str("⏷\n");
-    output.push_str(&format!("{}\n", &compiled[prev_compiled_index..]));
-    output.push_str("----- \n");
+    output.push_str(&compiled[prev_compiled_index..]);
+    output.push_str("\n----- \n");
     output
 }

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2025 The Gleam contributors
 
 use std::collections::HashMap;
+use std::fmt::Write as _;
 
 use lsp_types::{
     Position, PrepareRenameParams, PrepareRenamePlaceholder, Range, RenameParams,
@@ -119,7 +120,7 @@ fn display_result(
 ) -> String {
     let mut output = String::from("----- BEFORE RENAME\n");
     for (name, src) in project.root_package_modules.iter() {
-        output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+        let _ = write!(output, "-- {name}.gleam\n{src}\n\n");
     }
 
     let src = project.src;
@@ -128,9 +129,10 @@ fn display_result(
     } else {
         src.to_string()
     };
-    output.push_str(&format!(
+    let _ = write!(
+        output,
         "-- app.gleam\n{app_src_before}\n\n----- AFTER RENAME\n",
-    ));
+    );
 
     for &(name, src) in project.root_package_modules.iter() {
         let used_name = if let Some(new_name) = renamed_modules.get(name) {
@@ -138,21 +140,23 @@ fn display_result(
         } else {
             name
         };
-        output.push_str(&format!(
+        let _ = write!(
+            output,
             "-- {used_name}.gleam\n{}\n\n",
             modules
                 .get(name)
                 .map(|string| string.as_str())
                 .unwrap_or(src)
-        ));
+        );
     }
-    output.push_str(&format!(
+    let _ = write!(
+        output,
         "-- app.gleam\n{}",
         modules
             .get("app")
             .map(|string| string.as_str())
             .unwrap_or(src)
-    ));
+    );
     output
 }
 

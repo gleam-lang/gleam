@@ -6,6 +6,7 @@ use lsp_types::{
     CodeActionContext, CodeActionParams, DocumentChange, PartialResultParams, Position, Uri as Url,
     WorkDoneProgressParams,
 };
+use std::fmt::Write as _;
 
 use super::*;
 use crate::path;
@@ -248,7 +249,7 @@ macro_rules! assert_code_action {
         );
 
         if !file_operations.is_empty() {
-            output.push_str(&format!("\n----- FILE OPERATIONS -----\n{file_operations}"));
+            let _ = write!(output, "\n----- FILE OPERATIONS -----\n{file_operations}");
         }
 
         insta::assert_snapshot!(insta::internals::AutoName, output, src);

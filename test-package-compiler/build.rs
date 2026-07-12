@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2022 The Gleam contributors
 
+use std::fmt::Write as _;
 use std::path::PathBuf;
 
 pub fn main() {
@@ -25,7 +26,8 @@ pub fn main() {
     for name in names {
         let path = cases.join(&name);
         let path = path.to_str().unwrap().replace('\\', "/");
-        module.push_str(&format!(
+        let _ = write!(
+            module,
             r#"
 #[rustfmt::skip]
 #[test]
@@ -38,7 +40,7 @@ fn {name}() {{
     );
 }}
 "#
-        ));
+        );
     }
 
     let out = PathBuf::from("./src/generated_tests.rs");

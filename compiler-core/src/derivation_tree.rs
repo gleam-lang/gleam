@@ -13,6 +13,7 @@ use petgraph::prelude::StableGraph;
 use pubgrub::External;
 use pubgrub::{DerivationTree, Derived, Ranges};
 use std::collections::HashMap;
+use std::fmt::Write as _;
 use std::hash::RandomState;
 use std::ops::Bound::{Excluded, Included, Unbounded};
 use std::sync::Arc;
@@ -171,10 +172,11 @@ impl DerivationTreePrinter {
                 .ranges_between(previous, next)
                 .expect("path edge is in the graph");
 
-            message.push_str(&format!(
+            let _ = write!(
+                message,
                 "\n    - {previous_name} requires {next_name} {}",
                 pretty_range(next_range)
-            ));
+            );
             previous = next;
         }
         message
