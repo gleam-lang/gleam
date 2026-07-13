@@ -888,16 +888,10 @@ fn proto_to_release(
         .collect::<Result<HashMap<_, _>, _>>()?;
     let version = Version::try_from(release.version.as_str())
         .expect("Failed to parse version format from Hex");
-    let security_advisories = package_advisories
+    let security_advisories = release
+        .advisory_indexes
         .iter()
-        .enumerate()
-        .filter_map(|(index, advisory)| {
-            if release.advisory_indexes.contains(&(index as u32)) {
-                Some(advisory.clone())
-            } else {
-                None
-            }
-        })
+        .map(|index| package_advisories[*index as usize].clone())
         .collect();
     Ok(Release {
         version,
