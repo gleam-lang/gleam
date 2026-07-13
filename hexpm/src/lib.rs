@@ -923,14 +923,14 @@ fn proto_to_security_advisory(
     } = advisory;
     // We use this instead of just `SecurityAdvisory::severity()` to save `None`
     // state, since otherwise it will be lost.
-    let severity = severity
+    let cvss_rating = severity
         .and_then(|severity| severity.try_into().ok())
         .map(proto_to_advisory_severity);
     Ok(SecurityAdvisory {
         id,
         summary,
         html_url,
-        severity,
+        cvss_rating,
         cvss_score,
         api_url,
         aliases,
@@ -1052,7 +1052,7 @@ pub struct SecurityAdvisory {
     /// OSV web URL for the advisory
     pub html_url: String,
     /// Severity of the advisory
-    pub severity: Option<AdvisorySeverity>,
+    pub cvss_rating: Option<AdvisorySeverity>,
     /// CVSS score (0.0–10.0)
     pub cvss_score: Option<f32>,
     /// OSV API URL for the advisory
