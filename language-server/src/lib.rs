@@ -52,7 +52,8 @@
     clippy::match_single_binding,
     clippy::match_like_matches_macro,
     clippy::inconsistent_struct_constructor,
-    clippy::len_without_is_empty
+    clippy::len_without_is_empty,
+    clippy::let_unit_value
 )]
 
 mod code_action;

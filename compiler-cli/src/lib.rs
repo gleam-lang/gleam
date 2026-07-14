@@ -50,7 +50,8 @@
     clippy::match_single_binding,
     clippy::inconsistent_struct_constructor,
     clippy::assign_op_pattern,
-    clippy::len_without_is_empty
+    clippy::len_without_is_empty,
+    clippy::let_unit_value
 )]
 
 #[cfg(test)]

@@ -56,6 +56,7 @@
     clippy::match_like_matches_macro,
     clippy::inconsistent_struct_constructor,
     clippy::len_without_is_empty,
+    clippy::let_unit_value,
     // TODO: fix
     clippy::arc_with_non_send_sync,
 )]
