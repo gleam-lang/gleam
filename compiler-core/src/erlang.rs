@@ -3265,7 +3265,7 @@ fn how_to_divide(left: &TypedExpr, right: &TypedExpr) -> HowToDivide {
 pub fn record_definition(record_name: &str, fields: &[(&str, Arc<Type>)]) -> String {
     let mut builder = ErlangSourceBuilder::new(None);
 
-    builder.start_record_attribute(&to_snake_case(record_name));
+    let attribute = builder.start_record_attribute(&to_snake_case(record_name));
 
     let type_printer = TypeGenerator::new("").var_as_any();
     for (field_name, field_type) in fields {
@@ -3274,7 +3274,7 @@ pub fn record_definition(record_name: &str, fields: &[(&str, Arc<Type>)]) -> Str
         type_printer.type_(&mut builder, field_type);
     }
 
-    builder.end_record_attribute(());
+    builder.end_record_attribute(attribute);
     builder.into_output()
 }
 
