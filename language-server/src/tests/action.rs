@@ -15817,3 +15817,12 @@ fn convert_negative_int_hexadecimal_to_decimal() {
         find_position_of("0x6f").to_selection()
     );
 }
+
+#[test]
+fn convert_to_int_has_nicely_separated_digits() {
+    assert_code_action!(
+        "Convert to `1_234_567`",
+        "pub fn main() { 0b100101101011010000111 }",
+        find_position_of("0b100101101011010000111").to_selection()
+    );
+}
