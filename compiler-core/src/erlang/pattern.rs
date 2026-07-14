@@ -415,7 +415,7 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
             builder.end_clause_body(clause);
 
             let clause = builder.start_case_clause();
-            let denominator = self.generator.new_throwaway_variable();
+            let denominator = self.generator.new_generated_variable();
             builder.variable_pattern(&denominator);
             let clause = builder.end_clause_pattern(clause);
             let clause = builder.end_clause_guards(clause);
