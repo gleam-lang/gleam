@@ -594,3 +594,7 @@
 - Fixed a bug where an incorrect `package-interface.json` would be generated for
   certain type aliases.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where variable sized string segment patterns that are discarded
+  are not disallowed by the compiler.
+  ([Lily Rose](https://github.com/LilyRose2798))
