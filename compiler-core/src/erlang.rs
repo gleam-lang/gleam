@@ -32,12 +32,12 @@ use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 /// This is an open runtime error to which more fields can still be added.
 #[must_use]
-struct RuntimeError {
+struct RuntimeError<Map, Call> {
     /// This is the map that is going to be thrown by the `erlang:error` call.
-    error_map: erlang_generation::Map,
+    error_map: Map,
     /// This is the call to `erlang:error` that will throw the error, with the
     /// map as an argument.
-    erlang_error_call: erlang_generation::Call,
+    erlang_error_call: Call,
 }
 
 /// Represents all the different kind of runtime errors that Gleam can raise.
@@ -154,7 +154,7 @@ struct FunctionGenerator<'a, 'generator> {
     ///
     variable_names: im::HashMap<SrcSpan, EcoString>,
 
-    /// This keeps track of the number of throwaway variables that have already
+    /// This keeps track of the number of generated variables that have already
     /// been generated in the current function.
     /// For example if this is `2` it means we've already generated:
     ///
@@ -164,10 +164,10 @@ struct FunctionGenerator<'a, 'generator> {
     /// _value@2
     /// ```
     ///
-    /// We need this to make sure that every time we generate a new throwaway
+    /// We need this to make sure that every time we generate a new generated
     /// variable it has a unique name not shadowing anything else.
     ///
-    throwaway_variables: usize,
+    generated_variables: usize,
 
     /// This keeps track of all the names that are taken for the current
     /// function and can't be used when defining new variables.
@@ -488,7 +488,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             module_generator,
             taken_names: im::HashMap::new(),
             variable_names: im::HashMap::new(),
-            throwaway_variables: 0,
+            generated_variables: 0,
         }
     }
 
@@ -562,13 +562,13 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     /// The generated name is guaranteed to always be unique for the given
     /// function.
     ///
-    fn new_throwaway_variable(&mut self) -> EcoString {
-        let name = if self.throwaway_variables == 0 {
+    fn new_generated_variable(&mut self) -> EcoString {
+        let name = if self.generated_variables == 0 {
             EcoString::from("_value")
         } else {
-            eco_format!("_value@{}", self.throwaway_variables)
+            eco_format!("_value@{}", self.generated_variables)
         };
-        self.throwaway_variables += 1;
+        self.generated_variables += 1;
         name
     }
 
@@ -732,7 +732,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // If an argument is made of just underscores, then that would result
             // in a syntax error in the generated Erlang, where the external
             // function is called with a discard `io:format(_, _)`!
-            // So in this case we use a throwaway name to make sure the external
+            // So in this case we use a generated name to make sure the external
             // function can be called correctly.
             ArgNames::Discard { name, location }
             | ArgNames::LabelledDiscard {
@@ -741,7 +741,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 ..
             } if is_external => {
                 if name.chars().all(|char| char == '_') {
-                    self.new_throwaway_variable()
+                    self.new_generated_variable()
                 } else {
                     self.new_erlang_variable(name, *location)
                 }
@@ -764,8 +764,8 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // We go over each statement one by one and produce the code they need.
         for i in 0..statements.len() {
             match statements.get(i).expect("statement in range") {
-                Statement::Expression(expression) => self.expr(builder, expression),
-                Statement::Use(use_) => self.expr(builder, &use_.call),
+                Statement::Expression(expression) => self.expression(builder, expression),
+                Statement::Use(use_) => self.expression(builder, &use_.call),
                 Statement::Assert(assert) => self.assert(builder, assert),
                 Statement::Assignment(assignment) => match &assignment.kind {
                     AssignmentKind::Let | AssignmentKind::Generated => {
@@ -812,7 +812,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         }
     }
 
-    fn expr<Output>(
+    fn expression<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
         expression: &'a TypedExpr,
@@ -858,7 +858,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 left,
                 right,
                 ..
-            } => self.bin_op(builder, operator, left, right),
+            } => self.binary_operator(builder, operator, left, right),
 
             //
             // BitArrays, Lists, and Tuples.
@@ -1091,14 +1091,14 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     /// After you're done generating those additional fields remember you _must_
     /// call `end_runtime_error` before generating any other piece of code!
     ///
-    fn start_runtime_error<Output>(
+    fn start_runtime_error<Output, Builder: ErlangBuilder<Output>>(
         &mut self,
-        builder: &mut impl ErlangBuilder<Output>,
+        builder: &mut Builder,
         error_kind: RuntimeErrorKind,
         location: SrcSpan,
         message: Option<&'a TypedExpr>,
-    ) -> RuntimeError {
-        let call = builder.start_remote_call(ErlangModuleName::new("erlang"), "error");
+    ) -> RuntimeError<Builder::Map, Builder::Call> {
+        let call = builder.start_remote_call(ErlangModuleName::erlang(), "error");
         let map = builder.start_map();
 
         builder.map_field();
@@ -1146,10 +1146,10 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     }
 
     /// This closes an open runtime error.
-    fn end_runtime_error<Output>(
+    fn end_runtime_error<Output, Builder: ErlangBuilder<Output>>(
         &self,
-        builder: &mut impl ErlangBuilder<Output>,
-        runtime_error: RuntimeError,
+        builder: &mut Builder,
+        runtime_error: RuntimeError<Builder::Map, Builder::Call>,
     ) {
         builder.end_map(runtime_error.error_map);
         builder.end_call(runtime_error.erlang_error_call);
@@ -1162,10 +1162,10 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     ) {
         if needs_begin_end_wrapping(expression) {
             let block = builder.start_block();
-            self.expr(builder, expression);
+            self.expression(builder, expression);
             builder.end_block(block);
         } else {
-            self.expr(builder, expression);
+            self.expression(builder, expression);
         }
     }
 
@@ -1232,7 +1232,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // end
             // ```
             let clause = builder.start_case_clause();
-            let matched_value_name = self.new_throwaway_variable();
+            let matched_value_name = self.new_generated_variable();
             builder.match_pattern();
             let mut generator = PatternGenerator::new(self);
             generator.pattern(builder, pattern);
@@ -1246,7 +1246,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
         // This is the catch all branch to throw an error otherwise.
         let clause = builder.start_case_clause();
-        let value_name = self.new_throwaway_variable();
+        let value_name = self.new_generated_variable();
         builder.variable_pattern(&value_name);
         let clause = builder.end_clause_pattern(clause);
         let clause = builder.end_clause_guards(clause);
@@ -1355,7 +1355,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 },
             )
         } else {
-            self.expr(builder, finally)
+            self.expression(builder, finally)
         }
     }
 
@@ -1413,24 +1413,24 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 };
 
                 // If the left or right hand side are not simple variables we'll
-                // need to first assign those to throwaway variables and keep
+                // need to first assign those to generated variables and keep
                 // track of those names.
                 let left = if !left.is_var() {
-                    let name = self.new_throwaway_variable();
+                    let name = self.new_generated_variable();
                     builder.match_operator();
                     builder.variable_pattern(&name);
                     self.maybe_block_expr(builder, left);
-                    AssertionExpression::from_throwaway_variable(name, left)
+                    AssertionExpression::from_generated_variable(name, left)
                 } else {
                     AssertionExpression::from_expression(left)
                 };
 
                 let right = if !right.is_var() {
-                    let name = self.new_throwaway_variable();
+                    let name = self.new_generated_variable();
                     builder.match_operator();
                     builder.variable_pattern(&name);
                     self.maybe_block_expr(builder, right);
-                    AssertionExpression::from_throwaway_variable(name, right)
+                    AssertionExpression::from_generated_variable(name, right)
                 } else {
                     AssertionExpression::from_expression(right)
                 };
@@ -1479,11 +1479,11 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 let mut call_arguments = Vec::with_capacity(arguments.len());
                 for argument in arguments {
                     let argument = if !argument.value.is_var() {
-                        let name = self.new_throwaway_variable();
+                        let name = self.new_generated_variable();
                         builder.match_operator();
                         builder.variable_pattern(&name);
                         self.maybe_block_expr(builder, &argument.value);
-                        AssertionExpression::from_throwaway_variable(name, &argument.value)
+                        AssertionExpression::from_generated_variable(name, &argument.value)
                     } else {
                         AssertionExpression::from_expression(&argument.value)
                     };
@@ -1904,7 +1904,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         tuple: &'a TypedExpr,
         index: u64,
     ) {
-        let call = builder.start_remote_call(ErlangModuleName::new("erlang"), "element");
+        let call = builder.start_remote_call(ErlangModuleName::erlang(), "element");
         builder.int((index + 1).into());
         self.maybe_block_expr(builder, tuple);
         builder.end_call(call);
@@ -2213,7 +2213,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         if let TypedExpr::Block { statements, .. } = &clause.then {
             self.statement_sequence(builder, statements);
         } else {
-            self.expr(builder, &clause.then);
+            self.expression(builder, &clause.then);
         }
         builder.end_clause_body(clause_body);
     }
@@ -2487,7 +2487,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         });
     }
 
-    fn bin_op<Output>(
+    fn binary_operator<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
         name: &'a BinOp,
@@ -2548,7 +2548,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 // We first have to evaluate the left hand side, and store its
                 // result in a variable to use later.
                 let left_name = if !is_left_hand_side_pure {
-                    let left_name = self.new_throwaway_variable();
+                    let left_name = self.new_generated_variable();
                     builder.match_operator();
                     builder.variable_pattern(&left_name);
                     self.maybe_block_expr(builder, left);
@@ -2577,7 +2577,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 builder.end_clause_body(body);
 
                 // _value -> left / _value
-                let denominator = self.new_throwaway_variable();
+                let denominator = self.new_generated_variable();
                 let clause = builder.start_case_clause();
                 builder.variable_pattern(&denominator);
                 let guards = builder.end_clause_pattern(clause);
@@ -2624,7 +2624,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             } => {
                 // If the left hand side is not a pure expression we will have
                 // to evaluate it before the right hand side of the expression.
-                // So we assign it to a throwaway variable that we will then
+                // So we assign it to a generated variable that we will then
                 // reference in the case expression's body.
                 // It will look something like this:
                 //
@@ -2637,7 +2637,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 // ```
                 //
                 let left_name = if !is_left_hand_side_pure {
-                    let left_name = self.new_throwaway_variable();
+                    let left_name = self.new_generated_variable();
                     builder.match_operator();
                     builder.variable_pattern(&left_name);
                     self.maybe_block_expr(builder, left);
@@ -2658,7 +2658,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 builder.end_clause_body(body);
 
                 // _value -> left div _value
-                let denominator = self.new_throwaway_variable();
+                let denominator = self.new_generated_variable();
                 let clause = builder.start_case_clause();
                 builder.variable_pattern(&denominator);
                 let guards = builder.end_clause_pattern(clause);
@@ -2763,7 +2763,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // unicode:characters_to_binary(<segment_value>, utf8, {utf16, big})
             // ```
             let call =
-                builder.start_remote_call(ErlangModuleName::new("unicode"), "characters_to_binary");
+                builder.start_remote_call(ErlangModuleName::unicode(), "characters_to_binary");
             {
                 self.maybe_block_expr(builder, &segment.value);
                 builder.atom("utf8");
@@ -2814,7 +2814,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 builder.int(int_value.clone());
             }
         } else {
-            let call = builder.start_remote_call(ErlangModuleName::new("erlang"), "max");
+            let call = builder.start_remote_call(ErlangModuleName::erlang(), "max");
             builder.int(BigInt::ZERO);
             self.maybe_block_expr(builder, size);
             builder.end_call(call);
@@ -2916,7 +2916,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         tuple: &'a TypedClauseGuard,
         index: u64,
     ) {
-        let call = builder.start_remote_call(ErlangModuleName::new("erlang"), "element");
+        let call = builder.start_remote_call(ErlangModuleName::erlang(), "element");
         builder.int((index + 1).into());
         self.clause_guard(builder, tuple, &HashMap::new());
         builder.end_call(call);
@@ -2989,7 +2989,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         arguments: usize,
     ) {
         let arguments = (0..arguments)
-            .map(|_| self.new_throwaway_variable())
+            .map(|_| self.new_generated_variable())
             .collect_vec();
         let function = builder.start_anonymous_function(&arguments);
 
@@ -3265,7 +3265,7 @@ fn how_to_divide(left: &TypedExpr, right: &TypedExpr) -> HowToDivide {
 pub fn record_definition(record_name: &str, fields: &[(&str, Arc<Type>)]) -> String {
     let mut builder = ErlangSourceBuilder::new(None);
 
-    let record = builder.start_record_attribute(&to_snake_case(record_name));
+    builder.start_record_attribute(&to_snake_case(record_name));
 
     let type_printer = TypeGenerator::new("").var_as_any();
     for (field_name, field_type) in fields {
@@ -3274,7 +3274,7 @@ pub fn record_definition(record_name: &str, fields: &[(&str, Arc<Type>)]) -> Str
         type_printer.type_(&mut builder, field_type);
     }
 
-    builder.end_record_attribute(record);
+    builder.end_record_attribute(());
     builder.into_output()
 }
 
@@ -3563,7 +3563,7 @@ impl<'a> AssertionExpression<'a> {
         self
     }
 
-    fn from_throwaway_variable(name: EcoString, original_expression: &'a TypedExpr) -> Self {
+    fn from_generated_variable(name: EcoString, original_expression: &'a TypedExpr) -> Self {
         Self {
             runtime_value: Some(AssertedExpressionRuntimeValue::Variable(name)),
             kind: if original_expression.is_literal() {
@@ -3628,7 +3628,7 @@ enum AssertedExpressionRuntimeValue<'a> {
     /// That's because we know wether the assertion failed (it must be false),
     /// or not (it must be true).
     KnownBool(bool),
-    /// The asserted value was bound to a throwaway variable with the given
+    /// The asserted value was bound to a generated variable with the given
     /// name, and we can reference it using that name.
     Variable(EcoString),
     /// The asserted value is an expression we need to inline in the error.
