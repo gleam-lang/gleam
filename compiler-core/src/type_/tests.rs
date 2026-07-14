@@ -90,8 +90,6 @@ macro_rules! assert_module_error {
     };
 
     ($(($name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
-        use std::fmt::Write as _;
-
         let error = $crate::type_::tests::module_error(
             $src,
             vec![
@@ -101,15 +99,20 @@ macro_rules! assert_module_error {
 
         let mut output = String::from("----- SOURCE CODE\n");
         for (name, src) in [$(($name, $module_src)),*] {
-            let _ = write!(output, "-- {name}.gleam\n{src}\n\n");
+            output.push_str("-- ");
+            output.push_str(name);
+            output.push_str(".gleam\n");
+            output.push_str(src);
+            output.push_str("\n\n");
         }
-        let _ = write!(output, "-- main.gleam\n{}\n\n----- ERROR\n{error}", $src);
+        output.push_str("-- main.gleam\n");
+        output.push_str($src);
+        output.push_str("\n\n----- ERROR\n");
+        output.push_str(&error);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
     ($(($package:literal, $name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
-        use std::fmt::Write as _;
-
         let error = $crate::type_::tests::module_error(
             $src,
             vec![
@@ -119,9 +122,16 @@ macro_rules! assert_module_error {
 
         let mut output = String::from("----- SOURCE CODE\n");
         for (name, src) in [$(($name, $module_src)),*] {
-            let _ = write!(output, "-- {name}.gleam\n{src}\n\n");
+            output.push_str("-- ");
+            output.push_str(name);
+            output.push_str(".gleam\n");
+            output.push_str(src);
+            output.push_str("\n\n");
         }
-        let _ = write!(output, "-- main.gleam\n{}\n\n----- ERROR\n{error}", $src);
+        output.push_str("-- main.gleam\n");
+        output.push_str($src);
+        output.push_str("\n\n----- ERROR\n");
+        output.push_str(&error);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -235,8 +245,6 @@ macro_rules! assert_warning {
     };
 
     ($(($name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
-        use std::fmt::Write as _;
-
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![
@@ -249,15 +257,21 @@ macro_rules! assert_warning {
 
         let mut output = String::from("----- SOURCE CODE\n");
         for (name, src) in [$(($name, $module_src)),*] {
-            let _ = write!(output, "-- {name}.gleam\n{src}\n\n");
+            output.push_str("-- ");
+            output.push_str(name);
+            output.push_str(".gleam\n");
+            output.push_str(src);
+            output.push_str("\n\n");
         }
-        let _ = write!(output, "-- main.gleam\n{}\n\n----- WARNING\n{warning}", $src);
+
+        output.push_str("-- main.gleam\n");
+        output.push_str($src);
+        output.push_str("\n\n----- WARNING\n");
+        output.push_str(&warning);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr) => {
-        use std::fmt::Write as _;
-
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![$(($package, $name, $module_src)),*],
@@ -268,9 +282,17 @@ macro_rules! assert_warning {
 
         let mut output = String::from("----- SOURCE CODE\n");
         for (name, src) in [$(($name, $module_src)),*] {
-            let _ = write!(output, "-- {name}.gleam\n{src}\n\n");
+            output.push_str("-- ");
+            output.push_str(name);
+            output.push_str(".gleam\n");
+            output.push_str(src);
+            output.push_str("\n\n");
         }
-        let _ = write!(output, "-- main.gleam\n{}\n\n----- WARNING\n{warning}", $src);
+
+        output.push_str("-- main.gleam\n");
+        output.push_str($src);
+        output.push_str("\n\n----- WARNING\n");
+        output.push_str(&warning);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }

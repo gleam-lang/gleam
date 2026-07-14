@@ -114,11 +114,12 @@ fn read_toml_edit(name: &Utf8Path) -> Result<toml_edit::DocumentMut, Error> {
 
 fn version_to_string(version: &Version) -> String {
     let mut text = String::new();
-    let _ = write!(
+    write!(
         text,
         "{}.{}.{}",
         version.major, version.minor, version.patch
-    );
+    )
+    .expect("write to a string");
 
     if !version.pre.is_empty() {
         text.push('-');
@@ -133,7 +134,8 @@ fn version_to_string(version: &Version) -> String {
         }
     }
     if let Some(build) = version.build.as_ref() {
-        let _ = write!(text, "+{build}");
+        text.push('+');
+        text.push_str(build);
     }
     text
 }

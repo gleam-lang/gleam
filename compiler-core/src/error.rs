@@ -7,7 +7,6 @@ use crate::bit_array::UnsupportedOption;
 use crate::build::{Origin, Outcome, Runtime, Target};
 use crate::dependency::{PackageFetcher, ResolutionError};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
-use std::fmt::Write as _;
 
 use crate::derivation_tree::DerivationTreePrinter;
 use crate::parse::error::ParseErrorDetails;
@@ -3536,7 +3535,11 @@ but no type in scope with that name."
                         };
                         text.push_str(message);
                         for module_name in possible_modules {
-                            let _ = writeln!(text, "  - {module_name}.{name}");
+                            text.push_str("  - ");
+                            text.push_str(module_name);
+                            text.push('.');
+                            text.push_str(name);
+                            text.push('\n');
                         }
                     }
 
@@ -4649,11 +4652,9 @@ here takes {expected_string}.\n"
 the `use` callback function.\n",
                     );
                 } else {
-                    let _ = writeln!(
-                        text,
-                        "You supplied {supplied_arguments_string} \
-and the final one is the `use` callback function."
-                    );
+                    text.push_str("You supplied ");
+                    text.push_str(&supplied_arguments_string);
+                    text.push_str(" and the final one is the `use` callback function.\n");
                 }
             } else {
                 text.push_str(

@@ -47,14 +47,21 @@ pub static CURRENT_PACKAGE: &str = "thepackage";
 #[macro_export]
 macro_rules! assert_js {
     ($(($name:literal, $module_src:literal)),+, $src:literal $(,)?) => {
-        use std::fmt::Write as _;
         let compiled =
             $crate::javascript::tests::compile_js($src, vec![$(($crate::javascript::tests::CURRENT_PACKAGE, $name, $module_src)),*]);
             let mut output = String::from("----- SOURCE CODE\n");
             for (name, src) in [$(($name, $module_src)),*] {
-                let _ = write!(output, "-- {name}.gleam\n{src}\n\n");
+                output.push_str("-- ");
+                output.push_str(name);
+                output.push_str(".gleam\n");
+                output.push_str(src);
+                output.push_str("\n\n");
             }
-            let _ = write!(output, "-- main.gleam\n{}\n\n----- COMPILED JAVASCRIPT\n{compiled}", $src);
+            output.push_str("-- main.gleam\n");
+            output.push_str($src);
+            output.push_str("\n\n----- COMPILED JAVASCRIPT\n");
+            output.push_str(&compiled);
+
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
