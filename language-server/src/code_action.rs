@@ -13156,8 +13156,10 @@ impl<'a> ConvertIntToDifferentBase<'a> {
             let converted_number = match base {
                 Base::Binary => format!("{minus}0b{:b}", int),
                 Base::Octal => format!("{minus}0o{:o}", int),
-                Base::Decimal => format!("{minus}{}", int),
                 Base::Hexadecimal => format!("{minus}0x{:x}", int),
+                Base::Decimal => {
+                    format!("{minus}{}", format_int_with_thousands_separator(&int))
+                }
             };
             let title = format!("Convert to `{converted_number}`");
             self.edits.replace(location, converted_number);
@@ -13173,6 +13175,25 @@ impl<'a> ConvertIntToDifferentBase<'a> {
         }
         action
     }
+}
+
+fn format_int_with_thousands_separator(int: &BigInt) -> String {
+    if int <= &BigInt::from(9999) {
+        return int.to_string();
+    }
+
+    // We get chunks of three digits. If we start from 1234567
+    // we will have `765`, `432`, `1`
+    (int.to_string().chars().rev().chunks(3).into_iter())
+        // Each chunk is turned into a string and those are joined with a
+        // separator.
+        .map(|chunk| chunk.collect::<EcoString>())
+        .join("_")
+        // And finally reverse everything to bring it back to normal, the number
+        // is spelled in reverse right now!
+        .chars()
+        .rev()
+        .collect()
 }
 
 impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
