@@ -406,6 +406,23 @@ fn merge_conflict_lt() {
 }
 
 #[test]
+fn merge_conflict_lt_with_head() {
+    assert_error!(
+        "let wobble: Int = 32
+        <<<<<<< HEAD",
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::MergeConflictIndicator,
+                    location: SrcSpan { start: 29, end: 36 },
+                }
+            },
+            location: SrcSpan { start: 29, end: 36 },
+        }
+    );
+}
+
+#[test]
 fn four_lt_not_merge_conflict() {
     assert_error!(
         "let wobble: Int = 32
@@ -450,6 +467,23 @@ fn merge_conflict_gt() {
     assert_error!(
         "let wobble: Int = 32
         >>>>>>>",
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::MergeConflictIndicator,
+                    location: SrcSpan { start: 29, end: 36 },
+                }
+            },
+            location: SrcSpan { start: 29, end: 36 },
+        }
+    );
+}
+
+#[test]
+fn merge_conflict_gt_with_branch_name() {
+    assert_error!(
+        "let wobble: Int = 32
+        >>>>>>> main",
         ParseError {
             error: ParseErrorType::LexError {
                 error: LexicalError {
