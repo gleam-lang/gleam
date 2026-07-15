@@ -11,8 +11,21 @@ use std::sync::OnceLock;
 /// This is to raise an `unreachable` pretty printed error when we try producing
 /// some piece of code that is not allowed in the current position.
 macro_rules! invalid_code_for_position {
+    // If this is given no position it will automatically use the current
+    // position.
     ($this:expr, $expected:literal) => {
-        unreachable!("{}", $this.error_with_position($expected))
+        unreachable!(
+            "{}",
+            $this.error_with_position($expected, $this.position.last())
+        )
+    };
+
+    // But we can also feed the current position ourselves to the macro.
+    ($this:expr, $expected:literal, $position:expr) => {
+        unreachable!(
+            "{}",
+            $this.error_with_position($expected, $position.as_ref())
+        )
     };
 }
 
@@ -1458,7 +1471,7 @@ enum ErlangSourceBuilderPosition {
 
     /// We're generating code for a segment of a bit array, like `10:1/signed`.
     BitArraySegment {
-        expected: BitArraySegmentExpectedItem,
+        expected: ExpectedBitArraySegmentItem,
         /// This is `true` if the value of the bit array segment needs to be wrapped
         /// in parentheses. For example function calls need to be wrapped, or they
         /// would result in invalid Erlang being produced.
@@ -1520,7 +1533,7 @@ enum ErlangSourceBuilderPosition {
         first: bool,
     },
     /// We're generating a key-value pair inside a map.
-    MapField { expected: MapFieldExpectedItem },
+    MapField { expected: ExpectedMapFieldItem },
     /// We're generating the fields of a record attribute.
     RecordAttribute {
         /// This is `true` if no field has been generated yet.
@@ -1555,7 +1568,7 @@ enum BitArrayKind {
 /// after two expressions are generated. So we need to keep track of what we're
 /// expecting to be generated next.
 #[derive(Debug)]
-enum MapFieldExpectedItem {
+enum ExpectedMapFieldItem {
     Key,
     Value,
 }
@@ -1622,7 +1635,7 @@ enum ExpectedBinaryOperatorSide {
 /// This keeps track of which one we're expecting to be generated next.
 ///
 #[derive(Debug)]
-enum BitArraySegmentExpectedItem {
+enum ExpectedBitArraySegmentItem {
     Value {
         /// This is telling us if the value of the segment has to be a pattern
         /// or an expression.
@@ -1700,8 +1713,6 @@ enum ExpectedListItem {
     Rest,
     ListIsOver,
 }
-
-static UNICODE_ESCAPE_SEQUENCE_PATTERN: OnceLock<Regex> = OnceLock::new();
 
 /// How does pretty printing work? Here's a high level overview of how it works:
 ///
@@ -2203,7 +2214,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
     fn map_field(&mut self) {
         self.new_map_field();
         self.position.push(ErlangSourceBuilderPosition::MapField {
-            expected: MapFieldExpectedItem::Key,
+            expected: ExpectedMapFieldItem::Key,
         });
     }
 
@@ -2225,7 +2236,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         let kind = self.new_bit_array_segment();
         self.position
             .push(ErlangSourceBuilderPosition::BitArraySegment {
-                expected: BitArraySegmentExpectedItem::Value { kind },
+                expected: ExpectedBitArraySegmentItem::Value { kind },
                 // We assume all values are going to have to be wrapped, better
                 // be safe than sorry!
                 // We will turn this off only for certain expressions we know
@@ -2239,13 +2250,13 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.pop_leftover_items();
 
         if let Some(ErlangSourceBuilderPosition::BitArraySegment {
-            expected: expected @ BitArraySegmentExpectedItem::Size,
+            expected: expected @ ExpectedBitArraySegmentItem::Size,
             segment_value_needs_wrapping,
             segment_size_needs_wrapping,
         }) = self.position.last_mut()
         {
             // We are now expecting to see the specifiers list
-            *expected = BitArraySegmentExpectedItem::Specifiers;
+            *expected = ExpectedBitArraySegmentItem::Specifiers;
             if *segment_value_needs_wrapping {
                 self.code.push(')');
                 *segment_value_needs_wrapping = false;
@@ -2265,7 +2276,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
     ) {
         self.pop_leftover_items();
         let Some(ErlangSourceBuilderPosition::BitArraySegment {
-            expected: BitArraySegmentExpectedItem::Specifiers,
+            expected: ExpectedBitArraySegmentItem::Specifiers,
             segment_value_needs_wrapping,
             segment_size_needs_wrapping,
         }) = self.position.last_mut()
@@ -2686,7 +2697,7 @@ impl ErlangSourceBuilder {
 
             ErlangSourceBuilderPosition::BitArraySegment {
                 expected:
-                    expected @ BitArraySegmentExpectedItem::Value {
+                    expected @ ExpectedBitArraySegmentItem::Value {
                         kind: BitArrayKind::Expression,
                     },
                 segment_value_needs_wrapping,
@@ -2695,11 +2706,11 @@ impl ErlangSourceBuilder {
                 if *segment_value_needs_wrapping {
                     self.code.push('(');
                 }
-                *expected = BitArraySegmentExpectedItem::Size
+                *expected = ExpectedBitArraySegmentItem::Size
             }
 
             ErlangSourceBuilderPosition::BitArraySegment {
-                expected: expected @ BitArraySegmentExpectedItem::Size,
+                expected: expected @ ExpectedBitArraySegmentItem::Size,
                 segment_value_needs_wrapping,
                 segment_size_needs_wrapping,
             } => {
@@ -2710,7 +2721,7 @@ impl ErlangSourceBuilder {
                     // to the specifiers list!
                     *segment_value_needs_wrapping = false;
                 }
-                *expected = BitArraySegmentExpectedItem::Specifiers;
+                *expected = ExpectedBitArraySegmentItem::Specifiers;
                 self.code.push(':');
                 if *segment_size_needs_wrapping {
                     self.code.push('(');
@@ -2722,11 +2733,11 @@ impl ErlangSourceBuilder {
             }
 
             ErlangSourceBuilderPosition::MapField { expected } => match expected {
-                MapFieldExpectedItem::Key => *expected = MapFieldExpectedItem::Value,
+                ExpectedMapFieldItem::Key => *expected = ExpectedMapFieldItem::Value,
                 // We've generated a key and now the value is being generated.
                 // So we need to add the `=>` separating key and value and we
                 // can pop this position that is now complete.
-                MapFieldExpectedItem::Value => {
+                ExpectedMapFieldItem::Value => {
                     self.code.push_str(" => ");
                     self.position.pop();
                 }
@@ -2779,12 +2790,12 @@ impl ErlangSourceBuilder {
                 expected: ExpectedCaseClauseItem::Guards { .. },
             }
             | ErlangSourceBuilderPosition::BitArraySegment {
-                expected: BitArraySegmentExpectedItem::Specifiers,
+                expected: ExpectedBitArraySegmentItem::Specifiers,
                 ..
             }
             | ErlangSourceBuilderPosition::BitArraySegment {
                 expected:
-                    BitArraySegmentExpectedItem::Value {
+                    ExpectedBitArraySegmentItem::Value {
                         kind: BitArrayKind::Pattern,
                     },
                 ..
@@ -2922,14 +2933,14 @@ impl ErlangSourceBuilder {
                 segment_value_needs_wrapping,
                 segment_size_needs_wrapping: _,
                 expected:
-                    expected @ BitArraySegmentExpectedItem::Value {
+                    expected @ ExpectedBitArraySegmentItem::Value {
                         kind: BitArrayKind::Pattern,
                     },
             } => {
                 if *segment_value_needs_wrapping {
                     self.code.push('(');
                 }
-                *expected = BitArraySegmentExpectedItem::Size
+                *expected = ExpectedBitArraySegmentItem::Size
             }
 
             // We were waiting for the pattern to be generated, now we're done
@@ -2977,9 +2988,9 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::BitArray { .. }
             | ErlangSourceBuilderPosition::BitArraySegment {
                 expected:
-                    BitArraySegmentExpectedItem::Size
-                    | BitArraySegmentExpectedItem::Specifiers
-                    | BitArraySegmentExpectedItem::Value {
+                    ExpectedBitArraySegmentItem::Size
+                    | ExpectedBitArraySegmentItem::Specifiers
+                    | ExpectedBitArraySegmentItem::Value {
                         kind: BitArrayKind::Expression,
                     },
                 ..
@@ -3209,7 +3220,7 @@ impl ErlangSourceBuilder {
     /// If we were to just take that comment's content and put it in an Erlang
     /// string with no escaping that would produce invalid code!
     ///
-    fn escape_string_content(&self, content: &str) -> String {
+    fn escape_string_content(&self, content: &str) -> EcoString {
         let position = self
             .position
             .last()
@@ -3250,23 +3261,7 @@ impl ErlangSourceBuilder {
                 // If we're tasked with escaping the content of a literal string
                 // expression we need to turn Gleam's `\u` sequences into
                 // Erlang's `\x`.
-                UNICODE_ESCAPE_SEQUENCE_PATTERN
-                    .get_or_init(|| {
-                        Regex::new(r#"(\\+)(u)"#)
-                            .expect("Unicode escape sequence regex cannot be constructed")
-                    })
-                    // `\\u`-s should not be affected, so that "\\u..." is not converted to
-                    // "\\x...". That's why capturing groups is used to exclude cases that
-                    // shouldn't be replaced.
-                    .replace_all(content, |caps: &regex::Captures<'_>| {
-                        let slashes = caps.get(1).map_or("", |match_| match_.as_str());
-                        if slashes.len().is_multiple_of(2) {
-                            format!("{slashes}u")
-                        } else {
-                            format!("{slashes}x")
-                        }
-                    })
-                    .into()
+                escape_literal_string_content(content)
             }
         }
     }
@@ -3359,12 +3354,12 @@ impl ErlangSourceBuilder {
         match self.position.last_mut() {
             Some(ErlangSourceBuilderPosition::BitArraySegment {
                 segment_value_needs_wrapping,
-                expected: BitArraySegmentExpectedItem::Value { .. },
+                expected: ExpectedBitArraySegmentItem::Value { .. },
                 ..
             }) => *segment_value_needs_wrapping = false,
             Some(ErlangSourceBuilderPosition::BitArraySegment {
                 segment_size_needs_wrapping,
-                expected: BitArraySegmentExpectedItem::Size,
+                expected: ExpectedBitArraySegmentItem::Size,
                 ..
             }) => *segment_size_needs_wrapping = false,
             _ => (),
@@ -3387,7 +3382,7 @@ impl ErlangSourceBuilder {
             // We can't move the `new_expression` call down, that _must_ be the
             // first thing we do, so we check to see if the size if the next
             // thing we're expecting to see.
-            expected: BitArraySegmentExpectedItem::Size,
+            expected: ExpectedBitArraySegmentItem::Size,
             segment_value_needs_wrapping: _,
             segment_size_needs_wrapping: _,
         }) = self.position.last()
@@ -3539,7 +3534,7 @@ impl ErlangSourceBuilder {
                 expected: TypeSpecExpectedItem::TypeDefinition,
             }
             | ErlangSourceBuilderPosition::MapField {
-                expected: MapFieldExpectedItem::Key | MapFieldExpectedItem::Value,
+                expected: ExpectedMapFieldItem::Key | ExpectedMapFieldItem::Value,
             }
             | ErlangSourceBuilderPosition::List {
                 expected: ExpectedListItem::First | ExpectedListItem::Rest,
@@ -3547,9 +3542,9 @@ impl ErlangSourceBuilder {
             }
             | ErlangSourceBuilderPosition::BitArraySegment {
                 expected:
-                    BitArraySegmentExpectedItem::Size
-                    | BitArraySegmentExpectedItem::Specifiers
-                    | BitArraySegmentExpectedItem::Value { .. },
+                    ExpectedBitArraySegmentItem::Size
+                    | ExpectedBitArraySegmentItem::Specifiers
+                    | ExpectedBitArraySegmentItem::Value { .. },
                 ..
             }
             | ErlangSourceBuilderPosition::FunctionCall {
@@ -3604,8 +3599,11 @@ impl ErlangSourceBuilder {
 
     /// This produces a pretty printed error message including the current
     /// position.
-    fn error_with_position(&self, expected: &str) -> String {
-        let position = self.position.last();
+    fn error_with_position(
+        &self,
+        expected: &str,
+        position: Option<&ErlangSourceBuilderPosition>,
+    ) -> String {
         format!("tried {expected}, position: {position:?}")
     }
 
@@ -3624,6 +3622,29 @@ impl ErlangSourceBuilder {
             }
         }
     }
+}
+
+static UNICODE_ESCAPE_SEQUENCE_PATTERN: OnceLock<Regex> = OnceLock::new();
+
+/// This takes the content of a literal string and escapes it to something
+/// suitable to be used in an Erlang literal string.
+fn escape_literal_string_content(content: &str) -> EcoString {
+    UNICODE_ESCAPE_SEQUENCE_PATTERN
+        .get_or_init(|| {
+            Regex::new(r#"(\\+)(u)"#).expect("Unicode escape sequence regex cannot be constructed")
+        })
+        // `\\u`-s should not be affected, so that "\\u..." is not converted to
+        // "\\x...". That's why capturing groups is used to exclude cases that
+        // shouldn't be replaced.
+        .replace_all(content, |caps: &regex::Captures<'_>| {
+            let slashes = caps.get(1).map_or("", |match_| match_.as_str());
+            if slashes.len().is_multiple_of(2) {
+                format!("{slashes}u")
+            } else {
+                format!("{slashes}x")
+            }
+        })
+        .into()
 }
 
 /// This wraps an atom name in between single quotes if needed.
