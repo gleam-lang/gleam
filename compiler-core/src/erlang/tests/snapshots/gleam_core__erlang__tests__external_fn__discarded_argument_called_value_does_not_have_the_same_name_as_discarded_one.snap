@@ -1,19 +1,19 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-expression: "\n@external(erlang, \"wibble\", \"wobble\")\npub fn woo(_a: a) -> Nil\n"
+expression: "\n@external(erlang, \"wibble\", \"wobble\")\npub fn woo(_: a, _value: b) -> Nil\n"
 ---
 ----- SOURCE CODE
 
 @external(erlang, "wibble", "wobble")
-pub fn woo(_a: a) -> Nil
+pub fn woo(_: a, _value: b) -> Nil
 
 
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export([woo/1]).
+-export([woo/2]).
 
 -file("project/test/my/mod.gleam", 3).
--spec woo(any()) -> nil.
-woo(_value) ->
-    wibble:wobble(_value).
+-spec woo(any(), any()) -> nil.
+woo(_value, _value@1) ->
+    wibble:wobble(_value, _value@1).

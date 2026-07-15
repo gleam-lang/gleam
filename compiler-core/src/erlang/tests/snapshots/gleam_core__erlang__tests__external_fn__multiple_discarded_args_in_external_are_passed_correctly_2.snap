@@ -15,5 +15,5 @@ pub fn woo(__: a, _two: b) -> Nil
 
 -file("project/test/my/mod.gleam", 3).
 -spec woo(any(), any()) -> nil.
-woo(_value, _two) ->
-    wibble:wobble(_value, _two).
+woo(_value, _value@1) ->
+    wibble:wobble(_value, _value@1).
