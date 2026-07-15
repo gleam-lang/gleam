@@ -7,7 +7,7 @@ use crate::{
     io::{FileSystemWriter, memory::InMemoryFileSystem},
 };
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     sync::OnceLock,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -29,7 +29,13 @@ fn javascript_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.js"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -48,7 +54,13 @@ fn javascript_files_are_copied_from_test() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/test/wibble.js"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -67,7 +79,13 @@ fn javascript_files_are_copied_from_dev() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/dev/wibble.js"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -86,7 +104,13 @@ fn mjavascript_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.mjs"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -105,7 +129,13 @@ fn mjavascript_files_are_copied_from_test() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/test/wibble.mjs"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -124,7 +154,13 @@ fn mjavascript_files_are_copied_from_dev() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/dev/wibble.mjs"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -143,7 +179,13 @@ fn cjavascript_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.cjs"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -162,7 +204,13 @@ fn cjavascript_files_are_copied_from_test() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/test/wibble.cjs"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -181,7 +229,13 @@ fn cjavascript_files_are_copied_from_dev() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/dev/wibble.cjs"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -200,7 +254,13 @@ fn javascriptx_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.jsx"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -219,7 +279,13 @@ fn javascriptx_files_are_copied_from_test() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/test/wibble.jsx"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -238,7 +304,13 @@ fn javascriptx_files_are_copied_from_dev() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/dev/wibble.jsx"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -257,7 +329,13 @@ fn typescript_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.ts"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -276,7 +354,13 @@ fn typescript_files_are_copied_from_test() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/test/wibble.ts"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -295,7 +379,13 @@ fn typescript_files_are_copied_from_dev() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/dev/wibble.ts"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -314,7 +404,13 @@ fn mtypescript_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.mts"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -333,7 +429,13 @@ fn mtypescript_files_are_copied_from_test() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/test/wibble.mts"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -352,7 +454,13 @@ fn mtypescript_files_are_copied_from_dev() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/dev/wibble.mts"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -371,7 +479,13 @@ fn ctypescript_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.cts"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -390,7 +504,13 @@ fn ctypescript_files_are_copied_from_test() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/test/wibble.cts"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -409,7 +529,13 @@ fn ctypescript_files_are_copied_from_dev() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/dev/wibble.cts"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -428,7 +554,13 @@ fn typescriptx_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.tsx"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -447,7 +579,13 @@ fn typescriptx_files_are_copied_from_test() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/test/wibble.tsx"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -466,7 +604,13 @@ fn typescriptx_files_are_copied_from_dev() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/dev/wibble.tsx"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -499,7 +643,13 @@ fn all_javascript_files_are_copied_from_src_subfolders() {
     fs.write(&Utf8Path::new("/src/def/wobble.tsx"), "8")
         .unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -547,7 +697,13 @@ fn all_javascript_files_are_copied_from_test_subfolders() {
     fs.write(&Utf8Path::new("/test/def/wobble.tsx"), "8")
         .unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -586,7 +742,13 @@ fn all_javascript_files_are_copied_from_dev_subfolders() {
         .unwrap();
     fs.write(&Utf8Path::new("/dev/def/wobble.ts"), "4").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -611,7 +773,13 @@ fn erlang_header_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.hrl"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -630,7 +798,13 @@ fn erlang_header_files_are_copied_from_test() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/test/wibble.hrl"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -649,7 +823,13 @@ fn erlang_header_files_are_copied_from_dev() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/dev/wibble.hrl"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -668,7 +848,13 @@ fn erlang_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.erl"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -687,7 +873,13 @@ fn erlang_files_are_copied_from_test() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/test/wibble.erl"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -706,7 +898,13 @@ fn erlang_files_are_copied_from_dev() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/dev/wibble.erl"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -725,7 +923,13 @@ fn elixir_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.ex"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(copied.any_elixir);
@@ -744,7 +948,13 @@ fn elixir_files_are_copied_from_test() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/test/wibble.ex"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(copied.any_elixir);
@@ -763,7 +973,13 @@ fn elixir_files_are_copied_from_dev() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/dev/wibble.ex"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(copied.any_elixir);
@@ -786,7 +1002,13 @@ fn all_erlang_files_are_copied_from_src_subfolders() {
         .unwrap();
     fs.write(&Utf8Path::new("/src/def/wobble.ex"), "3").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(copied.any_elixir);
@@ -826,7 +1048,13 @@ fn all_erlang_files_are_copied_from_test_subfolders() {
     fs.write(&Utf8Path::new("/test/def/wobble.ex"), "3")
         .unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(copied.any_elixir);
@@ -865,7 +1093,13 @@ fn all_erlang_files_are_copied_from_dev_subfolders() {
         .unwrap();
     fs.write(&Utf8Path::new("/dev/def/wobble.ex"), "3").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(copied.any_elixir);
@@ -900,7 +1134,13 @@ fn other_files_are_ignored() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.cpp"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -921,7 +1161,13 @@ fn files_do_not_get_copied_if_there_already_is_a_new_version() {
     fs.set_modification_time(&out, UNIX_EPOCH + Duration::from_secs(1));
     fs.set_modification_time(&src, UNIX_EPOCH);
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -945,7 +1191,13 @@ fn files_get_copied_if_the_previously_copied_version_is_older() {
     fs.set_modification_time(&out, UNIX_EPOCH);
     fs.set_modification_time(&src, UNIX_EPOCH + Duration::from_secs(1));
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     let copied = copier.run().unwrap();
 
     assert!(!copied.any_elixir);
@@ -965,7 +1217,13 @@ fn duplicate_native_files_result_in_an_error() {
     fs.write(&Utf8Path::new("/src/wibble.mjs"), "1").unwrap();
     fs.write(&Utf8Path::new("/test/wibble.mjs"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     assert!(copier.run().is_err());
 }
 
@@ -977,7 +1235,13 @@ fn conflicting_erlang_modules_in_src_result_in_an_error() {
     fs.write(&Utf8Path::new("/src/e/f/wibble.erl"), "1")
         .unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     assert!(copier.run().is_err());
 }
 
@@ -989,7 +1253,13 @@ fn conflicting_erlang_modules_in_src_and_test_result_in_an_error() {
     fs.write(&Utf8Path::new("/test/e/f/wibble.erl"), "1")
         .unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     assert!(copier.run().is_err());
 }
 
@@ -1001,7 +1271,13 @@ fn conflicting_erlang_modules_in_src_and_dev_result_in_an_error() {
     fs.write(&Utf8Path::new("/dev/e/f/wibble.erl"), "1")
         .unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     assert!(copier.run().is_err());
 }
 
@@ -1013,7 +1289,13 @@ fn conflicting_erlang_modules_in_dev_and_test_result_in_an_error() {
     fs.write(&Utf8Path::new("/test/e/f/wibble.erl"), "1")
         .unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     assert!(copier.run().is_err());
 }
 
@@ -1023,7 +1305,13 @@ fn conflicting_gleam_and_javascript_modules_result_in_an_error() {
     fs.write(&Utf8Path::new("/src/wibble.gleam"), "1").unwrap();
     fs.write(&Utf8Path::new("/src/wibble.mjs"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     assert!(copier.run().is_err());
 }
 
@@ -1035,7 +1323,13 @@ fn differently_nested_gleam_and_javascript_modules_with_same_name_are_ok() {
     fs.write(&Utf8Path::new("/src/d/e/wibble.mjs"), "1")
         .unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     assert!(copier.run().is_ok());
 }
 
@@ -1045,7 +1339,13 @@ fn conflicting_gleam_and_erlang_modules_result_in_an_error() {
     fs.write(&Utf8Path::new("/src/wibble.gleam"), "1").unwrap();
     fs.write(&Utf8Path::new("/src/wibble.erl"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     assert!(copier.run().is_err());
 }
 
@@ -1057,7 +1357,13 @@ fn conflicting_nested_gleam_and_erlang_modules_result_in_an_error() {
     fs.write(&Utf8Path::new("/src/wibble@wobble.erl"), "1")
         .unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     assert!(copier.run().is_err());
 }
 
@@ -1068,7 +1374,13 @@ fn conflicting_nested_gleam_file_does_not_conflict_with_root_erlang_file() {
         .unwrap();
     fs.write(&Utf8Path::new("/src/wobble.erl"), "1").unwrap();
 
-    let copier = NativeFileCopier::new(fs.clone(), root(), root_out(), CheckModuleConflicts::Check);
+    let copier = NativeFileCopier::new(
+        fs.clone(),
+        root(),
+        root_out(),
+        CheckModuleConflicts::Check,
+        HashSet::new(),
+    );
     assert!(copier.run().is_ok());
 }
 
@@ -1083,6 +1395,7 @@ fn conflicting_gleam_and_erlang_modules_produce_no_error_in_dependency() {
         root(),
         root_out(),
         CheckModuleConflicts::DoNotCheck,
+        HashSet::new(),
     );
     assert!(copier.run().is_ok());
 }

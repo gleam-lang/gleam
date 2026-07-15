@@ -334,7 +334,7 @@ impl Module {
 
     pub fn compiled_erlang_path(&self) -> Utf8PathBuf {
         let mut path = Utf8PathBuf::from(&module_erlang_name(&self.name));
-        assert!(path.set_extension("erl"), "Couldn't set file extension");
+        assert!(path.set_extension("abstr"), "Couldn't set file extension");
         path
     }
 

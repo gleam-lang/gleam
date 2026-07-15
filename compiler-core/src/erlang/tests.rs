@@ -4,6 +4,7 @@
 use std::time::SystemTime;
 
 use camino::Utf8PathBuf;
+use erlang_generation::{ErlangBuilder, ErlangModuleName, ErlangSourceBuilder};
 use src_span::LineNumbers;
 
 use crate::analyse::TargetSupport;
@@ -134,7 +135,10 @@ pub fn compile_test_project(
     built_module.attach_doc_and_module_comments();
 
     let line_numbers = LineNumbers::new(src);
-    module(&built_module.ast, &line_numbers, root).replace(
+    let erlang_module_name = ErlangModuleName::new(&built_module.name);
+    // TODO) remove this clone from line numbers!!!
+    let builder = ErlangSourceBuilder::new(Some((erlang_module_name, line_numbers.clone())));
+    module(builder, &built_module.ast, &line_numbers, root).replace(
         std::include_str!("../../templates/echo.erl"),
         "% ...omitted code from `templates/echo.erl`...",
     )

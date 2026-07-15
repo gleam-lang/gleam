@@ -7,7 +7,7 @@ use num_bigint::BigInt;
 use num_traits::Zero;
 use regex::Regex;
 use src_span::{LineColumn, LineNumbers, SrcSpan};
-use std::{string, sync::OnceLock};
+use std::sync::OnceLock;
 
 /// This is to raise an `unreachable` pretty printed error when we try producing
 /// some piece of code that is not allowed in the current position.

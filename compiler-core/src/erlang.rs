@@ -3539,21 +3539,19 @@ pub fn record_definition(record_name: &str, fields: &[(SrcSpan, &str, Arc<Type>)
     builder.into_output()
 }
 
-pub fn module<'a>(
+pub fn module<'a, Output>(
+    mut builder: impl ErlangBuilder<Output>,
     module: &'a TypedModule,
     line_numbers: &'a LineNumbers,
     root: &'a Utf8Path,
-) -> String {
+) -> Output {
     let mut generator = Generator::new(module, line_numbers, root);
-
-    let module_name = ErlangModuleName::new(&module.name);
-    // TODO) remove this clone
-    let mut builder = ErlangSourceBuilder::new(Some((module_name, line_numbers.clone())));
     generator.module_document(&mut builder);
 
-    let mut output = builder.into_output();
+    let output = builder.into_output();
     if generator.echo_used {
-        output.push_str(std::include_str!("../templates/echo.erl"));
+        // output.push_str(std::include_str!("../templates/echo.erl"));
+        // TODO) how do we deal with echo?
     }
     output
 }
