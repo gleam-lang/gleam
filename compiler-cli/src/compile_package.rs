@@ -12,7 +12,7 @@ use gleam_core::{
     build::{
         Mode, NullTelemetry, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration,
     },
-    error::{FileIoAction, FileKind},
+    error::{FileIoAction, FileIoFailure, FileKind},
     metadata,
     paths::{self, ProjectPaths},
     type_::ModuleInterface,
@@ -95,7 +95,7 @@ fn load_libraries(
                         kind: FileKind::File,
                         action: FileIoAction::Parse,
                         path: module,
-                        err: Some(e.to_string()),
+                        err: FileIoFailure::Other(e.to_string()),
                     });
                 }
             };

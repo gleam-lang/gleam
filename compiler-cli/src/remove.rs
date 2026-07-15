@@ -3,7 +3,7 @@
 
 use gleam_core::{
     Error, Result,
-    error::{FileIoAction, FileKind},
+    error::{FileIoAction, FileIoFailure, FileKind},
     paths::ProjectPaths,
 };
 
@@ -18,7 +18,7 @@ pub fn command(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
             kind: FileKind::File,
             action: FileIoAction::Parse,
             path: root_config.to_path_buf(),
-            err: Some(e.to_string()),
+            err: FileIoFailure::Other(e.to_string()),
         })?;
 
     // Remove the specified dependencies

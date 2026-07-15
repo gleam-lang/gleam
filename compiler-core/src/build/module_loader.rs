@@ -18,7 +18,7 @@ use super::{
 };
 use crate::{
     Error, Result,
-    error::{FileIoAction, FileKind},
+    error::{FileIoAction, FileIoFailure, FileKind},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     warning::{TypeWarningEmitter, WarningEmitter},
 };
@@ -103,7 +103,7 @@ where
                 action: FileIoAction::Parse,
                 kind: FileKind::File,
                 path: meta_path,
-                err: Some(e),
+                err: FileIoFailure::Other(e),
             }
         })?;
         Ok(Some(cache_metadata))

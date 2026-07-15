@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2022 The Gleam contributors
 
+use std::io;
+
 use camino::Utf8PathBuf;
 use gleam_core::{
     Error, Result,
     build::{Mode, Target, Telemetry},
-    error::{FileIoAction, FileKind},
+    error::{FileIoAction, FileIoFailure, FileKind},
     paths::ProjectPaths,
 };
 use strum::IntoEnumIterator;
@@ -57,14 +59,22 @@ impl BuildLock {
             kind: FileKind::File,
             path: lock_path.clone(),
             action: FileIoAction::Create,
-            err: Some(e.to_string()),
+            err: if let io::ErrorKind::NotFound = e.kind() {
+                FileIoFailure::NotFound
+            } else {
+                FileIoFailure::Other(e.to_string())
+            },
         })?;
 
         let lock_error = |error: fslock::Error| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Lock,
             path: lock_path.clone(),
-            err: Some(error.to_string()),
+            err: if let io::ErrorKind::NotFound = error.kind() {
+                FileIoFailure::NotFound
+            } else {
+                FileIoFailure::Other(error.to_string())
+            },
         };
 
         if !file.try_lock_with_pid().map_err(lock_error)? {

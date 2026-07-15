@@ -2,9 +2,8 @@
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
 use gleam_core::{
-    error::{Error, FileIoAction, FileKind, Result, StandardIoAction, Unformatted},
-    io::Content,
-    io::OutputFile,
+    error::{Error, FileIoAction, FileIoFailure, FileKind, Result, StandardIoAction, Unformatted},
+    io::{Content, OutputFile},
 };
 use std::{io::Read, str::FromStr};
 
@@ -78,7 +77,7 @@ pub fn unformatted_files(files: Vec<String>) -> Result<Vec<Unformatted>> {
             action: FileIoAction::Open,
             kind: FileKind::File,
             path: Utf8PathBuf::from(file_path),
-            err: Some(e.to_string()),
+            err: FileIoFailure::Other(e.to_string()),
         })?;
 
         if path.is_dir() {
