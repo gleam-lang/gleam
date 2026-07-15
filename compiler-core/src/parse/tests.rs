@@ -354,6 +354,162 @@ fn triple_equals_with_whitespace() {
     );
 }
 
+#[test]
+fn merge_conflict_equals() {
+    assert_error!(
+        "let wobble: Int = 32
+        =======",
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::MergeConflictIndicator,
+                    location: SrcSpan { start: 29, end: 36 },
+                }
+            },
+            location: SrcSpan { start: 29, end: 36 },
+        }
+    );
+}
+
+#[test]
+fn six_equals_not_merge_conflict() {
+    assert_error!(
+        "let wobble: Int = 32
+        ======",
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::InvalidTripleEqual,
+                    location: SrcSpan { start: 29, end: 32 },
+                }
+            },
+            location: SrcSpan { start: 29, end: 32 },
+        }
+    );
+}
+
+#[test]
+fn merge_conflict_lt() {
+    assert_error!(
+        "let wobble: Int = 32
+        <<<<<<<",
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::MergeConflictIndicator,
+                    location: SrcSpan { start: 29, end: 36 },
+                }
+            },
+            location: SrcSpan { start: 29, end: 36 },
+        }
+    );
+}
+
+#[test]
+fn four_lt_not_merge_conflict() {
+    assert_error!(
+        "let wobble: Int = 32
+        <<<<",
+        ParseError {
+            error: ParseErrorType::UnexpectedEof,
+            location: SrcSpan { start: 0, end: 0 },
+        }
+    );
+}
+
+#[test]
+fn five_lt_not_merge_conflict() {
+    assert_error!(
+        "let wobble: Int = 32
+        <<<<<",
+        ParseError {
+            error: ParseErrorType::UnexpectedToken {
+                token: Token::Less,
+                expected: vec!["`>>`".into(), "a bit array segment".into()],
+                hint: None,
+            },
+            location: SrcSpan { start: 34, end: 35 },
+        }
+    );
+}
+
+#[test]
+fn six_lt_not_merge_conflict() {
+    assert_error!(
+        "let wobble: Int = 32
+        <<<<<<",
+        ParseError {
+            error: ParseErrorType::UnexpectedEof,
+            location: SrcSpan { start: 0, end: 0 },
+        }
+    );
+}
+
+#[test]
+fn merge_conflict_gt() {
+    assert_error!(
+        "let wobble: Int = 32
+        >>>>>>>",
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::MergeConflictIndicator,
+                    location: SrcSpan { start: 29, end: 36 },
+                }
+            },
+            location: SrcSpan { start: 29, end: 36 },
+        }
+    );
+}
+
+#[test]
+fn four_gt_not_merge_conflict() {
+    assert_error!(
+        "let wobble: Int = 32
+        >>>>",
+        ParseError {
+            error: ParseErrorType::UnexpectedToken {
+                token: Token::GtGt,
+                expected: vec!["An import, const, type, or function.".into()],
+                hint: None,
+            },
+            location: SrcSpan { start: 29, end: 31 },
+        }
+    );
+}
+
+#[test]
+fn five_gt_not_merge_conflict() {
+    assert_error!(
+        "let wobble: Int = 32
+        >>>>>",
+        ParseError {
+            error: ParseErrorType::UnexpectedToken {
+                token: Token::GtGt,
+                expected: vec!["An import, const, type, or function.".into()],
+                hint: None,
+            },
+            location: SrcSpan { start: 29, end: 31 },
+        }
+    );
+}
+
+#[test]
+fn six_gt_not_merge_conflict() {
+    assert_error!(
+        "let wobble: Int = 32
+        >>>>>>",
+        ParseError {
+            error: ParseErrorType::UnexpectedToken {
+                token: Token::GtGt,
+                expected: vec!["An import, const, type, or function.".into()],
+                hint: None
+            },
+            location: SrcSpan { start: 29, end: 31 },
+        }
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/1231
 #[test]
 fn pointless_spread() {
