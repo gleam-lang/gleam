@@ -1087,6 +1087,17 @@ impl<'string, 'doc> DocumentArena<'string, 'doc> {
         )
     }
 
+    /// Same as the `zero_width_string` but this works with string references.
+    /// This is useful when you already have a string reference and you want to
+    /// avoid allocating a further string.
+    ///
+    pub fn zero_width_str(&'doc self, string: &'string str) -> Document<'string, 'doc> {
+        Document(
+            self.documents
+                .alloc(PrintableDocument::ZeroWidthStr { string }),
+        )
+    }
+
     /// Joins together an iterator of documents into a single document.
     /// All the documents are gonna be rendered next to each other with no
     /// spaces in between.
