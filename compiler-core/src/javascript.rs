@@ -1303,7 +1303,13 @@ fn jsdoc_comment<'a, 'doc>(
         documentation
             .trim_end()
             .split('\n')
-            .map(|line| eco_format!(" *{}", line.replace("*/", "*\\/")).to_doc(arena)),
+            // Each comment line is turned into a zero width string.
+            // We actually don't need to know how long a comment string is
+            // because comments will never be split anyway.
+            // So this saves us a lot of useless grapheme counting that would
+            // otherwise have to happen if we just turned the string into a
+            // regular document.
+            .map(|line| arena.zero_width_string(eco_format!(" *{}", line.replace("*/", "*\\/")))),
         LINE_DOCUMENT,
     );
 
