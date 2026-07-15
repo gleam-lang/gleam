@@ -11,7 +11,6 @@ error: Syntax error
   ┌─ /src/parse/error.gleam:2:1
   │
 2 │ ======
-  │ ^^^ Did you mean `==`?
+  │ ^^ This operator has no value on its right side
 
-Gleam uses `==` to check for equality between two values.
-See: https://tour.gleam.run/basics/equality
+Hint: Remove it or put a value after it.
