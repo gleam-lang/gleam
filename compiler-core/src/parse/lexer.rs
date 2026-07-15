@@ -196,26 +196,59 @@ where
                 self.emit(string);
             }
             '=' => {
-                let token_start = self.get_position();
+                let mut token_start = self.get_position();
                 let _ = self.next_char();
-                match self.char0 {
-                    Some('=') => {
-                        let _ = self.next_char();
-                        let token_end = self.get_position();
-                        if let Some('=') = self.char0 {
-                            return Err(LexicalError {
-                                error: LexicalErrorType::InvalidTripleEqual,
-                                location: SrcSpan {
-                                    start: token_start,
-                                    end: token_end + 1,
-                                },
-                            });
-                        }
-                        self.emit((token_start, Token::EqualEqual, token_end));
+
+                if self.char0 != Some('=') {
+                    let token_end = self.get_position();
+                    self.emit((token_start, Token::Equal, token_end));
+                    return Ok(());
+                }
+
+                let _ = self.next_char();
+
+                if self.char0 != Some('=') {
+                    self.emit((token_start, Token::EqualEqual, self.get_position()));
+                    return Ok(());
+                }
+
+                let _ = self.next_char();
+                let mut seen_equals = 3;
+
+                if self.char0 != Some('=') {
+                    return Err(LexicalError {
+                        error: LexicalErrorType::InvalidTripleEqual,
+                        location: SrcSpan {
+                            start: token_start,
+                            end: self.get_position(),
+                        },
+                    });
+                }
+
+                loop {
+                    if seen_equals >= 7 {
+                        return Err(LexicalError {
+                            error: LexicalErrorType::MergeConflictIndicator,
+                            location: SrcSpan {
+                                start: token_start,
+                                end: self.get_position(),
+                            },
+                        });
                     }
-                    _ => {
-                        let token_end = self.get_position();
-                        self.emit((token_start, Token::Equal, token_end));
+
+                    if self.char0 == Some('=') {
+                        let _ = self.next_char();
+                        seen_equals += 1;
+                    } else {
+                        while seen_equals > 1 {
+                            self.emit((token_start, Token::EqualEqual, token_start + 2));
+                            token_start += 2;
+                            seen_equals -= 2;
+                        }
+                        if seen_equals > 0 {
+                            self.emit((token_start, Token::Equal, self.get_position()));
+                        }
+                        break;
                     }
                 }
             }
@@ -432,80 +465,12 @@ where
             '<' => {
                 let token_start = self.get_position();
                 let _ = self.next_char();
-                match self.char0 {
-                    Some('>') => {
-                        let _ = self.next_char();
-                        let token_end = self.get_position();
-                        self.emit((token_start, Token::Concatenate, token_end));
-                    }
-                    Some('<') => {
-                        let _ = self.next_char();
-                        let token_end = self.get_position();
-                        self.emit((token_start, Token::LtLt, token_end));
-                    }
-                    Some('.') => {
-                        let _ = self.next_char();
-                        let token_end = self.get_position();
-                        self.emit((token_start, Token::LessDot, token_end));
-                    }
-                    Some('-') => {
-                        let _ = self.next_char();
-                        let token_end = self.get_position();
-                        self.emit((token_start, Token::LArrow, token_end));
-                    }
-                    Some('=') => {
-                        let _ = self.next_char();
-                        match self.char0 {
-                            Some('.') => {
-                                let _ = self.next_char();
-                                let token_end = self.get_position();
-                                self.emit((token_start, Token::LessEqualDot, token_end));
-                            }
-                            _ => {
-                                let token_end = self.get_position();
-                                self.emit((token_start, Token::LessEqual, token_end));
-                            }
-                        }
-                    }
-                    _ => {
-                        let token_end = self.get_position();
-                        self.emit((token_start, Token::Less, token_end));
-                    }
-                }
+                self.lex_lt(token_start)?;
             }
             '>' => {
                 let token_start = self.get_position();
                 let _ = self.next_char();
-                match self.char0 {
-                    Some('>') => {
-                        let _ = self.next_char();
-                        let token_end = self.get_position();
-                        self.emit((token_start, Token::GtGt, token_end));
-                    }
-                    Some('.') => {
-                        let _ = self.next_char();
-                        let token_end = self.get_position();
-                        self.emit((token_start, Token::GreaterDot, token_end));
-                    }
-                    Some('=') => {
-                        let _ = self.next_char();
-                        match self.char0 {
-                            Some('.') => {
-                                let _ = self.next_char();
-                                let token_end = self.get_position();
-                                self.emit((token_start, Token::GreaterEqualDot, token_end));
-                            }
-                            _ => {
-                                let token_end = self.get_position();
-                                self.emit((token_start, Token::GreaterEqual, token_end));
-                            }
-                        }
-                    }
-                    _ => {
-                        let token_end = self.get_position();
-                        self.emit((token_start, Token::Greater, token_end));
-                    }
-                }
+                self.lex_gt(token_start)?;
             }
             ',' => {
                 self.eat_single_char(Token::Comma);
@@ -914,6 +879,144 @@ where
         Ok(())
     }
 
+    // Once we've found a `<`, proceed from there
+    fn lex_lt(&mut self, mut token_start: u32) -> Result<(), LexicalError> {
+        match self.char0 {
+            Some('>') => {
+                let _ = self.next_char();
+                self.emit((token_start, Token::Concatenate, self.get_position()));
+            }
+            Some('<') => {
+                let _ = self.next_char();
+
+                if self.char0 != Some('<') {
+                    self.emit((token_start, Token::LtLt, self.get_position()));
+                    return Ok(());
+                }
+
+                let _ = self.next_char();
+                let mut seen_lt = 3;
+
+                loop {
+                    if seen_lt >= 7 {
+                        return Err(LexicalError {
+                            error: LexicalErrorType::MergeConflictIndicator,
+                            location: SrcSpan {
+                                start: token_start,
+                                end: self.get_position(),
+                            },
+                        });
+                    }
+
+                    if self.char0 == Some('<') {
+                        let _ = self.next_char();
+                        seen_lt += 1;
+                    } else {
+                        while seen_lt > 1 {
+                            self.emit((token_start, Token::LtLt, token_start + 2));
+                            token_start += 2;
+                            seen_lt -= 2;
+                        }
+                        if seen_lt > 0 {
+                            return self.lex_lt(token_start);
+                        } else {
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            Some('.') => {
+                let _ = self.next_char();
+                self.emit((token_start, Token::LessDot, self.get_position()));
+            }
+            Some('-') => {
+                let _ = self.next_char();
+                self.emit((token_start, Token::LArrow, self.get_position()));
+            }
+            Some('=') => {
+                let _ = self.next_char();
+                match self.char0 {
+                    Some('.') => {
+                        let _ = self.next_char();
+                        self.emit((token_start, Token::LessEqualDot, self.get_position()));
+                    }
+                    _ => {
+                        self.emit((token_start, Token::LessEqual, self.get_position()));
+                    }
+                }
+            }
+            _ => {
+                self.emit((token_start, Token::Less, self.get_position()));
+            }
+        }
+        Ok(())
+    }
+
+    // Once we've found a `>`
+    fn lex_gt(&mut self, mut token_start: u32) -> Result<(), LexicalError> {
+        match self.char0 {
+            Some('>') => {
+                let _ = self.next_char();
+                let token_end = self.get_position();
+
+                if self.char0 != Some('>') {
+                    self.emit((token_start, Token::GtGt, token_end));
+                    return Ok(());
+                }
+
+                let _ = self.next_char();
+                let mut seen_gt = 3;
+
+                loop {
+                    if seen_gt >= 7 {
+                        return Err(LexicalError {
+                            error: LexicalErrorType::MergeConflictIndicator,
+                            location: SrcSpan {
+                                start: token_start,
+                                end: self.get_position(),
+                            },
+                        });
+                    }
+
+                    if self.char0 == Some('>') {
+                        let _ = self.next_char();
+                        seen_gt += 1;
+                    } else {
+                        while seen_gt > 1 {
+                            self.emit((token_start, Token::GtGt, token_start + 2));
+                            token_start += 2;
+                            seen_gt -= 2;
+                        }
+                        if seen_gt > 0 {
+                            return self.lex_gt(token_start);
+                        } else {
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            Some('.') => {
+                let _ = self.next_char();
+                self.emit((token_start, Token::GreaterDot, self.get_position()));
+            }
+            Some('=') => {
+                let _ = self.next_char();
+                match self.char0 {
+                    Some('.') => {
+                        let _ = self.next_char();
+                        self.emit((token_start, Token::GreaterEqualDot, self.get_position()));
+                    }
+                    _ => {
+                        self.emit((token_start, Token::GreaterEqual, self.get_position()));
+                    }
+                }
+            }
+            _ => {
+                self.emit((token_start, Token::Greater, self.get_position()));
+            }
+        }
+        Ok(())
+    }
     // Lexer helper functions:
     // this can be either a reserved word, or a name
     fn lex_name(&mut self) -> LexResult {

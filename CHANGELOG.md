@@ -104,6 +104,10 @@
   correct syntax when trying to update a record after providing fields.
   ([0xda157](https://github.com/0xda157))
 
+- The compiler now provides a more specific error message when encountering a
+  merge conflict indicator
+  ([0xda157](https://github.com/0xda157))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
