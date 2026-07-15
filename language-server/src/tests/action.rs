@@ -11353,6 +11353,40 @@ fn pattern_match_on_discard_pattern_in_branch() {
 }
 
 #[test]
+fn pattern_match_on_discard_pattern_in_branch_do_not_duplicate() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VALUE,
+        "pub type Wibble {
+  Wibble
+  Wobble
+  Wubble
+}
+
+pub fn go(w: Wibble) {
+  case w {
+    Wibble -> 1
+    _ -> 2
+  }
+}",
+        find_position_of("_").to_selection(),
+    );
+}
+
+#[test]
+fn pattern_match_on_list_discard_pattern_in_branch_do_not_duplicate() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VALUE,
+        "pub fn go(l) {
+  case l {
+    [] -> 1
+    _ -> 2
+  }
+}",
+        find_position_of("_").to_selection(),
+    );
+}
+
+#[test]
 fn cannot_pattern_match_on_discard_on_the_left_of_an_assignment() {
     assert_no_code_actions!(
         PATTERN_MATCH_ON_VALUE,
