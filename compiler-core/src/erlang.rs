@@ -739,13 +739,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 name,
                 name_location: location,
                 ..
-            } if is_external => {
-                if name.chars().all(|char| char == '_') {
-                    self.new_generated_variable()
-                } else {
-                    self.new_erlang_variable(name, *location)
-                }
-            }
+            } if is_external => self.new_generated_variable(),
             ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => EcoString::from("_"),
             ArgNames::Named { name, location }
             | ArgNames::NamedLabelled {

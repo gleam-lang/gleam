@@ -423,3 +423,14 @@ pub fn woo(__: a, _two: b) -> Nil
 "#
     );
 }
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/5970
+fn discarded_argument_called_value_does_not_have_the_same_name_as_discarded_one() {
+    assert_erl!(
+        r#"
+@external(erlang, "wibble", "wobble")
+pub fn woo(_: a, _value: b) -> Nil
+"#
+    );
+}
