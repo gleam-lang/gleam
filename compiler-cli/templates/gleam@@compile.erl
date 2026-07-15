@@ -90,15 +90,53 @@ worker_loop(Parent, Out) ->
     receive
         {module, Module} ->
             log({compiling, Module}),
-            case compile:file(Module, Options) of
-                {ok, ModuleName} ->
-                    Beam = filename:join(Out, ModuleName) ++ ".beam",
-                    Message = {compiled, ModuleName, Beam},
-                    log(Message),
-                    erlang:send(Parent, Message);
-                error ->
+
+            case filename:extension(Module) of
+              % Compiling native .erl files that might come from ffi.
+              ".erl" ->
+                case compile:file(Module, Options) of
+                  {ok, ModuleName} ->
+                      Beam = filename:join(Out, ModuleName) ++ ".beam",
+                      Message = {compiled, ModuleName, Beam},
+                      log(Message),
+                      erlang:send(Parent, Message);
+                  error ->
+                      log({failed, Module}),
+                      erlang:send(Parent, failed)
+                end;
+
+              % Compiling the compiled .abstr gleam files.
+              ".abstr" ->
+                case file:read_file(Module) of
+                  {ok, AbstrBinary} ->
+                    try
+                      AbstrForms = erlang:binary_to_term(AbstrBinary),
+                      case compile:forms(AbstrForms, Options) of
+                          {ok, ModuleName, CompiledBinary} ->
+                              Beam = filename:join(Out, ModuleName) ++ ".beam",
+                              case file:write_file(Beam, CompiledBinary) of
+                                ok ->
+                                  Message = {compiled, ModuleName, Beam},
+                                  log(Message),
+                                  erlang:send(Parent, Message);
+                                {error, _Reason} ->
+                                  log({failed, Module}),
+                                  erlang:send(Parent, failed)
+                              end;
+                          error ->
+                              log({failed, Module}),
+                              erlang:send(Parent, failed)
+                      end
+                    catch error:Error ->
+                      log({failed, Error, Module}),
+                      erlang:send(Parent, failed)
+                    end;
+
+                  {error, _Reason} ->
                     log({failed, Module}),
                     erlang:send(Parent, failed)
+                end;
+              _ -> nil
             end,
             worker_loop(Parent, Out)
     end.

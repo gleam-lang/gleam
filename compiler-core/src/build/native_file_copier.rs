@@ -32,6 +32,14 @@ pub(crate) struct NativeFileCopier<'a, IO> {
     to_compile: Vec<Utf8PathBuf>,
     elixir_files_copied: bool,
     check_module_conflicts: CheckModuleConflicts,
+
+    /// Gleam dependencies come with precompiled Erlang files as a nicety for
+    /// other build tools if they don’t have Gleam installed.
+    /// However, we never want to copy those over and compile them. We always
+    /// compile from the original `.gleam` files to an `.abstr` format.
+    /// If we are copying `.erl` files those will only be ffi files, not the
+    /// precompiled ones that come with dependencies!
+    precompiled_erlang_file_names: HashSet<EcoString>,
 }
 
 impl<'a, IO> NativeFileCopier<'a, IO>
@@ -43,6 +51,7 @@ where
         root: &'a Utf8Path,
         out: &'a Utf8Path,
         check_module_conflicts: CheckModuleConflicts,
+        precompiled_erlang_file_names: HashSet<EcoString>,
     ) -> Self {
         Self {
             io,
@@ -53,6 +62,7 @@ where
             seen_modules: HashMap::new(),
             elixir_files_copied: false,
             check_module_conflicts,
+            precompiled_erlang_file_names,
         }
     }
 
@@ -115,6 +125,14 @@ where
 
         // Skip unknown file formats that are not supported native files
         if !crate::io::is_native_file_extension(extension) {
+            return Ok(());
+        }
+
+        // Skip precompiled erlang files
+        if self
+            .precompiled_erlang_file_names
+            .contains(relative_path.as_str())
+        {
             return Ok(());
         }
 

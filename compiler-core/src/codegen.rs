@@ -13,6 +13,7 @@ use crate::{
 };
 use ecow::EcoString;
 use erlang::escape_atom_string;
+use erlang_generation::{ErlangBinaryBuilder, ErlangBuilder, ErlangModuleName};
 use itertools::Itertools;
 use src_span::LineNumbers;
 use std::fmt::Debug;
@@ -56,12 +57,15 @@ impl<'a> Erlang<'a> {
         erl_name: &str,
         root: &Utf8Path,
     ) -> Result<()> {
-        let name = format!("{erl_name}.erl");
+        let name = format!("{erl_name}.abstr");
         let path = self.build_directory.join(&name);
         let line_numbers = LineNumbers::new(&module.code);
-        let output = erlang::module(&module.ast, &line_numbers, root);
+        let erlang_module_name = ErlangModuleName::new(&module.name);
+        // TODO) remove this clone from line numbers
+        let builder = ErlangBinaryBuilder::new(Some((erlang_module_name, line_numbers.clone())));
+        let output = erlang::module(builder, &module.ast, &line_numbers, root);
         tracing::debug!(name = ?name, "Generated Erlang module");
-        writer.write(&path, &output)
+        writer.write_bytes(&path, &output)
     }
 
     fn erlang_record_headers<Writer: FileSystemWriter>(

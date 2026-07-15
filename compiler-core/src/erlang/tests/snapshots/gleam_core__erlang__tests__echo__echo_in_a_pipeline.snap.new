@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/erlang/tests/echo.rs
+assertion_line: 123
+expression: "\npub fn main() {\n  [1, 2, 3]\n  |> echo\n  |> wibble\n}\n\npub fn wibble(n) { n }\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  [1, 2, 3]
+  |> echo
+  |> wibble
+}
+
+pub fn wibble(n) { n }
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([wibble/1, main/0]).
+
+-file("project/test/my/mod.gleam", 8).
+-spec wibble(J) -> J.
+wibble(N) ->
+    N.
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> list(integer()).
+main() ->
+    _pipe = [1, 2, 3],
+    _pipe@1 = echo(_pipe, nil, ~"project/test/my/mod.gleam", 4),
+    wibble(_pipe@1).

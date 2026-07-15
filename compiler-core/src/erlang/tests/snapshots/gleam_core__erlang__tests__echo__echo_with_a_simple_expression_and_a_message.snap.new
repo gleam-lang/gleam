@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/erlang/tests/echo.rs
+assertion_line: 19
+expression: "\npub fn main() {\n  echo 1 as \"hello!\"\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  echo 1 as "hello!"
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> integer().
+main() ->
+    echo(1, ~"hello!", ~"project/test/my/mod.gleam", 3).
