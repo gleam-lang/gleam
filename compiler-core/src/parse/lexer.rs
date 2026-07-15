@@ -938,7 +938,7 @@ where
                 self.emit((tok_start, Token::Greater, tok_end));
             }
         }
-        return Ok(());
+        Ok(())
     }
     // Lexer helper functions:
     // this can be either a reserved word, or a name
