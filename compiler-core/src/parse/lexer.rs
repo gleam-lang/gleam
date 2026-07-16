@@ -194,7 +194,7 @@ where
                 self.emit(string);
             }
             '=' => {
-                let tok_start = self.get_pos();
+                let mut tok_start = self.get_pos();
                 let _ = self.next_char();
 
                 if self.chr0 != Some('=') {
@@ -213,6 +213,16 @@ where
                 let _ = self.next_char();
                 let mut seen_eq = 3;
 
+                if self.chr0 != Some('=') {
+                    return Err(LexicalError {
+                        error: LexicalErrorType::InvalidTripleEqual,
+                        location: SrcSpan {
+                            start: tok_start,
+                            end: self.get_pos(),
+                        },
+                    });
+                }
+
                 loop {
                     if seen_eq >= 7 {
                         return Err(LexicalError {
@@ -228,18 +238,15 @@ where
                         let _ = self.next_char();
                         seen_eq += 1;
                     } else {
-                        // we've found at least three `=`s, but not
-                        // enough to be a merge conflict indicator,
-                        // so we just return the triple equals error
-                        //
-                        // TODO: provide a better error for 3 < '='s < 7
-                        return Err(LexicalError {
-                            error: LexicalErrorType::InvalidTripleEqual,
-                            location: SrcSpan {
-                                start: tok_start,
-                                end: tok_start + 3,
-                            },
-                        });
+                        while seen_eq > 1 {
+                            self.emit((tok_start, Token::EqualEqual, tok_start + 2));
+                            tok_start += 2;
+                            seen_eq -= 2;
+                        }
+                        if seen_eq > 0 {
+                            self.emit((tok_start, Token::Equal, self.get_pos()));
+                        }
+                        break;
                     }
                 }
             }

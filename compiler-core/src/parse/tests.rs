@@ -377,13 +377,8 @@ fn six_equals_not_merge_conflict() {
         "let wobble: Int = 32
         ======",
         ParseError {
-            error: ParseErrorType::LexError {
-                error: LexicalError {
-                    error: LexicalErrorType::InvalidTripleEqual,
-                    location: SrcSpan { start: 29, end: 32 },
-                }
-            },
-            location: SrcSpan { start: 29, end: 32 },
+            error: ParseErrorType::OpNakedRight,
+            location: SrcSpan { start: 29, end: 31 },
         }
     );
 }
