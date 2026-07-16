@@ -2954,7 +2954,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             self.environment
                 .references
-                .register_module_reference(module_alias.clone());
+                .register_module_reference_by_alias(module_alias.clone());
 
             (module.name.clone(), constructor.clone())
         };
@@ -3701,7 +3701,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                 self.environment
                     .references
-                    .register_module_reference(module_name.clone());
+                    .register_module_reference_by_alias(module_name.clone());
 
                 module
                     .values

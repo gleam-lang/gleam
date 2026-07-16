@@ -271,7 +271,7 @@ macro_rules! assert_warning {
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
-    ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr) => {
+    ($(($package:expr, $name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![$(($package, $name, $module_src)),*],
@@ -374,7 +374,7 @@ macro_rules! assert_no_warnings {
         let warnings = $crate::type_::tests::get_warnings($src, vec![], crate::build::Target::Erlang, None);
         assert_eq!(warnings, vec![]);
     };
-    ($(($name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
+    ($(($name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings(
             $src,
             vec![$(("thepackage", $name, $module_src)),*],
@@ -383,7 +383,7 @@ macro_rules! assert_no_warnings {
         );
         assert_eq!(warnings, vec![]);
     };
-    ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
+    ($(($package:expr, $name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings(
             $src,
             vec![$(($package, $name, $module_src)),*],

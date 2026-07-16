@@ -305,8 +305,11 @@ pub struct ReferenceTracker {
     /// variant that defines it, used for renaming and go-to definition.
     pub label_definitions: HashMap<RecordLabel, Vec<LabelDefinition>>,
 
-    /// This map is used to access the nodes of modules that were not
-    /// aliased, given their name.
+    /// Maps a module's canonical name to the node of the import it was brought
+    /// in by. Every import is inserted here (aliased or not), keyed by its full
+    /// module name, _except_ imports with a discarded alias (`as _name`), which
+    /// have no reachable node and so are absent.
+    ///
     /// We need this to keep track of references made to imports by unqualified
     /// values/types: when an unqualified item is used we want to add an edge
     /// pointing to the import it comes from, so that if the item is used the
@@ -321,7 +324,8 @@ pub struct ReferenceTracker {
     /// ```
     ///
     /// And each imported entity carries around the _name of the module_ and not
-    /// just the alias (here it would be `wibble/wobble` and not just `wobble`).
+    /// just the alias (here it would be `wibble/wobble` and not just `wobble`),
+    /// so this map is keyed by that full name rather than the local name.
     ///
     module_name_to_node: HashMap<EcoString, NodeIndex>,
 }
@@ -374,6 +378,15 @@ impl ReferenceTracker {
                 }
             }
         }
+    }
+
+    /// Add a call-graph edge from the current node to the entity with the given
+    /// name and layer, creating its node if it doesn't exist yet. If the target
+    /// is used then the current node counts as used too.
+    ///
+    fn add_reference_edge(&mut self, name: EcoString, layer: EntityLayer) {
+        let target = self.get_or_create_node(name, layer);
+        _ = self.graph.add_edge(self.current_node, target, ());
     }
 
     /// This function exists because of a specific edge-case where constants
@@ -505,7 +518,7 @@ impl ReferenceTracker {
         // Also we want to register the fact that if this alias is used then the
         // import is used: so we add a reference from the alias to the import
         // we've just added.
-        self.register_module_reference(module_name.clone());
+        self.register_module_reference_by_module_name(module_name.clone());
 
         // Finally we can add information for this alias:
         let entity = Entity {
@@ -577,7 +590,7 @@ impl ReferenceTracker {
             EntityKind::ImportedConstructor { module }
             | EntityKind::ImportedType { module }
             | EntityKind::ImportedValue { module } => {
-                self.register_module_reference(module.clone());
+                self.register_module_reference_by_module_name(module.clone());
             }
         }
     }
@@ -605,8 +618,7 @@ impl ReferenceTracker {
             }
             ReferenceKind::Import(_) | ReferenceKind::Definition => {}
             ReferenceKind::Alias | ReferenceKind::Unqualified => {
-                let target = self.get_or_create_node(referenced_name.clone(), EntityLayer::Value);
-                _ = self.graph.add_edge(self.current_node, target, ());
+                self.add_reference_edge(referenced_name.clone(), EntityLayer::Value);
             }
         }
 
@@ -649,11 +661,12 @@ impl ReferenceTracker {
             .push(Reference { location, kind });
     }
 
-    /// Register a reference to a module in the code. This is separate to
-    /// `register_module_reference`, as references to modules can be created
-    /// implicitly, for example when using unqualified imports. This only register
-    /// explicit references in the source code, when the module name or local
-    /// alias is written.
+    /// Register a reference to a module name written explicitly in the source
+    /// code, when the module name or local alias appears. This is separate from
+    /// the call-graph edges added by `register_module_reference_by_alias`
+    /// and `register_module_reference_by_module_name`, which track references
+    /// created implicitly, for example when using unqualified imports.
+    ///
     pub fn register_module_name_reference(
         &mut self,
         module: EcoString,
@@ -717,11 +730,24 @@ impl ReferenceTracker {
     /// is to make a connection between them in the call graph.
     ///
     pub fn register_type_reference_in_call_graph(&mut self, name: EcoString) {
-        let target = self.get_or_create_node(name, EntityLayer::Type);
-        _ = self.graph.add_edge(self.current_node, target, ());
+        self.add_reference_edge(name, EntityLayer::Type);
     }
 
-    pub fn register_module_reference(&mut self, name: EcoString) {
+    /// Add a call-graph edge to a module resolved by its local name: the
+    /// alias, or the last segment of the module path when there is no alias.
+    /// Use this for references that name the module as written at the use site,
+    /// such as a qualified `wobble.thing`.
+    ///
+    pub fn register_module_reference_by_alias(&mut self, name: EcoString) {
+        self.add_reference_edge(name, EntityLayer::Module);
+    }
+
+    /// Add a call-graph edge to an import resolved by its canonical module name
+    /// via `module_name_to_node`. Use this for references that carry the full
+    /// module name rather than the local alias, such as an unqualified item
+    /// that remembers which module it came from.
+    ///
+    fn register_module_reference_by_module_name(&mut self, name: EcoString) {
         let target = match self.module_name_to_node.get(&name) {
             Some(target) => *target,
             None => self.get_or_create_node(name, EntityLayer::Module),
