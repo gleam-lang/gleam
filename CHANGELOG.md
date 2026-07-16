@@ -619,3 +619,7 @@
 - Fixed a bug where an incorrect `package-interface.json` would be generated for
   certain type aliases.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the compiler would report a module import as unused when
+  its local name matched another imported module's full name.
+  ([John Downey](https://github.com/jtdowney))

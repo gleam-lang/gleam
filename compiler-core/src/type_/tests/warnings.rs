@@ -1145,6 +1145,50 @@ fn unused_alias_for_duplicate_module_no_warning_for_alias_test() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/5975
+#[test]
+fn imported_module_usage_not_confused_with_another_module_name() {
+    assert_no_warnings!(
+        ("thepackage", "wibble/wobble", "pub const one = 1"),
+        ("thepackage", "wobble", "pub const two = 2"),
+        r#"
+            import wibble/wobble
+            import wobble as my_wobble
+            pub const one = wobble.one
+            pub const two = my_wobble.two
+        "#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5975
+#[test]
+fn imported_module_type_usage_not_confused_with_another_module_name() {
+    assert_no_warnings!(
+        ("thepackage", "wibble/wobble", "pub type One = Int"),
+        ("thepackage", "wobble", "pub type Two = Int"),
+        r#"
+            import wibble/wobble
+            import wobble as my_wobble
+            pub fn one(value: wobble.One) -> wobble.One { value }
+            pub fn two(value: my_wobble.Two) -> my_wobble.Two { value }
+        "#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5975
+#[test]
+fn unused_module_alias_not_confused_with_another_module_name() {
+    assert_warning!(
+        ("thepackage", "wibble/wobble", "pub const one = 1"),
+        ("thepackage", "wobble", "pub const two = 2"),
+        r#"
+            import wibble/wobble
+            import wobble as my_wobble
+            pub const one = wobble.one
+        "#
+    );
+}
+
 #[test]
 fn result_in_case_discarded() {
     assert_warning!(

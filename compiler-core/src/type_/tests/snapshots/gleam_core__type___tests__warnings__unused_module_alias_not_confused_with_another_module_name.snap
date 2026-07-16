@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n            import wibble/wobble\n            import wobble as my_wobble\n            pub const one = wobble.one\n        "
+---
+----- SOURCE CODE
+-- wibble/wobble.gleam
+pub const one = 1
+
+-- wobble.gleam
+pub const two = 2
+
+-- main.gleam
+
+            import wibble/wobble
+            import wobble as my_wobble
+            pub const one = wobble.one
+        
+
+----- WARNING
+warning: Unused imported module
+  ┌─ /src/warning/wrn.gleam:3:13
+  │
+3 │             import wobble as my_wobble
+  │             ^^^^^^^^^^^^^^^^^^^^^^^^^^ This imported module is never used
+
+Hint: You can safely remove it.
