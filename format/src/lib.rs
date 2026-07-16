@@ -3093,14 +3093,17 @@ impl<'a, 'doc> Formatter<'a> {
         left: &'a UntypedClauseGuard,
         right: &'a UntypedClauseGuard,
     ) -> Document<'a, 'doc> {
-        self.clause_guard_bin_op_side(arena, name, left, left.precedence())
-            .append(arena, BREAKABLE_SPACE_DOCUMENT)
-            .append(arena, binop(*name))
-            .append(arena, SPACE_DOCUMENT)
-            .append(
-                arena,
-                self.clause_guard_bin_op_side(arena, name, right, right.precedence() - 1),
-            )
+        let left_comments = self.pop_comments(left.location().start);
+        let left = self.clause_guard_bin_op_side(arena, name, left, left.precedence());
+        let left = commented(arena, left, left_comments);
+
+        let right_comments = self.pop_comments(right.location().start);
+        let right = self.clause_guard_bin_op_side(arena, name, right, right.precedence() - 1);
+        let right = docvec![arena, binop(*name), SPACE_DOCUMENT, right];
+        let right = commented(arena, right, right_comments);
+
+        left.append(arena, BREAKABLE_SPACE_DOCUMENT)
+            .append(arena, right)
     }
 
     fn clause_guard_bin_op_side(
