@@ -20,7 +20,7 @@ use crate::{
 use camino::Utf8Path;
 use ecow::{EcoString, eco_format};
 use erlang_generation::{
-    BitArraySegmentSpecifier, ErlangBuilder, ErlangModuleName, ErlangSourceBuilder,
+    BitArraySegmentSpecifier, DocContent, ErlangBuilder, ErlangModuleName, ErlangSourceBuilder,
 };
 use itertools::Itertools;
 use num_bigint::BigInt;
@@ -260,19 +260,16 @@ impl<'a> Generator<'a> {
         if self.module.type_info.is_internal {
             // The module is internal so we need to add a `-moduledoc(false).`
             // attribute to make sure its documentation is hidden.
-            let doc = builder.start_moduledoc_attribute();
-            builder.atom("false");
-            builder.end_doc_attribute(doc);
+            builder.moduledoc_attribute(DocContent::False);
         } else if self.module.documentation.is_empty() {
             // The module is not internal, but it has no docs.
             // We don't have to do anything.
         } else {
             // The module has some documentation that we're going to include
             // with a `-moduledoc` attribute.
-            let doc = builder.start_moduledoc_attribute();
-            let documentation = &self.module.documentation.iter().join("\n");
-            builder.string(documentation);
-            builder.end_doc_attribute(doc);
+            builder.moduledoc_attribute(DocContent::String(
+                &self.module.documentation.iter().join("\n"),
+            ));
         }
     }
 
@@ -692,15 +689,11 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             self.module_generator.module.type_info.is_internal || function.publicity.is_internal();
 
         if is_internal {
-            let attribute = builder.start_doc_attribute();
-            builder.atom("false");
-            builder.end_doc_attribute(attribute);
+            builder.doc_attribute(DocContent::False);
         } else if let Some((_, documentation)) = &function.documentation
             && !documentation.is_empty()
         {
-            let attribute = builder.start_doc_attribute();
-            builder.string(documentation);
-            builder.end_doc_attribute(attribute);
+            builder.doc_attribute(DocContent::String(documentation));
         }
     }
 
