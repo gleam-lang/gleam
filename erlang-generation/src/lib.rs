@@ -64,6 +64,14 @@ pub enum BitArraySegmentSpecifier {
     Unit(u8),
 }
 
+/// This represents what can go in a moduledoc or doc comment. Either the atom
+/// false, if the function/module is to be hidden from the public docs, or the
+/// string content to include.
+pub enum DocContent<'string> {
+    False,
+    String(&'string str),
+}
+
 /// A trait defining operations to describe the content of an Erlang module.
 ///
 /// This might look strange in places, for example why is there a `start_tuple`
@@ -116,9 +124,6 @@ pub trait ErlangBuilder<Output> {
 
     /// Represents an open tuple pattern that has yet to be closed.
     type TuplePattern;
-
-    /// Represents an open doc/moduledoc attribute.
-    type DocAttribute;
 
     /// Represents an open record attribute.
     type RecordAttribute;
@@ -201,17 +206,11 @@ pub trait ErlangBuilder<Output> {
         exported: impl IntoIterator<Item = (Name, usize)>,
     );
 
-    /// Starts a `-doc` attribute.
-    /// What is generated after calling this function will end up inside the
-    /// `-doc` attribute.
-    /// You'll most likely always put a string or the atom "false" inside it.
-    ///
+    /// Creates a `-doc` attribute with the given content.
     /// For example:
     ///
     /// ```ignore
-    /// let doc = builder.start_doc_attribute();
-    /// builder.atom("false");
-    /// builder.close_doc_attribute(doc);
+    /// todo!()
     /// ```
     ///
     /// Corresponds to:
@@ -220,19 +219,13 @@ pub trait ErlangBuilder<Output> {
     /// -doc(false).
     /// ```
     ///
-    fn start_doc_attribute(&mut self) -> Self::DocAttribute;
+    fn doc_attribute(&mut self, content: DocContent<'_>);
 
-    /// Starts a `-moduledoc` attribute.
-    /// What is generated after calling this function will end up inside the
-    /// `-moduledoc` attribute.
-    /// You'll most likely always put a string or the atom "false" inside it.
-    ///
+    /// Creates a `-moduledoc` attribute with the given content.
     /// For example:
     ///
     /// ```ignore
-    /// let doc = builder.start_moduledoc_attribute();
-    /// builder.atom("false");
-    /// builder.close_doc_attribute(doc);
+    /// todo!()
     /// ```
     ///
     /// Corresponds to:
@@ -241,12 +234,7 @@ pub trait ErlangBuilder<Output> {
     /// -moduledoc(false).
     /// ```
     ///
-    fn start_moduledoc_attribute(&mut self) -> Self::DocAttribute;
-
-    /// This closes the currently open doc/moduledoc attribute.
-    /// Code generated after this is not gonna be part of it.
-    ///
-    fn end_doc_attribute(&mut self, attribute: Self::DocAttribute);
+    fn moduledoc_attribute(&mut self, content: DocContent<'_>);
 
     /// This generates the code for a `-compile([]).` attribute where all the
     /// strings produces by the given iterator are going to be passed as atom
@@ -1274,10 +1262,6 @@ pub struct ErlangSourceBuilder {
 /// printed code from an `ErlangSourceBuilder`.
 #[derive(Debug)]
 enum ErlangSourceBuilderPosition {
-    /// We're generating a top level documentation attribute like `-doc(false)`,
-    /// or `-moduledoc(~"wibble wobble")`.
-    DocAttribute,
-
     /// We're generating a function spec like `-spec wibble(atom()) -> atom()`.
     FunctionSpec,
 
@@ -1691,7 +1675,6 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
     type ClauseBody = ();
     type ClauseGuards = ();
     type ClausePattern = ();
-    type DocAttribute = ();
     type Function = ();
     type FunctionSpec = ();
     type FunctionType = ();
@@ -1778,22 +1761,18 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.code.push_str("]).\n");
     }
 
-    fn start_doc_attribute(&mut self) -> Self::DocAttribute {
+    fn doc_attribute(&mut self, content: DocContent<'_>) {
         self.new_top_level_form();
         self.code.push_str("-doc(");
-        self.position
-            .push(ErlangSourceBuilderPosition::DocAttribute);
+        self.doc_content(content);
+        self.code.push_str(").\n")
     }
 
-    fn start_moduledoc_attribute(&mut self) -> Self::DocAttribute {
+    fn moduledoc_attribute(&mut self, content: DocContent<'_>) {
         self.new_top_level_form();
         self.code.push_str("-moduledoc(");
-        self.position
-            .push(ErlangSourceBuilderPosition::DocAttribute);
-    }
-
-    fn end_doc_attribute(&mut self, _attribute: Self::DocAttribute) {
-        self.close_currently_open_item();
+        self.doc_content(content);
+        self.code.push_str(").\n")
     }
 
     fn compile_attribute<'a>(&mut self, arguments: impl IntoIterator<Item = &'a str>) {
@@ -2485,8 +2464,6 @@ impl ErlangSourceBuilder {
         };
 
         match position {
-            ErlangSourceBuilderPosition::DocAttribute => (),
-
             ErlangSourceBuilderPosition::RecordField {
                 expected: expected @ ExpectedRecordFieldItem::Name,
             } => *expected = ExpectedRecordFieldItem::Type,
@@ -2755,7 +2732,6 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::List { .. }
             | ErlangSourceBuilderPosition::FunctionStatement { .. }
             | ErlangSourceBuilderPosition::AnonymousFunctionStatement { .. }
-            | ErlangSourceBuilderPosition::DocAttribute
             | ErlangSourceBuilderPosition::UnaryOperator
             | ErlangSourceBuilderPosition::Case { .. }
             | ErlangSourceBuilderPosition::BinaryOperator { .. }
@@ -2894,7 +2870,6 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::UnionType { .. }
             | ErlangSourceBuilderPosition::TupleType { .. }
             | ErlangSourceBuilderPosition::RecordField { .. }
-            | ErlangSourceBuilderPosition::DocAttribute
             | ErlangSourceBuilderPosition::RecordAttribute { .. }
             | ErlangSourceBuilderPosition::List {
                 kind: ListKind::Pattern,
@@ -3019,9 +2994,6 @@ impl ErlangSourceBuilder {
             }
             // There's nothing left to do when a union type ends.
             ErlangSourceBuilderPosition::UnionType { .. } => (),
-            // When a doc attribute is closed we need to add the closed
-            // parentheses and a newline.
-            ErlangSourceBuilderPosition::DocAttribute => self.code.push_str(").\n"),
             // When a case expression is over, we need to add the closing `end`.
             ErlangSourceBuilderPosition::Case {
                 expected: ExpectedCaseItem::Branches { .. },
@@ -3162,14 +3134,6 @@ impl ErlangSourceBuilder {
                         }
                     })
                     .into()
-            }
-
-            ErlangSourceBuilderPosition::DocAttribute => {
-                // Escaping strings generated inside doc attributes is a little
-                // different: since their content doesn't come from a Gleam
-                // literal string but freeform text, their content might contain
-                // all sorts of unescaped characters.
-                content.replace("\\", "\\\\").replace("\"", "\\\"")
             }
         }
     }
@@ -3410,7 +3374,6 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::TupleType { .. }
             | ErlangSourceBuilderPosition::FunctionStatement { .. }
             | ErlangSourceBuilderPosition::AnonymousFunctionStatement { .. }
-            | ErlangSourceBuilderPosition::DocAttribute
             | ErlangSourceBuilderPosition::FunctionSpec
             | ErlangSourceBuilderPosition::Tuple { .. }
             | ErlangSourceBuilderPosition::TuplePattern { .. }
@@ -3495,6 +3458,22 @@ impl ErlangSourceBuilder {
     fn error_with_position(&self, expected: &str) -> String {
         let position = self.position.last();
         format!("tried {expected}, position: {position:?}")
+    }
+
+    fn doc_content(&mut self, content: DocContent<'_>) {
+        match content {
+            DocContent::False => self.code.push_str("false"),
+            // Escaping strings generated inside doc attributes is a little
+            // different: since their content doesn't come from a Gleam
+            // literal string but freeform text, their content might contain
+            // all sorts of unescaped characters.
+            DocContent::String(content) => {
+                self.code.push_str("~\"");
+                self.code
+                    .push_str(&content.replace("\\", "\\\\").replace("\"", "\\\""));
+                self.code.push('"');
+            }
+        }
     }
 }
 
