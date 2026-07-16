@@ -1190,6 +1190,19 @@ fn unused_module_alias_not_confused_with_another_module_name() {
 }
 
 #[test]
+fn unused_module_not_marked_as_used_by_discard_aliased_import_with_same_name() {
+    assert_warning!(
+        ("thepackage", "wibble/wobble", "pub const one = 1"),
+        ("thepackage", "wobble", "pub const two = 2"),
+        r#"
+            import wibble/wobble
+            import wobble.{two} as _wobble
+            pub fn main() { two }
+        "#
+    );
+}
+
+#[test]
 fn result_in_case_discarded() {
     assert_warning!(
         "
