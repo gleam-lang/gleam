@@ -748,9 +748,10 @@ impl ReferenceTracker {
     /// that remembers which module it came from.
     ///
     fn register_module_reference_by_module_name(&mut self, name: EcoString) {
-        let target = match self.module_name_to_node.get(&name) {
-            Some(target) => *target,
-            None => self.get_or_create_node(name, EntityLayer::Module),
+        // If the module has no node then it was imported with a discarded
+        // alias, meaning there's no import for the reference to point at.
+        let Some(target) = self.module_name_to_node.get(&name).copied() else {
+            return;
         };
         _ = self.graph.add_edge(self.current_node, target, ());
     }
