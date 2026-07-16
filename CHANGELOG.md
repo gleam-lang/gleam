@@ -520,6 +520,9 @@
   writing a constructor with a lowercase name.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where guards with comments wouldn't be formatted properly.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - A `gleam@@compile.erl` is no longer left in the build output of
   `gleam compile-package`.
   ([Louis Pilfold](https://github.com/lpil))
