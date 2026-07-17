@@ -136,6 +136,10 @@ pub trait ErlangBuilder<Output> {
     /// the types it takes as an argument (if any).
     type NamedType;
 
+    /// Represents an open remote named type that has yet to be closed after
+    /// generating the types it takes as an argument (if any).
+    type RemoteNamedType;
+
     /// Represents an open alternative type that has yet to be closed after
     /// generating all of its alternatives.
     type UnionType;
@@ -438,6 +442,11 @@ pub trait ErlangBuilder<Output> {
     ///
     fn start_named_type(&mut self, name: &str) -> Self::NamedType;
 
+    /// This takes a named type and closes it.
+    /// Code generated after this is not gonna be part of this named type.
+    ///
+    fn end_named_type(&mut self, named_type: Self::NamedType);
+
     /// This starts a remote named type with the given module and name.
     /// Any code generated after this is gonna be an argument of the open
     /// named type type until `end_named_type` is called.
@@ -455,12 +464,16 @@ pub trait ErlangBuilder<Output> {
     /// wibble:wobble().
     /// ```
     ///
-    fn start_remote_named_type(&mut self, module: ErlangModuleName, name: &str) -> Self::NamedType;
+    fn start_remote_named_type(
+        &mut self,
+        module: ErlangModuleName,
+        name: &str,
+    ) -> Self::RemoteNamedType;
 
-    /// This takes a named type and closes it.
+    /// This takes a remote named type and closes it.
     /// Code generated after this is not gonna be part of this named type.
     ///
-    fn end_named_type(&mut self, named_type: Self::NamedType);
+    fn end_remote_named_type(&mut self, named_type: Self::RemoteNamedType);
 
     /// This starts a tuple type.
     /// Any code generated after this is gonna be one of the tuple items.
@@ -1689,6 +1702,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
     type FunctionTypeArguments = ();
     type Map = ();
     type NamedType = ();
+    type RemoteNamedType = ();
     type RecordAttribute = ();
     type Tuple = ();
     type TuplePattern = ();
@@ -1917,6 +1931,10 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.code.push('(');
     }
 
+    fn end_named_type(&mut self, _named_type: Self::NamedType) {
+        self.close_currently_open_item();
+    }
+
     fn start_remote_named_type(&mut self, module: ErlangModuleName, name: &str) -> Self::NamedType {
         self.new_type();
         self.position
@@ -1927,7 +1945,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.code.push('(');
     }
 
-    fn end_named_type(&mut self, _named_type: Self::NamedType) {
+    fn end_remote_named_type(&mut self, _named_type: Self::RemoteNamedType) {
         self.close_currently_open_item();
     }
 

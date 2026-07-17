@@ -315,7 +315,7 @@ impl<'a> Generator<'a> {
                 for type_variable in phantom_type_variables {
                     builder.type_variable(&type_variable);
                 }
-                builder.end_named_type(type_);
+                builder.end_remote_named_type(type_);
             }
             // This is an external type with no external annotation and no
             // phantom type variables. It is just `any()`.
@@ -3999,17 +3999,19 @@ impl<'a> TypeGenerator<'a> {
         arguments: &[Arc<Type>],
     ) {
         let name = erl_safe_type_name(to_snake_case(name));
-        let type_ = if self.current_module == module {
-            builder.start_named_type(&name)
+        if self.current_module == module {
+            let type_ = builder.start_named_type(&name);
+            for argument in arguments {
+                self.type_(builder, argument);
+            }
+            builder.end_named_type(type_);
         } else {
-            builder.start_remote_named_type(ErlangModuleName::new(&module), &name)
+            let type_ = builder.start_remote_named_type(ErlangModuleName::new(&module), &name);
+            for argument in arguments {
+                self.type_(builder, argument);
+            }
+            builder.end_remote_named_type(type_);
         };
-
-        for argument in arguments {
-            self.type_(builder, argument);
-        }
-
-        builder.end_named_type(type_);
     }
 }
 
