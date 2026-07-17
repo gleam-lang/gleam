@@ -1191,6 +1191,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // exception in case the pattern doesn't match.
         let case = builder.start_case();
         self.maybe_block_expr(builder, value);
+        let case = builder.end_case_subject(case);
 
         // This is the first branch for when the asserted pattern matches: it's
         // going to run all the remaining statements in its body.
@@ -1431,6 +1432,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 builder.binary_operator(erlang_operator);
                 self.runtime_value(builder, &left);
                 self.runtime_value(builder, &right);
+                let case = builder.end_case_subject(case);
 
                 // If the operator evaluates to true the assertion succeeded.
                 // We can just return nil.
@@ -1481,6 +1483,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
                 let case = builder.start_case();
                 self.call_in_assert(builder, fun, &call_arguments);
+                let case = builder.end_case_subject(case);
 
                 // If the operator evaluates to true the assertion succeeded.
                 // We can just return nil.
@@ -1532,6 +1535,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             | TypedExpr::Invalid { .. } => {
                 let case = builder.start_case();
                 self.maybe_block_expr(builder, value);
+                let case = builder.end_case_subject(case);
 
                 // If the expression evaluates to true the assertion succeeded.
                 // We can just return nil.
@@ -1596,6 +1600,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     ) {
         let case = builder.start_case();
         self.maybe_block_expr(builder, left);
+        let case = builder.end_case_subject(case);
 
         // In case the first expression is true, we get to evaluate the second
         // one as well, then we will be able to tell if the assertion failed or
@@ -1608,6 +1613,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // Now we have to match on the right hand side!
             let case = builder.start_case();
             self.maybe_block_expr(builder, right);
+            let case = builder.end_case_subject(case);
 
             // If it's true the assertion succeded! We can return `nil`.
             let clause = builder.start_case_clause();
@@ -1676,6 +1682,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         builder.binary_operator("orelse");
         self.maybe_block_expr(builder, left);
         self.maybe_block_expr(builder, right);
+        let case = builder.end_case_subject(case);
 
         // If the result is true, then the assertion succeeded, we can return
         // nil.
@@ -2119,6 +2126,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 builder.end_tuple(tuple);
             }
         }
+        let case = builder.end_case_subject(case);
 
         for clause in clauses {
             let taken_names_before_clause = self.taken_names.clone();
@@ -2548,6 +2556,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
                 let case = builder.start_case();
                 self.maybe_block_expr(builder, right);
+                let case = builder.end_case_subject(case);
 
                 // +0.0 -> +0.0
                 let clause = builder.start_case_clause();
@@ -2637,6 +2646,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
                 let case = builder.start_case();
                 self.maybe_block_expr(builder, right);
+                let case = builder.end_case_subject(case);
 
                 // 0 -> 0
                 let clause = builder.start_case_clause();

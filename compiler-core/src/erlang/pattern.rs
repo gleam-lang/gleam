@@ -406,6 +406,7 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
         } else {
             let case = builder.start_case();
             self.bit_array_size(builder, right);
+            let case = builder.end_case_subject(case);
 
             let clause = builder.start_case_clause();
             builder.int_pattern(BigInt::ZERO);

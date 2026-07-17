@@ -98,6 +98,9 @@ pub trait ErlangBuilder<Output> {
     /// Represents an open case expression that has yet to be closed.
     type Case;
 
+    /// Represents an open case subject that has yet to be closed.
+    type CaseSubject;
+
     /// Represents an open case clause pattern that has yet to be generated.
     type ClausePattern;
 
@@ -867,6 +870,7 @@ pub trait ErlangBuilder<Output> {
     /// This starts a new case expression.
     /// After this function is called you're supposed to first generate a single
     /// expression; that's going to be the case subject being matched on.
+    /// After that you must call `end_case_subject`.
     ///
     /// After that you're supposed to generate the case branches using the
     /// `start_case_clause` function.
@@ -876,6 +880,7 @@ pub trait ErlangBuilder<Output> {
     /// ```ignore
     /// let case = builder.start_case();
     /// builder.variable("wibble");
+    /// let case = builder.end_case_subject();
     ///
     /// let clause = builder.start_case_clause();
     /// builder.discard_pattern();
@@ -895,7 +900,11 @@ pub trait ErlangBuilder<Output> {
     /// end.
     /// ```
     ///
-    fn start_case(&mut self) -> Self::Case;
+    fn start_case(&mut self) -> Self::CaseSubject;
+
+    /// This ends the open case subject, after this you can start generating the
+    /// case clauses.
+    fn end_case_subject(&mut self, case: Self::CaseSubject) -> Self::Case;
 
     /// This ends an open case expression.
     /// Any code generated after this is not going to be part of it.
@@ -1693,6 +1702,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
     type Block = ();
     type Call = ();
     type Case = ();
+    type CaseSubject = ();
     type ClauseBody = ();
     type ClauseGuards = ();
     type ClausePattern = ();
@@ -2231,6 +2241,20 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.position.push(ErlangSourceBuilderPosition::Case {
             expected: ExpectedCaseItem::Subject,
         });
+    }
+
+    fn end_case_subject(&mut self, _case: Self::CaseSubject) -> Self::Case {
+        // We need to make sure that just a single expression was generated as
+        // the subject and then this function was called.
+        // So we can assert that we're no longer expecting the subject but the
+        // clauses and none has been generated yet.
+        self.pop_leftover_items();
+        let Some(ErlangSourceBuilderPosition::Case {
+            expected: ExpectedCaseItem::Branches { first: true },
+        }) = self.position.last()
+        else {
+            invalid_code_for_position!(self, "end case subject")
+        };
     }
 
     fn end_case(&mut self, _case: Self::Case) {
