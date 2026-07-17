@@ -220,13 +220,27 @@ where
             '+' => {
                 let tok_start = self.get_pos();
                 let _ = self.next_char();
-                if let Some('.') = self.chr0 {
-                    let _ = self.next_char();
-                    let tok_end = self.get_pos();
-                    self.emit((tok_start, Token::PlusDot, tok_end));
-                } else {
-                    let tok_end = self.get_pos();
-                    self.emit((tok_start, Token::Plus, tok_end));
+                match self.chr0 {
+                    Some('.') => {
+                        let _ = self.next_char();
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Token::PlusDot, tok_end));
+                    }
+                    Some('=' | '+') => {
+                        let _ = self.next_char();
+                        let tok_end = self.get_pos();
+                        return Err(LexicalError {
+                            error: LexicalErrorType::InvalidAssignmentShorthand,
+                            location: SrcSpan {
+                                start: tok_start,
+                                end: tok_end,
+                            },
+                        });
+                    }
+                    _ => {
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Token::Plus, tok_end));
+                    }
                 }
             }
             '*' => {
@@ -237,6 +251,17 @@ where
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
                         self.emit((tok_start, Token::StarDot, tok_end));
+                    }
+                    Some('=') => {
+                        let _ = self.next_char();
+                        let tok_end = self.get_pos();
+                        return Err(LexicalError {
+                            error: LexicalErrorType::InvalidAssignmentShorthand,
+                            location: SrcSpan {
+                                start: tok_start,
+                                end: tok_end,
+                            },
+                        });
                     }
                     _ => {
                         let tok_end = self.get_pos();
@@ -258,6 +283,17 @@ where
                         let comment = self.lex_comment();
                         self.emit(comment);
                     }
+                    Some('=') => {
+                        let _ = self.next_char();
+                        let tok_end = self.get_pos();
+                        return Err(LexicalError {
+                            error: LexicalErrorType::InvalidAssignmentShorthand,
+                            location: SrcSpan {
+                                start: tok_start,
+                                end: tok_end,
+                            },
+                        });
+                    }
                     _ => {
                         let tok_end = self.get_pos();
                         self.emit((tok_start, Token::Slash, tok_end));
@@ -265,39 +301,64 @@ where
                 }
             }
             '%' => {
-                self.eat_single_char(Token::Percent);
+                let tok_start = self.get_pos();
+                let _ = self.next_char();
+                match self.chr0 {
+                    Some('=') => {
+                        let _ = self.next_char();
+                        let tok_end = self.get_pos();
+                        return Err(LexicalError {
+                            error: LexicalErrorType::InvalidAssignmentShorthand,
+                            location: SrcSpan {
+                                start: tok_start,
+                                end: tok_end,
+                            },
+                        });
+                    }
+                    _ => {
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Token::Percent, tok_end));
+                    }
+                }
             }
             '|' => {
                 let tok_start = self.get_pos();
                 let _ = self.next_char();
-                if let Some('|') = self.chr0 {
-                    let _ = self.next_char();
-                    let tok_end = self.get_pos();
-                    self.emit((tok_start, Token::VbarVbar, tok_end));
-                } else if let Some('>') = self.chr0 {
-                    let _ = self.next_char();
-                    let tok_end = self.get_pos();
-                    self.emit((tok_start, Token::Pipe, tok_end));
-                } else {
-                    let tok_end = self.get_pos();
-                    self.emit((tok_start, Token::Vbar, tok_end));
+                match self.chr0 {
+                    Some('|') => {
+                        let _ = self.next_char();
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Token::VbarVbar, tok_end));
+                    }
+                    Some('>') => {
+                        let _ = self.next_char();
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Token::Pipe, tok_end));
+                    }
+                    _ => {
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Token::Vbar, tok_end));
+                    }
                 }
             }
             '&' => {
                 let tok_start = self.get_pos();
                 let _ = self.next_char();
-                if let Some('&') = self.chr0 {
-                    let _ = self.next_char();
-                    let tok_end = self.get_pos();
-                    self.emit((tok_start, Token::AmperAmper, tok_end));
-                } else {
-                    return Err(LexicalError {
-                        error: LexicalErrorType::UnrecognizedToken { tok: '&' },
-                        location: SrcSpan {
-                            start: tok_start,
-                            end: tok_start,
-                        },
-                    });
+                match self.chr0 {
+                    Some('&') => {
+                        let _ = self.next_char();
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Token::AmperAmper, tok_end));
+                    }
+                    _ => {
+                        return Err(LexicalError {
+                            error: LexicalErrorType::UnrecognizedToken { tok: '&' },
+                            location: SrcSpan {
+                                start: tok_start,
+                                end: tok_start,
+                            },
+                        });
+                    }
                 }
             }
             '-' => {
@@ -313,6 +374,19 @@ where
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
                         self.emit((tok_start, Token::RArrow, tok_end));
+                    }
+                    // Not including `-` here because repeated int negation is
+                    // valid gleam
+                    Some('=') => {
+                        let _ = self.next_char();
+                        let tok_end = self.get_pos();
+                        return Err(LexicalError {
+                            error: LexicalErrorType::InvalidAssignmentShorthand,
+                            location: SrcSpan {
+                                start: tok_start,
+                                end: tok_end,
+                            },
+                        });
                     }
                     _ => {
                         let tok_end = self.get_pos();

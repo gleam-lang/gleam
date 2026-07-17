@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "let wobble: Int = 32\nwobble++"
+---
+----- SOURCE CODE
+let wobble: Int = 32
+wobble++
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:7
+  │
+2 │ wobble++
+  │       ^^ Invalid assignment shorthand
+
+Gleam does not support this assignment shorthand syntax, nor mutation
+Hint: variables may be rebound with `let` and `=`

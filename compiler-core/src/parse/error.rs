@@ -46,6 +46,8 @@ pub enum LexicalErrorType {
         tok: char,
     },
     InvalidTripleEqual,
+    /// `++`, `-=`, etc.
+    InvalidAssignmentShorthand,
     /// A character was encountered that visually looks like a correct
     /// character, but in reality it's some other unicode characters.
     /// For example, a non-breaking-space instead of a regular space.
@@ -950,6 +952,13 @@ impl LexicalError {
                 vec![
                     "Gleam uses `==` to check for equality between two values.".into(),
                     "See: https://tour.gleam.run/basics/equality".into(),
+                ],
+            ),
+            LexicalErrorType::InvalidAssignmentShorthand => (
+                "Invalid assignment shorthand",
+                vec![
+                    "Gleam does not support this assignment shorthand syntax, nor mutation".into(),
+                    "Hint: variables may be rebound with `let` and `=`".into(),
                 ],
             ),
             LexicalErrorType::VisuallySimilarInvalidCharacter { name, correct } => (
