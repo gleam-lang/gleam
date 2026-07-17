@@ -14,5 +14,8 @@ warning: Unimplemented function
 2 │ pub fn wibble() { }
   │ ^^^^^^^^^^^^^^^ This code is incomplete
 
-This code will crash if it is run. Be sure to finish it before
+A function must always have an implementation.
+
+A todo expression has been use in place of the missing body,
+so this code will crash if it is run. Be sure to finish it before
 running your program.
