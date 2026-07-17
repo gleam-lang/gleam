@@ -290,7 +290,7 @@ impl<'a> Generator<'a> {
         let name = erl_safe_type_name(to_snake_case(name));
 
         // We start the type spec.
-        builder.type_spec(
+        let type_spec = builder.start_type_spec(
             *opaque,
             &name,
             typed_parameters
@@ -349,6 +349,8 @@ impl<'a> Generator<'a> {
                 builder.end_union_type(union);
             }
         }
+
+        builder.end_type_spec(type_spec);
     }
 
     /// Given a constructor this generates its type. For example:
