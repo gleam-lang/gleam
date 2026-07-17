@@ -55,6 +55,10 @@
   in a consistent alphabetical order.
   ([Zbyněk Juřica](https://github.com/zbyju))
 
+- The compiler now issues a more specific error message when invalid assignment
+  shorthands are used, such as `++` or `*=`.
+  ([0xda157](https://github.com/0xda157))
+
 ### Build tool
 
 - The build tool now generates Hexdocs URLs using the new format of

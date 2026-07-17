@@ -354,6 +354,108 @@ fn triple_equals_with_whitespace() {
     );
 }
 
+#[test]
+fn invalid_assignment_shorthand_plus_equals() {
+    assert_error!(
+        "let wobble: Int = 32
+        wobble += 1",
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::InvalidAssignmentShorthand,
+                    location: SrcSpan { start: 36, end: 38 },
+                },
+            },
+            location: SrcSpan { start: 36, end: 38 },
+        }
+    );
+}
+
+#[test]
+fn invalid_assignment_shorthand_plus_plus() {
+    assert_error!(
+        "let wobble: Int = 32
+        wobble++",
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::InvalidAssignmentShorthand,
+                    location: SrcSpan { start: 35, end: 37 },
+                },
+            },
+            location: SrcSpan { start: 35, end: 37 },
+        }
+    );
+}
+
+#[test]
+fn invalid_assignment_shorthand_minus_equals() {
+    assert_error!(
+        "let wobble: Int = 32
+        wobble -= 1",
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::InvalidAssignmentShorthand,
+                    location: SrcSpan { start: 36, end: 38 },
+                },
+            },
+            location: SrcSpan { start: 36, end: 38 },
+        }
+    );
+}
+
+#[test]
+fn invalid_assignment_shorthand_times_equals() {
+    assert_error!(
+        "let wobble: Int = 32
+        wobble *= 1",
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::InvalidAssignmentShorthand,
+                    location: SrcSpan { start: 36, end: 38 },
+                },
+            },
+            location: SrcSpan { start: 36, end: 38 },
+        }
+    );
+}
+
+#[test]
+fn invalid_assignment_shorthand_divide_equals() {
+    assert_error!(
+        "let wobble: Int = 32
+        wobble /= 1",
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::InvalidAssignmentShorthand,
+                    location: SrcSpan { start: 36, end: 38 },
+                },
+            },
+            location: SrcSpan { start: 36, end: 38 },
+        }
+    );
+}
+
+#[test]
+fn invalid_assignment_shorthand_modulo_equals() {
+    assert_error!(
+        "let wobble: Int = 32
+        wobble %= 1",
+        ParseError {
+            error: ParseErrorType::LexError {
+                error: LexicalError {
+                    error: LexicalErrorType::InvalidAssignmentShorthand,
+                    location: SrcSpan { start: 36, end: 38 },
+                },
+            },
+            location: SrcSpan { start: 36, end: 38 },
+        }
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/1231
 #[test]
 fn pointless_spread() {
