@@ -476,8 +476,7 @@ this code will crash if it is run. Be sure to finish it before
 running your program.";
                             ("Incomplete use expression", text)
                         }
-                    }
-                    .into();
+                    };
 
                     let hint = if !type_.is_variable() {
                         Some(format!(
