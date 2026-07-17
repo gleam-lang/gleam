@@ -24,3 +24,7 @@ indent_size = 4
 [Makefile]
 indent_style = tab
 indent_size = 4
+
+# snapshot files contain trailing whitespace which shouldn't be removed
+[*.snap]
+trim_trailing_whitespace = false
