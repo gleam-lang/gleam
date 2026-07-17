@@ -9,6 +9,7 @@
 
 ### Compiler
 
+<<<<<<< HEAD
 - The compiler now issues a friendlier error when attempting to pattern match
   on both the prefix and suffix of a string:
 
@@ -26,6 +27,10 @@
   ```
 
   ([Gavin Morrow](https://github.com/gavinmorrow))
+
+- The compiler now issues a more specific error message when invalid assignment
+  shorthands are used, such as `++` or `*=`.
+  ([0xda157](https://github.com/0xda157))
 
 ### Build tool
 
