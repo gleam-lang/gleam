@@ -152,6 +152,10 @@ pub trait ErlangBuilder<Output> {
     /// that has yet to be closed.
     type FunctionTypeArguments;
 
+    /// Represents an open type spec attribute that has yet to be closed after
+    /// generating the type it stands for.
+    type TypeSpec;
+
     /// Creates a new `ErlangBuilder` data structure to generate Erlang code.
     /// If a module name is provided this will also automatically take care of
     /// generating the appropriate `-module` annotation at the very beginning.
@@ -339,6 +343,7 @@ pub trait ErlangBuilder<Output> {
     /// This starts an Erlang type spec.
     /// After this call you're expected to generate a single type; that's going
     /// to be the definition of the type.
+    /// After that is done you should call `end_type_spec`.
     ///
     /// For example:
     ///
@@ -352,7 +357,8 @@ pub trait ErlangBuilder<Output> {
     /// builder.type_variable("A")
     /// builder.close_named_type();
     ///
-    /// builder.end_uniont_type(union);
+    /// builder.end_union_type(union);
+    /// builder.end_type_spec(spec);
     /// ```
     ///
     /// Corresponds to:
@@ -361,12 +367,14 @@ pub trait ErlangBuilder<Output> {
     /// -spec wibble(A) :: nil | list(A).
     /// ```
     ///
-    fn type_spec<Name: AsRef<str>>(
+    fn start_type_spec<Name: AsRef<str>>(
         &mut self,
         opaque: bool,
         name: &str,
         type_parameters: impl IntoIterator<Item = Name>,
-    );
+    ) -> Self::TypeSpec;
+
+    fn end_type_spec(&mut self, type_spec: Self::TypeSpec);
 
     /// This starts a function type.
     /// Any code generated after this is gonna be an argument type of the open
@@ -1686,6 +1694,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
     type TuplePattern = ();
     type TupleType = ();
     type UnionType = ();
+    type TypeSpec = ();
 
     fn new(module: Option<ErlangModuleName>) -> Self {
         Self {
@@ -1836,12 +1845,12 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.close_currently_open_item();
     }
 
-    fn type_spec<Name: AsRef<str>>(
+    fn start_type_spec<Name: AsRef<str>>(
         &mut self,
         opaque: bool,
         name: &str,
         type_variables: impl IntoIterator<Item = Name>,
-    ) {
+    ) -> Self::TypeSpec {
         self.new_top_level_form();
         self.code.push('\n');
         self.code
@@ -1862,6 +1871,12 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.position.push(ErlangSourceBuilderPosition::TypeSpec {
             expected: TypeSpecExpectedItem::TypeDefinition,
         });
+    }
+
+    fn end_type_spec(&mut self, _type_spec: Self::TypeSpec) {
+        // For the pretty printer type specs do not need any extra book keeping.
+        // Ending one does nothing because the spec is already over and doesn't
+        // change the builder's position.
     }
 
     fn start_function_type(&mut self) -> Self::FunctionTypeArguments {
