@@ -226,7 +226,7 @@ where
                         let tok_end = self.get_pos();
                         self.emit((tok_start, Token::PlusDot, tok_end));
                     }
-                    Some('=') | Some('+') => {
+                    Some('=' | '+') => {
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
                         return Err(LexicalError {
