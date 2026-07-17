@@ -440,28 +440,41 @@ comment so it is not attached to any definition.",
                     type_,
                     names,
                 } => {
-                    let mut text = String::new();
-                    text.push_str(
-                        "\
+                    let (title, text) = match kind {
+                        TodoKind::Keyword => {
+                            let text = "\
 This code will crash if it is run. Be sure to finish it before
-running your program.",
-                    );
-                    let title = match kind {
-                        TodoKind::Keyword => "Todo found",
-                        TodoKind::EmptyBlock => {
-                            text.push_str(
-                                "
-A block must always contain at least one expression.",
-                            );
-                            "Incomplete block"
+running your program.";
+
+                            ("Todo found", text)
                         }
-                        TodoKind::EmptyFunction { .. } => "Unimplemented function",
+
+                        TodoKind::EmptyBlock => {
+                            let text = "\
+A block must always contain at least one expression.
+
+A todo expression has been use in place of the missing code,
+so this code will crash if it is run. Be sure to finish it before
+running your program.";
+                            ("Incomplete block", text)
+                        }
+                        TodoKind::EmptyFunction { .. } => {
+                            let text = "\
+A function must always have an implementation.
+
+A todo expression has been use in place of the missing body,
+so this code will crash if it is run. Be sure to finish it before
+running your program.";
+                            ("Unimplemented function", text)
+                        }
                         TodoKind::IncompleteUse => {
-                            text.push_str(
-                                "
-A use expression must always be followed by at least one expression.",
-                            );
-                            "Incomplete use expression"
+                            let text = "\
+A use expression must always be followed by at least one expression.
+
+A todo expression has been use in place of the missing code, so
+this code will crash if it is run. Be sure to finish it before
+running your program.";
+                            ("Incomplete use expression", text)
                         }
                     }
                     .into();
@@ -476,8 +489,8 @@ A use expression must always be followed by at least one expression.",
                     };
 
                     Diagnostic {
-                        title,
-                        text,
+                        title: title.into(),
+                        text: text.into(),
                         level: diagnostic::Level::Warning,
                         location: Some(Location {
                             path: path.to_path_buf(),

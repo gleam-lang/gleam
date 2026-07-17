@@ -16,6 +16,8 @@ warning: Incomplete block
 3 │     {}
   │     ^^ This code is incomplete
 
-This code will crash if it is run. Be sure to finish it before
-running your program.
 A block must always contain at least one expression.
+
+A todo expression has been use in place of the missing code,
+so this code will crash if it is run. Be sure to finish it before
+running your program.
