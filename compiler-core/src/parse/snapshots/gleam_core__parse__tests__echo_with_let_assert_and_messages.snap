@@ -62,6 +62,7 @@ expression: let assert 1 = echo 1 as this_belongs_to_echo as this_belongs_to_ass
             compiled_case: CompiledCase {
                 tree: Fail,
                 subject_variables: [],
+                unreachable: {},
             },
             annotation: None,
         },

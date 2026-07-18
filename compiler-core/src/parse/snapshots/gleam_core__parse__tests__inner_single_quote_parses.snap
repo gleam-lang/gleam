@@ -34,6 +34,7 @@ expression: "\nlet a = \"inner 'quotes'\"\n"
             compiled_case: CompiledCase {
                 tree: Fail,
                 subject_variables: [],
+                unreachable: {},
             },
             annotation: None,
         },

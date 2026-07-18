@@ -61,6 +61,7 @@ expression: "let assert [x]: List(Int) = [2]"
             compiled_case: CompiledCase {
                 tree: Fail,
                 subject_variables: [],
+                unreachable: {},
             },
             annotation: Some(
                 Constructor(

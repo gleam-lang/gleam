@@ -7,6 +7,7 @@ mod tests;
 
 use crate::build::Target;
 use crate::erlang::pattern::{AliasedLiteral, PatternGenerator};
+use crate::exhaustiveness::CompiledCase;
 use crate::strings::to_snake_case;
 use crate::type_::{self, is_prelude_module};
 use crate::{
@@ -1027,8 +1028,8 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // Control flow.
             //
             TypedExpr::Case {
-                subjects, clauses, ..
-            } => self.case(builder, subjects, clauses),
+                subjects, clauses, compiled_case, ..
+            } => self.case(builder, subjects, clauses, compiled_case),
 
             //
             // Something went wrong!
@@ -2108,6 +2109,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         builder: &mut impl ErlangBuilder<Output>,
         subjects: &'a [TypedExpr],
         clauses: &'a [TypedClause],
+        compiled_case: &'a CompiledCase,
     ) {
         let case = builder.start_case();
 
@@ -2125,10 +2127,12 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             }
         }
 
-        for clause in clauses {
+        for (clause_index, clause) in clauses.iter().enumerate() {
             let taken_names_before_clause = self.taken_names.clone();
 
-            self.clause_branch(builder, &clause.pattern, clause);
+            if !compiled_case.unreachable.contains(&(clause_index, 0)) {
+                self.clause_branch(builder, &clause.pattern, clause);
+            }
 
             // Erlang doesn't support alternative patterns so we're gonna have
             // to turn those into separate branches!
@@ -2156,7 +2160,12 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // end
             // ```
             //
-            for pattern in &clause.alternative_patterns {
+            for (alt_offset, pattern) in clause.alternative_patterns.iter().enumerate() {
+                let pattern_index = alt_offset + 1; // same as typechecking
+                if compiled_case.unreachable.contains(&(clause_index, pattern_index)) {
+                    continue;
+                }
+
                 self.taken_names = taken_names_before_clause.clone();
                 self.clause_branch(builder, pattern, clause);
             }

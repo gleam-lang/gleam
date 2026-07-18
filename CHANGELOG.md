@@ -55,6 +55,9 @@
   in a consistent alphabetical order.
   ([Zbyněk Juřica](https://github.com/zbyju))
 
+- The Erlang code generator no longer emits unreachable `case` clauses.
+  ([Jack Programs](https://github.com/jackprogramsjp))
+
 ### Build tool
 
 - The build tool now generates Hexdocs URLs using the new format of

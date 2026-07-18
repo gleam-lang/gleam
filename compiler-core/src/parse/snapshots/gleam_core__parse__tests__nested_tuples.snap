@@ -59,6 +59,7 @@ expression: "\nlet tup = #(#(5, 6))\n{tup.0}.1\n"
             compiled_case: CompiledCase {
                 tree: Fail,
                 subject_variables: [],
+                unreachable: {},
             },
             annotation: None,
         },
