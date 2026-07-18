@@ -95,6 +95,10 @@ pub trait ErlangBuilder<Output> {
     /// Represents an open function call that has yet to be closed.
     type Call;
 
+    /// Represents an open function call where the called expression still has
+    /// to be generated.
+    type CalledExpression;
+
     /// Represents an open case expression that has yet to be closed.
     type Case;
 
@@ -676,13 +680,15 @@ pub trait ErlangBuilder<Output> {
 
     /// This starts a function call.
     /// The expression generated immediately after this is going to be the thing
-    /// that is called, followed by its arguments.
+    /// that is called, after generating it you must call the
+    /// `end_called_expression` function and generate its arguments.
     ///
     /// For example:
     ///
     /// ```ignore
     /// let call = builder.start_call();
     /// builder.atom("wibble")
+    /// let call = builder.end_called_expression(call);
     /// builder.string("Hello");
     /// builder.string("Giacomo");
     /// builder.end_call(call);
@@ -694,7 +700,12 @@ pub trait ErlangBuilder<Output> {
     /// wibble(~"Hello", ~"Giacomo").
     /// ```
     ///
-    fn start_call(&mut self) -> Self::Call;
+    fn start_call(&mut self) -> Self::CalledExpression;
+
+    /// This must be called after generating the expression that is called in a
+    /// function call. After that you can generate the arguments of the function
+    /// call.
+    fn end_called_expression(&mut self, called: Self::CalledExpression) -> Self::Call;
 
     /// This takes an open call and closes it.
     /// Code generated after this is not gonna be an argument to this call.
@@ -1700,6 +1711,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
     type BitArray = ();
     type BitArrayPattern = ();
     type Block = ();
+    type CalledExpression = ();
     type Call = ();
     type Case = ();
     type CaseSubject = ();
@@ -2102,6 +2114,21 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
                 expected: ExpectedCallItem::FunctionToBeCalled,
                 called_item_needs_wrapping: false,
             });
+    }
+
+    fn end_called_expression(&mut self, _called: Self::CalledExpression) -> Self::Call {
+        // We need to make sure that just a single expression was generated as
+        // the called expression.
+        // So we can assert that we're no longer expecting the called expression
+        // but the arguments, and none has been generated yet.
+        self.pop_leftover_items();
+        let Some(ErlangSourceBuilderPosition::FunctionCall {
+            expected: ExpectedCallItem::Arguments { first: true },
+            ..
+        }) = self.position.last()
+        else {
+            invalid_code_for_position!(self, "end called expression")
+        };
     }
 
     fn end_call(&mut self, _call: Self::Call) {

@@ -1045,6 +1045,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
         let call = builder.start_call();
         builder.atom("echo");
+        let call = builder.end_called_expression(call);
 
         // Echo has 4 arguments: the expression to print...
         match printed_value {
@@ -2003,7 +2004,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 } else {
                     let call = builder.start_call();
                     builder.atom(escape_erlang_existing_name(name));
-                    call
+                    builder.end_called_expression(call)
                 };
                 for argument in arguments {
                     self.maybe_block_expr(builder, &argument.value);
@@ -2016,6 +2017,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             FunctionCall::DirectCall => {
                 let call = builder.start_call();
                 self.maybe_block_expr(builder, fun);
+                let call = builder.end_called_expression(call);
                 for argument in arguments {
                     self.maybe_block_expr(builder, &argument.value);
                 }
@@ -2058,7 +2060,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 } else {
                     let call = builder.start_call();
                     builder.atom(escape_erlang_existing_name(name));
-                    call
+                    builder.end_called_expression(call)
                 };
                 for argument in arguments {
                     self.runtime_value(builder, argument);
@@ -2072,6 +2074,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             FunctionCall::DirectCall => {
                 let call = builder.start_call();
                 self.maybe_block_expr(builder, fun);
+                let call = builder.end_called_expression(call);
                 for argument in arguments {
                     self.runtime_value(builder, argument);
                 }
