@@ -2221,6 +2221,7 @@ impl CompileCaseResult {
 pub struct CompiledCase {
     pub tree: Decision,
     pub subject_variables: Vec<Variable>,
+    pub unreachable: HashSet<(usize, usize)>, // (clause_index, pattern_index)
 }
 
 impl CompiledCase {
@@ -2228,6 +2229,7 @@ impl CompiledCase {
         Self {
             tree: Decision::Fail,
             subject_variables: vec![],
+            unreachable: HashSet::new(),
         }
     }
 
@@ -2243,6 +2245,7 @@ impl CompiledCase {
         Self {
             tree: Decision::Run { body },
             subject_variables: vec![variable],
+            unreachable: HashSet::new(),
         }
     }
 }
@@ -3585,6 +3588,7 @@ impl CaseToCompile {
             compiled_case: CompiledCase {
                 tree: decision,
                 subject_variables: self.subject_variables,
+                unreachable: HashSet::new(),
             },
         }
     }

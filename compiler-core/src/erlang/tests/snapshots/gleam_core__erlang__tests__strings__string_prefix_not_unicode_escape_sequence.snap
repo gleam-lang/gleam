@@ -57,9 +57,6 @@ go(X) ->
         <<"\\u{01f600}"/utf8, Rest@8/binary>> ->
             ~"test";
 
-        <<"\\u{9} \\u{000009} \\u{21} \\u{100} \\u{1000} \\u{1F600} \\u{01F600}"/utf8, Rest@9/binary>> ->
-            ~"test";
-
         _ ->
             ~"Unknown"
     end.

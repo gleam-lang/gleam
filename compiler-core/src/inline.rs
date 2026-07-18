@@ -1163,6 +1163,7 @@ impl Inliner<'_> {
         let compiled_case = CompiledCase {
             tree: self.decision(compiled_case.tree),
             subject_variables: compiled_case.subject_variables,
+            unreachable: compiled_case.unreachable,
         };
 
         TypedExpr::Case {
