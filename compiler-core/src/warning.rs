@@ -453,7 +453,7 @@ running your program.";
                             let text = "\
 A block must always contain at least one expression.
 
-A todo expression has been use in place of the missing code,
+A todo expression has been used in place of the missing code,
 so this code will crash if it is run. Be sure to finish it before
 running your program.";
                             ("Incomplete block", text)
@@ -462,7 +462,7 @@ running your program.";
                             let text = "\
 A function must always have an implementation.
 
-A todo expression has been use in place of the missing body,
+A todo expression has been used in place of the missing body,
 so this code will crash if it is run. Be sure to finish it before
 running your program.";
                             ("Unimplemented function", text)
@@ -471,7 +471,7 @@ running your program.";
                             let text = "\
 A use expression must always be followed by at least one expression.
 
-A todo expression has been use in place of the missing code, so
+A todo expression has been used in place of the missing code, so
 this code will crash if it is run. Be sure to finish it before
 running your program.";
                             ("Incomplete use expression", text)

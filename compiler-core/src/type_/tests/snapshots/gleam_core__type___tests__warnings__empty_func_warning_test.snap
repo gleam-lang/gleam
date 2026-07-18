@@ -16,6 +16,6 @@ warning: Unimplemented function
 
 A function must always have an implementation.
 
-A todo expression has been use in place of the missing body,
+A todo expression has been used in place of the missing body,
 so this code will crash if it is run. Be sure to finish it before
 running your program.
