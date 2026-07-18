@@ -61,6 +61,7 @@ expression: "let assert [x] = [2]"
             compiled_case: CompiledCase {
                 tree: Fail,
                 subject_variables: [],
+                unreachable: {},
             },
             annotation: None,
         },
