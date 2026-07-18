@@ -2201,7 +2201,9 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
         let clause_guards = builder.end_clause_pattern(clause_pattern);
         if let Some(guard) = clause.guard.as_ref() {
+            let guard_ender = builder.start_clause_guard();
             self.clause_guard(builder, guard, &variables_to_add_later);
+            builder.end_clause_guard(guard_ender);
         }
 
         // Finally we can generate the clause body. If the clause is

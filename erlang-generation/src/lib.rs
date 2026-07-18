@@ -111,6 +111,9 @@ pub trait ErlangBuilder<Output> {
     /// Represents a set of clause guards that has yet to be closed.
     type ClauseGuards;
 
+    /// Represents a single clause guard that has yet to be closed.
+    type Guard;
+
     /// Represents an open clause body that has yet to be closed.
     type ClauseBody;
 
@@ -936,6 +939,37 @@ pub trait ErlangBuilder<Output> {
     /// that function without generating anything inbetween.
     fn end_clause_pattern(&mut self, clause_pattern: Self::ClausePattern) -> Self::ClauseGuards;
 
+    /// You must call this before generating the guard of a case clause.
+    /// For example:
+    ///
+    /// ```ignore
+    /// let case = builder.start_case();
+    /// builder.variable("wibble");
+    /// let case = builder.end_case_subject();
+    ///
+    /// let clause = builder.start_case_clause();
+    /// builder.discard_pattern();
+    /// let clause = builder.end_clause_pattern();
+    /// let guard = builder.start_clause_guard();
+    /// builder.atom("true");
+    /// builder.builder.end_clause_guard(guard);
+    /// let clause = builder.end_clause_guards();
+    /// builder.int(1.into());
+    /// builder.end_clause_body();
+    ///
+    /// builder.end_case(case);
+    /// ```
+    ///
+    /// A clause might have multiple guards but, the way Gleam is compiled, you
+    /// should always call this function just once. A gleam guard is always
+    /// compiled as a single erlang guard with a single expression.
+    ///
+    fn start_clause_guard(&mut self) -> Self::Guard;
+
+    /// This ends an open clause guards. Anything that is generated after
+    /// this is going to be a new guard among the guards of a case's guards.
+    fn end_clause_guard(&mut self, clause_guard: Self::Guard);
+
     /// This ends the case clause's guards. Anything that is generated after
     /// this is going to be a statement inside the current case clause until
     /// `end_clause_body` is called.
@@ -1491,6 +1525,8 @@ enum ErlangSourceBuilderPosition {
     /// in two steps: first we generate the name, second we generate the type of
     /// the field.
     RecordField { expected: ExpectedRecordFieldItem },
+    /// We're generating a guard in a possible series of guards in a clause.
+    ClauseGuard,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -1714,6 +1750,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
     type CalledExpression = ();
     type Call = ();
     type Case = ();
+    type Guard = ();
     type CaseSubject = ();
     type ClauseBody = ();
     type ClauseGuards = ();
@@ -2302,6 +2339,15 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         });
     }
 
+    fn start_clause_guard(&mut self) -> Self::Guard {
+        self.new_clause_guard();
+        self.position.push(ErlangSourceBuilderPosition::ClauseGuard);
+    }
+
+    fn end_clause_guard(&mut self, _clause_guard: Self::Guard) {
+        self.close_currently_open_item();
+    }
+
     fn end_clause_guards(&mut self, _clause_guards: Self::ClauseGuards) -> Self::ClauseBody {
         self.close_currently_open_item();
         self.indentation += INDENT;
@@ -2666,13 +2712,7 @@ impl ErlangSourceBuilder {
                 }
             }
 
-            ErlangSourceBuilderPosition::CaseClause {
-                expected:
-                    ExpectedCaseClauseItem::Guards {
-                        first: first @ true,
-                    },
-            } => {
-                *first = false;
+            ErlangSourceBuilderPosition::ClauseGuard => {
                 self.code.push_str(" when ");
             }
 
@@ -2731,7 +2771,7 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::Map { .. }
             | ErlangSourceBuilderPosition::RecordAttribute { .. }
             | ErlangSourceBuilderPosition::CaseClause {
-                expected: ExpectedCaseClauseItem::Guards { first: false },
+                expected: ExpectedCaseClauseItem::Guards { .. },
             }
             | ErlangSourceBuilderPosition::BitArraySegment {
                 expected: BitArraySegmentExpectedItem::Specifiers,
@@ -2818,6 +2858,7 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::AnonymousFunctionStatement { .. }
             | ErlangSourceBuilderPosition::UnaryOperator
             | ErlangSourceBuilderPosition::Case { .. }
+            | ErlangSourceBuilderPosition::ClauseGuard
             | ErlangSourceBuilderPosition::BinaryOperator { .. }
             | ErlangSourceBuilderPosition::CaseClause { .. }
             | ErlangSourceBuilderPosition::Map { .. }
@@ -2941,6 +2982,7 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::UnaryOperator
             | ErlangSourceBuilderPosition::BinaryOperator { .. }
             | ErlangSourceBuilderPosition::Case { .. }
+            | ErlangSourceBuilderPosition::ClauseGuard
             | ErlangSourceBuilderPosition::Map { .. }
             | ErlangSourceBuilderPosition::MapField { .. }
             | ErlangSourceBuilderPosition::MatchOperator {
@@ -3088,6 +3130,7 @@ impl ErlangSourceBuilder {
                 self.code.push_str("end");
             }
 
+            ErlangSourceBuilderPosition::ClauseGuard => (),
             ErlangSourceBuilderPosition::CaseClause { expected } => match expected {
                 ExpectedCaseClauseItem::Pattern => (),
                 // When the guards of a case clause are over we need to add the
@@ -3191,6 +3234,7 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::BinaryOperator { .. }
             | ErlangSourceBuilderPosition::Case { .. }
             | ErlangSourceBuilderPosition::CaseClause { .. }
+            | ErlangSourceBuilderPosition::ClauseGuard
             | ErlangSourceBuilderPosition::Map { .. }
             | ErlangSourceBuilderPosition::MapField { .. }
             | ErlangSourceBuilderPosition::MatchPattern { .. }
@@ -3271,6 +3315,21 @@ impl ErlangSourceBuilder {
             self.code.push_str(",\n")
         }
         self.code.push_str(&" ".repeat(self.indentation))
+    }
+
+    fn new_clause_guard(&mut self) {
+        self.pop_leftover_items();
+        let Some(ErlangSourceBuilderPosition::CaseClause {
+            expected:
+                ExpectedCaseClauseItem::Guards {
+                    first: first @ true,
+                },
+        }) = self.position.last_mut()
+        else {
+            invalid_code_for_position!(self, "new clause guard");
+        };
+
+        *first = false;
     }
 
     /// You can call this before generating any expression (before the
@@ -3464,6 +3523,7 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::BitArray { .. }
             | ErlangSourceBuilderPosition::Map { .. }
             | ErlangSourceBuilderPosition::Block { .. }
+            | ErlangSourceBuilderPosition::ClauseGuard
             | ErlangSourceBuilderPosition::UnaryOperator
             | ErlangSourceBuilderPosition::FunctionType {
                 expected:
