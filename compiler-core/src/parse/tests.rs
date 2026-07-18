@@ -372,6 +372,14 @@ fn merge_conflict_equals() {
 }
 
 #[test]
+fn merge_conflict_equals_snapshot() {
+    assert_error!(
+        "let wobble: Int = 32
+        ======="
+    );
+}
+
+#[test]
 fn six_equals_not_merge_conflict() {
     assert_error!(
         "let wobble: Int = 32
@@ -414,6 +422,14 @@ fn merge_conflict_lt_with_head() {
             },
             location: SrcSpan { start: 29, end: 36 },
         }
+    );
+}
+
+#[test]
+fn merge_conflict_lt_with_head_snapshot() {
+    assert_error!(
+        "let wobble: Int = 32
+        <<<<<<< HEAD"
     );
 }
 
@@ -488,6 +504,14 @@ fn merge_conflict_gt_with_branch_name() {
             },
             location: SrcSpan { start: 29, end: 36 },
         }
+    );
+}
+
+#[test]
+fn merge_conflict_gt_with_branch_name_snapshot() {
+    assert_error!(
+        "let wobble: Int = 32
+        >>>>>>> main"
     );
 }
 
