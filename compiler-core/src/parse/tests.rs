@@ -356,8 +356,10 @@ fn triple_equals_with_whitespace() {
 
 #[test]
 fn invalid_assignment_shorthand_plus_equals_snap() {
-    assert_error!("let wobble: Int = 32
-wobble += 1");
+    assert_error!(
+        "let wobble: Int = 32
+wobble += 1"
+    );
 }
 
 #[test]
