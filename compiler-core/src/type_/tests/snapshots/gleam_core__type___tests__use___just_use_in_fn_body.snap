@@ -22,6 +22,6 @@ warning: Incomplete use expression
 
 A use expression must always be followed by at least one expression.
 
-A todo expression has been use in place of the missing code, so
+A todo expression has been used in place of the missing code, so
 this code will crash if it is run. Be sure to finish it before
 running your program.
