@@ -11,13 +11,14 @@ use crate::{
     Result,
     ast::{
         AssignName, AssignmentKind, BitArrayOption, BitArraySize, ClauseGuard, Constant, Pattern,
-        SrcSpan, Statement, UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedFunction,
+        Statement, UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedFunction,
         UntypedModuleConstant, UntypedPattern, UntypedStatement,
     },
     type_::Error,
 };
 use itertools::Itertools;
 use petgraph::{Directed, stable_graph::NodeIndex, stable_graph::StableGraph};
+use src_span::SrcSpan;
 
 #[derive(Debug, Default)]
 struct CallGraphBuilder<'a> {

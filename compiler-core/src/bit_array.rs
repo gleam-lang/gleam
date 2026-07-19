@@ -4,9 +4,10 @@
 use ecow::EcoString;
 use num_bigint::BigInt;
 
-use crate::ast::{self, BitArrayOption, SrcSpan};
+use crate::ast::{self, BitArrayOption};
 use crate::build::Target;
 use crate::type_::Type;
+use src_span::SrcSpan;
 use std::sync::Arc;
 
 //

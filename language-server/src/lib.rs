@@ -78,11 +78,9 @@ mod tests;
 pub use server::LanguageServer;
 
 use camino::Utf8PathBuf;
-use gleam_core::{
-    Result, ast::SrcSpan, build::Target, line_numbers::LineNumbers, manifest::Manifest,
-    paths::ProjectPaths,
-};
+use gleam_core::{Result, build::Target, manifest::Manifest, paths::ProjectPaths};
 use lsp_types::{Position, Range, TextEdit, Uri as Url};
+use src_span::{LineNumbers, SrcSpan};
 use std::any::Any;
 
 #[derive(Debug)]
@@ -101,8 +99,8 @@ pub trait DownloadDependencies {
 }
 
 pub fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> Range {
-    let start = line_numbers.line_and_column_number(location.start);
-    let end = line_numbers.line_and_column_number(location.end);
+    let start = line_numbers.line_and_utf16_column_number(location.start);
+    let end = line_numbers.line_and_utf16_column_number(location.end);
 
     Range::new(
         Position::new(start.line - 1, start.column - 1),

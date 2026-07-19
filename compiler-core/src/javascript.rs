@@ -12,25 +12,21 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-use debug_ignore::DebugIgnore;
-use num_bigint::BigInt;
-use num_traits::ToPrimitive;
-use sourcemap::SourceMap;
-
+use crate::ast::{Import, *};
 use crate::build::Target;
 use crate::build::package_compiler::StdlibPackage;
 use crate::codegen::TypeScriptDeclarations;
-use crate::line_numbers::LineColumn;
 use crate::type_::{PRELUDE_MODULE_NAME, RecordAccessor};
-use crate::{
-    ast::{Import, *},
-    line_numbers::LineNumbers,
-};
 use camino::Utf8Path;
+use debug_ignore::DebugIgnore;
 use ecow::{EcoString, eco_format};
 use expression::Context;
 use itertools::Itertools;
+use num_bigint::BigInt;
+use num_traits::ToPrimitive;
 use pretty_arena::*;
+use sourcemap::SourceMap;
+use src_span::{LineColumn, LineNumbers, SrcSpan};
 
 use self::import::{Imports, Member};
 
@@ -1381,7 +1377,7 @@ fn create_cursor_position_observer<'a, 'doc>(
     line_numbers: &LineNumbers,
     start_index: u32,
 ) -> Document<'a, 'doc> {
-    let start_location = line_numbers.line_and_column_number(start_index);
+    let start_location = line_numbers.line_and_utf16_column_number(start_index);
     arena.position_observer(match builder {
         None => Rc::new(RefCell::new(NullCursorPositionObserver)),
         Some(builder) => Rc::new(RefCell::new(SourceMapCursorPositionObserver::new(

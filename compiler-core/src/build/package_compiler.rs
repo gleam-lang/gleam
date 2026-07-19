@@ -8,13 +8,13 @@ use crate::analyse::TargetSupport;
 use crate::build::package_loader::CacheFiles;
 
 use crate::error::{DefinedModuleOrigin, FailedModule, SkipReason, SkippedModule};
-use crate::line_numbers::LineNumbers;
+
 use crate::metadata;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::type_::printer::Names;
 use crate::{
     Error, Result, Warning,
-    ast::{SrcSpan, UntypedModule},
+    ast::UntypedModule,
     build::{
         Mode, Module, Origin, Outcome, SourceFingerprint, Target,
         elixir_libraries::ElixirLibraries,
@@ -31,6 +31,7 @@ use crate::{
 };
 use askama::Template;
 use ecow::EcoString;
+use src_span::{LineNumbers, SrcSpan};
 use std::{
     collections::{HashMap, HashSet},
     time::SystemTime,
