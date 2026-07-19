@@ -430,6 +430,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Incorrect Hex one-time-password")]
     IncorrectHexOneTimePassword,
 
+    #[error("Hex release not found")]
+    HexReleaseNotFound { package: String, version: String },
+
     #[error("{path} could not be added to the tarball as it is outside the project root")]
     TarPathOutsideOfProjectRoot { path: Utf8PathBuf },
 
@@ -2521,6 +2524,18 @@ add `gleam add {name}` in this project."
                 level: Level::Error,
                 location: None,
                 hint: None,
+            }],
+
+            Error::HexReleaseNotFound { package, version } => vec![Diagnostic {
+                title: "Release not found".into(),
+                text: wrap_format!(
+                    "There is no version {version} of the package {package} on Hex."
+                ),
+                level: Level::Error,
+                location: None,
+                hint: Some(
+                    "Check that the package name and version are correct.".into(),
+                ),
             }],
         }
     }
