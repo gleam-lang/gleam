@@ -217,7 +217,7 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                 // We first generate a segment matching on the literal prefix.
                 builder.bit_array_segment();
                 builder.string_pattern(left_side_string);
-                builder.atom("deafult");
+                builder.bit_array_segment_default_size();
                 builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Utf8]);
 
                 // We then add a segment matching on the rest of the string.
@@ -228,7 +228,7 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                     ),
                     AssignName::Discard(_) => builder.discard_pattern(),
                 }
-                builder.atom("default");
+                builder.bit_array_segment_default_size();
                 builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Binary]);
 
                 builder.end_bit_array_pattern(bit_array);
@@ -383,7 +383,7 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
         segment: &'a TypedPatternBitArraySegment,
     ) {
         let Some(size) = segment.size() else {
-            builder.atom("default");
+            builder.bit_array_segment_default_size();
             return;
         };
         let TypedPattern::BitArraySize(size) = size else {

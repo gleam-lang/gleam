@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/erlang/tests/case.rs
+assertion_line: 239
+expression: "\npub fn go(x) {\n  case x {\n    [\"a\" as letter <> rest, ..]\n    | [\"b\" as letter <> rest, ..] -> letter <> rest\n    _ -> \"\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    ["a" as letter <> rest, ..]
+    | ["b" as letter <> rest, ..] -> letter <> rest
+    _ -> ""
+  }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([go/1]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec go(list(binary())) -> binary().
+go(X) ->
+    case X of
+        [<<"a":(deafult)/utf8, Rest/binary>> | _] ->
+            Letter = ~"a",
+            <<Letter/binary, Rest/binary>>;
+
+        [<<"b":(deafult)/utf8, Rest/binary>> | _] ->
+            Letter = ~"b",
+            <<Letter/binary, Rest/binary>>;
+
+        _ ->
+            ~""
+    end.

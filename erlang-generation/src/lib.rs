@@ -790,13 +790,13 @@ pub trait ErlangBuilder<Output> {
     ///
     /// builder.bit_array_segment();
     /// builder.int(1);
-    /// builder.atom("default");
-    /// builder.atom("default");
+    /// builder.bit_array_segment_default_size();
+    /// builder.bit_array_segment_specifiers([]);
     ///
     /// builder.bit_array_segment();
     /// builder.string("hello");
-    /// builder.atom("deafult");
-    /// builder.atom("default");
+    /// builder.bit_array_segment_default_size();
+    /// builder.bit_array_segment_specifiers([]);
     ///
     /// builder.end_bit_array(bit_array);
     /// ```
@@ -836,6 +836,11 @@ pub trait ErlangBuilder<Output> {
     /// If you wanna check an example of how this is used you can have a read at
     /// the ones in `start_bit_array`.
     fn bit_array_segment(&mut self);
+
+    /// You can call this when a bit array segment has no explicit size, and the
+    /// default Erlang behaviour is fine.
+    ///
+    fn bit_array_segment_default_size(&mut self);
 
     /// This generates a specifiers list for the currently open bit array
     /// segment.
@@ -1189,13 +1194,13 @@ pub trait ErlangBuilder<Output> {
     ///
     /// builder.bit_array_pattern_segment();
     /// builder.int_pattern(1);
-    /// builder.atom("default");
-    /// builder.atom("default");
+    /// builder.bit_array_segment_default_size();
+    /// builder.bit_array_segment_specifiers([]);
     ///
     /// builder.bit_array_pattern_segment();
     /// builder.discard_pattern();
-    /// builder.atom("deafult");
-    /// builder.atom("default");
+    /// builder.bit_array_segment_default_size();
+    /// builder.bit_array_segment_specifiers([]);
     ///
     /// builder.end_bit_array_pattern(bit_array);
     /// ```
@@ -2230,6 +2235,28 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
             })
     }
 
+    fn bit_array_segment_default_size(&mut self) {
+        if let Some(ErlangSourceBuilderPosition::BitArraySegment {
+            expected: expected @ BitArraySegmentExpectedItem::Size,
+            segment_value_needs_wrapping,
+            segment_size_needs_wrapping,
+        }) = self.position.last_mut()
+        {
+            // We are now expecting to see the specifiers list
+            *expected = BitArraySegmentExpectedItem::Specifiers;
+            if *segment_value_needs_wrapping {
+                self.code.push(')');
+                *segment_value_needs_wrapping = false;
+            }
+            // We have the default atom as a size, that means we don't have to
+            // print anything at all! The size doesn't need any wrapping because
+            // there's no size at all.
+            *segment_size_needs_wrapping = false;
+        } else {
+            invalid_code_for_position!(self, "segment default size");
+        }
+    }
+
     fn bit_array_segment_specifiers(
         &mut self,
         specifiers: impl IntoIterator<Item = BitArraySegmentSpecifier>,
@@ -2516,32 +2543,8 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
     }
 
     fn atom(&mut self, name: &str) {
-        // There's one special case where we actually don't want to push the
-        // atom's text at all. That's when we're generating the `default` atom
-        // as the size of a bit array segment.
-        // That's how we can tell in the Erlang Abstract Format that the size
-        // should be the default value, but it's not actually spelled out in
-        // textual Erlang code.
-        if let Some(ErlangSourceBuilderPosition::BitArraySegment {
-            expected: expected @ BitArraySegmentExpectedItem::Size,
-            segment_value_needs_wrapping,
-            segment_size_needs_wrapping,
-        }) = self.position.last_mut()
-        {
-            // We are new expecting to see the specifiers list
-            *expected = BitArraySegmentExpectedItem::Specifiers;
-            if *segment_value_needs_wrapping {
-                self.code.push(')');
-                *segment_value_needs_wrapping = false;
-            }
-            // We have the default atom as a size, that means we don't have to
-            // print anything at all! The size doesn't need any wrapping because
-            // there's no size at all.
-            *segment_size_needs_wrapping = false;
-        } else {
-            self.new_expression();
-            self.code.push_str(&quote_atom_name(name));
-        }
+        self.new_expression();
+        self.code.push_str(&quote_atom_name(name));
     }
 }
 
