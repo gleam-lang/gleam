@@ -132,3 +132,13 @@ fn int_divide_with_no_side_effect_as_argument() {
 fn int_divide_with_possible_side_effect_as_argument() {
     assert_erl!("pub fn main(wibble, a, b) { wibble(a() / b) }")
 }
+
+#[test]
+fn negated_binop_is_parenthesised() {
+    assert_erl!("pub fn wibble(a, b) { !{ a || b } }")
+}
+
+#[test]
+fn negated_binop_is_parenthesised_2() {
+    assert_erl!("pub fn wibble(a, b, c) { !{ a && b || c } }")
+}
