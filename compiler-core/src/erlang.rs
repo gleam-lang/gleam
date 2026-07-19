@@ -2356,7 +2356,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 builder.int(BigInt::ZERO);
             }
             Some(size) => self.inlined_constant(builder, size),
-            None => builder.atom("default"),
+            None => builder.bit_array_segment_default_size(),
         }
         self.bit_array_segment_specifiers(builder, segment);
     }
@@ -2450,7 +2450,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
             builder.bit_array_segment();
             self.inlined_constant(builder, segment);
-            builder.atom("default");
+            builder.bit_array_segment_default_size();
             builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Utf8]);
         }
         builder.end_bit_array(bit_array);
@@ -2481,7 +2481,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // `default` atom.
         builder.bit_array_segment();
         self.maybe_block_expr(builder, value);
-        builder.atom("default");
+        builder.bit_array_segment_default_size();
         builder.bit_array_segment_specifiers(if produces_literal_string(value) {
             [BitArraySegmentSpecifier::Utf8]
         } else {
@@ -2752,7 +2752,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     // to add the binary option and we can call it a day.
                     builder.bit_array_segment();
                     self.maybe_block_expr(builder, &segment.value);
-                    builder.atom("default");
+                    builder.bit_array_segment_default_size();
                     builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Binary]);
                     return;
                 }
@@ -2781,7 +2781,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             }
             builder.end_call(call);
 
-            builder.atom("default");
+            builder.bit_array_segment_default_size();
             builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Binary]);
         } else {
             // If the bit array segment doesn't need any special handling we use the
@@ -2804,7 +2804,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         segment: &'a TypedExprBitArraySegment,
     ) {
         let Some(size) = segment.size() else {
-            builder.atom("default");
+            builder.bit_array_segment_default_size();
             return;
         };
 
@@ -2953,7 +2953,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // `default` atom.
         builder.bit_array_segment();
         self.clause_guard(builder, guard, assignments);
-        builder.atom("default");
+        builder.bit_array_segment_default_size();
         builder.bit_array_segment_specifiers(if guard_produces_literal_string(guard) {
             [BitArraySegmentSpecifier::Utf8]
         } else {
