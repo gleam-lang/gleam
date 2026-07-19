@@ -3579,15 +3579,13 @@ pub fn record_definition(record_name: &str, fields: &[(SrcSpan, &str, Arc<Type>)
     builder.into_output()
 }
 
-pub fn module<'a>(
+pub fn module<'a, Output>(
+    mut builder: impl ErlangBuilder<Output>,
     module: &'a TypedModule,
-    line_numbers: LineNumbers,
+    line_numbers: &'a LineNumbers,
     root: &'a Utf8Path,
-) -> String {
-    let mut generator = Generator::new(module, &line_numbers, root);
-
-    let module_name = ErlangModuleName::new(&module.name);
-    let mut builder = ErlangSourceBuilder::new(Some(module_name));
+) -> Output {
+    let mut generator = Generator::new(module, line_numbers, root);
     generator.module_document(&mut builder);
     builder.into_output()
 }
