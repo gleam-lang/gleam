@@ -232,3 +232,10 @@ pub fn divide_by_0_test() {
   let right = 0.0
   assert left /. right == 0.0
 }
+
+pub fn negative_float_test() {
+  let one = -1.1
+  let other = 1.1
+  assert one != other
+  assert one *. -1.0 == other
+}
