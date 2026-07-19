@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2023 The Gleam contributors
 
 use ecow::EcoString;
+use src_span::SrcSpan;
 
 use crate::{
-    ast::{Publicity, SrcSpan, UnqualifiedImport, UntypedImport},
+    ast::{Publicity, UnqualifiedImport, UntypedImport},
     build::Origin,
     reference::{EntityKind, ReferenceKind},
     type_::{

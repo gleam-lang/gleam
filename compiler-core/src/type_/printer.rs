@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2024 The Gleam contributors
 
+use crate::type_::{Type, TypeAliasConstructor, TypeVar};
 use bimap::{BiHashMap, BiMap};
 use ecow::{EcoString, eco_format};
 use im::HashMap;
+use src_span::SrcSpan;
 use std::{collections::HashSet, sync::Arc};
-
-use crate::{
-    ast::SrcSpan,
-    type_::{Type, TypeAliasConstructor, TypeVar},
-};
 
 /// This class keeps track of what names are used for modules in the current
 /// scope, so they can be printed in errors, etc.

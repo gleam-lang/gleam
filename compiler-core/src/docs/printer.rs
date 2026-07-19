@@ -10,8 +10,8 @@ use ecow::{EcoString, eco_format};
 
 use crate::{
     ast::{
-        ArgNames, CustomType, Function, Publicity, RecordConstructorArg, SrcSpan, TypeAlias,
-        TypedArg, TypedDefinitions, TypedModuleConstant, TypedRecordConstructor,
+        ArgNames, CustomType, Function, Publicity, RecordConstructorArg, TypeAlias, TypedArg,
+        TypedDefinitions, TypedModuleConstant, TypedRecordConstructor,
     },
     type_::{
         Deprecation, PRELUDE_MODULE_NAME, PRELUDE_PACKAGE_NAME, Type, TypeVar,
@@ -19,6 +19,7 @@ use crate::{
     },
 };
 use pretty_arena::*;
+use src_span::SrcSpan;
 
 use super::{
     Dependency, DependencyKind, DocsValues, TypeConstructor, TypeConstructorArg, TypeDefinition,

@@ -8,7 +8,7 @@ use gleam_core::{
     analyse::name::correct_name_case,
     ast::{
         self, Constant, CustomType, DefinitionLocation, ModuleConstant, PatternUnusedArguments,
-        SrcSpan, TypedArg, TypedClauseGuard, TypedConstant, TypedExpr, TypedFunction, TypedModule,
+        TypedArg, TypedClauseGuard, TypedConstant, TypedExpr, TypedFunction, TypedModule,
         TypedPattern, TypedRecordConstructor,
     },
     build::{
@@ -16,7 +16,6 @@ use gleam_core::{
     },
     config::PackageConfig,
     io::{BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter},
-    line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
         self, Deprecation, ModuleInterface, Type, TypeConstructor, ValueConstructor,
@@ -33,6 +32,7 @@ use lsp_types::{
     MarkupContent, Position, PrepareRenameResult, Range, SignatureHelp, SymbolKind, SymbolTag,
     TextEdit, Uri as Url, WorkspaceEdit,
 };
+use src_span::{LineNumbers, SrcSpan};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,

@@ -13,14 +13,8 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 // TODO: emit warnings for cached modules even if they are not compiled again.
 
-use ecow::EcoString;
-use itertools::Itertools;
-use regex::Regex;
-use vec1::Vec1;
-
 use crate::{
     Error, Result,
-    ast::SrcSpan,
     build::{Origin, module_loader::ModuleLoader},
     dep_tree,
     error::{DefinedModuleOrigin, FileIoAction, FileKind, ImportCycleLocationDetails},
@@ -31,6 +25,11 @@ use crate::{
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
 };
+use ecow::EcoString;
+use itertools::Itertools;
+use regex::Regex;
+use src_span::SrcSpan;
+use vec1::Vec1;
 
 use super::{
     Mode, Target,

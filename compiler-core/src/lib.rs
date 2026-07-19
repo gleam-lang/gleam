@@ -81,7 +81,6 @@ pub mod error;
 pub mod hex;
 pub mod io;
 pub mod javascript;
-pub mod line_numbers;
 pub mod manifest;
 pub mod metadata;
 pub mod package_interface;

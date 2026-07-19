@@ -28,19 +28,19 @@ use printer::Names;
 use crate::{
     ast::{
         ArgNames, BitArraySegment, CallArg, Constant, DefinitionLocation, Pattern, Publicity,
-        SrcSpan, TypedConstant, TypedExpr, TypedPattern, TypedPatternBitArraySegment,
-        UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg,
+        TypedConstant, TypedExpr, TypedPattern, TypedPatternBitArraySegment, UntypedMultiPattern,
+        UntypedPattern, UntypedRecordUpdateArg,
     },
     bit_array,
     build::{Origin, Target},
     inline::InlinableFunction,
-    line_numbers::LineNumbers,
     reference::{LabelDefinition, LabelReference, ModuleNameReference, RecordLabel, ReferenceMap},
     type_::expression::Implementations,
 };
 use error::*;
 use hydrator::Hydrator;
 use itertools::Itertools;
+use src_span::{LineNumbers, SrcSpan};
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},

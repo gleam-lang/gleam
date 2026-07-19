@@ -3,10 +3,10 @@
 
 use ecow::EcoString;
 
-use crate::ast::SrcSpan;
 use crate::parse::LiteralFloatValue;
 use crate::parse::error::{LexicalError, LexicalErrorType};
 use crate::parse::token::Token;
+use src_span::SrcSpan;
 use std::char;
 use std::ops::Neg;
 
