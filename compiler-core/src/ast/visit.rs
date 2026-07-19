@@ -59,13 +59,14 @@ use std::sync::Arc;
 
 use ecow::EcoString;
 use num_bigint::BigInt;
+use src_span::SrcSpan;
 use vec1::Vec1;
 
 use crate::type_::Type;
 
 use super::{
     AssignName, BinOp, BitArrayOption, CallArg, Pattern, PipelineAssignmentKind, RecordUpdateArg,
-    SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssert, TypedAssignment, TypedClause,
+    Statement, TodoKind, TypeAst, TypedArg, TypedAssert, TypedAssignment, TypedClause,
     TypedClauseGuard, TypedConstant, TypedCustomType, TypedExpr, TypedExprBitArraySegment,
     TypedFunction, TypedModule, TypedModuleConstant, TypedPattern, TypedPatternBitArraySegment,
     TypedPipelineAssignment, TypedStatement, TypedUse, untyped::FunctionLiteralKind,

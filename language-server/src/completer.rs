@@ -10,6 +10,7 @@ use lsp_types::{
     Documentation, MarkupContent, MarkupKind, Position, Range, TextDocumentPositionParams,
     TextEdit,
 };
+use src_span::{LineNumbers, SrcSpan};
 use strum::IntoEnumIterator;
 use vec1::Vec1;
 
@@ -20,7 +21,6 @@ use gleam_core::{
         visit::Visit,
     },
     build::{Module, Origin},
-    line_numbers::LineNumbers,
     parse::{LiteralFloatValue, parse_int_value},
     type_::{
         self, Deprecation, FieldMap, ModuleInterface, PRELUDE_MODULE_NAME, PreludeType,
@@ -468,10 +468,12 @@ impl<'a, IO> Completer<'a, IO> {
             ))))
         } else {
             // Find where to start and end the import completion
-            let start = self.src_line_numbers.line_and_column_number(start_of_line);
+            let start = self
+                .src_line_numbers
+                .line_and_utf16_column_number(start_of_line);
             let end = self
                 .src_line_numbers
-                .line_and_column_number(end_of_line - 1);
+                .line_and_utf16_column_number(end_of_line - 1);
             let start = Position::new(start.line - 1, start.column + 6);
             let end = Position::new(end.line - 1, end.column - 1);
             let completions = self.complete_modules_for_import(start, end);
@@ -1541,7 +1543,7 @@ impl<'ast> Visit<'ast> for LocalCompletion<'_> {
 
     fn visit_typed_expr_fn(
         &mut self,
-        location: &'ast ast::SrcSpan,
+        location: &'ast SrcSpan,
         _: &'ast Arc<Type>,
         _: &'ast FunctionLiteralKind,
         arguments: &'ast [ast::TypedArg],
@@ -1561,7 +1563,7 @@ impl<'ast> Visit<'ast> for LocalCompletion<'_> {
 
     fn visit_typed_expr_block(
         &mut self,
-        location: &'ast ast::SrcSpan,
+        location: &'ast SrcSpan,
         statements: &'ast [ast::TypedStatement],
     ) {
         // If we are completing after the block, any locally defined variables
@@ -1583,7 +1585,7 @@ impl<'ast> Visit<'ast> for LocalCompletion<'_> {
 
     fn visit_typed_pattern_variable(
         &mut self,
-        _: &'ast ast::SrcSpan,
+        _: &'ast SrcSpan,
         name: &'ast EcoString,
         type_: &'ast Arc<Type>,
         _origin: &'ast VariableOrigin,
@@ -1593,7 +1595,7 @@ impl<'ast> Visit<'ast> for LocalCompletion<'_> {
 
     fn visit_typed_pattern_discard(
         &mut self,
-        _: &'ast ast::SrcSpan,
+        _: &'ast SrcSpan,
         name: &'ast EcoString,
         type_: &'ast Arc<Type>,
     ) {
@@ -1602,10 +1604,10 @@ impl<'ast> Visit<'ast> for LocalCompletion<'_> {
 
     fn visit_typed_pattern_string_prefix(
         &mut self,
-        _: &'ast ast::SrcSpan,
-        _: &'ast ast::SrcSpan,
-        _: &'ast Option<(EcoString, ast::SrcSpan)>,
-        _: &'ast ast::SrcSpan,
+        _: &'ast SrcSpan,
+        _: &'ast SrcSpan,
+        _: &'ast Option<(EcoString, SrcSpan)>,
+        _: &'ast SrcSpan,
         _: &'ast EcoString,
         right_side_assignment: &'ast ast::AssignName,
     ) {
@@ -1614,7 +1616,7 @@ impl<'ast> Visit<'ast> for LocalCompletion<'_> {
 
     fn visit_typed_pattern_assign(
         &mut self,
-        _: &'ast ast::SrcSpan,
+        _: &'ast SrcSpan,
         name: &'ast EcoString,
         pattern: &'ast Pattern<Arc<Type>>,
     ) {

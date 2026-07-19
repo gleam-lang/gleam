@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
 use crate::{
-    ast::{BitArraySegmentTruncation, SrcSpan, TodoKind},
+    ast::{BitArraySegmentTruncation, TodoKind},
     build::Target,
     diagnostic::{self, Diagnostic, ExtraLabel, Location},
     error::wrap,
@@ -21,6 +21,7 @@ use camino::Utf8PathBuf;
 use debug_ignore::DebugIgnore;
 use ecow::EcoString;
 use itertools::Itertools;
+use src_span::SrcSpan;
 use std::{
     io::Write,
     sync::{Arc, atomic::Ordering},

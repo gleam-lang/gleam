@@ -223,16 +223,15 @@ mod tests {
     use ecow::EcoString;
 
     use super::Printer;
-    use std::{collections::HashMap, sync::Arc};
-
     use crate::{
-        ast::SrcSpan,
         exhaustiveness::{
             Variable,
             missing_patterns::{Term, VariantField},
         },
         type_::{Type, printer::Names},
     };
+    use src_span::SrcSpan;
+    use std::{collections::HashMap, sync::Arc};
 
     /// Create a variable with a dummy type, for ease of writing tests
     fn make_variable(id: usize) -> Variable {
