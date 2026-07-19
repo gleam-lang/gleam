@@ -96,11 +96,11 @@ fn echo<Output>(builder: &mut impl ErlangBuilder<Output>) {
 
     builder.match_operator(location);
     builder.variable_pattern(location, "Grey");
-    builder.string(location, "\\e[90m");
+    builder.string(location, "\\u{1B}[90m");
 
     builder.match_operator(location);
     builder.variable_pattern(location, "ResetColour");
-    builder.string(location, "\\e[39m");
+    builder.string(location, "\\u{1B}[39m");
 
     // Finally, we piece everything together and print it.
     // io:put_chars(
