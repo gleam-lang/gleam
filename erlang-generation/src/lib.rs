@@ -2266,20 +2266,24 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
     }
 
     fn binary_operator(&mut self, operator: &'static str) {
-        self.new_expression();
+        self.pop_leftover_items();
 
         // If this new binary operator we're generating is part of a bigger
         // binary operator (it doesn't matter if on the left or right-hand
         // side), then we want to wrap it in parentheses to avoid precedence
         // confusion!
         let needs_wrapping = match self.position.last() {
-            Some(ErlangSourceBuilderPosition::BinaryOperator { .. }) => {
-                self.code.push('(');
-                true
-            }
+            Some(
+                ErlangSourceBuilderPosition::BinaryOperator { .. }
+                | ErlangSourceBuilderPosition::UnaryOperator,
+            ) => true,
             Some(_) | None => false,
         };
 
+        self.new_expression();
+        if needs_wrapping {
+            self.code.push('(');
+        }
         self.position
             .push(ErlangSourceBuilderPosition::BinaryOperator {
                 expected: ExpectedBinaryOperatorSide::Left,

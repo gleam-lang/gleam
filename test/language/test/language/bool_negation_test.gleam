@@ -20,3 +20,8 @@ pub fn negation_false_or_panic_test() {
   let bool = !False
   bool || panic
 }
+
+pub fn negation_correctly_parenthesised() {
+  let bool = !{ True || False }
+  assert !bool
+}
