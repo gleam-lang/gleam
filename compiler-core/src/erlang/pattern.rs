@@ -6,6 +6,7 @@ use erlang_generation::BitArraySegmentSpecifier;
 use crate::{analyse::Inferred, parse::LiteralFloatValue};
 
 use super::*;
+use src_span::SrcSpan;
 
 /// This is used to generate the code for a pattern.
 /// Most Gleam patterns can be translated to Erlang in a pretty straightforward

@@ -4,6 +4,7 @@
 use std::time::SystemTime;
 
 use camino::Utf8PathBuf;
+use src_span::LineNumbers;
 
 use crate::analyse::TargetSupport;
 use crate::config::PackageConfig;
@@ -13,7 +14,6 @@ use crate::{build, inline};
 use crate::{
     build::{Origin, Target},
     erlang::module,
-    line_numbers::LineNumbers,
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
 };

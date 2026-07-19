@@ -38,6 +38,7 @@ use num_bigint::{BigInt, Sign};
 use num_traits::{One, ToPrimitive};
 #[cfg(test)]
 use pretty_assertions::assert_eq;
+use src_span::SrcSpan;
 use vec1::Vec1;
 
 pub const PIPE_VARIABLE: &str = "_pipe";
@@ -2779,64 +2780,6 @@ impl TypedClauseGuard {
                 span: *definition_location,
             }),
         }
-    }
-}
-
-#[derive(
-    Debug,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Default,
-    Clone,
-    Copy,
-    serde::Serialize,
-    serde::Deserialize,
-    Hash,
-)]
-pub struct SrcSpan {
-    pub start: u32,
-    pub end: u32,
-}
-
-impl SrcSpan {
-    pub fn new(start: u32, end: u32) -> Self {
-        Self { start, end }
-    }
-
-    pub fn contains(&self, byte_index: u32) -> bool {
-        byte_index >= self.start && byte_index <= self.end
-    }
-
-    pub fn contains_span(&self, span: SrcSpan) -> bool {
-        self.contains(span.start) && self.contains(span.end)
-    }
-
-    /// Merges two spans into a new one that starts at the start of the smaller
-    /// one and ends at the end of the bigger one. For example:
-    ///
-    /// ```txt
-    /// wibble    wobble
-    /// ─┬────    ─┬────
-    ///  │         ╰─ one span
-    ///  ╰─ the other span
-    /// ─┬──────────────
-    ///  ╰─ the span you get by merging the two
-    /// ```
-    pub fn merge(&self, with: &SrcSpan) -> SrcSpan {
-        Self {
-            start: self.start.min(with.start),
-            end: self.end.max(with.end),
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    pub fn len(&self) -> usize {
-        (self.end - self.start) as usize
     }
 }
 

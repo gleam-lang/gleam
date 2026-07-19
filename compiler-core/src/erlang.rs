@@ -11,7 +11,6 @@ use crate::strings::to_snake_case;
 use crate::type_::{self, is_prelude_module};
 use crate::{
     ast::*,
-    line_numbers::LineNumbers,
     type_::{
         ModuleValueConstructor, PatternConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
         ValueConstructorVariant,
@@ -26,6 +25,7 @@ use itertools::Itertools;
 use num_bigint::BigInt;
 use num_traits::Signed;
 use regex::Regex;
+use src_span::{LineNumbers, SrcSpan};
 use std::collections::VecDeque;
 use std::sync::OnceLock;
 use std::{collections::HashMap, ops::Deref, sync::Arc};

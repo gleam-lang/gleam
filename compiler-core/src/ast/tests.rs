@@ -9,13 +9,12 @@ use ecow::EcoString;
 use crate::analyse::TargetSupport;
 use crate::build::{ExpressionPosition, Origin, Target};
 use crate::config::PackageConfig;
-use crate::line_numbers::LineNumbers;
 use crate::type_::error::{VariableDeclaration, VariableOrigin, VariableSyntax};
 use crate::type_::expression::{FunctionDefinition, Purity};
 use crate::type_::{Deprecation, PRELUDE_MODULE_NAME, Problems};
 use crate::warning::WarningEmitter;
 use crate::{
-    ast::{BinOp, SrcSpan, TypedExpr},
+    ast::{BinOp, TypedExpr},
     build::Located,
     type_::{
         self, AccessorsMap, EnvironmentArguments, ExprTyper, FieldMap, ModuleValueConstructor,
@@ -24,6 +23,7 @@ use crate::{
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
 };
+use src_span::{LineNumbers, SrcSpan};
 
 use super::{Publicity, Statement, TypedModule, TypedStatement};
 

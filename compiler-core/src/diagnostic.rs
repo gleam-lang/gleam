@@ -5,12 +5,12 @@ use std::collections::HashMap;
 
 use camino::Utf8PathBuf;
 
+use crate::error::wrap;
 pub use codespan_reporting::diagnostic::{LabelStyle, Severity};
 use codespan_reporting::{diagnostic::Label as CodespanLabel, files::SimpleFiles};
 use ecow::EcoString;
+use src_span::SrcSpan;
 use termcolor::Buffer;
-
-use crate::{ast::SrcSpan, error::wrap};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Level {

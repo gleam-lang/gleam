@@ -9,12 +9,11 @@ use crate::build::package_loader::CacheFiles;
 
 use crate::error::{DefinedModuleOrigin, FailedModule, SkipReason, SkippedModule};
 use crate::io::files_with_extension;
-use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::type_::printer::Names;
 use crate::{
     Error, Result, Warning,
-    ast::{SrcSpan, TypedModule, UntypedModule},
+    ast::{TypedModule, UntypedModule},
     build::{
         Mode, Module, Origin, Outcome, Package, SourceFingerprint, Target,
         elixir_libraries::ElixirLibraries,
@@ -34,6 +33,7 @@ use crate::{inline, metadata};
 use askama::Template;
 use ecow::EcoString;
 use itertools::Itertools;
+use src_span::{LineNumbers, SrcSpan};
 use std::collections::HashSet;
 use std::{collections::HashMap, fmt::write, time::SystemTime};
 use vec1::Vec1;

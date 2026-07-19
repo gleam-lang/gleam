@@ -48,6 +48,7 @@ bitvec = { version = "1", features = ["serde"] }
 sourcemap = "9"
 indexmap = "2.12.1"
 
+src-span.workspace = true
 num-bigint.workspace = true
 num-traits.workspace = true
 async-trait.workspace = true

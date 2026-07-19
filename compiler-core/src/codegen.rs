@@ -10,11 +10,11 @@ use crate::{
     erlang,
     io::FileSystemWriter,
     javascript::{self, ModuleConfig},
-    line_numbers::LineNumbers,
 };
 use ecow::EcoString;
 use erlang::escape_atom_string;
 use itertools::Itertools;
+use src_span::LineNumbers;
 use std::fmt::Debug;
 
 use camino::Utf8Path;

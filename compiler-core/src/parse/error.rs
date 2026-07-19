@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
-use crate::ast::{RecordConstructorArg, SrcSpan, TypeAst};
+use crate::ast::{RecordConstructorArg, TypeAst};
 use crate::diagnostic::{ExtraLabel, Label};
 use crate::error::{wrap, wrap_format};
 use crate::parse::Token;
 use ecow::EcoString;
 use itertools::Itertools;
+use src_span::SrcSpan;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct LexicalError {

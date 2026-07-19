@@ -11,6 +11,7 @@ license = "Apache-2.0"
 [dependencies]
 gleam-core = { path = "../compiler-core" }
 pretty-arena = { path = "../pretty-arena" }
+src-span.workspace = true
 itertools.workspace = true
 vec1.workspace = true
 camino.workspace = true

@@ -1,9 +1,76 @@
 // SPDX-License-Identifier: Apache-2.0
-// SPDX-FileCopyrightText: 2021 The Gleam contributors
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
 
-use crate::ast::SrcSpan;
 use lsp_types::Position;
 use std::collections::HashMap;
+
+#[cfg(test)]
+mod tests;
+
+#[derive(
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Default,
+    Clone,
+    Copy,
+    serde::Serialize,
+    serde::Deserialize,
+    Hash,
+)]
+pub struct SrcSpan {
+    pub start: u32,
+    pub end: u32,
+}
+
+impl SrcSpan {
+    pub fn new(start: u32, end: u32) -> Self {
+        Self { start, end }
+    }
+
+    pub fn contains(&self, byte_index: u32) -> bool {
+        byte_index >= self.start && byte_index <= self.end
+    }
+
+    pub fn contains_span(&self, span: SrcSpan) -> bool {
+        self.contains(span.start) && self.contains(span.end)
+    }
+
+    /// Merges two spans into a new one that starts at the start of the smaller
+    /// one and ends at the end of the bigger one. For example:
+    ///
+    /// ```txt
+    /// wibble    wobble
+    /// ─┬────    ─┬────
+    ///  │         ╰─ one span
+    ///  ╰─ the other span
+    /// ─┬──────────────
+    ///  ╰─ the span you get by merging the two
+    /// ```
+    pub fn merge(&self, with: &SrcSpan) -> SrcSpan {
+        Self {
+            start: self.start.min(with.start),
+            end: self.end.max(with.end),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn len(&self) -> usize {
+        (self.end - self.start) as usize
+    }
+}
+
+/// A 1-index line and column position
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LineColumn {
+    pub line: u32,
+    pub column: u32,
+}
 
 /// A struct which contains information about line numbers of a source file,
 /// and can convert between byte offsets that are used in the compiler and
@@ -80,8 +147,24 @@ impl LineNumbers {
     }
 
     /// Returns the 1-indexed line and column number of a given byte index,
+    /// using a UTF-8 character offset.
+    pub fn line_and_utf8_column_number(&self, byte_index: u32) -> LineColumn {
+        let line = self.line_number(byte_index);
+        let line_start = self
+            .line_starts
+            .get(line as usize - 1)
+            .copied()
+            .unwrap_or_default();
+
+        LineColumn {
+            line,
+            column: byte_index - line_start,
+        }
+    }
+
+    /// Returns the 1-indexed line and column number of a given byte index,
     /// using a UTF-16 character offset.
-    pub fn line_and_column_number(&self, byte_index: u32) -> LineColumn {
+    pub fn line_and_utf16_column_number(&self, byte_index: u32) -> LineColumn {
         let line = self.line_number(byte_index);
         let line_start = self
             .line_starts
@@ -147,128 +230,4 @@ impl LineNumbers {
             line_start == span.start && self.line_starts.contains(&(span.end + 1))
         })
     }
-}
-
-#[test]
-fn byte_index() {
-    let src = r#"import gleam/io
-
-pub fn main() {
-  io.println("Hello, world!")
-}
-"#;
-    let line_numbers = LineNumbers::new(src);
-
-    assert_eq!(
-        line_numbers.byte_index(Position {
-            line: 0,
-            character: 0
-        }),
-        0
-    );
-    assert_eq!(
-        line_numbers.byte_index(Position {
-            line: 0,
-            character: 4
-        }),
-        4
-    );
-    assert_eq!(
-        line_numbers.byte_index(Position {
-            line: 100,
-            character: 0
-        }),
-        src.len() as u32
-    );
-    assert_eq!(
-        line_numbers.byte_index(Position {
-            line: 2,
-            character: 1
-        }),
-        18
-    );
-}
-
-// https://github.com/gleam-lang/gleam/issues/3628
-#[test]
-fn byte_index_with_multibyte_characters() {
-    let src = r#"fn wibble(_a, _b, _c) {
-  todo
-}
-
-pub fn main() {
-  wibble("क्षि", 10, <<"abc">>)
-}
-"#;
-    let line_numbers = LineNumbers::new(src);
-
-    assert_eq!(
-        line_numbers.byte_index(Position {
-            line: 1,
-            character: 6
-        }),
-        30
-    );
-    assert_eq!(
-        line_numbers.byte_index(Position {
-            line: 5,
-            character: 2
-        }),
-        52
-    );
-    assert_eq!(
-        line_numbers.byte_index(Position {
-            line: 5,
-            character: 17
-        }),
-        75
-    );
-    assert_eq!(
-        line_numbers.byte_index(Position {
-            line: 6,
-            character: 1
-        }),
-        91
-    );
-}
-
-// https://github.com/gleam-lang/gleam/issues/3628
-#[test]
-fn line_and_column_with_multibyte_characters() {
-    let src = r#"fn wibble(_a, _b, _c) {
-  todo
-}
-
-pub fn main() {
-  wibble("क्षि", 10, <<"abc">>)
-}
-"#;
-    let line_numbers = LineNumbers::new(src);
-
-    assert_eq!(
-        line_numbers.line_and_column_number(30),
-        LineColumn { line: 2, column: 7 }
-    );
-    assert_eq!(
-        line_numbers.line_and_column_number(52),
-        LineColumn { line: 6, column: 3 }
-    );
-    assert_eq!(
-        line_numbers.line_and_column_number(75),
-        LineColumn {
-            line: 6,
-            column: 18
-        }
-    );
-    assert_eq!(
-        line_numbers.line_and_column_number(91),
-        LineColumn { line: 7, column: 2 }
-    );
-}
-
-/// A 1-index line and column position
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct LineColumn {
-    pub line: u32,
-    pub column: u32,
 }

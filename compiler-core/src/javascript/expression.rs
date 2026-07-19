@@ -8,7 +8,6 @@ use super::{decision::ASSIGNMENT_VAR, *};
 use crate::{
     ast::*,
     exhaustiveness::StringEncoding,
-    line_numbers::LineNumbers,
     type_::{
         ModuleValueConstructor, Type, TypedCallArg, ValueConstructor, ValueConstructorVariant,
     },

@@ -128,7 +128,7 @@ use crate::{
     ast::{
         self, ArgNames, Assert, AssignName, Assignment, AssignmentKind, BitArrayOption,
         BitArraySegment, BitArraySize, CallArg, Clause, FunctionLiteralKind, Pattern,
-        PipelineAssignmentKind, Publicity, SrcSpan, Statement, TailPattern, TypedArg, TypedAssert,
+        PipelineAssignmentKind, Publicity, Statement, TailPattern, TypedArg, TypedAssert,
         TypedAssignment, TypedBitArraySize, TypedClause, TypedDefinitions, TypedExpr,
         TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern,
         TypedPipelineAssignment, TypedStatement, TypedUse, visit::Visit,
@@ -142,6 +142,7 @@ use crate::{
         expression::{Implementations, Purity},
     },
 };
+use src_span::SrcSpan;
 
 /// Perform function inlining across an entire module, applying it to each
 /// individual function.

@@ -11,12 +11,12 @@ use gleam_core::{
     build::{self, Mode, Module, NullTelemetry, Outcome, ProjectCompiler},
     config::PackageConfig,
     io::{BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
-    line_numbers::LineNumbers,
     manifest::Manifest,
     paths::ProjectPaths,
     type_::ModuleInterface,
     warning::VectorWarningEmitterIO,
 };
+use src_span::LineNumbers;
 use std::{collections::HashMap, rc::Rc};
 
 use camino::Utf8PathBuf;

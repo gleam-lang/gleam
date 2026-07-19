@@ -3,13 +3,14 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::ast::{Publicity, SrcSpan};
+use crate::ast::Publicity;
 use bimap::{BiMap, Overwritten};
 use ecow::EcoString;
 use petgraph::{
     Directed, Direction,
     stable_graph::{NodeIndex, StableGraph},
 };
+use src_span::SrcSpan;
 
 /// Describes one of a number of situations where references can be generated.
 /// See each variant for an explanation.

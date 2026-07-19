@@ -9,11 +9,10 @@ use super::*;
 use crate::{
     analyse::Inferred,
     ast::{
-        BitArrayOption, BitArraySegment, CallArg, Constant, Publicity, SrcSpan, TypedConstant,
+        BitArrayOption, BitArraySegment, CallArg, Constant, Publicity, TypedConstant,
         TypedConstantBitArraySegmentOption,
     },
     build::Origin,
-    line_numbers::LineNumbers,
     parse::LiteralFloatValue,
     reference::{ModuleNameReference, Reference, ReferenceKind},
     type_::{
@@ -25,6 +24,7 @@ use crate::{
     },
     uid::UniqueIdGenerator,
 };
+use src_span::{LineNumbers, SrcSpan};
 use std::{collections::HashMap, sync::Arc};
 
 use pretty_assertions::assert_eq;
