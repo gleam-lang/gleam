@@ -3,6 +3,7 @@
 
 use ecow::EcoString;
 use hexpm::version::Version;
+use src_span::LineNumbers;
 
 use super::*;
 use crate::{
@@ -10,7 +11,6 @@ use crate::{
     build::SourceFingerprint,
     build::package_compiler::CacheMetadata,
     io::{FileSystemWriter, memory::InMemoryFileSystem},
-    line_numbers,
     type_::References,
 };
 
@@ -39,7 +39,7 @@ fn write_cache(
     deps: Vec<(EcoString, SrcSpan)>,
     src: &str,
 ) {
-    let line_numbers = line_numbers::LineNumbers::new(src);
+    let line_numbers = LineNumbers::new(src);
     let mtime = SystemTime::UNIX_EPOCH + Duration::from_secs(seconds);
     let cache_metadata = CacheMetadata {
         mtime,
