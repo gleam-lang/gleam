@@ -11,6 +11,7 @@ license = "Apache-2.0"
 [dependencies]
 # Encoding values in the erlang term format
 erlang-term-format = { path = "../erlang-term-format" }
+src-span.workspace = true
 itertools.workspace = true
 num-bigint.workspace = true
 num-traits.workspace = true

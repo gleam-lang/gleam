@@ -6,7 +6,8 @@ use itertools::Itertools;
 use num_bigint::BigInt;
 use num_traits::Zero;
 use regex::Regex;
-use std::sync::OnceLock;
+use src_span::{LineColumn, LineNumbers, SrcSpan};
+use std::{string, sync::OnceLock};
 
 /// This is to raise an `unreachable` pretty printed error when we try producing
 /// some piece of code that is not allowed in the current position.
@@ -190,7 +191,7 @@ pub trait ErlangBuilder<Output> {
     /// It's optional because it might not always be needed. For example when
     /// producing `-record` annotations there's no need to have a module name.
     ///
-    fn new(module_name: Option<ErlangModuleName>) -> Self;
+    fn new(module_info: Option<(ErlangModuleName, LineNumbers)>) -> Self;
 
     /// Consumes the given `ErlangBuilder` turning it into some other
     /// representation.
@@ -501,7 +502,7 @@ pub trait ErlangBuilder<Output> {
     /// This starts a tuple type.
     /// Any code generated after this is gonna be one of the tuple items.
     ///
-    /// For example:
+    /// For example:n
     ///
     /// ```ignore
     /// let tuple = builder.start_tuple_type();
@@ -612,9 +613,10 @@ pub trait ErlangBuilder<Output> {
     ///
     fn start_function<Name: AsRef<str>>(
         &mut self,
+        location: SrcSpan,
         name: &str,
         arity: usize,
-        arguments_names: impl IntoIterator<Item = Name>,
+        arguments_names: impl IntoIterator<Item = (SrcSpan, Name)>,
     ) -> Self::Function;
 
     /// This starts an expression defining an anonymous function.
@@ -637,7 +639,8 @@ pub trait ErlangBuilder<Output> {
     ///
     fn start_anonymous_function<Name: AsRef<str>>(
         &mut self,
-        arguments_names: impl IntoIterator<Item = Name>,
+        location: SrcSpan,
+        arguments_names: impl IntoIterator<Item = (SrcSpan, Name)>,
     ) -> Self::Function;
 
     /// This takes a function and closes it.
@@ -667,7 +670,7 @@ pub trait ErlangBuilder<Output> {
     /// end.
     /// ```
     ///
-    fn start_block(&mut self) -> Self::Block;
+    fn start_block(&mut self, location: SrcSpan) -> Self::Block;
 
     /// This takes a block and closes it.
     /// Code generated after this is not gonna be part of this block.
@@ -692,7 +695,12 @@ pub trait ErlangBuilder<Output> {
     /// io:format(~"Giacomo").
     /// ```
     ///
-    fn start_remote_call(&mut self, module: ErlangModuleName, function: &str) -> Self::Call;
+    fn start_remote_call(
+        &mut self,
+        location: SrcSpan,
+        module: ErlangModuleName,
+        function: &str,
+    ) -> Self::Call;
 
     /// This starts a function call.
     /// The expression generated immediately after this is going to be the thing
@@ -716,7 +724,7 @@ pub trait ErlangBuilder<Output> {
     /// wibble(~"Hello", ~"Giacomo").
     /// ```
     ///
-    fn start_call(&mut self) -> Self::CalledExpression;
+    fn start_call(&mut self, location: SrcSpan) -> Self::CalledExpression;
 
     /// This must be called after generating the expression that is called in a
     /// function call. After that you can generate the arguments of the function
@@ -746,7 +754,7 @@ pub trait ErlangBuilder<Output> {
     /// {~"Hello", 1}.
     /// ```
     ///
-    fn start_tuple(&mut self) -> Self::Tuple;
+    fn start_tuple(&mut self, location: SrcSpan) -> Self::Tuple;
 
     /// This takes an open tuple and closes it.
     /// Code generated after this is not gonna be an item of the tuple.
@@ -780,7 +788,7 @@ pub trait ErlangBuilder<Output> {
     /// }.
     /// ```
     ///
-    fn start_map(&mut self) -> Self::Map;
+    fn start_map(&mut self, location: SrcSpan) -> Self::Map;
 
     /// This takes an open map and closes it.
     /// Code generated after this is not gonna be a map field.
@@ -791,7 +799,7 @@ pub trait ErlangBuilder<Output> {
     /// After calling this you must generate exactly two values: the first one
     /// is going to be the key, while the second one is going to be the
     /// associated value.
-    fn map_field(&mut self);
+    fn map_field(&mut self, location: SrcSpan);
 
     /// This starts an Erlang bitstring (that's a Gleam's BitArray).
     /// Any code generated after this is gonna be a segment of the bitstring.
@@ -820,7 +828,7 @@ pub trait ErlangBuilder<Output> {
     /// <<1, ~"hello">>.
     /// ```
     ///
-    fn start_bit_array(&mut self) -> Self::BitArray;
+    fn start_bit_array(&mut self, location: SrcSpan) -> Self::BitArray;
 
     /// This takes an open bit array and closes it.
     /// Code generated after this is not gonna be a segment of the bit array.
@@ -848,7 +856,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// If you wanna check an example of how this is used you can have a read at
     /// the ones in `start_bit_array`.
-    fn bit_array_segment(&mut self);
+    fn bit_array_segment(&mut self, location: SrcSpan);
 
     /// You can call this when a bit array segment has no explicit size, and the
     /// default Erlang behaviour is fine.
@@ -893,11 +901,11 @@ pub trait ErlangBuilder<Output> {
     /// [Hello, ~"Giacomo"]
     /// ```
     ///
-    fn cons_list(&mut self);
+    fn cons_list(&mut self, location: SrcSpan);
 
     /// This creates an empty list.
     ///
-    fn empty_list(&mut self);
+    fn empty_list(&mut self, location: SrcSpan);
 
     /// This starts a new case expression.
     /// After this function is called you're supposed to first generate a single
@@ -932,7 +940,7 @@ pub trait ErlangBuilder<Output> {
     /// end.
     /// ```
     ///
-    fn start_case(&mut self) -> Self::CaseSubject;
+    fn start_case(&mut self, location: SrcSpan) -> Self::CaseSubject;
 
     /// This ends the open case subject, after this you can start generating the
     /// case clauses.
@@ -949,7 +957,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For an example on how to generate a full case clause check the
     /// `start_case` documentation.
-    fn start_case_clause(&mut self) -> Self::ClausePattern;
+    fn start_case_clause(&mut self, location: SrcSpan) -> Self::ClausePattern;
 
     /// This ends the case clause's pattern. After this you must generate the
     /// clause guards and then call `end_clause_guards`.
@@ -1006,7 +1014,7 @@ pub trait ErlangBuilder<Output> {
     /// %            ^ This here!
     /// ```
     ///
-    fn variable(&mut self, name: &str);
+    fn variable(&mut self, location: SrcSpan, name: &str);
 
     /// This generated the code that is going to apply the given unary operator
     /// to the expression that is going to be generated next.
@@ -1023,7 +1031,7 @@ pub trait ErlangBuilder<Output> {
     /// -X.
     /// ```
     ///
-    fn unary_operator(&mut self, operator: &str);
+    fn unary_operator(&mut self, location: SrcSpan, operator: &str);
 
     /// This generated the code that is going to apply the given binary operator
     /// to the two expressions generated after it.
@@ -1041,7 +1049,7 @@ pub trait ErlangBuilder<Output> {
     /// X + 1.
     /// ```
     ///
-    fn binary_operator(&mut self, operator: &'static str);
+    fn binary_operator(&mut self, location: SrcSpan, operator: &'static str);
 
     /// This generates the code for a function reference.
     /// For example:
@@ -1058,7 +1066,13 @@ pub trait ErlangBuilder<Output> {
     /// fun io:format/2.
     /// ```
     ///
-    fn function_reference(&mut self, module: Option<ErlangModuleName>, name: &str, arity: usize);
+    fn function_reference(
+        &mut self,
+        location: SrcSpan,
+        module: Option<ErlangModuleName>,
+        name: &str,
+        arity: usize,
+    );
 
     /// This is used to create the code that corresponds to an assignment.
     /// A call to this function must always be followed by the generation of
@@ -1079,7 +1093,7 @@ pub trait ErlangBuilder<Output> {
     /// X = 1.
     /// ```
     ///
-    fn match_operator(&mut self);
+    fn match_operator(&mut self, location: SrcSpan);
 
     /// This is used to create the code that corresponds to a match pattern.
     /// A call to this function must always be followed by the generation of
@@ -1105,7 +1119,7 @@ pub trait ErlangBuilder<Output> {
     /// this only when generating code for Gleam's "as" patterns where the right
     /// hand side is just a variable pattern.
     ///
-    fn match_pattern(&mut self);
+    fn match_pattern(&mut self, location: SrcSpan);
 
     /// This creates a variable pattern with the given name.
     /// For example:
@@ -1116,7 +1130,7 @@ pub trait ErlangBuilder<Output> {
     /// % ^ This here!
     /// ```
     ///
-    fn variable_pattern(&mut self, name: &str);
+    fn variable_pattern(&mut self, location: SrcSpan, name: &str);
 
     /// This creates a discard pattern.
     /// For example:
@@ -1127,7 +1141,7 @@ pub trait ErlangBuilder<Output> {
     /// % ^ This here!
     /// ```
     ///
-    fn discard_pattern(&mut self);
+    fn discard_pattern(&mut self, location: SrcSpan);
 
     /// This creates an integer pattern.
     /// For example:
@@ -1138,7 +1152,7 @@ pub trait ErlangBuilder<Output> {
     /// % ^ This here!
     /// ```
     ///
-    fn int_pattern(&mut self, number: BigInt);
+    fn int_pattern(&mut self, location: SrcSpan, number: BigInt);
 
     /// This creates an integer pattern.
     /// For example:
@@ -1149,7 +1163,7 @@ pub trait ErlangBuilder<Output> {
     /// % ^ This here!
     /// ```
     ///
-    fn float_pattern(&mut self, number: f64);
+    fn float_pattern(&mut self, location: SrcSpan, number: f64);
 
     /// This creates a string pattern.
     /// For example:
@@ -1160,7 +1174,7 @@ pub trait ErlangBuilder<Output> {
     /// % ^^^^^^^^^^^^^^^^ This here!
     /// ```
     ///
-    fn string_pattern(&mut self, content: &str);
+    fn string_pattern(&mut self, location: SrcSpan, content: &str);
 
     /// This creates an atom pattern.
     /// For example:
@@ -1171,7 +1185,7 @@ pub trait ErlangBuilder<Output> {
     /// % ^^ This here!
     /// ```
     ///
-    fn atom_pattern(&mut self, name: &str);
+    fn atom_pattern(&mut self, location: SrcSpan, name: &str);
 
     /// This starts a tuple pattern.
     /// Any code generated after this is gonna be an item of the tuple pattern.
@@ -1191,7 +1205,7 @@ pub trait ErlangBuilder<Output> {
     /// {~"Hello", _}.
     /// ```
     ///
-    fn start_tuple_pattern(&mut self) -> Self::TuplePattern;
+    fn start_tuple_pattern(&mut self, location: SrcSpan) -> Self::TuplePattern;
 
     /// This takes an open tuple pattern and closes it.
     /// Any code generated after this is not gonna be part of that pattern.
@@ -1224,7 +1238,7 @@ pub trait ErlangBuilder<Output> {
     /// <<1, _>>.
     /// ```
     ///
-    fn start_bit_array_pattern(&mut self) -> Self::BitArrayPattern;
+    fn start_bit_array_pattern(&mut self, location: SrcSpan) -> Self::BitArrayPattern;
 
     /// This takes an open bit array pattern and closes it.
     /// Code generated after this is not gonna be a segment of the bit array.
@@ -1259,11 +1273,11 @@ pub trait ErlangBuilder<Output> {
     /// [_, ~"Louis"]
     /// ```
     ///
-    fn cons_list_pattern(&mut self);
+    fn cons_list_pattern(&mut self, location: SrcSpan);
 
     /// This creates a pattern matching on the empty list.
     ///
-    fn empty_list_pattern(&mut self);
+    fn empty_list_pattern(&mut self, location: SrcSpan);
 
     /// This creates a string literal, where the string is represented as a
     /// bit array with the utf8 bytes making up the string.
@@ -1288,7 +1302,7 @@ pub trait ErlangBuilder<Output> {
     /// <<107, 115, 105, 196, 133, 115, 107, 196, 153>>
     /// ```
     ///
-    fn string(&mut self, string: &str);
+    fn string(&mut self, location: SrcSpan, string: &str);
 
     /// This creates an integer literal from the given value.
     ///
@@ -1304,7 +1318,7 @@ pub trait ErlangBuilder<Output> {
     /// 2.
     /// ```
     ///
-    fn int(&mut self, value: BigInt);
+    fn int(&mut self, location: SrcSpan, value: BigInt);
 
     /// This creates a float literal from the given value.
     ///
@@ -1320,7 +1334,7 @@ pub trait ErlangBuilder<Output> {
     /// 1.2.
     /// ```
     ///
-    fn float(&mut self, value: f64);
+    fn float(&mut self, location: SrcSpan, value: f64);
 
     /// This creates a literal atom with the given name.
     ///
@@ -1336,7 +1350,7 @@ pub trait ErlangBuilder<Output> {
     /// wibble.
     /// ```
     ///
-    fn atom(&mut self, name: &str);
+    fn atom(&mut self, location: SrcSpan, name: &str);
 }
 
 /// A structure that implements the `ErlangBuilder` trait and produces a nice
@@ -1785,9 +1799,9 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
     type UnionType = ();
     type TypeSpec = ();
 
-    fn new(module: Option<ErlangModuleName>) -> Self {
+    fn new(module: Option<(ErlangModuleName, LineNumbers)>) -> Self {
         Self {
-            code: if let Some(module) = module {
+            code: if let Some((module, _)) = module {
                 format!("-module({}).\n", quote_atom_name(&module.0))
             } else {
                 String::new()
@@ -2057,16 +2071,17 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
 
     fn start_function<Name: AsRef<str>>(
         &mut self,
+        _location: SrcSpan,
         name: &str,
         _arity: usize,
-        arguments_names: impl IntoIterator<Item = Name>,
+        arguments_names: impl IntoIterator<Item = (SrcSpan, Name)>,
     ) -> Self::Function {
         self.new_top_level_form();
         self.code.push_str(&quote_atom_name(name));
         self.code.push('(');
 
         let mut first = true;
-        for argument in arguments_names {
+        for (_argument_location, argument) in arguments_names {
             if !first {
                 self.code.push_str(", ")
             } else {
@@ -2083,13 +2098,14 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
 
     fn start_anonymous_function<Name: AsRef<str>>(
         &mut self,
-        arguments_names: impl IntoIterator<Item = Name>,
+        _location: SrcSpan,
+        arguments_names: impl IntoIterator<Item = (SrcSpan, Name)>,
     ) -> Self::Function {
         self.new_expression();
         self.code.push_str("fun(");
 
         let mut first = true;
-        for argument in arguments_names {
+        for (_argument_location, argument) in arguments_names {
             if !first {
                 self.code.push_str(", ")
             } else {
@@ -2108,7 +2124,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.close_currently_open_item();
     }
 
-    fn start_block(&mut self) -> Self::Block {
+    fn start_block(&mut self, _location: SrcSpan) -> Self::Block {
         self.new_expression();
         self.code.push_str("begin");
         self.indentation += INDENT;
@@ -2120,7 +2136,12 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.close_currently_open_item();
     }
 
-    fn start_remote_call(&mut self, module: ErlangModuleName, function: &str) -> Self::Call {
+    fn start_remote_call(
+        &mut self,
+        _location: SrcSpan,
+        module: ErlangModuleName,
+        function: &str,
+    ) -> Self::Call {
         self.pop_leftover_items();
 
         // If this function call we're generating is itself being called then
@@ -2146,7 +2167,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
             });
     }
 
-    fn start_call(&mut self) -> Self::Call {
+    fn start_call(&mut self, _location: SrcSpan) -> Self::Call {
         self.pop_leftover_items();
 
         // If this function call we're generating is itself being called then
@@ -2188,7 +2209,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.close_currently_open_item();
     }
 
-    fn start_tuple(&mut self) -> Self::Tuple {
+    fn start_tuple(&mut self, _location: SrcSpan) -> Self::Tuple {
         self.new_expression();
         self.code.push('{');
         self.position
@@ -2199,7 +2220,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.close_currently_open_item();
     }
 
-    fn start_map(&mut self) -> Self::Map {
+    fn start_map(&mut self, _location: SrcSpan) -> Self::Map {
         self.new_expression();
         self.code.push_str("#{");
         self.indentation += INDENT;
@@ -2211,14 +2232,14 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.close_currently_open_item();
     }
 
-    fn map_field(&mut self) {
+    fn map_field(&mut self, _location: SrcSpan) {
         self.new_map_field();
         self.position.push(ErlangSourceBuilderPosition::MapField {
             expected: ExpectedMapFieldItem::Key,
         });
     }
 
-    fn start_bit_array(&mut self) -> Self::BitArray {
+    fn start_bit_array(&mut self, _location: SrcSpan) -> Self::BitArray {
         self.do_not_wrap_if_segment_value_or_size();
         self.new_expression();
         self.code.push_str("<<");
@@ -2232,7 +2253,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.close_currently_open_item();
     }
 
-    fn bit_array_segment(&mut self) {
+    fn bit_array_segment(&mut self, _location: SrcSpan) {
         let kind = self.new_bit_array_segment();
         self.position
             .push(ErlangSourceBuilderPosition::BitArraySegment {
@@ -2331,15 +2352,15 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.position.pop();
     }
 
-    fn cons_list(&mut self) {
+    fn cons_list(&mut self, _location: SrcSpan) {
         self.cons_list_of_kind(ListKind::Expression);
     }
 
-    fn empty_list(&mut self) {
+    fn empty_list(&mut self, _location: SrcSpan) {
         self.empty_list_of_kind(ListKind::Expression);
     }
 
-    fn start_case(&mut self) -> Self::Case {
+    fn start_case(&mut self, _location: SrcSpan) -> Self::Case {
         self.new_expression();
         self.code.push_str("case ");
         self.position.push(ErlangSourceBuilderPosition::Case {
@@ -2365,7 +2386,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.close_currently_open_item();
     }
 
-    fn start_case_clause(&mut self) -> Self::ClausePattern {
+    fn start_case_clause(&mut self, _location: SrcSpan) -> Self::ClausePattern {
         self.new_case_clause();
         self.position.push(ErlangSourceBuilderPosition::CaseClause {
             expected: ExpectedCaseClauseItem::Pattern,
@@ -2400,13 +2421,13 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.close_currently_open_item();
     }
 
-    fn variable(&mut self, name: &str) {
+    fn variable(&mut self, _location: SrcSpan, name: &str) {
         self.do_not_wrap_if_segment_value_or_size();
         self.new_expression();
         self.code.push_str(name);
     }
 
-    fn unary_operator(&mut self, operator: &str) {
+    fn unary_operator(&mut self, _location: SrcSpan, operator: &str) {
         self.new_expression();
         self.code.push_str(operator);
         self.code.push(' ');
@@ -2414,7 +2435,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
             .push(ErlangSourceBuilderPosition::UnaryOperator)
     }
 
-    fn binary_operator(&mut self, operator: &'static str) {
+    fn binary_operator(&mut self, _location: SrcSpan, operator: &'static str) {
         self.pop_leftover_items();
 
         // If this new binary operator we're generating is part of a bigger
@@ -2441,7 +2462,13 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
             })
     }
 
-    fn function_reference(&mut self, module: Option<ErlangModuleName>, name: &str, arity: usize) {
+    fn function_reference(
+        &mut self,
+        _location: SrcSpan,
+        module: Option<ErlangModuleName>,
+        name: &str,
+        arity: usize,
+    ) {
         self.new_expression();
         self.code.push_str("fun ");
         if let Some(module) = module {
@@ -2453,7 +2480,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.code.push_str(&arity.to_string());
     }
 
-    fn match_operator(&mut self) {
+    fn match_operator(&mut self, _location: SrcSpan) {
         self.new_expression();
         self.position
             .push(ErlangSourceBuilderPosition::MatchOperator {
@@ -2461,7 +2488,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
             });
     }
 
-    fn match_pattern(&mut self) {
+    fn match_pattern(&mut self, _location: SrcSpan) {
         self.new_pattern();
         self.position
             .push(ErlangSourceBuilderPosition::MatchPattern {
@@ -2469,43 +2496,43 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
             })
     }
 
-    fn variable_pattern(&mut self, name: &str) {
+    fn variable_pattern(&mut self, _location: SrcSpan, name: &str) {
         self.do_not_wrap_if_segment_value_or_size();
         self.new_pattern();
         self.code.push_str(name);
     }
 
-    fn discard_pattern(&mut self) {
+    fn discard_pattern(&mut self, _location: SrcSpan) {
         self.do_not_wrap_if_segment_value_or_size();
         self.new_pattern();
         self.code.push('_');
     }
 
-    fn int_pattern(&mut self, number: BigInt) {
+    fn int_pattern(&mut self, _location: SrcSpan, number: BigInt) {
         self.do_not_wrap_if_segment_value_or_size();
         self.new_pattern();
         self.code.push_str(&number.to_string());
     }
 
-    fn float_pattern(&mut self, number: f64) {
+    fn float_pattern(&mut self, _location: SrcSpan, number: f64) {
         self.do_not_wrap_if_segment_value_or_size();
         self.new_pattern();
 
         self.code.push_str(&format_float(number))
     }
 
-    fn string_pattern(&mut self, content: &str) {
+    fn string_pattern(&mut self, _location: SrcSpan, content: &str) {
         self.do_not_wrap_if_segment_value_or_size();
         self.new_pattern();
         self.do_print_string_content(content);
     }
 
-    fn atom_pattern(&mut self, name: &str) {
+    fn atom_pattern(&mut self, _location: SrcSpan, name: &str) {
         self.new_pattern();
         self.code.push_str(&quote_atom_name(name));
     }
 
-    fn start_tuple_pattern(&mut self) -> Self::TuplePattern {
+    fn start_tuple_pattern(&mut self, _location: SrcSpan) -> Self::TuplePattern {
         self.new_pattern();
         self.code.push('{');
         self.position
@@ -2516,7 +2543,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.close_currently_open_item();
     }
 
-    fn start_bit_array_pattern(&mut self) -> Self::BitArrayPattern {
+    fn start_bit_array_pattern(&mut self, _location: SrcSpan) -> Self::BitArrayPattern {
         self.new_pattern();
         self.code.push_str("<<");
         self.position.push(ErlangSourceBuilderPosition::BitArray {
@@ -2529,33 +2556,33 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.close_currently_open_item();
     }
 
-    fn cons_list_pattern(&mut self) {
+    fn cons_list_pattern(&mut self, _location: SrcSpan) {
         self.cons_list_of_kind(ListKind::Pattern);
     }
 
-    fn empty_list_pattern(&mut self) {
+    fn empty_list_pattern(&mut self, _location: SrcSpan) {
         self.empty_list_of_kind(ListKind::Pattern);
     }
 
-    fn string(&mut self, content: &str) {
+    fn string(&mut self, _location: SrcSpan, content: &str) {
         self.do_not_wrap_if_segment_value_or_size();
         self.new_expression();
         self.do_print_string_content(content);
     }
 
-    fn int(&mut self, number: BigInt) {
+    fn int(&mut self, _location: SrcSpan, number: BigInt) {
         self.do_not_wrap_if_segment_value_or_size();
         self.new_expression();
         self.code.push_str(&number.to_string());
     }
 
-    fn float(&mut self, number: f64) {
+    fn float(&mut self, _location: SrcSpan, number: f64) {
         self.do_not_wrap_if_segment_value_or_size();
         self.new_expression();
         self.code.push_str(&format_float(number));
     }
 
-    fn atom(&mut self, name: &str) {
+    fn atom(&mut self, _location: SrcSpan, name: &str) {
         self.new_expression();
         self.code.push_str(&quote_atom_name(name));
     }
@@ -3719,6 +3746,12 @@ pub struct ErlangBinaryBuilder {
     etf: erlang_term_format::TermBuilder,
 
     position: Vec<BinaryBuilderPosition>,
+
+    /// The line numbers used to properly annotate each node with its position
+    /// inside the module.
+    /// Might be null in case we're not generating code for a module, for
+    /// example if we're just generating record headers!
+    line_numbers: Option<LineNumbers>,
 }
 
 #[derive(Debug)]
@@ -3923,15 +3956,16 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
 
     type TypeSpec = Vec<EcoString>;
 
-    fn new(module_name: Option<ErlangModuleName>) -> Self {
+    fn new(module_info: Option<(ErlangModuleName, LineNumbers)>) -> Self {
         let mut etf = erlang_term_format::TermBuilder::new();
         let module_ender = etf.start_list();
 
-        let top_level_forms = match module_name {
+        let top_level_forms = match module_info.as_ref() {
             None => 0,
             // If there's a `module` declaration we need to add it to the
             // module.
-            Some(module_name) => {
+            // The line numbers are not needed by the pretty printer!
+            Some((module_name, _line_numbers)) => {
                 // The EAF representation of `-module(Module).` is
                 // `{attribute, ANNOTATION, module, Module}`.
                 etf.small_tuple(4);
@@ -3948,6 +3982,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
             top_level_forms,
             module_ender,
             etf,
+            line_numbers: module_info.map(|(_, line_numbers)| line_numbers),
             position: vec![],
         }
     }
@@ -3973,7 +4008,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {attribute,ANNO,export,[{Fun_1,A_1}, ..., {Fun_k,A_k}]}
         self.etf.small_tuple(4);
         self.etf.atom("attribute");
-        self.empty_annotation();
+        self.annotation(None);
         self.etf.atom("export");
         let list = self.etf.start_list();
         let mut count = 0;
@@ -3997,7 +4032,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {attribute,ANNO,export_type,[{Type_1,A_1}, ..., {Type_k,A_k}]}
         self.etf.small_tuple(4);
         self.etf.atom("attribute");
-        self.empty_annotation();
+        self.annotation(None);
         self.etf.atom("export_type");
         let list = self.etf.start_list();
         let mut count = 0;
@@ -4018,7 +4053,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {attribute,ANNO,doc,Content}
         self.etf.small_tuple(4);
         self.etf.atom("attribute");
-        self.annotation();
+        self.annotation(None);
         self.etf.atom("doc");
         match content {
             DocContent::String(content) => self.etf.binary(content.len() as u32, content.bytes()),
@@ -4034,7 +4069,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {attribute,ANNO,moduledoc,Content}
         self.etf.small_tuple(4);
         self.etf.atom("attribute");
-        self.annotation();
+        self.annotation(None);
         self.etf.atom("moduledoc");
         match content {
             DocContent::String(content) => self.etf.binary(content.len() as u32, content.bytes()),
@@ -4050,7 +4085,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {attribute,ANNO,compile,[Option1,...,OptionK]}
         self.etf.small_tuple(4);
         self.etf.atom("attribute");
-        self.empty_annotation();
+        self.annotation(None);
         self.etf.atom("compile");
         let options = self.etf.start_list();
         let mut count = 0;
@@ -4064,12 +4099,12 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
     fn file_attribute(&mut self, file: &str, line: u32) {
         self.new_top_level_form();
 
-        // -file(File,Line)
+        // -file(File)
         //   becomes
-        // {attribute,ANNO,file,{File,Line}}
+        // {attribute,ANNO,file,File,Line}}
         self.etf.small_tuple(4);
         self.etf.atom("attribute");
-        self.empty_annotation();
+        self.annotation(None);
         self.etf.atom("file");
         {
             self.etf.small_tuple(2);
@@ -4078,7 +4113,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
             let characters_count = self.push_string_chars(file);
             self.etf.end_list(file_name, characters_count);
 
-            self.int_representation(line.into());
+            self.etf.usize(line as usize);
         }
     }
 
@@ -4092,7 +4127,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {attribute,ANNO,record,{Name,[Rep(V_1), ..., Rep(V_k)]}}
         self.etf.small_tuple(4);
         self.etf.atom("attribute");
-        self.annotation();
+        self.annotation(None);
         self.etf.atom("record");
 
         self.etf.small_tuple(2);
@@ -4130,7 +4165,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // field).
         self.etf.small_tuple(3);
         self.etf.atom("record_field");
-        self.empty_annotation();
+        self.annotation(None);
     }
 
     fn start_function_spec(&mut self, name: &str, arity: usize) -> Self::FunctionSpec {
@@ -4142,7 +4177,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {attribute,ANNO,Spec,{{Name,Arity},[Rep(Ft_1)]}}
         self.etf.small_tuple(4);
         self.etf.atom("attribute");
-        self.annotation();
+        self.annotation(None);
         self.etf.atom("spec");
         self.etf.small_tuple(2);
 
@@ -4178,7 +4213,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {attribute,ANNO,type,{Name,Rep(T),[Rep(V_1), ..., Rep(V_k)]}}
         self.etf.small_tuple(4);
         self.etf.atom("attribute");
-        self.annotation();
+        self.annotation(None);
         self.etf.atom(if opaque { "opaque" } else { "type" });
 
         self.etf.small_tuple(3);
@@ -4207,7 +4242,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
                 for parameter in type_spec {
                     count += 1;
                     // Each type parameter is a simple type variable in Gleam.
-                    self.variable_representation(&parameter);
+                    self.variable_representation(None, &parameter);
                 }
                 self.etf.end_list(type_parameters, count);
             }
@@ -4226,13 +4261,13 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {type,ANNO,'fun',[{type,ANNO,product,[Rep(T_1), ..., Rep(T_n)]},Rep(T_0)]}
         self.etf.small_tuple(4);
         self.etf.atom("type");
-        self.annotation();
+        self.annotation(None);
         self.etf.atom("fun");
 
         let outer_list = self.etf.start_list();
         self.etf.small_tuple(4);
         self.etf.atom("type");
-        self.annotation();
+        self.annotation(None);
         self.etf.atom("product");
 
         let argument_types = self.etf.start_list();
@@ -4278,7 +4313,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {type,ANNO,N,[Rep(T_1), ..., Rep(T_k)]}
         self.etf.small_tuple(4);
         self.etf.atom("type");
-        self.annotation();
+        self.annotation(None);
         self.etf.atom(name);
 
         self.etf.start_list()
@@ -4307,7 +4342,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {remote_type,ANNO,[Rep(M),Rep(N),[Rep(T_1), ..., Rep(T_k)]]}
         self.etf.small_tuple(3);
         self.etf.atom("remote_type");
-        self.annotation();
+        self.annotation(None);
 
         let outer_list = self.etf.start_list();
         // Crucially, when it comes to a remote type, we require the
@@ -4316,8 +4351,8 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // Erlang atom. That's why here we call `self.atom` and not `self.etf.atom`:
         // - `self.atom` produces the _representation_ of an atom
         // - `self.etf.atom` produces a bare atom
-        self.atom_representation(&module.0);
-        self.atom_representation(name);
+        self.atom_representation(None, &module.0);
+        self.atom_representation(None, name);
         let arguments = self.etf.start_list();
         (outer_list, arguments)
     }
@@ -4342,7 +4377,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {type,ANNO,tuple,[Rep(T_1), ..., Rep(T_k)]}
         self.etf.small_tuple(4);
         self.etf.atom("type");
-        self.annotation();
+        self.annotation(None);
         self.etf.atom("tuple");
 
         self.etf.start_list()
@@ -4365,7 +4400,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {type,ANNO,union,[Rep(T_1), ..., Rep(T_k)]}
         self.etf.small_tuple(4);
         self.etf.atom("type");
-        self.annotation();
+        self.annotation(None);
         self.etf.atom("union");
         self.etf.start_list()
     }
@@ -4381,19 +4416,20 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
 
     fn type_variable(&mut self, name: &str) {
         self.new_type();
-        self.variable_representation(name);
+        self.variable_representation(None, name);
     }
 
     fn literal_atom_type(&mut self, name: &str) {
         self.new_type();
-        self.atom_representation(name);
+        self.atom_representation(None, name);
     }
 
     fn start_function<Name: AsRef<str>>(
         &mut self,
+        location: SrcSpan,
         name: &str,
         arity: usize,
-        arguments_names: impl IntoIterator<Item = Name>,
+        arguments_names: impl IntoIterator<Item = (SrcSpan, Name)>,
     ) -> Self::Function {
         self.new_top_level_form();
         self.position
@@ -4404,20 +4440,20 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {function,ANNO,Name,Arity,[{clause,ANNO,Rep(Ps),[],Rep(B)}]}
         self.etf.small_tuple(5);
         self.etf.atom("function");
-        self.annotation();
+        self.annotation(Some(location));
         self.etf.atom(name);
         self.etf.usize(arity);
 
         let clauses = self.etf.start_list();
         self.etf.small_tuple(5);
         self.etf.atom("clause");
-        self.annotation();
+        self.annotation(Some(location));
 
         let arguments = self.etf.start_list();
         let mut arguments_count = 0;
-        for argument in arguments_names {
+        for (argument_location, argument) in arguments_names {
             arguments_count += 1;
-            self.variable_representation(argument.as_ref());
+            self.variable_representation(Some(argument_location), argument.as_ref());
         }
         self.etf.end_list(arguments, arguments_count);
 
@@ -4429,7 +4465,8 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
 
     fn start_anonymous_function<Name: AsRef<str>>(
         &mut self,
-        arguments_names: impl IntoIterator<Item = Name>,
+        location: SrcSpan,
+        arguments_names: impl IntoIterator<Item = (SrcSpan, Name)>,
     ) -> Self::Function {
         self.new_expression();
         self.position
@@ -4441,7 +4478,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
 
         self.etf.small_tuple(3);
         self.etf.atom("fun");
-        self.annotation();
+        self.annotation(Some(location));
 
         self.etf.small_tuple(2);
         self.etf.atom("clauses");
@@ -4449,12 +4486,12 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         let clauses = self.etf.start_list();
         self.etf.small_tuple(5);
         self.etf.atom("clause");
-        self.annotation();
+        self.annotation(Some(location));
         let arguments = self.etf.start_list();
         let mut arguments_count = 0;
-        for argument in arguments_names {
+        for (argument_location, argument) in arguments_names {
             arguments_count += 1;
-            self.variable_representation(argument.as_ref())
+            self.variable_representation(Some(argument_location), argument.as_ref())
         }
         self.etf.end_list(arguments, arguments_count);
 
@@ -4474,7 +4511,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         }
     }
 
-    fn start_block(&mut self) -> Self::Block {
+    fn start_block(&mut self, location: SrcSpan) -> Self::Block {
         self.new_expression();
         self.position
             .push(BinaryBuilderPosition::Block { statements: 0 });
@@ -4484,7 +4521,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {block,ANNO,Rep(B)}
         self.etf.small_tuple(3);
         self.etf.atom("block");
-        self.annotation();
+        self.annotation(Some(location));
 
         self.etf.start_list()
     }
@@ -4498,7 +4535,12 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         }
     }
 
-    fn start_remote_call(&mut self, module: ErlangModuleName, function: &str) -> Self::Call {
+    fn start_remote_call(
+        &mut self,
+        location: SrcSpan,
+        module: ErlangModuleName,
+        function: &str,
+    ) -> Self::Call {
         self.new_expression();
         self.position.push(BinaryBuilderPosition::Call {
             expected: ExpectedBinaryCallItem::Arguments { count: 0 },
@@ -4509,12 +4551,12 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {call,ANNO,{remote,ANNO,Rep(E_m),Rep(E_0)},[Rep(E_1), ..., Rep(E_k)]}
         self.etf.small_tuple(4);
         self.etf.atom("call");
-        self.annotation();
+        self.annotation(Some(location));
 
         {
             self.etf.small_tuple(4);
             self.etf.atom("remote");
-            self.annotation();
+            self.annotation(Some(location));
             // Crucially, when it comes to a call, we require the
             // _representation_ of the module and name of the called thing.
             // Those are atoms so we want the Erlang Abstract Format
@@ -4522,14 +4564,14 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
             // That's why here we call `self.atom` and not `self.etf.atom`:
             // - `self.atom` produces the _representation_ of an atom
             // - `self.etf.atom` produces a bare atom
-            self.atom_representation(&module.0);
-            self.atom_representation(function);
+            self.atom_representation(None, &module.0);
+            self.atom_representation(None, function);
         }
 
         self.etf.start_list()
     }
 
-    fn start_call(&mut self) -> Self::CalledExpression {
+    fn start_call(&mut self, location: SrcSpan) -> Self::CalledExpression {
         self.new_expression();
         self.position.push(BinaryBuilderPosition::Call {
             expected: ExpectedBinaryCallItem::CalledExpression,
@@ -4540,7 +4582,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {call,ANNO,Rep(E_0),[Rep(E_1), ..., Rep(E_k)]}
         self.etf.small_tuple(4);
         self.etf.atom("call");
-        self.annotation();
+        self.annotation(Some(location));
     }
 
     fn end_called_expression(&mut self, _called: Self::CalledExpression) -> Self::Call {
@@ -4561,7 +4603,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         }
     }
 
-    fn start_tuple(&mut self) -> Self::Tuple {
+    fn start_tuple(&mut self, location: SrcSpan) -> Self::Tuple {
         self.new_expression();
         self.position
             .push(BinaryBuilderPosition::Tuple { items: 0 });
@@ -4571,7 +4613,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {tuple,ANNO,[Rep(E_1), ..., Rep(E_k)]}
         self.etf.small_tuple(3);
         self.etf.atom("tuple");
-        self.annotation();
+        self.annotation(Some(location));
 
         self.etf.start_list()
     }
@@ -4583,7 +4625,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         }
     }
 
-    fn start_map(&mut self) -> Self::Map {
+    fn start_map(&mut self, location: SrcSpan) -> Self::Map {
         self.new_expression();
         self.position
             .push(BinaryBuilderPosition::Map { entries: 0 });
@@ -4593,7 +4635,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {map,ANNO,[Rep(A_1), ..., Rep(A_k)]}
         self.etf.small_tuple(3);
         self.etf.atom("map");
-        self.annotation();
+        self.annotation(Some(location));
 
         self.etf.start_list()
     }
@@ -4605,7 +4647,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         }
     }
 
-    fn map_field(&mut self) {
+    fn map_field(&mut self, location: SrcSpan) {
         self.new_map_field();
         self.position.push(BinaryBuilderPosition::MapEntry {
             expected: ExpectedMapFieldItem::Key,
@@ -4616,10 +4658,10 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {map_field_assoc,ANNO,Rep(K),Rep(V)}
         self.etf.small_tuple(4);
         self.etf.atom("map_field_assoc");
-        self.annotation();
+        self.annotation(Some(location));
     }
 
-    fn start_bit_array(&mut self) -> Self::BitArray {
+    fn start_bit_array(&mut self, location: SrcSpan) -> Self::BitArray {
         self.new_expression();
         self.position
             .push(BinaryBuilderPosition::BitArray { segments: 0 });
@@ -4633,7 +4675,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // ]}
         self.etf.small_tuple(3);
         self.etf.atom("bin");
-        self.annotation();
+        self.annotation(Some(location));
 
         self.etf.start_list()
     }
@@ -4647,7 +4689,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         }
     }
 
-    fn bit_array_segment(&mut self) {
+    fn bit_array_segment(&mut self, location: SrcSpan) {
         let kind = self.new_bit_array_segment();
         self.position.push(BinaryBuilderPosition::BitArraySegment {
             expected: ExpectedBitArraySegmentItem::Value { kind },
@@ -4658,7 +4700,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {bin_element,ANNO,Rep(E_1),Rep(Size_1),Rep(TSL_1)}
         self.etf.small_tuple(5);
         self.etf.atom("bin_element");
-        self.annotation();
+        self.annotation(Some(location));
     }
 
     fn bit_array_segment_default_size(&mut self) {
@@ -4719,7 +4761,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         }
     }
 
-    fn cons_list(&mut self) {
+    fn cons_list(&mut self, location: SrcSpan) {
         self.new_expression();
         self.position.push(BinaryBuilderPosition::List {
             expected: ExpectedListItem::First,
@@ -4730,10 +4772,10 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {cons,ANNO,Rep(E_h),Rep(E_t)}
         self.etf.small_tuple(4);
         self.etf.atom("cons");
-        self.annotation();
+        self.annotation(Some(location));
     }
 
-    fn empty_list(&mut self) {
+    fn empty_list(&mut self, location: SrcSpan) {
         self.new_expression();
 
         // []
@@ -4741,10 +4783,10 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {nil,ANNO}
         self.etf.small_tuple(2);
         self.etf.atom("nil");
-        self.annotation();
+        self.annotation(Some(location));
     }
 
-    fn start_case(&mut self) -> Self::CaseSubject {
+    fn start_case(&mut self, location: SrcSpan) -> Self::CaseSubject {
         self.new_expression();
         self.position.push(BinaryBuilderPosition::Case {
             expected: ExpectedBinaryCaseItem::Subject,
@@ -4756,7 +4798,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
 
         self.etf.small_tuple(4);
         self.etf.atom("case");
-        self.annotation();
+        self.annotation(Some(location));
     }
 
     fn end_case_subject(&mut self, _case: Self::CaseSubject) -> Self::Case {
@@ -4779,7 +4821,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         }
     }
 
-    fn start_case_clause(&mut self) -> Self::ClausePattern {
+    fn start_case_clause(&mut self, location: SrcSpan) -> Self::ClausePattern {
         self.new_case_clause();
         self.position.push(BinaryBuilderPosition::CaseClause {
             expected: ExpectedBinaryCaseClauseItem::Pattern,
@@ -4790,7 +4832,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {clause,ANNO,[Rep(P)],Rep(Gs),Rep(B)}
         self.etf.small_tuple(5);
         self.etf.atom("clause");
-        self.annotation();
+        self.annotation(Some(location));
         self.etf.start_list()
     }
 
@@ -4859,12 +4901,12 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         }
     }
 
-    fn variable(&mut self, name: &str) {
+    fn variable(&mut self, location: SrcSpan, name: &str) {
         self.new_expression();
-        self.variable_representation(name);
+        self.variable_representation(Some(location), name);
     }
 
-    fn unary_operator(&mut self, operator: &str) {
+    fn unary_operator(&mut self, location: SrcSpan, operator: &str) {
         self.new_expression();
         self.position.push(BinaryBuilderPosition::UnaryOperator);
 
@@ -4873,11 +4915,11 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {op,ANNO,Op,Rep(E_0)}
         self.etf.small_tuple(4);
         self.etf.atom("op");
-        self.annotation();
+        self.annotation(Some(location));
         self.etf.atom(operator);
     }
 
-    fn binary_operator(&mut self, operator: &'static str) {
+    fn binary_operator(&mut self, location: SrcSpan, operator: &'static str) {
         self.new_expression();
         self.position.push(BinaryBuilderPosition::BinaryOperator {
             expected: ExpectedBinaryOperatorSide::Left,
@@ -4888,11 +4930,17 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {op,ANNO,Op,Rep(E_1),Rep(E_2)}
         self.etf.small_tuple(5);
         self.etf.atom("op");
-        self.annotation();
+        self.annotation(Some(location));
         self.etf.atom(operator);
     }
 
-    fn function_reference(&mut self, module: Option<ErlangModuleName>, name: &str, arity: usize) {
+    fn function_reference(
+        &mut self,
+        location: SrcSpan,
+        module: Option<ErlangModuleName>,
+        name: &str,
+        arity: usize,
+    ) {
         self.new_expression();
 
         match module {
@@ -4902,7 +4950,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
                 // {'fun',ANNO,{function,Rep(Module),Rep(Name),Rep(Arity)}}
                 self.etf.small_tuple(3);
                 self.etf.atom("fun");
-                self.annotation();
+                self.annotation(Some(location));
 
                 self.etf.small_tuple(4);
                 self.etf.atom("function");
@@ -4915,9 +4963,9 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
                 // - `self.etf.atom` produces a bare atom
                 // - `self.int_representation` produces the _representation_ of an int
                 // - `self.etf.usize` produces a bare int
-                self.atom_representation(&module.0);
-                self.atom_representation(name);
-                self.int_representation(arity.into());
+                self.atom_representation(None, &module.0);
+                self.atom_representation(None, name);
+                self.int_representation(None, arity.into());
             }
             None => {
                 // fun Name/Arity
@@ -4925,7 +4973,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
                 // {'fun',ANNO,{function,Name,Arity}}
                 self.etf.small_tuple(3);
                 self.etf.atom("fun");
-                self.annotation();
+                self.annotation(Some(location));
                 self.etf.small_tuple(3);
                 self.etf.atom("function");
                 self.etf.atom(name);
@@ -4934,7 +4982,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         }
     }
 
-    fn match_operator(&mut self) {
+    fn match_operator(&mut self, location: SrcSpan) {
         self.new_expression();
         self.position.push(BinaryBuilderPosition::MatchOperator {
             expected: ExpectedMatchSide::Pattern,
@@ -4945,10 +4993,10 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {match,ANNO,Rep(P),Rep(E_0)}
         self.etf.small_tuple(4);
         self.etf.atom("match");
-        self.annotation();
+        self.annotation(Some(location));
     }
 
-    fn match_pattern(&mut self) {
+    fn match_pattern(&mut self, location: SrcSpan) {
         self.new_pattern();
         self.position
             .push(BinaryBuilderPosition::MatchPatternOperator {
@@ -4960,30 +5008,30 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {match,ANNO,Rep(P_1),Rep(P_2)}
         self.etf.small_tuple(4);
         self.etf.atom("match");
-        self.annotation();
+        self.annotation(Some(location));
     }
 
-    fn variable_pattern(&mut self, name: &str) {
+    fn variable_pattern(&mut self, location: SrcSpan, name: &str) {
         self.new_pattern();
-        self.variable_representation(name);
+        self.variable_representation(Some(location), name);
     }
 
-    fn discard_pattern(&mut self) {
+    fn discard_pattern(&mut self, location: SrcSpan) {
         self.new_pattern();
-        self.variable_representation("_");
+        self.variable_representation(Some(location), "_");
     }
 
-    fn int_pattern(&mut self, number: BigInt) {
+    fn int_pattern(&mut self, location: SrcSpan, number: BigInt) {
         self.new_pattern();
-        self.int_representation(number);
+        self.int_representation(Some(location), number);
     }
 
-    fn float_pattern(&mut self, number: f64) {
+    fn float_pattern(&mut self, location: SrcSpan, number: f64) {
         self.new_pattern();
-        self.float_representation(number);
+        self.float_representation(Some(location), number);
     }
 
-    fn string_pattern(&mut self, content: &str) {
+    fn string_pattern(&mut self, location: SrcSpan, content: &str) {
         // With strings we want to be careful. If a string is generated as the
         // value in a segment, we want to use the literal string as a charlist:
         // ```
@@ -5000,18 +5048,18 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
 
         self.new_pattern();
         if is_segment_value {
-            self.charlist_representation(&content);
+            self.charlist_representation(Some(location), &content);
         } else {
-            self.binary_string_representation(&content);
+            self.binary_string_representation(Some(location), &content);
         }
     }
 
-    fn atom_pattern(&mut self, name: &str) {
+    fn atom_pattern(&mut self, location: SrcSpan, name: &str) {
         self.new_pattern();
-        self.atom_representation(name);
+        self.atom_representation(Some(location), name);
     }
 
-    fn start_tuple_pattern(&mut self) -> Self::TuplePattern {
+    fn start_tuple_pattern(&mut self, location: SrcSpan) -> Self::TuplePattern {
         self.new_pattern();
         self.position
             .push(BinaryBuilderPosition::TuplePattern { items: 0 });
@@ -5021,7 +5069,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {tuple,ANNO,[Rep(P_1), ..., Rep(P_k)]}
         self.etf.small_tuple(3);
         self.etf.atom("tuple");
-        self.annotation();
+        self.annotation(Some(location));
 
         self.etf.start_list()
     }
@@ -5033,7 +5081,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         }
     }
 
-    fn start_bit_array_pattern(&mut self) -> Self::BitArrayPattern {
+    fn start_bit_array_pattern(&mut self, location: SrcSpan) -> Self::BitArrayPattern {
         self.new_pattern();
         self.position
             .push(BinaryBuilderPosition::BitArrayPattern { segments: 0 });
@@ -5047,7 +5095,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // ]}
         self.etf.small_tuple(3);
         self.etf.atom("bin");
-        self.annotation();
+        self.annotation(Some(location));
 
         self.etf.start_list()
     }
@@ -5061,7 +5109,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         }
     }
 
-    fn cons_list_pattern(&mut self) {
+    fn cons_list_pattern(&mut self, location: SrcSpan) {
         self.new_pattern();
         self.position.push(BinaryBuilderPosition::ListPattern {
             expected: ExpectedListItem::First,
@@ -5072,10 +5120,10 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {cons,ANNO,Rep(E_h),Rep(E_t)}
         self.etf.small_tuple(4);
         self.etf.atom("cons");
-        self.annotation();
+        self.annotation(Some(location));
     }
 
-    fn empty_list_pattern(&mut self) {
+    fn empty_list_pattern(&mut self, location: SrcSpan) {
         self.new_pattern();
 
         // []
@@ -5083,10 +5131,10 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
         // {nil,ANNO}
         self.etf.small_tuple(2);
         self.etf.atom("nil");
-        self.annotation();
+        self.annotation(Some(location));
     }
 
-    fn string(&mut self, string: &str) {
+    fn string(&mut self, location: SrcSpan, string: &str) {
         // With strings we want to be careful. If a string is generated as the
         // value in a segment, we want to use the literal string as a charlist:
         // ```
@@ -5103,35 +5151,54 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
 
         self.new_expression();
         if is_segment_value {
-            self.charlist_representation(string);
+            self.charlist_representation(Some(location), string);
         } else {
-            self.binary_string_representation(string);
+            self.binary_string_representation(Some(location), string);
         }
     }
 
-    fn int(&mut self, value: BigInt) {
+    fn int(&mut self, location: SrcSpan, value: BigInt) {
         self.new_expression();
-        self.int_representation(value)
+        self.int_representation(Some(location), value)
     }
 
-    fn float(&mut self, value: f64) {
+    fn float(&mut self, location: SrcSpan, value: f64) {
         self.new_expression();
-        self.float_representation(value);
+        self.float_representation(Some(location), value);
     }
 
-    fn atom(&mut self, name: &str) {
+    fn atom(&mut self, location: SrcSpan, name: &str) {
         self.new_expression();
-        self.atom_representation(name);
+        self.atom_representation(Some(location), name);
     }
 }
 
 impl ErlangBinaryBuilder {
-    fn annotation(&mut self) {
-        self.empty_annotation();
-    }
+    fn annotation(&mut self, location: Option<SrcSpan>) {
+        match (location, &self.line_numbers) {
+            (Some(src_span), Some(line_numbers)) => {
+                let list = self.etf.start_list();
 
-    fn empty_annotation(&mut self) {
-        self.etf.usize(0);
+                let LineColumn { line, column } =
+                    line_numbers.line_and_utf8_column_number(src_span.start);
+                self.etf.small_tuple(2);
+                self.etf.atom("location");
+                self.etf.small_tuple(2);
+                self.etf.usize(line as usize);
+                self.etf.usize((column + 1) as usize);
+
+                let LineColumn { line, column } =
+                    line_numbers.line_and_utf8_column_number(src_span.end);
+                self.etf.small_tuple(2);
+                self.etf.atom("end_location");
+                self.etf.small_tuple(2);
+                self.etf.usize(line as usize);
+                self.etf.usize((column + 1) as usize);
+
+                self.etf.end_list(list, 2);
+            }
+            (None, Some(_) | None) | (Some(_), None) => self.etf.usize(0),
+        }
     }
 
     fn error_with_position(
@@ -5445,10 +5512,10 @@ impl ErlangBinaryBuilder {
     /// Abstract Format.
     /// No additional check about the current position is performed!
     ///
-    fn variable_representation(&mut self, name: &str) {
+    fn variable_representation(&mut self, location: Option<SrcSpan>, name: &str) {
         self.etf.small_tuple(3);
         self.etf.atom("var");
-        self.empty_annotation();
+        self.annotation(location);
         self.etf.atom(name);
     }
 
@@ -5456,17 +5523,17 @@ impl ErlangBinaryBuilder {
     /// Erlang Abstract Format.
     /// No additional check about the current position is performed!
     ///
-    fn binary_string_representation(&mut self, content: &str) {
+    fn binary_string_representation(&mut self, location: Option<SrcSpan>, content: &str) {
         self.etf.small_tuple(3);
         self.etf.atom("bin");
-        self.annotation();
+        self.annotation(location);
         let segments_list = self.etf.start_list();
 
         self.etf.small_tuple(5);
         self.etf.atom("bin_element");
-        self.annotation();
+        self.annotation(location);
 
-        self.charlist_representation(content);
+        self.charlist_representation(location, content);
 
         self.etf.atom("default");
         let options_list = self.etf.start_list();
@@ -5481,10 +5548,10 @@ impl ErlangBinaryBuilder {
     /// > `binary_string_representation`. This function is only used to build
     /// > other inner parts of the Abstract Format, like literal string segments
     /// > in bit arrays.
-    fn charlist_representation(&mut self, content: &str) {
+    fn charlist_representation(&mut self, location: Option<SrcSpan>, content: &str) {
         self.etf.small_tuple(3);
         self.etf.atom("string");
-        self.annotation();
+        self.annotation(location);
 
         let characters = self.etf.start_list();
         let count = self.push_string_chars(content);
@@ -5500,10 +5567,10 @@ impl ErlangBinaryBuilder {
     /// - `self.int()`: `self.int()` performs additional checks and updates to
     ///   make sure that it is called only in certain places. This function does
     ///   not perform any additional check about the current position!
-    fn int_representation(&mut self, number: BigInt) {
+    fn int_representation(&mut self, location: Option<SrcSpan>, number: BigInt) {
         self.etf.small_tuple(3);
         self.etf.atom("integer");
-        self.annotation();
+        self.annotation(location);
         self.etf.bigint(number);
     }
 
@@ -5516,36 +5583,36 @@ impl ErlangBinaryBuilder {
     /// - `self.atom()`: `self.atom()` performs additional checks and updates to
     ///   make sure that it is called only in certain places. This function does
     ///   not perform any additional check about the current position!
-    fn atom_representation(&mut self, name: &str) {
+    fn atom_representation(&mut self, location: Option<SrcSpan>, name: &str) {
         self.etf.small_tuple(3);
         self.etf.atom("atom");
-        self.annotation();
+        self.annotation(location);
         self.etf.atom(name);
     }
 
     /// This pushes the representation of a literal float according to the
     /// Erlang Abstract Format.
     /// No additional check about the current position is performed!
-    fn float_representation(&mut self, number: f64) {
+    fn float_representation(&mut self, location: Option<SrcSpan>, number: f64) {
         if number.is_zero() {
             if number.is_sign_negative() {
                 // {op,ANNO,"-",Rep(Float)}
                 self.etf.small_tuple(4);
                 self.etf.atom("op");
-                self.annotation();
+                self.annotation(location);
                 self.etf.atom("-");
             } else {
                 // {op,ANNO,"+",Rep(Float)}
                 self.etf.small_tuple(4);
                 self.etf.atom("op");
-                self.annotation();
+                self.annotation(location);
                 self.etf.atom("+");
             }
         }
 
         self.etf.small_tuple(3);
         self.etf.atom("float");
-        self.annotation();
+        self.annotation(location);
         self.etf.new_float(number);
     }
 
@@ -5625,16 +5692,24 @@ mod tests {
 
     #[test]
     fn wibble() {
-        let mut builder = ErlangBinaryBuilder::new(Some(ErlangModuleName::new("wibble")));
+        let mut builder = ErlangBinaryBuilder::new(Some((
+            ErlangModuleName::new("wibble"),
+            LineNumbers::new(""),
+        )));
 
         builder.moduledoc_attribute(DocContent::String("Hello 📖🐦‍⬛"));
         builder.export_attribute([("wibble", 1)]);
 
-        let fun = builder.start_function("wibble", 1, ["Name"]);
-        builder.match_operator();
-        builder.int_pattern(1.into());
-        builder.variable("Name");
-        builder.int(1.into());
+        let fun = builder.start_function(
+            SrcSpan::default(),
+            "wibble",
+            1,
+            [(SrcSpan::default(), "Name")],
+        );
+        builder.match_operator(SrcSpan::default());
+        builder.int_pattern(SrcSpan::default(), 1.into());
+        builder.variable(SrcSpan::default(), "Name");
+        builder.int(SrcSpan::default(), 1.into());
         builder.end_function(fun);
 
         let output = builder

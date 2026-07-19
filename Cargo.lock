@@ -873,6 +873,7 @@ dependencies = [
  "num-bigint",
  "num-traits",
  "regex",
+ "src-span",
 ]
 
 [[package]]
