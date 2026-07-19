@@ -13,8 +13,8 @@ echo(Value, Message, Filepath, Line) ->
         M ->
             [~" ", M]
     end,
-    Grey = ~"\e[90m",
-    ResetColour = ~"\e[39m",
+    Grey = ~"\x{1B}[90m",
+    ResetColour = ~"\x{1B}[39m",
     io:put_chars(standard_error, [Grey, Filepath, ~":", StringLine, ResetColour, StringMessage, ~"\n", StringValue, ~"\n"]),
     Value.
 
