@@ -34,6 +34,18 @@ impl<'a> EnvironmentArguments<'a> {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct UnqualifiedImport {
+    /// The location of the import. For example:
+    /// ```gleam
+    /// import gleam/result.{type Result as MyResult}
+    /// //                   ^^^^^^^^^^^^^^^^^^^^^^^
+    /// ```
+    pub location: SrcSpan,
+    /// Whether the unqualified import has been aliased.
+    pub has_alias: bool,
+}
+
 #[derive(Debug)]
 pub struct Environment<'a> {
     pub current_package: EcoString,
@@ -47,10 +59,11 @@ pub struct Environment<'a> {
     pub target: Target,
     pub ids: UniqueIdGenerator,
     previous_id: u64,
-    /// Names of types or values that have been imported an unqualified fashion
-    /// from other modules. Used to prevent multiple imports using the same name.
-    pub unqualified_imported_names: HashMap<EcoString, SrcSpan>,
-    pub unqualified_imported_types: HashMap<EcoString, SrcSpan>,
+    /// Names of types or values that have been imported in unqualified fashion
+    /// from other modules. Used to prevent multiple imports using the same
+    /// name and to check if an item has an import alias.
+    pub unqualified_imported_names: HashMap<EcoString, UnqualifiedImport>,
+    pub unqualified_imported_types: HashMap<EcoString, UnqualifiedImport>,
     pub importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
 
     /// Modules that have been imported by the current module, along with the

@@ -3832,3 +3832,107 @@ pub fn main(w: Wobble) -> mod.Wibble { todo }
         find_position_of("Wobble")
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5681
+#[test]
+fn rename_value_with_same_named_import_alias() {
+    assert_rename!(
+        TestProject::for_source(
+            "
+pub type Wibble {
+  Wibble
+}
+"
+        )
+        .add_module(
+            "wibble",
+            "
+import app.{Wibble as Wibble}
+
+pub fn go() {
+  Wibble
+}
+"
+        ),
+        "Wobble",
+        find_position_of("Wibble").nth_occurrence(2).under_char('b')
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5681
+#[test]
+fn rename_type_with_same_named_import_alias() {
+    assert_rename!(
+        TestProject::for_source(
+            "
+pub type Wibble {
+  Wibble
+}
+"
+        )
+        .add_module(
+            "wibble",
+            "
+import app.{type Wibble as Wibble}
+
+pub fn go() -> Wibble {
+  todo
+}
+"
+        ),
+        "Wobble",
+        find_position_of("Wibble").under_char('b')
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5681
+#[test]
+fn rename_type_with_same_named_import_alias_and_other_import() {
+    assert_rename!(
+        TestProject::for_source(
+            "
+pub type Wibble {
+  Wibble
+}
+"
+        )
+        .add_module(
+            "wibble",
+            "
+import app.{type Wibble as Wibble, Wibble as Wibble}
+
+pub fn go() -> Wibble {
+  Wibble
+}
+"
+        ),
+        "Wobble",
+        find_position_of("Wibble").under_char('b')
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5681
+#[test]
+fn rename_value_with_same_named_import_alias_and_other_import() {
+    assert_rename!(
+        TestProject::for_source(
+            "
+pub type Wibble {
+  Wibble
+}
+"
+        )
+        .add_module(
+            "wibble",
+            "
+import app.{type Wibble as Wibble, Wibble as Wibble}
+
+pub fn go() -> Wibble {
+  Wibble
+}
+"
+        ),
+        "Wobble",
+        find_position_of("Wibble").nth_occurrence(2).under_char('b')
+    );
+}
