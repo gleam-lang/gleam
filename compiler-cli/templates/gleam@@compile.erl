@@ -90,17 +90,48 @@ worker_loop(Parent, Out) ->
     receive
         {module, Module} ->
             log({compiling, Module}),
-            case compile:file(Module, Options) of
-                {ok, ModuleName} ->
-                    Beam = filename:join(Out, ModuleName) ++ ".beam",
+            Outcome =
+                case filename:extension(Module) of
+                    ".erl" -> compile_erlang_file(Options, Module, Out);
+                    ".abstr" -> compile_abstr_file(Options, Module, Out);
+                    _ -> {error, unknown_extension}
+                end,
+            case Outcome of
+                {ok, ModuleName, Beam} ->
                     Message = {compiled, ModuleName, Beam},
                     log(Message),
                     erlang:send(Parent, Message);
-                error ->
-                    log({failed, Module}),
+                {error, Reason} ->
+                    log({failed, Module, Reason}),
                     erlang:send(Parent, failed)
             end,
             worker_loop(Parent, Out)
+    end.
+
+compile_abstr_file(Options, Module, Out) ->
+    maybe
+        {ok, AbstrBinary} ?= file:read_file(Module),
+        {ok, AbstrForms} ?=
+            try {ok, erlang:binary_to_term(AbstrBinary)}
+            catch error:Error -> {error, {bin_to_term, Error}}
+            end,
+        {ok, ModuleName, CompiledBinary} ?= compile:forms(AbstrForms, Options),
+        Beam = filename:join(Out, ModuleName) ++ ".beam",
+        ok ?= file:write_file(Beam, CompiledBinary),
+        {ok, ModuleName, Beam}
+    else
+        {error, Reason} -> {error, Reason};
+        error -> {error, nil};
+        Reason -> {error, Reason}
+    end.
+
+compile_erlang_file(Options, Module, Out) ->
+    case compile:file(Module, Options) of
+        {ok, ModuleName} ->
+            Beam = filename:join(Out, ModuleName) ++ ".beam",
+            {ok, ModuleName, Beam};
+        error ->
+            {error, nil}
     end.
 
 compile_elixir(Modules, Out) ->

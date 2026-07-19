@@ -4,7 +4,7 @@
 use std::time::SystemTime;
 
 use camino::Utf8PathBuf;
-use erlang_generation::{ErlangBuilder, ErlangSourceBuilder};
+use erlang_generation::{ErlangBuilder, ErlangModuleName, ErlangSourceBuilder};
 use src_span::LineNumbers;
 
 use crate::analyse::TargetSupport;
@@ -136,11 +136,13 @@ pub fn compile_test_project(
     built_module.attach_doc_and_module_comments();
 
     let line_numbers = LineNumbers::new(src);
+    let erlang_module_name = ErlangModuleName::new(&built_module.name);
+    let source_builder = ErlangSourceBuilder::new(Some(erlang_module_name));
 
     let mut echo_builder = ErlangSourceBuilder::new(None);
     echo_with_helpers(&mut echo_builder);
 
-    module(&built_module.ast, line_numbers, root)
+    module(source_builder, &built_module.ast, &line_numbers, root)
         .replace(&echo_builder.into_output(), "\n% ...omitted echo code...")
 }
 
