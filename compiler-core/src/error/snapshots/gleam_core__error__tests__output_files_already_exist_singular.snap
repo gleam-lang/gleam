@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/error/tests.rs
+expression: "err.to_diagnostics()[0]"
+---
+Diagnostic {
+    title: "File already exists in target directory",
+    text: "  - wibble\nIf you want to overwrite these files, delete them and run the command again.\n",
+    level: Error,
+    location: None,
+    hint: None,
+}
