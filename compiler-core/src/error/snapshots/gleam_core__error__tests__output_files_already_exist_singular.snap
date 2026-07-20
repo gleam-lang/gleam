@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/error/tests.rs
+expression: err.pretty_string()
+---
+error: File already exists in target directory
+
+  - wibble
+
+If you want to overwrite this file, delete it and run the command again.
