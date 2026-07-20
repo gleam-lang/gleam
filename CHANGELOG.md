@@ -55,6 +55,10 @@
   in a consistent alphabetical order.
   ([Zbyněk Juřica](https://github.com/zbyju))
 
+- The compiler now gives a clearer error message when `&` is used
+  so it points to `gleam/int` bitwise functions and bit array syntax.
+  ([Jack Programs](https://github.com/jackprogramsjp))
+
 ### Build tool
 
 - The build tool now generates Hexdocs URLs using the new format of
