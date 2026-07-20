@@ -27,8 +27,8 @@ fn alternative_patterns1() {
     // Alternative patterns with a clause containing vars
     assert_erl!(
         r#"
-pub fn main() {
-  case Ok(1) {
+pub fn main(x) {
+  case x {
     Ok(duplicate_name) | Error(duplicate_name) -> duplicate_name
   }
 }"#

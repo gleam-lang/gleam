@@ -1,11 +1,11 @@
 ---
 source: compiler-core/src/erlang/tests/patterns.rs
-expression: "\npub fn main() {\n  case Ok(1) {\n    Ok(duplicate_name) | Error(duplicate_name) -> duplicate_name\n  }\n}"
+expression: "\npub fn main(x) {\n  case x {\n    Ok(duplicate_name) | Error(duplicate_name) -> duplicate_name\n  }\n}"
 ---
 ----- SOURCE CODE
 
-pub fn main() {
-  case Ok(1) {
+pub fn main(x) {
+  case x {
     Ok(duplicate_name) | Error(duplicate_name) -> duplicate_name
   }
 }
@@ -13,12 +13,15 @@ pub fn main() {
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export([main/0]).
+-export([main/1]).
 
 -file("project/test/my/mod.gleam", 2).
--spec main() -> integer().
-main() ->
-    case {ok, 1} of
+-spec main({ok, N} | {error, N}) -> N.
+main(X) ->
+    case X of
         {ok, Duplicate_name} ->
+            Duplicate_name;
+
+        {error, Duplicate_name} ->
             Duplicate_name
     end.
