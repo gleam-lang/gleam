@@ -1285,29 +1285,29 @@ target, so it cannot be run.",
                 location: None,
             }],
 
-            Error::OutputFilesAlreadyExist { file_names } => vec![Diagnostic {
-                title: format!(
-                    "{} already exist{} in target directory",
-                    if file_names.len() == 1 {
-                        "File"
-                    } else {
-                        "Files"
-                    },
-                    if file_names.len() == 1 { "" } else { "s" }
-                ),
-                text: format!(
-                    "{}
-If you want to overwrite these files, delete them and run the command again.
-",
-                    file_names
-                        .iter()
-                        .map(|name| format!("  - {}", name.as_str()))
-                        .join("\n")
-                ),
-                level: Level::Error,
-                hint: None,
-                location: None,
-            }],
+            Error::OutputFilesAlreadyExist { file_names } => {
+                let (plural, conjugation, text_files, text_pronoun) = if file_names.len() == 1 {
+                    ("", "s", "this file", "it")
+                } else {
+                    ("s", "", "these files", "them")
+                };
+                let file_list = file_names
+                    .iter()
+                    .map(|name| format!("  - {}", name.as_str()))
+                    .join("\n");
+                vec![Diagnostic {
+                    title: format!("File{plural} already exist{conjugation} in target directory"),
+                    text: format!(
+                        "{file_list}
+
+If you want to overwrite {text_files}, delete {text_pronoun} and run the command again.
+"
+                    ),
+                    level: Level::Error,
+                    hint: None,
+                    location: None,
+                }]
+            }
 
             Error::RemovedPackagesNotExist { packages } => vec![Diagnostic {
                 title: "Package not found".into(),
