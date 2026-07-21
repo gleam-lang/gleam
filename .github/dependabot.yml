@@ -4,7 +4,9 @@
 version: 2
 updates:
 - package-ecosystem: github-actions
-  directory: "/"
+- directories:
+  - "/"
+  - "/.github/actions/*"
   labels: []
   schedule:
     interval: monthly
