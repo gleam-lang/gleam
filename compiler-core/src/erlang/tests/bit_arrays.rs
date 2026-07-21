@@ -554,3 +554,17 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/6020
+fn bit_array_segment_inside_block_with_size() {
+    assert_erl!(
+        "
+pub fn main() {
+  let a = 1
+  let b = 2
+  <<{ a + b }, { a + b }:size(16)>>
+}
+"
+    )
+}
