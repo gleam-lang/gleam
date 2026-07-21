@@ -869,7 +869,7 @@ version = "1.0.0"
 dependencies = [
  "ecow",
  "erlang-term-format",
- "itertools",
+ "itertools 0.15.0",
  "num-bigint",
  "num-traits",
  "regex",
@@ -1202,7 +1202,7 @@ dependencies = [
  "ignore",
  "im",
  "insta",
- "itertools",
+ "itertools 0.15.0",
  "lsp-server",
  "opener",
  "pretty_assertions",
@@ -1257,7 +1257,7 @@ dependencies = [
  "im",
  "indexmap",
  "insta",
- "itertools",
+ "itertools 0.15.0",
  "lsp-server",
  "num-bigint",
  "num-traits",
@@ -1295,7 +1295,7 @@ dependencies = [
  "camino",
  "ecow",
  "gleam-core",
- "itertools",
+ "itertools 0.15.0",
  "pretty-arena",
  "pretty_assertions",
  "vec1",
@@ -1314,7 +1314,7 @@ dependencies = [
  "hexpm",
  "im",
  "insta",
- "itertools",
+ "itertools 0.15.0",
  "lsp-server",
  "num-bigint",
  "serde",
@@ -1335,7 +1335,7 @@ dependencies = [
  "gleam-core",
  "hexpm",
  "im",
- "itertools",
+ "itertools 0.15.0",
  "serde",
  "serde-wasm-bindgen",
  "termcolor",
@@ -1869,6 +1869,15 @@ name = "itertools"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b4baf93f58d4425749ca49a51c50ebab072c5df6994d08fed93541c331481dc"
 dependencies = [
  "either",
 ]
@@ -2465,7 +2474,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03da047801ff44bb6a4d407d4860c05fd70bb81714e6b2f3812603d5b145b042"
 dependencies = [
  "heck",
- "itertools",
+ "itertools 0.14.0",
  "log",
  "multimap",
  "petgraph",
@@ -2484,7 +2493,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a56d757972c98b346a9b766e3f02746cde6dd1cd1d1d563472929fdd74bec4d"
 dependencies = [
  "anyhow",
- "itertools",
+ "itertools 0.14.0",
  "proc-macro2",
  "quote",
  "syn",
@@ -2497,7 +2506,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b570b25f7617e43d59005d0990ccb79e950a423952cea19671b7a876da390adf"
 dependencies = [
  "anyhow",
- "itertools",
+ "itertools 0.14.0",
  "proc-macro2",
  "quote",
  "syn",
@@ -3460,7 +3469,7 @@ dependencies = [
  "gleam-core",
  "im",
  "insta",
- "itertools",
+ "itertools 0.15.0",
  "regex",
  "toml 0.9.11+spec-1.1.0",
  "walkdir",
@@ -3485,7 +3494,7 @@ dependencies = [
  "gleam-core",
  "im",
  "insta",
- "itertools",
+ "itertools 0.15.0",
  "regex",
  "test-helpers-rs",
  "toml 0.9.11+spec-1.1.0",
@@ -3499,7 +3508,7 @@ dependencies = [
  "gleam-core",
  "im",
  "insta",
- "itertools",
+ "itertools 0.15.0",
  "regex",
  "test-helpers-rs",
  "toml 0.9.11+spec-1.1.0",
