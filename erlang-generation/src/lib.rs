@@ -2236,6 +2236,8 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
     }
 
     fn bit_array_segment_default_size(&mut self) {
+        self.pop_leftover_items();
+
         if let Some(ErlangSourceBuilderPosition::BitArraySegment {
             expected: expected @ BitArraySegmentExpectedItem::Size,
             segment_value_needs_wrapping,
