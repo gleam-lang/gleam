@@ -128,10 +128,10 @@ runs:
         subscription-id: ${{ inputs.azure-subscription-id }}
     - name: Windows Code Signing
       if: ${{ contains(inputs.target, '-windows-') && inputs.azure-tenant-id && inputs.azure-subscription-id && inputs.azure-client-id && inputs.azure-trusted-signing-account-name && inputs.azure-certificate-profile-name }}
-      uses: azure/trusted-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2.0.0
+      uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2.0.0
       with:
         endpoint: https://eus.codesigning.azure.net/
-        trusted-signing-account-name: ${{ inputs.azure-trusted-signing-account-name }}
+        signing-account-name: ${{ inputs.azure-trusted-signing-account-name }}
         certificate-profile-name: ${{ inputs.azure-certificate-profile-name }}
         files: ${{ github.workspace }}\target\${{ inputs.target }}\release\gleam.exe
         file-digest: SHA256
