@@ -5,7 +5,7 @@
 
 # Changelog
 
-## Unreleased
+## v1.18.0-rc1 - 2026-07-21
 
 ### Compiler
 

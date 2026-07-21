@@ -3,7 +3,7 @@
 
 [package]
 name = "test-commands"
-version = "1.17.0"
+version = "1.18.0-rc1"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2024"
 license = "Apache-2.0"
