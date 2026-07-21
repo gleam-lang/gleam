@@ -1028,7 +1028,10 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // Control flow.
             //
             TypedExpr::Case {
-                subjects, clauses, compiled_case, ..
+                subjects,
+                clauses,
+                compiled_case,
+                ..
             } => self.case(builder, subjects, clauses, compiled_case),
 
             //
@@ -2130,6 +2133,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         for (clause_index, clause) in clauses.iter().enumerate() {
             let taken_names_before_clause = self.taken_names.clone();
 
+            // If the main pattern is not unreachable, emit an Erlang case arm for it.
             if !compiled_case.unreachable.contains(&(clause_index, 0)) {
                 self.clause_branch(builder, &clause.pattern, clause);
             }
@@ -2161,8 +2165,19 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // ```
             //
             for (alt_offset, pattern) in clause.alternative_patterns.iter().enumerate() {
-                let pattern_index = alt_offset + 1; // same as typechecking
-                if compiled_case.unreachable.contains(&(clause_index, pattern_index)) {
+                // This specific for loop iterates over alternative patterns.
+                // Since we have already looked over the main pattern, we
+                // must add 1 to the `alt_offset` as we shift by one to line up
+                // with the real indexes for the unreachable. (Alternatives start at `1+`.)
+                let pattern_index = alt_offset + 1;
+
+                // If this alternative is unreachable based on
+                // the `compiled_case`, then the Erlang generated code
+                // will not contain this alternative's Erlang arm.
+                if compiled_case
+                    .unreachable
+                    .contains(&(clause_index, pattern_index))
+                {
                     continue;
                 }
 
