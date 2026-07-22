@@ -5674,6 +5674,8 @@ pub enum PatternMatchedValue<'a> {
         /// ```
         ///
         bound_variables: Vec<BoundVariable>,
+        /// We don't want to duplicate existing patterns
+        existing_patterns: Vec<&'a Vec<TypedPattern>>,
     },
     UseVariable {
         variable_name: &'a EcoString,
@@ -5775,6 +5777,7 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
                 variable_location,
                 clause_location,
                 bound_variables,
+                existing_patterns,
             }) => {
                 let title = if variable_location.is_discard() {
                     "Pattern match on value"
@@ -6307,32 +6310,56 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
         }
     }
 
-    fn visit_typed_clause(&mut self, clause: &'ast ast::TypedClause) {
-        // If we're not inside the clause there's no point in exploring its
-        // ast further.
-        let clause_range = self.edits.src_span_to_lsp_range(clause.location);
-        if !within(self.params.range, clause_range) {
+    fn visit_typed_expr_case(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        subjects: &'ast [TypedExpr],
+        clauses: &'ast [ast::TypedClause],
+        compiled_case: &'ast CompiledCase,
+    ) {
+        let is_hovering_clause = clauses.iter().any(|clause| {
+            let pattern_range = self.edits.src_span_to_lsp_range(clause.pattern_location());
+            within(self.params.range, pattern_range)
+        });
+
+        if !is_hovering_clause {
+            ast::visit::visit_typed_expr_case(
+                self,
+                location,
+                type_,
+                subjects,
+                clauses,
+                compiled_case,
+            );
             return;
         }
 
-        for pattern in clause.pattern.iter() {
-            self.visit_typed_pattern(pattern);
-        }
-        for patterns in clause.alternative_patterns.iter() {
-            for pattern in patterns {
+        for clause in clauses {
+            for pattern in clause.pattern.iter() {
                 self.visit_typed_pattern(pattern);
             }
-        }
+            for patterns in clause.alternative_patterns.iter() {
+                for pattern in patterns {
+                    self.visit_typed_pattern(pattern);
+                }
+            }
 
-        if let Some((_, variable_location, type_)) = self.pattern_variable_under_cursor.take() {
-            self.selected_value = Some(PatternMatchedValue::ClausePatternVariable {
-                variable_type: type_,
-                variable_location,
-                clause_location: clause.location(),
-                bound_variables: clause.bound_variables().collect_vec(),
-            });
-        } else {
-            self.visit_typed_expr(&clause.then);
+            if let Some((_, variable_location, type_)) = self.pattern_variable_under_cursor.take() {
+                self.selected_value = Some(PatternMatchedValue::ClausePatternVariable {
+                    variable_type: type_,
+                    variable_location,
+                    clause_location: clause.location(),
+                    bound_variables: clause.bound_variables().collect_vec(),
+                    existing_patterns: clauses
+                        .into_iter()
+                        .map(|clause| clause.patterns().collect::<Vec<&Vec<TypedPattern>>>())
+                        .flatten()
+                        .collect::<Vec<&Vec<TypedPattern>>>(),
+                });
+            } else {
+                self.visit_typed_expr(&clause.then);
+            }
         }
     }
 
