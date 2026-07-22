@@ -472,6 +472,33 @@ fn type_parameter_name(type_: &Type) -> EcoString {
     }
 }
 
+fn fold_bits_unit_value<Value>(options: &[BitArrayOption<Value>]) -> Option<u8> {
+    let mut has_bits = false;
+    let mut unit_value = None;
+    for option in options {
+        match option {
+            BitArrayOption::Bits { .. } => has_bits = true,
+            BitArrayOption::Unit { value, .. } => unit_value = Some(value),
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Size { .. } => {}
+        }
+    }
+    if has_bits { unit_value.copied() } else { None }
+}
+
 impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     pub fn new(
         function: &'a TypedFunction,
@@ -2349,17 +2376,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         builder: &mut impl ErlangBuilder<Output>,
         segment: &'a TypedConstantBitArraySegment,
     ) {
-        // Fold unit for constant bits segments
-        let mut has_bits = false;
-        let mut bits_unit_value = None;
-        for option in &segment.options {
-            match option {
-                BitArrayOption::Bits { .. } => has_bits = true,
-                BitArrayOption::Unit { value, .. } => bits_unit_value = Some(*value),
-                _ => {}
-            }
-        }
-        let bits_unit_value = if has_bits { bits_unit_value } else { None };
+        let bits_unit_value = fold_bits_unit_value(&segment.options);
 
         builder.bit_array_segment();
         self.inlined_constant(builder, &segment.value);
@@ -2806,16 +2823,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         } else {
             // If the bit array segment doesn't need any special handling we use the
             // regular printing functions to format its value and options.
-            let mut has_bits = false;
-            let mut bits_unit_value = None;
-            for option in &segment.options {
-                match option {
-                    BitArrayOption::Bits { .. } => has_bits = true,
-                    BitArrayOption::Unit { value, .. } => bits_unit_value = Some(*value),
-                    _ => {}
-                }
-            }
-            let bits_unit_value = if has_bits { bits_unit_value } else { None };
+            let bits_unit_value = fold_bits_unit_value(&segment.options);
             builder.bit_array_segment();
 
             // Fold unit into size for bits segments with unit
@@ -2845,9 +2853,10 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // results in a runtime error. We can't do that in Gleam! So any
         // negative value must be turned to zero instead.
         //
-        // When `bits_unit_value` is set the unit has been folded into
-        // the size so the unit specifier can be omitted. For example,
-        // size=8 with unit=8 produces 64, emitting <<X:64/bitstring>>
+        // And when `bits_unit_value` is set the unit has been folded into
+        // the size so the unit specifier can be omitted.
+        //
+        // For example, size=8 with unit=8 produces 64, emitting <<X:64/bitstring>>
         // instead of <<X:8/bitstring-unit:8>>.
         if let Some(unit) = bits_unit_value {
             // Multiply the size by the unit

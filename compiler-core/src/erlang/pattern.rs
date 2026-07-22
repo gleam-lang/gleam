@@ -239,22 +239,12 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                 for segment in segments {
                     // Only fold unit into size for literal integer sizes,
                     // patterns cannot use binary operators at runtime.
-                    let mut has_bits = false;
-                    let mut bits_unit_value = None;
                     let is_literal_size = matches!(
                         segment.size(),
                         Some(Pattern::BitArraySize(BitArraySize::Int { .. }))
                     );
-                    for option in &segment.options {
-                        match option {
-                            BitArrayOption::Bits { .. } => has_bits = true,
-                            BitArrayOption::Unit { value, .. } if is_literal_size => {
-                                bits_unit_value = Some(*value)
-                            }
-                            _ => {}
-                        }
-                    }
-                    let bits_unit_value = if has_bits { bits_unit_value } else { None };
+                    let bits_unit_value = fold_bits_unit_value(&segment.options)
+                        .filter(|_| is_literal_size);
 
                     builder.bit_array_segment();
                     self.bit_array_pattern_segment_value(builder, segment);
@@ -263,8 +253,11 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                     } else {
                         self.bit_array_pattern_segment_size(builder, segment);
                     }
-                    self.generator
-                        .bit_array_segment_specifiers(builder, segment, bits_unit_value.is_some());
+                    self.generator.bit_array_segment_specifiers(
+                        builder,
+                        segment,
+                        bits_unit_value.is_some(),
+                    );
                 }
                 builder.end_bit_array_pattern(bit_array);
             }
