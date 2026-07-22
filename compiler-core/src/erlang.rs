@@ -2341,22 +2341,38 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         builder: &mut impl ErlangBuilder<Output>,
         segment: &'a TypedConstantBitArraySegment,
     ) {
+        // fold unit for constant bits segments
+        let unit_fold = segment
+            .has_bits_option()
+            .then(|| segment.options.iter().find_map(|o| match o {
+                BitArrayOption::Unit { value, .. } => Some(*value),
+                _ => None,
+            }))
+            .flatten();
+
         builder.bit_array_segment();
         self.inlined_constant(builder, &segment.value);
-        match segment.size() {
-            Some(TypedConstant::Int { int_value, .. }) if int_value.is_negative() => {
+        match (segment.size(), unit_fold) {
+            (Some(TypedConstant::Int { int_value, .. }), _) if int_value.is_negative() => {
                 builder.int(BigInt::ZERO);
             }
-            Some(size) => self.inlined_constant(builder, size),
-            None => builder.atom("default"),
+            (Some(TypedConstant::Int { int_value, .. }), Some(unit)) => {
+                builder.int(int_value * unit);
+            }
+            (Some(size), _) => self.inlined_constant(builder, size),
+            (None, _) => builder.atom("default"),
         }
-        self.bit_array_segment_specifiers(builder, segment);
+        self.bit_array_segment_specifiers(builder, segment, unit_fold.is_some());
     }
 
+    // When fold_unit is true, the unit was already multiplied into the
+    // size (e.g. size=8, unit=8 became 64), so skip emitting the unit
+    // specifier. BEAM rejects unit with the bitstring type.
     fn bit_array_segment_specifiers<Output, Expr>(
         &self,
         builder: &mut impl ErlangBuilder<Output>,
         segment: &'a BitArraySegment<Expr, Arc<Type>>,
+        fold_unit: bool,
     ) {
         let options = segment.options.iter();
         builder.bit_array_segment_specifiers(options.filter_map(|option| match option {
@@ -2378,6 +2394,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             BitArrayOption::Big { .. } => Some(BitArraySegmentSpecifier::Big),
             BitArrayOption::Little { .. } => Some(BitArraySegmentSpecifier::Little),
             BitArrayOption::Native { .. } => Some(BitArraySegmentSpecifier::Native),
+            BitArrayOption::Unit { .. } if fold_unit => None,
             BitArrayOption::Unit { value, .. } => Some(BitArraySegmentSpecifier::Unit(*value)),
             BitArrayOption::Size { .. } => None,
         }));
@@ -2776,10 +2793,19 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         } else {
             // If the bit array segment doesn't need any special handling we use the
             // regular printing functions to format its value and options.
+            let unit_fold = segment
+                .has_bits_option()
+                .then(|| segment.options.iter().find_map(|o| match o {
+                    BitArrayOption::Unit { value, .. } => Some(*value),
+                    _ => None,
+                }))
+                .flatten();
             builder.bit_array_segment();
+
+            // Folds unit for expression bits segments
             self.maybe_block_expr(builder, &segment.value);
-            self.bit_array_expression_segment_size(builder, segment);
-            self.bit_array_segment_specifiers(builder, segment);
+            self.bit_array_expression_segment_size(builder, segment, unit_fold);
+            self.bit_array_segment_specifiers(builder, segment, unit_fold.is_some());
         }
     }
 
@@ -2792,6 +2818,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
         segment: &'a TypedExprBitArraySegment,
+        unit_fold: Option<u8>,
     ) {
         let Some(size) = segment.size() else {
             builder.atom("default");
@@ -2800,8 +2827,27 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
         // Sizes need some care: in Erlang, having a negative segment size
         // results in a runtime error. We can't do that in Gleam! So any
-        // negative value must be turned to zero instead:
-        if let TypedExpr::Int { int_value, .. } = &size {
+        // negative value must be turned to zero instead.
+        //
+        // Also see the `unit_fold` parameter above: when set,
+        // we fold the unit into the size here.
+        if let Some(unit) = unit_fold {
+            // size * unit
+            if let TypedExpr::Int { int_value, .. } = &size {
+                if int_value.is_negative() {
+                    builder.int(BigInt::ZERO);
+                } else {
+                    builder.int(int_value.clone() * unit);
+                }
+            } else {
+                let call = builder.start_remote_call(ErlangModuleName::erlang(), "max");
+                builder.int(BigInt::ZERO);
+                builder.binary_operator("*");
+                self.maybe_block_expr(builder, size);
+                builder.int(unit.into());
+                builder.end_call(call);
+            }
+        } else if let TypedExpr::Int { int_value, .. } = &size {
             if int_value.is_negative() {
                 builder.int(BigInt::ZERO);
             } else {
