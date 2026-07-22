@@ -27,7 +27,13 @@
     "Telem",
     "Unretire",
     "Untar",
-    "walkdir"
+    "walkdir",
+    // Alternatives to "foo bar"
+    "!foo",
+    "!foobar",
+    "wibble",
+    "wobble",
+    "warble"
   ],
   "cSpell.language": "en,uk,en-GB,en-US"
 }
