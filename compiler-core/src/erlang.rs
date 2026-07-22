@@ -20,7 +20,7 @@ use crate::{
 use camino::Utf8Path;
 use ecow::{EcoString, eco_format};
 use erlang_generation::{
-    BitArraySegmentSpecifier, ErlangBuilder, ErlangModuleName, ErlangSourceBuilder,
+    BitArraySegmentSpecifier, DocContent, ErlangBuilder, ErlangModuleName, ErlangSourceBuilder,
 };
 use itertools::Itertools;
 use num_bigint::BigInt;
@@ -260,19 +260,16 @@ impl<'a> Generator<'a> {
         if self.module.type_info.is_internal {
             // The module is internal so we need to add a `-moduledoc(false).`
             // attribute to make sure its documentation is hidden.
-            let doc = builder.start_moduledoc_attribute();
-            builder.atom("false");
-            builder.end_doc_attribute(doc);
+            builder.moduledoc_attribute(DocContent::False);
         } else if self.module.documentation.is_empty() {
             // The module is not internal, but it has no docs.
             // We don't have to do anything.
         } else {
             // The module has some documentation that we're going to include
             // with a `-moduledoc` attribute.
-            let doc = builder.start_moduledoc_attribute();
-            let documentation = &self.module.documentation.iter().join("\n");
-            builder.string(documentation);
-            builder.end_doc_attribute(doc);
+            builder.moduledoc_attribute(DocContent::String(
+                &self.module.documentation.iter().join("\n"),
+            ));
         }
     }
 
@@ -293,7 +290,7 @@ impl<'a> Generator<'a> {
         let name = erl_safe_type_name(to_snake_case(name));
 
         // We start the type spec.
-        builder.type_spec(
+        let type_spec = builder.start_type_spec(
             *opaque,
             &name,
             typed_parameters
@@ -318,7 +315,7 @@ impl<'a> Generator<'a> {
                 for type_variable in phantom_type_variables {
                     builder.type_variable(&type_variable);
                 }
-                builder.end_named_type(type_);
+                builder.end_remote_named_type(type_);
             }
             // This is an external type with no external annotation and no
             // phantom type variables. It is just `any()`.
@@ -352,6 +349,8 @@ impl<'a> Generator<'a> {
                 builder.end_union_type(union);
             }
         }
+
+        builder.end_type_spec(type_spec);
     }
 
     /// Given a constructor this generates its type. For example:
@@ -692,15 +691,11 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             self.module_generator.module.type_info.is_internal || function.publicity.is_internal();
 
         if is_internal {
-            let attribute = builder.start_doc_attribute();
-            builder.atom("false");
-            builder.end_doc_attribute(attribute);
+            builder.doc_attribute(DocContent::False);
         } else if let Some((_, documentation)) = &function.documentation
             && !documentation.is_empty()
         {
-            let attribute = builder.start_doc_attribute();
-            builder.string(documentation);
-            builder.end_doc_attribute(attribute);
+            builder.doc_attribute(DocContent::String(documentation));
         }
     }
 
@@ -1050,6 +1045,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
         let call = builder.start_call();
         builder.atom("echo");
+        let call = builder.end_called_expression(call);
 
         // Echo has 4 arguments: the expression to print...
         match printed_value {
@@ -1196,6 +1192,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // exception in case the pattern doesn't match.
         let case = builder.start_case();
         self.maybe_block_expr(builder, value);
+        let case = builder.end_case_subject(case);
 
         // This is the first branch for when the asserted pattern matches: it's
         // going to run all the remaining statements in its body.
@@ -1436,6 +1433,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 builder.binary_operator(erlang_operator);
                 self.runtime_value(builder, &left);
                 self.runtime_value(builder, &right);
+                let case = builder.end_case_subject(case);
 
                 // If the operator evaluates to true the assertion succeeded.
                 // We can just return nil.
@@ -1486,6 +1484,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
                 let case = builder.start_case();
                 self.call_in_assert(builder, fun, &call_arguments);
+                let case = builder.end_case_subject(case);
 
                 // If the operator evaluates to true the assertion succeeded.
                 // We can just return nil.
@@ -1537,6 +1536,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             | TypedExpr::Invalid { .. } => {
                 let case = builder.start_case();
                 self.maybe_block_expr(builder, value);
+                let case = builder.end_case_subject(case);
 
                 // If the expression evaluates to true the assertion succeeded.
                 // We can just return nil.
@@ -1601,6 +1601,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     ) {
         let case = builder.start_case();
         self.maybe_block_expr(builder, left);
+        let case = builder.end_case_subject(case);
 
         // In case the first expression is true, we get to evaluate the second
         // one as well, then we will be able to tell if the assertion failed or
@@ -1613,6 +1614,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // Now we have to match on the right hand side!
             let case = builder.start_case();
             self.maybe_block_expr(builder, right);
+            let case = builder.end_case_subject(case);
 
             // If it's true the assertion succeded! We can return `nil`.
             let clause = builder.start_case_clause();
@@ -1681,6 +1683,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         builder.binary_operator("orelse");
         self.maybe_block_expr(builder, left);
         self.maybe_block_expr(builder, right);
+        let case = builder.end_case_subject(case);
 
         // If the result is true, then the assertion succeeded, we can return
         // nil.
@@ -2001,7 +2004,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 } else {
                     let call = builder.start_call();
                     builder.atom(escape_erlang_existing_name(name));
-                    call
+                    builder.end_called_expression(call)
                 };
                 for argument in arguments {
                     self.maybe_block_expr(builder, &argument.value);
@@ -2014,6 +2017,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             FunctionCall::DirectCall => {
                 let call = builder.start_call();
                 self.maybe_block_expr(builder, fun);
+                let call = builder.end_called_expression(call);
                 for argument in arguments {
                     self.maybe_block_expr(builder, &argument.value);
                 }
@@ -2056,7 +2060,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 } else {
                     let call = builder.start_call();
                     builder.atom(escape_erlang_existing_name(name));
-                    call
+                    builder.end_called_expression(call)
                 };
                 for argument in arguments {
                     self.runtime_value(builder, argument);
@@ -2070,6 +2074,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             FunctionCall::DirectCall => {
                 let call = builder.start_call();
                 self.maybe_block_expr(builder, fun);
+                let call = builder.end_called_expression(call);
                 for argument in arguments {
                     self.runtime_value(builder, argument);
                 }
@@ -2124,6 +2129,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 builder.end_tuple(tuple);
             }
         }
+        let case = builder.end_case_subject(case);
 
         for clause in clauses {
             let taken_names_before_clause = self.taken_names.clone();
@@ -2195,7 +2201,9 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
         let clause_guards = builder.end_clause_pattern(clause_pattern);
         if let Some(guard) = clause.guard.as_ref() {
+            let guard_ender = builder.start_clause_guard();
             self.clause_guard(builder, guard, &variables_to_add_later);
+            builder.end_clause_guard(guard_ender);
         }
 
         // Finally we can generate the clause body. If the clause is
@@ -2341,18 +2349,21 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         builder: &mut impl ErlangBuilder<Output>,
         segment: &'a TypedConstantBitArraySegment,
     ) {
-        // fold unit for constant bits segments
-        let unit_fold = segment
-            .has_bits_option()
-            .then(|| segment.options.iter().find_map(|o| match o {
-                BitArrayOption::Unit { value, .. } => Some(*value),
-                _ => None,
-            }))
-            .flatten();
+        // Fold unit for constant bits segments
+        let mut has_bits = false;
+        let mut bits_unit_value = None;
+        for option in &segment.options {
+            match option {
+                BitArrayOption::Bits { .. } => has_bits = true,
+                BitArrayOption::Unit { value, .. } => bits_unit_value = Some(*value),
+                _ => {}
+            }
+        }
+        let bits_unit_value = if has_bits { bits_unit_value } else { None };
 
         builder.bit_array_segment();
         self.inlined_constant(builder, &segment.value);
-        match (segment.size(), unit_fold) {
+        match (segment.size(), bits_unit_value) {
             (Some(TypedConstant::Int { int_value, .. }), _) if int_value.is_negative() => {
                 builder.int(BigInt::ZERO);
             }
@@ -2360,19 +2371,19 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 builder.int(int_value * unit);
             }
             (Some(size), _) => self.inlined_constant(builder, size),
-            (None, _) => builder.atom("default"),
+            (None, _) => builder.bit_array_segment_default_size(),
         }
-        self.bit_array_segment_specifiers(builder, segment, unit_fold.is_some());
+        self.bit_array_segment_specifiers(builder, segment, bits_unit_value.is_some());
     }
 
-    // When fold_unit is true, the unit was already multiplied into the
-    // size (e.g. size=8, unit=8 became 64), so skip emitting the unit
-    // specifier. BEAM rejects unit with the bitstring type.
+    // When `omit_unit_specifier` is true, the unit was already multiplied
+    // into the size (e.g. size=8, unit=8 became 64), so we skip emitting
+    // the unit specifier. The BEAM rejects unit with the bitstring type.
     fn bit_array_segment_specifiers<Output, Expr>(
         &self,
         builder: &mut impl ErlangBuilder<Output>,
         segment: &'a BitArraySegment<Expr, Arc<Type>>,
-        fold_unit: bool,
+        omit_unit_specifier: bool,
     ) {
         let options = segment.options.iter();
         builder.bit_array_segment_specifiers(options.filter_map(|option| match option {
@@ -2394,7 +2405,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             BitArrayOption::Big { .. } => Some(BitArraySegmentSpecifier::Big),
             BitArrayOption::Little { .. } => Some(BitArraySegmentSpecifier::Little),
             BitArrayOption::Native { .. } => Some(BitArraySegmentSpecifier::Native),
-            BitArrayOption::Unit { .. } if fold_unit => None,
+            BitArrayOption::Unit { .. } if omit_unit_specifier => None,
             BitArrayOption::Unit { value, .. } => Some(BitArraySegmentSpecifier::Unit(*value)),
             BitArrayOption::Size { .. } => None,
         }));
@@ -2459,7 +2470,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
             builder.bit_array_segment();
             self.inlined_constant(builder, segment);
-            builder.atom("default");
+            builder.bit_array_segment_default_size();
             builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Utf8]);
         }
         builder.end_bit_array(bit_array);
@@ -2490,7 +2501,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // `default` atom.
         builder.bit_array_segment();
         self.maybe_block_expr(builder, value);
-        builder.atom("default");
+        builder.bit_array_segment_default_size();
         builder.bit_array_segment_specifiers(if produces_literal_string(value) {
             [BitArraySegmentSpecifier::Utf8]
         } else {
@@ -2570,6 +2581,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
                 let case = builder.start_case();
                 self.maybe_block_expr(builder, right);
+                let case = builder.end_case_subject(case);
 
                 // +0.0 -> +0.0
                 let clause = builder.start_case_clause();
@@ -2659,6 +2671,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
                 let case = builder.start_case();
                 self.maybe_block_expr(builder, right);
+                let case = builder.end_case_subject(case);
 
                 // 0 -> 0
                 let clause = builder.start_case_clause();
@@ -2759,7 +2772,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     // to add the binary option and we can call it a day.
                     builder.bit_array_segment();
                     self.maybe_block_expr(builder, &segment.value);
-                    builder.atom("default");
+                    builder.bit_array_segment_default_size();
                     builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Binary]);
                     return;
                 }
@@ -2788,24 +2801,27 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             }
             builder.end_call(call);
 
-            builder.atom("default");
+            builder.bit_array_segment_default_size();
             builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Binary]);
         } else {
             // If the bit array segment doesn't need any special handling we use the
             // regular printing functions to format its value and options.
-            let unit_fold = segment
-                .has_bits_option()
-                .then(|| segment.options.iter().find_map(|o| match o {
-                    BitArrayOption::Unit { value, .. } => Some(*value),
-                    _ => None,
-                }))
-                .flatten();
+            let mut has_bits = false;
+            let mut bits_unit_value = None;
+            for option in &segment.options {
+                match option {
+                    BitArrayOption::Bits { .. } => has_bits = true,
+                    BitArrayOption::Unit { value, .. } => bits_unit_value = Some(*value),
+                    _ => {}
+                }
+            }
+            let bits_unit_value = if has_bits { bits_unit_value } else { None };
             builder.bit_array_segment();
 
-            // Folds unit for expression bits segments
+            // Fold unit into size for bits segments with unit
             self.maybe_block_expr(builder, &segment.value);
-            self.bit_array_expression_segment_size(builder, segment, unit_fold);
-            self.bit_array_segment_specifiers(builder, segment, unit_fold.is_some());
+            self.bit_array_expression_segment_size(builder, segment, bits_unit_value);
+            self.bit_array_segment_specifiers(builder, segment, bits_unit_value.is_some());
         }
     }
 
@@ -2818,10 +2834,10 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
         segment: &'a TypedExprBitArraySegment,
-        unit_fold: Option<u8>,
+        bits_unit_value: Option<u8>,
     ) {
         let Some(size) = segment.size() else {
-            builder.atom("default");
+            builder.bit_array_segment_default_size();
             return;
         };
 
@@ -2829,10 +2845,12 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // results in a runtime error. We can't do that in Gleam! So any
         // negative value must be turned to zero instead.
         //
-        // Also see the `unit_fold` parameter above: when set,
-        // we fold the unit into the size here.
-        if let Some(unit) = unit_fold {
-            // size * unit
+        // When `bits_unit_value` is set the unit has been folded into
+        // the size so the unit specifier can be omitted. For example,
+        // size=8 with unit=8 produces 64, emitting <<X:64/bitstring>>
+        // instead of <<X:8/bitstring-unit:8>>.
+        if let Some(unit) = bits_unit_value {
+            // Multiply the size by the unit
             if let TypedExpr::Int { int_value, .. } = &size {
                 if int_value.is_negative() {
                     builder.int(BigInt::ZERO);
@@ -2989,7 +3007,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // `default` atom.
         builder.bit_array_segment();
         self.clause_guard(builder, guard, assignments);
-        builder.atom("default");
+        builder.bit_array_segment_default_size();
         builder.bit_array_segment_specifiers(if guard_produces_literal_string(guard) {
             [BitArraySegmentSpecifier::Utf8]
         } else {
@@ -4050,17 +4068,19 @@ impl<'a> TypeGenerator<'a> {
         arguments: &[Arc<Type>],
     ) {
         let name = erl_safe_type_name(to_snake_case(name));
-        let type_ = if self.current_module == module {
-            builder.start_named_type(&name)
+        if self.current_module == module {
+            let type_ = builder.start_named_type(&name);
+            for argument in arguments {
+                self.type_(builder, argument);
+            }
+            builder.end_named_type(type_);
         } else {
-            builder.start_remote_named_type(ErlangModuleName::new(&module), &name)
+            let type_ = builder.start_remote_named_type(ErlangModuleName::new(&module), &name);
+            for argument in arguments {
+                self.type_(builder, argument);
+            }
+            builder.end_remote_named_type(type_);
         };
-
-        for argument in arguments {
-            self.type_(builder, argument);
-        }
-
-        builder.end_named_type(type_);
     }
 }
 

@@ -215,3 +215,10 @@ fn io_read_metadata_of_file_error() {
     .pretty_string();
     assert_snapshot!(error);
 }
+
+#[test]
+fn wrap_with_multibyte_char_at_width_boundary() {
+    let input = format!("{}é", "a".repeat(74));
+    let wrapped = wrap(&input);
+    assert_eq!(wrapped.replace('\n', ""), input);
+}

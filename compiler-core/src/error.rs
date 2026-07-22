@@ -5307,12 +5307,14 @@ fn break_line(line: &str, width: usize) -> Vec<Cow<'_, str>> {
 // breaks word into n lines based on width. Returns list of new lines and remainder
 fn break_word(word: &str, width: usize) -> (Vec<Cow<'_, str>>, &str) {
     let mut new_lines: Vec<Cow<'_, str>> = Vec::new();
-    let (first, mut remainder) = word.split_at(width);
+    // Split on a char boundary so a multi-byte UTF-8 char straddling `width`
+    // doesn't cause a panic.
+    let (first, mut remainder) = word.split_at(word.floor_char_boundary(width));
     new_lines.push(Cow::from(first));
 
     // split remainder until it's small enough
     while remainder.len() > width {
-        let (first, second) = remainder.split_at(width);
+        let (first, second) = remainder.split_at(remainder.floor_char_boundary(width));
         new_lines.push(Cow::from(first));
         remainder = second;
     }

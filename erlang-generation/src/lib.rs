@@ -64,6 +64,14 @@ pub enum BitArraySegmentSpecifier {
     Unit(u8),
 }
 
+/// This represents what can go in a moduledoc or doc comment. Either the atom
+/// false, if the function/module is to be hidden from the public docs, or the
+/// string content to include.
+pub enum DocContent<'string> {
+    False,
+    String(&'string str),
+}
+
 /// A trait defining operations to describe the content of an Erlang module.
 ///
 /// This might look strange in places, for example why is there a `start_tuple`
@@ -87,14 +95,24 @@ pub trait ErlangBuilder<Output> {
     /// Represents an open function call that has yet to be closed.
     type Call;
 
+    /// Represents an open function call where the called expression still has
+    /// to be generated.
+    type CalledExpression;
+
     /// Represents an open case expression that has yet to be closed.
     type Case;
+
+    /// Represents an open case subject that has yet to be closed.
+    type CaseSubject;
 
     /// Represents an open case clause pattern that has yet to be generated.
     type ClausePattern;
 
     /// Represents a set of clause guards that has yet to be closed.
     type ClauseGuards;
+
+    /// Represents a single clause guard that has yet to be closed.
+    type Guard;
 
     /// Represents an open clause body that has yet to be closed.
     type ClauseBody;
@@ -117,9 +135,6 @@ pub trait ErlangBuilder<Output> {
     /// Represents an open tuple pattern that has yet to be closed.
     type TuplePattern;
 
-    /// Represents an open doc/moduledoc attribute.
-    type DocAttribute;
-
     /// Represents an open record attribute.
     type RecordAttribute;
 
@@ -130,6 +145,10 @@ pub trait ErlangBuilder<Output> {
     /// Represents an open named type that has yet to be closed after generating
     /// the types it takes as an argument (if any).
     type NamedType;
+
+    /// Represents an open remote named type that has yet to be closed after
+    /// generating the types it takes as an argument (if any).
+    type RemoteNamedType;
 
     /// Represents an open alternative type that has yet to be closed after
     /// generating all of its alternatives.
@@ -146,6 +165,10 @@ pub trait ErlangBuilder<Output> {
     /// Represents an open list of arguments' types in a function type annotation
     /// that has yet to be closed.
     type FunctionTypeArguments;
+
+    /// Represents an open type spec attribute that has yet to be closed after
+    /// generating the type it stands for.
+    type TypeSpec;
 
     /// Creates a new `ErlangBuilder` data structure to generate Erlang code.
     /// If a module name is provided this will also automatically take care of
@@ -201,17 +224,11 @@ pub trait ErlangBuilder<Output> {
         exported: impl IntoIterator<Item = (Name, usize)>,
     );
 
-    /// Starts a `-doc` attribute.
-    /// What is generated after calling this function will end up inside the
-    /// `-doc` attribute.
-    /// You'll most likely always put a string or the atom "false" inside it.
-    ///
+    /// Creates a `-doc` attribute with the given content.
     /// For example:
     ///
     /// ```ignore
-    /// let doc = builder.start_doc_attribute();
-    /// builder.atom("false");
-    /// builder.close_doc_attribute(doc);
+    /// todo!()
     /// ```
     ///
     /// Corresponds to:
@@ -220,19 +237,13 @@ pub trait ErlangBuilder<Output> {
     /// -doc(false).
     /// ```
     ///
-    fn start_doc_attribute(&mut self) -> Self::DocAttribute;
+    fn doc_attribute(&mut self, content: DocContent<'_>);
 
-    /// Starts a `-moduledoc` attribute.
-    /// What is generated after calling this function will end up inside the
-    /// `-moduledoc` attribute.
-    /// You'll most likely always put a string or the atom "false" inside it.
-    ///
+    /// Creates a `-moduledoc` attribute with the given content.
     /// For example:
     ///
     /// ```ignore
-    /// let doc = builder.start_moduledoc_attribute();
-    /// builder.atom("false");
-    /// builder.close_doc_attribute(doc);
+    /// todo!()
     /// ```
     ///
     /// Corresponds to:
@@ -241,12 +252,7 @@ pub trait ErlangBuilder<Output> {
     /// -moduledoc(false).
     /// ```
     ///
-    fn start_moduledoc_attribute(&mut self) -> Self::DocAttribute;
-
-    /// This closes the currently open doc/moduledoc attribute.
-    /// Code generated after this is not gonna be part of it.
-    ///
-    fn end_doc_attribute(&mut self, attribute: Self::DocAttribute);
+    fn moduledoc_attribute(&mut self, content: DocContent<'_>);
 
     /// This generates the code for a `-compile([]).` attribute where all the
     /// strings produces by the given iterator are going to be passed as atom
@@ -351,6 +357,7 @@ pub trait ErlangBuilder<Output> {
     /// This starts an Erlang type spec.
     /// After this call you're expected to generate a single type; that's going
     /// to be the definition of the type.
+    /// After that is done you should call `end_type_spec`.
     ///
     /// For example:
     ///
@@ -364,7 +371,8 @@ pub trait ErlangBuilder<Output> {
     /// builder.type_variable("A")
     /// builder.close_named_type();
     ///
-    /// builder.end_uniont_type(union);
+    /// builder.end_union_type(union);
+    /// builder.end_type_spec(spec);
     /// ```
     ///
     /// Corresponds to:
@@ -373,12 +381,14 @@ pub trait ErlangBuilder<Output> {
     /// -spec wibble(A) :: nil | list(A).
     /// ```
     ///
-    fn type_spec<Name: AsRef<str>>(
+    fn start_type_spec<Name: AsRef<str>>(
         &mut self,
         opaque: bool,
         name: &str,
         type_parameters: impl IntoIterator<Item = Name>,
-    );
+    ) -> Self::TypeSpec;
+
+    fn end_type_spec(&mut self, type_spec: Self::TypeSpec);
 
     /// This starts a function type.
     /// Any code generated after this is gonna be an argument type of the open
@@ -442,6 +452,11 @@ pub trait ErlangBuilder<Output> {
     ///
     fn start_named_type(&mut self, name: &str) -> Self::NamedType;
 
+    /// This takes a named type and closes it.
+    /// Code generated after this is not gonna be part of this named type.
+    ///
+    fn end_named_type(&mut self, named_type: Self::NamedType);
+
     /// This starts a remote named type with the given module and name.
     /// Any code generated after this is gonna be an argument of the open
     /// named type type until `end_named_type` is called.
@@ -459,12 +474,16 @@ pub trait ErlangBuilder<Output> {
     /// wibble:wobble().
     /// ```
     ///
-    fn start_remote_named_type(&mut self, module: ErlangModuleName, name: &str) -> Self::NamedType;
+    fn start_remote_named_type(
+        &mut self,
+        module: ErlangModuleName,
+        name: &str,
+    ) -> Self::RemoteNamedType;
 
-    /// This takes a named type and closes it.
+    /// This takes a remote named type and closes it.
     /// Code generated after this is not gonna be part of this named type.
     ///
-    fn end_named_type(&mut self, named_type: Self::NamedType);
+    fn end_remote_named_type(&mut self, named_type: Self::RemoteNamedType);
 
     /// This starts a tuple type.
     /// Any code generated after this is gonna be one of the tuple items.
@@ -664,13 +683,15 @@ pub trait ErlangBuilder<Output> {
 
     /// This starts a function call.
     /// The expression generated immediately after this is going to be the thing
-    /// that is called, followed by its arguments.
+    /// that is called, after generating it you must call the
+    /// `end_called_expression` function and generate its arguments.
     ///
     /// For example:
     ///
     /// ```ignore
     /// let call = builder.start_call();
     /// builder.atom("wibble")
+    /// let call = builder.end_called_expression(call);
     /// builder.string("Hello");
     /// builder.string("Giacomo");
     /// builder.end_call(call);
@@ -682,7 +703,12 @@ pub trait ErlangBuilder<Output> {
     /// wibble(~"Hello", ~"Giacomo").
     /// ```
     ///
-    fn start_call(&mut self) -> Self::Call;
+    fn start_call(&mut self) -> Self::CalledExpression;
+
+    /// This must be called after generating the expression that is called in a
+    /// function call. After that you can generate the arguments of the function
+    /// call.
+    fn end_called_expression(&mut self, called: Self::CalledExpression) -> Self::Call;
 
     /// This takes an open call and closes it.
     /// Code generated after this is not gonna be an argument to this call.
@@ -764,13 +790,13 @@ pub trait ErlangBuilder<Output> {
     ///
     /// builder.bit_array_segment();
     /// builder.int(1);
-    /// builder.atom("default");
-    /// builder.atom("default");
+    /// builder.bit_array_segment_default_size();
+    /// builder.bit_array_segment_specifiers([]);
     ///
     /// builder.bit_array_segment();
     /// builder.string("hello");
-    /// builder.atom("deafult");
-    /// builder.atom("default");
+    /// builder.bit_array_segment_default_size();
+    /// builder.bit_array_segment_specifiers([]);
     ///
     /// builder.end_bit_array(bit_array);
     /// ```
@@ -810,6 +836,11 @@ pub trait ErlangBuilder<Output> {
     /// If you wanna check an example of how this is used you can have a read at
     /// the ones in `start_bit_array`.
     fn bit_array_segment(&mut self);
+
+    /// You can call this when a bit array segment has no explicit size, and the
+    /// default Erlang behaviour is fine.
+    ///
+    fn bit_array_segment_default_size(&mut self);
 
     /// This generates a specifiers list for the currently open bit array
     /// segment.
@@ -858,6 +889,7 @@ pub trait ErlangBuilder<Output> {
     /// This starts a new case expression.
     /// After this function is called you're supposed to first generate a single
     /// expression; that's going to be the case subject being matched on.
+    /// After that you must call `end_case_subject`.
     ///
     /// After that you're supposed to generate the case branches using the
     /// `start_case_clause` function.
@@ -867,6 +899,7 @@ pub trait ErlangBuilder<Output> {
     /// ```ignore
     /// let case = builder.start_case();
     /// builder.variable("wibble");
+    /// let case = builder.end_case_subject();
     ///
     /// let clause = builder.start_case_clause();
     /// builder.discard_pattern();
@@ -886,7 +919,11 @@ pub trait ErlangBuilder<Output> {
     /// end.
     /// ```
     ///
-    fn start_case(&mut self) -> Self::Case;
+    fn start_case(&mut self) -> Self::CaseSubject;
+
+    /// This ends the open case subject, after this you can start generating the
+    /// case clauses.
+    fn end_case_subject(&mut self, case: Self::CaseSubject) -> Self::Case;
 
     /// This ends an open case expression.
     /// Any code generated after this is not going to be part of it.
@@ -906,6 +943,37 @@ pub trait ErlangBuilder<Output> {
     /// If the clause you're generating has no guards you can immediately call
     /// that function without generating anything inbetween.
     fn end_clause_pattern(&mut self, clause_pattern: Self::ClausePattern) -> Self::ClauseGuards;
+
+    /// You must call this before generating the guard of a case clause.
+    /// For example:
+    ///
+    /// ```ignore
+    /// let case = builder.start_case();
+    /// builder.variable("wibble");
+    /// let case = builder.end_case_subject();
+    ///
+    /// let clause = builder.start_case_clause();
+    /// builder.discard_pattern();
+    /// let clause = builder.end_clause_pattern();
+    /// let guard = builder.start_clause_guard();
+    /// builder.atom("true");
+    /// builder.builder.end_clause_guard(guard);
+    /// let clause = builder.end_clause_guards();
+    /// builder.int(1.into());
+    /// builder.end_clause_body();
+    ///
+    /// builder.end_case(case);
+    /// ```
+    ///
+    /// A clause might have multiple guards but, the way Gleam is compiled, you
+    /// should always call this function just once. A gleam guard is always
+    /// compiled as a single erlang guard with a single expression.
+    ///
+    fn start_clause_guard(&mut self) -> Self::Guard;
+
+    /// This ends an open clause guards. Anything that is generated after
+    /// this is going to be a new guard among the guards of a case's guards.
+    fn end_clause_guard(&mut self, clause_guard: Self::Guard);
 
     /// This ends the case clause's guards. Anything that is generated after
     /// this is going to be a statement inside the current case clause until
@@ -1126,13 +1194,13 @@ pub trait ErlangBuilder<Output> {
     ///
     /// builder.bit_array_pattern_segment();
     /// builder.int_pattern(1);
-    /// builder.atom("default");
-    /// builder.atom("default");
+    /// builder.bit_array_segment_default_size();
+    /// builder.bit_array_segment_specifiers([]);
     ///
     /// builder.bit_array_pattern_segment();
     /// builder.discard_pattern();
-    /// builder.atom("deafult");
-    /// builder.atom("default");
+    /// builder.bit_array_segment_default_size();
+    /// builder.bit_array_segment_specifiers([]);
     ///
     /// builder.end_bit_array_pattern(bit_array);
     /// ```
@@ -1274,10 +1342,6 @@ pub struct ErlangSourceBuilder {
 /// printed code from an `ErlangSourceBuilder`.
 #[derive(Debug)]
 enum ErlangSourceBuilderPosition {
-    /// We're generating a top level documentation attribute like `-doc(false)`,
-    /// or `-moduledoc(~"wibble wobble")`.
-    DocAttribute,
-
     /// We're generating a function spec like `-spec wibble(atom()) -> atom()`.
     FunctionSpec,
 
@@ -1466,6 +1530,8 @@ enum ErlangSourceBuilderPosition {
     /// in two steps: first we generate the name, second we generate the type of
     /// the field.
     RecordField { expected: ExpectedRecordFieldItem },
+    /// We're generating a guard in a possible series of guards in a clause.
+    ClauseGuard,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -1686,23 +1752,27 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
     type BitArray = ();
     type BitArrayPattern = ();
     type Block = ();
+    type CalledExpression = ();
     type Call = ();
     type Case = ();
+    type Guard = ();
+    type CaseSubject = ();
     type ClauseBody = ();
     type ClauseGuards = ();
     type ClausePattern = ();
-    type DocAttribute = ();
     type Function = ();
     type FunctionSpec = ();
     type FunctionType = ();
     type FunctionTypeArguments = ();
     type Map = ();
     type NamedType = ();
+    type RemoteNamedType = ();
     type RecordAttribute = ();
     type Tuple = ();
     type TuplePattern = ();
     type TupleType = ();
     type UnionType = ();
+    type TypeSpec = ();
 
     fn new(module: Option<ErlangModuleName>) -> Self {
         Self {
@@ -1778,22 +1848,18 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.code.push_str("]).\n");
     }
 
-    fn start_doc_attribute(&mut self) -> Self::DocAttribute {
+    fn doc_attribute(&mut self, content: DocContent<'_>) {
         self.new_top_level_form();
         self.code.push_str("-doc(");
-        self.position
-            .push(ErlangSourceBuilderPosition::DocAttribute);
+        self.doc_content(content);
+        self.code.push_str(").\n")
     }
 
-    fn start_moduledoc_attribute(&mut self) -> Self::DocAttribute {
+    fn moduledoc_attribute(&mut self, content: DocContent<'_>) {
         self.new_top_level_form();
         self.code.push_str("-moduledoc(");
-        self.position
-            .push(ErlangSourceBuilderPosition::DocAttribute);
-    }
-
-    fn end_doc_attribute(&mut self, _attribute: Self::DocAttribute) {
-        self.close_currently_open_item();
+        self.doc_content(content);
+        self.code.push_str(").\n")
     }
 
     fn compile_attribute<'a>(&mut self, arguments: impl IntoIterator<Item = &'a str>) {
@@ -1857,12 +1923,12 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.close_currently_open_item();
     }
 
-    fn type_spec<Name: AsRef<str>>(
+    fn start_type_spec<Name: AsRef<str>>(
         &mut self,
         opaque: bool,
         name: &str,
         type_variables: impl IntoIterator<Item = Name>,
-    ) {
+    ) -> Self::TypeSpec {
         self.new_top_level_form();
         self.code.push('\n');
         self.code
@@ -1883,6 +1949,12 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.position.push(ErlangSourceBuilderPosition::TypeSpec {
             expected: TypeSpecExpectedItem::TypeDefinition,
         });
+    }
+
+    fn end_type_spec(&mut self, _type_spec: Self::TypeSpec) {
+        // For the pretty printer type specs do not need any extra book keeping.
+        // Ending one does nothing because the spec is already over and doesn't
+        // change the builder's position.
     }
 
     fn start_function_type(&mut self) -> Self::FunctionTypeArguments {
@@ -1923,6 +1995,10 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.code.push('(');
     }
 
+    fn end_named_type(&mut self, _named_type: Self::NamedType) {
+        self.close_currently_open_item();
+    }
+
     fn start_remote_named_type(&mut self, module: ErlangModuleName, name: &str) -> Self::NamedType {
         self.new_type();
         self.position
@@ -1933,7 +2009,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.code.push('(');
     }
 
-    fn end_named_type(&mut self, _named_type: Self::NamedType) {
+    fn end_remote_named_type(&mut self, _named_type: Self::RemoteNamedType) {
         self.close_currently_open_item();
     }
 
@@ -2082,6 +2158,21 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
             });
     }
 
+    fn end_called_expression(&mut self, _called: Self::CalledExpression) -> Self::Call {
+        // We need to make sure that just a single expression was generated as
+        // the called expression.
+        // So we can assert that we're no longer expecting the called expression
+        // but the arguments, and none has been generated yet.
+        self.pop_leftover_items();
+        let Some(ErlangSourceBuilderPosition::FunctionCall {
+            expected: ExpectedCallItem::Arguments { first: true },
+            ..
+        }) = self.position.last()
+        else {
+            invalid_code_for_position!(self, "end called expression")
+        };
+    }
+
     fn end_call(&mut self, _call: Self::Call) {
         self.close_currently_open_item();
     }
@@ -2142,6 +2233,30 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
                 segment_value_needs_wrapping: true,
                 segment_size_needs_wrapping: true,
             })
+    }
+
+    fn bit_array_segment_default_size(&mut self) {
+        self.pop_leftover_items();
+
+        if let Some(ErlangSourceBuilderPosition::BitArraySegment {
+            expected: expected @ BitArraySegmentExpectedItem::Size,
+            segment_value_needs_wrapping,
+            segment_size_needs_wrapping,
+        }) = self.position.last_mut()
+        {
+            // We are now expecting to see the specifiers list
+            *expected = BitArraySegmentExpectedItem::Specifiers;
+            if *segment_value_needs_wrapping {
+                self.code.push(')');
+                *segment_value_needs_wrapping = false;
+            }
+            // We have the default atom as a size, that means we don't have to
+            // print anything at all! The size doesn't need any wrapping because
+            // there's no size at all.
+            *segment_size_needs_wrapping = false;
+        } else {
+            invalid_code_for_position!(self, "segment default size");
+        }
     }
 
     fn bit_array_segment_specifiers(
@@ -2221,6 +2336,20 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         });
     }
 
+    fn end_case_subject(&mut self, _case: Self::CaseSubject) -> Self::Case {
+        // We need to make sure that just a single expression was generated as
+        // the subject and then this function was called.
+        // So we can assert that we're no longer expecting the subject but the
+        // clauses and none has been generated yet.
+        self.pop_leftover_items();
+        let Some(ErlangSourceBuilderPosition::Case {
+            expected: ExpectedCaseItem::Branches { first: true },
+        }) = self.position.last()
+        else {
+            invalid_code_for_position!(self, "end case subject")
+        };
+    }
+
     fn end_case(&mut self, _case: Self::Case) {
         self.close_currently_open_item();
     }
@@ -2237,6 +2366,15 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.position.push(ErlangSourceBuilderPosition::CaseClause {
             expected: ExpectedCaseClauseItem::Guards { first: true },
         });
+    }
+
+    fn start_clause_guard(&mut self) -> Self::Guard {
+        self.new_clause_guard();
+        self.position.push(ErlangSourceBuilderPosition::ClauseGuard);
+    }
+
+    fn end_clause_guard(&mut self, _clause_guard: Self::Guard) {
+        self.close_currently_open_item();
     }
 
     fn end_clause_guards(&mut self, _clause_guards: Self::ClauseGuards) -> Self::ClauseBody {
@@ -2407,32 +2545,8 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
     }
 
     fn atom(&mut self, name: &str) {
-        // There's one special case where we actually don't want to push the
-        // atom's text at all. That's when we're generating the `default` atom
-        // as the size of a bit array segment.
-        // That's how we can tell in the Erlang Abstract Format that the size
-        // should be the default value, but it's not actually spelled out in
-        // textual Erlang code.
-        if let Some(ErlangSourceBuilderPosition::BitArraySegment {
-            expected: expected @ BitArraySegmentExpectedItem::Size,
-            segment_value_needs_wrapping,
-            segment_size_needs_wrapping,
-        }) = self.position.last_mut()
-        {
-            // We are new expecting to see the specifiers list
-            *expected = BitArraySegmentExpectedItem::Specifiers;
-            if *segment_value_needs_wrapping {
-                self.code.push(')');
-                *segment_value_needs_wrapping = false;
-            }
-            // We have the default atom as a size, that means we don't have to
-            // print anything at all! The size doesn't need any wrapping because
-            // there's no size at all.
-            *segment_size_needs_wrapping = false;
-        } else {
-            self.new_expression();
-            self.code.push_str(&quote_atom_name(name));
-        }
+        self.new_expression();
+        self.code.push_str(&quote_atom_name(name));
     }
 }
 
@@ -2485,8 +2599,6 @@ impl ErlangSourceBuilder {
         };
 
         match position {
-            ErlangSourceBuilderPosition::DocAttribute => (),
-
             ErlangSourceBuilderPosition::RecordField {
                 expected: expected @ ExpectedRecordFieldItem::Name,
             } => *expected = ExpectedRecordFieldItem::Type,
@@ -2605,13 +2717,7 @@ impl ErlangSourceBuilder {
                 }
             }
 
-            ErlangSourceBuilderPosition::CaseClause {
-                expected:
-                    ExpectedCaseClauseItem::Guards {
-                        first: first @ true,
-                    },
-            } => {
-                *first = false;
+            ErlangSourceBuilderPosition::ClauseGuard => {
                 self.code.push_str(" when ");
             }
 
@@ -2670,7 +2776,7 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::Map { .. }
             | ErlangSourceBuilderPosition::RecordAttribute { .. }
             | ErlangSourceBuilderPosition::CaseClause {
-                expected: ExpectedCaseClauseItem::Guards { first: false },
+                expected: ExpectedCaseClauseItem::Guards { .. },
             }
             | ErlangSourceBuilderPosition::BitArraySegment {
                 expected: BitArraySegmentExpectedItem::Specifiers,
@@ -2755,9 +2861,9 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::List { .. }
             | ErlangSourceBuilderPosition::FunctionStatement { .. }
             | ErlangSourceBuilderPosition::AnonymousFunctionStatement { .. }
-            | ErlangSourceBuilderPosition::DocAttribute
             | ErlangSourceBuilderPosition::UnaryOperator
             | ErlangSourceBuilderPosition::Case { .. }
+            | ErlangSourceBuilderPosition::ClauseGuard
             | ErlangSourceBuilderPosition::BinaryOperator { .. }
             | ErlangSourceBuilderPosition::CaseClause { .. }
             | ErlangSourceBuilderPosition::Map { .. }
@@ -2881,6 +2987,7 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::UnaryOperator
             | ErlangSourceBuilderPosition::BinaryOperator { .. }
             | ErlangSourceBuilderPosition::Case { .. }
+            | ErlangSourceBuilderPosition::ClauseGuard
             | ErlangSourceBuilderPosition::Map { .. }
             | ErlangSourceBuilderPosition::MapField { .. }
             | ErlangSourceBuilderPosition::MatchOperator {
@@ -2894,7 +3001,6 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::UnionType { .. }
             | ErlangSourceBuilderPosition::TupleType { .. }
             | ErlangSourceBuilderPosition::RecordField { .. }
-            | ErlangSourceBuilderPosition::DocAttribute
             | ErlangSourceBuilderPosition::RecordAttribute { .. }
             | ErlangSourceBuilderPosition::List {
                 kind: ListKind::Pattern,
@@ -3019,9 +3125,6 @@ impl ErlangSourceBuilder {
             }
             // There's nothing left to do when a union type ends.
             ErlangSourceBuilderPosition::UnionType { .. } => (),
-            // When a doc attribute is closed we need to add the closed
-            // parentheses and a newline.
-            ErlangSourceBuilderPosition::DocAttribute => self.code.push_str(").\n"),
             // When a case expression is over, we need to add the closing `end`.
             ErlangSourceBuilderPosition::Case {
                 expected: ExpectedCaseItem::Branches { .. },
@@ -3032,6 +3135,7 @@ impl ErlangSourceBuilder {
                 self.code.push_str("end");
             }
 
+            ErlangSourceBuilderPosition::ClauseGuard => (),
             ErlangSourceBuilderPosition::CaseClause { expected } => match expected {
                 ExpectedCaseClauseItem::Pattern => (),
                 // When the guards of a case clause are over we need to add the
@@ -3135,6 +3239,7 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::BinaryOperator { .. }
             | ErlangSourceBuilderPosition::Case { .. }
             | ErlangSourceBuilderPosition::CaseClause { .. }
+            | ErlangSourceBuilderPosition::ClauseGuard
             | ErlangSourceBuilderPosition::Map { .. }
             | ErlangSourceBuilderPosition::MapField { .. }
             | ErlangSourceBuilderPosition::MatchPattern { .. }
@@ -3162,14 +3267,6 @@ impl ErlangSourceBuilder {
                         }
                     })
                     .into()
-            }
-
-            ErlangSourceBuilderPosition::DocAttribute => {
-                // Escaping strings generated inside doc attributes is a little
-                // different: since their content doesn't come from a Gleam
-                // literal string but freeform text, their content might contain
-                // all sorts of unescaped characters.
-                content.replace("\\", "\\\\").replace("\"", "\\\"")
             }
         }
     }
@@ -3223,6 +3320,21 @@ impl ErlangSourceBuilder {
             self.code.push_str(",\n")
         }
         self.code.push_str(&" ".repeat(self.indentation))
+    }
+
+    fn new_clause_guard(&mut self) {
+        self.pop_leftover_items();
+        let Some(ErlangSourceBuilderPosition::CaseClause {
+            expected:
+                ExpectedCaseClauseItem::Guards {
+                    first: first @ true,
+                },
+        }) = self.position.last_mut()
+        else {
+            invalid_code_for_position!(self, "new clause guard");
+        };
+
+        *first = false;
     }
 
     /// You can call this before generating any expression (before the
@@ -3410,13 +3522,13 @@ impl ErlangSourceBuilder {
             | ErlangSourceBuilderPosition::TupleType { .. }
             | ErlangSourceBuilderPosition::FunctionStatement { .. }
             | ErlangSourceBuilderPosition::AnonymousFunctionStatement { .. }
-            | ErlangSourceBuilderPosition::DocAttribute
             | ErlangSourceBuilderPosition::FunctionSpec
             | ErlangSourceBuilderPosition::Tuple { .. }
             | ErlangSourceBuilderPosition::TuplePattern { .. }
             | ErlangSourceBuilderPosition::BitArray { .. }
             | ErlangSourceBuilderPosition::Map { .. }
             | ErlangSourceBuilderPosition::Block { .. }
+            | ErlangSourceBuilderPosition::ClauseGuard
             | ErlangSourceBuilderPosition::UnaryOperator
             | ErlangSourceBuilderPosition::FunctionType {
                 expected:
@@ -3495,6 +3607,22 @@ impl ErlangSourceBuilder {
     fn error_with_position(&self, expected: &str) -> String {
         let position = self.position.last();
         format!("tried {expected}, position: {position:?}")
+    }
+
+    fn doc_content(&mut self, content: DocContent<'_>) {
+        match content {
+            DocContent::False => self.code.push_str("false"),
+            // Escaping strings generated inside doc attributes is a little
+            // different: since their content doesn't come from a Gleam
+            // literal string but freeform text, their content might contain
+            // all sorts of unescaped characters.
+            DocContent::String(content) => {
+                self.code.push_str("~\"");
+                self.code
+                    .push_str(&content.replace("\\", "\\\\").replace("\"", "\\\""));
+                self.code.push('"');
+            }
+        }
     }
 }
 

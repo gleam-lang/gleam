@@ -217,7 +217,7 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                 // We first generate a segment matching on the literal prefix.
                 builder.bit_array_segment();
                 builder.string_pattern(left_side_string);
-                builder.atom("deafult");
+                builder.bit_array_segment_default_size();
                 builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Utf8]);
 
                 // We then add a segment matching on the rest of the string.
@@ -228,7 +228,7 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                     ),
                     AssignName::Discard(_) => builder.discard_pattern(),
                 }
-                builder.atom("default");
+                builder.bit_array_segment_default_size();
                 builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Binary]);
 
                 builder.end_bit_array_pattern(bit_array);
@@ -237,31 +237,34 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
             Pattern::BitArray { segments, .. } => {
                 let bit_array = builder.start_bit_array_pattern();
                 for segment in segments {
-                    // Only fold literal ints, patterns don't have runtime ops
-                    let unit_fold = segment.has_bits_option().then(|| {
-                        segment.options.iter().find_map(|o| match o {
-                            BitArrayOption::Unit { value, .. } => {
-                                let is_literal_size = matches!(
-                                    segment.size(),
-                                    Some(Pattern::BitArraySize(
-                                        BitArraySize::Int { .. }
-                                    ))
-                                );
-                                if is_literal_size { Some(*value) } else { None }
+                    // Only fold unit into size for literal integer sizes,
+                    // patterns cannot use binary operators at runtime.
+                    let mut has_bits = false;
+                    let mut bits_unit_value = None;
+                    let is_literal_size = matches!(
+                        segment.size(),
+                        Some(Pattern::BitArraySize(BitArraySize::Int { .. }))
+                    );
+                    for option in &segment.options {
+                        match option {
+                            BitArrayOption::Bits { .. } => has_bits = true,
+                            BitArrayOption::Unit { value, .. } if is_literal_size => {
+                                bits_unit_value = Some(*value)
                             }
-                            _ => None,
-                        })
-                    }).flatten();
+                            _ => {}
+                        }
+                    }
+                    let bits_unit_value = if has_bits { bits_unit_value } else { None };
 
                     builder.bit_array_segment();
                     self.bit_array_pattern_segment_value(builder, segment);
-                    if let Some(unit) = unit_fold {
+                    if let Some(unit) = bits_unit_value {
                         self.bit_array_pattern_segment_size_with_unit(builder, segment, unit);
                     } else {
                         self.bit_array_pattern_segment_size(builder, segment);
                     }
                     self.generator
-                        .bit_array_segment_specifiers(builder, segment, unit_fold.is_some());
+                        .bit_array_segment_specifiers(builder, segment, bits_unit_value.is_some());
                 }
                 builder.end_bit_array_pattern(bit_array);
             }
@@ -403,7 +406,7 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
         segment: &'a TypedPatternBitArraySegment,
     ) {
         let Some(size) = segment.size() else {
-            builder.atom("default");
+            builder.bit_array_segment_default_size();
             return;
         };
         let TypedPattern::BitArraySize(size) = size else {
@@ -412,8 +415,8 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
         self.bit_array_size(builder, size);
     }
 
-    /// For bits segments with unit+literal int size,
-    /// multiply size by unit so we can drop the unit specifier.
+    /// For bits segments with a unit option and a literal integer size,
+    /// multiply the size by the unit so we can drop the unit specifier.
     fn bit_array_pattern_segment_size_with_unit<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
@@ -451,6 +454,7 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
         } else {
             let case = builder.start_case();
             self.bit_array_size(builder, right);
+            let case = builder.end_case_subject(case);
 
             let clause = builder.start_case_clause();
             builder.int_pattern(BigInt::ZERO);
