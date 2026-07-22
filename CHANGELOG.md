@@ -5,6 +5,14 @@
 
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Fixed a bug where the compiler would crash when wrapping an error message
+  whose line broke in the middle of a multi-byte UTF-8 character.
+  ([John Downey](https://github.com/jtdowney))
+
 ## v1.18.0-rc1 - 2026-07-21
 
 ### Compiler
