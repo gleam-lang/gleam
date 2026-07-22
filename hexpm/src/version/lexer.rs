@@ -294,12 +294,12 @@ mod tests {
     #[test]
     pub fn whitespace() {
         assert_eq!(
-            lex("  foo \t\n\rbar"),
+            lex("  wibble \t\n\rwobble"),
             vec![
                 Whitespace(0, 2),
-                AlphaNumeric("foo"),
-                Whitespace(5, 9),
-                AlphaNumeric("bar"),
+                AlphaNumeric("wibble"),
+                Whitespace(8, 12),
+                AlphaNumeric("wobble"),
             ]
         );
     }

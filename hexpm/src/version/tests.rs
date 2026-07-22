@@ -132,7 +132,7 @@ version_parse_test!(
     Some("ignore".to_string())
 );
 
-version_parse_fail_test!(just_a_word, "foobar");
+version_parse_fail_test!(just_a_word, "wibble");
 
 version_parse_fail_test!(just_major, "2");
 
@@ -359,7 +359,7 @@ parse_range_fail_test!(range_just_major, "1");
 parse_range_fail_test!(range_just_major_minor, "1.1");
 parse_range_fail_test!(alpha_component, "1.1.a");
 
-parse_range_fail_test!(range_word, "foobar");
+parse_range_fail_test!(range_word, "wibble");
 parse_range_fail_test!(range_major_dot, "2.");
 parse_range_fail_test!(range_major_minor_dot, "2.3.");
 parse_range_fail_test!(range_triplet_dash, "2.3.0-");

@@ -160,16 +160,16 @@ mod tests {
     #[test]
     fn escape_path_plain() {
         assert_eq!(
-            escape_path("/build/packages/foo/src/bar.erl"),
-            "/build/packages/foo/src/bar.erl"
+            escape_path("/build/packages/wibble/src/bar.erl"),
+            "/build/packages/wibble/src/bar.erl"
         );
     }
 
     #[test]
     fn escape_path_backslash() {
         assert_eq!(
-            escape_path("C:\\Users\\foo\\bar.erl"),
-            "C:\\\\Users\\\\foo\\\\bar.erl"
+            escape_path("C:\\Users\\wibble\\bar.erl"),
+            "C:\\\\Users\\\\wibble\\\\bar.erl"
         );
     }
 
