@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 359
 expression: "let wobble: Int = 32\nwobble += 1"
 ---
 ----- SOURCE CODE
