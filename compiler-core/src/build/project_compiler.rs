@@ -14,7 +14,9 @@ use crate::{
     codegen::{self, ErlangApp},
     config::PackageConfig,
     dep_tree,
-    error::{DefinedModuleOrigin, FileIoAction, FileKind, ShellCommandFailureReason},
+    error::{
+        DefinedModuleOrigin, FileIoAction, FileIoFailure, FileKind, ShellCommandFailureReason,
+    },
     io::{BeamCompilerIO, Command, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     manifest::{ManifestPackage, ManifestPackageSource},
     metadata,
@@ -293,7 +295,7 @@ where
                 action: FileIoAction::WriteTo,
                 kind: FileKind::File,
                 path,
-                err: Some(e.to_string()),
+                err: FileIoFailure::Other(e.to_string()),
             })
     }
 

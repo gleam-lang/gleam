@@ -124,6 +124,13 @@ impl SkipReason {
     }
 }
 
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum FileIoFailure {
+    NotFound,
+    Unknown,
+    Other(String),
+}
+
 #[derive(Debug, Eq, PartialEq, Error, Clone)]
 pub enum Error {
     #[error("failed to parse Gleam source code")]
@@ -187,7 +194,7 @@ pub enum Error {
         kind: FileKind,
         action: FileIoAction,
         path: Utf8PathBuf,
-        err: Option<String>,
+        err: FileIoFailure,
     },
 
     #[error("Non Utf-8 Path: {path}")]
@@ -1850,10 +1857,14 @@ Erlang modules must have unique names regardless of the subfolders where their
                 err,
             } => {
                 let err = match err {
-                    Some(e) => {
+                    FileIoFailure::NotFound => {
+                        "\nThe error message from the file IO library was:\n\n    File Not Found\n"
+                            .to_string()
+                    }
+                    FileIoFailure::Other(e) => {
                         format!("\nThe error message from the file IO library was:\n\n    {e}\n")
                     }
-                    None => "".into(),
+                    FileIoFailure::Unknown => "".into(),
                 };
                 let destination = if let Some(destination) = action.destination() {
                     format!(

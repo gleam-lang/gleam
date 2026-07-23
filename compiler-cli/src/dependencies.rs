@@ -20,7 +20,7 @@ use gleam_core::{
     build::{Mode, SourceFingerprint, Target, Telemetry},
     config::PackageConfig,
     dependency::{self, PackageFetchError},
-    error::{FileIoAction, FileKind, ShellCommandFailureReason, StandardIoAction},
+    error::{FileIoAction, FileIoFailure, FileKind, ShellCommandFailureReason, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, WrappedReader},
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource, PackageChanges},
@@ -614,7 +614,7 @@ fn read_manifest_from_disc(paths: &ProjectPaths) -> Result<Manifest> {
         action: FileIoAction::Parse,
         kind: FileKind::File,
         path: manifest_path.clone(),
-        err: Some(e.to_string()),
+        err: FileIoFailure::Other(e.to_string()),
     })?;
     Ok(manifest)
 }
@@ -703,7 +703,7 @@ impl LocalPackages {
             action: FileIoAction::Parse,
             kind: FileKind::File,
             path: path.clone(),
-            err: Some(e.to_string()),
+            err: FileIoFailure::Other(e.to_string()),
         })
     }
 

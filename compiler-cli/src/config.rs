@@ -5,7 +5,7 @@ use camino::Utf8PathBuf;
 
 use gleam_core::{
     config::PackageConfig,
-    error::{Error, FileIoAction, FileKind},
+    error::{Error, FileIoAction, FileIoFailure, FileKind},
     manifest::{Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
 };
@@ -65,7 +65,7 @@ pub fn read(config_path: Utf8PathBuf) -> Result<PackageConfig, Error> {
         action: FileIoAction::Parse,
         kind: FileKind::File,
         path: config_path,
-        err: Some(e.to_string()),
+        err: FileIoFailure::Other(e.to_string()),
     })?;
     config.check_gleam_compatibility()?;
     Ok(config)
@@ -78,7 +78,7 @@ pub fn ensure_config_exists(paths: &ProjectPaths) -> Result<(), Error> {
             action: FileIoAction::Read,
             kind: FileKind::File,
             path,
-            err: Some("File not found".into()),
+            err: FileIoFailure::NotFound,
         });
     }
     Ok(())

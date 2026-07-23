@@ -4,7 +4,9 @@
 use gleam_core::{
     Result, Warning,
     build::{NullTelemetry, Target},
-    error::{Error, FileIoAction, FileKind, OS, ShellCommandFailureReason, parse_os},
+    error::{
+        Error, FileIoAction, FileIoFailure, FileKind, OS, ShellCommandFailureReason, parse_os,
+    },
     io::{
         BeamCompilerIO, Command, CommandExecutor, Content, DirEntry, FileSystemReader,
         FileSystemWriter, OutputFile, ReadDir, Stdio, WrappedReader, is_native_file_extension,
@@ -37,7 +39,11 @@ pub fn get_current_directory() -> Result<Utf8PathBuf, Error> {
         kind: FileKind::Directory,
         action: FileIoAction::Open,
         path: ".".into(),
-        err: Some(e.to_string()),
+        err: if let io::ErrorKind::NotFound = e.kind() {
+            FileIoFailure::NotFound
+        } else {
+            FileIoFailure::Other(e.to_string())
+        },
     })?;
     Utf8PathBuf::from_path_buf(curr_dir.clone()).map_err(|_| Error::NonUtf8Path { path: curr_dir })
 }
@@ -163,7 +169,11 @@ fn is_same_file(left: &Utf8Path, right: &Utf8Path) -> Result<bool, Error> {
         action: FileIoAction::ReadMetadata,
         kind: FileKind::File,
         path: left.to_path_buf(),
-        err: Some(e.to_string()),
+        err: if let io::ErrorKind::NotFound = e.kind() {
+            FileIoFailure::NotFound
+        } else {
+            FileIoFailure::Other(e.to_string())
+        },
     })
 }
 
@@ -174,7 +184,11 @@ pub fn modification_time(path: &Utf8Path) -> std::result::Result<SystemTime, Err
             action: FileIoAction::ReadMetadata,
             kind: FileKind::File,
             path: path.to_path_buf(),
-            err: Some(e.to_string()),
+            err: if let io::ErrorKind::NotFound = e.kind() {
+                FileIoFailure::NotFound
+            } else {
+                FileIoFailure::Other(e.to_string())
+            },
         })
 }
 
@@ -310,7 +324,7 @@ pub fn delete_directory(dir: &Utf8Path) -> Result<(), Error> {
             action: FileIoAction::Delete,
             kind: FileKind::Directory,
             path: dir.to_path_buf(),
-            err: Some(e.to_string()),
+            err: FileIoFailure::Other(e.to_string()),
         })?;
     } else {
         tracing::debug!(path=?dir, "directory_did_not_exist_for_deletion");
@@ -325,7 +339,7 @@ pub fn delete_file(file: &Utf8Path) -> Result<(), Error> {
             action: FileIoAction::Delete,
             kind: FileKind::File,
             path: file.to_path_buf(),
-            err: Some(e.to_string()),
+            err: FileIoFailure::Other(e.to_string()),
         })?;
     } else {
         tracing::debug!("Did not exist for deletion: {:?}", file);
@@ -366,7 +380,11 @@ pub fn make_executable(path: impl AsRef<Utf8Path>) -> Result<(), Error> {
             action: FileIoAction::UpdatePermissions,
             kind: FileKind::File,
             path: path.as_ref().to_path_buf(),
-            err: Some(e.to_string()),
+            err: if let io::ErrorKind::NotFound = e.kind() {
+                FileIoFailure::NotFound
+            } else {
+                FileIoFailure::Other(e.to_string())
+            },
         },
     )?;
     Ok(())
@@ -384,28 +402,28 @@ pub fn write_bytes(path: &Utf8Path, bytes: &[u8]) -> Result<(), Error> {
         action: FileIoAction::FindParent,
         kind: FileKind::Directory,
         path: path.to_path_buf(),
-        err: None,
+        err: FileIoFailure::Unknown,
     })?;
 
     std::fs::create_dir_all(dir_path).map_err(|e| Error::FileIo {
         action: FileIoAction::Create,
         kind: FileKind::Directory,
         path: dir_path.to_path_buf(),
-        err: Some(e.to_string()),
+        err: FileIoFailure::Other(e.to_string()),
     })?;
 
     let mut f = File::create(path).map_err(|e| Error::FileIo {
         action: FileIoAction::Create,
         kind: FileKind::File,
         path: path.to_path_buf(),
-        err: Some(e.to_string()),
+        err: FileIoFailure::Other(e.to_string()),
     })?;
 
     f.write_all(bytes).map_err(|e| Error::FileIo {
         action: FileIoAction::WriteTo,
         kind: FileKind::File,
         path: path.to_path_buf(),
-        err: Some(e.to_string()),
+        err: FileIoFailure::Other(e.to_string()),
     })?;
     Ok(())
 }
@@ -419,7 +437,7 @@ pub fn write_to_open_file(
         action: FileIoAction::WriteTo,
         kind: FileKind::File,
         path: path.clone(),
-        err: Some(e.to_string()),
+        err: FileIoFailure::Other(e.to_string()),
     })
 }
 
@@ -577,7 +595,7 @@ pub fn mkdir(path: impl AsRef<Utf8Path> + Debug) -> Result<(), Error> {
         kind: FileKind::Directory,
         path: Utf8PathBuf::from(path.as_ref()),
         action: FileIoAction::Create,
-        err: Some(err.to_string()),
+        err: FileIoFailure::Other(err.to_string()),
     })
 }
 
@@ -588,7 +606,11 @@ pub fn read_dir(path: impl AsRef<Utf8Path> + Debug) -> Result<ReadDirUtf8, Error
         action: FileIoAction::Read,
         kind: FileKind::Directory,
         path: Utf8PathBuf::from(path.as_ref()),
-        err: Some(e.to_string()),
+        err: if let io::ErrorKind::NotFound = e.kind() {
+            FileIoFailure::NotFound
+        } else {
+            FileIoFailure::Other(e.to_string())
+        },
     })
 }
 
@@ -609,7 +631,11 @@ pub fn read(path: impl AsRef<Utf8Path>) -> Result<String, Error> {
         action: FileIoAction::Read,
         kind: FileKind::File,
         path: Utf8PathBuf::from(path),
-        err: Some(err.to_string()),
+        err: if let io::ErrorKind::NotFound = err.kind() {
+            FileIoFailure::NotFound
+        } else {
+            FileIoFailure::Other(err.to_string())
+        },
     })
 }
 
@@ -621,7 +647,7 @@ pub fn open_file(path: impl AsRef<Utf8Path>) -> Result<File, Error> {
         action: FileIoAction::Open,
         kind: FileKind::File,
         path: Utf8PathBuf::from(path),
-        err: Some(err.to_string()),
+        err: FileIoFailure::Other(err.to_string()),
     })
 }
 
@@ -633,7 +659,11 @@ pub fn read_bytes(path: impl AsRef<Utf8Path>) -> Result<Vec<u8>, Error> {
         action: FileIoAction::Read,
         kind: FileKind::File,
         path: Utf8PathBuf::from(path),
-        err: Some(err.to_string()),
+        err: if let io::ErrorKind::NotFound = err.kind() {
+            FileIoFailure::NotFound
+        } else {
+            FileIoFailure::Other(err.to_string())
+        },
     })
 }
 
@@ -645,7 +675,11 @@ pub fn reader(path: impl AsRef<Utf8Path>) -> Result<WrappedReader, Error> {
         action: FileIoAction::Open,
         kind: FileKind::File,
         path: Utf8PathBuf::from(path),
-        err: Some(err.to_string()),
+        err: if let io::ErrorKind::NotFound = err.kind() {
+            FileIoFailure::NotFound
+        } else {
+            FileIoFailure::Other(err.to_string())
+        },
     })?;
 
     Ok(WrappedReader::new(path, Box::new(reader)))
@@ -658,7 +692,11 @@ pub fn buffered_reader<P: AsRef<Utf8Path>>(path: P) -> Result<impl BufRead, Erro
         action: FileIoAction::Open,
         kind: FileKind::File,
         path: Utf8PathBuf::from(path),
-        err: Some(err.to_string()),
+        err: if let io::ErrorKind::NotFound = err.kind() {
+            FileIoFailure::NotFound
+        } else {
+            FileIoFailure::Other(err.to_string())
+        },
     })?;
     Ok(BufReader::new(reader))
 }
@@ -673,7 +711,11 @@ pub fn copy(path: impl AsRef<Utf8Path>, to: impl AsRef<Utf8Path>) -> Result<(), 
             action: FileIoAction::Copy(Some(to.to_path_buf())),
             kind: FileKind::File,
             path: Utf8PathBuf::from(path),
-            err: Some(err.to_string()),
+            err: if let io::ErrorKind::NotFound = err.kind() {
+                FileIoFailure::NotFound
+            } else {
+                FileIoFailure::Other(err.to_string())
+            },
         })
         .map(|_| ())
 }
@@ -694,7 +736,11 @@ pub fn copy_dir(path: impl AsRef<Utf8Path>, to: impl AsRef<Utf8Path>) -> Result<
         action: FileIoAction::Copy(Some(to.to_path_buf())),
         kind: FileKind::Directory,
         path: Utf8PathBuf::from(path),
-        err: Some(err.to_string()),
+        err: if let fs_extra::error::ErrorKind::NotFound = err.kind {
+            FileIoFailure::NotFound
+        } else {
+            FileIoFailure::Other(err.to_string())
+        },
     })
     .map(|_| ())
 }
@@ -714,7 +760,11 @@ pub fn symlink_dir(src: impl AsRef<Utf8Path>, dest: impl AsRef<Utf8Path>) -> Res
         action: FileIoAction::Link(dest.to_path_buf()),
         kind: FileKind::File,
         path: src,
-        err: Some(err.to_string()),
+        err: if let io::ErrorKind::NotFound = err.kind() {
+            FileIoFailure::NotFound
+        } else {
+            FileIoFailure::Other(err.to_string())
+        },
     })?;
     Ok(())
 }
@@ -728,7 +778,11 @@ pub fn hardlink(from: impl AsRef<Utf8Path>, to: impl AsRef<Utf8Path>) -> Result<
             action: FileIoAction::Link(to.to_path_buf()),
             kind: FileKind::File,
             path: Utf8PathBuf::from(from),
-            err: Some(err.to_string()),
+            err: if let io::ErrorKind::NotFound = err.kind() {
+                FileIoFailure::NotFound
+            } else {
+                FileIoFailure::Other(err.to_string())
+            },
         })
         .map(|_| ())
 }
@@ -751,7 +805,11 @@ fn hardlink_dir_recursive(
         action: FileIoAction::Read,
         kind: FileKind::Directory,
         path: current.to_path_buf(),
-        err: Some(err.to_string()),
+        err: if let io::ErrorKind::NotFound = err.kind() {
+            FileIoFailure::NotFound
+        } else {
+            FileIoFailure::Other(err.to_string())
+        },
     })?;
 
     for entry in entries {
@@ -759,7 +817,11 @@ fn hardlink_dir_recursive(
             action: FileIoAction::Read,
             kind: FileKind::Directory,
             path: current.to_path_buf(),
-            err: Some(err.to_string()),
+            err: if let io::ErrorKind::NotFound = err.kind() {
+                FileIoFailure::NotFound
+            } else {
+                FileIoFailure::Other(err.to_string())
+            },
         })?;
 
         let source_path =
@@ -774,7 +836,11 @@ fn hardlink_dir_recursive(
             action: FileIoAction::Read,
             kind: FileKind::File,
             path: source_path.clone(),
-            err: Some(err.to_string()),
+            err: if let io::ErrorKind::NotFound = err.kind() {
+                FileIoFailure::NotFound
+            } else {
+                FileIoFailure::Other(err.to_string())
+            },
         })?;
 
         // Skip symlinks to prevent path traversal outside the source tree
@@ -874,7 +940,11 @@ pub fn canonicalise(path: &Utf8Path) -> Result<Utf8PathBuf, Error> {
             action: FileIoAction::Canonicalise,
             kind: FileKind::File,
             path: Utf8PathBuf::from(path),
-            err: Some(err.to_string()),
+            err: if let io::ErrorKind::NotFound = err.kind() {
+                FileIoFailure::NotFound
+            } else {
+                FileIoFailure::Other(err.to_string())
+            },
         })
         .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf8 Path"))
 }
@@ -942,13 +1012,17 @@ impl<W: Write + io::Seek> ZipArchive<W> {
             kind: FileKind::File,
             action: FileIoAction::Open,
             path: disc_path.to_path_buf(),
-            err: Some(e.to_string()),
+            err: if let io::ErrorKind::NotFound = e.kind() {
+                FileIoFailure::NotFound
+            } else {
+                FileIoFailure::Other(e.to_string())
+            },
         })?;
         let _: u64 = io::copy(&mut file, &mut self.zip).map_err(|e| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Copy(None),
             path: disc_path.to_path_buf(),
-            err: Some(e.to_string()),
+            err: FileIoFailure::Other(e.to_string()),
         })?;
         Ok(())
     }

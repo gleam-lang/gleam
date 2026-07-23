@@ -25,7 +25,9 @@ use crate::{
     build::{Module, Origin, module_loader::ModuleLoader},
     config::PackageConfig,
     dep_tree,
-    error::{DefinedModuleOrigin, FileIoAction, FileKind, ImportCycleLocationDetails},
+    error::{
+        DefinedModuleOrigin, FileIoAction, FileIoFailure, FileKind, ImportCycleLocationDetails,
+    },
     io::{self, CommandExecutor, FileSystemReader, FileSystemWriter, files_with_extension},
     metadata,
     paths::ProjectPaths,
@@ -196,7 +198,7 @@ where
                     kind: FileKind::File,
                     action: FileIoAction::Parse,
                     path: cache_files.cache_path,
-                    err: Some(e.to_string()),
+                    err: FileIoFailure::Other(e.to_string()),
                 });
             }
         };

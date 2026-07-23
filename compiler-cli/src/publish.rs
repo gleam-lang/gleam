@@ -11,7 +11,7 @@ use gleam_core::{
     build::{Codegen, Compile, Mode, Options, Package, Target},
     config::{GleamVersion, PackageConfig, SpdxLicense},
     docs::{Dependency, DependencyKind, DocContext},
-    error::{InvalidReadmeReason, SmallVersion, wrap},
+    error::{FileIoFailure, InvalidReadmeReason, SmallVersion, wrap},
     hex,
     manifest::ManifestPackageSource,
     paths::{self, ProjectPaths},
@@ -154,8 +154,9 @@ fn check_for_invalid_readme(config: &PackageConfig, paths: &ProjectPaths) -> Res
 
     let project_readme = match fs::read(paths.readme()) {
         Err(Error::FileIo {
-            err: Some(message), ..
-        }) if message.contains("No such file or directory") => {
+            err: FileIoFailure::NotFound,
+            ..
+        }) => {
             return Err(Error::CannotPublishWithInvalidReadme {
                 reason: InvalidReadmeReason::Missing,
             });

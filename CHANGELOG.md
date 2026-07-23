@@ -13,6 +13,10 @@
   whose line broke in the middle of a multi-byte UTF-8 character.
   ([John Downey](https://github.com/jtdowney))
 
+- Fixed a bug where bad error message would be shown when trying to publish
+  package with no README on Windows.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## v1.18.0-rc1 - 2026-07-21
 
 ### Compiler

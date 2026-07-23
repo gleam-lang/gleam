@@ -105,7 +105,7 @@ impl InMemoryFileSystem {
                 kind: FileKind::File,
                 action: FileIoAction::Open,
                 path: path.to_path_buf(),
-                err: None,
+                err: FileIoFailure::Unknown,
             })?
             .modification_time = time;
         Ok(())
@@ -121,7 +121,7 @@ impl FileSystemWriter for InMemoryFileSystem {
                 kind: FileKind::Directory,
                 action: FileIoAction::Delete,
                 path: path.to_path_buf(),
-                err: None,
+                err: FileIoFailure::Unknown,
             });
         }
 
@@ -168,7 +168,7 @@ impl FileSystemWriter for InMemoryFileSystem {
                     kind: FileKind::Directory,
                     action: FileIoAction::Create,
                     path: ancestor.to_path_buf(),
-                    err: None,
+                    err: FileIoFailure::Unknown,
                 });
             }
             let dir = InMemoryFile::directory();
@@ -185,7 +185,7 @@ impl FileSystemWriter for InMemoryFileSystem {
                 kind: FileKind::File,
                 action: FileIoAction::ReadMetadata,
                 path: left.to_path_buf(),
-                err: None,
+                err: FileIoFailure::Unknown,
             });
         };
         let _ = files.insert(right.into(), file);
@@ -203,7 +203,7 @@ impl FileSystemWriter for InMemoryFileSystem {
                 kind: FileKind::File,
                 action: FileIoAction::Delete,
                 path: path.to_path_buf(),
-                err: None,
+                err: FileIoFailure::Unknown,
             });
         }
         let _ = files.remove(path);
@@ -250,14 +250,14 @@ impl FileSystemReader for InMemoryFileSystem {
                 kind: FileKind::File,
                 action: FileIoAction::Open,
                 path: path.clone(),
-                err: None,
+                err: FileIoFailure::Unknown,
             })?;
         let bytes = buffer.borrow();
         let unicode = String::from_utf8(bytes.clone()).map_err(|err| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Read,
             path: path.clone(),
-            err: Some(err.to_string()),
+            err: FileIoFailure::Other(err.to_string()),
         })?;
         Ok(unicode)
     }
@@ -272,7 +272,7 @@ impl FileSystemReader for InMemoryFileSystem {
                 kind: FileKind::File,
                 action: FileIoAction::Open,
                 path: path.clone(),
-                err: None,
+                err: FileIoFailure::Unknown,
             })?;
         let bytes = buffer.borrow().clone();
         Ok(bytes)
@@ -319,7 +319,7 @@ impl FileSystemReader for InMemoryFileSystem {
             kind: FileKind::File,
             action: FileIoAction::ReadMetadata,
             path: path.to_path_buf(),
-            err: None,
+            err: FileIoFailure::Unknown,
         })?;
         Ok(file.modification_time)
     }

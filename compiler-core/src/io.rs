@@ -3,7 +3,7 @@
 
 pub mod memory;
 
-use crate::error::{Error, FileIoAction, FileKind, Result};
+use crate::error::{Error, FileIoAction, FileIoFailure, FileKind, Result};
 use async_trait::async_trait;
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
@@ -85,7 +85,7 @@ impl Utf8Writer for String {
             action: FileIoAction::WriteTo,
             kind: FileKind::File,
             path: Utf8PathBuf::from("<in memory>"),
-            err: Some(error.to_string()),
+            err: FileIoFailure::Other(error.to_string()),
         }
     }
 }
@@ -269,7 +269,7 @@ impl DirWalker {
                         kind: FileKind::Directory,
                         action: FileIoAction::Read,
                         path: next_path,
-                        err: None,
+                        err: FileIoFailure::Unknown,
                     });
                 };
 
@@ -398,7 +398,7 @@ impl Reader for WrappedReader {
             kind: FileKind::File,
             action: FileIoAction::Read,
             path: self.path.clone(),
-            err: Some(err.to_string()),
+            err: FileIoFailure::Other(err.to_string()),
         }
     }
 }
@@ -445,7 +445,11 @@ pub trait TarUnpacker {
                 action: FileIoAction::WriteTo,
                 kind: FileKind::Directory,
                 path: path.to_path_buf(),
-                err: Some(e.to_string()),
+                err: if let io::ErrorKind::NotFound = e.kind() {
+                    FileIoFailure::NotFound
+                } else {
+                    FileIoFailure::Other(e.to_string())
+                },
             })
     }
 }
