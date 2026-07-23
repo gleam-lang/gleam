@@ -472,6 +472,33 @@ fn type_parameter_name(type_: &Type) -> EcoString {
     }
 }
 
+fn fold_bits_unit_value<Value>(options: &[BitArrayOption<Value>]) -> Option<u8> {
+    let mut has_bits = false;
+    let mut unit_value = None;
+    for option in options {
+        match option {
+            BitArrayOption::Bits { .. } => has_bits = true,
+            BitArrayOption::Unit { value, .. } => unit_value = Some(value),
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Size { .. } => {}
+        }
+    }
+    if has_bits { unit_value.copied() } else { None }
+}
+
 impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     pub fn new(
         function: &'a TypedFunction,
@@ -2349,22 +2376,31 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         builder: &mut impl ErlangBuilder<Output>,
         segment: &'a TypedConstantBitArraySegment,
     ) {
+        let bits_unit_value = fold_bits_unit_value(&segment.options);
+
         builder.bit_array_segment();
         self.inlined_constant(builder, &segment.value);
-        match segment.size() {
-            Some(TypedConstant::Int { int_value, .. }) if int_value.is_negative() => {
+        match (segment.size(), bits_unit_value) {
+            (Some(TypedConstant::Int { int_value, .. }), _) if int_value.is_negative() => {
                 builder.int(BigInt::ZERO);
             }
-            Some(size) => self.inlined_constant(builder, size),
-            None => builder.bit_array_segment_default_size(),
+            (Some(TypedConstant::Int { int_value, .. }), Some(unit)) => {
+                builder.int(int_value * unit);
+            }
+            (Some(size), _) => self.inlined_constant(builder, size),
+            (None, _) => builder.bit_array_segment_default_size(),
         }
-        self.bit_array_segment_specifiers(builder, segment);
+        self.bit_array_segment_specifiers(builder, segment, bits_unit_value.is_some());
     }
 
+    // When `omit_unit_specifier` is true, the unit was already multiplied
+    // into the size (e.g. size=8, unit=8 became 64), so we skip emitting
+    // the unit specifier. The BEAM rejects unit with the bitstring type.
     fn bit_array_segment_specifiers<Output, Expr>(
         &self,
         builder: &mut impl ErlangBuilder<Output>,
         segment: &'a BitArraySegment<Expr, Arc<Type>>,
+        omit_unit_specifier: bool,
     ) {
         let options = segment.options.iter();
         builder.bit_array_segment_specifiers(options.filter_map(|option| match option {
@@ -2386,6 +2422,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             BitArrayOption::Big { .. } => Some(BitArraySegmentSpecifier::Big),
             BitArrayOption::Little { .. } => Some(BitArraySegmentSpecifier::Little),
             BitArrayOption::Native { .. } => Some(BitArraySegmentSpecifier::Native),
+            BitArrayOption::Unit { .. } if omit_unit_specifier => None,
             BitArrayOption::Unit { value, .. } => Some(BitArraySegmentSpecifier::Unit(*value)),
             BitArrayOption::Size { .. } => None,
         }));
@@ -2786,10 +2823,13 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         } else {
             // If the bit array segment doesn't need any special handling we use the
             // regular printing functions to format its value and options.
+            let bits_unit_value = fold_bits_unit_value(&segment.options);
             builder.bit_array_segment();
+
+            // Fold unit into size for bits segments with unit
             self.maybe_block_expr(builder, &segment.value);
-            self.bit_array_expression_segment_size(builder, segment);
-            self.bit_array_segment_specifiers(builder, segment);
+            self.bit_array_expression_segment_size(builder, segment, bits_unit_value);
+            self.bit_array_segment_specifiers(builder, segment, bits_unit_value.is_some());
         }
     }
 
@@ -2802,6 +2842,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
         segment: &'a TypedExprBitArraySegment,
+        bits_unit_value: Option<u8>,
     ) {
         let Some(size) = segment.size() else {
             builder.bit_array_segment_default_size();
@@ -2810,8 +2851,30 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
         // Sizes need some care: in Erlang, having a negative segment size
         // results in a runtime error. We can't do that in Gleam! So any
-        // negative value must be turned to zero instead:
-        if let TypedExpr::Int { int_value, .. } = &size {
+        // negative value must be turned to zero instead.
+        //
+        // And when `bits_unit_value` is set the unit has been folded into
+        // the size so the unit specifier can be omitted.
+        //
+        // For example, size=8 with unit=8 produces 64, emitting <<X:64/bitstring>>
+        // instead of <<X:8/bitstring-unit:8>>.
+        if let Some(unit) = bits_unit_value {
+            // Multiply the size by the unit
+            if let TypedExpr::Int { int_value, .. } = &size {
+                if int_value.is_negative() {
+                    builder.int(BigInt::ZERO);
+                } else {
+                    builder.int(int_value.clone() * unit);
+                }
+            } else {
+                let call = builder.start_remote_call(ErlangModuleName::erlang(), "max");
+                builder.int(BigInt::ZERO);
+                builder.binary_operator("*");
+                self.maybe_block_expr(builder, size);
+                builder.int(unit.into());
+                builder.end_call(call);
+            }
+        } else if let TypedExpr::Int { int_value, .. } = &size {
             if int_value.is_negative() {
                 builder.int(BigInt::ZERO);
             } else {

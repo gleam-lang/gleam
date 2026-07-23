@@ -237,11 +237,27 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
             Pattern::BitArray { segments, .. } => {
                 let bit_array = builder.start_bit_array_pattern();
                 for segment in segments {
+                    // Only fold unit into size for literal integer sizes,
+                    // patterns cannot use binary operators at runtime.
+                    let is_literal_size = matches!(
+                        segment.size(),
+                        Some(Pattern::BitArraySize(BitArraySize::Int { .. }))
+                    );
+                    let bits_unit_value = fold_bits_unit_value(&segment.options)
+                        .filter(|_| is_literal_size);
+
                     builder.bit_array_segment();
                     self.bit_array_pattern_segment_value(builder, segment);
-                    self.bit_array_pattern_segment_size(builder, segment);
-                    self.generator
-                        .bit_array_segment_specifiers(builder, segment);
+                    if let Some(unit) = bits_unit_value {
+                        self.bit_array_pattern_segment_size_with_unit(builder, segment, unit);
+                    } else {
+                        self.bit_array_pattern_segment_size(builder, segment);
+                    }
+                    self.generator.bit_array_segment_specifiers(
+                        builder,
+                        segment,
+                        bits_unit_value.is_some(),
+                    );
                 }
                 builder.end_bit_array_pattern(bit_array);
             }
@@ -390,6 +406,31 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
             panic!("invalid size in pattern size segment")
         };
         self.bit_array_size(builder, size);
+    }
+
+    /// For bits segments with a unit option and a literal integer size,
+    /// multiply the size by the unit so we can drop the unit specifier.
+    fn bit_array_pattern_segment_size_with_unit<Output>(
+        &mut self,
+        builder: &mut impl ErlangBuilder<Output>,
+        segment: &'a TypedPatternBitArraySegment,
+        unit: u8,
+    ) {
+        let Some(size) = segment.size() else {
+            builder.atom("default");
+            return;
+        };
+        let TypedPattern::BitArraySize(size) = size else {
+            panic!("invalid size in pattern size segment")
+        };
+        match size {
+            BitArraySize::Int { int_value, .. } => {
+                builder.int(int_value * unit);
+            }
+            BitArraySize::Block { .. }
+            | BitArraySize::Variable { .. }
+            | BitArraySize::BinaryOperator { .. } => self.bit_array_size(builder, size),
+        }
     }
 
     fn bit_array_size_divide<Output>(
