@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 512
+expression: "let wobble: Int = 32\n        >>>>>>> main"
+---
+----- SOURCE CODE
+let wobble: Int = 32
+        >>>>>>> main
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:9
+  │
+2 │         >>>>>>> main
+  │         ^^^^^^^ I don't know how to handle this
+
+Hint: resolve merge conflicts

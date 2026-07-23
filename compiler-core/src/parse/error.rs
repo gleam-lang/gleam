@@ -46,6 +46,7 @@ pub enum LexicalErrorType {
         tok: char,
     },
     InvalidTripleEqual,
+    MergeConflictIndicator,
     /// A character was encountered that visually looks like a correct
     /// character, but in reality it's some other unicode characters.
     /// For example, a non-breaking-space instead of a regular space.
@@ -951,6 +952,10 @@ impl LexicalError {
                     "Gleam uses `==` to check for equality between two values.".into(),
                     "See: https://tour.gleam.run/basics/equality".into(),
                 ],
+            ),
+            LexicalErrorType::MergeConflictIndicator => (
+                "I don't know how to handle this",
+                vec!["Hint: resolve merge conflicts".into()],
             ),
             LexicalErrorType::VisuallySimilarInvalidCharacter { name, correct } => (
                 "Unexpected character",
