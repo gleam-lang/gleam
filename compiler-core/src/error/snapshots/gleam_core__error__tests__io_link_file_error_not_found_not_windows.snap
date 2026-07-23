@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/error/tests.rs
+expression: error
+---
+error: File IO failure
+
+An error occurred while trying to link this file:
+
+    /src
+
+To:
+
+    /dest
+
+This file does not exist.
