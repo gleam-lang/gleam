@@ -61,48 +61,40 @@ go(X) ->
             Start@5 = ~"\\",
             ~"test";
 
-        <<"\f \n \r \t \" \\"/utf8, Rest@6/binary>> ->
-            Start@6 = ~"\f \n \r \t \" \\",
-            ~"control chars with prefix assignment";
-
-        <<"\x{9}"/utf8, Rest@7/binary>> ->
-            Start@7 = ~"\x{9}",
+        <<"\x{9}"/utf8, Rest@6/binary>> ->
+            Start@6 = ~"\x{9}",
             ~"test";
 
-        <<"\x{000009}"/utf8, Rest@8/binary>> ->
-            Start@8 = ~"\x{000009}",
+        <<"\x{000009}"/utf8, Rest@7/binary>> ->
+            Start@7 = ~"\x{000009}",
             ~"test";
 
-        <<"\x{21}"/utf8, Rest@9/binary>> ->
-            Start@9 = ~"\x{21}",
+        <<"\x{21}"/utf8, Rest@8/binary>> ->
+            Start@8 = ~"\x{21}",
             ~"test";
 
-        <<"\x{100}"/utf8, Rest@10/binary>> ->
-            Start@10 = ~"\x{100}",
+        <<"\x{100}"/utf8, Rest@9/binary>> ->
+            Start@9 = ~"\x{100}",
             ~"test";
 
-        <<"\x{1000}"/utf8, Rest@11/binary>> ->
-            Start@11 = ~"\x{1000}",
+        <<"\x{1000}"/utf8, Rest@10/binary>> ->
+            Start@10 = ~"\x{1000}",
             ~"test";
 
-        <<"\x{1F600}"/utf8, Rest@12/binary>> ->
-            Start@12 = ~"\x{1F600}",
+        <<"\x{1F600}"/utf8, Rest@11/binary>> ->
+            Start@11 = ~"\x{1F600}",
             ~"test";
 
-        <<"\x{1f600}"/utf8, Rest@13/binary>> ->
-            Start@13 = ~"\x{1f600}",
+        <<"\x{1f600}"/utf8, Rest@12/binary>> ->
+            Start@12 = ~"\x{1f600}",
             ~"test";
 
-        <<"\x{01F600}"/utf8, Rest@14/binary>> ->
-            Start@14 = ~"\x{01F600}",
+        <<"\x{01F600}"/utf8, Rest@13/binary>> ->
+            Start@13 = ~"\x{01F600}",
             ~"test";
 
-        <<"\x{01f600}"/utf8, Rest@15/binary>> ->
-            Start@15 = ~"\x{01f600}",
-            ~"test";
-
-        <<"\x{9} \x{000009} \x{21} \x{100} \x{1000} \x{1F600} \x{01F600}"/utf8, Rest@16/binary>> ->
-            Start@16 = ~"\x{9} \x{000009} \x{21} \x{100} \x{1000} \x{1F600} \x{01F600}",
+        <<"\x{01f600}"/utf8, Rest@14/binary>> ->
+            Start@14 = ~"\x{01f600}",
             ~"test";
 
         _ ->
