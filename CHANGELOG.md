@@ -13,6 +13,11 @@
   whose line broke in the middle of a multi-byte UTF-8 character.
   ([John Downey](https://github.com/jtdowney))
 
+- Fixed a bug where invalid JavaScript would be generated for code which used a
+  bit array pattern to extract a `Float` and had a constructor called `Number`.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+
 ## v1.18.0-rc1 - 2026-07-21
 
 ### Compiler
