@@ -6,7 +6,7 @@ use super::{
     expression::{ArgumentKind, CallKind},
 };
 use crate::{
-    ast::{BinOp, BitArraySegmentTruncation, Layer, SrcSpan, TodoKind},
+    ast::{BinOp, BitArraySegmentTruncation, Layer, TodoKind},
     build::Target,
     exhaustiveness::ImpossibleBitArraySegmentPattern,
     parse::LiteralFloatValue,
@@ -18,6 +18,7 @@ use hexpm::version::Version;
 use num_bigint::BigInt;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
+use src_span::SrcSpan;
 use std::sync::Arc;
 
 /// Errors and warnings discovered when compiling a module.

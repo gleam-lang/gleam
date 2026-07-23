@@ -35,11 +35,11 @@ use gleam_core::{
         BeamCompilerIO, Command, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
         WrappedReader, memory::InMemoryFileSystem,
     },
-    line_numbers::LineNumbers,
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
     requirement::Requirement,
 };
+use src_span::LineNumbers;
 
 use super::{
     DownloadDependencies, LockGuard, Locker, MakeLocker, engine::LanguageServerEngine,

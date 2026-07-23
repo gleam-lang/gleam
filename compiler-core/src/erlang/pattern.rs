@@ -6,6 +6,7 @@ use erlang_generation::BitArraySegmentSpecifier;
 use crate::{analyse::Inferred, parse::LiteralFloatValue};
 
 use super::*;
+use src_span::SrcSpan;
 
 /// This is used to generate the code for a pattern.
 /// Most Gleam patterns can be translated to Erlang in a pretty straightforward
@@ -133,12 +134,25 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
         pattern: &'a TypedPattern,
     ) {
         match pattern {
-            Pattern::Discard { .. } => builder.discard_pattern(),
-            Pattern::Float { float_value, .. } => builder.float_pattern(float_value.value()),
-            Pattern::Int { int_value, .. } => builder.int_pattern(int_value.clone()),
-            Pattern::String { value, .. } => builder.string_pattern(value),
+            Pattern::Discard { location, .. } => builder.discard_pattern(*location),
+            Pattern::Float {
+                float_value,
+                location,
+                ..
+            } => builder.float_pattern(*location, float_value.value()),
+            Pattern::Int {
+                int_value,
+                location,
+                ..
+            } => builder.int_pattern(*location, int_value.clone()),
+            Pattern::String {
+                value, location, ..
+            } => builder.string_pattern(*location, value),
             Pattern::Variable { name, location, .. } => {
-                builder.variable_pattern(&self.generator.new_erlang_variable(name, *location));
+                builder.variable_pattern(
+                    *location,
+                    &self.generator.new_erlang_variable(name, *location),
+                );
             }
 
             Pattern::Assign {
@@ -146,34 +160,47 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                 pattern,
                 location,
             } => {
-                builder.match_pattern();
+                builder.match_pattern(*location);
                 self.pattern(builder, pattern);
-                builder.variable_pattern(&self.generator.new_erlang_variable(name, *location));
+                builder.variable_pattern(
+                    *location,
+                    &self.generator.new_erlang_variable(name, *location),
+                );
             }
 
-            Pattern::Tuple { elements, .. } => {
-                let tuple = builder.start_tuple_pattern();
+            Pattern::Tuple { elements, location } => {
+                let tuple = builder.start_tuple_pattern(*location);
                 for element in elements {
                     self.pattern(builder, element);
                 }
                 builder.end_tuple_pattern(tuple);
             }
 
-            Pattern::List { elements, tail, .. } => {
+            Pattern::List {
+                elements,
+                tail,
+                location,
+                ..
+            } => {
                 for element in elements {
-                    builder.cons_list_pattern();
+                    builder.cons_list_pattern(*location);
                     self.pattern(builder, element);
                 }
                 if let Some(tail) = tail {
                     self.pattern(builder, &tail.pattern);
                 } else {
-                    builder.empty_list_pattern();
+                    builder.empty_list_pattern(SrcSpan {
+                        start: location.end,
+                        end: location.end,
+                    });
                 }
             }
 
             Pattern::Constructor {
                 arguments,
                 constructor,
+                location,
+                name_location,
                 ..
             } => {
                 let Inferred::Known(PatternConstructor { name, .. }) = constructor else {
@@ -181,10 +208,10 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                 };
 
                 if arguments.is_empty() {
-                    builder.atom_pattern(&to_snake_case(name));
+                    builder.atom_pattern(*name_location, &to_snake_case(name));
                 } else {
-                    let tuple = builder.start_tuple_pattern();
-                    builder.atom_pattern(&to_snake_case(name));
+                    let tuple = builder.start_tuple_pattern(*location);
+                    builder.atom_pattern(*name_location, &to_snake_case(name));
                     for argument in arguments {
                         self.pattern(builder, &argument.value);
                     }
@@ -197,7 +224,8 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                 left_side_assignment,
                 right_side_assignment,
                 right_location,
-                ..
+                location,
+                left_location,
             } => {
                 // If the constant string prefix is being aliased we need to add
                 // that value to the variables that are going to be generated
@@ -212,21 +240,22 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                     );
                 }
 
-                let bit_array = builder.start_bit_array_pattern();
+                let bit_array = builder.start_bit_array_pattern(*location);
 
                 // We first generate a segment matching on the literal prefix.
-                builder.bit_array_segment();
-                builder.string_pattern(left_side_string);
+                builder.bit_array_segment(*left_location);
+                builder.string_pattern(*left_location, left_side_string);
                 builder.bit_array_segment_default_size();
                 builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Utf8]);
 
                 // We then add a segment matching on the rest of the string.
-                builder.bit_array_segment();
+                builder.bit_array_segment(*right_location);
                 match right_side_assignment {
                     AssignName::Variable(name) => builder.variable_pattern(
+                        *right_location,
                         &self.generator.new_erlang_variable(name, *right_location),
                     ),
-                    AssignName::Discard(_) => builder.discard_pattern(),
+                    AssignName::Discard(_) => builder.discard_pattern(*right_location),
                 }
                 builder.bit_array_segment_default_size();
                 builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Binary]);
@@ -234,10 +263,12 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                 builder.end_bit_array_pattern(bit_array);
             }
 
-            Pattern::BitArray { segments, .. } => {
-                let bit_array = builder.start_bit_array_pattern();
+            Pattern::BitArray {
+                segments, location, ..
+            } => {
+                let bit_array = builder.start_bit_array_pattern(*location);
                 for segment in segments {
-                    builder.bit_array_segment();
+                    builder.bit_array_segment(segment.location);
                     self.bit_array_pattern_segment_value(builder, segment);
                     self.bit_array_pattern_segment_size(builder, segment);
                     self.generator
@@ -260,13 +291,19 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
         size: &'a TypedBitArraySize,
     ) {
         match size {
-            BitArraySize::Int { int_value, .. } => builder.int(int_value.clone()),
+            BitArraySize::Int {
+                int_value,
+                location,
+                ..
+            } => builder.int(*location, int_value.clone()),
             BitArraySize::Block { inner, .. } => self.bit_array_size(builder, inner),
 
             BitArraySize::Variable {
                 constructor, name, ..
             } => match self.variables_to_add_later.get(name) {
-                Some(AliasedLiteral::Int { value, .. }) => builder.int(value.clone()),
+                Some(AliasedLiteral::Int { value, location }) => {
+                    builder.int(*location, value.clone())
+                }
                 Some(_) => panic!("segment size that is not int made it through type checking"),
                 None => {
                     let constructor = constructor.as_ref().expect("variable with no constructor");
@@ -275,7 +312,7 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                             self.generator.inlined_constant(builder, literal);
                         }
                         ValueConstructorVariant::LocalVariable { location, .. } => {
-                            builder.variable(&self.generator.local_var_name(location));
+                            builder.variable(*location, &self.generator.local_var_name(location));
                         }
                         ValueConstructorVariant::ModuleFn { .. }
                         | ValueConstructorVariant::Record { .. } => panic!("invalid segment"),
@@ -287,20 +324,20 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                 operator,
                 left,
                 right,
-                ..
+                location,
             } => {
                 let operator = match operator {
                     IntOperator::Add => "+",
                     IntOperator::Subtract => "-",
                     IntOperator::Multiply => "*",
                     IntOperator::Divide => {
-                        return self.bit_array_size_divide(builder, left, right, "div");
+                        return self.bit_array_size_divide(location, builder, left, right, "div");
                     }
                     IntOperator::Remainder => {
-                        return self.bit_array_size_divide(builder, left, right, "rem");
+                        return self.bit_array_size_divide(location, builder, left, right, "rem");
                     }
                 };
-                builder.binary_operator(operator);
+                builder.binary_operator(*location, operator);
                 self.bit_array_size(builder, left);
                 self.bit_array_size(builder, right);
             }
@@ -353,8 +390,11 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
             // Aliasing a discard is the same as just producing a variable
             // pattern, that makes things even simpler, we can just produce the
             // code for a variable pattern with the wanted name and call it a day
-            Pattern::Discard { .. } => {
-                builder.variable_pattern(&self.generator.new_erlang_variable(name, *location));
+            Pattern::Discard { location, .. } => {
+                builder.variable_pattern(
+                    *location,
+                    &self.generator.new_erlang_variable(name, *location),
+                );
                 return;
             }
 
@@ -394,35 +434,36 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
 
     fn bit_array_size_divide<Output>(
         &mut self,
+        location: &'a SrcSpan,
         builder: &mut impl ErlangBuilder<Output>,
         left: &'a TypedBitArraySize,
         right: &'a TypedBitArraySize,
         operator: &'static str,
     ) {
         if right.non_zero_compile_time_number() {
-            builder.binary_operator(operator);
+            builder.binary_operator(*location, operator);
             self.bit_array_size(builder, left);
             self.bit_array_size(builder, right);
         } else {
-            let case = builder.start_case();
+            let case = builder.start_case(*location);
             self.bit_array_size(builder, right);
             let case = builder.end_case_subject(case);
 
-            let clause = builder.start_case_clause();
-            builder.int_pattern(BigInt::ZERO);
+            let clause = builder.start_case_clause(*location);
+            builder.int_pattern(*location, BigInt::ZERO);
             let clause = builder.end_clause_pattern(clause);
             let clause = builder.end_clause_guards(clause);
-            builder.int(BigInt::ZERO);
+            builder.int(*location, BigInt::ZERO);
             builder.end_clause_body(clause);
 
-            let clause = builder.start_case_clause();
+            let clause = builder.start_case_clause(*location);
             let denominator = self.generator.new_generated_variable();
-            builder.variable_pattern(&denominator);
+            builder.variable_pattern(right.location(), &denominator);
             let clause = builder.end_clause_pattern(clause);
             let clause = builder.end_clause_guards(clause);
-            builder.binary_operator(operator);
+            builder.binary_operator(*location, operator);
             self.bit_array_size(builder, left);
-            builder.variable(&denominator);
+            builder.variable(right.location(), &denominator);
             builder.end_clause_body(clause);
             builder.end_case(case);
         }

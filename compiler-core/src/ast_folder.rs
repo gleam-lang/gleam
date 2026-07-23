@@ -1,17 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 The Gleam contributors
 
-use ecow::EcoString;
-use itertools::Itertools;
-use num_bigint::BigInt;
-use vec1::Vec1;
-
 use crate::{
     analyse::Inferred,
     ast::{
         Assert, AssignName, Assignment, BinOp, BitArraySize, CallArg, Constant, Definition,
         FunctionLiteralKind, InvalidExpression, Pattern, RecordBeingUpdated, RecordUpdateArg,
-        SrcSpan, Statement, TailPattern, TargetedDefinition, TodoKind, TypeAst, TypeAstConstructor,
+        Statement, TailPattern, TargetedDefinition, TodoKind, TypeAst, TypeAstConstructor,
         TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UntypedArg, UntypedAssert,
         UntypedAssignment, UntypedClause, UntypedConstant, UntypedConstantBitArraySegment,
         UntypedCustomType, UntypedDefinition, UntypedExpr, UntypedExprBitArraySegment,
@@ -23,6 +18,11 @@ use crate::{
     parse::LiteralFloatValue,
     type_::error::VariableOrigin,
 };
+use ecow::EcoString;
+use itertools::Itertools;
+use num_bigint::BigInt;
+use src_span::SrcSpan;
+use vec1::Vec1;
 
 #[allow(dead_code)]
 pub trait UntypedModuleFolder: TypeAstFolder + UntypedExprFolder {

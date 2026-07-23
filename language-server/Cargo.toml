@@ -11,7 +11,7 @@ license = "Apache-2.0"
 [dependencies]
 gleam-core = { path = "../compiler-core" }
 gleam-format = { path = "../format" }
-
+src-span.workspace = true
 camino.workspace = true
 debug-ignore.workspace = true
 ecow.workspace = true

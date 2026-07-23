@@ -11,19 +11,17 @@ use crate::{
     GLEAM_CORE_PACKAGE_NAME, STDLIB_PACKAGE_NAME,
     ast::{
         self, Arg, BitArrayOption, CustomType, DefinitionLocation, Function, GroupedDefinitions,
-        Import, ModuleConstant, Publicity, RecordConstructor, RecordConstructorArg, SrcSpan,
-        Statement, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple,
-        TypeAstVar, TypedCustomType, TypedDefinitions, TypedExpr, TypedFunction, TypedImport,
-        TypedModule, TypedModuleConstant, TypedTypeAlias, UntypedArg, UntypedCustomType,
-        UntypedFunction, UntypedImport, UntypedModule, UntypedModuleConstant, UntypedStatement,
-        UntypedTypeAlias,
+        Import, ModuleConstant, Publicity, RecordConstructor, RecordConstructorArg, Statement,
+        TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar,
+        TypedCustomType, TypedDefinitions, TypedExpr, TypedFunction, TypedImport, TypedModule,
+        TypedModuleConstant, TypedTypeAlias, UntypedArg, UntypedCustomType, UntypedFunction,
+        UntypedImport, UntypedModule, UntypedModuleConstant, UntypedStatement, UntypedTypeAlias,
     },
     build::{Origin, Outcome, Target},
     call_graph::{CallGraphNode, into_dependency_order},
     config::PackageConfig,
     dep_tree,
     inline::{self, InlinableFunction},
-    line_numbers::LineNumbers,
     parse::SpannedString,
     reference::{EntityKind, ReferenceKind},
     type_::{
@@ -47,6 +45,7 @@ use hexpm::version::Version;
 use itertools::Itertools;
 use name::{check_argument_names, check_name_case};
 use regex::Regex;
+use src_span::{LineNumbers, SrcSpan};
 use std::{
     collections::{HashMap, HashSet},
     ops::Deref,

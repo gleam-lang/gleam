@@ -5,16 +5,16 @@
 mod tests;
 
 use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
+use crate::build::module_erlang_name;
 use crate::build::package_loader::CacheFiles;
 
 use crate::error::{DefinedModuleOrigin, FailedModule, SkipReason, SkippedModule};
 use crate::io::files_with_extension;
-use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::type_::printer::Names;
 use crate::{
     Error, Result, Warning,
-    ast::{SrcSpan, TypedModule, UntypedModule},
+    ast::{TypedModule, UntypedModule},
     build::{
         Mode, Module, Origin, Outcome, Package, SourceFingerprint, Target,
         elixir_libraries::ElixirLibraries,
@@ -32,8 +32,9 @@ use crate::{
 };
 use crate::{inline, metadata};
 use askama::Template;
-use ecow::EcoString;
+use ecow::{EcoString, eco_format};
 use itertools::Itertools;
+use src_span::{LineNumbers, SrcSpan};
 use std::collections::HashSet;
 use std::{collections::HashMap, fmt::write, time::SystemTime};
 use vec1::Vec1;
@@ -272,6 +273,7 @@ where
     fn copy_project_native_files(
         &mut self,
         destination_dir: &Utf8Path,
+        precompiled_erlang_file_names: HashSet<EcoString>,
         to_compile_modules: &mut HashSet<Utf8PathBuf>,
     ) -> Result<(), Error> {
         tracing::debug!("copying_native_source_files");
@@ -289,6 +291,7 @@ where
             self.root.clone(),
             destination_dir,
             self.check_module_conflicts,
+            precompiled_erlang_file_names,
         );
         let copied = copier.run()?;
 
@@ -392,8 +395,21 @@ where
 
         io.mkdir(&build_dir)?;
 
+        // We don't want to copy the precompiled erlang files of deps over, so
+        // we make sure the native file copier will ignore those.
+        let precompiled_erlang_file_names = modules
+            .iter()
+            .map(|module| &module.name)
+            .chain(cached_module_names.iter())
+            .map(|module_name| eco_format!("{}.erl", module_erlang_name(module_name)))
+            .collect();
+
         if self.copy_native_files {
-            self.copy_project_native_files(&build_dir, &mut written)?;
+            self.copy_project_native_files(
+                &build_dir,
+                precompiled_erlang_file_names,
+                &mut written,
+            )?;
         } else {
             tracing::debug!("skipping_native_file_copying");
         }
@@ -453,7 +469,7 @@ where
         .render(&self.io, modules, self.stdlib_package())?;
 
         if self.copy_native_files {
-            self.copy_project_native_files(&self.out, &mut written)?;
+            self.copy_project_native_files(&self.out, HashSet::new(), &mut written)?;
         } else {
             tracing::debug!("skipping_native_file_copying");
         }

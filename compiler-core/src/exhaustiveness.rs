@@ -71,8 +71,8 @@ pub mod printer;
 
 use crate::{
     ast::{
-        self, AssignName, BitArraySize, Endianness, IntOperator, SrcSpan, TypedBitArraySize,
-        TypedClause, TypedPattern, TypedPatternBitArraySegment,
+        self, AssignName, BitArraySize, Endianness, IntOperator, TypedBitArraySize, TypedClause,
+        TypedPattern, TypedPatternBitArraySegment,
     },
     parse::LiteralFloatValue,
     strings::{
@@ -92,6 +92,7 @@ use itertools::Itertools;
 use num_bigint::{BigInt, Sign};
 use num_traits::ToPrimitive;
 use radix_trie::{Trie, TrieCommon};
+use src_span::SrcSpan;
 use std::{
     cell::RefCell,
     cmp::Ordering,

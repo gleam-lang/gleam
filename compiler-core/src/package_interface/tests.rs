@@ -7,12 +7,12 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use globset::GlobBuilder;
 use hexpm::version::Identifier;
+use src_span::LineNumbers;
 
 use crate::{
     analyse::TargetSupport,
     build::{Module, Origin, Package, Target},
     config::{Docs, ErlangConfig, GleamVersion, JavaScriptConfig, PackageConfig},
-    line_numbers::LineNumbers,
     type_::PRELUDE_MODULE_NAME,
     uid::UniqueIdGenerator,
     warning::{TypeWarningEmitter, WarningEmitter},

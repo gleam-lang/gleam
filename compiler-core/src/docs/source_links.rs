@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
-
 use crate::{
-    ast::SrcSpan,
     build,
     config::{PackageConfig, Repository},
-    line_numbers::LineNumbers,
     paths::ProjectPaths,
 };
+use src_span::{LineNumbers, SrcSpan};
 
 use camino::{Utf8Component, Utf8Path, Utf8PathBuf};
 

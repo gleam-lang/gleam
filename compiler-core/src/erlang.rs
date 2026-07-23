@@ -11,7 +11,6 @@ use crate::strings::to_snake_case;
 use crate::type_::{self, is_prelude_module};
 use crate::{
     ast::*,
-    line_numbers::LineNumbers,
     type_::{
         ModuleValueConstructor, PatternConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
         ValueConstructorVariant,
@@ -26,6 +25,7 @@ use itertools::Itertools;
 use num_bigint::BigInt;
 use num_traits::Signed;
 use regex::Regex;
+use src_span::{LineNumbers, SrcSpan};
 use std::collections::VecDeque;
 use std::sync::OnceLock;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
@@ -617,12 +617,18 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // Finally we start generating code for the function itself, how we do
         // it depends if the function is external or not.
         let arity = function.arguments.len();
+        let function_full_location = function.full_location();
         match function.external_erlang.as_ref() {
             // If the function is not external we generate the code for all of
             // its statements.
             None => {
                 let arguments = self.function_arguments_names(&function.arguments, false);
-                let open_function = builder.start_function(&function_name, arity, arguments);
+                let open_function = builder.start_function(
+                    function_full_location,
+                    &function_name,
+                    arity,
+                    arguments,
+                );
                 self.statement_sequence(builder, &function.body);
                 builder.end_function(open_function);
             }
@@ -633,12 +639,19 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 let arguments = self
                     .function_arguments_names(&function.arguments, true)
                     .collect_vec();
-                let open_function =
-                    builder.start_function(&function_name, arity, arguments.clone());
-                let call = builder
-                    .start_remote_call(ErlangModuleName::new(module), external_function_name);
-                for argument in arguments {
-                    builder.variable(&argument);
+                let open_function = builder.start_function(
+                    function_full_location,
+                    &function_name,
+                    arity,
+                    arguments.clone(),
+                );
+                let call = builder.start_remote_call(
+                    function_full_location,
+                    ErlangModuleName::new(module),
+                    external_function_name,
+                );
+                for (argument_location, argument) in arguments {
+                    builder.variable(argument_location, &argument);
                 }
                 builder.end_call(call);
                 builder.end_function(open_function);
@@ -706,7 +719,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         &mut self,
         arguments: &[TypedArg],
         is_external: bool,
-    ) -> impl Iterator<Item = EcoString> {
+    ) -> impl Iterator<Item = (SrcSpan, EcoString)> {
         arguments.iter().map(move |argument| match &argument.names {
             // When the function is external we need to be careful with discarded
             // arguments. _All_ of the function arguments are always used in an
@@ -734,14 +747,18 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 name,
                 name_location: location,
                 ..
-            } if is_external => self.new_generated_variable(),
-            ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => EcoString::from("_"),
+            } if is_external => (*location, self.new_generated_variable()),
+            ArgNames::Discard { location, .. }
+            | ArgNames::LabelledDiscard {
+                name_location: location,
+                ..
+            } => (*location, EcoString::from("_")),
             ArgNames::Named { name, location }
             | ArgNames::NamedLabelled {
                 name,
                 name_location: location,
                 ..
-            } => self.new_erlang_variable(name, *location),
+            } => (*location, self.new_erlang_variable(name, *location)),
         })
     }
 
@@ -758,7 +775,12 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 Statement::Assert(assert) => self.assert(builder, assert),
                 Statement::Assignment(assignment) => match &assignment.kind {
                     AssignmentKind::Let | AssignmentKind::Generated => {
-                        self.let_(builder, &assignment.value, &assignment.pattern);
+                        self.let_(
+                            builder,
+                            assignment.location,
+                            &assignment.value,
+                            &assignment.pattern,
+                        );
                     }
                     // Let asserts are slightly different from everything else:
                     // A let assert is compiled to a case expression where we
@@ -810,13 +832,30 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             //
             // Simple scalar values, and blocks.
             //
-            TypedExpr::Int { int_value, .. } => builder.int(int_value.clone()),
-            TypedExpr::Float { float_value, .. } => builder.float(float_value.value()),
-            TypedExpr::String { value, .. } => builder.string(value),
+            TypedExpr::Int {
+                int_value,
+                location,
+                ..
+            } => builder.int(*location, int_value.clone()),
+            TypedExpr::Float {
+                float_value,
+                location,
+                ..
+            } => builder.float(*location, float_value.value()),
+            TypedExpr::String {
+                value, location, ..
+            } => builder.string(*location, value),
             TypedExpr::Var {
-                name, constructor, ..
-            } => self.var(builder, name, constructor),
-            TypedExpr::Block { statements, .. } => {
+                name,
+                constructor,
+                location,
+                ..
+            } => self.var(builder, *location, name, constructor),
+            TypedExpr::Block {
+                statements,
+                location,
+                ..
+            } => {
                 // If the block has a single expression we don't bother wrapping
                 // it in an additional `begin ... end` block.
                 // It's going to be added only if strictly needed.
@@ -825,7 +864,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 {
                     self.maybe_block_expr(builder, expression);
                 } else {
-                    let block = builder.start_block();
+                    let block = builder.start_block(*location);
                     self.statement_sequence(builder, statements);
                     builder.end_block(block);
                 }
@@ -834,35 +873,47 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             //
             // Operators.
             //
-            TypedExpr::NegateBool { value, .. } => {
-                builder.unary_operator("not");
+            TypedExpr::NegateBool {
+                value, location, ..
+            } => {
+                builder.unary_operator(*location, "not");
                 self.maybe_block_expr(builder, value);
             }
-            TypedExpr::NegateInt { value, .. } => {
-                builder.unary_operator("-");
+            TypedExpr::NegateInt {
+                value, location, ..
+            } => {
+                builder.unary_operator(*location, "-");
                 self.maybe_block_expr(builder, value);
             }
             TypedExpr::BinOp {
                 operator,
                 left,
                 right,
+                location,
                 ..
-            } => self.binary_operator(builder, operator, left, right),
+            } => self.binary_operator(builder, *location, operator, left, right),
 
             //
             // BitArrays, Lists, and Tuples.
             //
-            TypedExpr::BitArray { segments, .. } => {
-                let bit_array = builder.start_bit_array();
+            TypedExpr::BitArray {
+                segments, location, ..
+            } => {
+                let bit_array = builder.start_bit_array(*location);
                 for segment in segments {
                     self.bit_array_expression_segment(builder, segment);
                 }
                 builder.end_bit_array(bit_array);
             }
-            TypedExpr::List { elements, tail, .. } => {
+            TypedExpr::List {
+                elements,
+                tail,
+                location,
+                ..
+            } => {
                 // We generate all the items of the list as cons cells.
                 for element in elements {
-                    builder.cons_list();
+                    builder.cons_list(element.location());
                     self.maybe_block_expr(builder, element);
                 }
                 // Finally we close the list with the tail, or an empty list
@@ -870,11 +921,16 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 if let Some(tail) = tail {
                     self.maybe_block_expr(builder, tail);
                 } else {
-                    builder.empty_list();
+                    builder.empty_list(SrcSpan {
+                        start: location.end,
+                        end: location.end,
+                    });
                 }
             }
-            TypedExpr::Tuple { elements, .. } => {
-                let tuple = builder.start_tuple();
+            TypedExpr::Tuple {
+                elements, location, ..
+            } => {
+                let tuple = builder.start_tuple(*location);
                 for element in elements {
                     self.maybe_block_expr(builder, element);
                 }
@@ -885,10 +941,25 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // Accessing data inside tuples, and records.
             // They're all tuple accesses at the end of the day!
             //
-            TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(builder, tuple, *index),
-            TypedExpr::RecordAccess { record, index, .. }
-            | TypedExpr::PositionalAccess { record, index, .. } => {
-                self.tuple_index(builder, record, index + 1);
+            TypedExpr::TupleIndex {
+                tuple,
+                index,
+                location,
+                ..
+            } => self.tuple_index(builder, *location, tuple, *index),
+            TypedExpr::RecordAccess {
+                record,
+                index,
+                location,
+                ..
+            }
+            | TypedExpr::PositionalAccess {
+                record,
+                index,
+                location,
+                ..
+            } => {
+                self.tuple_index(builder, *location, record, index + 1);
             }
 
             //
@@ -896,45 +967,52 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             //
             TypedExpr::ModuleSelect {
                 constructor: ModuleValueConstructor::Record { name, arity: 0, .. },
+                location,
                 ..
-            } => builder.atom(&to_snake_case(name)),
+            } => builder.atom(*location, &to_snake_case(name)),
             TypedExpr::RecordUpdate {
                 updated_record_assigned_name,
                 updated_record,
                 constructor,
                 arguments,
+                location,
                 ..
             } => {
                 // If the record value itself needs to be bound to a variable
                 // before the update, we define it.
                 if let Some(name) = updated_record_assigned_name.as_ref() {
-                    builder.match_operator();
+                    builder.match_operator(*location);
                     builder.variable_pattern(
+                        *location,
                         &self.new_erlang_variable(name, updated_record.location()),
                     );
                     self.maybe_block_expr(builder, updated_record);
                 }
                 // Then a record update is simply a call!
-                self.call(builder, constructor, arguments);
+                self.call(builder, *location, constructor, arguments);
             }
 
             //
             // All kinds of anonymous functions.
             //
             TypedExpr::Fn {
-                arguments, body, ..
+                arguments,
+                body,
+                location,
+                ..
             } => {
                 let outer_scope = self.taken_names.clone();
                 let argument_names = self.function_arguments_names(arguments, false);
-                let function = builder.start_anonymous_function(argument_names);
+                let function = builder.start_anonymous_function(*location, argument_names);
                 self.statement_sequence(builder, body);
                 builder.end_function(function);
                 self.taken_names = outer_scope;
             }
             TypedExpr::ModuleSelect {
                 constructor: ModuleValueConstructor::Record { name, arity, .. },
+                location,
                 ..
-            } => self.record_builder_anonymous_function(builder, name, *arity as usize),
+            } => self.record_builder_anonymous_function(builder, *location, name, *arity as usize),
             TypedExpr::ModuleSelect {
                 type_,
                 constructor:
@@ -943,9 +1021,11 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                         ..
                     }
                     | ModuleValueConstructor::Fn { module, name, .. },
+                location,
                 ..
             } => match type_::collapse_links(type_.clone()).as_ref() {
                 Type::Fn { arguments, .. } => builder.function_reference(
+                    *location,
                     Some(ErlangModuleName::new(module)),
                     escape_erlang_existing_name(name),
                     arguments.len(),
@@ -953,7 +1033,8 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
                 Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
                     let name = escape_erlang_existing_name(name);
-                    let call = builder.start_remote_call(ErlangModuleName::new(module), name);
+                    let call =
+                        builder.start_remote_call(*location, ErlangModuleName::new(module), name);
                     builder.end_call(call);
                 }
             },
@@ -961,7 +1042,12 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             //
             // Calling functions.
             //
-            TypedExpr::Call { fun, arguments, .. } => self.call(builder, fun, arguments),
+            TypedExpr::Call {
+                fun,
+                arguments,
+                location,
+                ..
+            } => self.call(builder, *location, fun, arguments),
             TypedExpr::Pipeline {
                 first_value,
                 assignments,
@@ -1022,8 +1108,11 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // Control flow.
             //
             TypedExpr::Case {
-                subjects, clauses, ..
-            } => self.case(builder, subjects, clauses),
+                subjects,
+                clauses,
+                location,
+                ..
+            } => self.case(builder, *location, subjects, clauses),
 
             //
             // Something went wrong!
@@ -1043,27 +1132,28 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     ) {
         self.module_generator.echo_used = true;
 
-        let call = builder.start_call();
-        builder.atom("echo");
+        let call = builder.start_call(echo_location);
+        builder.atom(echo_location, "echo");
         let call = builder.end_called_expression(call);
 
         // Echo has 4 arguments: the expression to print...
         match printed_value {
-            EchoPrintedValue::PipeStep { name } => builder.variable(&name),
+            EchoPrintedValue::PipeStep { name } => builder.variable(echo_location, &name),
             EchoPrintedValue::Expression { value } => self.maybe_block_expr(builder, value),
         }
         // ...the message to print (or nil if there's no message)...
         if let Some(message) = message {
             self.maybe_block_expr(builder, message);
         } else {
-            builder.atom("nil");
+            builder.atom(echo_location, "nil");
         }
 
         // ...the filepath of this module...
-        builder.string(&self.module_generator.module_source_path);
+        builder.string(echo_location, &self.module_generator.module_source_path);
 
         // ...and the line number of the expression.
         builder.int(
+            echo_location,
             self.module_generator
                 .line_numbers
                 .line_number(echo_location.start)
@@ -1088,41 +1178,45 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         location: SrcSpan,
         message: Option<&'a TypedExpr>,
     ) -> RuntimeError<Builder::Map, Builder::Call> {
-        let call = builder.start_remote_call(ErlangModuleName::erlang(), "error");
-        let map = builder.start_map();
+        let call = builder.start_remote_call(location, ErlangModuleName::erlang(), "error");
+        let map = builder.start_map(location);
 
-        builder.map_field();
-        builder.atom("gleam_error");
-        builder.atom(match error_kind {
-            RuntimeErrorKind::Todo => "todo",
-            RuntimeErrorKind::Panic => "panic",
-            RuntimeErrorKind::Assert => "assert",
-            RuntimeErrorKind::LetAssert => "let_assert",
-        });
+        builder.map_field(location);
+        builder.atom(location, "gleam_error");
+        builder.atom(
+            location,
+            match error_kind {
+                RuntimeErrorKind::Todo => "todo",
+                RuntimeErrorKind::Panic => "panic",
+                RuntimeErrorKind::Assert => "assert",
+                RuntimeErrorKind::LetAssert => "let_assert",
+            },
+        );
 
-        builder.map_field();
-        builder.atom("message");
+        builder.map_field(location);
+        builder.atom(location, "message");
         if let Some(message) = message {
             self.maybe_block_expr(builder, message);
         } else {
-            builder.string(error_kind.default_error_message());
+            builder.string(location, error_kind.default_error_message());
         }
 
-        builder.map_field();
-        builder.atom("file");
-        builder.string(&self.module_generator.module_source_path);
+        builder.map_field(location);
+        builder.atom(location, "file");
+        builder.string(location, &self.module_generator.module_source_path);
 
-        builder.map_field();
-        builder.atom("module");
-        builder.string(&self.module_generator.module.name);
+        builder.map_field(location);
+        builder.atom(location, "module");
+        builder.string(location, &self.module_generator.module.name);
 
-        builder.map_field();
-        builder.atom("function");
-        builder.string(self.function_name);
+        builder.map_field(location);
+        builder.atom(location, "function");
+        builder.string(location, self.function_name);
 
-        builder.map_field();
-        builder.atom("line");
+        builder.map_field(location);
+        builder.atom(location, "line");
         builder.int(
+            location,
             self.module_generator
                 .line_numbers
                 .line_number(location.start)
@@ -1151,7 +1245,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         expression: &'a TypedExpr,
     ) {
         if needs_begin_end_wrapping(expression) {
-            let block = builder.start_block();
+            let block = builder.start_block(expression.location());
             self.expression(builder, expression);
             builder.end_block(block);
         } else {
@@ -1162,10 +1256,11 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn let_<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
+        location: SrcSpan,
         value: &'a TypedExpr,
         pattern: &'a TypedPattern,
     ) {
-        builder.match_operator();
+        builder.match_operator(location);
         PatternGenerator::new(self).pattern(builder, pattern);
         self.maybe_block_expr(builder, value);
     }
@@ -1182,7 +1277,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // If the pattern will never fail, like a tuple or a simple variable, we
         // simply treat it as if it were a `let` assignment.
         if pattern.always_matches() {
-            self.let_(builder, value, pattern);
+            self.let_(builder, location, value, pattern);
             self.statement_sequence(builder, following_statements);
             return;
         }
@@ -1190,7 +1285,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // Otherwise we turn the let assert into a case expression with two
         // branches: one for the asserted pattern, and one catch all to throw an
         // exception in case the pattern doesn't match.
-        let case = builder.start_case();
+        let case = builder.start_case(location);
         self.maybe_block_expr(builder, value);
         let case = builder.end_case_subject(case);
 
@@ -1199,7 +1294,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         if !following_statements.is_empty() {
             // If there's statements after this let assert we want to generate
             // them.
-            let clause = builder.start_case_clause();
+            let clause = builder.start_case_clause(location);
             let mut generator = PatternGenerator::new(self);
             generator.pattern(builder, pattern);
             let clause = builder.end_clause_pattern(clause);
@@ -1222,48 +1317,48 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             //   _ -> erlang:error(...)
             // end
             // ```
-            let clause = builder.start_case_clause();
+            let clause = builder.start_case_clause(location);
             let matched_value_name = self.new_generated_variable();
-            builder.match_pattern();
+            builder.match_pattern(location);
             let mut generator = PatternGenerator::new(self);
             generator.pattern(builder, pattern);
-            builder.variable_pattern(&matched_value_name);
+            builder.variable_pattern(location, &matched_value_name);
 
             let clause = builder.end_clause_pattern(clause);
             let clause = builder.end_clause_guards(clause);
-            builder.variable(&matched_value_name);
+            builder.variable(location, &matched_value_name);
             builder.end_clause_body(clause);
         }
 
         // This is the catch all branch to throw an error otherwise.
-        let clause = builder.start_case_clause();
+        let clause = builder.start_case_clause(location);
         let value_name = self.new_generated_variable();
-        builder.variable_pattern(&value_name);
+        builder.variable_pattern(location, &value_name);
         let clause = builder.end_clause_pattern(clause);
         let clause = builder.end_clause_guards(clause);
         let error =
             self.start_runtime_error(builder, RuntimeErrorKind::LetAssert, location, message);
 
         // We want to add some additional fields to the error map:
-        builder.map_field();
-        builder.atom("value");
-        builder.variable(&value_name);
+        builder.map_field(location);
+        builder.atom(location, "value");
+        builder.variable(location, &value_name);
 
-        builder.map_field();
-        builder.atom("start");
-        builder.int(location.start.into());
+        builder.map_field(location);
+        builder.atom(location, "start");
+        builder.int(location, location.start.into());
 
-        builder.map_field();
-        builder.atom("end");
-        builder.int(value.location().end.into());
+        builder.map_field(location);
+        builder.atom(location, "end");
+        builder.int(location, value.location().end.into());
 
-        builder.map_field();
-        builder.atom("pattern_start");
-        builder.int(pattern.location().start.into());
+        builder.map_field(location);
+        builder.atom(location, "pattern_start");
+        builder.int(location, pattern.location().start.into());
 
-        builder.map_field();
-        builder.atom("pattern_end");
-        builder.int(pattern.location().end.into());
+        builder.map_field(location);
+        builder.atom(location, "pattern_end");
+        builder.int(location, pattern.location().end.into());
 
         self.end_runtime_error(builder, error);
         builder.end_clause_body(clause);
@@ -1297,9 +1392,9 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // A pipeline step always ends up assigned to a variable.
             // So we start by generating `_pipe = ...`, followed by the
             // expression.
-            builder.match_operator();
+            builder.match_operator(assignment.location);
             let name = self.new_erlang_variable(&assignment.name, assignment.location);
-            builder.variable_pattern(&name);
+            builder.variable_pattern(assignment.location, &name);
 
             // In case of a pipe we need to manually pass the previous step to
             // echo as an argument.
@@ -1370,6 +1465,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 operator,
                 left,
                 right,
+                location: binop_location,
                 ..
             } => {
                 let erlang_operator = match operator {
@@ -1408,8 +1504,8 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 // track of those names.
                 let left = if !left.is_var() {
                     let name = self.new_generated_variable();
-                    builder.match_operator();
-                    builder.variable_pattern(&name);
+                    builder.match_operator(left.location());
+                    builder.variable_pattern(left.location(), &name);
                     self.maybe_block_expr(builder, left);
                     AssertionExpression::from_generated_variable(name, left)
                 } else {
@@ -1418,35 +1514,35 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
                 let right = if !right.is_var() {
                     let name = self.new_generated_variable();
-                    builder.match_operator();
-                    builder.variable_pattern(&name);
+                    builder.match_operator(right.location());
+                    builder.variable_pattern(right.location(), &name);
                     self.maybe_block_expr(builder, right);
                     AssertionExpression::from_generated_variable(name, right)
                 } else {
                     AssertionExpression::from_expression(right)
                 };
 
-                let case = builder.start_case();
+                let case = builder.start_case(*location);
 
                 // Then we need to apply the operator. If any of the two sides
                 // has been bound to a variable we can use that name directly!
-                builder.binary_operator(erlang_operator);
+                builder.binary_operator(*binop_location, erlang_operator);
                 self.runtime_value(builder, &left);
                 self.runtime_value(builder, &right);
                 let case = builder.end_case_subject(case);
 
                 // If the operator evaluates to true the assertion succeeded.
                 // We can just return nil.
-                let clause = builder.start_case_clause();
-                builder.atom_pattern("true");
+                let clause = builder.start_case_clause(*location);
+                builder.atom_pattern(*location, "true");
                 let clause = builder.end_clause_pattern(clause);
                 let clause = builder.end_clause_guards(clause);
-                builder.atom("nil");
+                builder.atom(*location, "nil");
                 builder.end_clause_body(clause);
 
                 // Otherwise we want to throw a runtime error!
-                let clause = builder.start_case_clause();
-                builder.atom_pattern("false");
+                let clause = builder.start_case_clause(*location);
+                builder.atom_pattern(*location, "false");
                 let clause = builder.end_clause_pattern(clause);
                 let clause = builder.end_clause_guards(clause);
                 self.assert_binary_operator_error(
@@ -1462,7 +1558,12 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 builder.end_case(case);
             }
 
-            TypedExpr::Call { fun, arguments, .. } => {
+            TypedExpr::Call {
+                fun,
+                arguments,
+                location: call_location,
+                ..
+            } => {
                 // When asserting on a call, we want to include the values of
                 // each argument in the assertion error in case of failure.
                 // This means we first have to evaluate each argument and bind
@@ -1472,8 +1573,8 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 for argument in arguments {
                     let argument = if !argument.value.is_var() {
                         let name = self.new_generated_variable();
-                        builder.match_operator();
-                        builder.variable_pattern(&name);
+                        builder.match_operator(argument.location);
+                        builder.variable_pattern(argument.location, &name);
                         self.maybe_block_expr(builder, &argument.value);
                         AssertionExpression::from_generated_variable(name, &argument.value)
                     } else {
@@ -1482,22 +1583,22 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     call_arguments.push(argument);
                 }
 
-                let case = builder.start_case();
-                self.call_in_assert(builder, fun, &call_arguments);
+                let case = builder.start_case(*location);
+                self.call_in_assert(builder, *call_location, fun, &call_arguments);
                 let case = builder.end_case_subject(case);
 
                 // If the operator evaluates to true the assertion succeeded.
                 // We can just return nil.
-                let clause = builder.start_case_clause();
-                builder.atom_pattern("true");
+                let clause = builder.start_case_clause(*location);
+                builder.atom_pattern(*location, "true");
                 let clause = builder.end_clause_pattern(clause);
                 let clause = builder.end_clause_guards(clause);
-                builder.atom("nil");
+                builder.atom(*location, "nil");
                 builder.end_clause_body(clause);
 
                 // Otherwise we want to throw a runtime error!
-                let clause = builder.start_case_clause();
-                builder.atom_pattern("false");
+                let clause = builder.start_case_clause(*location);
+                builder.atom_pattern(*location, "false");
                 let clause = builder.end_clause_pattern(clause);
                 let clause = builder.end_clause_guards(clause);
                 self.assert_call_error(
@@ -1534,22 +1635,22 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. }
             | TypedExpr::Invalid { .. } => {
-                let case = builder.start_case();
+                let case = builder.start_case(*location);
                 self.maybe_block_expr(builder, value);
                 let case = builder.end_case_subject(case);
 
                 // If the expression evaluates to true the assertion succeeded.
                 // We can just return nil.
-                let clause = builder.start_case_clause();
-                builder.atom_pattern("true");
+                let clause = builder.start_case_clause(*location);
+                builder.atom_pattern(*location, "true");
                 let clause = builder.end_clause_pattern(clause);
                 let clause = builder.end_clause_guards(clause);
-                builder.atom("nil");
+                builder.atom(*location, "nil");
                 builder.end_clause_body(clause);
 
                 // Otherwise we want to throw a runtime error!
-                let clause = builder.start_case_clause();
-                builder.atom_pattern("false");
+                let clause = builder.start_case_clause(*location);
+                builder.atom_pattern(*location, "false");
                 let clause = builder.end_clause_pattern(clause);
                 let clause = builder.end_clause_guards(clause);
                 self.assert_expression_error(
@@ -1599,35 +1700,35 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         message: Option<&'a TypedExpr>,
         location: SrcSpan,
     ) {
-        let case = builder.start_case();
+        let case = builder.start_case(location);
         self.maybe_block_expr(builder, left);
         let case = builder.end_case_subject(case);
 
         // In case the first expression is true, we get to evaluate the second
         // one as well, then we will be able to tell if the assertion failed or
         // not!
-        let clause = builder.start_case_clause();
-        builder.atom_pattern("true");
+        let clause = builder.start_case_clause(location);
+        builder.atom_pattern(location, "true");
         let clause = builder.end_clause_pattern(clause);
         let clause = builder.end_clause_guards(clause);
         {
             // Now we have to match on the right hand side!
-            let case = builder.start_case();
+            let case = builder.start_case(location);
             self.maybe_block_expr(builder, right);
             let case = builder.end_case_subject(case);
 
             // If it's true the assertion succeded! We can return `nil`.
-            let clause = builder.start_case_clause();
-            builder.atom_pattern("true");
+            let clause = builder.start_case_clause(location);
+            builder.atom_pattern(location, "true");
             let clause = builder.end_clause_pattern(clause);
             let clause = builder.end_clause_guards(clause);
-            builder.atom("nil");
+            builder.atom(location, "nil");
             builder.end_clause_body(clause);
 
             // If it's false the assertion failed! The left hand side was true
             // but this one evaluated to false :(
-            let clause = builder.start_case_clause();
-            builder.atom_pattern("false");
+            let clause = builder.start_case_clause(location);
+            builder.atom_pattern(location, "false");
             let clause = builder.end_clause_pattern(clause);
             let clause = builder.end_clause_guards(clause);
             self.assert_binary_operator_error(
@@ -1646,8 +1747,8 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // In case the first expression is false, we want to fail fast. We are
         // short circuiting without evaluating the right hand side! This side
         // just build an error.
-        let clause = builder.start_case_clause();
-        builder.atom_pattern("false");
+        let clause = builder.start_case_clause(location);
+        builder.atom_pattern(location, "false");
         let clause = builder.end_clause_pattern(clause);
         let clause = builder.end_clause_guards(clause);
         self.assert_binary_operator_error(
@@ -1679,26 +1780,26 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         message: Option<&'a TypedExpr>,
         location: SrcSpan,
     ) {
-        let case = builder.start_case();
-        builder.binary_operator("orelse");
+        let case = builder.start_case(location);
+        builder.binary_operator(location, "orelse");
         self.maybe_block_expr(builder, left);
         self.maybe_block_expr(builder, right);
         let case = builder.end_case_subject(case);
 
         // If the result is true, then the assertion succeeded, we can return
         // nil.
-        let clause = builder.start_case_clause();
-        builder.atom_pattern("true");
+        let clause = builder.start_case_clause(location);
+        builder.atom_pattern(location, "true");
         let clause = builder.end_clause_pattern(clause);
         let clause = builder.end_clause_guards(clause);
-        builder.atom("nil");
+        builder.atom(location, "nil");
         builder.end_clause_body(clause);
 
         // But if it fails we know that both sides of the assertion resulted in
         // a false value. In that case we throw an error.
 
-        let clause = builder.start_case_clause();
-        builder.atom_pattern("false");
+        let clause = builder.start_case_clause(location);
+        builder.atom_pattern(location, "false");
         let clause = builder.end_clause_pattern(clause);
         let clause = builder.end_clause_guards(clause);
         self.assert_binary_operator_error(
@@ -1727,33 +1828,33 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     ) {
         let error = self.start_runtime_error(builder, RuntimeErrorKind::Assert, location, message);
 
-        builder.map_field();
-        builder.atom("kind");
-        builder.atom("binary_operator");
+        builder.map_field(location);
+        builder.atom(location, "kind");
+        builder.atom(location, "binary_operator");
 
-        builder.map_field();
-        builder.atom("operator");
-        builder.atom(operator.name());
+        builder.map_field(location);
+        builder.atom(location, "operator");
+        builder.atom(location, operator.name());
 
-        builder.map_field();
-        builder.atom("left");
-        self.assertion_expression_map(builder, &left);
+        builder.map_field(location);
+        builder.atom(location, "left");
+        self.assertion_expression_map(builder, location, &left);
 
-        builder.map_field();
-        builder.atom("right");
-        self.assertion_expression_map(builder, &right);
+        builder.map_field(location);
+        builder.atom(location, "right");
+        self.assertion_expression_map(builder, location, &right);
 
-        builder.map_field();
-        builder.atom("start");
-        builder.int(location.start.into());
+        builder.map_field(location);
+        builder.atom(location, "start");
+        builder.int(location, location.start.into());
 
-        builder.map_field();
-        builder.atom("end");
-        builder.int(right.location.end.into());
+        builder.map_field(location);
+        builder.atom(location, "end");
+        builder.int(location, right.location.end.into());
 
-        builder.map_field();
-        builder.atom("expression_start");
-        builder.int(left.location.start.into());
+        builder.map_field(location);
+        builder.atom(location, "expression_start");
+        builder.int(location, left.location.start.into());
 
         self.end_runtime_error(builder, error);
     }
@@ -1769,27 +1870,27 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     ) {
         let error = self.start_runtime_error(builder, RuntimeErrorKind::Assert, location, message);
 
-        builder.map_field();
-        builder.atom("kind");
-        builder.atom("expression");
+        builder.map_field(location);
+        builder.atom(location, "kind");
+        builder.atom(location, "expression");
 
         // If assert fails on an expression's result then we know it must have
         // evaluated to false!
-        builder.map_field();
-        builder.atom("expression");
-        self.assertion_expression_map(builder, &expression);
+        builder.map_field(location);
+        builder.atom(location, "expression");
+        self.assertion_expression_map(builder, location, &expression);
 
-        builder.map_field();
-        builder.atom("start");
-        builder.int(location.start.into());
+        builder.map_field(location);
+        builder.atom(location, "start");
+        builder.int(location, location.start.into());
 
-        builder.map_field();
-        builder.atom("end");
-        builder.int(expression.location.end.into());
+        builder.map_field(location);
+        builder.atom(location, "end");
+        builder.int(location, expression.location.end.into());
 
-        builder.map_field();
-        builder.atom("expression_start");
-        builder.int(expression.location.start.into());
+        builder.map_field(location);
+        builder.atom(location, "expression_start");
+        builder.int(location, expression.location.start.into());
 
         self.end_runtime_error(builder, error);
     }
@@ -1804,29 +1905,29 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     ) {
         let error = self.start_runtime_error(builder, RuntimeErrorKind::Assert, location, message);
 
-        builder.map_field();
-        builder.atom("kind");
-        builder.atom("function_call");
+        builder.map_field(location);
+        builder.atom(location, "kind");
+        builder.atom(location, "function_call");
 
-        builder.map_field();
-        builder.atom("arguments");
+        builder.map_field(location);
+        builder.atom(location, "arguments");
         for argument in arguments {
-            builder.cons_list();
-            self.assertion_expression_map(builder, argument);
+            builder.cons_list(location);
+            self.assertion_expression_map(builder, location, argument);
         }
-        builder.empty_list();
+        builder.empty_list(location);
 
-        builder.map_field();
-        builder.atom("start");
-        builder.int(location.start.into());
+        builder.map_field(location);
+        builder.atom(location, "start");
+        builder.int(location, location.start.into());
 
-        builder.map_field();
-        builder.atom("end");
-        builder.int(call.location().end.into());
+        builder.map_field(location);
+        builder.atom(location, "end");
+        builder.int(location, call.location().end.into());
 
-        builder.map_field();
-        builder.atom("expression_start");
-        builder.int(call.location().start.into());
+        builder.map_field(location);
+        builder.atom(location, "expression_start");
+        builder.int(location, call.location().start.into());
 
         self.end_runtime_error(builder, error);
     }
@@ -1837,6 +1938,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn assertion_expression_map<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
+        assertion_location: SrcSpan,
         expression: &AssertionExpression<'a>,
     ) {
         let AssertionExpression {
@@ -1845,29 +1947,32 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             location,
         } = expression;
 
-        let map = builder.start_map();
+        let map = builder.start_map(assertion_location);
 
-        builder.map_field();
-        builder.atom("kind");
-        builder.atom(match kind {
-            AssertedExpressionKind::Literal => "literal",
-            AssertedExpressionKind::Expression => "expression",
-            AssertedExpressionKind::Unevaluated => "unevaluated",
-        });
+        builder.map_field(assertion_location);
+        builder.atom(assertion_location, "kind");
+        builder.atom(
+            assertion_location,
+            match kind {
+                AssertedExpressionKind::Literal => "literal",
+                AssertedExpressionKind::Expression => "expression",
+                AssertedExpressionKind::Unevaluated => "unevaluated",
+            },
+        );
 
         if runtime_value.is_some() {
-            builder.map_field();
-            builder.atom("value");
+            builder.map_field(assertion_location);
+            builder.atom(assertion_location, "value");
             self.runtime_value(builder, expression);
         }
 
-        builder.map_field();
-        builder.atom("start");
-        builder.int(location.start.into());
+        builder.map_field(assertion_location);
+        builder.atom(assertion_location, "start");
+        builder.int(assertion_location, location.start.into());
 
-        builder.map_field();
-        builder.atom("end");
-        builder.int(location.end.into());
+        builder.map_field(assertion_location);
+        builder.atom(assertion_location, "end");
+        builder.int(assertion_location, location.end.into());
 
         builder.end_map(map);
     }
@@ -1886,9 +1991,15 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             .as_ref()
             .expect("trying to reference unevaluated assert value")
         {
-            AssertedExpressionRuntimeValue::KnownBool(true) => builder.atom("true"),
-            AssertedExpressionRuntimeValue::KnownBool(false) => builder.atom("false"),
-            AssertedExpressionRuntimeValue::Variable(name) => builder.variable(name),
+            AssertedExpressionRuntimeValue::KnownBool(true) => {
+                builder.atom(expression.location, "true")
+            }
+            AssertedExpressionRuntimeValue::KnownBool(false) => {
+                builder.atom(expression.location, "false")
+            }
+            AssertedExpressionRuntimeValue::Variable(name) => {
+                builder.variable(expression.location, name)
+            }
             AssertedExpressionRuntimeValue::Expression(expr) => {
                 self.maybe_block_expr(builder, expr);
             }
@@ -1898,11 +2009,12 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn tuple_index<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
+        location: SrcSpan,
         tuple: &'a TypedExpr,
         index: u64,
     ) {
-        let call = builder.start_remote_call(ErlangModuleName::erlang(), "element");
-        builder.int((index + 1).into());
+        let call = builder.start_remote_call(location, ErlangModuleName::erlang(), "element");
+        builder.int(location, (index + 1).into());
         self.maybe_block_expr(builder, tuple);
         builder.end_call(call);
     }
@@ -1910,6 +2022,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn var<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
+        variable_location: SrcSpan,
         name: &'a str,
         constructor: &'a ValueConstructor,
     ) {
@@ -1935,15 +2048,20 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 // }
                 // ```
                 Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
-                    builder.atom(&to_snake_case(record_name));
+                    builder.atom(variable_location, &to_snake_case(record_name));
                 }
                 Type::Fn { arguments, .. } => {
-                    self.record_builder_anonymous_function(builder, record_name, arguments.len());
+                    self.record_builder_anonymous_function(
+                        builder,
+                        variable_location,
+                        record_name,
+                        arguments.len(),
+                    );
                 }
             },
 
             ValueConstructorVariant::LocalVariable { location, .. } => {
-                builder.variable(&self.local_var_name(location));
+                builder.variable(variable_location, &self.local_var_name(location));
             }
 
             ValueConstructorVariant::ModuleConstant { literal, .. } => {
@@ -1957,16 +2075,26 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             } => {
                 let name = escape_erlang_existing_name(name);
                 if *module == self.module_generator.module.name {
-                    builder.function_reference(None, name, *arity);
+                    builder.function_reference(variable_location, None, name, *arity);
                 } else {
-                    builder.function_reference(Some(ErlangModuleName::new(module)), name, *arity);
+                    builder.function_reference(
+                        variable_location,
+                        Some(ErlangModuleName::new(module)),
+                        name,
+                        *arity,
+                    );
                 }
             }
 
             ValueConstructorVariant::ModuleFn { arity, module, .. }
                 if *module == self.module_generator.module.name =>
             {
-                builder.function_reference(None, escape_erlang_existing_name(name), *arity);
+                builder.function_reference(
+                    variable_location,
+                    None,
+                    escape_erlang_existing_name(name),
+                    *arity,
+                );
             }
 
             ValueConstructorVariant::ModuleFn {
@@ -1975,6 +2103,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 name,
                 ..
             } => builder.function_reference(
+                variable_location,
                 Some(ErlangModuleName::new(module)),
                 escape_erlang_existing_name(name),
                 *arity,
@@ -1985,25 +2114,29 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn call<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
+        call_location: SrcSpan,
         fun: &'a TypedExpr,
         arguments: &'a [TypedCallArg],
     ) {
         match how_to_call(fun) {
             // If we're building a record then we want to just output a
             // tagged tuple, there's no function call at all!
-            FunctionCall::BuildRecord { name } => self.build_record(builder, name, arguments),
+            FunctionCall::BuildRecord { name } => {
+                self.build_record(builder, call_location, name, arguments)
+            }
             // If we're calling some module function like `io.println`, `main`,
             // `list.map` then we can call the function using its name (and
             // module name if it comes from a different module).
             FunctionCall::Call { module, name } => {
                 let call = if module != self.module_generator.module.name {
                     builder.start_remote_call(
+                        call_location,
                         ErlangModuleName::new(module),
                         escape_erlang_existing_name(name),
                     )
                 } else {
-                    let call = builder.start_call();
-                    builder.atom(escape_erlang_existing_name(name));
+                    let call = builder.start_call(call_location);
+                    builder.atom(fun.location(), escape_erlang_existing_name(name));
                     builder.end_called_expression(call)
                 };
                 for argument in arguments {
@@ -2015,7 +2148,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // the result of another function call) we generate its code and
             // call that result directly.
             FunctionCall::DirectCall => {
-                let call = builder.start_call();
+                let call = builder.start_call(call_location);
                 self.maybe_block_expr(builder, fun);
                 let call = builder.end_called_expression(call);
                 for argument in arguments {
@@ -2038,6 +2171,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn call_in_assert<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
+        call_location: SrcSpan,
         fun: &'a TypedExpr,
         arguments: &[AssertionExpression<'a>],
     ) {
@@ -2054,12 +2188,13 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             FunctionCall::Call { module, name } => {
                 let call = if module != self.module_generator.module.name {
                     builder.start_remote_call(
+                        call_location,
                         ErlangModuleName::new(module),
                         escape_erlang_existing_name(name),
                     )
                 } else {
-                    let call = builder.start_call();
-                    builder.atom(escape_erlang_existing_name(name));
+                    let call = builder.start_call(call_location);
+                    builder.atom(fun.location(), escape_erlang_existing_name(name));
                     builder.end_called_expression(call)
                 };
                 for argument in arguments {
@@ -2072,7 +2207,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // the result of another function call) we generate its code and
             // call that result directly.
             FunctionCall::DirectCall => {
-                let call = builder.start_call();
+                let call = builder.start_call(call_location);
                 self.maybe_block_expr(builder, fun);
                 let call = builder.end_called_expression(call);
                 for argument in arguments {
@@ -2093,14 +2228,15 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn build_record<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
+        location: SrcSpan,
         record_name: &str,
         arguments: &'a [TypedCallArg],
     ) {
         if arguments.is_empty() {
-            builder.atom(&to_snake_case(record_name));
+            builder.atom(location, &to_snake_case(record_name));
         } else {
-            let tuple = builder.start_tuple();
-            builder.atom(&to_snake_case(record_name));
+            let tuple = builder.start_tuple(location);
+            builder.atom(location, &to_snake_case(record_name));
             for argument in arguments {
                 self.maybe_block_expr(builder, &argument.value);
             }
@@ -2111,10 +2247,11 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn case<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
+        case_location: SrcSpan,
         subjects: &'a [TypedExpr],
         clauses: &'a [TypedClause],
     ) {
-        let case = builder.start_case();
+        let case = builder.start_case(case_location);
 
         // If there's more than a single subject we will need to wrap those in a
         // tuple and start matching on tuple patterns. That's because Erlang
@@ -2122,7 +2259,14 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         match subjects {
             [subject] => self.maybe_block_expr(builder, subject),
             subjects => {
-                let tuple = builder.start_tuple();
+                let first_subject_location = subjects
+                    .first()
+                    .map_or(case_location, |subject| subject.location());
+                let last_subject_location = subjects
+                    .last()
+                    .map_or(case_location, |subject| subject.location());
+                let tuple =
+                    builder.start_tuple(first_subject_location.merge(&last_subject_location));
                 for subject in subjects {
                     self.maybe_block_expr(builder, subject);
                 }
@@ -2179,7 +2323,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         patterns: &'a Vec<Pattern<Arc<Type>>>,
         clause: &'a Clause<TypedExpr, Arc<Type>>,
     ) {
-        let clause_pattern = builder.start_case_clause();
+        let clause_pattern = builder.start_case_clause(clause.location);
 
         // We start by generating the case clause pattern. If we're matching on
         // multiple subjects (and so patterns has more that a single item) those
@@ -2189,7 +2333,14 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         match patterns.as_slice() {
             [pattern] => pattern_generator.pattern(builder, pattern),
             patterns => {
-                let tuple = builder.start_tuple_pattern();
+                let first_pattern_location = patterns
+                    .first()
+                    .map_or(clause.location, |pattern| pattern.location());
+                let last_pattern_location = patterns
+                    .last()
+                    .map_or(clause.location, |pattern| pattern.location());
+                let tuple = builder
+                    .start_tuple_pattern(first_pattern_location.merge(&last_pattern_location));
                 for pattern in patterns {
                     pattern_generator.pattern(builder, pattern);
                 }
@@ -2231,36 +2382,60 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         literal: &'a TypedConstant,
     ) {
         match literal {
-            Constant::Int { int_value, .. } => builder.int(int_value.clone()),
-            Constant::Float { float_value, .. } => builder.float(float_value.value()),
-            Constant::String { value, .. } => builder.string(value),
+            Constant::Int {
+                int_value,
+                location,
+                ..
+            } => builder.int(*location, int_value.clone()),
+            Constant::Float {
+                float_value,
+                location,
+                ..
+            } => builder.float(*location, float_value.value()),
+            Constant::String {
+                value, location, ..
+            } => builder.string(*location, value),
             Constant::Var {
-                name, constructor, ..
+                name,
+                constructor,
+                location,
+                ..
             } => self.var(
                 builder,
+                *location,
                 name,
                 constructor
                     .as_ref()
                     .expect("This is guaranteed to hold a value."),
             ),
 
-            Constant::Tuple { elements, .. } => {
-                let tuple = builder.start_tuple();
+            Constant::Tuple {
+                elements, location, ..
+            } => {
+                let tuple = builder.start_tuple(*location);
                 for element in elements {
                     self.inlined_constant(builder, element);
                 }
                 builder.end_tuple(tuple);
             }
 
-            Constant::List { elements, tail, .. } => {
+            Constant::List {
+                elements,
+                tail,
+                location,
+                ..
+            } => {
                 for element in elements {
-                    builder.cons_list();
+                    builder.cons_list(element.location());
                     self.inlined_constant(builder, element);
                 }
                 match tail {
                     // If there's no tail we simply add an empty list cell to
                     // end the cons list.
-                    None => builder.empty_list(),
+                    None => builder.empty_list(SrcSpan {
+                        start: location.end,
+                        end: location.end,
+                    }),
                     Some(tail) => match tail.list_elements() {
                         // If there's a tail and we don't statically know the
                         // elements it's made of, we add it as a regular Erlang
@@ -2270,17 +2445,22 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                         // constant elements, then those are inlined too!
                         Some(list_elements) => {
                             for element in list_elements {
-                                builder.cons_list();
+                                builder.cons_list(element.location());
                                 self.inlined_constant(builder, element);
                             }
-                            builder.empty_list();
+                            builder.empty_list(SrcSpan {
+                                start: location.end,
+                                end: location.end,
+                            });
                         }
                     },
                 }
             }
 
-            Constant::BitArray { segments, .. } => {
-                let bit_array = builder.start_bit_array();
+            Constant::BitArray {
+                segments, location, ..
+            } => {
+                let bit_array = builder.start_bit_array(*location);
                 for segment in segments {
                     self.bit_array_constant_segment(builder, segment);
                 }
@@ -2288,7 +2468,10 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             }
 
             Constant::Record {
-                type_, arguments, ..
+                type_,
+                arguments,
+                location,
+                ..
             } => {
                 let tag = literal
                     .constant_record_tag()
@@ -2298,8 +2481,8 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     // This is a regular record call, we're building a record as
                     // usual as a tagged tuple.
                     Some(arguments) => {
-                        let tuple = builder.start_tuple();
-                        builder.atom(&to_snake_case(&tag));
+                        let tuple = builder.start_tuple(*location);
+                        builder.atom(*location, &to_snake_case(&tag));
                         for argument in arguments {
                             self.inlined_constant(builder, &argument.value);
                         }
@@ -2321,17 +2504,26 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     // ```
                     None => match type_::collapse_links(type_.clone()).deref() {
                         Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
-                            builder.atom(&to_snake_case(&tag));
+                            builder.atom(*location, &to_snake_case(&tag));
                         }
                         Type::Fn { arguments, .. } => {
-                            self.record_builder_anonymous_function(builder, &tag, arguments.len());
+                            self.record_builder_anonymous_function(
+                                builder,
+                                *location,
+                                &tag,
+                                arguments.len(),
+                            );
                         }
                     },
                 }
             }
 
-            Constant::StringConcatenation { left, right, .. } => {
-                self.constant_string_concatenate(builder, left, right);
+            Constant::StringConcatenation {
+                left,
+                right,
+                location,
+            } => {
+                self.constant_string_concatenate(builder, *location, left, right);
             }
 
             Constant::RecordUpdate { .. } => {
@@ -2349,11 +2541,15 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         builder: &mut impl ErlangBuilder<Output>,
         segment: &'a TypedConstantBitArraySegment,
     ) {
-        builder.bit_array_segment();
+        builder.bit_array_segment(segment.location);
         self.inlined_constant(builder, &segment.value);
         match segment.size() {
-            Some(TypedConstant::Int { int_value, .. }) if int_value.is_negative() => {
-                builder.int(BigInt::ZERO);
+            Some(TypedConstant::Int {
+                int_value,
+                location,
+                ..
+            }) if int_value.is_negative() => {
+                builder.int(*location, BigInt::ZERO);
             }
             Some(size) => self.inlined_constant(builder, size),
             None => builder.bit_array_segment_default_size(),
@@ -2394,6 +2590,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn constant_string_concatenate<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
+        location: SrcSpan,
         left: &'a TypedConstant,
         right: &'a TypedConstant,
     ) {
@@ -2401,7 +2598,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         items.push_back(left);
         items.push_back(right);
 
-        let bit_array = builder.start_bit_array();
+        let bit_array = builder.start_bit_array(location);
         while let Some(segment) = items.pop_front() {
             match segment {
                 // When concatenating constant strings we flatten out all
@@ -2448,7 +2645,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 | Constant::Todo { .. } => (),
             }
 
-            builder.bit_array_segment();
+            builder.bit_array_segment(segment.location());
             self.inlined_constant(builder, segment);
             builder.bit_array_segment_default_size();
             builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Utf8]);
@@ -2459,10 +2656,11 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn string_concatenate<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
+        location: SrcSpan,
         left: &'a TypedExpr,
         right: &'a TypedExpr,
     ) {
-        let bit_array = builder.start_bit_array();
+        let bit_array = builder.start_bit_array(location);
         self.string_concatenate_argument(builder, left);
         self.string_concatenate_argument(builder, right);
         builder.end_bit_array(bit_array);
@@ -2479,7 +2677,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // the `/utf8` specifier instead!
         // In both cases the size is alwaus automatic, so we generate the
         // `default` atom.
-        builder.bit_array_segment();
+        builder.bit_array_segment(value.location());
         self.maybe_block_expr(builder, value);
         builder.bit_array_segment_default_size();
         builder.bit_array_segment_specifiers(if produces_literal_string(value) {
@@ -2492,6 +2690,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn binary_operator<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
+        expression_location: SrcSpan,
         name: &'a BinOp,
         left: &'a TypedExpr,
         right: &'a TypedExpr,
@@ -2511,16 +2710,24 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
             // Division needs some extra case, in Gleam dividing by 0 results
             // in 0; while in Erlang that's an exception.
-            BinOp::DivFloat => return self.float_division(builder, left, right),
-            BinOp::DivInt => return self.int_division(builder, left, right, "div"),
-            BinOp::RemainderInt => return self.int_division(builder, left, right, "rem"),
+            BinOp::DivFloat => {
+                return self.float_division(builder, expression_location, left, right);
+            }
+            BinOp::DivInt => {
+                return self.int_division(builder, expression_location, left, right, "div");
+            }
+            BinOp::RemainderInt => {
+                return self.int_division(builder, expression_location, left, right, "rem");
+            }
 
             // String concatenation is not a binop at all! It's just building a
             // bit array.
-            BinOp::Concatenate => return self.string_concatenate(builder, left, right),
+            BinOp::Concatenate => {
+                return self.string_concatenate(builder, expression_location, left, right);
+            }
         };
 
-        builder.binary_operator(operator);
+        builder.binary_operator(expression_location, operator);
         self.maybe_block_expr(builder, left);
         self.maybe_block_expr(builder, right);
     }
@@ -2528,19 +2735,20 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn float_division<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
+        division_location: SrcSpan,
         left: &'a TypedExpr,
         right: &'a TypedExpr,
     ) {
         match how_to_divide(left, right) {
-            HowToDivide::ReplaceWithZero => builder.float(0.0),
+            HowToDivide::ReplaceWithZero => builder.float(division_location, 0.0),
             HowToDivide::EvaluateLeftAndReturnZero => {
                 // We first evaluate the left hand side, and ignore its return
                 // value, and then we return zero directly!
                 self.maybe_block_expr(builder, left);
-                builder.float(0.0);
+                builder.float(division_location, 0.0);
             }
             HowToDivide::PlainErlangDivision => {
-                builder.binary_operator("/");
+                builder.binary_operator(division_location, "/");
                 self.maybe_block_expr(builder, left);
                 self.maybe_block_expr(builder, right);
             }
@@ -2551,50 +2759,50 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 // result in a variable to use later.
                 let left_name = if !is_left_hand_side_pure {
                     let left_name = self.new_generated_variable();
-                    builder.match_operator();
-                    builder.variable_pattern(&left_name);
+                    builder.match_operator(left.location());
+                    builder.variable_pattern(left.location(), &left_name);
                     self.maybe_block_expr(builder, left);
                     Some(left_name)
                 } else {
                     None
                 };
 
-                let case = builder.start_case();
+                let case = builder.start_case(division_location);
                 self.maybe_block_expr(builder, right);
                 let case = builder.end_case_subject(case);
 
                 // +0.0 -> +0.0
-                let clause = builder.start_case_clause();
-                builder.float_pattern(0.0);
+                let clause = builder.start_case_clause(division_location);
+                builder.float_pattern(right.location(), 0.0);
                 let guards = builder.end_clause_pattern(clause);
                 let body = builder.end_clause_guards(guards);
-                builder.float(0.0);
+                builder.float(right.location(), 0.0);
                 builder.end_clause_body(body);
 
                 // -0.0 -> -0.0
-                let clause = builder.start_case_clause();
-                builder.float_pattern(-0.0);
+                let clause = builder.start_case_clause(division_location);
+                builder.float_pattern(right.location(), -0.0);
                 let guards = builder.end_clause_pattern(clause);
                 let body = builder.end_clause_guards(guards);
-                builder.float(-0.0);
+                builder.float(right.location(), -0.0);
                 builder.end_clause_body(body);
 
                 // _value -> left / _value
                 let denominator = self.new_generated_variable();
-                let clause = builder.start_case_clause();
-                builder.variable_pattern(&denominator);
+                let clause = builder.start_case_clause(division_location);
+                builder.variable_pattern(right.location(), &denominator);
                 let guards = builder.end_clause_pattern(clause);
                 let body = builder.end_clause_guards(guards);
-                builder.binary_operator("/");
+                builder.binary_operator(division_location, "/");
                 // If we had bound the left hand side to a variabe we just
                 // reference it, otherwise we will generate the code for the
                 // numerator.
                 if let Some(left_name) = left_name {
-                    builder.variable(&left_name);
+                    builder.variable(left.location(), &left_name);
                 } else {
                     self.maybe_block_expr(builder, left);
                 }
-                builder.variable(&denominator);
+                builder.variable(right.location(), &denominator);
                 builder.end_clause_body(body);
 
                 builder.end_case(case);
@@ -2605,20 +2813,21 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn int_division<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
+        division_location: SrcSpan,
         left: &'a TypedExpr,
         right: &'a TypedExpr,
         op: &'static str,
     ) {
         match how_to_divide(left, right) {
-            HowToDivide::ReplaceWithZero => builder.int(BigInt::ZERO),
+            HowToDivide::ReplaceWithZero => builder.int(division_location, BigInt::ZERO),
             HowToDivide::EvaluateLeftAndReturnZero => {
                 // We first evaluate the left hand side, and ignore its return
                 // value, and then we return zero directly!
                 self.maybe_block_expr(builder, left);
-                builder.int(BigInt::ZERO);
+                builder.int(division_location, BigInt::ZERO);
             }
             HowToDivide::PlainErlangDivision => {
-                builder.binary_operator(op);
+                builder.binary_operator(division_location, op);
                 self.maybe_block_expr(builder, left);
                 self.maybe_block_expr(builder, right);
             }
@@ -2641,42 +2850,42 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 //
                 let left_name = if !is_left_hand_side_pure {
                     let left_name = self.new_generated_variable();
-                    builder.match_operator();
-                    builder.variable_pattern(&left_name);
+                    builder.match_operator(left.location());
+                    builder.variable_pattern(left.location(), &left_name);
                     self.maybe_block_expr(builder, left);
                     Some(left_name)
                 } else {
                     None
                 };
 
-                let case = builder.start_case();
+                let case = builder.start_case(division_location);
                 self.maybe_block_expr(builder, right);
                 let case = builder.end_case_subject(case);
 
                 // 0 -> 0
-                let clause = builder.start_case_clause();
-                builder.int_pattern(BigInt::ZERO);
+                let clause = builder.start_case_clause(division_location);
+                builder.int_pattern(right.location(), BigInt::ZERO);
                 let guards = builder.end_clause_pattern(clause);
                 let body = builder.end_clause_guards(guards);
-                builder.int(BigInt::ZERO);
+                builder.int(right.location(), BigInt::ZERO);
                 builder.end_clause_body(body);
 
                 // _value -> left div _value
                 let denominator = self.new_generated_variable();
-                let clause = builder.start_case_clause();
-                builder.variable_pattern(&denominator);
+                let clause = builder.start_case_clause(division_location);
+                builder.variable_pattern(right.location(), &denominator);
                 let guards = builder.end_clause_pattern(clause);
                 let body = builder.end_clause_guards(guards);
-                builder.binary_operator(op);
+                builder.binary_operator(division_location, op);
                 // If we had bound the left hand side to a variabe we just
                 // reference it, otherwise we will generate the code for the
                 // numerator.
                 if let Some(left_name) = left_name {
-                    builder.variable(&left_name);
+                    builder.variable(left.location(), &left_name);
                 } else {
                     self.maybe_block_expr(builder, left);
                 }
-                builder.variable(&denominator);
+                builder.variable(right.location(), &denominator);
                 builder.end_clause_body(body);
 
                 builder.end_case(case);
@@ -2750,7 +2959,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 ExpressionSegmentStringEncoding::Utf8 => {
                     // Gleam strings are utf8 encoded binaries, so we just need
                     // to add the binary option and we can call it a day.
-                    builder.bit_array_segment();
+                    builder.bit_array_segment(segment.location);
                     self.maybe_block_expr(builder, &segment.value);
                     builder.bit_array_segment_default_size();
                     builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Binary]);
@@ -2758,7 +2967,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 }
             };
 
-            builder.bit_array_segment();
+            builder.bit_array_segment(segment.location);
 
             // For utf16 and utf32 we need an explicit conversion using erlang's
             // `unicode:characters_to_binary`. The segment value will be
@@ -2766,16 +2975,19 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // ```erl
             // unicode:characters_to_binary(<segment_value>, utf8, {utf16, big})
             // ```
-            let call =
-                builder.start_remote_call(ErlangModuleName::unicode(), "characters_to_binary");
+            let call = builder.start_remote_call(
+                segment.location,
+                ErlangModuleName::unicode(),
+                "characters_to_binary",
+            );
             {
                 self.maybe_block_expr(builder, &segment.value);
-                builder.atom("utf8");
-                let tuple = builder.start_tuple();
-                builder.atom(&format!("utf{size}"));
+                builder.atom(segment.location, "utf8");
+                let tuple = builder.start_tuple(segment.location);
+                builder.atom(segment.location, &format!("utf{size}"));
                 match endiannes {
-                    Endianness::Big => builder.atom("big"),
-                    Endianness::Little => builder.atom("little"),
+                    Endianness::Big => builder.atom(segment.location, "big"),
+                    Endianness::Little => builder.atom(segment.location, "little"),
                 }
                 builder.end_tuple(tuple);
             }
@@ -2786,7 +2998,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         } else {
             // If the bit array segment doesn't need any special handling we use the
             // regular printing functions to format its value and options.
-            builder.bit_array_segment();
+            builder.bit_array_segment(segment.location);
             self.maybe_block_expr(builder, &segment.value);
             self.bit_array_expression_segment_size(builder, segment);
             self.bit_array_segment_specifiers(builder, segment);
@@ -2811,15 +3023,21 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // Sizes need some care: in Erlang, having a negative segment size
         // results in a runtime error. We can't do that in Gleam! So any
         // negative value must be turned to zero instead:
-        if let TypedExpr::Int { int_value, .. } = &size {
+        if let TypedExpr::Int {
+            int_value,
+            location: size_location,
+            ..
+        } = &size
+        {
             if int_value.is_negative() {
-                builder.int(BigInt::ZERO);
+                builder.int(*size_location, BigInt::ZERO);
             } else {
-                builder.int(int_value.clone());
+                builder.int(*size_location, int_value.clone());
             }
         } else {
-            let call = builder.start_remote_call(ErlangModuleName::erlang(), "max");
-            builder.int(BigInt::ZERO);
+            let call =
+                builder.start_remote_call(size.location(), ErlangModuleName::erlang(), "max");
+            builder.int(size.location(), BigInt::ZERO);
             self.maybe_block_expr(builder, size);
             builder.end_call(call);
         }
@@ -2839,19 +3057,31 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
             ClauseGuard::Block { value, .. } => self.clause_guard(builder, value, assignments),
 
-            ClauseGuard::TupleIndex { tuple, index, .. } => {
-                self.clause_guard_tuple_index(builder, tuple, *index);
+            ClauseGuard::TupleIndex {
+                tuple,
+                index,
+                location,
+                ..
+            } => {
+                self.clause_guard_tuple_index(builder, *location, tuple, *index);
             }
 
             ClauseGuard::FieldAccess {
-                container, index, ..
+                container,
+                index,
+                label_location,
+                ..
             } => self.clause_guard_tuple_index(
                 builder,
+                container.location().merge(label_location),
                 container,
                 index.expect("Unable to find index") + 1,
             ),
-            ClauseGuard::Not { expression, .. } => {
-                builder.unary_operator("not");
+            ClauseGuard::Not {
+                expression,
+                location,
+            } => {
+                builder.unary_operator(*location, "not");
                 self.clause_guard(builder, expression, assignments);
             }
 
@@ -2859,6 +3089,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 operator,
                 left,
                 right,
+                location,
                 ..
             } => {
                 let operator = match operator {
@@ -2879,6 +3110,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     BinOp::Concatenate => {
                         return self.clause_guard_string_concatenate(
                             builder,
+                            *location,
                             left,
                             right,
                             assignments,
@@ -2886,7 +3118,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                     }
                 };
 
-                builder.binary_operator(operator);
+                builder.binary_operator(*location, operator);
                 self.clause_guard(builder, left, assignments);
                 self.clause_guard(builder, right, assignments);
             }
@@ -2896,6 +3128,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             ClauseGuard::Var {
                 name,
                 definition_location,
+                location,
                 ..
             } => {
                 // If we're referencing a variable introduced by an alias pattern
@@ -2903,11 +3136,15 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 // generated code the variable is only defined later, so just
                 // referencing its name would result in an error.
                 match assignments.get(name) {
-                    Some(AliasedLiteral::String { value, .. }) => builder.string(value),
-                    Some(AliasedLiteral::Int { value, .. }) => builder.int(value.clone()),
-                    Some(AliasedLiteral::Float { value, .. }) => builder.float(value.value()),
+                    Some(AliasedLiteral::String { value, .. }) => builder.string(*location, value),
+                    Some(AliasedLiteral::Int { value, .. }) => {
+                        builder.int(*location, value.clone())
+                    }
+                    Some(AliasedLiteral::Float { value, .. }) => {
+                        builder.float(*location, value.value())
+                    }
                     None => {
-                        builder.variable(&self.local_var_name(definition_location));
+                        builder.variable(*location, &self.local_var_name(definition_location));
                     }
                 }
             }
@@ -2917,11 +3154,12 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn clause_guard_tuple_index<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
+        location: SrcSpan,
         tuple: &'a TypedClauseGuard,
         index: u64,
     ) {
-        let call = builder.start_remote_call(ErlangModuleName::erlang(), "element");
-        builder.int((index + 1).into());
+        let call = builder.start_remote_call(location, ErlangModuleName::erlang(), "element");
+        builder.int(location, (index + 1).into());
         self.clause_guard(builder, tuple, &HashMap::new());
         builder.end_call(call);
     }
@@ -2929,11 +3167,12 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn clause_guard_string_concatenate<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
+        location: SrcSpan,
         left: &'a TypedClauseGuard,
         right: &'a TypedClauseGuard,
         assignments: &HashMap<EcoString, AliasedLiteral>,
     ) {
-        let bit_array = builder.start_bit_array();
+        let bit_array = builder.start_bit_array(location);
         self.clause_guard_string_concatenate_argument(builder, left, assignments);
         self.clause_guard_string_concatenate_argument(builder, right, assignments);
         builder.end_bit_array(bit_array);
@@ -2951,7 +3190,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // the `/utf8` specifier instead!
         // In both cases the size is alwaus automatic, so we generate the
         // `default` atom.
-        builder.bit_array_segment();
+        builder.bit_array_segment(guard.location());
         self.clause_guard(builder, guard, assignments);
         builder.bit_array_segment_default_size();
         builder.bit_array_segment_specifiers(if guard_produces_literal_string(guard) {
@@ -2989,21 +3228,28 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn record_builder_anonymous_function<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
+        builder_location: SrcSpan,
         record_name: &str,
         arguments: usize,
     ) {
         let arguments = (0..arguments)
             .map(|_| self.new_generated_variable())
             .collect_vec();
-        let function = builder.start_anonymous_function(&arguments);
+
+        let function = builder.start_anonymous_function(
+            builder_location,
+            arguments
+                .iter()
+                .map(|argument| (builder_location, argument)),
+        );
 
         if arguments.is_empty() {
-            builder.atom(&to_snake_case(record_name));
+            builder.atom(builder_location, &to_snake_case(record_name));
         } else {
-            let tuple = builder.start_tuple();
-            builder.atom(&to_snake_case(record_name));
+            let tuple = builder.start_tuple(builder_location);
+            builder.atom(builder_location, &to_snake_case(record_name));
             for argument in arguments {
-                builder.variable(&argument);
+                builder.variable(builder_location, &argument);
             }
             builder.end_tuple(tuple);
         }
@@ -3024,19 +3270,30 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             .sorted_by(|(one, _), (other, _)| one.cmp(other));
 
         for (gleam_name, value) in variables_to_add_later {
-            builder.match_operator();
             match value {
                 AliasedLiteral::String { location, value } => {
-                    builder.variable_pattern(&self.new_erlang_variable(&gleam_name, location));
-                    builder.string(&value);
+                    builder.match_operator(location);
+                    builder.variable_pattern(
+                        location,
+                        &self.new_erlang_variable(&gleam_name, location),
+                    );
+                    builder.string(location, &value);
                 }
                 AliasedLiteral::Float { location, value } => {
-                    builder.variable_pattern(&self.new_erlang_variable(&gleam_name, location));
-                    builder.float(value.value());
+                    builder.match_operator(location);
+                    builder.variable_pattern(
+                        location,
+                        &self.new_erlang_variable(&gleam_name, location),
+                    );
+                    builder.float(location, value.value());
                 }
                 AliasedLiteral::Int { location, value } => {
-                    builder.variable_pattern(&self.new_erlang_variable(&gleam_name, location));
-                    builder.int(value.clone());
+                    builder.match_operator(location);
+                    builder.variable_pattern(
+                        location,
+                        &self.new_erlang_variable(&gleam_name, location),
+                    );
+                    builder.int(location, value.clone());
                 }
             }
         }
@@ -3064,13 +3321,13 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
                     |RecordConstructorArg {
                          label,
                          ast: _,
-                         location: _,
+                         location,
                          type_,
                          ..
                      }| {
                         label
                             .as_ref()
-                            .map(|(_, label)| (label.as_str(), type_.clone()))
+                            .map(|(_, label)| (*location, label.as_str(), type_.clone()))
                     },
                 )
                 .collect::<Option<Vec<_>>>()
@@ -3266,15 +3523,15 @@ fn how_to_divide(left: &TypedExpr, right: &TypedExpr) -> HowToDivide {
     }
 }
 
-pub fn record_definition(record_name: &str, fields: &[(&str, Arc<Type>)]) -> String {
+pub fn record_definition(record_name: &str, fields: &[(SrcSpan, &str, Arc<Type>)]) -> String {
     let mut builder = ErlangSourceBuilder::new(None);
 
     let attribute = builder.start_record_attribute(&to_snake_case(record_name));
 
     let type_printer = TypeGenerator::new("").var_as_any();
-    for (field_name, field_type) in fields {
+    for (field_location, field_name, field_type) in fields {
         builder.record_field();
-        builder.atom(field_name);
+        builder.atom(*field_location, field_name);
         type_printer.type_(&mut builder, field_type);
     }
 
@@ -3282,18 +3539,19 @@ pub fn record_definition(record_name: &str, fields: &[(&str, Arc<Type>)]) -> Str
     builder.into_output()
 }
 
-pub fn module<'a>(
+pub fn module<'a, Output>(
+    mut builder: impl ErlangBuilder<Output>,
     module: &'a TypedModule,
     line_numbers: &'a LineNumbers,
     root: &'a Utf8Path,
-) -> String {
+) -> Output {
     let mut generator = Generator::new(module, line_numbers, root);
-    let mut builder = ErlangSourceBuilder::new(Some(ErlangModuleName::new(&module.name)));
     generator.module_document(&mut builder);
 
-    let mut output = builder.into_output();
+    let output = builder.into_output();
     if generator.echo_used {
-        output.push_str(std::include_str!("../templates/echo.erl"));
+        // output.push_str(std::include_str!("../templates/echo.erl"));
+        // TODO) how do we deal with echo?
     }
     output
 }

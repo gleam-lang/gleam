@@ -873,6 +873,7 @@ dependencies = [
  "num-bigint",
  "num-traits",
  "regex",
+ "src-span",
 ]
 
 [[package]]
@@ -1275,6 +1276,7 @@ dependencies = [
  "serde_json",
  "sourcemap",
  "spdx",
+ "src-span",
  "stacker",
  "strum",
  "tar",
@@ -1298,6 +1300,7 @@ dependencies = [
  "itertools",
  "pretty-arena",
  "pretty_assertions",
+ "src-span",
  "vec1",
 ]
 
@@ -1319,6 +1322,7 @@ dependencies = [
  "num-bigint",
  "serde",
  "serde_json",
+ "src-span",
  "strum",
  "toml 0.9.11+spec-1.1.0",
  "tracing",
@@ -3311,6 +3315,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "58b69356da67e2fc1f542c71ea7e654a361a79c938e4424392ecf4fa065d2193"
 dependencies = [
  "smallvec",
+]
+
+[[package]]
+name = "src-span"
+version = "1.0.0"
+dependencies = [
+ "gen-lsp-types",
+ "pretty_assertions",
+ "serde",
 ]
 
 [[package]]

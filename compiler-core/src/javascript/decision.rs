@@ -6,7 +6,7 @@ use super::{
     expression::{self, Generator, Ordering, Scope, float, float_from_value},
 };
 use crate::{
-    ast::{AssignmentKind, Endianness, SrcSpan, TypedClause, TypedExpr, TypedPattern},
+    ast::{AssignmentKind, Endianness, TypedClause, TypedExpr, TypedPattern},
     exhaustiveness::{
         BitArrayMatchedValue, BitArrayTest, Body, BoundValue, CompiledCase, Decision,
         FallbackCheck, MatchTest, Offset, ReadAction, ReadSize, ReadType, RuntimeCheck,
@@ -23,6 +23,7 @@ use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use num_bigint::BigInt;
 use pretty_arena::*;
+use src_span::SrcSpan;
 use std::{collections::HashMap, sync::OnceLock};
 
 pub const ASSIGNMENT_VAR: &str = "$";

@@ -17,7 +17,6 @@ use gleam_core::{
     Result,
     diagnostic::{Diagnostic, ExtraLabel, Level},
     io::{BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter},
-    line_numbers::LineNumbers,
 };
 use itertools::Itertools;
 use lsp_server::ResponseError;
@@ -28,6 +27,7 @@ use lsp_types::{
     WorkspaceOptions,
 };
 use serde_json::Value as Json;
+use src_span::LineNumbers;
 use std::collections::{HashMap, HashSet};
 
 /// This class is responsible for handling the language server protocol and

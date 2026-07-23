@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2019 The Gleam contributors
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
-use crate::ast::{self, SrcSpan};
+use crate::ast::{self};
 use crate::bit_array::UnsupportedOption;
 use crate::build::{Origin, Outcome, Runtime, Target};
 use crate::dependency::{PackageFetcher, ResolutionError};
@@ -24,6 +24,7 @@ use crate::{bit_array, diagnostic::Level, type_::UnifyErrorSituation};
 use ecow::EcoString;
 use hexpm::version::Version;
 use itertools::Itertools;
+use src_span::SrcSpan;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt::Debug;

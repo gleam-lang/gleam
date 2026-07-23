@@ -5,9 +5,10 @@ use std::sync::OnceLock;
 
 use ecow::{EcoString, eco_format};
 use regex::Regex;
+use src_span::SrcSpan;
 
 use crate::{
-    ast::{ArgNames, SrcSpan},
+    ast::ArgNames,
     strings::{to_snake_case, to_upper_camel_case},
     type_::Problems,
 };

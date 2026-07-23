@@ -213,11 +213,11 @@ mod tests {
 
     use super::*;
     use gleam_core::{
-        ast::SrcSpan,
         diagnostic::Level,
         parse::error::{ParseError, ParseErrorType},
         type_,
     };
+    use src_span::SrcSpan;
 
     #[test]
     fn feedback() {

@@ -4,12 +4,7 @@
 use hexpm::version::Version;
 use strum::{EnumIter, IntoEnumIterator};
 
-use crate::{
-    ast::{Publicity, SrcSpan},
-    build::Origin,
-    line_numbers::LineNumbers,
-    uid::UniqueIdGenerator,
-};
+use crate::{ast::Publicity, build::Origin, uid::UniqueIdGenerator};
 
 use super::{
     ModuleInterface, Opaque, References, Type, TypeConstructor, TypeValueConstructor,
@@ -17,6 +12,7 @@ use super::{
     ValueConstructorVariant,
 };
 use crate::type_::Deprecation::NotDeprecated;
+use src_span::{LineNumbers, SrcSpan};
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
 const BIT_ARRAY: &str = "BitArray";

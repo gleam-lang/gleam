@@ -20,6 +20,7 @@ use gleam_core::{
 };
 use itertools::Itertools;
 use pretty_arena::*;
+use src_span::SrcSpan;
 use std::cmp::Ordering;
 use vec1::Vec1;
 

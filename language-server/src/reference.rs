@@ -10,7 +10,7 @@ use gleam_core::{
     analyse,
     ast::{
         self, ArgNames, AssignName, BitArraySize, ClauseGuard, CustomType, Function,
-        ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
+        ModuleConstant, Pattern, RecordConstructor, TypedExpr, TypedModule, visit::Visit,
     },
     build::{Located, UnqualifiedImport},
     reference::RecordLabel,
@@ -19,6 +19,7 @@ use gleam_core::{
         error::{Named, VariableOrigin},
     },
 };
+use src_span::SrcSpan;
 
 use super::{
     compiler::ModuleSourceInformation, rename::RenameTarget, src_span_to_lsp_range, url_from_path,

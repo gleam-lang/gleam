@@ -11,15 +11,14 @@ use gleam_core::{
         self, ArgNames, AssignName, AssignmentKind, BitArraySegmentTruncation, BoundVariable,
         BoundVariableName, CallArg, CustomType, FunctionLiteralKind, ImplicitCallArgOrigin, Import,
         InvalidExpression, PIPE_PRECEDENCE, Pattern, PatternUnusedArguments,
-        PipelineAssignmentKind, Publicity, RecordConstructor, SrcSpan, TodoKind,
-        TypeAstConstructorName, TypedArg, TypedAssignment, TypedClauseGuard, TypedDefinitions,
-        TypedExpr, TypedFunction, TypedModuleConstant, TypedPattern, TypedPipelineAssignment,
-        TypedRecordConstructor, TypedStatement, TypedTailPattern, TypedUse, visit::Visit as _,
+        PipelineAssignmentKind, Publicity, RecordConstructor, TodoKind, TypeAstConstructorName,
+        TypedArg, TypedAssignment, TypedClauseGuard, TypedDefinitions, TypedExpr, TypedFunction,
+        TypedModuleConstant, TypedPattern, TypedPipelineAssignment, TypedRecordConstructor,
+        TypedStatement, TypedTailPattern, TypedUse, visit::Visit as _,
     },
     build::{Located, Module, Origin},
     config::PackageConfig,
     exhaustiveness::CompiledCase,
-    line_numbers::LineNumbers,
     parse::{extra::ModuleExtra, lexer::string_to_keyword},
     paths::ProjectPaths,
     strings::to_snake_case,
@@ -37,6 +36,7 @@ use lsp_types::{
     Position, Range, TextEdit, Uri as Url,
 };
 use num_bigint::BigInt;
+use src_span::{LineNumbers, SrcSpan};
 use vec1::{Vec1, vec1};
 
 use crate::engine::{completely_within, position_within};
