@@ -1293,7 +1293,7 @@ target, so it cannot be run.",
                     } else {
                         "Files"
                     },
-                    if file_names.len() == 1 { "" } else { "s" }
+                    if file_names.len() == 1 { "s" } else { "" }
                 ),
                 text: format!(
                     "{}

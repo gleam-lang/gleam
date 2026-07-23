@@ -54,6 +54,24 @@ fn hex_error_conversion() {
     );
 }
 
+#[test]
+fn test_output_files_already_exist() {
+    let file_names = vec![
+        ("singular", vec![Utf8PathBuf::from("wibble")]),
+        (
+            "multiple",
+            vec![Utf8PathBuf::from("wibble"), Utf8PathBuf::from("wobble")],
+        ),
+    ];
+    for (group, file_names) in file_names {
+        let err = Error::OutputFilesAlreadyExist { file_names };
+        assert_debug_snapshot!(
+            format!("output_files_already_exist_{group}"),
+            err.to_diagnostics()[0]
+        );
+    }
+}
+
 // There are 2 separate tests for Windows and for Unix, because on Windows note
 // about inability to create symlinks without Developer Mode is shown, so
 // snapshots differ.
