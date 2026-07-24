@@ -1460,7 +1460,8 @@ impl<'a, 'doc> Formatter<'a> {
     }
 
     fn int(&self, arena: &'doc DocumentArena<'a, 'doc>, value: &'a str) -> Document<'a, 'doc> {
-        if value.starts_with("0x") || value.starts_with("0b") || value.starts_with("0o") {
+        let digits = value.trim_start_matches('-');
+        if digits.starts_with("0x") || digits.starts_with("0b") || digits.starts_with("0o") {
             return value.to_doc(arena);
         }
 

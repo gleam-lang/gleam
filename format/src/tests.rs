@@ -1358,6 +1358,9 @@ fn expr_int() {
     assert_format!("fn o() {\n  0o1234567\n}\n");
     assert_format!("fn o() {\n  0o1_234_567\n}\n");
     assert_format!("fn o() {\n  0o_123_456_7\n}\n");
+    assert_format!("fn h() {\n  -0xFFFFF\n}\n");
+    assert_format!("fn b() {\n  -0b10100001\n}\n");
+    assert_format!("fn o() {\n  -0o1234567\n}\n");
 }
 
 #[test]
