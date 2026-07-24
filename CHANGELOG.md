@@ -21,6 +21,11 @@
   segments on the JavaScript target.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the formatter would insert underscores into negative
+  hexadecimal, octal, and binary literals, producing code that no longer
+  compiles.
+  ([John Downey](https://github.com/jtdowney))
+
 ## v1.18.0-rc1 - 2026-07-21
 
 ### Compiler
