@@ -112,6 +112,11 @@
   when building large projects.
   ([John Downey](https://github.com/jtdowney))
 
+- `gleam hex revert` now shows a clearer error when the specified package
+  version does not exist on Hex, including the package name and version in the
+  message rather than the generic "Resource was not found".
+  ([KevesDev](https://github.com/KevesDev))
+
 ### Language server
 
 - The language server now supports go-to-definition, find-references and rename
