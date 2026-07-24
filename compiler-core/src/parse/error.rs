@@ -917,6 +917,14 @@ impl LexicalError {
                 "Unexpected single quote",
                 vec!["Hint: Strings are written with double quotes.".into()],
             ),
+            LexicalErrorType::UnrecognizedToken { tok } if *tok == '&' => (
+                "Unexpected `&`",
+                vec![
+                    "Hint: Gleam does not have a bitwise '&' operator.".into(),
+                    "Hint: Use `int.bitwise_and` from `gleam/int`, or bit array syntax `<<>>`.".into(),
+                    "See: https://hexdocs.pm/gleam_stdlib/gleam/int.html".into(),
+                ],
+            ),
             LexicalErrorType::UnrecognizedToken { .. } => (
                 "I can't figure out what to do with this character",
                 vec!["Hint: Is it a typo?".into()],
