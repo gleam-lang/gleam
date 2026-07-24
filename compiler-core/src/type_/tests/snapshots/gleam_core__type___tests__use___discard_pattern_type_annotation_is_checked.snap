@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/type_/tests/use_.rs
+expression: "\npub type Woo(a) {\n  Woo\n}\n\npub fn wibble(_f: fn(Woo(a)) -> Nil) -> Woo(a) {\n  Woo\n}\n\npub fn main() -> Woo(Int) {\n  use _: Woo(String) <- wibble()\n  Nil\n}\n"
+---
+----- SOURCE CODE
+
+pub type Woo(a) {
+  Woo
+}
+
+pub fn wibble(_f: fn(Woo(a)) -> Nil) -> Woo(a) {
+  Woo
+}
+
+pub fn main() -> Woo(Int) {
+  use _: Woo(String) <- wibble()
+  Nil
+}
+
+
+----- ERROR
+error: Type mismatch
+   ┌─ /src/one/two.gleam:11:3
+   │
+11 │   use _: Woo(String) <- wibble()
+   │   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The type of this returned value doesn't match the return type
+annotation of this function.
+
+Expected type:
+
+    Woo(Int)
+
+Found type:
+
+    Woo(String)
