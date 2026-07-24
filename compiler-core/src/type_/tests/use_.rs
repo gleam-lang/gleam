@@ -496,3 +496,23 @@ use <- x()
 "#
     );
 }
+
+#[test]
+fn discard_pattern_type_annotation_is_checked() {
+    assert_module_error!(
+        r#"
+pub type Woo(a) {
+  Woo
+}
+
+pub fn wibble(_f: fn(Woo(a)) -> Nil) -> Woo(a) {
+  Woo
+}
+
+pub fn main() -> Woo(Int) {
+  use _: Woo(String) <- wibble()
+  Nil
+}
+"#
+    );
+}
