@@ -413,6 +413,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         .collect(),
                     value_references: env.references.value_references,
                     type_references: env.references.type_references,
+                    type_alias_references: env.references.type_alias_references,
                     module_references: env.references.module_references,
                     label_references: env.references.label_references,
                     label_definitions: env.references.label_definitions,

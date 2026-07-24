@@ -35,7 +35,10 @@ use crate::{
     build::{Origin, Target},
     inline::InlinableFunction,
     line_numbers::LineNumbers,
-    reference::{LabelDefinition, LabelReference, ModuleNameReference, RecordLabel, ReferenceMap},
+    reference::{
+        LabelDefinition, LabelReference, ModuleNameReference, RecordLabel, ReferenceMap,
+        TypeReferences,
+    },
     type_::expression::Implementations,
 };
 use error::*;
@@ -1056,6 +1059,8 @@ pub struct References {
     pub imported_modules: HashSet<EcoString>,
     pub value_references: ReferenceMap,
     pub type_references: ReferenceMap,
+    #[serde(default)]
+    pub type_alias_references: TypeReferences,
     pub module_references: HashMap<EcoString, Vec<ModuleNameReference>>,
     pub label_references: HashMap<RecordLabel, Vec<LabelReference>>,
     pub label_definitions: HashMap<RecordLabel, Vec<LabelDefinition>>,

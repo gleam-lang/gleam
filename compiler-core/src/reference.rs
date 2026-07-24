@@ -120,6 +120,28 @@ pub struct Reference {
     pub kind: ReferenceKind,
 }
 
+/// Identity of a source-level type alias.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub struct TypeReferenceTarget {
+    pub module: EcoString,
+    pub name: EcoString,
+}
+
+/// A type reference for editor features. It preserves both the source-level
+/// type symbol and the type that analysis resolved it to.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct TypeReference {
+    pub location: SrcSpan,
+    pub kind: ReferenceKind,
+    pub resolved_target: TypeReferenceTarget,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub struct TypeReferences {
+    pub by_source_target: HashMap<TypeReferenceTarget, Vec<TypeReference>>,
+    pub by_location: HashMap<SrcSpan, TypeReferenceTarget>,
+}
+
 /// A reference to a module name. This is similar to a `Reference`, which covers
 /// types and values, but it is separate because we care about slightly different
 /// pieces of information when, for example, renaming modules vs. renaming types
@@ -295,6 +317,9 @@ pub struct ReferenceTracker {
     /// The locations of the references to each type in this module, used for
     /// renaming and go-to reference.
     pub type_references: ReferenceMap,
+    /// The locations of references to each type alias in this module, used for
+    /// source-level operations such as Rename.
+    pub type_alias_references: TypeReferences,
     /// The locations of the references to each imported module, used for
     /// renaming and go-to reference.
     pub module_references: HashMap<EcoString, Vec<ModuleNameReference>>,
@@ -647,6 +672,28 @@ impl ReferenceTracker {
             .entry((module, name))
             .or_default()
             .push(Reference { location, kind });
+    }
+
+    pub fn register_type_alias_reference(
+        &mut self,
+        resolved_target: TypeReferenceTarget,
+        target: TypeReferenceTarget,
+        location: SrcSpan,
+        kind: ReferenceKind,
+    ) {
+        _ = self
+            .type_alias_references
+            .by_location
+            .insert(location, target.clone());
+        self.type_alias_references
+            .by_source_target
+            .entry(target.clone())
+            .or_default()
+            .push(TypeReference {
+                location,
+                kind,
+                resolved_target,
+            });
     }
 
     /// Register a reference to a module in the code. This is separate to

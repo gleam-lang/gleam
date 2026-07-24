@@ -13,9 +13,10 @@ use gleam_core::{
         ModuleConstant, Pattern, RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
     },
     build::{Located, UnqualifiedImport},
-    reference::RecordLabel,
+    reference::{RecordLabel, TypeReferenceTarget},
     type_::{
-        ModuleInterface, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant,
+        ModuleInterface, ModuleValueConstructor, References, Type, ValueConstructor,
+        ValueConstructorVariant,
         error::{Named, VariableOrigin},
     },
 };
@@ -79,6 +80,7 @@ pub enum Referenced {
 pub fn reference_for_ast_node(
     found: Located<'_>,
     current_module: &EcoString,
+    references: Option<&References>,
 ) -> Option<Referenced> {
     match found {
         Located::Expression {
@@ -304,6 +306,18 @@ pub fn reference_for_ast_node(
                 };
                 let location = constructor.name.name_location()?;
 
+                if let Some(TypeReferenceTarget { module, name }) =
+                    references.and_then(|references| type_alias_target_at(references, location))
+                {
+                    return Some(Referenced::ModuleType {
+                        module,
+                        name,
+                        location,
+                        name_start: location.start,
+                        target_kind,
+                    });
+                }
+
                 Some(Referenced::ModuleType {
                     module,
                     name,
@@ -413,6 +427,18 @@ pub fn reference_for_ast_node(
             },
         ) => {
             if import.is_type() {
+                let used_name_location = import.used_name_location();
+                if let Some(TypeReferenceTarget { module, name }) = references
+                    .and_then(|references| type_alias_target_at(references, used_name_location))
+                {
+                    return Some(Referenced::ModuleType {
+                        module,
+                        name,
+                        location: *location,
+                        name_start: used_name_location.start,
+                        target_kind: RenameTarget::Unqualified,
+                    });
+                }
                 Some(Referenced::ModuleType {
                     module: module.clone(),
                     name: name.clone(),
@@ -465,7 +491,6 @@ pub fn reference_for_ast_node(
             label,
             location,
         }),
-
         Located::Pattern(_)
         | Located::ClauseGuard(_)
         | Located::PatternSpread { .. }
@@ -477,6 +502,14 @@ pub fn reference_for_ast_node(
         | Located::ModuleFunction(_)
         | Located::ModuleTypeAlias(_) => None,
     }
+}
+
+fn type_alias_target_at(references: &References, location: SrcSpan) -> Option<TypeReferenceTarget> {
+    references
+        .type_alias_references
+        .by_location
+        .get(&location)
+        .cloned()
 }
 
 pub fn find_module_references(

@@ -8,7 +8,7 @@ use crate::{
     ast::{PIPE_VARIABLE, Publicity},
     build::Target,
     error::edit_distance,
-    reference::{EntityKind, ReferenceTracker},
+    reference::{EntityKind, ReferenceTracker, TypeReferenceTarget},
     uid::UniqueIdGenerator,
 };
 
@@ -51,6 +51,7 @@ pub struct Environment<'a> {
     /// from other modules. Used to prevent multiple imports using the same name.
     pub unqualified_imported_names: HashMap<EcoString, SrcSpan>,
     pub unqualified_imported_types: HashMap<EcoString, SrcSpan>,
+    pub unqualified_imported_type_aliases: HashMap<EcoString, TypeReferenceTarget>,
     pub importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
 
     /// Modules that have been imported by the current module, along with the
@@ -145,6 +146,7 @@ impl<'a> Environment<'a> {
             imported_modules: HashMap::new(),
             unqualified_imported_names: HashMap::new(),
             unqualified_imported_types: HashMap::new(),
+            unqualified_imported_type_aliases: HashMap::new(),
             accessors: prelude.accessors.clone(),
             scope: prelude.values.clone().into(),
             discarded_names: im::HashMap::new(),
@@ -481,6 +483,19 @@ impl Environment<'_> {
                 })
             }
         }
+    }
+
+    /// Return the source-level identity of a type alias. Type checking itself
+    /// continues to use the alias's expanded type constructor.
+    pub fn get_type_alias_target(
+        &self,
+        module: &Option<(EcoString, SrcSpan)>,
+        name: &EcoString,
+    ) -> Option<TypeReferenceTarget> {
+        module
+            .is_none()
+            .then(|| self.unqualified_imported_type_aliases.get(name).cloned())
+            .flatten()
     }
 
     fn unknown_type_hint(&self, type_name: &EcoString) -> UnknownTypeHint {

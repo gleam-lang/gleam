@@ -868,7 +868,11 @@ where
 
             let byte_index = lines.byte_index(params.text_document_position_params.position);
 
-            let referenced = reference_for_ast_node(found, &current_module.name);
+            let referenced = reference_for_ast_node(
+                found,
+                &current_module.name,
+                Some(&current_module.ast.type_info.references),
+            );
 
             Ok(match referenced {
                 Some(Referenced::LocalVariable {
@@ -981,7 +985,8 @@ where
                 return Ok(RenameOutcome::NoRenames.into_result());
             };
 
-            let referenced = reference_for_ast_node(found, &module.name);
+            let referenced =
+                reference_for_ast_node(found, &module.name, Some(&module.ast.type_info.references));
 
             Ok(match referenced {
                 Some(Referenced::LocalVariable {
@@ -1095,7 +1100,7 @@ where
 
         let byte_index = lines.byte_index(position.position);
 
-        let referenced = reference_for_ast_node(found, &source_module.name);
+        let referenced = reference_for_ast_node(found, &source_module.name, None);
 
         match referenced {
             Some(Referenced::LocalVariable {

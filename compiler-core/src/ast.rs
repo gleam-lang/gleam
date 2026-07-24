@@ -1343,6 +1343,13 @@ impl UnqualifiedImport {
             self.name_position + self.name.len() as u32,
         )
     }
+
+    /// The location of the name used in this module. For example, in `type
+    /// Wibble as Wobble`, it covers `Wobble`.
+    pub fn used_name_location(&self) -> SrcSpan {
+        let name = self.used_name();
+        SrcSpan::new(self.location.end - name.len() as u32, self.location.end)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Default, serde::Serialize, serde::Deserialize)]

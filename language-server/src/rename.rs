@@ -12,7 +12,9 @@ use gleam_core::{
     ast::{self, SrcSpan},
     build::Module,
     line_numbers::LineNumbers,
-    reference::{LabelSyntax, ModuleNameReference, RecordLabel, ReferenceKind},
+    reference::{
+        LabelSyntax, ModuleNameReference, RecordLabel, ReferenceKind, TypeReferenceTarget,
+    },
     type_::{ModuleInterface, error::Named},
 };
 
@@ -149,6 +151,35 @@ pub fn rename_module_entity(
         return RenameOutcome::InvalidName { name: new_name };
     }
 
+    if renamed.layer == ast::Layer::Type && renamed.module_name == &current_module.name {
+        let target = TypeReferenceTarget {
+            module: renamed.module_name.clone(),
+            name: renamed.name.clone(),
+        };
+        if let Some(references) = current_module
+            .ast
+            .type_info
+            .references
+            .type_alias_references
+            .by_source_target
+            .get(&target)
+            && let Some(resolved_target) = references
+                .iter()
+                .find(|reference| matches!(&reference.kind, ReferenceKind::Definition))
+                .map(|reference| &reference.resolved_target)
+                .filter(|resolved_target| *resolved_target != &target)
+        {
+            return alias_references_in_module(
+                params,
+                current_module,
+                &resolved_target.module,
+                &resolved_target.name,
+                ast::Layer::Type,
+                Some(&target),
+            );
+        }
+    }
+
     match renamed.target_kind {
         // When renaming an unqualified import, instead of renaming the original
         // value, we simply want to alias it in the current module.
@@ -161,6 +192,7 @@ pub fn rename_module_entity(
                 renamed.module_name,
                 renamed.name,
                 renamed.layer,
+                None,
             );
         }
         RenameTarget::Unqualified | RenameTarget::Qualified | RenameTarget::Definition => {}
@@ -237,6 +269,19 @@ fn rename_references_in_module(
 
     if let Some(changes) = workspace_edit.changes.as_mut() {
         _ = changes.insert(uri, edits.edits);
+    }
+}
+
+fn rename_import_alias(
+    edits: &mut TextEdits<'_>,
+    alias_location: SrcSpan,
+    name: &EcoString,
+    new_name: &str,
+) {
+    if name == new_name {
+        edits.delete(alias_location);
+    } else {
+        edits.replace(alias_location, format!(" as {new_name}"));
     }
 }
 
@@ -348,36 +393,49 @@ fn alias_references_in_module(
     module_name: &EcoString,
     name: &EcoString,
     layer: ast::Layer,
+    source_alias_target: Option<&TypeReferenceTarget>,
 ) -> RenameOutcome {
     let reference_map = match layer {
         ast::Layer::Value => &module.ast.type_info.references.value_references,
         ast::Layer::Type => &module.ast.type_info.references.type_references,
     };
 
-    let Some(references) = reference_map.get(&(module_name.clone(), name.clone())) else {
+    let references = reference_map.get(&(module_name.clone(), name.clone()));
+    if references.is_none() && source_alias_target.is_none() {
         return RenameOutcome::NoRenames;
-    };
+    }
 
     let mut edits = TextEdits::new(&module.ast.type_info.line_numbers);
     let mut found_import = false;
 
-    for reference in references {
+    for reference in references.into_iter().flatten() {
         match reference.kind {
             ReferenceKind::Qualified { .. } => {}
             ReferenceKind::Unqualified | ReferenceKind::Alias => {
                 edits.replace(reference.location, params.new_name.clone());
             }
             ReferenceKind::Import(alias_location) => {
-                // If old name is equal to original name, we can just remove
-                // alias part.
-                if name == &params.new_name {
-                    edits.delete(alias_location);
-                } else {
-                    edits.replace(alias_location, format!(" as {}", params.new_name));
-                }
+                rename_import_alias(&mut edits, alias_location, name, &params.new_name);
                 found_import = true;
             }
             ReferenceKind::Definition => {}
+        }
+    }
+
+    if let Some(source_alias_target) = source_alias_target {
+        for reference in module
+            .ast
+            .type_info
+            .references
+            .type_alias_references
+            .by_source_target
+            .get(source_alias_target)
+            .into_iter()
+            .flatten()
+        {
+            if !matches!(reference.kind, ReferenceKind::Definition) {
+                edits.replace(reference.location, params.new_name.clone());
+            }
         }
     }
 

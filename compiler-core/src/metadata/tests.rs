@@ -2029,6 +2029,7 @@ fn module_with_references() {
                 ],
             )]
             .into(),
+            type_alias_references: Default::default(),
             module_references: [(
                 "some_module".into(),
                 vec![

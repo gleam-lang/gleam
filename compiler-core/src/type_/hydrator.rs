@@ -8,7 +8,7 @@ use crate::{
         Layer, TypeAst, TypeAstConstructor, TypeAstConstructorName, TypeAstFn, TypeAstHole,
         TypeAstTuple, TypeAstVar,
     },
-    reference::ReferenceKind,
+    reference::{ReferenceKind, TypeReferenceTarget},
 };
 use std::sync::Arc;
 
@@ -181,6 +181,7 @@ impl Hydrator {
                     .clone();
 
                 if let Some((type_module, type_name)) = return_type.named_type_name() {
+                    let type_alias_target = environment.get_type_alias_target(&module, name);
                     let reference_kind = if let Some((module_alias, module_location)) = &module {
                         ReferenceKind::Qualified {
                             module_alias: module_alias.clone(),
@@ -192,12 +193,23 @@ impl Hydrator {
                         ReferenceKind::Unqualified
                     };
                     environment.references.register_type_reference(
-                        type_module,
-                        type_name,
+                        type_module.clone(),
+                        type_name.clone(),
                         name,
                         *name_location,
-                        reference_kind,
+                        reference_kind.clone(),
                     );
+                    if let Some(target) = type_alias_target {
+                        environment.references.register_type_alias_reference(
+                            TypeReferenceTarget {
+                                module: type_module.clone(),
+                                name: type_name.clone(),
+                            },
+                            target,
+                            *name_location,
+                            reference_kind,
+                        );
+                    }
                 } else {
                     environment
                         .references

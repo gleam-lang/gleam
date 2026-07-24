@@ -6,7 +6,7 @@ use ecow::EcoString;
 use crate::{
     ast::{Publicity, SrcSpan, UnqualifiedImport, UntypedImport},
     build::Origin,
-    reference::{EntityKind, ReferenceKind},
+    reference::{EntityKind, ReferenceKind, TypeReferenceTarget},
     type_::{
         Environment, Error, ModuleInterface, Problems, ValueConstructorVariant, Warning,
         error::InvalidImportKind,
@@ -103,6 +103,18 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         };
 
         let type_info = type_info.clone().with_location(import.location);
+        let local_type_alias_target = (import.as_name.is_some()
+            && module.type_aliases.contains_key(&import.name))
+        .then(|| TypeReferenceTarget {
+            module: self.environment.current_module.clone(),
+            name: imported_name.clone(),
+        });
+        if let Some(target) = &local_type_alias_target {
+            _ = self
+                .environment
+                .unqualified_imported_type_aliases
+                .insert(imported_name.clone(), target.clone());
+        }
 
         self.environment.names.type_in_scope(
             imported_name.clone(),
@@ -131,6 +143,17 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             import.name_location(),
             ReferenceKind::Import(alias_location),
         );
+        if let Some(target) = local_type_alias_target {
+            self.environment.references.register_type_alias_reference(
+                TypeReferenceTarget {
+                    module: type_info.module.clone(),
+                    name: import.name.clone(),
+                },
+                target,
+                import.used_name_location(),
+                ReferenceKind::Definition,
+            );
+        }
 
         if let Err(e) = self
             .environment

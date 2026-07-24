@@ -460,6 +460,10 @@ impl<'a> UnqualifiedImport<'a> {
         }
     }
 
+    pub fn used_name_location(&self) -> SrcSpan {
+        SrcSpan::new(self.used_name_position(), self.location.end)
+    }
+
     pub fn name_kind(&self) -> Named {
         let is_upname = match self.name.chars().next() {
             Some(c) => c.is_uppercase(),
