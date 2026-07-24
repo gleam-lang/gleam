@@ -26,6 +26,10 @@
   compiles.
   ([John Downey](https://github.com/jtdowney))
 
+- Fixed a bug where type annotations on discarded variables in `use` bindings
+  were ignored.
+  ([Francesco Cappetti](https://github.com/frakappa))
+
 ## v1.18.0-rc1 - 2026-07-21
 
 ### Compiler
