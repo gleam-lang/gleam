@@ -1170,6 +1170,7 @@ fn constant_list() {
 fn constant_record() {
     let module = constant_module(Constant::Record {
         location: SrcSpan::default(),
+        constructor_location: SrcSpan::default(),
         module: None,
         name: "".into(),
         arguments: Some(vec![
