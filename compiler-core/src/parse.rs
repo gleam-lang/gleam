@@ -3688,6 +3688,7 @@ where
 
                     Ok(Some(Constant::Record {
                         location: SrcSpan { start, end: par_e },
+                        constructor_location: SrcSpan { start, end },
                         module,
                         name,
                         arguments: Some(arguments),
@@ -3699,6 +3700,7 @@ where
             }
             _ => Ok(Some(Constant::Record {
                 location: SrcSpan { start, end },
+                constructor_location: SrcSpan { start, end },
                 module,
                 name,
                 arguments: None,

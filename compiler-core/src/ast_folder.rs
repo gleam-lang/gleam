@@ -993,13 +993,14 @@ pub trait UntypedConstantFolder {
 
             Constant::Record {
                 location,
+                constructor_location,
                 module,
                 name,
                 arguments,
                 type_: (),
                 field_map: _,
                 record_constructor: _,
-            } => self.fold_constant_record(location, module, name, arguments),
+            } => self.fold_constant_record(location, constructor_location, module, name, arguments),
 
             Constant::RecordUpdate {
                 location,
@@ -1116,12 +1117,14 @@ pub trait UntypedConstantFolder {
     fn fold_constant_record(
         &mut self,
         location: SrcSpan,
+        constructor_location: SrcSpan,
         module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
         arguments: Option<Vec<CallArg<UntypedConstant>>>,
     ) -> UntypedConstant {
         Constant::Record {
             location,
+            constructor_location,
             module,
             name,
             arguments,
@@ -1232,6 +1235,7 @@ pub trait UntypedConstantFolder {
 
             Constant::Record {
                 location,
+                constructor_location,
                 module,
                 name,
                 arguments,
@@ -1250,6 +1254,7 @@ pub trait UntypedConstantFolder {
                 });
                 Constant::Record {
                     location,
+                    constructor_location,
                     module,
                     name,
                     arguments,
