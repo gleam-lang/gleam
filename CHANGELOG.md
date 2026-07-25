@@ -30,6 +30,14 @@
   were ignored.
   ([Francesco Cappetti](https://github.com/frakappa))
 
+- Fixed a bug where the language server would crash on code that contains syntax
+  errors.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where bit array segments would not be compiled properly, using an
+  invalid Erlang segment option.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.18.0-rc1 - 2026-07-21
 
 ### Compiler
