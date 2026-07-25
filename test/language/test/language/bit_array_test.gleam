@@ -192,3 +192,9 @@ pub fn sliced_bit_array_data_view_byte_length_test() {
   let assert Ok(sliced) = bit_array.slice(data, 1, 2)
   assert sliced == <<0xBB, 0xCC>>
 }
+
+// https://github.com/gleam-lang/gleam/issues/6036
+pub fn negative_zero_16_bits_test() {
+  let data = <<-0.0:16>>
+  assert data == <<0x8000:16>>
+}

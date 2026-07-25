@@ -1255,7 +1255,11 @@ function numberToFp16Uint(value, isBigEndian) {
   } else if (value === -Infinity) {
     buffer[1] = 0xfc;
   } else if (value === 0) {
-    // Both values are already zero
+    // 0 === -0, so we need to do an additional check here
+    if (isNegativeZero(value)) {
+      buffer[1] = 128;
+    }
+    // Otherwise, both values are already zero
   } else {
     const sign = value < 0 ? 1 : 0;
     value = Math.abs(value);
@@ -1287,6 +1291,19 @@ function numberToFp16Uint(value, isBigEndian) {
   }
 
   return buffer;
+}
+
+/**
+ * Returns whether or not a value is `-0`, since this cannot be checked using
+ * equality.
+ *
+ * @param {number} value
+ * @returns {boolean}
+ */
+function isNegativeZero(value) {
+  // One of the few differences between 0 and -0 is that division by -0 returns
+  // -Infinity rather than Infinity.
+  return 1 / value === -Infinity;
 }
 
 /**
