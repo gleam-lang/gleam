@@ -5,7 +5,7 @@
 
 # Changelog
 
-## Unreleased
+## v1.18.0-rc2 - 2026-07-25
 
 ### Bug fixes
 
