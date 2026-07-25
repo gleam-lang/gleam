@@ -28,6 +28,10 @@ Parsed {
                                 start: 19,
                                 end: 27,
                             },
+                            constructor_location: SrcSpan {
+                                start: 19,
+                                end: 25,
+                            },
                             module: None,
                             name: "Wibble",
                             arguments: Some(
