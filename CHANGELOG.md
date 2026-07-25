@@ -17,6 +17,9 @@
   bit array pattern to extract a `Float` and had a constructor called `Number`.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where `-0.0` would be encoded incorrectly in 16-bit bit array
+  segments on the JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
 
 ## v1.18.0-rc1 - 2026-07-21
 
