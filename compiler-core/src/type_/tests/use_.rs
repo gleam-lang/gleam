@@ -501,16 +501,12 @@ use <- x()
 fn discard_pattern_type_annotation_is_checked() {
     assert_module_error!(
         r#"
-pub type Woo(a) {
-  Woo
+fn wibble(f: fn(Int, String) -> Nil) -> Nil {
+  f(1, "")
 }
 
-pub fn wibble(_f: fn(Woo(a)) -> Nil) -> Woo(a) {
-  Woo
-}
-
-pub fn main() -> Woo(Int) {
-  use _: Woo(String) <- wibble()
+pub fn main() {
+  use _a: Int, _b: Float <- wibble()
   Nil
 }
 "#
