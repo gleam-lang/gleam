@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\ntype Wibble {\n  Wibble(wibble: Int)\n}\n\npub const zero = Wibble(0)\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+type Wibble {
+  Wibble(wibble: Int)
+  ↑▔▔▔▔▔             
+}
+
+pub const zero = Wibble(0)
+
+
+----- AFTER RENAME
+-- app.gleam
+
+type Wibble {
+  Wobble(wibble: Int)
+}
+
+pub const zero = Wobble(0)

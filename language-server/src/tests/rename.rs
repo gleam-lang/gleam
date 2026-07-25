@@ -3358,6 +3358,21 @@ pub fn main() {
 }
 
 #[test]
+fn rename_record_constructor_in_constant() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub const zero = Wibble(0)
+",
+        "Wobble",
+        find_position_of("Wibble(wibble: Int)").under_char('W')
+    );
+}
+
+#[test]
 fn rename_record_field_renames_labelled_arguments_of_call_with_incorrect_arity() {
     assert_rename!(
         "
