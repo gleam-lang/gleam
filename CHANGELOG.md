@@ -31,6 +31,10 @@
   single or multiple conflicting files existed in the target directory.
   ([Spenser Black](https://github.com/spenserblack))
 
+- Fixed a bug where renaming constructors referenced in constants
+  results in incorrect code.
+  ([Khalid Belkassmi E.H.](https://github.com/khalidbelk))
+
 ## v1.18.0-rc2 - 2026-07-25
 
 ### Bug fixes
