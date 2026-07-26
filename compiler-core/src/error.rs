@@ -5222,9 +5222,12 @@ fn hint_wrap_value_in_result(expected: &Arc<Type>, given: &Arc<Type>) -> Option<
     let expected = collapse_links(expected.clone());
     let (expected_ok_type, expected_error_type) = expected.result_types()?;
 
-    if given.same_as(expected_ok_type.as_ref()) {
+    // Unbound type variables are trivially matched by `same_as` to any other type,
+    // leading to confusing hints. Any `given` type could match one of the `expected`
+    // type variables, leading to false positives for the wrap hint.
+    if !expected_ok_type.is_unbound() && given.same_as(expected_ok_type.as_ref()) {
         Some("Did you mean to wrap this in an `Ok`?".into())
-    } else if given.same_as(expected_error_type.as_ref()) {
+    } else if !expected_error_type.is_unbound() && given.same_as(expected_error_type.as_ref()) {
         Some("Did you mean to wrap this in an `Error`?".into())
     } else {
         None

@@ -2889,6 +2889,79 @@ pub fn want_result(wibble: fn() -> Result(Int, Bool)) {
 }
 
 #[test]
+fn do_not_suggest_wrapping_in_ok_if_expected_ok_type_is_unbound() {
+    assert_module_error!(
+        "
+pub fn try(
+  result: Result(a, e),
+  apply fun: fn(a) -> Result(b, e),
+) -> Result(b, e) {
+    todo
+}
+
+pub type WibbleError {
+  WibbleError
+}
+
+pub type WobbleError {
+  WobbleError
+}
+
+pub fn main() {
+  use _ <- try(wibble())
+  use _ <- try(wobble())
+  todo
+}
+
+pub fn wibble() -> Result(Int, WibbleError) {
+  todo
+}
+
+pub fn wobble() -> Result(Int, WobbleError) {
+  todo
+}
+"
+    );
+}
+
+#[test]
+fn do_not_suggest_wrapping_in_error_if_expected_error_type_is_unbound() {
+    assert_module_error!(
+        "
+
+pub fn try_recover(
+  result: Result(a, e),
+  with fun: fn(e) -> Result(a, f),
+) -> Result(a, f) {
+    todo
+}
+
+pub type WibbleError {
+  WibbleError
+}
+
+pub type WobbleError {
+  WobbleError
+}
+
+pub fn main() {
+  use _ <- try_recover(wibble())
+  use _ <- try_recover(wobble())
+  todo
+}
+
+pub fn wibble() -> Result(Int, WibbleError) {
+  todo
+}
+
+pub fn wobble() -> Result(Float, WibbleError) {
+  todo
+}
+"
+    );
+}
+
+#[test]
 // https://github.com/gleam-lang/gleam/issues/4195
 fn let_assert_binding_cannot_be_used_in_panic_message() {
     assert_module_error!(

@@ -1,0 +1,50 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn try(\n  result: Result(a, e),\n  apply fun: fn(a) -> Result(b, e),\n) -> Result(b, e) {\n    todo\n}\n\npub type WibbleError {\n  WibbleError\n}\n\npub type WobbleError {\n  WobbleError\n}\n\npub fn main() {\n  use _ <- try(wibble())\n  use _ <- try(wobble())\n  todo\n}\n\npub fn wibble() -> Result(Int, WibbleError) {\n  todo\n}\n\npub fn wobble() -> Result(Int, WobbleError) {\n  todo\n}\n"
+---
+----- SOURCE CODE
+
+pub fn try(
+  result: Result(a, e),
+  apply fun: fn(a) -> Result(b, e),
+) -> Result(b, e) {
+    todo
+}
+
+pub type WibbleError {
+  WibbleError
+}
+
+pub type WobbleError {
+  WobbleError
+}
+
+pub fn main() {
+  use _ <- try(wibble())
+  use _ <- try(wobble())
+  todo
+}
+
+pub fn wibble() -> Result(Int, WibbleError) {
+  todo
+}
+
+pub fn wobble() -> Result(Int, WobbleError) {
+  todo
+}
+
+
+----- ERROR
+error: Type mismatch
+   ┌─ /src/one/two.gleam:19:3
+   │
+19 │   use _ <- try(wobble())
+   │   ^^^^^^^^^^^^^^^^^^^^^^
+
+Expected type:
+
+    Result(b, WibbleError)
+
+Found type:
+
+    Result(b, WobbleError)
