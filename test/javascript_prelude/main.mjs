@@ -682,6 +682,21 @@ assertEqual(sizedFloat(NaN, 16, true), new Uint8Array([0x7e, 0x00]));
 assertEqual(sizedFloat(1_000_000.0, 16, true), new Uint8Array([0x7c, 0x00]));
 assertEqual(sizedFloat(-1_000_000.0, 16, true), new Uint8Array([0xfc, 0x00]));
 
+assertEqual(sizedFloat(2047.5, 16, true), new Uint8Array([0x68, 0x00]));
+assertEqual(sizedFloat(2049.0, 16, true), new Uint8Array([0x68, 0x00]));
+assertEqual(sizedFloat(1.00048828125, 16, true), new Uint8Array([0x3c, 0x00]));
+assertEqual(sizedFloat(1.0009765625, 16, true), new Uint8Array([0x3c, 0x01]));
+assertEqual(sizedFloat(3945.0, 16, true), new Uint8Array([0x6b, 0xb4]));
+assertEqual(sizedFloat(65_520.0, 16, true), new Uint8Array([0x7c, 0x00]));
+assertEqual(
+  sizedFloat(2.9802322387695312e-8, 16, true),
+  new Uint8Array([0x00, 0x00]),
+);
+assertEqual(
+  sizedFloat(8.940696716308594e-8, 16, true),
+  new Uint8Array([0x00, 0x02]),
+);
+
 assertEqual(sizedFloat(16.25, 32, true), new Uint8Array([65, 130, 0, 0]));
 assertEqual(sizedFloat(-16.25, 32, false), new Uint8Array([0, 0, 130, 193]));
 assertEqual(
