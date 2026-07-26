@@ -215,3 +215,8 @@ pub fn float_16_subnormal_rounds_ties_to_even_test() {
   assert <<2.9802322387695312e-8:float-16>> == <<0x00, 0x00>>
   assert <<8.940696716308594e-8:float-16>> == <<0x00, 0x02>>
 }
+
+pub fn zero_size_int_segment_test() {
+  assert <<0:size(0), 1:size(8)>> == <<1>>
+  assert bit_array.bit_size(<<0:size(0)>>) == 0
+}

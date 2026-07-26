@@ -2847,3 +2847,34 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn zero_size_int_segment() {
+    assert_js!(
+        r#"
+pub fn go() {
+  <<0:size(0), 1:size(8)>>
+}
+"#,
+    );
+}
+
+#[test]
+fn zero_size_int_segment_with_variable_value() {
+    assert_js!(
+        r#"
+pub fn go(x: Int) {
+  <<x:size(0), 1:size(8)>>
+}
+"#,
+    );
+}
+
+#[test]
+fn zero_size_int_segment_constant() {
+    assert_js!(
+        r#"
+pub const value = <<0:size(0), 1:size(8)>>
+"#,
+    );
+}

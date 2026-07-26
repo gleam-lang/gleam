@@ -22,6 +22,11 @@
   JavaScript target.
   ([John Downey](https://github.com/jtdowney))
 
+- Fixed a bug where a bit array segment with a size of zero would add a zero
+  byte to the bit array on the JavaScript target, instead of contributing
+  nothing.
+  ([John Downey](https://github.com/jtdowney))
+
 ## v1.18.0-rc2 - 2026-07-25
 
 ### Bug fixes

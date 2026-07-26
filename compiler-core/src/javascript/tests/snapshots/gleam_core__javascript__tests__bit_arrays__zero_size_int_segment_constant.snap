@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub const value = <<0:size(0), 1:size(8)>>\n"
+---
+----- SOURCE CODE
+
+pub const value = <<0:size(0), 1:size(8)>>
+
+
+----- COMPILED JAVASCRIPT
+import { toBitArray } from "../gleam.mjs";
+
+export const value = /* @__PURE__ */ toBitArray([1]);
