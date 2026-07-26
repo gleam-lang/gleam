@@ -275,6 +275,13 @@ pub enum Command {
     /// for bug fixes that have not yet been published to Hex.
     ///
     ///    [dependencies]
+    ///    wibble = { git = "https://example.com/wibble.git", path = "wibblewobble" }
+    ///
+    /// A Git dependency from a monorepo. This is useful if you like to organise
+    /// related packages in one shared Git repository. Provide the path from
+    /// the root of your repository to the Gleam package you wish to use.
+    ///
+    ///    [dependencies]
     ///    wibble = { path = "../wibble" }
     ///
     /// A local dependency, on your computer. This is useful for testing and
