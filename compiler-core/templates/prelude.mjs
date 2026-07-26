@@ -1277,7 +1277,14 @@ function numberToFp16Uint(value, isBigEndian) {
       fraction = 0;
     }
 
-    fraction = Math.round(fraction * 1024);
+    fraction = roundTiesToEven(fraction * 1024);
+
+    // Rounding can push the fraction up to 1024, which doesn't fit in the bits
+    // it has, so it carries into the exponent.
+    if (fraction === 1024) {
+      fraction = 0;
+      exponent += 1;
+    }
 
     buffer[1] =
       (sign << 7) | ((exponent & 0x1f) << 2) | ((fraction >> 8) & 0x03);
@@ -1291,6 +1298,25 @@ function numberToFp16Uint(value, isBigEndian) {
   }
 
   return buffer;
+}
+
+/**
+ * Rounds to the nearest integer, with a value exactly halfway between two
+ * integers rounding to the even one.
+ *
+ * This is the rounding IEEE 754 specifies. `Math.round` rounds a half towards
+ * positive infinity instead.
+ *
+ * @param {number} value
+ * @returns {number}
+ */
+function roundTiesToEven(value) {
+  const rounded = Math.round(value);
+  if (rounded - value === 0.5 && rounded % 2 !== 0) {
+    return rounded - 1;
+  }
+
+  return rounded;
 }
 
 /**

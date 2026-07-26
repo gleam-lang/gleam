@@ -13,6 +13,15 @@
   strings in bit array segments.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where floats whose fraction rounded up would be encoded as half
+  their value in 16-bit bit array segments on the JavaScript target.
+  ([John Downey](https://github.com/jtdowney))
+
+- Fixed a bug where floats exactly halfway between two 16-bit floats would be
+  rounded away from zero rather than to even in bit array segments on the
+  JavaScript target.
+  ([John Downey](https://github.com/jtdowney))
+
 ## v1.18.0-rc2 - 2026-07-25
 
 ### Bug fixes
