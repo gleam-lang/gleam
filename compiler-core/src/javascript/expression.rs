@@ -597,14 +597,14 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
         // Collect all the values used in segments.
         let segments_array = array(
             arena,
-            segments.iter().map(|segment| {
+            segments.iter().filter_map(|segment| {
                 let value = self.not_in_tail_position(Some(Ordering::Strict), |this| {
                     this.wrap_expression(arena, &segment.value)
                 });
 
                 let details = self.bit_array_segment_details(arena, segment);
 
-                match details.type_ {
+                let document = match details.type_ {
                     BitArraySegmentType::BitArray => {
                         if segment.size().is_some() {
                             self.tracker.bit_array_slice_used = true;
@@ -622,6 +622,8 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                     }
                     BitArraySegmentType::Int => {
                         match (details.size_value, segment.value.as_ref()) {
+                            (Some(size_value), _) if size_value <= 0.into() => return None,
+
                             (Some(size_value), TypedExpr::Int { int_value, .. })
                                 if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()
                                     && (&size_value % BigInt::from(8) == BigInt::ZERO) =>
@@ -636,8 +638,6 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                             }
 
                             (Some(size_value), _) if size_value == 8.into() => value,
-
-                            (Some(size_value), _) if size_value <= 0.into() => EMPTY_DOCUMENT,
 
                             _ => {
                                 self.tracker.sized_integer_segment_used = true;
@@ -737,7 +737,9 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                             CLOSE_PAREN_DOCUMENT
                         ]
                     }
-                }
+                };
+
+                Some(document)
             }),
         );
 
@@ -2873,7 +2875,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
         self.tracker.bit_array_literal_used = true;
         let segments_array = array(
             arena,
-            segments.iter().map(|segment| {
+            segments.iter().filter_map(|segment| {
                 let value = match context {
                     Context::Constant => self.constant_expression(arena, context, &segment.value),
                     Context::Guard => self.guard_constant_expression(arena, &segment.value),
@@ -2881,7 +2883,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
 
                 let details = self.constant_bit_array_segment_details(arena, segment, context);
 
-                match details.type_ {
+                let document = match details.type_ {
                     BitArraySegmentType::BitArray => {
                         if segment.size().is_some() {
                             self.tracker.bit_array_slice_used = true;
@@ -2899,6 +2901,8 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                     }
                     BitArraySegmentType::Int => {
                         match (details.size_value, segment.value.as_ref()) {
+                            (Some(size_value), _) if size_value <= 0.into() => return None,
+
                             (Some(size_value), Constant::Int { int_value, .. })
                                 if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()
                                     && (&size_value % BigInt::from(8) == BigInt::ZERO) =>
@@ -2913,8 +2917,6 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                             }
 
                             (Some(size_value), _) if size_value == 8.into() => value,
-
-                            (Some(size_value), _) if size_value <= 0.into() => EMPTY_DOCUMENT,
 
                             _ => {
                                 self.tracker.sized_integer_segment_used = true;
@@ -3014,7 +3016,9 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                             CLOSE_PAREN_DOCUMENT
                         ]
                     }
-                }
+                };
+
+                Some(document)
             }),
         );
 

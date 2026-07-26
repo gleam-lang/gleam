@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn go() {\n  <<0:size(0), 1:size(8)>>\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go() {
+  <<0:size(0), 1:size(8)>>
+}
+
+
+----- COMPILED JAVASCRIPT
+import { toBitArray } from "../gleam.mjs";
+
+export function go() {
+  return toBitArray([1]);
+}
