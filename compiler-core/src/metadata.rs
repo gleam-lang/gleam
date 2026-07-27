@@ -335,7 +335,7 @@ impl RemapIds {
             },
             Constant::Record {
                 location,
-                constructor_location,
+                arguments_start_position,
                 module,
                 name,
                 arguments,
@@ -344,7 +344,7 @@ impl RemapIds {
                 record_constructor,
             } => Constant::Record {
                 location,
-                constructor_location,
+                arguments_start_position,
                 module,
                 name,
                 arguments: arguments.map(|arguments| {

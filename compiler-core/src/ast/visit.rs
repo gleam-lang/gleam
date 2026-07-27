@@ -742,7 +742,7 @@ pub trait Visit<'ast> {
     fn visit_typed_constant_record(
         &mut self,
         location: &'ast SrcSpan,
-        constructor_location: &'ast SrcSpan,
+        arguments_start_position: &'ast u32,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
         arguments: &'ast Option<Vec<CallArg<TypedConstant>>>,
@@ -753,7 +753,7 @@ pub trait Visit<'ast> {
         visit_typed_constant_record(
             self,
             location,
-            constructor_location,
+            arguments_start_position,
             module,
             name,
             arguments,
@@ -868,7 +868,7 @@ fn visit_typed_constant_bit_array<'a, V: Visit<'a> + ?Sized>(
 pub fn visit_typed_constant_record<'a, V: Visit<'a> + ?Sized>(
     v: &mut V,
     _location: &'a SrcSpan,
-    _constructor_location: &'a SrcSpan,
+    _arguments_start_position: &'a u32,
     _module: &'a Option<(EcoString, SrcSpan)>,
     _name: &'a EcoString,
     arguments: &'a Option<Vec<CallArg<TypedConstant>>>,
@@ -1175,7 +1175,7 @@ pub fn visit_typed_constant<'a, V: Visit<'a> + ?Sized>(v: &mut V, constant: &'a 
         } => v.visit_typed_constant_list(location, elements, type_, tail),
         super::Constant::Record {
             location,
-            constructor_location,
+            arguments_start_position,
             module,
             name,
             arguments,
@@ -1184,7 +1184,7 @@ pub fn visit_typed_constant<'a, V: Visit<'a> + ?Sized>(v: &mut V, constant: &'a 
             record_constructor,
         } => v.visit_typed_constant_record(
             location,
-            constructor_location,
+            arguments_start_position,
             module,
             name,
             arguments,

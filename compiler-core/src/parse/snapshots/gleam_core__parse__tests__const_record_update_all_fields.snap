@@ -172,10 +172,7 @@ Parsed {
                                 start: 78,
                                 end: 107,
                             },
-                            constructor_location: SrcSpan {
-                                start: 78,
-                                end: 84,
-                            },
+                            arguments_start_position: 84,
                             module: None,
                             name: "Person",
                             arguments: Some(
