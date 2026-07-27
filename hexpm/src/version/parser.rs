@@ -146,7 +146,7 @@ impl<'input> Parser<'input> {
 
     /// Parse an string identifier.
     ///
-    /// Like, `foo`, or `bar`, or `beta-1`.
+    /// Like, `wibble`, or `wobble`, or `beta-1`.
     pub fn identifier(&mut self) -> Result<Identifier, Error> {
         let identifier = match self.pop()? {
             Token::AlphaNumeric(identifier) => {

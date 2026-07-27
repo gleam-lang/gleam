@@ -1414,7 +1414,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
 
                     docvec![
                         arena,
-                        NUMBER_DOT_IS_FINITE_OPEN_PAREN_DOCUMENT,
+                        GLOBAL_THIS_DOT_NUMBER_DOT_IS_FINITE_OPEN_PAREN_DOCUMENT,
                         check,
                         CLOSE_PAREN_DOCUMENT
                     ]

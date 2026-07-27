@@ -6049,7 +6049,7 @@ impl UseAssignments {
                 Pattern::Discard { name, .. } => assignments.function_arguments.push(Arg {
                     location,
                     names: ArgNames::Discard { name, location },
-                    annotation: None,
+                    annotation,
                     type_: (),
                 }),
 

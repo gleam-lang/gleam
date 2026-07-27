@@ -137,6 +137,8 @@ runs:
         file-digest: SHA256
         timestamp-rfc3161: http://timestamp.acs.microsoft.com
         timestamp-digest: SHA256
+        # https://github.com/Azure/artifact-signing-action/issues/146
+        cache-dependencies: false
 
     - name: Build archive
       id: build

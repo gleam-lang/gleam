@@ -12992,9 +12992,9 @@ impl<'a> ConvertBetweenDocAndRegularComment<'a> {
 
     pub fn code_actions(self) -> Vec<CodeAction> {
         let line = self.params.range.start.line;
-        let num_slashes = self
-            .count_leading_slashes(line)
-            .expect("Line number should be valid");
+        let Some(num_slashes) = self.count_leading_slashes(line) else {
+            return vec![];
+        };
 
         if !(2..=4).contains(&num_slashes) {
             return vec![];
@@ -13012,7 +13012,7 @@ impl<'a> ConvertBetweenDocAndRegularComment<'a> {
         }
 
         let comment = match num_slashes {
-            2 if self.is_module_comment(start_line, end_line) => "////",
+            2 if self.can_be_module_comment(start_line, end_line) => "////",
             2 if self.can_have_doc_comment(end_line) => "///",
             3 | 4 => "//",
             _ => return vec![],
@@ -13020,10 +13020,10 @@ impl<'a> ConvertBetweenDocAndRegularComment<'a> {
 
         let mut edits = TextEdits::new(self.lines);
         for line in start_line..=end_line {
-            let start = next_nonwhitespace(
-                &self.module.code,
-                self.line_start(line).expect("Line number should be valid"),
-            );
+            let Some(line_start) = self.line_start(line) else {
+                return vec![];
+            };
+            let start = next_nonwhitespace(&self.module.code, line_start);
             edits.replace(SrcSpan::new(start, start + num_slashes), comment.to_owned());
         }
 
@@ -13058,21 +13058,20 @@ impl<'a> ConvertBetweenDocAndRegularComment<'a> {
     }
 
     /// Find the last line in the range that is part of the same comment.
-    fn find_comment_edge(&self, range: impl Iterator<Item = u32>, num_slashes: u32) -> Option<u32> {
-        range
-            .take_while(|&i| {
-                self.count_leading_slashes(i)
+    fn find_comment_edge(&self, lines: impl Iterator<Item = u32>, num_slashes: u32) -> Option<u32> {
+        lines
+            .take_while(|&line| {
+                self.count_leading_slashes(line)
                     .is_some_and(|n| n == num_slashes)
             })
             .last()
     }
 
-    fn is_module_comment(&self, start_line: u32, end_line: u32) -> bool {
-        previous_nonwhitespace(
-            &self.module.code,
-            self.line_start(start_line)
-                .expect("Line number should be valid"),
-        ) == 0
+    fn can_be_module_comment(&self, start_line: u32, end_line: u32) -> bool {
+        let Some(line_start) = self.line_start(start_line) else {
+            return false;
+        };
+        previous_nonwhitespace(&self.module.code, line_start) == 0
             && self
                 .line_start(end_line + 1)
                 .is_none_or(|position| self.module.extra.empty_lines.contains(&position))
@@ -13080,34 +13079,36 @@ impl<'a> ConvertBetweenDocAndRegularComment<'a> {
 
     /// Check if the comment is before a node that can have a doc comment, e.g. a function.
     fn can_have_doc_comment(&self, end_line: u32) -> bool {
-        self.line_start(end_line + 1).is_some_and(|position| {
-            let next_node = next_nonwhitespace(&self.module.code, position);
-            let definitions = &self.module.ast.definitions;
-            definitions
-                .functions
+        let Some(position) = self.line_start(end_line + 1) else {
+            return false;
+        };
+
+        let next_node = next_nonwhitespace(&self.module.code, position);
+        let definitions = &self.module.ast.definitions;
+        definitions
+            .functions
+            .iter()
+            .any(|function| function.location.contains(next_node))
+            || definitions
+                .constants
                 .iter()
-                .any(|function| function.location.contains(next_node))
-                || definitions
-                    .constants
-                    .iter()
-                    .any(|constant| constant.location.contains(next_node))
-                || definitions
-                    .type_aliases
-                    .iter()
-                    .any(|type_alias| type_alias.location.contains(next_node))
-                || definitions.custom_types.iter().any(|custom_type| {
-                    custom_type.location.contains(next_node)
-                        || custom_type.constructors.iter().any(|constructor| {
-                            constructor.location.contains(next_node)
-                                || constructor.arguments.iter().any(|argument| {
-                                    argument
-                                        .label
-                                        .as_ref()
-                                        .is_some_and(|label| label.0.contains(next_node))
-                                })
-                        })
-                })
-        })
+                .any(|constant| constant.location.contains(next_node))
+            || definitions
+                .type_aliases
+                .iter()
+                .any(|type_alias| type_alias.location.contains(next_node))
+            || definitions.custom_types.iter().any(|custom_type| {
+                custom_type.location.contains(next_node)
+                    || custom_type.constructors.iter().any(|constructor| {
+                        constructor.location.contains(next_node)
+                            || constructor.arguments.iter().any(|argument| {
+                                argument
+                                    .label
+                                    .as_ref()
+                                    .is_some_and(|label| label.0.contains(next_node))
+                            })
+                    })
+            })
     }
 }
 

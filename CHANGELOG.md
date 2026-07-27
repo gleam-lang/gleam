@@ -5,13 +5,38 @@
 
 # Changelog
 
-## Unreleased
+## v1.18.0-rc2 - 2026-07-25
 
 ### Bug fixes
 
 - Fixed a bug where the compiler would crash when wrapping an error message
   whose line broke in the middle of a multi-byte UTF-8 character.
   ([John Downey](https://github.com/jtdowney))
+
+- Fixed a bug where invalid JavaScript would be generated for code which used a
+  bit array pattern to extract a `Float` and had a constructor called `Number`.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where `-0.0` would be encoded incorrectly in 16-bit bit array
+  segments on the JavaScript target.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the formatter would insert underscores into negative
+  hexadecimal, octal, and binary literals, producing code that no longer
+  compiles.
+  ([John Downey](https://github.com/jtdowney))
+
+- Fixed a bug where type annotations on discarded variables in `use` bindings
+  were ignored.
+  ([Francesco Cappetti](https://github.com/frakappa))
+
+- Fixed a bug where the language server would crash on code that contains syntax
+  errors.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where bit array segments would not be compiled properly, using an
+  invalid Erlang segment option.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ## v1.18.0-rc1 - 2026-07-21
 

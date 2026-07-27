@@ -839,9 +839,9 @@ const_str!(CLOSE_PAREN_MODULO_8_DOCUMENT, ") % 8", 5);
 const_str!(SPACE_GT_EQ_ZERO_DOCUMENT, " >= 0", 5);
 const_str!(SPACE_GT_EQ_SPACE_DOCUMENT, " >= ", 4);
 const_str!(
-    NUMBER_DOT_IS_FINITE_OPEN_PAREN_DOCUMENT,
-    "Number.isFinite(",
-    16
+    GLOBAL_THIS_DOT_NUMBER_DOT_IS_FINITE_OPEN_PAREN_DOCUMENT,
+    "globalThis.Number.isFinite(",
+    27
 );
 const_str!(SPACE_INSTANCE_OF_SPACE_DOCUMENT, " instanceof ", 12);
 const_str!(

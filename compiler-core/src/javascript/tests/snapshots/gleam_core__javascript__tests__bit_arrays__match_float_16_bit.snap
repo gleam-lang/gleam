@@ -16,7 +16,10 @@ const FILEPATH = "src/module.gleam";
 
 export function go(x) {
   let a;
-  if (x.bitSize === 16 && Number.isFinite(bitArraySliceToFloat(x, 0, 16, true))) {
+  if (
+    x.bitSize === 16 &&
+    globalThis.Number.isFinite(bitArraySliceToFloat(x, 0, 16, true))
+  ) {
     a = bitArraySliceToFloat(x, 0, 16, true);
   } else {
     throw makeError(

@@ -1,0 +1,42 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub type Number {\n  Number(Int)\n}\n\npub fn go(bit_array) {\n  case bit_array {\n    <<f:float>> -> f\n    _ -> 0.0\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type Number {
+  Number(Int)
+}
+
+pub fn go(bit_array) {
+  case bit_array {
+    <<f:float>> -> f
+    _ -> 0.0
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType, bitArraySliceToFloat } from "../gleam.mjs";
+
+export class Number extends $CustomType {
+  constructor($0) {
+    super();
+    this[0] = $0;
+  }
+}
+export const Number$Number = ($0) => new Number($0);
+export const Number$isNumber = (value) => value instanceof Number;
+export const Number$Number$0 = (value) => value[0];
+
+export function go(bit_array) {
+  if (
+    bit_array.bitSize === 64 &&
+    globalThis.Number.isFinite(bitArraySliceToFloat(bit_array, 0, 64, true))
+  ) {
+    let f = bitArraySliceToFloat(bit_array, 0, 64, true);
+    return f;
+  } else {
+    return 0.0;
+  }
+}

@@ -496,3 +496,19 @@ use <- x()
 "#
     );
 }
+
+#[test]
+fn discard_pattern_type_annotation_is_checked() {
+    assert_module_error!(
+        r#"
+fn wibble(f: fn(Int, String) -> Nil) -> Nil {
+  f(1, "")
+}
+
+pub fn main() {
+  use _a: Int, _b: Float <- wibble()
+  Nil
+}
+"#
+    );
+}

@@ -1108,3 +1108,22 @@ pub fn go() {
 }"#
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/6029
+#[test]
+fn bit_array_slice_float_with_number_constructor() {
+    assert_js!(
+        "
+pub type Number {
+  Number(Int)
+}
+
+pub fn go(bit_array) {
+  case bit_array {
+    <<f:float>> -> f
+    _ -> 0.0
+  }
+}
+"
+    );
+}

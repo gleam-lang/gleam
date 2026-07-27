@@ -19,7 +19,7 @@ export function go(x) {
   let b;
   if (
     x.bitSize >= 32 &&
-    Number.isFinite(bitArraySliceToFloat(x, 0, 32, false)) &&
+    globalThis.Number.isFinite(bitArraySliceToFloat(x, 0, 32, false)) &&
     x.bitSize === 40
   ) {
     a = bitArraySliceToFloat(x, 0, 32, false);
