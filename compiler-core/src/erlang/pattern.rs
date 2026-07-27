@@ -240,18 +240,23 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                     // When a bits segment has both size and unit as literal
                     // ints, multiply them so the unit specifier can be
                     // dropped. The BEAM rejects unit with bitstring.
-                    let int_value = match segment.size() {
-                        Some(Pattern::BitArraySize(BitArraySize::Int { int_value, .. })) => {
-                            Some(int_value)
-                        }
-                        _ => None,
-                    };
                     let mut has_bits = false;
                     let mut bits_unit_value = None;
+                    let mut int_value = None;
                     for option in &segment.options {
+                        #[allow(clippy::wildcard_enum_match_arm)]
                         match option {
                             BitArrayOption::Bits { .. } => has_bits = true,
                             BitArrayOption::Unit { value, .. } => bits_unit_value = Some(*value),
+                            BitArrayOption::Size { value, .. } => {
+                                if let Pattern::BitArraySize(BitArraySize::Int {
+                                    int_value: iv,
+                                    ..
+                                }) = value.as_ref()
+                                {
+                                    int_value = Some(iv);
+                                }
+                            }
                             _ => {}
                         }
                     }
@@ -264,7 +269,7 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                     builder.bit_array_segment();
                     self.bit_array_pattern_segment_value(builder, segment);
                     if let (Some(int_value), Some(unit)) = (int_value, bits_unit_value) {
-                        self.bit_array_pattern_segment_size_with_unit(builder, int_value, unit);
+                        builder.int(int_value * unit);
                     } else {
                         self.bit_array_pattern_segment_size(builder, segment);
                     }
@@ -421,15 +426,6 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
             panic!("invalid size in pattern size segment")
         };
         self.bit_array_size(builder, size);
-    }
-
-    fn bit_array_pattern_segment_size_with_unit<Output>(
-        &mut self,
-        builder: &mut impl ErlangBuilder<Output>,
-        int_value: &BigInt,
-        unit: u8,
-    ) {
-        builder.int(int_value * unit);
     }
 
     fn bit_array_size_divide<Output>(

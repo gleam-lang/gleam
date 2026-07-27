@@ -472,31 +472,24 @@ fn type_parameter_name(type_: &Type) -> EcoString {
     }
 }
 
-fn fold_bits_unit_value<Value>(options: &[BitArrayOption<Value>]) -> Option<u8> {
+/// Extract Bits, Unit and Size options from a bit array segment in a
+/// Returns a tuple of (has_bits, unit_value, size_value).
+fn collect_bit_array_options<Value>(
+    options: &[BitArrayOption<Value>],
+) -> (bool, Option<u8>, Option<&Box<Value>>) {
     let mut has_bits = false;
     let mut unit_value = None;
+    let mut size_value = None;
+    #[allow(clippy::wildcard_enum_match_arm)]
     for option in options {
         match option {
             BitArrayOption::Bits { .. } => has_bits = true,
-            BitArrayOption::Unit { value, .. } => unit_value = Some(value),
-            BitArrayOption::Bytes { .. }
-            | BitArrayOption::Int { .. }
-            | BitArrayOption::Float { .. }
-            | BitArrayOption::Utf8 { .. }
-            | BitArrayOption::Utf16 { .. }
-            | BitArrayOption::Utf32 { .. }
-            | BitArrayOption::Utf8Codepoint { .. }
-            | BitArrayOption::Utf16Codepoint { .. }
-            | BitArrayOption::Utf32Codepoint { .. }
-            | BitArrayOption::Signed { .. }
-            | BitArrayOption::Unsigned { .. }
-            | BitArrayOption::Big { .. }
-            | BitArrayOption::Little { .. }
-            | BitArrayOption::Native { .. }
-            | BitArrayOption::Size { .. } => {}
+            BitArrayOption::Unit { value, .. } => unit_value = Some(*value),
+            BitArrayOption::Size { value, .. } => size_value = Some(value),
+            _ => {}
         }
     }
-    if has_bits { unit_value.copied() } else { None }
+    (has_bits, unit_value, size_value)
 }
 
 impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
@@ -2376,11 +2369,13 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         builder: &mut impl ErlangBuilder<Output>,
         segment: &'a TypedConstantBitArraySegment,
     ) {
-        let bits_unit_value = fold_bits_unit_value(&segment.options);
+        let (has_bits, unit_value, size_value) = collect_bit_array_options(&segment.options);
+        let bits_unit_value = if has_bits { unit_value } else { None };
+        let size = size_value.map(|v| v.as_ref());
 
         builder.bit_array_segment();
         self.inlined_constant(builder, &segment.value);
-        match (segment.size(), bits_unit_value) {
+        match (size, bits_unit_value) {
             (Some(TypedConstant::Int { int_value, .. }), _) if int_value.is_negative() => {
                 builder.int(BigInt::ZERO);
             }
@@ -2823,12 +2818,14 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         } else {
             // If the bit array segment doesn't need any special handling we use the
             // regular printing functions to format its value and options.
-            let bits_unit_value = fold_bits_unit_value(&segment.options);
+            let (has_bits, unit_value, size_value) = collect_bit_array_options(&segment.options);
+            let bits_unit_value = if has_bits { unit_value } else { None };
+            let size = size_value.map(|v| v.as_ref());
             builder.bit_array_segment();
 
             // Fold unit into size for bits segments with unit
             self.maybe_block_expr(builder, &segment.value);
-            self.bit_array_expression_segment_size(builder, segment, bits_unit_value);
+            self.bit_array_expression_segment_size(builder, size, bits_unit_value);
             self.bit_array_segment_specifiers(builder, segment, bits_unit_value.is_some());
         }
     }
@@ -2841,10 +2838,10 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn bit_array_expression_segment_size<Output>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
-        segment: &'a TypedExprBitArraySegment,
+        size: Option<&'a TypedExpr>,
         bits_unit_value: Option<u8>,
     ) {
-        let Some(size) = segment.size() else {
+        let Some(size) = size else {
             builder.bit_array_segment_default_size();
             return;
         };
