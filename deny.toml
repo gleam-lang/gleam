@@ -29,18 +29,6 @@ https://github.com/gleam-lang/gleam/issues/5829
 FIX-DEADLINE: 2026-10-08
 """
 
-[[advisories.ignore]]
-id = "RUSTSEC-2025-0141"
-reason = """
-Bincode is currently unmaintained.
-https://rustsec.org/advisories/RUSTSEC-2025-0141.html
-
-We need to migrate to some other package.
-https://github.com/gleam-lang/gleam/issues/5827
-
-FIX-DEADLINE: 2026-10-08
-"""
-
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
 allow = [

@@ -6,7 +6,7 @@ expression: "./cases/imported_external_fns"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<89 byte binary>
+<44 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -29,7 +29,7 @@ escaped_thing() ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/three.cache_meta
-<89 byte binary>
+<44 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/three.erl
 -module(three).
@@ -52,7 +52,7 @@ escaped_thing() ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<501 byte binary>
+<246 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

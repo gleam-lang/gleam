@@ -824,13 +824,12 @@ pub(crate) struct CacheMetadata {
 
 impl CacheMetadata {
     pub fn to_binary(&self) -> Vec<u8> {
-        bincode::serde::encode_to_vec(self, bincode::config::legacy())
-            .expect("Serializing cache info")
+        bitcode::serialize(self).expect("Serializing cache info")
     }
 
     pub fn from_binary(bytes: &[u8]) -> Result<Self, String> {
-        match bincode::serde::decode_from_slice(bytes, bincode::config::legacy()) {
-            Ok((data, _)) => Ok(data),
+        match bitcode::deserialize(bytes) {
+            Ok(data) => Ok(data),
             Err(e) => Err(e.to_string()),
         }
     }
