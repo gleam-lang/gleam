@@ -280,3 +280,30 @@ pub fn go(x) {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/6045#issuecomment-5083234328
+#[test]
+fn constant_string_in_bit_array_segment_test_with_utf8_option() {
+    assert_erl!(
+        r#"
+const message = "hello"
+pub fn main() {
+  let _ = <<message:utf8>>
+  Nil
+}
+"#
+    )
+}
+
+#[test]
+fn constant_string_in_bit_array_segment_test_with_utf16_option() {
+    assert_erl!(
+        r#"
+const message = "hello"
+pub fn main() {
+  let _ = <<message:utf16>>
+  Nil
+}
+"#
+    )
+}

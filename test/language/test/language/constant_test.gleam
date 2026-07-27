@@ -48,3 +48,11 @@ pub fn list_1_test() {
 pub fn list_2_test() {
   assert const_list_2 == [1, 2]
 }
+
+// https://github.com/gleam-lang/gleam/issues/6045#issuecomment-5083234328
+const message = "hello"
+
+pub fn constant_string_in_bit_array_segment() {
+  assert <<"hello">> == <<message:utf8>>
+  assert <<"hello":utf8>> == <<message:utf8>>
+}
