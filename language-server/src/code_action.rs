@@ -40,7 +40,10 @@ use num_bigint::BigInt;
 use src_span::{LineNumbers, SrcSpan};
 use vec1::{Vec1, vec1};
 
-use crate::engine::{completely_within, position_within};
+use crate::{
+    compiler::ModuleSourceInformation,
+    engine::{completely_within, position_within},
+};
 
 use super::{
     TextEdits,
@@ -13391,5 +13394,78 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
         }
 
         self.insert_int(string_value, int_value, location);
+    }
+}
+
+pub struct InlineConstantUsage<'a> {
+    module: &'a Module,
+    sources: &'a std::collections::HashMap<EcoString, ModuleSourceInformation>,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    actions: Vec<CodeAction>,
+}
+
+impl<'a> InlineConstantUsage<'a> {
+    pub fn new(
+        module: &'a Module,
+        sources: &'a std::collections::HashMap<EcoString, ModuleSourceInformation>,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            sources,
+            params,
+            edits: TextEdits::new(line_numbers),
+            actions: Vec::new(),
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        self.actions
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for InlineConstantUsage<'ast> {
+    fn visit_typed_expr_var(
+        &mut self,
+        location: &'ast SrcSpan,
+        constructor: &'ast ValueConstructor,
+        _name: &'ast EcoString,
+    ) {
+        let range = self.edits.src_span_to_lsp_range(*location);
+
+        if !within(self.params.range, range) {
+            return;
+        }
+
+        let type_::ValueConstructorVariant::ModuleConstant {
+            literal, module, ..
+        } = &constructor.variant
+        else {
+            return;
+        };
+
+        let value_location = literal.location();
+        let value = self
+            .sources
+            .get(module)
+            .expect("module exists")
+            .code
+            .get(value_location.start as usize..value_location.end as usize)
+            .expect("span is valid");
+
+        self.edits.replace(*location, value.to_string());
+
+        CodeActionBuilder::new("Inline constant usage")
+            .kind(CodeActionKind::RefactorInline)
+            .changes(
+                self.params.text_document.uri.clone(),
+                std::mem::take(&mut self.edits.edits),
+            )
+            .preferred(false)
+            .push_to(&mut self.actions);
     }
 }
