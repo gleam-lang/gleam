@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/erlang/tests/consts.rs
+expression: "\nconst message = \"hello\"\npub fn main() {\n  let _ = <<message:utf16>>\n  Nil\n}\n"
+---
+----- SOURCE CODE
+
+const message = "hello"
+pub fn main() {
+  let _ = <<message:utf16>>
+  Nil
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 3).
+-spec main() -> nil.
+main() ->
+    _ = <<"hello"/utf16>>,
+    nil.

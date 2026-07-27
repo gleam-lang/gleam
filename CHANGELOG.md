@@ -5,6 +5,14 @@
 
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Fixed a bug where the compiler would generate invalid code when using constant
+  strings in bit array segments.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.18.0-rc2 - 2026-07-25
 
 ### Bug fixes

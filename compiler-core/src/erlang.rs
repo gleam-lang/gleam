@@ -2741,7 +2741,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         //   ```
         //
         if segment.type_.is_string()
-            && !segment.value.is_literal_string()
+            && !produces_literal_string(&segment.value)
             && let Some(encoding) = expression_segment_string_encoding(segment)
         {
             let (size, endiannes) = match encoding {
