@@ -192,3 +192,23 @@ pub fn sliced_bit_array_data_view_byte_length_test() {
   let assert Ok(sliced) = bit_array.slice(data, 1, 2)
   assert sliced == <<0xBB, 0xCC>>
 }
+
+pub fn bits_with_unit_literal_size_test() {
+  let data = <<1, 2>>
+  let result = <<data:bits-size(8)-unit(8)>>
+  assert result == <<1, 2>>
+}
+
+pub fn bits_with_unit_variable_size_test() {
+  let data = <<1, 2>>
+  let size = 16
+  let result = <<data:bits-size(size)-unit(8)>>
+  assert result == <<1, 2>>
+}
+
+pub fn bits_with_unit_pattern_test() {
+  let data = <<1, 2>>
+  let assert <<a:size(8)-unit(8)-bits, b:size(8)-unit(8)-bits>> = data
+  assert a == 1
+  assert b == 2
+}

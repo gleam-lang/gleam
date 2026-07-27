@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/erlang/tests/bit_arrays.rs
+expression: "\npub fn main(x) {\n  let size = 8\n  <<x:bits-size(size)-unit(8)>>\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(x) {
+  let size = 8
+  <<x:bits-size(size)-unit(8)>>
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([main/1]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec main(bitstring()) -> bitstring().
+main(X) ->
+    Size = 8,
+    <<X:(erlang:max(0, Size * 8))/bitstring>>.
