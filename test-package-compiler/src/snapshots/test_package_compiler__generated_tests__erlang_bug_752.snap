@@ -6,7 +6,7 @@ expression: "./cases/erlang_bug_752"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<77 byte binary>
+<31 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -21,7 +21,7 @@ expression: "./cases/erlang_bug_752"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<104 byte binary>
+<41 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

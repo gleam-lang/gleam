@@ -6,13 +6,13 @@ expression: "./cases/javascript_import"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache_meta
-<77 byte binary>
+<31 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<100 byte binary>
+<43 byte binary>
 
 //// /out/lib/the_package/gleam.d.mts
 export * from "../prelude.mjs";
