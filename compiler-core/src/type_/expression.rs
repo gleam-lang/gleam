@@ -4220,7 +4220,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 Constant::Record {
                     module,
                     location,
-                    constructor_location,
+                    arguments_start_position: constructor_location.end,
                     name,
                     arguments: Some(final_arguments),
                     type_: expected_type,
@@ -4232,11 +4232,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             Constant::Record {
                 module,
                 location,
-                constructor_location,
+                arguments_start_position,
                 name,
                 arguments,
                 ..
-            } => self.infer_constant_record(module, location, constructor_location, name, arguments),
+            } => self.infer_constant_record(module, location, arguments_start_position, name, arguments),
 
             Constant::Var {
                 location,
@@ -4349,7 +4349,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         module: Option<(EcoString, SrcSpan)>,
         location: SrcSpan,
-        constructor_location: SrcSpan,
+        arguments_start_position: u32,
         name: EcoString,
         arguments: Option<Vec<CallArg<UntypedConstant>>>,
     ) -> Constant<Arc<Type>> {
@@ -4367,6 +4367,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 arity: arguments.len(),
             });
 
+        let constructor_location = SrcSpan { start: location.start, end: arguments_start_position };
         let constructor = match self.infer_value_constructor(&module, &name, &constructor_location, usage) {
             Ok(constructor) => constructor,
             Err(error) => {
@@ -4397,7 +4398,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             return Constant::Record {
                 module,
                 location,
-                constructor_location,
+                arguments_start_position,
                 name,
                 arguments: None,
                 type_: constructor.type_.clone(),
@@ -4556,7 +4557,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Constant::Record {
             module,
             location,
-            constructor_location,
+            arguments_start_position,
             name,
             arguments: Some(typed_arguments),
             type_: expected_return,
@@ -5751,7 +5752,7 @@ fn invalid_with_annotated_type(constant: TypedConstant, new_type: Arc<Type>) -> 
 
         Constant::Record {
             location,
-            constructor_location,
+            arguments_start_position,
             module,
             name,
             arguments,
@@ -5760,7 +5761,7 @@ fn invalid_with_annotated_type(constant: TypedConstant, new_type: Arc<Type>) -> 
             record_constructor,
         } => Constant::Record {
             location,
-            constructor_location,
+            arguments_start_position,
             module,
             name,
             arguments,

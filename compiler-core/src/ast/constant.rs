@@ -42,7 +42,7 @@ pub enum Constant<T> {
 
     Record {
         location: SrcSpan,
-        constructor_location: SrcSpan,
+        arguments_start_position: u32,
         module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
         /// These are the arguments used when calling the record.
