@@ -27,6 +27,10 @@
   nothing.
   ([John Downey](https://github.com/jtdowney))
 
+- Fixed a bug in `gleam new` where the incorrect verb form would be used when
+  single or multiple conflicting files existed in the target directory.
+  ([Spenser Black](https://github.com/spenserblack))
+
 ## v1.18.0-rc2 - 2026-07-25
 
 ### Bug fixes
@@ -678,7 +682,3 @@
 - Fixed a bug where the compiler would report a module import as unused when
   its local name matched another imported module's full name.
   ([John Downey](https://github.com/jtdowney))
-
-- Fixed a bug in `gleam new` where the incorrect verb form would be used when
-  single or multiple conflicting files existed in the target directory.
-  ([Spenser Black](https://github.com/spenserblack))
