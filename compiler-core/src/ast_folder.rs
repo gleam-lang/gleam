@@ -1000,7 +1000,13 @@ pub trait UntypedConstantFolder {
                 type_: (),
                 field_map: _,
                 record_constructor: _,
-            } => self.fold_constant_record(location, arguments_start_position, module, name, arguments),
+            } => self.fold_constant_record(
+                location,
+                arguments_start_position,
+                module,
+                name,
+                arguments,
+            ),
 
             Constant::RecordUpdate {
                 location,

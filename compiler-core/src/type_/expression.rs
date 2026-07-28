@@ -4236,7 +4236,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 name,
                 arguments,
                 ..
-            } => self.infer_constant_record(module, location, arguments_start_position, name, arguments),
+            } => self.infer_constant_record(
+                module,
+                location,
+                arguments_start_position,
+                name,
+                arguments,
+            ),
 
             Constant::Var {
                 location,
@@ -4367,14 +4373,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 arity: arguments.len(),
             });
 
-        let constructor_location = SrcSpan { start: location.start, end: arguments_start_position };
-        let constructor = match self.infer_value_constructor(&module, &name, &constructor_location, usage) {
-            Ok(constructor) => constructor,
-            Err(error) => {
-                self.problems.error(error);
-                return self.new_invalid_constant(location);
-            }
+        let constructor_location = SrcSpan {
+            start: location.start,
+            end: arguments_start_position,
         };
+        let constructor =
+            match self.infer_value_constructor(&module, &name, &constructor_location, usage) {
+                Ok(constructor) => constructor,
+                Err(error) => {
+                    self.problems.error(error);
+                    return self.new_invalid_constant(location);
+                }
+            };
 
         let field_map = match &constructor.variant {
             ValueConstructorVariant::Record { field_map, .. } => field_map.clone(),
