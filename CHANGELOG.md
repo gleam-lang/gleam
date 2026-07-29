@@ -209,7 +209,7 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The language server now offers a code action to rewrite integers in a
+- The language server now offers a code action to rewrite ints in a
   different base. For example:
 
   ```gleam
