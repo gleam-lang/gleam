@@ -15515,6 +15515,20 @@ fn convert_to_doc_comment_on_record_label_definition() {
 }
 
 #[test]
+fn no_convert_to_doc_comment_when_newlines_between_it_and_definition() {
+    assert_no_code_actions!(
+        CONVERT_TO_DOCUMENTATION_COMMENT,
+        "import wibble
+// wobble
+
+fn wubble() {
+    todo
+}",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
 fn no_convert_to_doc_comment_triggered_on_doc_comment() {
     assert_no_code_actions!(
         CONVERT_TO_DOCUMENTATION_COMMENT,

@@ -13089,33 +13089,37 @@ impl<'a> ConvertBetweenDocAndRegularComment<'a> {
 
     /// Check if the comment is before a node that can have a doc comment, e.g. a function.
     fn can_have_doc_comment(&self, end_line: u32) -> bool {
-        let Some(position) = self.line_start(end_line + 1) else {
+        let Some(mut position) = self.line_start(end_line + 1) else {
             return false;
         };
 
-        let next_node = next_nonwhitespace(&self.module.code, position);
+        let mut chars = self.module.code[position as usize..].chars();
+        while chars.next().is_some_and(|c| c.is_whitespace() && c != '\n') {
+            position += 1;
+        }
+
         let definitions = &self.module.ast.definitions;
         definitions
             .functions
             .iter()
-            .any(|function| function.location.contains(next_node))
+            .any(|function| function.location.contains(position))
             || definitions
                 .constants
                 .iter()
-                .any(|constant| constant.location.contains(next_node))
+                .any(|constant| constant.location.contains(position))
             || definitions
                 .type_aliases
                 .iter()
-                .any(|type_alias| type_alias.location.contains(next_node))
+                .any(|type_alias| type_alias.location.contains(position))
             || definitions.custom_types.iter().any(|custom_type| {
-                custom_type.location.contains(next_node)
+                custom_type.location.contains(position)
                     || custom_type.constructors.iter().any(|constructor| {
-                        constructor.location.contains(next_node)
+                        constructor.location.contains(position)
                             || constructor.arguments.iter().any(|argument| {
                                 argument
                                     .label
                                     .as_ref()
-                                    .is_some_and(|label| label.0.contains(next_node))
+                                    .is_some_and(|label| label.0.contains(position))
                             })
                     })
             })
