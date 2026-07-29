@@ -209,6 +209,7 @@ const DISCARD_UNUSED_VARIABLE: &str = "Discard unused variable";
 const ADD_EXTRA_PARENTHESES: &str = "Add extra parentheses";
 const CONVERT_TO_DOCUMENTATION_COMMENT: &str = "Convert to documentation comment";
 const CONVERT_TO_REGULAR_COMMENT: &str = "Convert to regular comment";
+const REMOVE_REDUNDANT_LIST_PREPEND: &str = "Remove redundant list prepend";
 
 fn generate_variant_message(type_name: &str) -> String {
     format!("Generate `{type_name}` variant")
@@ -16136,5 +16137,131 @@ fn convert_int_between_bases_in_size_options() {
   let assert <<2:size(111)>> = x
 }",
         find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn remove_redundant_list_prepend_variable() {
+    assert_code_action!(
+        REMOVE_REDUNDANT_LIST_PREPEND,
+        "pub fn main() {
+  let wibble = [1]
+  let wobble = [..wibble]
+}",
+        find_position_of("..wibble").to_selection()
+    );
+}
+
+#[test]
+fn remove_redundant_list_prepend_variable_literal() {
+    assert_code_action!(
+        REMOVE_REDUNDANT_LIST_PREPEND,
+        "pub fn main() {
+  let wibble = [..[1]]
+}",
+        find_position_of("..[1]").to_selection()
+    );
+}
+
+#[test]
+fn remove_redundant_list_prepend_const() {
+    assert_code_action!(
+        REMOVE_REDUNDANT_LIST_PREPEND,
+        "const wibble = [1]
+const wobble = [..wibble]",
+        find_position_of("..wibble").to_selection()
+    );
+}
+
+#[test]
+fn remove_redundant_list_prepend_const_literal() {
+    assert_code_action!(
+        REMOVE_REDUNDANT_LIST_PREPEND,
+        "const wobble = [..[1]]",
+        find_position_of("..[1]").to_selection()
+    );
+}
+
+#[test]
+fn remove_redundant_list_prepend_const_literal_whitespace() {
+    assert_code_action!(
+        REMOVE_REDUNDANT_LIST_PREPEND,
+        "const wobble = [  ..    [   1   ]   ]",
+        find_position_of("1").to_selection()
+    );
+}
+
+#[test]
+fn remove_redundant_list_prepend_empty() {
+    assert_code_action!(
+        REMOVE_REDUNDANT_LIST_PREPEND,
+        "const wibble = [..[]]",
+        find_position_of("..").to_selection()
+    );
+}
+
+#[test]
+fn remove_redundant_list_prepend_many_nested() {
+    assert_code_action!(
+        REMOVE_REDUNDANT_LIST_PREPEND,
+        "const wibble = [1, 2]
+const wobble = [..[..wibble]]",
+        find_position_of("..wibble").to_selection()
+    );
+}
+
+#[test]
+fn remove_redundant_list_prepend_intermittent_nested_outer() {
+    assert_code_action!(
+        REMOVE_REDUNDANT_LIST_PREPEND,
+        "const wibble = [..[..[1, 2, ..[]]]]",
+        find_position_of("[..[").to_selection()
+    );
+}
+
+#[test]
+fn remove_redundant_list_prepend_intermittent_nested_inner() {
+    assert_code_action!(
+        REMOVE_REDUNDANT_LIST_PREPEND,
+        "const wibble = [..[..[1, 2, ..[]]]]",
+        find_position_of("..[]").to_selection()
+    );
+}
+
+// This is already covered by the formatter
+#[test]
+fn no_remove_redundant_list_prepend_pattern_case() {
+    assert_no_code_actions!(
+        REMOVE_REDUNDANT_LIST_PREPEND,
+        "pub fn main {
+  case [1, 2] {
+    [one] -> todo
+    [..many] -> todo
+  }
+}",
+        find_position_of("[..many]").to_selection()
+    );
+}
+
+#[test]
+fn no_remove_list_prepend_has_items() {
+    assert_no_code_actions!(
+        REMOVE_REDUNDANT_LIST_PREPEND,
+        "pub fn main {
+  let wibble = [1, 2]
+  let wobble = [1, 2, ..wibble]
+}",
+        find_position_of("..wibble").to_selection()
+    );
+}
+
+#[test]
+fn no_remove_list_prepend_no_prepend() {
+    assert_no_code_actions!(
+        REMOVE_REDUNDANT_LIST_PREPEND,
+        "pub fn main {
+  let wibble = [1, 2]
+}",
+        find_position_of("[1, 2]").to_selection()
     );
 }

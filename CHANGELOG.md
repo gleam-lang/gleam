@@ -185,6 +185,24 @@
   code action in constants, patterns and bit array "size" options.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The language server can now offer a "Remove redundant list prepend" code
+  action, for example:
+
+  ```gleam
+  const wibble = [1, 2]
+  const wobble = [..wibble]
+               // ^^^^^^^^ Trigger code action here
+  ```
+
+  becomes
+
+  ```gleam
+  const wibble = [1, 2]
+  const wobble = wibble
+  ```
+
+  ([0xda157](https://github.com/0xda157))
+
 ### Formatter
 
 ### Compiler Wasm API

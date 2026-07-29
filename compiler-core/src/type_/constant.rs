@@ -875,9 +875,15 @@ impl<'expression_typer, 'env, 'module> ConstantTyper<'expression_typer, 'env, 'm
         // We're checking if we have a prepend but no elements, so we can
         // provide an error telling the developer to just use the list directly.
         // Like this: `[..tail]`.
-        if elements.is_empty() && tail.is_some() {
+        if let Some(ref tail) = tail
+            && elements.is_empty()
+        {
             self.typer
-                .problems.error(Error::ListPrependWithoutElements { location })
+                .problems
+                .error(Error::ListPrependWithoutElements {
+                    location,
+                    tail_location: tail.location(),
+                })
         }
 
         Constant::List {
