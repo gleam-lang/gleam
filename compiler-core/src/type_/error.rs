@@ -722,6 +722,14 @@ pub enum Error {
     ///
     ListPrependWithoutElements {
         location: SrcSpan,
+        /// We hold onto the location of the tail expression for the code action.
+        ///
+        /// ```gleam
+        /// const wibble = [..wobble]
+        ///                   ^^^^^^ here
+        /// ```
+        ///
+        tail_location: SrcSpan,
     },
 
     /// When a constant contains a todo.
@@ -1478,7 +1486,10 @@ impl Error {
             | Error::LowercaseBoolPattern { location }
             | Error::PrivateValueUse { location, .. }
             | Error::PrivateTypeUse { location, .. }
-            | Error::ListPrependWithoutElements { location } => location.start,
+            | Error::ListPrependWithoutElements {
+                location,
+                tail_location: _,
+            } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }

@@ -1,0 +1,17 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn main() {\n  let wibble = [1]\n  let wobble = [..wibble]\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  let wibble = [1]
+  let wobble = [..wibble]
+                ↑        
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  let wibble = [1]
+  let wobble = wibble
+}
