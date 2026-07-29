@@ -31,6 +31,10 @@
   single or multiple conflicting files existed in the target directory.
   ([Spenser Black](https://github.com/spenserblack))
 
+- Fixed a bug where some commands would fail if `gleam.toml` use TOML v1.1
+  syntax.
+  ([Louis Pilfold](https://github.com/lpil))
+
 - Fixed a bug where renaming constructors referenced in constants
   results in incorrect code.
   ([Khalid Belkassmi E.H.](https://github.com/khalidbelk))
