@@ -5,6 +5,14 @@
 
 # Changelog
 
+## Unreleased
+
+### Language Server
+
+- The "Convert to documentation comment" code action now will not trigger if
+  there is a newline between the comment and definition.
+  ([Daniel Venable](https://github.com/DanielVenable))
+
 ## v1.18.0 - 2026-07-29
 
 ### Bug fixes
