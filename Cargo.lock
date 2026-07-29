@@ -1201,7 +1201,7 @@ dependencies = [
 
 [[package]]
 name = "gleam"
-version = "1.18.0-rc2"
+version = "1.18.0"
 dependencies = [
  "gleam-cli",
  "static_vcruntime",
@@ -1209,7 +1209,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-cli"
-version = "1.18.0-rc2"
+version = "1.18.0"
 dependencies = [
  "async-trait",
  "base16",
@@ -1253,7 +1253,7 @@ dependencies = [
  "termcolor",
  "tokio",
  "toml 0.9.11+spec-1.1.0",
- "toml_edit 0.24.0+spec-1.1.0",
+ "toml_edit",
  "tracing",
  "tracing-subscriber",
  "xxhash-rust",
@@ -1262,7 +1262,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-core"
-version = "1.18.0-rc2"
+version = "1.18.0"
 dependencies = [
  "age",
  "askama",
@@ -1322,7 +1322,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-format"
-version = "1.18.0-rc2"
+version = "1.18.0"
 dependencies = [
  "camino",
  "ecow",
@@ -1335,7 +1335,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-language-server"
-version = "1.18.0-rc2"
+version = "1.18.0"
 dependencies = [
  "camino",
  "debug-ignore",
@@ -1359,7 +1359,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-wasm"
-version = "1.18.0-rc2"
+version = "1.18.0"
 dependencies = [
  "camino",
  "console_error_panic_hook",
@@ -1432,7 +1432,7 @@ checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 
 [[package]]
 name = "hexpm"
-version = "1.18.0-rc2"
+version = "1.18.0"
 dependencies = [
  "base16",
  "bytes",
@@ -3508,7 +3508,7 @@ dependencies = [
 
 [[package]]
 name = "test-commands"
-version = "1.18.0-rc2"
+version = "1.18.0"
 dependencies = [
  "camino",
  "gleam-cli",
@@ -3533,7 +3533,7 @@ dependencies = [
 
 [[package]]
 name = "test-output"
-version = "1.18.0-rc2"
+version = "1.18.0"
 dependencies = [
  "camino",
  "gleam-cli",
@@ -3544,7 +3544,7 @@ dependencies = [
 
 [[package]]
 name = "test-package-compiler"
-version = "1.18.0-rc2"
+version = "1.18.0"
 dependencies = [
  "camino",
  "gleam-core",
@@ -3558,7 +3558,7 @@ dependencies = [
 
 [[package]]
 name = "test-project-compiler"
-version = "1.18.0-rc2"
+version = "1.18.0"
 dependencies = [
  "camino",
  "gleam-core",
@@ -3727,7 +3727,7 @@ dependencies = [
  "serde",
  "serde_spanned 0.6.9",
  "toml_datetime 0.6.11",
- "toml_edit 0.22.27",
+ "toml_edit",
 ]
 
 [[package]]
@@ -3774,19 +3774,6 @@ dependencies = [
  "serde_spanned 0.6.9",
  "toml_datetime 0.6.11",
  "toml_write",
- "winnow 0.7.13",
-]
-
-[[package]]
-name = "toml_edit"
-version = "0.24.0+spec-1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c740b185920170a6d9191122cafef7010bd6270a3824594bff6784c04d7f09e"
-dependencies = [
- "indexmap",
- "toml_datetime 0.7.5+spec-1.1.0",
- "toml_parser",
- "toml_writer",
  "winnow 0.7.13",
 ]
 
