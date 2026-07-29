@@ -3,13 +3,13 @@
 
 use super::NativeFileCopier;
 use crate::{
-    build::{native_file_copier::CopiedNativeFiles, package_compiler::CheckModuleConflicts},
+    build::package_compiler::CheckModuleConflicts,
     io::{FileSystemWriter, memory::InMemoryFileSystem},
 };
 use std::{
     collections::HashMap,
     sync::OnceLock,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, UNIX_EPOCH},
 };
 
 use camino::{Utf8Path, Utf8PathBuf};

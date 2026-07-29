@@ -7,7 +7,6 @@ mod tests;
 use std::{
     collections::{HashMap, HashSet},
     sync::OnceLock,
-    time::{Duration, SystemTime},
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -22,11 +21,10 @@ use vec1::Vec1;
 use crate::{
     Error, Result,
     ast::SrcSpan,
-    build::{Module, Origin, module_loader::ModuleLoader},
-    config::PackageConfig,
+    build::{Origin, module_loader::ModuleLoader},
     dep_tree,
     error::{DefinedModuleOrigin, FileIoAction, FileKind, ImportCycleLocationDetails},
-    io::{self, CommandExecutor, FileSystemReader, FileSystemWriter, files_with_extension},
+    io::{CommandExecutor, FileSystemReader, FileSystemWriter, files_with_extension},
     metadata,
     paths::ProjectPaths,
     type_,
@@ -37,9 +35,7 @@ use crate::{
 use super::{
     Mode, Target,
     module_loader::read_source,
-    package_compiler::{
-        CacheMetadata, CachedModule, CachedWarnings, Input, Loaded, UncompiledModule,
-    },
+    package_compiler::{CachedModule, CachedWarnings, Input, Loaded, UncompiledModule},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -79,6 +75,7 @@ impl<'a, IO> PackageLoader<'a, IO>
 where
     IO: FileSystemWriter + FileSystemReader + CommandExecutor + Clone,
 {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         io: IO,
         ids: UniqueIdGenerator,
@@ -120,10 +117,10 @@ where
         // Check for any removed modules, by looking at cache files that don't exist in inputs.
         // Delete the cache files for removed modules and mark them as stale
         // to trigger refreshing dependent modules.
-        for module in CacheFiles::modules_with_meta_files(&self.io, &self.artefact_directory) {
-            if (!inputs.contains_key(&module)) {
+        for module in CacheFiles::modules_with_meta_files(&self.io, self.artefact_directory) {
+            if !inputs.contains_key(&module) {
                 tracing::debug!(%module, "module_removed");
-                CacheFiles::new(&self.artefact_directory, &module).delete(&self.io)?;
+                CacheFiles::new(self.artefact_directory, &module).delete(&self.io)?;
                 self.stale_modules.add(module);
             }
         }
@@ -160,7 +157,7 @@ where
                 Input::New(module) => {
                     tracing::debug!(module = %module.name, "new_module_to_be_compiled");
                     self.stale_modules.add(module.name.clone());
-                    loaded.to_compile.push(module);
+                    loaded.to_compile.push(*module);
                 }
 
                 // A cached module with dependencies that are stale must be
@@ -187,7 +184,7 @@ where
     }
 
     fn load_cached_module(&self, info: CachedModule) -> Result<type_::ModuleInterface, Error> {
-        let cache_files = CacheFiles::new(&self.artefact_directory, &info.name);
+        let cache_files = CacheFiles::new(self.artefact_directory, &info.name);
         let bytes = self.io.read_bytes(&cache_files.cache_path)?;
         let mut module = match metadata::decode(bytes.as_slice(), self.ids.clone()) {
             Ok(module) => module,
@@ -279,7 +276,7 @@ where
         // "code". Emit an error so this never happens.
         if self.target.is_erlang() {
             for (_, input) in inputs.collection.values() {
-                ensure_gleam_module_does_not_overwrite_standard_erlang_module(&input)?;
+                ensure_gleam_module_does_not_overwrite_standard_erlang_module(input)?;
             }
         }
 
@@ -294,7 +291,7 @@ where
         // next time the dependencies might no longer be stale, but we still need to be able to tell
         // that this module needs to be recompiled until it successfully compiles at least once.
         // This can happen if the stale dependency includes breaking changes.
-        CacheFiles::new(&self.artefact_directory, &cached.name).delete(&self.io)?;
+        CacheFiles::new(self.artefact_directory, &cached.name).delete(&self.io)?;
 
         read_source(
             self.io.clone(),
@@ -1705,7 +1702,7 @@ impl<'a> Inputs<'a> {
             .insert(name.clone(), origin.clone())
         {
             return Err(Error::DuplicateModule {
-                module: name.clone(),
+                module: name,
                 first,
                 second: origin,
             });
@@ -1737,7 +1734,7 @@ static IS_GLEAM_PATH_PATTERN: OnceLock<Regex> = OnceLock::new();
 impl GleamFile {
     pub fn new(dir: &Utf8Path, path: Utf8PathBuf) -> Self {
         Self {
-            module_name: Self::module_name(&path, &dir),
+            module_name: Self::module_name(&path, dir),
             path,
         }
     }
@@ -1753,7 +1750,7 @@ impl GleamFile {
     ) -> impl Iterator<Item = Result<Self, crate::Warning>> + 'b {
         tracing::trace!("gleam_source_files {:?}", dir);
         files_with_extension(io, dir, "gleam").map(move |path| {
-            if (Self::is_gleam_path(&path, &dir)) {
+            if Self::is_gleam_path(&path, dir) {
                 Ok(Self::new(dir, path))
             } else {
                 Err(crate::Warning::InvalidSource { path })
@@ -1825,7 +1822,7 @@ impl CacheFiles {
         }
     }
 
-    pub fn delete(&self, io: &dyn io::FileSystemWriter) -> Result<()> {
+    pub fn delete(&self, io: &dyn FileSystemWriter) -> Result<()> {
         io.delete_file(&self.cache_path)?;
         io.delete_file(&self.meta_path)
     }
@@ -1838,7 +1835,7 @@ impl CacheFiles {
         dir: &'a Utf8Path,
     ) -> impl Iterator<Item = EcoString> + 'a {
         tracing::trace!("CacheFiles::modules_with_meta_files {:?}", dir);
-        files_with_extension(io, dir, "cache_meta").map(move |path| Self::module_name(&dir, &path))
+        files_with_extension(io, dir, "cache_meta").map(move |path| Self::module_name(dir, &path))
     }
 
     fn module_name(dir: &Utf8Path, path: &Utf8Path) -> EcoString {

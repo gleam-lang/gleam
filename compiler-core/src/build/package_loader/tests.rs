@@ -1,21 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 The Gleam contributors
 
-use ecow::{EcoString, eco_format};
+use ecow::EcoString;
 use hexpm::version::Version;
 
 use super::*;
 use crate::{
     Warning,
     build::SourceFingerprint,
+    build::package_compiler::CacheMetadata,
     io::{FileSystemWriter, memory::InMemoryFileSystem},
     line_numbers,
-    parse::extra::ModuleExtra,
     type_::References,
-    warning::NullWarningEmitterIO,
 };
 
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 #[derive(Debug)]
 struct LoaderTestOutput {
@@ -54,7 +53,7 @@ fn write_cache(
     let path = Utf8Path::new("/artefact").join(format!("{artefact_name}.cache_meta"));
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();
 
-    let cache = crate::type_::ModuleInterface {
+    let cache = type_::ModuleInterface {
         name: name.into(),
         origin: Origin::Src,
         package: "my_package".into(),

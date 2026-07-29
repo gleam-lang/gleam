@@ -9,7 +9,6 @@ use std::{collections::HashSet, time::SystemTime};
 use camino::{Utf8Path, Utf8PathBuf};
 
 use ecow::EcoString;
-use serde::{Deserialize, Serialize};
 
 use super::{
     Mode, Origin, SourceFingerprint, Target,
@@ -20,7 +19,7 @@ use crate::{
     Error, Result,
     error::{FileIoAction, FileKind},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
-    warning::{TypeWarningEmitter, WarningEmitter},
+    warning::WarningEmitter,
 };
 
 #[derive(Debug)]
@@ -58,7 +57,7 @@ where
 
         let meta = match self.read_cache_metadata(&file)? {
             Some(meta) => meta,
-            None => return read_source(name).map(Input::New),
+            None => return read_source(name).map(|module| Input::New(Box::new(module))),
         };
 
         // The cache currently does not contain enough data to perform codegen,
@@ -66,7 +65,7 @@ where
         // that codegen has already been performed before using a cache.
         if self.codegen.is_required() && !meta.codegen_performed {
             tracing::debug!(?name, "codegen_required_cache_insufficient");
-            return read_source(name).map(Input::New);
+            return read_source(name).map(|module| Input::New(Box::new(module)));
         }
 
         // If the timestamp of the source is newer than the cache entry and
@@ -76,12 +75,12 @@ where
             let source_module = read_source(name.clone())?;
             if meta.fingerprint != SourceFingerprint::new(&source_module.code) {
                 tracing::debug!(?name, "cache_stale");
-                return Ok(Input::New(source_module));
+                return Ok(Input::New(Box::new(source_module)));
             } else if self.mode == Mode::Lsp && self.incomplete_modules.contains(&name) {
                 // Since the lsp can have valid but incorrect intermediate code states between
                 // successful compilations, we need to invalidate the cache even if the fingerprint matches
                 tracing::debug!(?name, "cache_stale for lsp");
-                return Ok(Input::New(source_module));
+                return Ok(Input::New(Box::new(source_module)));
             }
         }
 
@@ -91,7 +90,7 @@ where
     /// Read the cache metadata file from the artefact directory for the given
     /// source file. If the file does not exist, return `None`.
     fn read_cache_metadata(&self, source_file: &GleamFile) -> Result<Option<CacheMetadata>> {
-        let meta_path = source_file.cache_files(&self.artefact_directory).meta_path;
+        let meta_path = source_file.cache_files(self.artefact_directory).meta_path;
 
         if !self.io.is_file(&meta_path) {
             return Ok(None);
@@ -133,11 +132,11 @@ where
             source_path: file.path,
             origin: self.origin,
             name: file.module_name,
-            line_numbers: meta.line_numbers,
         }
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn read_source<IO>(
     io: IO,
     target: Target,

@@ -109,10 +109,10 @@ where
         let read_pathfinder = self.io.read(&cache)?;
         for lib_path in read_pathfinder.split('\n') {
             let source = Utf8PathBuf::from(lib_path);
-            let name = source.as_path().file_name().expect(&format!(
-                "Unexpanded path in {}",
-                self.paths_cache_filename()
-            ));
+            let name = source
+                .as_path()
+                .file_name()
+                .unwrap_or_else(|| panic!("Unexpanded path in {}", self.paths_cache_filename()));
             let dest = self.build_dir.join(name);
             let ebin = dest.join("ebin");
             if !update_links || self.io.is_directory(&ebin) {

@@ -4,39 +4,37 @@
 #[cfg(test)]
 mod tests;
 
-use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
+use crate::analyse::TargetSupport;
 use crate::build::package_loader::CacheFiles;
 
 use crate::error::{DefinedModuleOrigin, FailedModule, SkipReason, SkippedModule};
-use crate::io::files_with_extension;
-use crate::line_numbers::{self, LineNumbers};
+use crate::line_numbers::LineNumbers;
+use crate::metadata;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::type_::printer::Names;
 use crate::{
     Error, Result, Warning,
-    ast::{SrcSpan, TypedModule, UntypedModule},
+    ast::{SrcSpan, UntypedModule},
     build::{
-        Mode, Module, Origin, Outcome, Package, SourceFingerprint, Target,
+        Mode, Module, Origin, Outcome, SourceFingerprint, Target,
         elixir_libraries::ElixirLibraries,
         native_file_copier::NativeFileCopier,
         package_loader::{CodegenRequired, PackageLoader, StaleTracker},
     },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
-    dep_tree, error,
     io::{BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     parse::extra::ModuleExtra,
     paths, type_,
     uid::UniqueIdGenerator,
     warning::{TypeWarningEmitter, WarningEmitter},
 };
-use crate::{inline, metadata};
 use askama::Template;
 use ecow::EcoString;
-use itertools::Itertools;
-use std::collections::HashSet;
-use std::{collections::HashMap, fmt::write, time::SystemTime};
-use vec1::Vec1;
+use std::{
+    collections::{HashMap, HashSet},
+    time::SystemTime,
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -82,6 +80,7 @@ impl<'a, IO> PackageCompiler<'a, IO>
 where
     IO: FileSystemReader + FileSystemWriter + CommandExecutor + BeamCompilerIO + Clone,
 {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         config: &'a PackageConfig,
         mode: Mode,
@@ -197,7 +196,7 @@ where
         // Type check the modules that are new or have changed
         tracing::info!(count=%loaded.to_compile.len(), "analysing_modules");
         let outcome = analyse(
-            &self.config,
+            self.config,
             self.target.target(),
             self.mode,
             &self.ids,
@@ -266,7 +265,7 @@ where
 
         self.io
             .compile_beam(self.out, self.lib, modules, self.subprocess_stdio)
-            .map(|modules| modules.iter().map(|str| EcoString::from(str)).collect())
+            .map(|modules| modules.iter().map(EcoString::from).collect())
     }
 
     fn copy_project_native_files(
@@ -286,13 +285,13 @@ where
 
         let copier = NativeFileCopier::new(
             self.io.clone(),
-            self.root.clone(),
+            self.root,
             destination_dir,
             self.check_module_conflicts,
         );
         let copied = copier.run()?;
 
-        to_compile_modules.extend(copied.to_compile.into_iter());
+        to_compile_modules.extend(copied.to_compile);
 
         // If there are any Elixir files then we need to locate Elixir
         // installed on this system for use in compilation.
@@ -421,7 +420,7 @@ where
         if let Some(config) = app_file_config {
             ErlangApp::new(&self.out.join("ebin"), config).render(
                 io,
-                &self.config,
+                self.config,
                 modules,
                 cached_module_names,
                 native_modules,
@@ -444,16 +443,16 @@ where
             TypeScriptDeclarations::None
         };
         JavaScript::new(
-            &self.out,
+            self.out,
             typescript,
             sourcemaps,
             prelude_location,
-            &self.root,
+            self.root,
         )
         .render(&self.io, modules, self.stdlib_package())?;
 
         if self.copy_native_files {
-            self.copy_project_native_files(&self.out, &mut written)?;
+            self.copy_project_native_files(self.out, &mut written)?;
         } else {
             tracing::debug!("skipping_native_file_copying");
         }
@@ -483,7 +482,7 @@ where
         // If the file does not exist then linking is needed. It could already
         // exist due to having been linked by a previous compilation run.
         if !file_at_destination {
-            return self.io.hardlink(&source, &destination);
+            return self.io.hardlink(source, &destination);
         }
 
         // If file is already there then there is nothing to do.
@@ -491,12 +490,12 @@ where
         // If there is already a file there but it is not a link that means
         // it is a link to the source file for a previous module that had
         // the same name.
-        if self.io.is_same_file(&source, &destination)? {
+        if self.io.is_same_file(source, &destination)? {
             return Ok(());
         }
 
         self.io.delete_file(&destination)?;
-        self.io.hardlink(&source, &destination)
+        self.io.hardlink(source, &destination)
     }
 
     fn render_erlang_entrypoint_module(
@@ -558,12 +557,13 @@ pub enum StdlibPackage {
     Missing,
 }
 
+#[allow(clippy::too_many_arguments)]
 fn analyse(
     package_config: &PackageConfig,
     target: Target,
     mode: Mode,
     ids: &UniqueIdGenerator,
-    mut parsed_modules: Vec<UncompiledModule>,
+    parsed_modules: Vec<UncompiledModule>,
     module_types: &mut im::HashMap<EcoString, type_::ModuleInterface>,
     warnings: &WarningEmitter,
     target_support: TargetSupport,
@@ -590,9 +590,9 @@ fn analyse(
         path,
         mtime,
         origin,
-        package,
         dependencies,
         extra,
+        ..
     } in parsed_modules
     {
         tracing::debug!(module = ?name, "Type checking");
@@ -601,7 +601,7 @@ fn analyse(
         // If we weren't able to compile one of the modules it depends on, then
         // we have to skip this one to avoid reporting false errors.
         let skipped_dependency = dependencies.iter().find_map(|(dependency, location)| {
-            if let Some(failed_module) = failed_modules.get(dependency) {
+            if let Some(_failed_module) = failed_modules.get(dependency) {
                 // This module imports a module with an error.
                 let reason = SkipReason::DependencyHasError {
                     name: dependency.clone(),
@@ -680,7 +680,7 @@ fn analyse(
                     .map(|interface| interface.values.is_empty() && interface.types.is_empty())
                     .unwrap_or(false)
                 {
-                    warnings.emit(crate::warning::Warning::EmptyModule {
+                    warnings.emit(Warning::EmptyModule {
                         path: module.input_path.clone(),
                         name: module.name.clone(),
                     });
@@ -715,7 +715,7 @@ fn analyse(
                     module.name.clone(),
                     FailedModule {
                         names: Box::new(names),
-                        path: path,
+                        path,
                         src: code,
                         errors,
                     },
@@ -760,7 +760,7 @@ fn analyse(
 
 #[derive(Debug)]
 pub(crate) enum Input {
-    New(UncompiledModule),
+    New(Box<UncompiledModule>),
     Cached(CachedModule),
 }
 
@@ -789,6 +789,7 @@ impl Input {
     /// Returns `true` if the input is [`New`].
     ///
     /// [`New`]: Input::New
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn is_new(&self) -> bool {
         matches!(self, Self::New(..))
@@ -797,6 +798,7 @@ impl Input {
     /// Returns `true` if the input is [`Cached`].
     ///
     /// [`Cached`]: Input::Cached
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn is_cached(&self) -> bool {
         matches!(self, Self::Cached(..))
@@ -809,7 +811,6 @@ pub(crate) struct CachedModule {
     pub origin: Origin,
     pub dependencies: Vec<(EcoString, SrcSpan)>,
     pub source_path: Utf8PathBuf,
-    pub line_numbers: LineNumbers,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]

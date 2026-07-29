@@ -9,8 +9,8 @@ use ecow::EcoString;
 use crate::{
     Error,
     build::{
-        self, NullTelemetry, Outcome, PackageCompiler, StaleTracker, Target,
-        TargetCodegenConfiguration, Telemetry, package_compiler::Compiled,
+        self, NullTelemetry, Outcome, PackageCompiler, StaleTracker, TargetCodegenConfiguration,
+        package_compiler::Compiled,
     },
     config::PackageConfig,
     error::DefinedModuleOrigin,
@@ -24,7 +24,7 @@ fn compile_modules(
     module: &str,
     existing_modules: Vec<(&str, &str)>,
 ) -> Outcome<Compiled, Error> {
-    let mut fs = InMemoryFileSystem::new();
+    let fs = InMemoryFileSystem::new();
     fs.write(
         Utf8Path::new(&format!("/src/{module}.gleam")),
         "pub fn main() -> Nil { Nil }",

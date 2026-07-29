@@ -2,40 +2,30 @@
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
 use crate::{
-    Error, Result, Warning,
+    Error, Result,
     analyse::TargetSupport,
     build::{
-        Mode, Module, Origin, Package, Target,
-        package_compiler::{self, PackageCompiler},
-        package_loader::StaleTracker,
-        project_compiler,
-        telemetry::Telemetry,
+        Mode, Module, Package, Target, package_compiler::PackageCompiler,
+        package_loader::StaleTracker, telemetry::Telemetry,
     },
-    codegen::{self, ErlangApp},
     config::PackageConfig,
     dep_tree,
     error::{DefinedModuleOrigin, FileIoAction, FileKind, ShellCommandFailureReason},
     io::{BeamCompilerIO, Command, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     manifest::{ManifestPackage, ManifestPackageSource},
-    metadata,
     paths::{self, ProjectPaths},
     type_::{self, ModuleFunction},
     uid::UniqueIdGenerator,
     version::COMPILER_VERSION,
-    warning::{self, WarningEmitter, WarningEmitterIO},
+    warning::{WarningEmitter, WarningEmitterIO},
 };
 use ecow::EcoString;
 use hexpm::version::Version;
 use itertools::Itertools;
-use pubgrub::Range;
 use std::{
     cmp,
     collections::{HashMap, HashSet},
-    fmt::Write,
-    io::BufReader,
     rc::Rc,
-    sync::Arc,
-    time::Instant,
 };
 
 use super::{
@@ -58,7 +48,7 @@ const ELIXIR_EXECUTABLE: &str = "elixir";
 #[cfg(target_os = "windows")]
 const ELIXIR_EXECUTABLE: &str = "elixir.bat";
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Options {
     pub mode: Mode,
     pub target: Option<Target>,
@@ -73,7 +63,6 @@ pub struct Options {
 pub struct Built {
     pub root_package: Package,
     pub module_interfaces: im::HashMap<EcoString, type_::ModuleInterface>,
-    compiled_dependency_modules: Vec<Module>,
 }
 
 impl Built {
@@ -96,7 +85,7 @@ impl Built {
             .values()
             .map(|interface| &interface.minimum_required_version)
             .reduce(|one_version, other_version| cmp::max(one_version, other_version))
-            .map(|minimum_required_version| minimum_required_version.clone())
+            .cloned()
             .unwrap_or(Version::new(0, 1, 0))
     }
 }
@@ -177,9 +166,9 @@ where
 
         self.stale_modules.empty();
 
-        /// We also clear the defined modules, otherwise the language server
-        /// would start throwing errors for modules defined twice when compiling
-        /// a second time!
+        // We also clear the defined modules, otherwise the language server
+        // would start throwing errors for modules defined twice when compiling
+        // a second time!
         self.defined_modules.clear();
     }
 
@@ -216,7 +205,7 @@ where
         self.write_prelude()?;
 
         // Dependencies are compiled first.
-        let compiled_dependency_modules = self.compile_dependencies()?;
+        let _ = self.compile_dependencies()?;
 
         // We reset the warning count as we don't want to fail the build if a
         // dependency has warnings, only if the root package does.
@@ -234,7 +223,6 @@ where
         Ok(Built {
             root_package,
             module_interfaces: self.importable_modules,
-            compiled_dependency_modules,
         })
     }
 
@@ -276,7 +264,7 @@ where
 
         if self.io.is_file(&path) {
             let previous = self.io.read(&path)?;
-            if &previous == &fingerprint {
+            if previous == fingerprint {
                 return Ok(());
             }
         }
@@ -346,11 +334,11 @@ where
         // packages into their own classes and then only mutate self after we no
         // longer need to have the package borrowed from self.packages.
         let package = self.packages.get(name).expect("Missing package").clone();
-        let result = match usable_build_tools(&package)?.as_slice() {
-            &[BuildTool::Gleam] => self.compile_gleam_dep_package(&package),
-            &[BuildTool::Rebar3] => self.compile_rebar3_dep_package(&package).map(|_| vec![]),
-            &[BuildTool::Mix] => self.compile_mix_dep_package(&package).map(|_| vec![]),
-            &[BuildTool::Mix, BuildTool::Rebar3] => self
+        let result = match *usable_build_tools(&package)?.as_slice() {
+            [BuildTool::Gleam] => self.compile_gleam_dep_package(&package),
+            [BuildTool::Rebar3] => self.compile_rebar3_dep_package(&package).map(|_| vec![]),
+            [BuildTool::Mix] => self.compile_mix_dep_package(&package).map(|_| vec![]),
+            [BuildTool::Mix, BuildTool::Rebar3] => self
                 .compile_mix_dep_package(&package)
                 .or_else(|_| self.compile_rebar3_dep_package(&package))
                 .map(|_| vec![]),
@@ -409,9 +397,6 @@ where
         self.telemetry.compiling_package(package_name);
 
         let package = self.paths.build_packages_package(package_name);
-        let build_packages = self.paths.build_directory_for_target(mode, target);
-        let ebins = self.paths.build_packages_ebins_glob(mode, target);
-        let rebar3_path = |path: &Utf8Path| format!("../{}", path);
 
         tracing::debug!("copying_package_to_build");
         self.io.mkdir(&package_build)?;
@@ -663,7 +648,7 @@ where
 
         // Compile project to Erlang or JavaScript source code
         compiler.compile(
-            &mut self.warnings,
+            &self.warnings,
             &mut self.importable_modules,
             &mut self.defined_modules,
             &mut self.stale_modules,
@@ -688,12 +673,7 @@ fn order_packages(packages: &HashMap<String, ManifestPackage>) -> Result<Vec<Eco
             // any bugged outcomes, though not any where the compiler is working correctly, so it's
             // mostly to aid debugging.
             .sorted_by(|a, b| a.name.cmp(&b.name))
-            .map(|package| {
-                (
-                    package.name.as_str().into(),
-                    package.requirements.iter().cloned().collect(),
-                )
-            })
+            .map(|package| (package.name.as_str().into(), package.requirements.to_vec()))
             .collect(),
     )
     .map_err(convert_deps_tree_error)
@@ -757,9 +737,5 @@ impl BitFlags {
         } else {
             self.bits &= !(1 << bit);
         }
-    }
-
-    fn get(&self, bit: u8) -> bool {
-        self.bits & (1 << bit) != 0
     }
 }

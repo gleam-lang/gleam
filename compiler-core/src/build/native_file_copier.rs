@@ -63,7 +63,7 @@ where
     /// Returns a list of files that need to be compiled (Elixir and Erlang).
     ///
     pub fn run(mut self) -> Result<CopiedNativeFiles> {
-        self.io.mkdir(&self.destination_dir)?;
+        self.io.mkdir(self.destination_dir)?;
 
         let src = self.paths.src_directory();
         self.copy_files(&src)?;
@@ -90,7 +90,7 @@ where
     fn copy_files(&mut self, src_root: &Utf8Path) -> Result<()> {
         let mut dir_walker = DirWalker::new(src_root.to_path_buf());
         while let Some(path) = dir_walker.next_file(&self.io)? {
-            self.copy(path, &src_root)?;
+            self.copy(path, src_root)?;
         }
         Ok(())
     }
@@ -187,9 +187,7 @@ where
         // Insert the full relative `.mjs` path in `seen_modules` as there is
         // no conflict if two `.mjs` files have the same name but are in
         // different subpaths, unlike Erlang files.
-        let existing = self
-            .seen_modules
-            .insert(mjs_path.clone(), relative_path.clone());
+        let existing = self.seen_modules.insert(mjs_path, relative_path.clone());
 
         // If there was no already existing one then there's no problem.
         let Some(existing) = existing else {
@@ -213,9 +211,9 @@ where
         // The only way for two `.mjs` files to clash is by having
         // the exact same path.
         assert_eq!(&existing, relative_path);
-        return Err(Error::DuplicateSourceFile {
+        Err(Error::DuplicateSourceFile {
             file: existing.to_string(),
-        });
+        })
     }
 
     /// Erlang module files cannot have the same name regardless of their
