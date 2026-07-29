@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021 The Gleam contributors
 
-#![allow(warnings)]
-
 mod elixir_libraries;
 mod module_loader;
 mod native_file_copier;
@@ -20,19 +18,16 @@ pub use self::project_compiler::{Built, Options, ProjectCompiler};
 pub use self::telemetry::{NullTelemetry, Telemetry};
 
 use crate::ast::{
-    self, CallArg, CustomType, DefinitionLocation, TypeAst, TypedArg, TypedClauseGuard,
-    TypedConstant, TypedCustomType, TypedDefinitions, TypedExpr, TypedFunction, TypedImport,
-    TypedModuleConstant, TypedPattern, TypedRecordConstructor, TypedStatement, TypedTypeAlias,
+    self, CustomType, DefinitionLocation, TypeAst, TypedArg, TypedClauseGuard, TypedConstant,
+    TypedCustomType, TypedDefinitions, TypedExpr, TypedFunction, TypedImport, TypedModuleConstant,
+    TypedPattern, TypedRecordConstructor, TypedStatement, TypedTypeAlias,
 };
 use crate::reference;
 use crate::type_::error::Named;
 use crate::type_::{Type, TypedCallArg};
 use crate::{
-    ast::{Definition, SrcSpan, TypedModule},
-    config::{self, PackageConfig},
-    erlang,
-    error::{Error, FileIoAction, FileKind},
-    io::OutputFile,
+    ast::{SrcSpan, TypedModule},
+    config::PackageConfig,
     parse::extra::{Comment, ModuleExtra},
     type_,
 };
@@ -41,12 +36,11 @@ use clap::ValueEnum;
 use ecow::EcoString;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::SystemTime;
-use std::{collections::HashMap, ffi::OsString, fs::DirEntry, iter::Peekable, process};
-use strum::{Display, EnumIter, EnumString, EnumVariantNames, VariantNames};
-use vec1::Vec1;
+use std::{collections::HashMap, iter::Peekable};
+use strum::{Display, EnumIter, EnumString, VariantNames};
 
 #[derive(
     Debug,
@@ -54,7 +48,7 @@ use vec1::Vec1;
     Deserialize,
     ValueEnum,
     EnumString,
-    EnumVariantNames,
+    VariantNames,
     EnumIter,
     Clone,
     Copy,
@@ -136,11 +130,12 @@ impl Codegen {
 }
 
 #[derive(
+    Default,
     Debug,
     Serialize,
     Deserialize,
     EnumString,
-    EnumVariantNames,
+    VariantNames,
     ValueEnum,
     Clone,
     Copy,
@@ -154,6 +149,7 @@ pub enum Runtime {
     #[strum(serialize = "node")]
     #[serde(alias = "node")]
     #[clap(alias = "node")]
+    #[default]
     NodeJs,
     Deno,
     Bun,
@@ -166,12 +162,6 @@ impl Runtime {
             Runtime::Deno => "Deno",
             Runtime::Bun => "Bun",
         }
-    }
-}
-
-impl Default for Runtime {
-    fn default() -> Self {
-        Self::NodeJs
     }
 }
 
@@ -211,7 +201,7 @@ pub struct ErlangAppCodegenConfiguration {
     Deserialize,
     Display,
     EnumString,
-    EnumVariantNames,
+    VariantNames,
     EnumIter,
     Clone,
     Copy,
@@ -258,7 +248,7 @@ pub struct Package {
 
 impl Package {
     pub fn attach_doc_and_module_comments(&mut self) {
-        for mut module in &mut self.modules {
+        for module in &mut self.modules {
             module.attach_doc_and_module_comments();
         }
     }
@@ -526,7 +516,7 @@ pub enum Located<'a> {
     Arg(&'a TypedArg),
     Annotation {
         ast: &'a TypeAst,
-        type_: std::sync::Arc<Type>,
+        type_: Arc<Type>,
     },
     TypeVariable {
         name: EcoString,
@@ -537,13 +527,13 @@ pub enum Located<'a> {
     Label {
         location: SrcSpan,
         /// The type of the labelled argument's value (used for hover).
-        field_type: std::sync::Arc<Type>,
+        field_type: Arc<Type>,
     },
     /// A record field label at its definition in a custom type variant.
     RecordLabelDefinition {
         location: SrcSpan,
         /// The type of the field (used for hover).
-        field_type: std::sync::Arc<Type>,
+        field_type: Arc<Type>,
         label: EcoString,
         /// The name of the custom type this field belongs to. The type is
         /// being defined in the module being analysed, so only its name is
@@ -555,10 +545,10 @@ pub enum Located<'a> {
     RecordLabelUsage {
         location: SrcSpan,
         /// The type of the field's value (used for hover).
-        field_type: std::sync::Arc<Type>,
+        field_type: Arc<Type>,
         label: EcoString,
         /// The record type the field belongs to.
-        record_type: std::sync::Arc<Type>,
+        record_type: Arc<Type>,
         /// The name of the variant the field was used with.
         variant: EcoString,
     },
@@ -566,10 +556,10 @@ pub enum Located<'a> {
     RecordAccessLabel {
         location: SrcSpan,
         /// The type of the field (used for hover).
-        field_type: std::sync::Arc<Type>,
+        field_type: Arc<Type>,
         label: EcoString,
         /// The record type the field belongs to.
-        record_type: std::sync::Arc<Type>,
+        record_type: Arc<Type>,
         /// The documentation of the field (used for hover).
         documentation: Option<EcoString>,
     },
@@ -595,7 +585,7 @@ impl<'a> Located<'a> {
     fn type_location(
         &self,
         importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
-        type_: std::sync::Arc<Type>,
+        type_: Arc<Type>,
     ) -> Option<DefinitionLocation> {
         type_constructor_from_modules(importable_modules, type_).map(|t| DefinitionLocation {
             module: Some(t.module.clone()),
@@ -649,7 +639,7 @@ impl<'a> Located<'a> {
                 span: *location,
             }),
             Self::Statement(statement) => statement.definition_location(),
-            Self::FunctionBody(statement) => None,
+            Self::FunctionBody(_statement) => None,
             Self::Expression { expression, .. } => expression.definition_location(),
 
             Self::ModuleImport(import) => Some(DefinitionLocation {
@@ -772,9 +762,9 @@ impl<'a> Located<'a> {
 /// This is what powers the "go to type definition" capability of the language
 /// server.
 ///
-fn type_to_definition_locations<'a>(
+fn type_to_definition_locations(
     type_: Arc<Type>,
-    importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
+    importable_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
 ) -> Vec<DefinitionLocation> {
     match type_.as_ref() {
         // For named types we start with the location of the named type itself
@@ -794,7 +784,7 @@ fn type_to_definition_locations<'a>(
                 return vec![];
             };
 
-            let Some(type_) = module.get_importable_type(&name) else {
+            let Some(type_) = module.get_importable_type(name) else {
                 return vec![];
             };
 
@@ -845,14 +835,14 @@ fn type_to_definition_locations<'a>(
 // Looks up the type constructor for the given type
 pub fn type_constructor_from_modules(
     importable_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
-    type_: std::sync::Arc<Type>,
+    type_: Arc<Type>,
 ) -> Option<&type_::TypeConstructor> {
     let type_ = type_::collapse_links(type_);
     match type_.as_ref() {
         Type::Named { name, module, .. } => importable_modules
             .get(module)
             .and_then(|i| i.types.get(name)),
-        _ => None,
+        Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => None,
     }
 }
 
@@ -929,7 +919,7 @@ fn doc_comments_before<'a>(
     (comment_start, comments)
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub struct SourceFingerprint(u64);
 
 impl SourceFingerprint {

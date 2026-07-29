@@ -6,10 +6,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{
-    Warning,
-    manifest::{PackageChanges, Resolved},
-};
+use crate::manifest::PackageChanges;
 
 pub trait Telemetry: Debug {
     fn waiting_for_build_directory_lock(&self);
@@ -29,7 +26,7 @@ pub struct NullTelemetry;
 
 impl Telemetry for NullTelemetry {
     fn waiting_for_build_directory_lock(&self) {}
-    fn running(&self, name: &str) {}
+    fn running(&self, _name: &str) {}
     fn resolving_package_versions(&self) {}
     fn downloading_package(&self, _name: &str) {}
     fn compiled_package(&self, _duration: Duration) {}
