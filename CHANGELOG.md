@@ -156,6 +156,24 @@
   highlight all of them.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The language server can now offer a "Remove redundant list prepend" code
+  action, for example:
+
+  ```gleam
+  const wibble = [1, 2]
+  const wobble = [..wibble]
+               // ^^^^^^^^ Trigger code action here
+  ```
+
+  becomes
+
+  ```gleam
+  const wibble = [1, 2]
+  const wobble = wibble
+  ```
+
+  ([0xda157](https://github.com/0xda157))
+
 ### Bug fixes
 
 - Fixed a bug where the language server "Generate variant" code action would

@@ -1,0 +1,11 @@
+---
+source: language-server/src/tests/action.rs
+expression: "const wibble = [..[]]"
+---
+----- BEFORE ACTION
+const wibble = [..[]]
+                ↑    
+
+
+----- AFTER ACTION
+const wibble = []
