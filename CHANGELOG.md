@@ -44,6 +44,24 @@
   `gleam_stdlib` package is available.
   ([0xda157](https://github.com/0xda157))
 
+- The language server can now offer a "Remove redundant list prepend" code
+  action, for example:
+
+  ```gleam
+  const wibble = [1, 2]
+  const wobble = [..wibble]
+               // ^^^^^^^^ Trigger code action here
+  ```
+
+  becomes
+
+  ```gleam
+  const wibble = [1, 2]
+  const wobble = wibble
+  ```
+
+  ([0xda157](https://github.com/0xda157))
+
 ### Formatter
 
 ### Bug fixes

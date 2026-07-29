@@ -5085,7 +5085,10 @@ Be sure to finish it before running your program.",
             }),
         },
 
-        TypeError::ListPrependWithoutElements { location } => Diagnostic {
+        TypeError::ListPrependWithoutElements {
+            location,
+            tail_location: _,
+        } => Diagnostic {
             title: "Redundant list prepend".to_string(),
             text: "See: https://tour.gleam.run/basics/lists/".to_string(),
             hint: Some("`list` can be used directly instead of `[..list]`".into()),
