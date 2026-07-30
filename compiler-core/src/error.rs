@@ -5103,6 +5103,21 @@ Be sure to finish it before running your program.",
                 extra_labels: vec![],
             }),
         },
+        TypeError::ListPrependWithoutElements { location } => Diagnostic {
+            title: "Redundant list prepend".to_string(),
+            text: "See: https://tour.gleam.run/basics/lists/".to_string(),
+            hint: Some("`list` can be used directly instead of `[..list]`".into()),
+            level: Level::Error,
+            location: Some(Location {
+                label: Label {
+                    text: Some("This prepend does nothing".into()),
+                    span: *location,
+                },
+                path: path.clone(),
+                src: src.clone(),
+                extra_labels: vec![],
+            }),
+        },
     })
 }
 

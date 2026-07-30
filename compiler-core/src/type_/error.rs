@@ -710,6 +710,20 @@ pub enum Error {
     RecordUpdateVariantWithNoFields {
         location: SrcSpan,
     },
+
+    /// Redundantly prepending a list:
+    ///
+    /// ```gleam
+    /// const wibble = [1, 2]
+    ///
+    /// const wobble = [..wibble]
+    ///              // ^^^^^^^^ This prepending is redundant!
+    /// ```
+    ///
+    ListPrependWithoutElements {
+        location: SrcSpan,
+    },
+
     /// When a constant contains a todo.
     /// Unlike todo _expressions_, todo constants are a compile time error: we
     /// want the developer to take care of them before they can run their code.
@@ -1414,7 +1428,8 @@ impl Error {
             | Error::RecordUpdateVariantWithNoFields { location }
             | Error::QualifiedTypeMissingName { location }
             | Error::TodoConstant { location }
-            | Error::LowercaseBoolPattern { location } => location.start,
+            | Error::LowercaseBoolPattern { location }
+            | Error::ListPrependWithoutElements { location } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }

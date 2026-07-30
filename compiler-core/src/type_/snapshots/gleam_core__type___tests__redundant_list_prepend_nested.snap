@@ -1,0 +1,47 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "const wibble = [..[..[..[..[1, 2]]]]]"
+---
+----- SOURCE CODE
+const wibble = [..[..[..[..[1, 2]]]]]
+
+----- ERROR
+error: Redundant list prepend
+  ┌─ /src/one/two.gleam:1:16
+  │
+1 │ const wibble = [..[..[..[..[1, 2]]]]]
+  │                ^^^^^^^^^^^^^^^^^^^^^^ This prepend does nothing
+
+See: https://tour.gleam.run/basics/lists/
+
+Hint: `list` can be used directly instead of `[..list]`
+
+error: Redundant list prepend
+  ┌─ /src/one/two.gleam:1:19
+  │
+1 │ const wibble = [..[..[..[..[1, 2]]]]]
+  │                   ^^^^^^^^^^^^^^^^^^ This prepend does nothing
+
+See: https://tour.gleam.run/basics/lists/
+
+Hint: `list` can be used directly instead of `[..list]`
+
+error: Redundant list prepend
+  ┌─ /src/one/two.gleam:1:22
+  │
+1 │ const wibble = [..[..[..[..[1, 2]]]]]
+  │                      ^^^^^^^^^^^^^^ This prepend does nothing
+
+See: https://tour.gleam.run/basics/lists/
+
+Hint: `list` can be used directly instead of `[..list]`
+
+error: Redundant list prepend
+  ┌─ /src/one/two.gleam:1:25
+  │
+1 │ const wibble = [..[..[..[..[1, 2]]]]]
+  │                         ^^^^^^^^^^ This prepend does nothing
+
+See: https://tour.gleam.run/basics/lists/
+
+Hint: `list` can be used directly instead of `[..list]`
