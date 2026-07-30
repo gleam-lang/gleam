@@ -4541,7 +4541,16 @@ impl<'a, IO> GenerateDynamicDecoder<'a, IO> {
     }
 
     pub fn code_actions(&mut self) {
-        self.visit_typed_module(&self.module.ast);
+        let project_config = &self.compiler.project_compiler.config;
+        if project_config
+            .dependencies
+            .contains_key(STDLIB_PACKAGE_NAME)
+            || project_config
+                .dev_dependencies
+                .contains_key(STDLIB_PACKAGE_NAME)
+        {
+            self.visit_typed_module(&self.module.ast);
+        }
     }
 
     fn custom_type_decoder_body(
