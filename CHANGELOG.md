@@ -45,6 +45,10 @@
   copyright metadata to the generated POSIX entrypoint.
   ([John Downey](https://github.com/jtdowney))
 
+- Fixed a bug where the `echo` on the JavaScript target would incorrectly print
+  numbers like `1.0e300`.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when
