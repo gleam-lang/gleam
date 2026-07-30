@@ -181,6 +181,11 @@ fn echo_float() {
 }
 
 #[test]
+fn echo_nan_infinity() {
+    assert_echo!(Target::JavaScript, "echo_nan_infinity");
+}
+
+#[test]
 fn echo_function() {
     assert_echo!("echo_function");
 }
