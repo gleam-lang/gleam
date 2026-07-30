@@ -153,6 +153,10 @@
   through further usages.
   ([James Dolan](https://github.com/jamesdolan16))
 
+- The compiler is now fault tolerant when providing an error for a redundant list
+  prepend like `[..wobble]`.
+  ([0xda157](https://github.com/0xda157))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
