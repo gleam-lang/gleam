@@ -66,7 +66,7 @@ class Echo$Inspector {
     if (v === null) return "//js(null)";
     if (v === undefined) return "Nil";
     if (t === "string") return this.#string(v);
-    if (t === "bigint" || globalThis.Number.isInteger(v)) return v.toString();
+    if (t === "bigint" || globalThis.Number.isSafeInteger(v)) return v.toString();
     if (t === "number") return this.#float(v);
     if (v instanceof $UtfCodepoint) return this.#utfCodepoint(v);
     if (v instanceof $BitArray) return this.#bit_array(v);
