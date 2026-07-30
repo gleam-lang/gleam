@@ -122,7 +122,6 @@ pub enum ParseErrorType {
     DuplicateAttribute, // an attribute was used more than once
     UnknownAttribute, // an attribute was used that is not known
     UnknownTarget, // an unknown target was used
-    ListSpreadWithoutElements, // Pointless spread: `[..xs]`
     ListSpreadFollowedByElements, // trying to append something after the spread: `[..xs, x]`
     ListSpreadWithAnotherSpread {
         first_spread_location: SrcSpan,
@@ -439,13 +438,6 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 text: "".into(),
                 hint: None,
                 label_text: "The module ended unexpectedly".into(),
-                extra_labels: vec![],
-            },
-
-            ParseErrorType::ListSpreadWithoutElements => ParseErrorDetails {
-                text: "See: https://tour.gleam.run/basics/lists/".into(),
-                hint: Some("Try prepending some elements [1, 2, ..list].".into()),
-                label_text: "This spread does nothing".into(),
                 extra_labels: vec![],
             },
 

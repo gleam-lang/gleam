@@ -402,16 +402,11 @@ wobble %= 1"
     );
 }
 
-// https://github.com/gleam-lang/gleam/issues/1231
+// The error for this invalid syntax been moved to type checker, so that the
+// langauge server can provide a fix for it.
 #[test]
-fn pointless_spread() {
-    assert_error!(
-        "let xs = [] [..xs]",
-        ParseError {
-            error: ParseErrorType::ListSpreadWithoutElements,
-            location: SrcSpan { start: 12, end: 18 },
-        }
-    );
+fn pointless_list_prepend_should_parse() {
+    assert_parse!("let xs = [] [..xs]");
 }
 
 // https://github.com/gleam-lang/gleam/issues/1613
@@ -2253,16 +2248,6 @@ fn prepend_to_const_list_with_no_tail() {
     assert_module_error!(
         "
 const wibble = [1, 2, ..]
-"
-    );
-}
-
-#[test]
-fn prepend_no_elements_to_const_list() {
-    assert_module_error!(
-        "
-const wibble = [2, 3]
-const wobble = [..wibble]
 "
     );
 }
