@@ -410,7 +410,7 @@ impl<'a, 'doc> Formatter<'a> {
         arena: &'doc DocumentArena<'a, 'doc>,
         unqualified_import: &'a UnqualifiedImport,
     ) -> Document<'a, 'doc> {
-        unqualified_import.name.as_ref().to_doc(arena).append(
+        unqualified_import.name.as_str().to_doc(arena).append(
             arena,
             match &unqualified_import.as_name {
                 None => EMPTY_DOCUMENT,
@@ -2321,13 +2321,13 @@ impl<'a, 'doc> Formatter<'a> {
             CallArgFormatting::Unlabelled(value) => format_value(self, value),
             CallArgFormatting::ShorthandLabelled(label) => {
                 let comments = self.pop_comments(argument.location.start);
-                let label = label.as_ref().to_doc(arena).append(arena, COLON_DOCUMENT);
+                let label = label.as_str().to_doc(arena).append(arena, COLON_DOCUMENT);
                 commented(arena, label, comments)
             }
             CallArgFormatting::Labelled(label, value) => {
                 let comments = self.pop_comments(argument.location.start);
                 let label = label
-                    .as_ref()
+                    .as_str()
                     .to_doc(arena)
                     .append(arena, COLON_SPACE_DOCUMENT);
                 let value = format_value(self, value);

@@ -298,7 +298,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
 
             // If any of the function arguments shadow the current function then
             // recursion is no longer possible.
-            if function_name.as_ref() == name {
+            if function_name.as_str() == name {
                 current_function = CurrentFunction::ModuleWithShadowingArgument;
             }
         }
