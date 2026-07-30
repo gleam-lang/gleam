@@ -13,6 +13,10 @@
   patterns.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The compiler is now fault tolerant when providing an error for a redundant list
+  prepend like `[..wobble]`.
+  ([0xda157](https://github.com/0xda157))
+
 ### Build tool
 
 - `gleam remove` now rejects invalid package names with an error explaining
