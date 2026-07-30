@@ -53,8 +53,11 @@ class Echo$Inspector {
       const index = string.indexOf("e");
       if (index >= 0) {
         return string.slice(0, index) + ".0" + string.slice(index);
+      } else if (globalThis.Number.isInteger(float)) {
+        return string + ".0"
       } else {
-        return string + ".0";
+        // For NaN and Infinity we return it as-is.
+        return string;
       }
     }
   }
