@@ -7890,7 +7890,25 @@ fn wobble(i) {
 
 #[test]
 fn generate_dynamic_decoder() {
+    let src = "
+pub type Person {
+  Person(name: String, age: Int, height: Float, is_cool: Bool, brain: BitArray)
+}
+";
     assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_stdlib",
+            "gleam/dynamic",
+            "pub type Dynamic"
+        ),
+        find_position_of("type").to_selection()
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_not_offered_without_stdlib() {
+    assert_no_code_actions!(
         GENERATE_DYNAMIC_DECODER,
         "
 pub type Person {
@@ -7903,9 +7921,7 @@ pub type Person {
 
 #[test]
 fn generate_dynamic_decoder_only_works_if_withing_a_type() {
-    assert_no_code_actions!(
-        GENERATE_DYNAMIC_DECODER,
-        "
+    let src = "
 pub type Person {
   Person(name: String, age: Int, height: Float, is_cool: Bool, brain: BitArray)
 }
@@ -7914,7 +7930,14 @@ pub fn main() {
   // unrelated
   todo
 }
-",
+";
+    assert_no_code_actions!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_stdlib",
+            "gleam/dynamic",
+            "pub type Dynamic"
+        ),
         find_position_of("pub type").select_until(find_position_of("todo"))
     );
 }
@@ -7940,9 +7963,9 @@ pub type Wibble(value) {
     assert_code_action!(
         GENERATE_DYNAMIC_DECODER,
         TestProject::for_source(src)
-            .add_module("gleam/option", "pub type Option(a)")
-            .add_module("gleam/dynamic", "pub type Dynamic")
-            .add_module("gleam/dict", "pub type Dict(k, v)"),
+            .add_package_module("gleam_stdlib", "gleam/option", "pub type Option(a)")
+            .add_package_module("gleam_stdlib", "gleam/dynamic", "pub type Dynamic")
+            .add_package_module("gleam_stdlib", "gleam/dict", "pub type Dict(k, v)"),
         find_position_of("type W").to_selection()
     );
 }
@@ -7959,20 +7982,29 @@ pub type Wibble {
 
     assert_code_action!(
         GENERATE_DYNAMIC_DECODER,
-        TestProject::for_source(src).add_module("gleam/dynamic/decode", "pub type Decoder(a)"),
+        TestProject::for_source(src).add_package_module(
+            "gleam_stdlib",
+            "gleam/dynamic/decode",
+            "pub type Decoder(a)"
+        ),
         find_position_of("type W").to_selection()
     );
 }
 
 #[test]
 fn generate_dynamic_decoder_tuple() {
-    assert_code_action!(
-        GENERATE_DYNAMIC_DECODER,
-        "
+    let src = "
 pub type Wibble {
   Wibble(tuple: #(Int, Float, #(String, Bool)))
 }
-",
+";
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_stdlib",
+            "gleam/dynamic/decode",
+            "pub type Decoder(a)"
+        ),
         find_position_of("type W").to_selection()
     );
 }
@@ -7988,91 +8020,125 @@ pub type LinkedList {
 ";
     assert_code_action!(
         GENERATE_DYNAMIC_DECODER,
-        TestProject::for_source(src).add_module("gleam/option", "pub type Option(a)"),
+        TestProject::for_source(src).add_package_module(
+            "gleam_stdlib",
+            "gleam/option",
+            "pub type Option(a)"
+        ),
         find_position_of("type").to_selection()
     );
 }
 
 #[test]
 fn generate_dynamic_decoder_for_multi_variant_type() {
-    assert_code_action!(
-        GENERATE_DYNAMIC_DECODER,
-        "
+    let src = "
 pub type Wibble {
   Wibble(wibble: Int, next: Wibble)
   Wobble(wobble: Float, text: String, values: List(Bool))
 }
-",
+";
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_stdlib",
+            "gleam/dynamic/decode",
+            "pub type Decoder(a)"
+        ),
         find_position_of("type").to_selection()
     );
 }
 
 #[test]
 fn generate_dynamic_decoder_for_multi_variant_type_multi_word_name() {
-    assert_code_action!(
-        GENERATE_DYNAMIC_DECODER,
-        "
+    let src = "
 pub type Wibble {
   OneTwo(wibble: Int, next: Wibble)
   ThreeFour(wobble: Float, text: String, values: List(Bool))
   FiveSixSeven(one_two: Int)
 }
-",
+";
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_stdlib",
+            "gleam/dynamic/decode",
+            "pub type Decoder(a)"
+        ),
         find_position_of("type").to_selection()
     );
 }
 
 #[test]
 fn generate_dynamic_decoder_for_variant_with_no_fields() {
-    assert_code_action!(
-        GENERATE_DYNAMIC_DECODER,
-        "
+    let src = "
 pub type Wibble {
   Wibble
 }
-",
+";
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_stdlib",
+            "gleam/dynamic/decode",
+            "pub type Decoder(a)"
+        ),
         find_position_of("type").to_selection()
     );
 }
 
 #[test]
 fn generate_dynamic_decoder_for_variants_with_no_fields() {
-    assert_code_action!(
-        GENERATE_DYNAMIC_DECODER,
-        "
+    let src = "
 pub type Wibble {
   Wibble
   Wobble
   Woo
 }
-",
+";
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_stdlib",
+            "gleam/dynamic/decode",
+            "pub type Decoder(a)"
+        ),
         find_position_of("type").to_selection()
     );
 }
 
 #[test]
 fn generate_dynamic_decoder_for_variants_with_mixed_fields() {
-    assert_code_action!(
-        GENERATE_DYNAMIC_DECODER,
-        "
+    let src = "
 pub type Wibble {
   Wibble
   Wobble(field: String, field2: Int)
 }
-",
+";
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_stdlib",
+            "gleam/dynamic/decode",
+            "pub type Decoder(a)"
+        ),
         find_position_of("type").to_selection()
     );
 }
 
 #[test]
 fn no_code_action_to_generate_dynamic_decoder_for_type_without_labels() {
-    assert_no_code_actions!(
-        GENERATE_DYNAMIC_DECODER,
-        "
+    let src = "
 pub type Wibble {
   Wibble(Int, Int, String)
 }
-",
+";
+    assert_no_code_actions!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_stdlib",
+            "gleam/dynamic/decode",
+            "pub type Decoder(a)"
+        ),
         find_position_of("type").to_selection()
     );
 }
@@ -14067,8 +14133,12 @@ pub type Wobble {
     assert_code_action!(
         GENERATE_DYNAMIC_DECODER,
         TestProject::for_source(src)
-            .add_hex_module("gleam/option", "pub type Option(a) { Some(a) None }")
-            .add_hex_module("gleam/dict", "pub type Dict(key, value)"),
+            .add_package_module(
+                "gleam_stdlib",
+                "gleam/option",
+                "pub type Option(a) { Some(a) None }"
+            )
+            .add_package_module("gleam_stdlib", "gleam/dict", "pub type Dict(key, value)"),
         find_position_of("pub type Wobble {").select_until(find_position_of("}"))
     );
 }
@@ -14096,7 +14166,13 @@ pub type Wobble {
     "#;
     assert_code_action!(
         GENERATE_DYNAMIC_DECODER,
-        TestProject::for_source(src).add_module("wibble", "pub type Wibble { Wibble }"),
+        TestProject::for_source(src)
+            .add_module("wibble", "pub type Wibble { Wibble }")
+            .add_package_module(
+                "gleam_stdlib",
+                "gleam/dynamic/decode",
+                "pub type Decoder(a)"
+            ),
         find_position_of("pub type Wobble {").select_until(find_position_of("}").nth_occurrence(2))
     );
 }
@@ -14137,6 +14213,11 @@ pub type Wibble { Wibble(value: NestedWibble) }
                 r#"
 pub type NestedWibble { NestedWibble }
 "#
+            )
+            .add_package_module(
+                "gleam_stdlib",
+                "gleam/dynamic/decode",
+                "pub type Decoder(a)"
             ),
         find_position_of("pub type Wobble {").select_until(find_position_of("}").nth_occurrence(2))
     );
@@ -14168,6 +14249,11 @@ pub type Wibble { Wibble(map: Dict(Int, Bool)) }
 pub type Dict(key, value)
 pub fn new() -> Dict(k, v) { todo }
 "#
+            )
+            .add_package_module(
+                "gleam_stdlib",
+                "gleam/dynamic/decode",
+                "pub type Decoder(a)"
             ),
         find_position_of("pub type Wobble {").select_until(find_position_of("}").nth_occurrence(2))
     );
@@ -14185,21 +14271,32 @@ pub type Wobble {
     "#;
     assert_code_action!(
         GENERATE_DYNAMIC_DECODER,
-        TestProject::for_source(src).add_hex_module("wibble", "pub type Wibble { Wibble }"),
+        TestProject::for_source(src)
+            .add_hex_module("wibble", "pub type Wibble { Wibble }")
+            .add_package_module(
+                "gleam_stdlib",
+                "gleam/dynamic/decode",
+                "pub type Decoder(a)"
+            ),
         find_position_of("pub type Wobble {").select_until(find_position_of("}").nth_occurrence(2))
     );
 }
 
 #[test]
 fn generate_dynamic_decoder_skips_over_recursive_constructors_when_generating_zero_values() {
-    assert_code_action!(
-        GENERATE_DYNAMIC_DECODER,
-        r#"
+    let src = r#"
 pub type Wobble {
   Wobble(inside: Wobble)
   Dummy(a: Int, b: Int)
 }
-    "#,
+    "#;
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_stdlib",
+            "gleam/dynamic/decode",
+            "pub type Decoder(a)"
+        ),
         find_position_of("pub type Wobble {").select_until(find_position_of("}"))
     );
 }
@@ -14207,9 +14304,7 @@ pub type Wobble {
 #[test]
 fn generate_dynamic_decoder_skips_over_mutually_recursive_constructors_when_generating_zero_values()
 {
-    assert_code_action!(
-        GENERATE_DYNAMIC_DECODER,
-        r#"
+    let src = r#"
 pub type Wobble {
   Wobble(inside: Wibble)
   DummyWobble(a: Int, b: Int)
@@ -14219,7 +14314,14 @@ pub type Wibble {
   Wibble(inside: Wobble)
   DummyWibble(a: Int, b: Int)
 }
-    "#,
+    "#;
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_stdlib",
+            "gleam/dynamic/decode",
+            "pub type Decoder(a)"
+        ),
         find_position_of("pub type Wobble {").select_until(find_position_of("}"))
     );
 }
@@ -14237,36 +14339,52 @@ pub type Wobble {
     "#;
     assert_code_action!(
         GENERATE_DYNAMIC_DECODER,
-        TestProject::for_source(src).add_hex_module("wibble", "pub type Wibble { Wibble }"),
+        TestProject::for_source(src)
+            .add_hex_module("wibble", "pub type Wibble { Wibble }")
+            .add_package_module(
+                "gleam_stdlib",
+                "gleam/dynamic/decode",
+                "pub type Decoder(a)"
+            ),
         find_position_of("pub type Wobble {").select_until(find_position_of("}").nth_occurrence(2))
     );
 }
 
 #[test]
 fn generate_dynamic_decoder_generates_todo_for_zero_value_when_all_constructors_fail() {
-    assert_code_action!(
-        GENERATE_DYNAMIC_DECODER,
-        r#"
+    let src = r#"
 pub type Wobble {
   Wobble(nope: Wobble)
   Wibble(not: Int, again: Wobble)
 }
-    "#,
+    "#;
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_stdlib",
+            "gleam/dynamic/decode",
+            "pub type Decoder(a)"
+        ),
         find_position_of("pub type Wobble {").select_until(find_position_of("}"))
     );
 }
 
 #[test]
 fn generate_dynamic_decoder_uses_decode_success_for_nil() {
-    assert_code_action!(
-        GENERATE_DYNAMIC_DECODER,
-        r#"
+    let src = r#"
 pub type Nothing {
   No(val: Nil)
   Nope(val: #(Nil, Nil))
   Nothing(val: List(Nil))
 }
-    "#,
+    "#;
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_stdlib",
+            "gleam/dynamic/decode",
+            "pub type Decoder(a)"
+        ),
         find_position_of("pub type Nothing {").select_until(find_position_of("}"))
     );
 }
