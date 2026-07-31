@@ -1,0 +1,48 @@
+---
+source: compiler-core/src/erlang/tests/consts.rs
+expression: "\nimport some_module\n\nconst wobble = some_module.wibble\nconst wubble = wobble\n\npub fn go(x) {\n  case x {\n    x if x == wubble <> \"b\" -> todo\n    _ -> todo\n  }\n}\n"
+---
+----- SOURCE CODE
+
+import some_module
+
+const wobble = some_module.wibble
+const wubble = wobble
+
+pub fn go(x) {
+  case x {
+    x if x == wubble <> "b" -> todo
+    _ -> todo
+  }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([go/1]).
+
+-file("project/test/my/mod.gleam", 7).
+-spec go(binary()) -> any().
+go(X) ->
+    case X of
+        X@1 when X@1 =:= <<"a"/binary, "b"/utf8>> ->
+            erlang:error(#{
+                gleam_error => todo,
+                message => ~"`todo` expression evaluated. This code has not yet been implemented.",
+                file => ~"project/test/my/mod.gleam",
+                module => ~"my/mod",
+                function => ~"go",
+                line => 9
+            });
+
+        _ ->
+            erlang:error(#{
+                gleam_error => todo,
+                message => ~"`todo` expression evaluated. This code has not yet been implemented.",
+                file => ~"project/test/my/mod.gleam",
+                module => ~"my/mod",
+                function => ~"go",
+                line => 10
+            })
+    end.
