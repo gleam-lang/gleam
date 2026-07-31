@@ -696,3 +696,8 @@
 - Fixed a bug where the compiler would report a module import as unused when
   its local name matched another imported module's full name.
   ([John Downey](https://github.com/jtdowney))
+
+- Fixed a bug where the Erlang code generator would generate wrong code when
+  referencing constants that are aliases to other constants in bit array
+  segments, string concatenation and clause guards.
+  ([Andrey Kozhev](https://github.com/ankddev))
