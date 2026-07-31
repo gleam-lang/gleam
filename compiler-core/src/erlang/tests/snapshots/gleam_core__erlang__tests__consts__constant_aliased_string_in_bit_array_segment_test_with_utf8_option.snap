@@ -21,5 +21,5 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 5).
 -spec main() -> nil.
 main() ->
-    _ = <<"a"/binary>>,
+    _ = <<"a"/utf8>>,
     nil.

@@ -22,4 +22,4 @@ pub fn main() {
 -file("project/test/my/mod.gleam", 7).
 -spec main() -> binary().
 main() ->
-    _ = <<"a"/binary, "b"/utf8>>.
+    _ = <<"a"/utf8, "b"/utf8>>.
