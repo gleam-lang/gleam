@@ -308,3 +308,199 @@ pub fn main() {
 "#
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/6086
+#[test]
+fn constant_imported_aliased_string_in_bit_array_segment_test_with_utf16_option() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            r#"
+pub const wibble = "a"
+            "#
+        ),
+        r#"
+import some_module.{wibble}
+
+const wobble = wibble
+
+pub fn main() {
+  let _ = <<wobble:utf16>>
+  Nil
+}
+"#
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/6086
+#[test]
+fn constant_imported_aliased_string_in_bit_array_segment_test_with_utf16_option_2() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            r#"
+pub const wibble = "a"
+            "#
+        ),
+        r#"
+import some_module
+
+const wobble = some_module.wibble
+const wubble = wobble
+
+pub fn main() {
+  let _ = <<wubble:utf16>>
+  Nil
+}
+"#
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/6086
+#[test]
+fn constant_imported_aliased_string_in_bit_array_segment_test_with_utf8_option() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            r#"
+pub const wibble = "a"
+            "#
+        ),
+        r#"
+import some_module.{wibble}
+
+const wobble = wibble
+
+pub fn main() {
+  let _ = <<wobble:utf8>>
+  Nil
+}
+"#
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/6086
+#[test]
+fn constant_imported_aliased_string_in_bit_array_segment_test_with_utf8_option_2() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            r#"
+pub const wibble = "a"
+            "#
+        ),
+        r#"
+import some_module
+
+const wobble = some_module.wibble
+const wubble = wobble
+
+pub fn main() {
+  let _ = <<wubble:utf8>>
+  Nil
+}
+"#
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/6086
+#[test]
+fn constant_aliased_string_in_bit_array_segment_test_with_utf8_option() {
+    assert_erl!(
+        r#"
+const wibble = "a"
+const wobble = wibble
+
+pub fn main() {
+  let _ = <<wobble:utf8>>
+  Nil
+}
+"#
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/6086
+#[test]
+fn constant_aliased_string_in_bit_array_segment_test_with_utf16_option() {
+    assert_erl!(
+        r#"
+const wibble = "a"
+const wobble = wibble
+
+pub fn main() {
+  let _ = <<wobble:utf16>>
+  Nil
+}
+"#
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/6086
+#[test]
+fn constant_imported_aliased_string_in_string_concatenation() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            r#"
+pub const wibble = "a"
+            "#
+        ),
+        r#"
+import some_module
+
+const wobble = some_module.wibble
+const wubble = wobble
+
+pub fn main() {
+  let _ = wubble <> "b"
+}
+"#
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/6086
+#[test]
+fn constant_imported_aliased_string_in_string_concatenation_in_guard() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            r#"
+pub const wibble = "a"
+            "#
+        ),
+        r#"
+import some_module
+
+const wobble = some_module.wibble
+const wubble = wobble
+
+pub fn go(x) {
+  case x {
+    x if x == wubble <> "b" -> todo
+    _ -> todo
+  }
+}
+"#
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/6086
+#[test]
+fn constant_aliased_string_in_concatenation() {
+    assert_erl!(
+        r#"
+const wibble = "a"
+const wobble = wibble
+
+pub fn main() {
+  let _ = wobble <> "b"
+}
+"#
+    )
+}

@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/erlang/tests/consts.rs
+expression: "\nimport some_module\n\nconst wobble = some_module.wibble\nconst wubble = wobble\n\npub fn main() {\n  let _ = wubble <> \"b\"\n}\n"
+---
+----- SOURCE CODE
+
+import some_module
+
+const wobble = some_module.wibble
+const wubble = wobble
+
+pub fn main() {
+  let _ = wubble <> "b"
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 7).
+-spec main() -> binary().
+main() ->
+    _ = <<"a"/binary, "b"/utf8>>.
