@@ -3532,10 +3532,13 @@ where
                         self.advance(); // name
 
                         match self.tok0 {
-                            Some((_, Token::LeftParen, _)) => parse_error(
-                                ParseErrorType::UnexpectedFunction,
-                                SrcSpan { start, end },
-                            ),
+                            Some((_, Token::LeftParen, _)) => {
+                                let call_end = self.find_matching_paren();
+                                parse_error(
+                                    ParseErrorType::UnexpectedFunction,
+                                    SrcSpan { start, end: call_end },
+                                )
+                            }
                             _ => Ok(Some(Constant::Var {
                                 location: SrcSpan { start, end },
                                 module: Some((name, SrcSpan::new(start, module_end))),
@@ -3563,10 +3566,14 @@ where
                 self.advance(); // name
 
                 match self.tok0 {
-                    Some((_, Token::LeftParen, _)) => parse_error(
-                        ParseErrorType::UnexpectedFunction,
-                        SrcSpan { start, end },
-                    ),
+                    Some((_, Token::LeftParen, _)) => {
+                        // Scan ahead to find the matching closing paren
+                        let call_end = self.find_matching_paren();
+                        parse_error(
+                            ParseErrorType::UnexpectedFunction,
+                            SrcSpan { start, end: call_end },
+                        )
+                    }
                     _ => Ok(Some(Constant::Var {
                         location: SrcSpan { start, end },
                         module: None,
@@ -4500,6 +4507,62 @@ functions are declared separately from types.";
                 SrcSpan { start, end },
             ),
         }
+    }
+
+    // Scan ahead through the token stream to find the matching closing paren
+    // for the current LeftParen in tok0. Returns the end position of ')'.
+    // Does not consume any tokens - uses the underlying lexer iterator directly.
+    fn find_matching_paren(&mut self) -> u32 {
+        let mut depth: i32 = 1;
+        let mut saved_tok1 = self.tok1.take();
+
+        // tok0 is currently LeftParen, advance past it
+        self.tok0 = saved_tok1.take();
+        match self.tokens.next() {
+            Some(Ok(tok)) => self.tok1 = Some(tok),
+            _ => self.tok1 = None,
+        }
+
+        let mut last_end = 0u32;
+        loop {
+            let tok = self.tok0.take();
+            match tok {
+                Some((_, Token::LeftParen, e)) => {
+                    depth += 1;
+                    last_end = e;
+                    self.tok0 = self.tok1.take();
+                    match self.tokens.next() {
+                        Some(Ok(t)) => self.tok1 = Some(t),
+                        _ => self.tok1 = None,
+                    }
+                }
+                Some((_, Token::RightParen, e)) => {
+                    depth -= 1;
+                    last_end = e;
+                    if depth == 0 {
+                        break;
+                    }
+                    self.tok0 = self.tok1.take();
+                    match self.tokens.next() {
+                        Some(Ok(t)) => self.tok1 = Some(t),
+                        _ => self.tok1 = None,
+                    }
+                }
+                Some(_) => {
+                    self.tok0 = self.tok1.take();
+                    match self.tokens.next() {
+                        Some(Ok(t)) => self.tok1 = Some(t),
+                        _ => self.tok1 = None,
+                    }
+                }
+                None => break,
+            }
+        }
+
+        // Note: we leave the parser state somewhat disrupted here,
+        // but since this is called right before parse_error (which
+        // returns Err immediately), it doesn't matter.
+        last_end
     }
 
     // Moves the token stream forward
