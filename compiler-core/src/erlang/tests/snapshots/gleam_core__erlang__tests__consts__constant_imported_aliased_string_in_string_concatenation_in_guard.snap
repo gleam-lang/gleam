@@ -26,7 +26,7 @@ pub fn go(x) {
 -spec go(binary()) -> any().
 go(X) ->
     case X of
-        X@1 when X@1 =:= <<"a"/binary, "b"/utf8>> ->
+        X@1 when X@1 =:= <<"a"/utf8, "b"/utf8>> ->
             erlang:error(#{
                 gleam_error => todo,
                 message => ~"`todo` expression evaluated. This code has not yet been implemented.",
