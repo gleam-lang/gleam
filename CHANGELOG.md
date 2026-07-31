@@ -36,3 +36,8 @@
 - Fixed a bug where `gleam export erlang-shipment` would add Gleam contributor
   copyright metadata to the generated POSIX entrypoint.
   ([John Downey](https://github.com/jtdowney))
+
+- Fixed a bug where the Erlang code generator would generate wrong code when
+  referencing constants that are aliases to other constants in bit array
+  segments, string concatenation and clause guards.
+  ([Andrey Kozhev](https://github.com/ankddev))
