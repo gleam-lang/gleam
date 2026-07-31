@@ -3362,33 +3362,25 @@ fn type_export(custom_type: &TypedCustomType) -> (EcoString, usize) {
 
 /// This returns true if the given expression is going to be compiled to a
 /// single literal Erlang string.
-/// This is not true just for literal Gleam strings like `"abc"`, but also
+/// This is not only true for literal Gleam strings like `"abc"`, but also for
 /// variables referencing string constants (as those are inlined)
 fn produces_literal_string(value: &TypedExpr) -> bool {
     match value {
-        TypedExpr::String { .. }
+        TypedExpr::String { .. } => true,
         // Constants are inlined on the Erlang target, so we need to check if
-        // those are literal strings too!
-        | TypedExpr::ModuleSelect {
-            constructor:
-                ModuleValueConstructor::Constant {
-                    literal: Constant::String { .. },
-                    ..
-                },
+        // those produce literal strings too!
+        TypedExpr::ModuleSelect {
+            constructor: ModuleValueConstructor::Constant { literal, .. },
             ..
         }
         | TypedExpr::Var {
             constructor:
                 ValueConstructor {
-                    variant:
-                        ValueConstructorVariant::ModuleConstant {
-                            literal: Constant::String { .. },
-                            ..
-                        },
+                    variant: ValueConstructorVariant::ModuleConstant { literal, .. },
                     ..
                 },
             ..
-        } => true,
+        } => constant_produces_literal_string(literal),
 
         TypedExpr::Int { .. }
         | TypedExpr::Var { .. }
@@ -3416,23 +3408,51 @@ fn produces_literal_string(value: &TypedExpr) -> bool {
     }
 }
 
-/// This returns true if the given expression is going to be compiled to a
+/// This returns true if the given constant is going to be compiled to a
 /// single literal Erlang string.
-/// This is not true just for literal Gleam strings like `"abc"`, but also
+/// This is not only true for literal Gleam strings like `"abc"`, but also for
+/// variables referencing string constants (as those are inlined)
+fn constant_produces_literal_string(constant: &Constant<Arc<Type>>) -> bool {
+    match constant {
+        Constant::String { .. } => true,
+        Constant::Var {
+            constructor: Some(constructor),
+            ..
+        } if let ValueConstructor {
+            variant: ValueConstructorVariant::ModuleConstant { ref literal, .. },
+            ..
+        } = **constructor =>
+        {
+            constant_produces_literal_string(literal)
+        }
+        Constant::Int { .. }
+        | Constant::Float { .. }
+        | Constant::Tuple { .. }
+        | Constant::List { .. }
+        | Constant::Record { .. }
+        | Constant::RecordUpdate { .. }
+        | Constant::BitArray { .. }
+        | Constant::StringConcatenation { .. }
+        | Constant::Invalid { .. }
+        | Constant::Todo { .. }
+        | Constant::Var { .. } => false,
+    }
+}
+
+/// This returns true if the given guard is going to be compiled to a
+/// single literal Erlang string.
+/// This is not only true for literal Gleam strings like `"abc"`, but also for
 /// variables referencing string constants (as those are inlined)
 fn guard_produces_literal_string(guard: &ClauseGuard<Arc<Type>>) -> bool {
     match guard {
         ClauseGuard::Block { value, .. } => guard_produces_literal_string(value),
 
         ClauseGuard::ModuleSelect {
-            literal: Constant::String { .. },
-            ..
+            literal: constant, ..
         }
-        | ClauseGuard::Constant(Constant::String { .. }) => true,
+        | ClauseGuard::Constant(constant) => constant_produces_literal_string(constant),
 
         ClauseGuard::BinaryOperator { .. }
-        | ClauseGuard::Constant(..)
-        | ClauseGuard::ModuleSelect { .. }
         | ClauseGuard::Not { .. }
         | ClauseGuard::Var { .. }
         | ClauseGuard::TupleIndex { .. }
