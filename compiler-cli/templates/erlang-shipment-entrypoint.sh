@@ -1,8 +1,5 @@
 #!/bin/sh
 
-# SPDX-License-Identifier: Apache-2.0
-# SPDX-FileCopyrightText: 2022 The Gleam contributors
-
 set -eu
 
 PACKAGE=$PACKAGE_NAME_FROM_GLEAM

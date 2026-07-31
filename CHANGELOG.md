@@ -24,3 +24,7 @@
 - Fixed a bug where on the JavaScript target a case clause whose guard's top
   level operator was `||` could run for a subject its pattern did not match.
   ([John Downey](https://github.com/jtdowney))
+
+- Fixed a bug where `gleam export erlang-shipment` would add Gleam contributor
+  copyright metadata to the generated POSIX entrypoint.
+  ([John Downey](https://github.com/jtdowney))
