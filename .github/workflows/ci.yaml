@@ -493,6 +493,10 @@ jobs:
         run: make
         working-directory: ./test/compile_package1
 
+      - name: test/compile_package2
+        run: make
+        working-directory: ./test/compile_package2
+
       - name: Test JavaScript prelude
         run: make
         working-directory: ./test/javascript_prelude
