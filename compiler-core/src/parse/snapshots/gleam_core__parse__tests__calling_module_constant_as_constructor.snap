@@ -14,4 +14,4 @@ error: Syntax error
   ┌─ /src/parse/error.gleam:4:15
   │
 4 │ pub const a = wibble(1)
-  │               ^^^^^^^ Functions can only be called within other functions
+  │               ^^^^^^ Functions can only be called within other functions

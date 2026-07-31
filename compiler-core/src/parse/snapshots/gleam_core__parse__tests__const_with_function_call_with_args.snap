@@ -13,4 +13,4 @@ error: Syntax error
   ┌─ /src/parse/error.gleam:3:18
   │
 3 │ const wib: Int = wibble(1, "wobble")
-  │                  ^^^^^^^ Functions can only be called within other functions
+  │                  ^^^^^^ Functions can only be called within other functions

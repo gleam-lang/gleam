@@ -3534,10 +3534,7 @@ where
                         match self.tok0 {
                             Some((_, Token::LeftParen, _)) => parse_error(
                                 ParseErrorType::UnexpectedFunction,
-                                SrcSpan {
-                                    start,
-                                    end: end + 1,
-                                },
+                                SrcSpan { start, end },
                             ),
                             _ => Ok(Some(Constant::Var {
                                 location: SrcSpan { start, end },
@@ -3568,10 +3565,7 @@ where
                 match self.tok0 {
                     Some((_, Token::LeftParen, _)) => parse_error(
                         ParseErrorType::UnexpectedFunction,
-                        SrcSpan {
-                            start,
-                            end: end + 1,
-                        },
+                        SrcSpan { start, end },
                     ),
                     _ => Ok(Some(Constant::Var {
                         location: SrcSpan { start, end },
