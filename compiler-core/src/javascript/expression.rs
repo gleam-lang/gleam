@@ -3076,7 +3076,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
         }
     }
 
-    pub(crate) fn guard(
+    fn guard_expression(
         &mut self,
         arena: &'doc DocumentArena<'a, 'doc>,
         guard: &'a TypedClauseGuard,
@@ -3084,10 +3084,11 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
         match guard {
             ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to code generation"),
 
-            ClauseGuard::Block { value, .. } => {
-                self.guard(arena, value)
-                    .surround(arena, OPEN_PAREN_DOCUMENT, CLOSE_PAREN_DOCUMENT)
-            }
+            ClauseGuard::Block { value, .. } => self.guard_expression(arena, value).surround(
+                arena,
+                OPEN_PAREN_DOCUMENT,
+                CLOSE_PAREN_DOCUMENT,
+            ),
 
             ClauseGuard::BinaryOperator {
                 left,
@@ -3122,8 +3123,8 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                             return doc;
                         }
 
-                        let left_doc = self.guard(arena, left);
-                        let right_doc = self.guard(arena, right);
+                        let left_doc = self.guard_expression(arena, left);
+                        let right_doc = self.guard_expression(arena, right);
                         return self.prelude_equal_call(
                             arena,
                             should_be_equal,
@@ -3149,7 +3150,10 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                             DIVIDE_FLOAT_DOCUMENT,
                             wrap_arguments(
                                 arena,
-                                [self.guard(arena, left), self.guard(arena, right)]
+                                [
+                                    self.guard_expression(arena, left),
+                                    self.guard_expression(arena, right)
+                                ]
                             )
                         ];
                     }
@@ -3161,7 +3165,10 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                             DIVIDE_INT_DOCUMENT,
                             wrap_arguments(
                                 arena,
-                                [self.guard(arena, left), self.guard(arena, right)]
+                                [
+                                    self.guard_expression(arena, left),
+                                    self.guard_expression(arena, right)
+                                ]
                             )
                         ];
                     }
@@ -3173,7 +3180,10 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                             CAMEL_CASE_REMAINDER_INT_DOCUMENT,
                             wrap_arguments(
                                 arena,
-                                [self.guard(arena, left), self.guard(arena, right)]
+                                [
+                                    self.guard_expression(arena, left),
+                                    self.guard_expression(arena, right)
+                                ]
                             )
                         ];
                     }
@@ -3200,7 +3210,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
             ClauseGuard::TupleIndex { tuple, index, .. } => {
                 docvec![
                     arena,
-                    self.guard(arena, tuple,),
+                    self.guard_expression(arena, tuple,),
                     OPEN_SQUARE_DOCUMENT,
                     *index,
                     CLOSE_SQUARE_DOCUMENT
@@ -3211,7 +3221,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                 label, container, ..
             } => docvec![
                 arena,
-                self.guard(arena, container),
+                self.guard_expression(arena, container),
                 DOT_DOCUMENT,
                 maybe_escape_property(label)
             ],
@@ -3226,7 +3236,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                 docvec![
                     arena,
                     EXCLAMATION_MARK_DOCUMENT,
-                    self.guard(arena, expression,)
+                    self.guard_expression(arena, expression,)
                 ]
             }
 
@@ -3253,7 +3263,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                 ..
             } = &constructor.variant =>
             {
-                let left_doc = self.guard(arena, left);
+                let left_doc = self.guard_expression(arena, left);
                 Some(self.singleton_equal(
                     arena,
                     left_doc,
@@ -3269,7 +3279,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                 tail: None,
                 ..
             }) if elements.is_empty() => {
-                let left_doc = self.guard(arena, left);
+                let left_doc = self.guard_expression(arena, left);
                 self.tracker.list_empty_class_used = true;
                 Some(self.singleton_equal(
                     arena,
@@ -3305,16 +3315,43 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
             | ClauseGuard::Constant(_)
             | ClauseGuard::Not { .. }
             | ClauseGuard::FieldAccess { .. }
-            | ClauseGuard::Block { .. } => self.guard(arena, guard),
+            | ClauseGuard::Block { .. } => self.guard_expression(arena, guard),
 
             ClauseGuard::BinaryOperator { .. } | ClauseGuard::ModuleSelect { .. } => {
                 docvec![
                     arena,
                     OPEN_PAREN_DOCUMENT,
-                    self.guard(arena, guard),
+                    self.guard_expression(arena, guard),
                     CLOSE_PAREN_DOCUMENT
                 ]
             }
+        }
+    }
+
+    pub(crate) fn guard(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        guard: &'a TypedClauseGuard,
+    ) -> Document<'a, 'doc> {
+        match guard {
+            ClauseGuard::BinaryOperator {
+                operator: BinOp::Or,
+                ..
+            } => docvec![
+                arena,
+                OPEN_PAREN_DOCUMENT,
+                self.guard_expression(arena, guard),
+                CLOSE_PAREN_DOCUMENT
+            ],
+            ClauseGuard::BinaryOperator { .. }
+            | ClauseGuard::Block { .. }
+            | ClauseGuard::Not { .. }
+            | ClauseGuard::Var { .. }
+            | ClauseGuard::TupleIndex { .. }
+            | ClauseGuard::FieldAccess { .. }
+            | ClauseGuard::ModuleSelect { .. }
+            | ClauseGuard::Constant(_)
+            | ClauseGuard::Invalid { .. } => self.guard_expression(arena, guard),
         }
     }
 

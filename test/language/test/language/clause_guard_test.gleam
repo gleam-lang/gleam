@@ -576,3 +576,22 @@ pub fn go(x: List(Int), y: List(Int)) {
     _ -> False
   }
 }
+
+pub fn or_guard_does_not_escape_its_pattern_test() {
+  let flag = false()
+  let other = true()
+
+  let value = [1, 2]
+  assert 0
+    == case value {
+      [a] if flag || other -> a
+      _ -> 0
+    }
+
+  let value = 7
+  assert 7
+    == case value {
+      a if flag || other -> a
+      _ -> 0
+    }
+}
