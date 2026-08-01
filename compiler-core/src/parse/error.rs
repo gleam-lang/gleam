@@ -46,8 +46,9 @@ pub enum LexicalErrorType {
         tok: char,
     },
     InvalidTripleEqual,
-    /// `++`, `-=`, etc.
-    InvalidAssignmentShorthand,
+    /// Operators that commonly exist in procedural language, but do
+    /// not exist in Gleam. e.g. `++`, `-=`, `/=`, `%=`, `+=`, `*=`
+    UnsupportedProceduralOperator,
     /// A character was encountered that visually looks like a correct
     /// character, but in reality it's some other unicode characters.
     /// For example, a non-breaking-space instead of a regular space.
@@ -954,11 +955,20 @@ impl LexicalError {
                     "See: https://tour.gleam.run/basics/equality".into(),
                 ],
             ),
-            LexicalErrorType::InvalidAssignmentShorthand => (
-                "Invalid assignment shorthand",
+            LexicalErrorType::UnsupportedProceduralOperator => (
+                "Unknown operator",
                 vec![
-                    "Gleam does not support this assignment shorthand syntax, nor mutation".into(),
-                    "Hint: variables may be rebound with `let` and `=`".into(),
+                    "Gleam is an immutable language and does not have any operators that
+change the value of an existing variable. You might want to create a
+new variable with the same name as the previous one:
+
+    let wibble = 10
+    let blobby = wibble
+    let wibble = wibble + 20
+    assert wibble == 30
+    assert bounce == 10
+"
+                    .into(),
                 ],
             ),
             LexicalErrorType::VisuallySimilarInvalidCharacter { name, correct } => (

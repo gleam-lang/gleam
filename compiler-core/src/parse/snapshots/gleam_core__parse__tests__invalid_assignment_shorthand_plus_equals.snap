@@ -11,7 +11,14 @@ error: Syntax error
   ┌─ /src/parse/error.gleam:2:8
   │
 2 │ wobble += 1
-  │        ^^ Invalid assignment shorthand
+  │        ^^ Unknown operator
 
-Gleam does not support this assignment shorthand syntax, nor mutation
-Hint: variables may be rebound with `let` and `=`
+Gleam is an immutable language and does not have any operators that
+change the value of an existing variable. You might want to create a
+new variable with the same name as the previous one:
+
+    let wibble = 10
+    let blobby = wibble
+    let wibble = wibble + 20
+    assert wibble == 30
+    assert bounce == 10

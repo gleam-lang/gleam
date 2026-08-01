@@ -230,7 +230,7 @@ where
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
                         return Err(LexicalError {
-                            error: LexicalErrorType::InvalidAssignmentShorthand,
+                            error: LexicalErrorType::UnsupportedProceduralOperator,
                             location: SrcSpan {
                                 start: tok_start,
                                 end: tok_end,
@@ -256,7 +256,7 @@ where
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
                         return Err(LexicalError {
-                            error: LexicalErrorType::InvalidAssignmentShorthand,
+                            error: LexicalErrorType::UnsupportedProceduralOperator,
                             location: SrcSpan {
                                 start: tok_start,
                                 end: tok_end,
@@ -287,7 +287,7 @@ where
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
                         return Err(LexicalError {
-                            error: LexicalErrorType::InvalidAssignmentShorthand,
+                            error: LexicalErrorType::UnsupportedProceduralOperator,
                             location: SrcSpan {
                                 start: tok_start,
                                 end: tok_end,
@@ -308,7 +308,7 @@ where
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
                         return Err(LexicalError {
-                            error: LexicalErrorType::InvalidAssignmentShorthand,
+                            error: LexicalErrorType::UnsupportedProceduralOperator,
                             location: SrcSpan {
                                 start: tok_start,
                                 end: tok_end,
@@ -381,7 +381,7 @@ where
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
                         return Err(LexicalError {
-                            error: LexicalErrorType::InvalidAssignmentShorthand,
+                            error: LexicalErrorType::UnsupportedProceduralOperator,
                             location: SrcSpan {
                                 start: tok_start,
                                 end: tok_end,
