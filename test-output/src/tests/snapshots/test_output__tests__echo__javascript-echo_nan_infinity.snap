@@ -15,6 +15,6 @@ pub fn main() {
 
 --- gleam run output ----------------
 [90msrc/main.gleam:6[39m
-Infinity
+//js(Infinity)
 [90msrc/main.gleam:7[39m
-NaN
+//js(NaN)

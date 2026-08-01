@@ -56,8 +56,8 @@ class Echo$Inspector {
       } else if (globalThis.Number.isInteger(float)) {
         return string + ".0"
       } else {
-        // For NaN and Infinity we return it as-is.
-        return string;
+        // For NaN and Infinity we return it as JS representation.
+        return "//js(" + string + ")";
       }
     }
   }
