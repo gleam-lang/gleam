@@ -700,10 +700,10 @@ pub trait Visit<'ast> {
     fn visit_typed_constant_int(
         &mut self,
         location: &'ast SrcSpan,
-        value: &'ast EcoString,
+        string_value: &'ast EcoString,
         int_value: &'ast BigInt,
     ) {
-        visit_typed_constant_int(self, location, value, int_value);
+        visit_typed_constant_int(self, location, string_value, int_value);
     }
 
     fn visit_typed_constant_float(
@@ -945,7 +945,7 @@ fn visit_typed_constant_float<'a, V: Visit<'a> + ?Sized>(
 fn visit_typed_constant_int<'a, V: Visit<'a> + ?Sized>(
     _v: &mut V,
     _location: &'a SrcSpan,
-    _value: &'a EcoString,
+    _string_value: &'a EcoString,
     _int_value: &'a BigInt,
 ) {
     // No further traversal needed for constant ints
