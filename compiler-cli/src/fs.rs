@@ -549,6 +549,7 @@ pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
             path: file.path.clone(),
             err: e.to_string(),
         })?;
+        header.set_mode(0o600);
         header.set_size(file.content.as_bytes().len() as u64);
         header.set_cksum();
         builder
