@@ -482,8 +482,13 @@ pub trait Visit<'ast> {
         visit_typed_pattern(self, pattern);
     }
 
-    fn visit_typed_pattern_int(&mut self, location: &'ast SrcSpan, value: &'ast EcoString) {
-        visit_typed_pattern_int(self, location, value);
+    fn visit_typed_pattern_int(
+        &mut self,
+        location: &'ast SrcSpan,
+        string_value: &'ast EcoString,
+        int_value: &'ast BigInt,
+    ) {
+        visit_typed_pattern_int(self, location, string_value, int_value);
     }
 
     fn visit_typed_pattern_float(&mut self, location: &'ast SrcSpan, value: &'ast EcoString) {
@@ -1997,9 +2002,9 @@ where
     match pattern {
         Pattern::Int {
             location,
-            value,
-            int_value: _,
-        } => v.visit_typed_pattern_int(location, value),
+            value: string_value,
+            int_value,
+        } => v.visit_typed_pattern_int(location, string_value, int_value),
         Pattern::Float {
             location,
             value,
@@ -2071,8 +2076,12 @@ where
     }
 }
 
-fn visit_typed_pattern_int<'a, V>(_v: &mut V, _location: &'a SrcSpan, _value: &'a EcoString)
-where
+fn visit_typed_pattern_int<'a, V>(
+    _v: &mut V,
+    _location: &'a SrcSpan,
+    _string_value: &'a EcoString,
+    _int_value: &'a BigInt,
+) where
     V: Visit<'a> + ?Sized,
 {
 }
