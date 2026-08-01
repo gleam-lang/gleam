@@ -468,8 +468,8 @@ pub fn new() -> other.Wibble { todo }
 }
 
 #[test]
-fn generate_unqualified_variant_in_other_module_adds_an_unqualified_import_if_other_variants_are_unqualified()
- {
+fn generate_unqualified_variant_in_other_module_adds_an_unqualified_import_if_other_variants_are_unqualified(
+) {
     let src = r#"
 import other.{ Wibble }
 
@@ -493,8 +493,8 @@ pub fn new() -> other.Wibble { todo }
 }
 
 #[test]
-fn generate_unqualified_variant_in_other_module_adds_qualification_if_other_variants_are_not_imported()
- {
+fn generate_unqualified_variant_in_other_module_adds_qualification_if_other_variants_are_not_imported(
+) {
     let src = r#"
 import other
 
@@ -8201,8 +8201,8 @@ pub fn main(arg: CannotBeDestructured) {
 }
 
 #[test]
-fn pattern_match_on_argument_with_multiple_constructors_is_nicely_formatted_in_function_with_empty_body()
- {
+fn pattern_match_on_argument_with_multiple_constructors_is_nicely_formatted_in_function_with_empty_body(
+) {
     assert_code_action!(
         PATTERN_MATCH_ON_ARGUMENT,
         "
@@ -15964,3 +15964,13 @@ fn convert_to_int_has_nicely_separated_digits() {
         find_position_of("0b100101101011010000111").to_selection()
     );
 }
+
+#[test]
+fn convert_int_between_bases_in_constants() {
+    assert_code_action!(
+        "Convert to `0b1101111`",
+        "const wibble = 111",
+        find_position_of("111").to_selection()
+    );
+}
+
