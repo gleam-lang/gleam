@@ -3532,8 +3532,14 @@ where
                         self.advance(); // name
 
                         match self.tok0 {
-                            Some((_, Token::LeftParen, _)) => {
+                            Some((_, Token::LeftParen, paren_end)) => {
+                                self.advance(); // pop the LeftParen
                                 let call_end = self.find_matching_paren();
+                                let call_end = if call_end == 0 {
+                                    paren_end
+                                } else {
+                                    call_end
+                                };
                                 parse_error(
                                     ParseErrorType::UnexpectedFunction,
                                     SrcSpan { start, end: call_end },
@@ -3566,9 +3572,14 @@ where
                 self.advance(); // name
 
                 match self.tok0 {
-                    Some((_, Token::LeftParen, _)) => {
-                        // Scan ahead to find the matching closing paren
+                    Some((_, Token::LeftParen, paren_end)) => {
+                        self.advance(); // pop the LeftParen
                         let call_end = self.find_matching_paren();
+                        let call_end = if call_end == 0 {
+                            paren_end
+                        } else {
+                            call_end
+                        };
                         parse_error(
                             ParseErrorType::UnexpectedFunction,
                             SrcSpan { start, end: call_end },
@@ -4509,19 +4520,11 @@ functions are declared separately from types.";
         }
     }
 
-    // Scan ahead through the token stream to find the matching closing paren
-    // for the current LeftParen in tok0. Returns the end position of ')'.
-    // Does not consume any tokens - uses the underlying lexer iterator directly.
+    // Scan ahead through the token stream to find the matching closing paren.
+    // Assumes the opening LeftParen has already been consumed by the caller.
+    // Returns the end position of ')' if found, or 0 if unmatched (EOF).
     fn find_matching_paren(&mut self) -> u32 {
         let mut depth: i32 = 1;
-        let mut saved_tok1 = self.tok1.take();
-
-        // tok0 is currently LeftParen, advance past it
-        self.tok0 = saved_tok1.take();
-        match self.tokens.next() {
-            Some(Ok(tok)) => self.tok1 = Some(tok),
-            _ => self.tok1 = None,
-        }
 
         let mut last_end = 0u32;
         loop {
