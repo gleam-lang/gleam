@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: const a = 1 > 2
+---
+----- SOURCE CODE
+const a = 1 > 2
+
+----- ERROR
+error: Unsupported operator in constant expression
+  ┌─ /src/one/two.gleam:1:13
+  │
+1 │ const a = 1 > 2
+  │             ^
+
+This operator is currently not supported in constants.

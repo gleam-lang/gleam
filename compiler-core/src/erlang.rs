@@ -2354,9 +2354,38 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 }
             }
 
-            Constant::StringConcatenation { left, right, .. } => {
-                self.constant_string_concatenate(builder, left, right);
-            }
+            Constant::BinaryOperator {
+                left,
+                right,
+                operator,
+                ..
+            } => match operator {
+                BinOp::Concatenate => self.constant_string_concatenate(builder, left, right),
+
+                BinOp::And
+                | BinOp::Or
+                | BinOp::Eq
+                | BinOp::NotEq
+                | BinOp::LtInt
+                | BinOp::LtEqInt
+                | BinOp::LtFloat
+                | BinOp::LtEqFloat
+                | BinOp::GtEqInt
+                | BinOp::GtInt
+                | BinOp::GtEqFloat
+                | BinOp::GtFloat
+                | BinOp::AddInt
+                | BinOp::AddFloat
+                | BinOp::SubInt
+                | BinOp::SubFloat
+                | BinOp::MultInt
+                | BinOp::MultFloat
+                | BinOp::DivInt
+                | BinOp::DivFloat
+                | BinOp::RemainderInt => {
+                    unreachable!("invalid constant binop made it to code generation")
+                }
+            },
 
             Constant::RecordUpdate { .. } => {
                 panic!("record updates should not reach code generation")
@@ -2435,7 +2464,12 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 // `<<<<~"a", ~"b">>/binary, ~"c">>`.
                 // If we find a string concatenation we push its separate items
                 // to be printed next!
-                Constant::StringConcatenation { left, right, .. } => {
+                Constant::BinaryOperator {
+                    left,
+                    right,
+                    operator: BinOp::Concatenate,
+                    ..
+                } => {
                     items.push_front(right);
                     items.push_front(left);
                     continue;
@@ -2469,6 +2503,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 | Constant::BitArray { .. }
                 | Constant::Var { .. }
                 | Constant::Invalid { .. }
+                | Constant::BinaryOperator { .. }
                 | Constant::Todo { .. } => (),
             }
 
@@ -3432,7 +3467,7 @@ fn constant_produces_literal_string(constant: &Constant<Arc<Type>>) -> bool {
         | Constant::Record { .. }
         | Constant::RecordUpdate { .. }
         | Constant::BitArray { .. }
-        | Constant::StringConcatenation { .. }
+        | Constant::BinaryOperator { .. }
         | Constant::Invalid { .. }
         | Constant::Todo { .. }
         | Constant::Var { .. } => false,
@@ -4118,7 +4153,7 @@ fn find_referenced_private_functions(
             .flatten()
             .for_each(|argument| find_referenced_private_functions(&argument.value, already_found)),
 
-        TypedConstant::StringConcatenation { left, right, .. } => {
+        TypedConstant::BinaryOperator { left, right, .. } => {
             find_referenced_private_functions(left, already_found);
             find_referenced_private_functions(right, already_found);
         }

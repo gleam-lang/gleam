@@ -2848,11 +2848,42 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                 }
             }
 
-            Constant::StringConcatenation { left, right, .. } => {
-                let left = self.constant_expression(arena, context, left);
-                let right = self.constant_expression(arena, context, right);
-                docvec![arena, left, SPACE_PLUS_SPACE_DOCUMENT, right]
-            }
+            Constant::BinaryOperator {
+                left,
+                right,
+                operator,
+                ..
+            } => match operator {
+                BinOp::And
+                | BinOp::Or
+                | BinOp::Eq
+                | BinOp::NotEq
+                | BinOp::LtInt
+                | BinOp::LtEqInt
+                | BinOp::LtFloat
+                | BinOp::LtEqFloat
+                | BinOp::GtEqInt
+                | BinOp::GtInt
+                | BinOp::GtEqFloat
+                | BinOp::GtFloat
+                | BinOp::AddInt
+                | BinOp::AddFloat
+                | BinOp::SubInt
+                | BinOp::SubFloat
+                | BinOp::MultInt
+                | BinOp::MultFloat
+                | BinOp::DivInt
+                | BinOp::DivFloat
+                | BinOp::RemainderInt => {
+                    unreachable!("invalid constant operator made it to code generation")
+                }
+
+                BinOp::Concatenate => {
+                    let left = self.constant_expression(arena, context, left);
+                    let right = self.constant_expression(arena, context, right);
+                    docvec![arena, left, SPACE_PLUS_SPACE_DOCUMENT, right]
+                }
+            },
 
             Constant::RecordUpdate { .. } => {
                 panic!("record updates should not reach code generation")
@@ -3388,7 +3419,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
             | Constant::String { .. }
             | Constant::List { .. }
             | Constant::RecordUpdate { .. }
-            | Constant::StringConcatenation { .. }
+            | Constant::BinaryOperator { .. }
             | Constant::Todo { .. }
             | Constant::Invalid { .. } => {
                 self.constant_expression(arena, Context::Guard, expression)

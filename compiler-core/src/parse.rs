@@ -1945,7 +1945,7 @@ where
 
             t0 => {
                 self.token0 = t0;
-                match self.parse_const_value()? {
+                match self.parse_const_value_unit()? {
                     Some(const_val) => {
                         // Constant
                         Ok(Some(ClauseGuard::Constant(const_val)))
@@ -3328,11 +3328,54 @@ where
     //   [1,2,3]
     //   wibble <> "wobble"
     fn parse_const_value(&mut self) -> Result<Option<UntypedConstant>, ParseError> {
-        let constant_result = self.parse_const_value_unit();
-        match constant_result {
-            Ok(Some(constant)) => self.parse_const_maybe_concatenation(constant),
-            _ => constant_result,
+        // uses the simple operator parser algorithm
+        let mut opstack = vec![];
+        let mut estack = vec![];
+        let mut last_op_start = 0;
+        let mut last_op_end = 0;
+
+        loop {
+            match self.parse_const_value_unit()? {
+                Some(unit) => estack.push(unit),
+                _ if estack.is_empty() => return Ok(None),
+                _ => {
+                    return parse_error(
+                        ParseErrorType::OpNakedRight,
+                        SrcSpan {
+                            start: last_op_start,
+                            end: last_op_end,
+                        },
+                    );
+                }
+            }
+
+            let Some((operator_start, operator, operator_end)) = self.token0.take() else {
+                break;
+            };
+
+            let Some(precedence) = precedence(&operator) else {
+                self.token0 = Some((operator_start, operator, operator_end));
+                break;
+            };
+
+            // Is Op
+            self.advance();
+            last_op_start = operator_start;
+            last_op_end = operator_end;
+            let _ = handle_operator(
+                Some(((operator_start, operator, operator_end), precedence)),
+                &mut opstack,
+                &mut estack,
+                &do_reduce_constant,
+            );
         }
+
+        Ok(handle_operator(
+            None,
+            &mut opstack,
+            &mut estack,
+            &do_reduce_constant,
+        ))
     }
 
     fn parse_const_value_unit(&mut self) -> Result<Option<UntypedConstant>, ParseError> {
@@ -3591,39 +3634,6 @@ where
             t0 => {
                 self.token0 = t0;
                 Ok(None)
-            }
-        }
-    }
-
-    fn parse_const_maybe_concatenation(
-        &mut self,
-        left: UntypedConstant,
-    ) -> Result<Option<UntypedConstant>, ParseError> {
-        match self.token0.take() {
-            Some((op_start, Token::Concatenate, op_end)) => {
-                self.advance();
-
-                match self.parse_const_value() {
-                    Ok(Some(right_constant_value)) => Ok(Some(Constant::StringConcatenation {
-                        location: SrcSpan {
-                            start: left.location().start,
-                            end: right_constant_value.location().end,
-                        },
-                        left: Box::new(left),
-                        right: Box::new(right_constant_value),
-                    })),
-                    _ => parse_error(
-                        ParseErrorType::OpNakedRight,
-                        SrcSpan {
-                            start: op_start,
-                            end: op_end,
-                        },
-                    ),
-                }
-            }
-            t0 => {
-                self.token0 = t0;
-                Ok(Some(left))
             }
         }
     }
@@ -5032,6 +5042,17 @@ fn do_reduce_clause_guard(operator: Spanned, estack: &mut Vec<UntypedClauseGuard
     }
 }
 
+/// Simple-Precedence-Parser, perform reduction for clause guard
+fn do_reduce_constant(op: Spanned, estack: &mut Vec<UntypedConstant>) {
+    match (estack.pop(), estack.pop()) {
+        (Some(er), Some(el)) => {
+            let new_e = constant_binop_reduction(op, el, er);
+            estack.push(new_e);
+        }
+        _ => panic!("Tried to reduce without 2 guards"),
+    }
+}
+
 /// Simple-Precedence-Parser, perform reduction for bit array size expressions
 fn reduce_bit_array_size((_, token, _): Spanned, experession_stack: &mut Vec<BitArraySize<()>>) {
     let operator = token_to_bit_array_size_operator(&token)
@@ -5103,6 +5124,28 @@ fn clause_guard_reduction(
         operator_start: start,
         left,
         right,
+    }
+}
+
+fn constant_binop_reduction(
+    (operator_start, operator_token, _end): Spanned,
+    left: UntypedConstant,
+    right: UntypedConstant,
+) -> UntypedConstant {
+    let location = SrcSpan {
+        start: left.location().start,
+        end: right.location().end,
+    };
+    let left = Box::new(left);
+    let right = Box::new(right);
+    let operator = token_to_binop(&operator_token).expect("Token could not be converted to binop.");
+    UntypedConstant::BinaryOperator {
+        location,
+        operator,
+        operator_start,
+        left,
+        right,
+        type_: (),
     }
 }
 

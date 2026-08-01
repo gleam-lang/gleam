@@ -5084,6 +5084,24 @@ Be sure to finish it before running your program.",
                 extra_labels: vec![],
             }),
         },
+        TypeError::InvalidConstantBinaryOperator {
+            operator_start,
+            operator,
+        } => Diagnostic {
+            title: "Unsupported operator in constant expression".into(),
+            text: wrap("This operator is currently not supported in constants."),
+            hint: None,
+            level: Level::Error,
+            location: Some(Location {
+                label: Label {
+                    text: None,
+                    span: SrcSpan::new(*operator_start, operator_start + operator.size()),
+                },
+                path: path.clone(),
+                src: src.clone(),
+                extra_labels: vec![],
+            }),
+        },
     })
 }
 

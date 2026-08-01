@@ -1,0 +1,46 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\n// We will see an error here\nconst a = 1 + 2\n// And an error here!\nconst b = 1 - 2\n// And an error here!\nconst c = 1 - does_not_exist\n"
+---
+----- SOURCE CODE
+
+// We will see an error here
+const a = 1 + 2
+// And an error here!
+const b = 1 - 2
+// And an error here!
+const c = 1 - does_not_exist
+
+
+----- ERROR
+error: Unsupported operator in constant expression
+  ┌─ /src/one/two.gleam:3:13
+  │
+3 │ const a = 1 + 2
+  │             ^
+
+This operator is currently not supported in constants.
+
+error: Unsupported operator in constant expression
+  ┌─ /src/one/two.gleam:5:13
+  │
+5 │ const b = 1 - 2
+  │             ^
+
+This operator is currently not supported in constants.
+
+error: Unsupported operator in constant expression
+  ┌─ /src/one/two.gleam:7:13
+  │
+7 │ const c = 1 - does_not_exist
+  │             ^
+
+This operator is currently not supported in constants.
+
+error: Unknown variable
+  ┌─ /src/one/two.gleam:7:15
+  │
+7 │ const c = 1 - does_not_exist
+  │               ^^^^^^^^^^^^^^
+
+The name `does_not_exist` is not in scope here.
