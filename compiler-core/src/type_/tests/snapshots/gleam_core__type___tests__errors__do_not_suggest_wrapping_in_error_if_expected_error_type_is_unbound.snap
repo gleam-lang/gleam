@@ -1,51 +1,41 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\n\npub fn try_recover(\n  result: Result(a, e),\n  with fun: fn(e) -> Result(a, f),\n) -> Result(a, f) {\n    todo\n}\n\npub type WibbleError {\n  WibbleError\n}\n\npub type WobbleError {\n  WobbleError\n}\n\npub fn main() {\n  use _ <- try_recover(wibble())\n  use _ <- try_recover(wobble())\n  todo\n}\n\npub fn wibble() -> Result(Int, WibbleError) {\n  todo\n}\n\npub fn wobble() -> Result(Float, WibbleError) {\n  todo\n}\n"
+expression: "\npub type SomeError {\n  WibbleError\n}\n\npub type OtherError {\n  WobbleError\n}\n\npub fn main() {\n  wibble(wobble(todo))\n}\n\npub fn wobble(arg: a) -> Result(Int, a) {\n  todo\n}\n\npub fn wibble(arg: Result(Float, a)) -> a {\n  todo\n}\n"
 ---
 ----- SOURCE CODE
 
-
-pub fn try_recover(
-  result: Result(a, e),
-  with fun: fn(e) -> Result(a, f),
-) -> Result(a, f) {
-    todo
-}
-
-pub type WibbleError {
+pub type SomeError {
   WibbleError
 }
 
-pub type WobbleError {
+pub type OtherError {
   WobbleError
 }
 
 pub fn main() {
-  use _ <- try_recover(wibble())
-  use _ <- try_recover(wobble())
+  wibble(wobble(todo))
+}
+
+pub fn wobble(arg: a) -> Result(Int, a) {
   todo
 }
 
-pub fn wibble() -> Result(Int, WibbleError) {
-  todo
-}
-
-pub fn wobble() -> Result(Float, WibbleError) {
+pub fn wibble(arg: Result(Float, a)) -> a {
   todo
 }
 
 
 ----- ERROR
 error: Type mismatch
-   ┌─ /src/one/two.gleam:20:3
+   ┌─ /src/one/two.gleam:11:10
    │
-20 │   use _ <- try_recover(wobble())
-   │   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+11 │   wibble(wobble(todo))
+   │          ^^^^^^^^^^^^
 
 Expected type:
 
-    Result(Int, f)
+    Result(Float, a)
 
 Found type:
 
-    Result(Float, f)
+    Result(Int, a)
