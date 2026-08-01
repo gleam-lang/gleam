@@ -41,7 +41,6 @@
 
   ([Khalid Belkassmi E.H.](https://github.com/khalidbelk))
 
-
 - The compiler now has a specific error message for when trying to use
   procedural operators that do not exist in Gleam, such as `+=` and `++`.
   ([0xda157](https://github.com/0xda157))
@@ -149,6 +148,9 @@
 
 - Fixed a bug where comments after the last item in a tuple, or after the last
   argument in a function call wouldn't be formatted properly.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where file permissions were not set in Hex tarballs.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ## v1.18.1 - 2026-08-01

@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2022 The Gleam contributors
 
+use std::io::Cursor;
+
 use camino::{Utf8Path, Utf8PathBuf};
+use gleam_core::io::{Content, OutputFile};
 use itertools::Itertools;
+
+use crate::fs::create_tar_archive;
 
 #[test]
 fn is_inside_git_work_tree_ok() {
@@ -252,4 +257,31 @@ fn hardlink_dir_skips_symlinks() {
 
     assert!(dest.join("real.txt").exists());
     assert!(!dest.join("escape").exists());
+}
+
+// https://github.com/gleam-lang/gleam/issues/5992
+#[test]
+fn create_tar_archive_sets_proper_permissions() {
+    let compressed_archive = create_tar_archive(vec![
+        OutputFile {
+            content: Content::Text("Hello".into()),
+            path: "./wibble.txt".into(),
+        },
+        OutputFile {
+            content: Content::Binary(vec![11, 6, 7]),
+            path: "./wobble.bin".into(),
+        },
+    ])
+    .expect("should create archive");
+
+    let decoder = flate2::read::GzDecoder::new(Cursor::new(compressed_archive));
+    let mut archive = tar::Archive::new(decoder);
+
+    for entry in archive.entries().expect("archive entries") {
+        let entry = entry.expect("archive entry");
+        let mode = entry.header().mode().expect("entry mode");
+        let entry_path = entry.path().expect("entry path");
+        let path_str = entry_path.to_str().expect("path string");
+        assert_eq!(mode, 0o600, "entry {path_str} has unexpected mode")
+    }
 }
