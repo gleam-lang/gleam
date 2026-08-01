@@ -1,0 +1,15 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn go(x) {\n  let assert <<2:size(111)>> = x\n}"
+---
+----- BEFORE ACTION
+pub fn go(x) {
+  let assert <<2:size(111)>> = x
+                      ↑         
+}
+
+
+----- AFTER ACTION
+pub fn go(x) {
+  let assert <<2:size(0b1101111)>> = x
+}
