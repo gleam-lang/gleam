@@ -1,0 +1,11 @@
+---
+source: language-server/src/tests/action.rs
+expression: const wibble = -0x6f
+---
+----- BEFORE ACTION
+const wibble = -0x6f
+                ↑   
+
+
+----- AFTER ACTION
+const wibble = -111
