@@ -13295,11 +13295,29 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
     }
 
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
-        // We skip all the expression's the cursor is not inside of.
+        // We skip all the expressions the cursor is not inside of.
         // This is gonna make it faster to find the int we're hovering, if any.
         let expression_range = self.edits.src_span_to_lsp_range(expr.location());
         if within(self.params.range, expression_range) {
             ast::visit::visit_typed_expr(self, expr);
+        }
+    }
+
+    fn visit_typed_pattern(&mut self, pattern: &'ast TypedPattern) {
+        // We skip all the patterns the cursor is not inside of.
+        // This is gonna make it faster to find the int we're hovering, if any.
+        let pattern_range = self.edits.src_span_to_lsp_range(pattern.location());
+        if within(self.params.range, pattern_range) {
+            ast::visit::visit_typed_pattern(self, pattern);
+        }
+    }
+
+    fn visit_typed_constant(&mut self, constant: &'ast ast::TypedConstant) {
+        // We skip all the constants the cursor is not inside of.
+        // This is gonna make it faster to find the int we're hovering, if any.
+        let constant_range = self.edits.src_span_to_lsp_range(constant.location());
+        if within(self.params.range, constant_range) {
+            ast::visit::visit_typed_constant(self, constant);
         }
     }
 
