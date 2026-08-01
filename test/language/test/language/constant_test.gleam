@@ -52,7 +52,7 @@ pub fn list_2_test() {
 const message = "hello"
 
 // https://github.com/gleam-lang/gleam/issues/6045
-pub fn constant_string_in_bit_array_segment() {
+pub fn constant_string_in_bit_array_segment_test() {
   assert <<"hello">> == <<message:utf8>>
   assert <<"hello":utf8>> == <<message:utf8>>
 }
