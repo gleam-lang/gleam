@@ -9,7 +9,6 @@
 
 ### Compiler
 
-<<<<<<< HEAD
 - The compiler now issues a friendlier error when attempting to pattern match
   on both the prefix and suffix of a string:
 
@@ -28,8 +27,8 @@
 
   ([Gavin Morrow](https://github.com/gavinmorrow))
 
-- The compiler now issues a more specific error message when invalid assignment
-  shorthands are used, such as `++` or `*=`.
+- The compiler now has a specific error message for when trying to use
+  procedural operators that do not exist in Gleam, such as `+=` and `++`.
   ([0xda157](https://github.com/0xda157))
 
 ### Build tool
