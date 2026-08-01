@@ -82,7 +82,7 @@ opener = "0"
 # Recursively traversing directories
 ignore = "0"
 # Parsing of arbitrary width int values
-num-bigint = { version = "0.4.6", features = ["serde"] }
+num-bigint = { version = "0.5.1", features = ["serde"] }
 num-traits = "0.2.19"
 # Unicode grapheme traversal
 unicode-segmentation = "1.13.2"
