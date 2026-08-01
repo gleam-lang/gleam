@@ -13320,4 +13320,29 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
 
         self.int = Some((*location, base, int_value.clone()))
     }
+
+    fn visit_typed_bit_array_size_int(
+        &mut self,
+        location: &'ast SrcSpan,
+        string_value: &'ast EcoString,
+        int_value: &'ast BigInt,
+    ) {
+        let int_range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, int_range) {
+            return;
+        }
+
+        let string_value = string_value.trim_start_matches('-');
+        let base = if string_value.starts_with("0b") {
+            Base::Binary
+        } else if string_value.starts_with("0o") {
+            Base::Octal
+        } else if string_value.starts_with("0x") {
+            Base::Hexadecimal
+        } else {
+            Base::Decimal
+        };
+
+        self.int = Some((*location, base, int_value.clone()))
+    }
 }
