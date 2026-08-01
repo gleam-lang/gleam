@@ -142,6 +142,10 @@
   "discard unused argument" code action.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now supports triggering "Convert int to different base"
+  code action in constants, patterns and bit array "size" options.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Formatter
 
 ### Compiler Wasm API
