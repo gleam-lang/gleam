@@ -1038,11 +1038,16 @@ pub trait UntypedConstantFolder {
                 type_: (),
             } => self.fold_constant_var(location, module, name),
 
-            Constant::StringConcatenation {
+            Constant::BinaryOperator {
                 location,
+                operator_start,
                 left,
                 right,
-            } => self.fold_constant_string_concatenation(location, left, right),
+                operator,
+                type_: (),
+            } => {
+                self.fold_constant_binary_operator(location, operator_start, operator, left, right)
+            }
 
             Constant::Invalid {
                 location,
@@ -1184,16 +1189,21 @@ pub trait UntypedConstantFolder {
         }
     }
 
-    fn fold_constant_string_concatenation(
+    fn fold_constant_binary_operator(
         &mut self,
         location: SrcSpan,
+        operator_start: u32,
+        operator: BinOp,
         left: Box<UntypedConstant>,
         right: Box<UntypedConstant>,
     ) -> UntypedConstant {
-        Constant::StringConcatenation {
+        Constant::BinaryOperator {
             location,
+            operator_start,
+            operator,
             left,
             right,
+            type_: (),
         }
     }
 
@@ -1315,17 +1325,23 @@ pub trait UntypedConstantFolder {
                 Constant::BitArray { location, segments }
             }
 
-            Constant::StringConcatenation {
+            Constant::BinaryOperator {
                 location,
+                operator_start,
                 left,
                 right,
+                operator,
+                type_: (),
             } => {
                 let left = Box::new(self.fold_constant(*left));
                 let right = Box::new(self.fold_constant(*right));
-                Constant::StringConcatenation {
+                Constant::BinaryOperator {
                     location,
+                    operator_start,
+                    operator,
                     left,
                     right,
+                    type_: (),
                 }
             }
         }

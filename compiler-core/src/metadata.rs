@@ -426,12 +426,18 @@ impl RemapIds {
                     .map(|constructor| Box::new(self.value_constructor(*constructor))),
                 type_: self.type_(type_),
             },
-            Constant::StringConcatenation {
+            Constant::BinaryOperator {
                 location,
+                operator_start,
                 left,
                 right,
-            } => Constant::StringConcatenation {
+                operator,
+                type_,
+            } => Constant::BinaryOperator {
                 location,
+                operator_start,
+                operator,
+                type_,
                 left: Box::new(self.constant(*left)),
                 right: Box::new(self.constant(*right)),
             },

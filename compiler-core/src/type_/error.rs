@@ -714,6 +714,17 @@ pub enum Error {
     TodoConstant {
         location: SrcSpan,
     },
+    /// This happens when we use an invalid binary operator in a constant.
+    /// For example as of Gleam 1.18 float addition is not supported:
+    ///
+    /// ```gleam
+    /// pub const wibble = 1.1 +. 1.3
+    /// //                     ^^ Error!
+    /// ```
+    InvalidConstantBinaryOperator {
+        operator_start: u32,
+        operator: BinOp,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1405,6 +1416,7 @@ impl Error {
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }
+            Error::InvalidConstantBinaryOperator { operator_start, .. } => *operator_start,
             Error::ReservedModuleName { .. } => 0,
             Error::KeywordInModuleName { .. } => 0,
         }

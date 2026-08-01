@@ -4369,3 +4369,40 @@ const a = A()
 "
     );
 }
+
+#[test]
+fn constant_unsupported_binop() {
+    assert_module_error!("const a = 1 > 2");
+}
+
+#[test]
+fn constant_unsupported_binop_2() {
+    assert_module_error!("const a = 1 <=. 2");
+}
+
+#[test]
+fn multiple_constant_unsupported_binops() {
+    assert_module_error!(
+        "const a = [
+  1 + 2,
+  1 - 2,
+  \"this is ok\" <> \"no error here!\",
+  1 * 2,
+  1 >=. 3.0,
+]"
+    );
+}
+
+#[test]
+fn invalid_operator_in_constants_does_not_stop_analysis() {
+    assert_module_error!(
+        "
+// We will see an error here
+const a = 1 + 2
+// And an error here!
+const b = 1 - 2
+// And an error here!
+const c = 1 - does_not_exist
+"
+    );
+}

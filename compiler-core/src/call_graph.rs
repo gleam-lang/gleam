@@ -516,7 +516,7 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            Constant::StringConcatenation { left, right, .. } => {
+            Constant::BinaryOperator { left, right, .. } => {
                 self.constant(left);
                 self.constant(right);
             }

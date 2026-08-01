@@ -88,10 +88,17 @@ pub enum Constant<T> {
         type_: T,
     },
 
-    StringConcatenation {
+    /// A constant binary operation.
+    /// Most binops are not supported in constants yet, however we parse them
+    /// and produce an error during type analysis rather than during parsing so
+    /// we can get better error messages and language server code actions.
+    BinaryOperator {
         location: SrcSpan,
+        operator_start: u32,
+        operator: BinOp,
         left: Box<Self>,
         right: Box<Self>,
+        type_: T,
     },
 
     /// A placeholder constant used to allow module analysis to continue
@@ -112,15 +119,43 @@ pub enum Constant<T> {
     },
 }
 
+impl<T> Constant<T> {
+    pub fn bin_op_precedence(&self) -> u8 {
+        match self {
+            Self::BinaryOperator { operator, .. } => operator.precedence(),
+            Self::Int { .. }
+            | Self::Float { .. }
+            | Self::String { .. }
+            | Self::Var { .. }
+            | Self::List { .. }
+            | Self::Tuple { .. }
+            | Self::Todo { .. }
+            | Self::BitArray { .. }
+            | Self::Invalid { .. }
+            | Self::Record { .. }
+            | Self::RecordUpdate { .. } => u8::MAX,
+        }
+    }
+
+    pub fn bin_op_name(&self) -> Option<BinOp> {
+        if let Self::BinaryOperator { operator, .. } = self {
+            Some(*operator)
+        } else {
+            None
+        }
+    }
+}
+
 impl TypedConstant {
     pub fn type_(&self) -> Arc<Type> {
         match self {
             Constant::Int { .. } => type_::int(),
             Constant::Float { .. } => type_::float(),
-            Constant::String { .. } | Constant::StringConcatenation { .. } => type_::string(),
+            Constant::String { .. } => type_::string(),
             Constant::BitArray { .. } => type_::bit_array(),
 
             Constant::List { type_, .. }
+            | Constant::BinaryOperator { type_, .. }
             | Constant::Tuple { type_, .. }
             | Constant::Record { type_, .. }
             | Constant::RecordUpdate { type_, .. }
@@ -200,7 +235,7 @@ impl TypedConstant {
                 .iter()
                 .find_map(|segment| segment.find_node(byte_index))
                 .unwrap_or(Located::Constant(self)),
-            Constant::StringConcatenation { left, right, .. } => left
+            Constant::BinaryOperator { left, right, .. } => left
                 .find_node(byte_index)
                 .or_else(|| right.find_node(byte_index))
                 .unwrap_or(Located::Constant(self)),
@@ -216,7 +251,7 @@ impl TypedConstant {
             | Constant::List { .. }
             | Constant::BitArray { .. }
             | Constant::Todo { .. }
-            | Constant::StringConcatenation { .. }
+            | Constant::BinaryOperator { .. }
             | Constant::Invalid { .. } => None,
             Constant::Record {
                 record_constructor: value_constructor,
@@ -283,7 +318,7 @@ impl TypedConstant {
                 })
                 .fold(im::hashset![], im::HashSet::union),
 
-            Constant::StringConcatenation { left, right, .. } => left
+            Constant::BinaryOperator { left, right, .. } => left
                 .referenced_variables()
                 .union(right.referenced_variables()),
         }
@@ -448,14 +483,24 @@ impl TypedConstant {
             (Constant::Var { .. }, _) => false,
 
             (
-                Constant::StringConcatenation { left, right, .. },
-                Constant::StringConcatenation {
-                    left: other_left,
-                    right: other_right,
+                Constant::BinaryOperator {
+                    left,
+                    right,
+                    operator,
                     ..
                 },
-            ) => left.syntactically_eq(other_left) && right.syntactically_eq(other_right),
-            (Constant::StringConcatenation { .. }, _) => false,
+                Constant::BinaryOperator {
+                    left: other_left,
+                    right: other_right,
+                    operator: other_operator,
+                    ..
+                },
+            ) => {
+                operator == other_operator
+                    && left.syntactically_eq(other_left)
+                    && right.syntactically_eq(other_right)
+            }
+            (Constant::BinaryOperator { .. }, _) => false,
 
             (Constant::Invalid { .. }, _) => false,
         }
@@ -499,7 +544,7 @@ impl TypedConstant {
             | Constant::Record { .. }
             | Constant::RecordUpdate { .. }
             | Constant::BitArray { .. }
-            | Constant::StringConcatenation { .. }
+            | Constant::BinaryOperator { .. }
             | Constant::Var { .. }
             | Constant::Todo { .. }
             | Constant::Invalid { .. } => None,
@@ -553,7 +598,7 @@ impl<A> Constant<A> {
             | Constant::Var { location, .. }
             | Constant::Invalid { location, .. }
             | Constant::Todo { location, .. }
-            | Constant::StringConcatenation { location, .. } => *location,
+            | Constant::BinaryOperator { location, .. } => *location,
         }
     }
 
@@ -571,7 +616,7 @@ impl<A> Constant<A> {
             | Constant::Record { .. }
             | Constant::RecordUpdate { .. }
             | Constant::BitArray { .. }
-            | Constant::StringConcatenation { .. }
+            | Constant::BinaryOperator { .. }
             | Constant::Invalid { .. } => false,
         }
     }

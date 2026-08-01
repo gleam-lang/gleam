@@ -1723,7 +1723,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         | Constant::RecordUpdate { .. }
                         | Constant::BitArray { .. }
                         | Constant::Var { .. }
-                        | Constant::StringConcatenation { .. }
+                        | Constant::BinaryOperator { .. }
                         | Constant::Invalid { .. } => (),
                     }
                 }
@@ -4058,7 +4058,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     | Constant::RecordUpdate { .. }
                     | Constant::BitArray { .. }
                     | Constant::Var { .. }
-                    | Constant::StringConcatenation { .. }
+                    | Constant::BinaryOperator { .. }
                     | Constant::Todo { .. }
                     | Constant::Invalid { .. } => typed_record,
                 };
@@ -4295,37 +4295,69 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
             }
 
-            Constant::StringConcatenation {
+            Constant::BinaryOperator {
                 location,
                 left,
                 right,
-            } => {
-                self.track_feature_usage(FeatureKind::ConstantStringConcatenation, location);
-                let left = self.infer_const(&None, *left);
+                operator,
+                operator_start,
+                type_: (),
+            } => match operator {
+                BinOp::And
+                | BinOp::Or
+                | BinOp::Eq
+                | BinOp::NotEq
+                | BinOp::LtInt
+                | BinOp::LtEqInt
+                | BinOp::LtFloat
+                | BinOp::LtEqFloat
+                | BinOp::GtEqInt
+                | BinOp::GtInt
+                | BinOp::GtEqFloat
+                | BinOp::GtFloat
+                | BinOp::AddInt
+                | BinOp::AddFloat
+                | BinOp::SubInt
+                | BinOp::SubFloat
+                | BinOp::MultInt
+                | BinOp::MultFloat
+                | BinOp::DivInt
+                | BinOp::DivFloat
+                | BinOp::RemainderInt => {
+                    // These operators are not currently allowed in constants.
+                    // We keep inferring the left and right values to catch
+                    // other invalid usages of this kind but we don't try and
+                    // type check those against some expected type!
+                    let left = self.infer_const_value(*left);
+                    let right = self.infer_const_value(*right);
+                    self.problems.error(Error::InvalidConstantBinaryOperator {
+                        operator_start,
+                        operator,
+                    });
 
-                if let Err(error) = unify(string(), left.type_()) {
-                    self.problems.error(
-                        error
-                            .operator_situation(BinOp::Concatenate)
-                            .into_error(left.location()),
-                    );
+                    Constant::BinaryOperator {
+                        location,
+                        operator_start,
+                        operator,
+                        left: Box::new(left),
+                        right: Box::new(right),
+                        // We use an unbound type so we don't get type errors
+                        // for this invalid binary operator. We only want an
+                        // error message saying "this is not supported", other
+                        // type errors like "Expected String, got Int" wouldn't
+                        // be all that useful.
+                        type_: self.new_unbound_var(),
+                    }
                 }
 
-                let right = self.infer_const(&None, *right);
-                if let Err(error) = unify(string(), right.type_()) {
-                    self.problems.error(
-                        error
-                            .operator_situation(BinOp::Concatenate)
-                            .into_error(right.location()),
-                    );
-                }
-
-                Constant::StringConcatenation {
+                BinOp::Concatenate => self.infer_constant_string_concatenation(
                     location,
-                    left: Box::new(left),
-                    right: Box::new(right),
-                }
-            }
+                    operator_start,
+                    left,
+                    right,
+                    operator,
+                ),
+            },
 
             Constant::Todo {
                 location, message, ..
@@ -4356,6 +4388,44 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
+    fn infer_constant_string_concatenation(
+        &mut self,
+        location: SrcSpan,
+        operator_start: u32,
+        left: Box<UntypedConstant>,
+        right: Box<UntypedConstant>,
+        operator: BinOp,
+    ) -> TypedConstant {
+        self.track_feature_usage(FeatureKind::ConstantStringConcatenation, location);
+        let left = self.infer_const(&None, *left);
+
+        if let Err(error) = unify(string(), left.type_()) {
+            self.problems.error(
+                error
+                    .operator_situation(BinOp::Concatenate)
+                    .into_error(left.location()),
+            );
+        }
+
+        let right = self.infer_const(&None, *right);
+        if let Err(error) = unify(string(), right.type_()) {
+            self.problems.error(
+                error
+                    .operator_situation(BinOp::Concatenate)
+                    .into_error(right.location()),
+            );
+        }
+
+        Constant::BinaryOperator {
+            location,
+            operator_start,
+            operator,
+            type_: string(),
+            left: Box::new(left),
+            right: Box::new(right),
+        }
+    }
+
     fn infer_constant_record(
         &mut self,
         module: Option<(EcoString, SrcSpan)>,
@@ -4363,7 +4433,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         arguments_start_position: u32,
         name: EcoString,
         arguments: Option<Vec<CallArg<UntypedConstant>>>,
-    ) -> Constant<Arc<Type>> {
+    ) -> TypedConstant {
         // We start by inferring the value constructor. If we can't do that we
         // immediately fail and return an invalid node.
         // TODO: in future we might want to make this more fault tolerant and
@@ -5572,7 +5642,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             | Constant::Record { .. }
             | Constant::RecordUpdate { .. }
             | Constant::BitArray { .. }
-            | Constant::StringConcatenation { .. }
+            | Constant::BinaryOperator { .. }
             | Constant::Todo { .. }
             | Constant::Invalid { .. } => (),
         }
@@ -5718,8 +5788,7 @@ fn invalid_with_annotated_type(constant: TypedConstant, new_type: Arc<Type>) -> 
         Constant::Int { location, .. }
         | Constant::Float { location, .. }
         | Constant::String { location, .. }
-        | Constant::BitArray { location, .. }
-        | Constant::StringConcatenation { location, .. } => TypedConstant::Invalid {
+        | Constant::BitArray { location, .. } => TypedConstant::Invalid {
             location,
             type_: new_type,
             extra_information: None,
@@ -5733,6 +5802,22 @@ fn invalid_with_annotated_type(constant: TypedConstant, new_type: Arc<Type>) -> 
             location,
             type_: new_type,
             message,
+        },
+
+        Constant::BinaryOperator {
+            location,
+            operator_start,
+            operator,
+            left,
+            right,
+            type_: _,
+        } => Constant::BinaryOperator {
+            location,
+            operator_start,
+            operator,
+            left,
+            right,
+            type_: new_type,
         },
 
         // In all other cases we don't want to lose information on

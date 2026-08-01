@@ -807,13 +807,24 @@ pub trait Visit<'ast> {
         visit_typed_constant_var(self, location, module, name, constructor, type_);
     }
 
-    fn visit_typed_constant_string_concatenation(
+    fn visit_typed_constant_binary_operator(
         &mut self,
         location: &'ast SrcSpan,
+        operator_start: &'ast u32,
+        operator: &'ast BinOp,
         left: &'ast TypedConstant,
         right: &'ast TypedConstant,
+        type_: &'ast Arc<Type>,
     ) {
-        visit_typed_constant_string_concatenation(self, location, left, right);
+        visit_typed_constant_binary_operator(
+            self,
+            location,
+            operator_start,
+            operator,
+            left,
+            right,
+            type_,
+        );
     }
 
     fn visit_typed_constant_invalid(
@@ -835,11 +846,14 @@ fn visit_typed_constant_invalid<'a, V: Visit<'a> + ?Sized>(
     // No further traversal needed for constant invalid expressions
 }
 
-fn visit_typed_constant_string_concatenation<'a, V: Visit<'a> + ?Sized>(
+fn visit_typed_constant_binary_operator<'a, V: Visit<'a> + ?Sized>(
     v: &mut V,
     _location: &'a SrcSpan,
+    _operator_start: &'a u32,
+    _operator: &'a BinOp,
     left: &'a TypedConstant,
     right: &'a TypedConstant,
+    _type: &'a Arc<Type>,
 ) {
     v.visit_typed_constant(left);
     v.visit_typed_constant(right);
@@ -1221,11 +1235,21 @@ pub fn visit_typed_constant<'a, V: Visit<'a> + ?Sized>(v: &mut V, constant: &'a 
             constructor,
             type_,
         } => v.visit_typed_constant_var(location, module, name, constructor, type_),
-        super::Constant::StringConcatenation {
+        super::Constant::BinaryOperator {
             location,
+            operator_start,
+            operator,
             left,
             right,
-        } => v.visit_typed_constant_string_concatenation(location, left, right),
+            type_,
+        } => v.visit_typed_constant_binary_operator(
+            location,
+            operator_start,
+            operator,
+            left,
+            right,
+            type_,
+        ),
         super::Constant::Invalid {
             location,
             type_,
