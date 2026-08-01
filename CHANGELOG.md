@@ -19,6 +19,9 @@
 
 ### Build tool
 
+- Cache size has been significantly reduced.
+  ([Andrey Kozhev](httos://github.com/ankddev))
+
 ### Language server
 
 - The "Generate dynamic decoder" code action is now only offered when the
