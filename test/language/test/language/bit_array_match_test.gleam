@@ -144,12 +144,12 @@ pub fn multiple_variable_segments_test() {
 }
 
 // https://github.com/gleam-lang/gleam/issues/5208
-pub fn unit_ignores_bytes_option() {
+pub fn unit_ignores_bytes_option_test() {
   let assert <<x:unit(2)-bytes-size(3)>> = <<1:6>>
   assert x == <<1:6>>
 }
 
-pub fn unit_ignores_bytes_option_regardless_of_order() {
+pub fn unit_ignores_bytes_option_regardless_of_order_test() {
   let assert <<x:bytes-unit(2)-size(3)>> = <<1:6>>
   assert x == <<1:6>>
 }
