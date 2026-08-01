@@ -37,6 +37,8 @@
   copyright metadata to the generated POSIX entrypoint.
   ([John Downey](https://github.com/jtdowney))
 
+## v1.18.1 - 2026-08-01
+
 - Fixed a bug where the Erlang code generator would generate wrong code when
   referencing constants that are aliases to other constants in bit array
   segments, string concatenation and clause guards.
