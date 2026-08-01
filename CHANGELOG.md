@@ -25,6 +25,11 @@
   `gleam_stdlib` package is available.
   ([0xda157](https://github.com/0xda157))
 
+- Added a new code action to wrap expressions in `Ok()` or `Error()` when the
+  expected type is `Result` and the given type matches the `Ok` or the `Error`
+  type, respectively.
+  ([Hari Mohan](https://github.com/seafoamteal))
+
 ### Formatter
 
 ### Bug fixes
