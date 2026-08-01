@@ -1,50 +1,40 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\npub fn try(\n  result: Result(a, e),\n  apply fun: fn(a) -> Result(b, e),\n) -> Result(b, e) {\n    todo\n}\n\npub type WibbleError {\n  WibbleError\n}\n\npub type WobbleError {\n  WobbleError\n}\n\npub fn main() {\n  use _ <- try(wibble())\n  use _ <- try(wobble())\n  todo\n}\n\npub fn wibble() -> Result(Int, WibbleError) {\n  todo\n}\n\npub fn wobble() -> Result(Int, WobbleError) {\n  todo\n}\n"
+expression: "\npub type SomeError {\n  WibbleError\n}\n\npub type OtherError {\n  WobbleError\n}\n\npub fn main() {\n  wibble(wobble(todo))\n}\n\npub fn wobble(arg: a) -> Result(a, SomeError) {\n  todo\n}\n\npub fn wibble(arg: Result(a, OtherError)) -> a {\n  todo\n}"
 ---
 ----- SOURCE CODE
 
-pub fn try(
-  result: Result(a, e),
-  apply fun: fn(a) -> Result(b, e),
-) -> Result(b, e) {
-    todo
-}
-
-pub type WibbleError {
+pub type SomeError {
   WibbleError
 }
 
-pub type WobbleError {
+pub type OtherError {
   WobbleError
 }
 
 pub fn main() {
-  use _ <- try(wibble())
-  use _ <- try(wobble())
+  wibble(wobble(todo))
+}
+
+pub fn wobble(arg: a) -> Result(a, SomeError) {
   todo
 }
 
-pub fn wibble() -> Result(Int, WibbleError) {
+pub fn wibble(arg: Result(a, OtherError)) -> a {
   todo
 }
-
-pub fn wobble() -> Result(Int, WobbleError) {
-  todo
-}
-
 
 ----- ERROR
 error: Type mismatch
-   ┌─ /src/one/two.gleam:19:3
+   ┌─ /src/one/two.gleam:11:10
    │
-19 │   use _ <- try(wobble())
-   │   ^^^^^^^^^^^^^^^^^^^^^^
+11 │   wibble(wobble(todo))
+   │          ^^^^^^^^^^^^
 
 Expected type:
 
-    Result(b, WibbleError)
+    Result(a, OtherError)
 
 Found type:
 
-    Result(b, WobbleError)
+    Result(a, SomeError)
