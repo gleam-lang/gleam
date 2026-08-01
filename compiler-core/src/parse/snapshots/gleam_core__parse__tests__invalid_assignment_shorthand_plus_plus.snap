@@ -21,4 +21,4 @@ new variable with the same name as the previous one:
     let blobby = wibble
     let wibble = wibble + 20
     assert wibble == 30
-    assert bounce == 10
+    assert blobby == 10
