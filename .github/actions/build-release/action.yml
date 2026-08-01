@@ -265,7 +265,7 @@ runs:
     # * https://github.com/actions/attest-sbom
     - name: Attest Distribution Assets with SBoM
       id: attest-sbom
-      uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+      uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
       with:
         subject-path: |
           ${{ steps.build.outputs.archive }}
