@@ -56,7 +56,7 @@ runs:
   using: "composite"
   steps:
     - name: Install Rust toolchain
-      uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1.15.4
+      uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
       with:
         toolchain: ${{ inputs.toolchain }}
         target: ${{ inputs.target }}
@@ -70,7 +70,7 @@ runs:
 
     - name: Build WASM release binary
       if: ${{ inputs.target != 'wasm32-unknown-unknown' }}
-      uses: clechasseur/rs-cargo@319e211e9459c5e531afb6d157296765b441572e # v3.0.3
+      uses: clechasseur/rs-cargo@8ccb6817fc46c9af3b058a5a7b31932edb82cf13 # v5.0.7
       with:
         command: build
         args: --release --target ${{ inputs.target }}
@@ -265,7 +265,7 @@ runs:
     # * https://github.com/actions/attest-sbom
     - name: Attest Distribution Assets with SBoM
       id: attest-sbom
-      uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+      uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
       with:
         subject-path: |
           ${{ steps.build.outputs.archive }}
@@ -285,7 +285,7 @@ runs:
         ATTESTATION: "${{ steps.attest-sbom.outputs.bundle-path }}"
 
     - name: Upload artifact
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: release-${{ matrix.target }}
         path: |
