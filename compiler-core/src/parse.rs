@@ -3535,14 +3535,13 @@ where
                             Some((_, Token::LeftParen, paren_end)) => {
                                 self.advance(); // pop the LeftParen
                                 let call_end = self.find_matching_paren();
-                                let call_end = if call_end == 0 {
-                                    paren_end
-                                } else {
-                                    call_end
-                                };
+                                let call_end = if call_end == 0 { paren_end } else { call_end };
                                 parse_error(
                                     ParseErrorType::UnexpectedFunction,
-                                    SrcSpan { start, end: call_end },
+                                    SrcSpan {
+                                        start,
+                                        end: call_end,
+                                    },
                                 )
                             }
                             _ => Ok(Some(Constant::Var {
@@ -3575,14 +3574,13 @@ where
                     Some((_, Token::LeftParen, paren_end)) => {
                         self.advance(); // pop the LeftParen
                         let call_end = self.find_matching_paren();
-                        let call_end = if call_end == 0 {
-                            paren_end
-                        } else {
-                            call_end
-                        };
+                        let call_end = if call_end == 0 { paren_end } else { call_end };
                         parse_error(
                             ParseErrorType::UnexpectedFunction,
-                            SrcSpan { start, end: call_end },
+                            SrcSpan {
+                                start,
+                                end: call_end,
+                            },
                         )
                     }
                     _ => Ok(Some(Constant::Var {
