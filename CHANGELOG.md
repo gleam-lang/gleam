@@ -19,7 +19,8 @@
 
 ### Build tool
 
-- Cache size has been significantly reduced.
+- The build tool now stores its build cache in a more compact binary format,
+  making the cache files noticeably smaller.
   ([Andrey Kozhev](httos://github.com/ankddev))
 
 ### Language server
