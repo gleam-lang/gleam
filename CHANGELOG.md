@@ -13,6 +13,35 @@
   longer generate any code.
   ([Jack Programs](https://github.com/jackprogramsjp))
 
+- The compiler now emits a warning when trying to use the pattern of a spread
+  and a variable when pattern matching inside a 'case' clause.
+  This syntax may be removed in a future (major) release.
+
+  Considering the following Gleam code:
+
+  ```gleam
+  pub fn main() {
+    let letters = ["b", "c"]
+    case letters {
+      [] -> []
+      [..x] -> x
+    }
+  }
+  ```
+
+  The compiler will emit the following warning:
+
+  ```txt
+  warning: Deprecated list pattern matching syntax
+    ┌─ /main.gleam:6:9
+    │
+  6 │         [..x] -> x
+    │         ^^^^^ This can be replaced with the variable itself
+  ```
+
+  ([Khalid Belkassmi E.H.](https://github.com/khalidbelk))
+
+
 - The compiler now has a specific error message for when trying to use
   procedural operators that do not exist in Gleam, such as `+=` and `++`.
   ([0xda157](https://github.com/0xda157))
