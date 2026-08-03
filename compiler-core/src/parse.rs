@@ -1641,20 +1641,17 @@ where
                     };
 
                     match tail.as_ref() {
-                        Some(pattern) => {
-                            if pattern.is_discard() {
-                                self.warnings.push(
-                                    DeprecatedSyntaxWarning::DeprecatedListCatchAllPattern {
-                                        location,
-                                    },
-                                );
-                            } else if pattern.is_variable() {
-                                self.warnings.push(
-                                    DeprecatedSyntaxWarning::DeprecatedListSpreadAsVariablePattern {
-                                        location,
-                                    }
-                                );
-                            }
+                        Some(Pattern::Discard { .. }) => {
+                            self.warnings.push(
+                                DeprecatedSyntaxWarning::DeprecatedListCatchAllPattern { location },
+                            );
+                        }
+                        Some(Pattern::Variable { .. }) => {
+                            self.warnings.push(
+                                DeprecatedSyntaxWarning::DeprecatedListSpreadAsVariablePattern {
+                                    location,
+                                },
+                            );
                         }
                         _ => {}
                     }
