@@ -21,13 +21,10 @@ export function classify(input, a, b) {
   } else if (input.charCodeAt(0) === 97) {
     if (b) {
       return "a-prefix";
+    } else if (input.slice(1) === "") {
+      return "exact-a";
     } else {
-      let $ = input.slice(1);
-      if ($ === "") {
-        return "exact-a";
-      } else {
-        return "other";
-      }
+      return "other";
     }
   } else {
     return "other";

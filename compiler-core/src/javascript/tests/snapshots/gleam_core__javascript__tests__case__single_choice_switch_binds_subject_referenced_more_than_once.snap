@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn go(sequences) {\n  case sequences {\n    [] -> 0\n    [_] -> 1\n    [a, b, ..rest] -> a + b + go(rest)\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(sequences) {
+  case sequences {
+    [] -> 0
+    [_] -> 1
+    [a, b, ..rest] -> a + b + go(rest)
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { Empty as $Empty } from "../gleam.mjs";
+
+export function go(sequences) {
+  if (sequences instanceof $Empty) {
+    return 0;
+  } else {
+    let $ = sequences.tail;
+    if ($ instanceof $Empty) {
+      return 1;
+    } else {
+      let a = sequences.head;
+      let b = $.head;
+      let rest = $.tail;
+      return (a + b) + go(rest);
+    }
+  }
+}

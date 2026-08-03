@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\npub fn go(input: String, b: Bool) -> String {\n  case input {\n    \"a\" <> _ if b -> \"a-guard\"\n    \"ac\" <> r if r != \"\" -> \"ac\" <> r\n    _ -> \"other\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(input: String, b: Bool) -> String {
+  case input {
+    "a" <> _ if b -> "a-guard"
+    "ac" <> r if r != "" -> "ac" <> r
+    _ -> "other"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function go(input, b) {
+  if (input.charCodeAt(0) === 97) {
+    if (b) {
+      return "a-guard";
+    } else {
+      let $ = input.slice(1);
+      if ($.charCodeAt(0) === 99) {
+        let r = $.slice(1);
+        if (r !== "") {
+          return input;
+        } else {
+          return "other";
+        }
+      } else {
+        return "other";
+      }
+    }
+  } else {
+    return "other";
+  }
+}

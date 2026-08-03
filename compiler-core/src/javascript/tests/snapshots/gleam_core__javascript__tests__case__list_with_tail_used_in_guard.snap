@@ -17,17 +17,14 @@ import { toList, Empty as $Empty, prepend as listPrepend, isEqual } from "../gle
 export function go(x, y) {
   if (x instanceof $Empty) {
     return false;
-  } else {
-    let $ = x.head;
-    if ($ === 1) {
-      let x$1 = x.tail;
-      if (isEqual(listPrepend(1, listPrepend(2, x$1)), y)) {
-        return true;
-      } else {
-        return false;
-      }
+  } else if (x.head === 1) {
+    let x$1 = x.tail;
+    if (isEqual(listPrepend(1, listPrepend(2, x$1)), y)) {
+      return true;
     } else {
       return false;
     }
+  } else {
+    return false;
   }
 }

@@ -41,8 +41,7 @@ export function go(cat) {
   let y = cat.cuteness;
   let x$1 = cat.name;
   let x$2;
-  let $ = cat.cuteness;
-  if ($ === 4) {
+  if (cat.cuteness === 4) {
     x$2 = cat.name;
   } else {
     throw makeError(

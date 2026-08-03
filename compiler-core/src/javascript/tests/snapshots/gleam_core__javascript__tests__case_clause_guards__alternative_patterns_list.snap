@@ -20,29 +20,15 @@ export function main(xs) {
   } else {
     let $ = xs.tail;
     if ($ instanceof $Empty) {
-      let $1 = xs.head;
-      if ($1 === 1) {
+      if (xs.head === 1) {
         return 0;
       } else {
         return 1;
       }
+    } else if ($.tail instanceof $Empty && xs.head === 1 && $.head === 2) {
+      return 0;
     } else {
-      let $1 = $.tail;
-      if ($1 instanceof $Empty) {
-        let $2 = xs.head;
-        if ($2 === 1) {
-          let $3 = $.head;
-          if ($3 === 2) {
-            return 0;
-          } else {
-            return 1;
-          }
-        } else {
-          return 1;
-        }
-      } else {
-        return 1;
-      }
+      return 1;
     }
   }
 }

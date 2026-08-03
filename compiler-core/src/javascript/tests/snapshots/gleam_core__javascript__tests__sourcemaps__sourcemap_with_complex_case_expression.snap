@@ -19,27 +19,17 @@ expression: "\npub fn go(one, other) {\n  case one, other {\n    Ok(1), Error(_)
 2 |
 3 |export function go(one, other) {
 4 |  if (one instanceof Ok) {
-5 |    if (other instanceof Error) {
-6 |      let $ = one[0];
-7 |      if ($ === 1) {
-8 |        return 1;
-9 |      } else {
-10 |        return 2;
-11 |      }
-12 |    } else {
-13 |      return 2;
-14 |    }
-15 |  } else if (other instanceof Ok) {
-16 |    let $ = other[0];
-17 |    if ($ === 2) {
-18 |      return 3;
-19 |    } else {
-20 |      return 4;
-21 |    }
-22 |  } else {
-23 |    return 4;
-24 |  }
-25 |}
+5 |    if (other instanceof Error && one[0] === 1) {
+6 |      return 1;
+7 |    } else {
+8 |      return 2;
+9 |    }
+10 |  } else if (other instanceof Ok && other[0] === 2) {
+11 |    return 3;
+12 |  } else {
+13 |    return 4;
+14 |  }
+15 |}
 
 ----- SOURCE MAP
 File: my/mod.mjs
@@ -68,46 +58,36 @@ one, other {
     Ok(1), Error(_) -> 
 ⏷
 if (one instanceof Ok) {
-    if (other instanceof Error) {
-      let $ = one[0];
-      if ($ === 1) {
-        
+    if (other instanceof Error && one[0] === 1) {
+      
 ----- 
 1
     Ok(_), _ -> 
 ⏷
 return 1;
-      } else {
-        
+    } else {
+      
 ----- 
 2
     Error(_), Ok(2) -> 
 ⏷
 return 2;
-      }
-    } else {
-      return 2;
     }
-  } else if (other instanceof Ok) {
-    let $ = other[0];
-    if ($ === 2) {
-      
+  } else if (other instanceof Ok && other[0] === 2) {
+    
 ----- 
 3
     _, _ -> 
 ⏷
 return 3;
-    } else {
-      
+  } else {
+    
 ----- 
 4
   }
 }
 ⏷
 return 4;
-    }
-  } else {
-    return 4;
   }
 }
 ----- 

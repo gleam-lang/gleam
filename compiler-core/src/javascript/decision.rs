@@ -23,7 +23,10 @@ use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use num_bigint::BigInt;
 use pretty_arena::*;
-use std::{collections::HashMap, sync::OnceLock};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::OnceLock,
+};
 
 pub const ASSIGNMENT_VAR: &str = "$";
 
@@ -390,6 +393,125 @@ impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
         }
     }
 
+    /// Returns whether the value of `var` is going to be used more than once by
+    /// the switch made up of `choices` and `fallback`.
+    ///
+    /// A variable that is not bound to a name has its value inlined at every
+    /// reference, and any variable derived from it (for example `x.tail` or
+    /// `x[0]`) embeds that whole expression. So a single reference costs
+    /// nothing, while any further one recomputes the work a binding would have
+    /// done just once.
+    ///
+    fn value_used_more_than_once(
+        &self,
+        var: &Variable,
+        choices: &'a [(RuntimeCheck, Decision)],
+        fallback: &'a Decision,
+        fallback_check: &'a FallbackCheck,
+    ) -> bool {
+        // Every choice uses the value to perform its own check, so more than
+        // one choice already means more than one use.
+        if choices.len() > 1 {
+            return true;
+        }
+
+        // Otherwise there's exactly one choice (`switch` returns early when
+        // there's none) and its check is the first use, so the value gets used
+        // again as soon as any of the branches does.
+        let derived = derived_variables(var, choices, fallback_check);
+        choices
+            .iter()
+            .map(|(_check, decision)| decision)
+            .chain([fallback])
+            .any(|decision| self.decision_uses_value(decision, &derived))
+    }
+
+    /// Whether `decision` uses the value of one of the `derived` variables.
+    ///
+    fn decision_uses_value(&self, decision: &'a Decision, derived: &HashSet<usize>) -> bool {
+        match decision {
+            Decision::Fail => false,
+
+            // A clause that just returns one of the case subjects reuses it
+            // directly and its bindings are never used, so they can't make us
+            // recompute anything.
+            Decision::Run { body } if self.body_returns_subject(body) => false,
+            // Otherwise, we need to check if the body uses any of the derived
+            // variables.
+            Decision::Run { body } => self.body_uses_value(body, derived),
+
+            // A guarded body is different: even when it returns a subject, the
+            // bindings its check needs are used before the check itself, so
+            // those still count.
+            Decision::Guard {
+                if_true, if_false, ..
+            } => {
+                self.body_uses_value(if_true, derived)
+                    || self.decision_uses_value(if_false, derived)
+            }
+
+            // A nested switch checks the value it switches on, so if that is
+            // one of the derived variables then the value is used here no
+            // matter what the branches go on to do. Otherwise it's only used if
+            // one of those branches uses it.
+            Decision::Switch {
+                var,
+                choices,
+                fallback,
+                ..
+            } => {
+                derived.contains(&var.id)
+                    || choices
+                        .iter()
+                        .map(|(_check, decision)| decision)
+                        .chain([fallback.as_ref()])
+                        .any(|decision| self.decision_uses_value(decision, derived))
+            }
+        }
+    }
+
+    /// Whether the clause `body` belongs to just rebuilds and returns one of
+    /// the case subjects, like `Ok(value) -> Ok(value)` or `n -> n`.
+    ///
+    /// Such a clause is compiled to a `return` of the subject itself, so the
+    /// bindings in `body` are never emitted and the values they reference are
+    /// never used. Here `value` never makes it into the generated code, even
+    /// though the pattern binds it.
+    ///
+    fn body_returns_subject(&self, body: &'a Body) -> bool {
+        let DecisionKind::Case { clauses } = &self.kind else {
+            return false;
+        };
+
+        clauses
+            .get(body.clause_index)
+            .expect("invalid clause index")
+            .returned_subject()
+            .is_some()
+    }
+
+    /// Whether any value bound by `body` is one of the `derived` variables,
+    /// that is the variable we're deciding whether to bind and everything the
+    /// switch's checks pull out of it.
+    ///
+    /// Since those variables are not bound to a name, each binding that
+    /// references one repeats the whole expression its value is computed from,
+    /// which is exactly the work a binding would let us do just once.
+    ///
+    fn body_uses_value(&self, body: &'a Body, derived: &HashSet<usize>) -> bool {
+        body.bindings
+            .iter()
+            .filter_map(|(_name, value)| match value {
+                BoundValue::Variable(variable) => Some(variable),
+                BoundValue::BitArraySlice { bit_array, .. } => Some(bit_array),
+                BoundValue::StringSlice { subject, .. } => Some(subject),
+                BoundValue::LiteralString(_)
+                | BoundValue::LiteralInt(_)
+                | BoundValue::LiteralFloat(_) => None,
+            })
+            .any(|variable| derived.contains(&variable.id))
+    }
+
     fn body_expression(
         &mut self,
         arena: &'doc DocumentArena<'a, 'doc>,
@@ -492,11 +614,17 @@ impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
         // Otherwise we'll have to generate a series of if-else to check which
         // pattern is going to match!
         let mut assignments = vec![];
-        if !self.variables.is_bound_in_scope(var) {
+        if !self.variables.is_bound_in_scope(var)
+            && self.value_used_more_than_once(var, choices, fallback, fallback_check)
+        {
             // If the variable we need to perform a check on is not already bound
             // in scope we will be binding it to a new made up name. This way we
             // can also reference this exact name in further checks instead of
             // recomputing the value each time.
+            //
+            // If the value is only ever used once there's nothing to share the
+            // name with, so binding it would just add a statement and stop the
+            // resulting `if` from being merged into the enclosing one.
             let name = self.variables.next_local_var(&ASSIGNMENT_VAR.into());
             let value = self.variables.get_value(var);
             self.variables.bind(name.clone(), var);
@@ -690,10 +818,19 @@ impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
             body: if_body,
         } = if_
         {
+            // When the `if` body is empty the check gets negated and the else
+            // body becomes the entire statement, so it needs a block of its own
+            // rather than being joined onto an `else` keyword.
+            let else_body = if if_body.is_empty() {
+                break_block(arena, else_body.into_doc(arena))
+            } else {
+                else_body.document_after_else(arena)
+            };
+
             CaseBody::IfElse {
                 check,
                 if_body,
-                else_body: else_body.document_after_else(arena),
+                else_body,
                 fallback_decision: fallback,
             }
         } else {
@@ -894,6 +1031,43 @@ fn multiple_single_character_prefix_checks(choices: &[(RuntimeCheck, Decision)])
     }
 
     false
+}
+
+/// The ids of `var` and of every variable the switch's checks pull out of it.
+///
+/// Using one of these uses `var`'s value as well, for example, the value of
+/// `x.tail` is the value of `x` with `.tail` tacked onto it.
+///
+fn derived_variables(
+    var: &Variable,
+    choices: &[(RuntimeCheck, Decision)],
+    fallback_check: &FallbackCheck,
+) -> HashSet<usize> {
+    let checks = choices
+        .iter()
+        .map(|(check, _decision)| check)
+        .chain(match fallback_check {
+            FallbackCheck::RuntimeCheck { check } => Some(check),
+            FallbackCheck::InfiniteCatchAll | FallbackCheck::CatchAll { .. } => None,
+        });
+
+    checks.fold(HashSet::from_iter([var.id]), |mut derived, check| {
+        let introduced: &[&Variable] = &match check {
+            RuntimeCheck::Int { .. }
+            | RuntimeCheck::Float { .. }
+            | RuntimeCheck::String { .. }
+            | RuntimeCheck::BitArray { .. }
+            | RuntimeCheck::EmptyList => vec![],
+
+            RuntimeCheck::StringPrefix { rest, .. } => vec![rest],
+            RuntimeCheck::Tuple { elements, .. } => elements.iter().collect(),
+            RuntimeCheck::Variant { fields, .. } => fields.iter().collect(),
+            RuntimeCheck::NonEmptyList { first, rest } => vec![first, rest],
+        };
+
+        derived.extend(introduced.iter().map(|variable| variable.id));
+        derived
+    })
 }
 
 pub fn let_<'a, 'doc>(
