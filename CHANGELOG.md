@@ -9,6 +9,34 @@
 
 ### Compiler
 
+- The compiler now emits a warning when trying to use the pattern of a spread
+  and a variable when pattern matching inside a 'case' clause.
+  This syntax may be removed in a future (major) release.
+
+  Considering the following Gleam code:
+
+  ```gleam
+  pub fn main() {
+    let letters = ["b", "c"]
+    case letters {
+      [] -> []
+      [..x] -> x
+    }
+  }
+  ```
+
+  The compiler will emit the following warning:
+
+  ```txt
+  warning: Deprecated list pattern matching syntax
+    ┌─ /main.gleam:6:9
+    │
+  6 │         [..x] -> x
+    │         ^^^^^ This can be replaced with the variable itself
+  ```
+
+  ([Khalid Belkassmi E.H.](https://github.com/khalidbelk))
+
 - When compiling to JavaScript any case clauses found to be unreachable will no
   longer generate any code.
   ([Jack Programs](https://github.com/jackprogramsjp))
