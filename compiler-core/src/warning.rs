@@ -223,6 +223,20 @@ pub enum DeprecatedSyntaxWarning {
         location: SrcSpan,
     },
 
+    /// If someone uses the deprecated syntax to bind an entire list to a
+    /// variable with a spread, instead of using the variable directly:
+    /// ```gleam
+    /// case list {
+    ///   [..x] -> todo
+    /// //^^^^^ this matches the whole list so `x` should be used instead!
+    ///   _ ->
+    /// }
+    /// ```
+    ///
+    DeprecatedListSpreadAsVariablePattern {
+        location: SrcSpan,
+    },
+
     /// If a record pattern has a spread that is not preceded by a comma:
     /// ```gleam
     /// case wibble {
@@ -352,6 +366,30 @@ To match on all possible lists, use the `_` catch-all pattern instead.",
                 location: Some(Location {
                     label: diagnostic::Label {
                         text: Some("This can be replaced with `_`".into()),
+                        span: *location,
+                    },
+                    path: path.clone(),
+                    src: src.clone(),
+                    extra_labels: vec![],
+                }),
+            },
+
+            Warning::DeprecatedSyntax {
+                path,
+                src,
+                warning: DeprecatedSyntaxWarning::DeprecatedListSpreadAsVariablePattern { location },
+            } => Diagnostic {
+                title: "Deprecated list pattern matching syntax".into(),
+                text: wrap(
+                    "This syntax for pattern matching on lists is deprecated.
+This spread matches the entire list, so the variable can be used as \
+the pattern directly instead.",
+                ),
+                hint: None,
+                level: diagnostic::Level::Warning,
+                location: Some(Location {
+                    label: diagnostic::Label {
+                        text: Some("This can be replaced with the variable itself".into()),
                         span: *location,
                     },
                     path: path.clone(),
