@@ -22,14 +22,11 @@ export function main(xs) {
     if ($ instanceof $Empty) {
       let x = xs.head;
       return x;
+    } else if ($.tail instanceof $Empty) {
+      let x = $.head;
+      return x;
     } else {
-      let $1 = $.tail;
-      if ($1 instanceof $Empty) {
-        let x = $.head;
-        return x;
-      } else {
-        return 1;
-      }
+      return 1;
     }
   }
 }

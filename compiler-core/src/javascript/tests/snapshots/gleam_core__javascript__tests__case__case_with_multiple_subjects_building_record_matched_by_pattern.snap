@@ -16,13 +16,8 @@ import { Ok, Error } from "../gleam.mjs";
 
 export function go(x, y) {
   if (x instanceof Ok) {
-    if (y instanceof Error) {
-      let $ = x[0];
-      if ($ === 1) {
-        return x;
-      } else {
-        return new Error(undefined);
-      }
+    if (y instanceof Error && x[0] === 1) {
+      return x;
     } else {
       return new Error(undefined);
     }

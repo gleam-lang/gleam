@@ -21,6 +21,13 @@
   expression now points to the entire function call.
   ([mmustafasenoglu](https://github.com/mmustafasenoglu))
 
+- Pattern matching on the JavaScript target now generates flatter code, with
+  nested `if` statements collapsed into a single condition and fewer
+  intermediate variables. This makes little difference to the size of a bundled
+  application, but the resulting code has fewer branches for JavaScript engines
+  to optimise.
+  ([John Downey](https://github.com/jtdowney))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,

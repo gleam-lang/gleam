@@ -19,8 +19,7 @@ export function anything() {
   while (true) {
     let $ = $List$Empty$const;
     if (!($ instanceof $Empty)) {
-      let $1 = $.tail;
-      if ($1 instanceof $Empty && (false || true)) {
+      if ($.tail instanceof $Empty && (false || true)) {
         let a = $.head;
         return a;
       }

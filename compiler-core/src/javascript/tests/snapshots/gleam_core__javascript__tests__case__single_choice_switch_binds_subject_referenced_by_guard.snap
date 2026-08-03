@@ -1,0 +1,34 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn go(x) {\n  case x {\n    [a, b, ..rest] if b > 0 -> [a, b, ..rest]\n    _ -> []\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    [a, b, ..rest] if b > 0 -> [a, b, ..rest]
+    _ -> []
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { Empty as $Empty, List$Empty$const as $List$Empty$const } from "../gleam.mjs";
+
+export function go(x) {
+  if (x instanceof $Empty) {
+    return $List$Empty$const;
+  } else {
+    let $ = x.tail;
+    if ($ instanceof $Empty) {
+      return $List$Empty$const;
+    } else {
+      let b = $.head;
+      if (b > 0) {
+        return x;
+      } else {
+        return $List$Empty$const;
+      }
+    }
+  }
+}

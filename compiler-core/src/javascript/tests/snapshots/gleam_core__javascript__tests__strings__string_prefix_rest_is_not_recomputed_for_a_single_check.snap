@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-expression: "\npub fn classify(input: String, a: Bool, b: Bool) -> String {\n  case input {\n    \"aa\" <> _ if a -> \"aa\"\n    \"a\" <> _ if b -> \"a-guard\"\n    \"ac\" <> _ -> \"ac\"\n    _ -> \"other\"\n  }\n}\n"
+expression: "\npub fn classify(input: String, a: Bool, b: Bool) -> String {\n  case input {\n    \"aa\" <> _ if a -> \"aa\"\n    \"a\" <> _ if b -> \"a-guard\"\n    \"ac\" <> r -> r\n    _ -> \"other\"\n  }\n}\n"
 ---
 ----- SOURCE CODE
 
@@ -8,7 +8,7 @@ pub fn classify(input: String, a: Bool, b: Bool) -> String {
   case input {
     "aa" <> _ if a -> "aa"
     "a" <> _ if b -> "a-guard"
-    "ac" <> _ -> "ac"
+    "ac" <> r -> r
     _ -> "other"
   }
 }
@@ -21,10 +21,14 @@ export function classify(input, a, b) {
   } else if (input.charCodeAt(0) === 97) {
     if (b) {
       return "a-guard";
-    } else if (input.slice(1).charCodeAt(0) === 99) {
-      return "ac";
     } else {
-      return "other";
+      let $ = input.slice(1);
+      if ($.charCodeAt(0) === 99) {
+        let r = $.slice(1);
+        return r;
+      } else {
+        return "other";
+      }
     }
   } else {
     return "other";

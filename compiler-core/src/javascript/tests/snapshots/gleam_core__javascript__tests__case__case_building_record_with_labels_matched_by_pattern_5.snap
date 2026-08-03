@@ -44,13 +44,8 @@ export const Wibble$isWobble = (value) => value instanceof Wobble;
 export const Wibble$Wobble$0 = (value) => value[0];
 
 export function go(x) {
-  if (x instanceof Wibble) {
-    let $ = x.int;
-    if ($ === 1) {
-      return x;
-    } else {
-      return new Wobble(1);
-    }
+  if (x instanceof Wibble && x.int === 1) {
+    return x;
   } else {
     return new Wobble(1);
   }

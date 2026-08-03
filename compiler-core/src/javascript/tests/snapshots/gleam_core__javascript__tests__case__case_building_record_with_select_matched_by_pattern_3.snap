@@ -18,13 +18,8 @@ import * as $gleam from "../gleam.mjs";
 import { Error } from "../gleam.mjs";
 
 export function go(x) {
-  if (x instanceof $gleam.Ok) {
-    let $ = x[0];
-    if ($ === 1) {
-      return x;
-    } else {
-      return new Error(undefined);
-    }
+  if (x instanceof $gleam.Ok && x[0] === 1) {
+    return x;
   } else {
     return new Error(undefined);
   }

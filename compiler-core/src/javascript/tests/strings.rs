@@ -436,3 +436,34 @@ pub fn classify(input: String) -> String {
 "#,
     );
 }
+
+#[test]
+fn string_prefix_rest_is_not_recomputed_for_a_single_check() {
+    assert_js!(
+        r#"
+pub fn classify(input: String, a: Bool, b: Bool) -> String {
+  case input {
+    "aa" <> _ if a -> "aa"
+    "a" <> _ if b -> "a-guard"
+    "ac" <> r -> r
+    _ -> "other"
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn string_prefix_rest_is_not_recomputed_when_used_by_guard() {
+    assert_js!(
+        r#"
+pub fn go(input: String, b: Bool) -> String {
+  case input {
+    "a" <> _ if b -> "a-guard"
+    "ac" <> r if r != "" -> "ac" <> r
+    _ -> "other"
+  }
+}
+"#,
+    );
+}

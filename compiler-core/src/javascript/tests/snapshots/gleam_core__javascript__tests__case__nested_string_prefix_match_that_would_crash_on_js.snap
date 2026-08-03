@@ -24,23 +24,14 @@ export function main() {
     let $2 = $1.tail;
     if ($2 instanceof $Empty) {
       return 1;
+    } else if (
+      $2.tail instanceof $Empty &&
+      $1.head.startsWith("b ") &&
+      $2.head === "d"
+    ) {
+      return 1;
     } else {
-      let $3 = $2.tail;
-      if ($3 instanceof $Empty) {
-        let $4 = $1.head;
-        if ($4.startsWith("b ")) {
-          let $5 = $2.head;
-          if ($5 === "d") {
-            return 1;
-          } else {
-            return 1;
-          }
-        } else {
-          return 1;
-        }
-      } else {
-        return 1;
-      }
+      return 1;
     }
   }
 }

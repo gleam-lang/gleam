@@ -15,8 +15,7 @@ pub fn go(x) {
 ----- COMPILED JAVASCRIPT
 export function go(x) {
   let $ = [1, 2];
-  let $1 = $[0];
-  if ($1 === 1) {
+  if ($[0] === 1) {
     let a = $[1];
     if (a === 2) {
       return 1;
