@@ -3533,16 +3533,8 @@ where
 
                         match self.tok0 {
                             Some((_, Token::LeftParen, paren_end)) => {
-                                self.advance(); // pop the LeftParen
-                                let call_end = self.find_matching_paren();
-                                let call_end = if call_end == 0 { paren_end } else { call_end };
-                                parse_error(
-                                    ParseErrorType::UnexpectedFunction,
-                                    SrcSpan {
-                                        start,
-                                        end: call_end,
-                                    },
-                                )
+                                self.advance();
+                                self.function_call_in_constant(start, paren_end)
                             }
                             _ => Ok(Some(Constant::Var {
                                 location: SrcSpan { start, end },
@@ -3572,16 +3564,8 @@ where
 
                 match self.tok0 {
                     Some((_, Token::LeftParen, paren_end)) => {
-                        self.advance(); // pop the LeftParen
-                        let call_end = self.find_matching_paren();
-                        let call_end = if call_end == 0 { paren_end } else { call_end };
-                        parse_error(
-                            ParseErrorType::UnexpectedFunction,
-                            SrcSpan {
-                                start,
-                                end: call_end,
-                            },
-                        )
+                        self.advance();
+                        self.function_call_in_constant(start, paren_end)
                     }
                     _ => Ok(Some(Constant::Var {
                         location: SrcSpan { start, end },
@@ -4518,52 +4502,36 @@ functions are declared separately from types.";
         }
     }
 
-    // Scan ahead through the token stream to find the matching closing paren.
-    // Assumes the opening LeftParen has already been consumed by the caller.
-    // Returns the end position of ')' if found, or 0 if unmatched (EOF).
-    fn find_matching_paren(&mut self) -> u32 {
+    /// This function is to be called after seeing a `name(` in a constant
+    /// or guard clause expression. It returns an error, as functions
+    /// cannot be called in this context.
+    fn function_call_in_constant(
+        &mut self,
+        start: u32,
+        start_paren: u32,
+    ) -> Result<Option<Constant<()>>, ParseError> {
         let mut depth: i32 = 1;
 
-        let mut last_end = 0u32;
-        loop {
-            let tok = self.tok0.take();
-            match tok {
-                Some((_, Token::LeftParen, e)) => {
+        // Scan ahead through the token stream to find the matching closing paren.
+        // This can skip over invalid Gleam code as it doens't check anything but (),
+        // but it is good enough for the error message.
+        let end = loop {
+            match self.next_tok() {
+                Some((_, Token::LeftParen, _)) => {
                     depth += 1;
-                    last_end = e;
-                    self.tok0 = self.tok1.take();
-                    match self.tokens.next() {
-                        Some(Ok(t)) => self.tok1 = Some(t),
-                        _ => self.tok1 = None,
-                    }
                 }
-                Some((_, Token::RightParen, e)) => {
+                Some((_, Token::RightParen, position)) if depth == 1 => {
+                    break position;
+                }
+                Some((_, Token::RightParen, _)) => {
                     depth -= 1;
-                    last_end = e;
-                    if depth == 0 {
-                        break;
-                    }
-                    self.tok0 = self.tok1.take();
-                    match self.tokens.next() {
-                        Some(Ok(t)) => self.tok1 = Some(t),
-                        _ => self.tok1 = None,
-                    }
                 }
-                Some(_) => {
-                    self.tok0 = self.tok1.take();
-                    match self.tokens.next() {
-                        Some(Ok(t)) => self.tok1 = Some(t),
-                        _ => self.tok1 = None,
-                    }
-                }
-                None => break,
+                Some(_) => (),
+                None => break start_paren,
             }
-        }
+        };
 
-        // Note: we leave the parser state somewhat disrupted here,
-        // but since this is called right before parse_error (which
-        // returns Err immediately), it doesn't matter.
-        last_end
+        parse_error(ParseErrorType::UnexpectedFunction, SrcSpan { start, end })
     }
 
     // Moves the token stream forward
