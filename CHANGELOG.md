@@ -52,10 +52,3 @@
 - Fixed a bug where the `echo` on the JavaScript target would incorrectly print
   `NaN` and `Infinity`.
   ([Andrey Kozhev](https://github.com/ankddev))
-
-## v1.18.1 - 2026-08-01
-
-- Fixed a bug where the Erlang code generator would generate wrong code when
-  referencing constants that are aliases to other constants in bit array
-  segments, string concatenation and clause guards.
-  ([Andrey Kozhev](https://github.com/ankddev))
