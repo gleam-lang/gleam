@@ -17,6 +17,10 @@
   procedural operators that do not exist in Gleam, such as `+=` and `++`.
   ([0xda157](https://github.com/0xda157))
 
+- The error message for calling a function in a guard expression or constant
+  expression now points to the entire function call.
+  ([mmustafasenoglu](https://github.com/mmustafasenoglu))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
