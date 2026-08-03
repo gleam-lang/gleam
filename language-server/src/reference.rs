@@ -10,7 +10,8 @@ use gleam_core::{
     analyse,
     ast::{
         self, ArgNames, AssignName, BitArraySize, ClauseGuard, CustomType, Function,
-        ModuleConstant, Pattern, RecordConstructor, TypedExpr, TypedModule, visit::Visit,
+        ModuleConstant, Pattern, RecordConstructor, StringPrefixLeftSideAssignment, TypedExpr,
+        TypedModule, visit::Visit,
     },
     build::{Located, UnqualifiedImport},
     reference::RecordLabel,
@@ -967,14 +968,23 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
         &mut self,
         location: &'ast SrcSpan,
         left_location: &'ast SrcSpan,
-        left_side_assignment: &'ast Option<(EcoString, SrcSpan)>,
+        left_side_assignment: &'ast Option<StringPrefixLeftSideAssignment>,
         right_location: &'ast SrcSpan,
         left_side_string: &'ast EcoString,
         right_side_assignment: &'ast AssignName,
     ) {
         // Handle the prefix alias in alternative pattern: "prefix" as name | "other_prefix" as name
-        if let Some((name, left_side_assignment_location)) = left_side_assignment {
-            self.register_alternative_definition(name, left_side_assignment_location);
+        if let Some(StringPrefixLeftSideAssignment {
+            name,
+            name_start_position: left_side_assignment_start_position,
+            location: left_side_assignment_location,
+        }) = left_side_assignment
+        {
+            let left_side_assignment_location = SrcSpan::new(
+                *left_side_assignment_start_position,
+                left_side_assignment_location.end,
+            );
+            self.register_alternative_definition(name, &left_side_assignment_location);
         }
 
         // Handle the suffix in alternative pattern: "prefix" <> name | "other_prefix" <> name

@@ -15965,6 +15965,7 @@ fn convert_to_int_has_nicely_separated_digits() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/6120
 #[test]
 fn discard_unused_variable_triggered_at_string_prefix_pattern() {
     assert_code_action!(
