@@ -230,11 +230,18 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                 // If the constant string prefix is being aliased we need to add
                 // that value to the variables that are going to be generated
                 // later:
-                if let Some((prefix_name, prefix_location)) = left_side_assignment {
+                if let Some(StringPrefixLeftSideAssignment {
+                    name: prefix_name,
+                    name_start_position: prefix_name_start_position,
+                    location: prefix_location,
+                }) = left_side_assignment
+                {
+                    let prefix_name_location =
+                        SrcSpan::new(*prefix_name_start_position, prefix_location.end);
                     let _ = self.variables_to_add_later.insert(
                         prefix_name.clone(),
                         AliasedLiteral::String {
-                            location: *prefix_location,
+                            location: prefix_name_location,
                             value: left_side_string.clone(),
                         },
                     );
