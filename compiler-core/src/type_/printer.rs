@@ -171,9 +171,16 @@ struct TypeAlias {
     alias_package: EcoString,
     alias_module: EcoString,
     alias_name: EcoString,
-    // Private aliases can be printed in errors and the language server within
-    // their module, but generated public documentation must not use them.
-    alias_is_public: bool,
+    availability: TypeAliasAvailability,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+enum TypeAliasAvailability {
+    // Private local aliases and ordinary unqualified imports can be printed in
+    // errors and the language server, but not in generated documentation.
+    InScopeOnly,
+    // Public local aliases and reexports can also be used in documentation.
+    Public,
 }
 
 #[derive(Debug)]
@@ -234,6 +241,7 @@ impl TypeAlias {
         alias_package: &EcoString,
         alias_name: &EcoString,
         alias: &TypeAliasConstructor,
+        availability: TypeAliasAvailability,
     ) -> Option<Self> {
         // we need to preserve the order in which type variables go in the
         // type alias so when printing the final type, we can print the
@@ -250,7 +258,7 @@ impl TypeAlias {
             alias_package: alias_package.clone(),
             alias_module: alias.module.clone(),
             alias_name: alias_name.clone(),
-            alias_is_public: alias.publicity.is_public(),
+            availability,
         })
     }
 
@@ -376,10 +384,34 @@ impl Names {
         alias_name: &EcoString,
         alias: &TypeAliasConstructor,
     ) {
-        if self.register_type_alias(package, alias_name, alias) {
+        let availability = if alias.publicity.is_public() {
+            TypeAliasAvailability::Public
+        } else {
+            TypeAliasAvailability::InScopeOnly
+        };
+        if self.register_type_alias(package, alias_name, alias, availability) {
             self.named_type_in_scope(alias.module.clone(), alias_name.clone(), alias_name.clone());
         } else {
             _ = self.local_types.remove_by_right(alias_name);
+        }
+    }
+
+    pub fn imported_type_alias_in_scope(
+        &mut self,
+        package: &EcoString,
+        alias_name: &EcoString,
+        local_name: &EcoString,
+        alias: &TypeAliasConstructor,
+    ) {
+        if self.register_type_alias(
+            package,
+            alias_name,
+            alias,
+            TypeAliasAvailability::InScopeOnly,
+        ) {
+            self.named_type_in_scope(alias.module.clone(), alias_name.clone(), local_name.clone());
+        } else {
+            _ = self.local_types.remove_by_right(local_name);
         }
     }
 
@@ -388,8 +420,9 @@ impl Names {
         package: &EcoString,
         alias_name: &EcoString,
         alias: &TypeAliasConstructor,
+        availability: TypeAliasAvailability,
     ) -> bool {
-        let Some(alias) = TypeAlias::new(package, alias_name, alias) else {
+        let Some(alias) = TypeAlias::new(package, alias_name, alias, availability) else {
             return false;
         };
         let Some(key) = TypeAliasKey::new(&alias.underlying_type_pattern) else {
@@ -434,7 +467,7 @@ impl Names {
             return;
         }
 
-        _ = self.register_type_alias(package, alias_name, alias);
+        _ = self.register_type_alias(package, alias_name, alias, TypeAliasAvailability::Public);
     }
 
     /// Get the name and optional module qualifier for a named type.
@@ -522,13 +555,14 @@ impl Names {
                 })
                 .or_else(|| {
                     self.find_matching_type_alias(type_, |alias| {
-                        alias.alias_is_public && self.type_alias_is_in_scope(alias)
+                        alias.availability == TypeAliasAvailability::Public
+                            && self.type_alias_is_in_scope(alias)
                     })
                 })
             }
             AliasResolutionMode::Public | AliasResolutionMode::PublicExcludingModule { .. } => self
                 .find_matching_type_alias(type_, |alias| {
-                    alias.alias_is_public
+                    alias.availability == TypeAliasAvailability::Public
                         && self.type_alias_is_in_scope(alias)
                         && !mode.excludes(alias)
                 }),
@@ -569,7 +603,7 @@ impl Names {
         aliases
             .iter()
             .filter(|alias| {
-                alias.alias_is_public
+                alias.availability == TypeAliasAvailability::Public
                     && !self.type_alias_is_in_scope(alias)
                     && !mode.excludes(alias)
             })
