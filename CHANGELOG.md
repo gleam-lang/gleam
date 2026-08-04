@@ -21,6 +21,10 @@
   expression now points to the entire function call.
   ([mmustafasenoglu](https://github.com/mmustafasenoglu))
 
+- The error message for top-level function calls is now the same as top-level 
+  function calls on the right-hand of const assignment.
+  ([jamesdolan16](https://github.com/jamesdolan16))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,

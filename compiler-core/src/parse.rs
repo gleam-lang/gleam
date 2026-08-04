@@ -282,7 +282,34 @@ where
     ) -> Result<A, ParseError> {
         let parse_result = self.ensure_no_errors(parse_result)?;
         if let Some((start, token, end)) = self.next_token() {
-            // there are still more tokens
+            // there are still more tokens, check to see if we're attempting to call a function from the wrong scope
+            // if we are report that fact to the user, otherwise return generic UnexpectedToken message
+            if let Token::Name { .. } = &token {
+                // Handle module qualifier
+                if let Some((_, Token::Dot, _)) = self.token0 {
+                    self.advance(); // Dot
+                    self.advance(); // Fn name
+                }
+
+                return match self.token0.take() {
+                    Some((_, Token::LeftParen, paren_end)) => {
+                        self.advance(); // Left Paren
+                        self.unexpected_function_call(start, paren_end)
+                    }
+                    Some((start, token, end)) => parse_error(
+                        ParseErrorType::UnexpectedToken {
+                            token,
+                            expected: vec!["Name".into()],
+                            hint: None,
+                        },
+                        SrcSpan { start, end },
+                    ),
+                    None => {
+                        parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 })
+                    }
+                };
+            }
+
             let expected = vec!["An import, const, type, or function.".into()];
             return parse_error(
                 ParseErrorType::UnexpectedToken {
@@ -3540,7 +3567,7 @@ where
                         match self.token0 {
                             Some((_, Token::LeftParen, paren_end)) => {
                                 self.advance();
-                                self.function_call_in_constant(start, paren_end)
+                                self.unexpected_function_call(start, paren_end)
                             }
                             _ => Ok(Some(Constant::Var {
                                 location: SrcSpan { start, end },
@@ -3571,7 +3598,7 @@ where
                 match self.token0 {
                     Some((_, Token::LeftParen, paren_end)) => {
                         self.advance();
-                        self.function_call_in_constant(start, paren_end)
+                        self.unexpected_function_call(start, paren_end)
                     }
                     _ => Ok(Some(Constant::Var {
                         location: SrcSpan { start, end },
@@ -4510,14 +4537,13 @@ functions are declared separately from types.";
         }
     }
 
-    /// This function is to be called after seeing a `name(` in a constant
-    /// or guard clause expression. It returns an error, as functions
-    /// cannot be called in this context.
-    fn function_call_in_constant(
+    /// This function is to be called after seeing a `name(` in an unexpected place. 
+    /// It returns an error, as functions cannot be called from whatever context called this function.
+    fn unexpected_function_call<A>(
         &mut self,
         start: u32,
         start_paren: u32,
-    ) -> Result<Option<Constant<()>>, ParseError> {
+    ) -> Result<A, ParseError> {
         let mut depth: i32 = 1;
 
         // Scan ahead through the token stream to find the matching closing paren.

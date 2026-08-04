@@ -972,6 +972,25 @@ const wib: Int = wibble(1, "wobble")
 }
 
 #[test]
+fn function_call_at_module_scope() {
+    assert_module_error!(
+        r#"
+pub fn wibble() { todo }
+wibble()
+"#
+    );
+}
+
+#[test]
+fn module_qualified_function_call_at_module_scope() {
+    assert_module_error!(
+        r#"
+io.println("wibble")
+"#
+    );
+}
+
+#[test]
 fn import_type() {
     assert_parse_module!(r#"import wibble.{type Wobble, Wobble, type Wabble}"#);
 }
