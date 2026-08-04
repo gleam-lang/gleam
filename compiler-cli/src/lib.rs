@@ -102,8 +102,6 @@ use gleam_core::{
     version::COMPILER_VERSION,
 };
 
-use crate::add::PackagesToAdd;
-
 #[derive(Args, Debug, Clone)]
 pub struct UpdateOptions {
     /// (optional) Names of the packages to update
@@ -701,17 +699,9 @@ impl Command {
                 let paths = find_project_paths(directory)?;
 
                 if let Some(packages) = packages {
-                    add::command(&paths, PackagesToAdd::Hex(packages), dev)
+                    add::hex_dependencies(&paths, packages, dev)
                 } else if let Some(git_uri) = git_uri {
-                    add::command(
-                        &paths,
-                        PackagesToAdd::Git {
-                            repository: git_uri,
-                            ref_: git_ref,
-                            path: path.map(Utf8PathBuf::from),
-                        },
-                        dev,
-                    )
+                    add::git_dependency(&paths, git_uri, git_ref, path.map(Utf8PathBuf::from), dev)
                 } else {
                     unreachable!("Exactly one of PACKAGES and --git must be provided")
                 }
