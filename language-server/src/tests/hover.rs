@@ -538,6 +538,23 @@ fn do_stuff() {
 }
 
 #[test]
+fn hover_expression_uses_type_alias_with_internal_generic_argument() {
+    assert_hover!(
+        "
+@internal
+pub type Connection
+
+pub type Request = List(Connection)
+
+pub fn main(request: Request) {
+  request
+}
+",
+        find_position_of("request").nth_occurrence(2)
+    );
+}
+
+#[test]
 fn hover_function_arg_annotation_2() {
     assert_hover!(
         "
