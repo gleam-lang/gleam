@@ -1157,6 +1157,41 @@ pub fn do_thing(value: internal.Internal) -> External {
 }
 
 #[test]
+fn function_uses_generic_reexport_of_internal_type() {
+    assert_documentation!(
+        ("thepackage/internal", "pub type Wibble(a)"),
+        "
+import thepackage/internal
+
+pub type Wobble(a) = internal.Wibble(List(a))
+
+pub fn wobble(value: internal.Wibble(List(Int))) -> Wobble(Int) {
+  value
+}
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn function_uses_structural_reexports_of_internal_type() {
+    assert_documentation!(
+        ("thepackage/internal", "pub type Wibble(a)"),
+        "
+import thepackage/internal
+
+pub type Handler(a) = fn(internal.Wibble(a)) -> Nil
+pub type Pair(a) = #(internal.Wibble(a), Int)
+
+pub fn wobble(handler: Handler(String), pair: Pair(Float)) -> Nil {
+  todo
+}
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
 fn function_uses_reexport_of_internal_type_in_other_module() {
     assert_documentation!(
         ("thepackage/internal", "pub type Internal"),
@@ -1173,6 +1208,85 @@ import thepackage/something
 
 pub fn do_thing(value: something.External) {
   value
+}
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn function_uses_generic_reexport_of_internal_type_in_other_module() {
+    assert_documentation!(
+        ("thepackage/internal", "pub type Wibble(a)"),
+        (
+            "thepackage/wibble",
+            "
+import thepackage/internal
+
+pub type Wobble(a) = internal.Wibble(List(a))
+"
+        ),
+        "
+import thepackage/wibble.{type Wobble as Woo}
+
+pub fn wobble(value: Woo(Int)) -> wibble.Wobble(String) {
+  todo
+}
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
+fn function_only_uses_unique_global_reexport_of_internal_type() {
+    assert_documentation!(
+        (
+            "thepackage/internal",
+            "
+@internal pub type Wibble(a)
+@internal pub type Wobble(a)
+"
+        ),
+        (
+            "thepackage/types",
+            "
+import thepackage/internal
+
+pub type Wibble(a) = internal.Wibble(a)
+pub type First(a) = internal.Wobble(a)
+"
+        ),
+        (
+            "thepackage/api",
+            "
+import thepackage/types
+
+pub fn wibble() -> types.Wibble(Int) {
+  todo
+}
+
+pub fn wobble() -> types.First(Int) {
+  todo
+}
+"
+        ),
+        (
+            "thepackage/second",
+            "
+import thepackage/internal
+
+pub type Second(a) = internal.Wobble(a)
+"
+        ),
+        "
+import thepackage/api
+
+pub fn wibble() {
+  api.wibble()
+}
+
+pub fn wobble() {
+  api.wobble()
 }
 ",
         ONLY_LINKS
