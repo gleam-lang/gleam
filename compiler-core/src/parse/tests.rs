@@ -2596,3 +2596,97 @@ pub type Wibble {
 "#
     );
 }
+
+#[test]
+fn record_trailing_update_const() {
+    assert_module_error!(
+        "
+pub type Wibble {
+    Wibble(field1: Int, field2: Int)
+}
+
+const wibble = Wibble(1, 2)
+const wobble = Wibble(field1: 0, ..wibble)
+        "
+    );
+}
+
+#[test]
+fn record_trailing_update_no_close_paran_const() {
+    assert_module_error!(
+        "
+pub type Wibble {
+    Wibble(field1: Int, field2: Int)
+}
+
+const wibble = Wibble(1, 2)
+const wobble = Wibble(field1: 0, ..wibble
+
+pub fn main() {
+  todo
+}
+        "
+    );
+}
+
+#[test]
+fn record_trailing_dot_dot_const() {
+    assert_module_error!(
+        "
+pub type Wibble {
+    Wibble(field1: Int, field2: Int)
+}
+
+const wibble = Wibble(1, 2)
+const wobble = Wibble(field1: 0, ..)
+        "
+    );
+}
+
+#[test]
+fn record_trailing_update_variable() {
+    assert_module_error!(
+        "
+pub type Wibble {
+    Wibble(field1: Int, field2: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(1, 2)
+  let wobble = Wibble(field1: 0, ..wibble)
+}
+        "
+    );
+}
+
+#[test]
+fn record_trailing_dot_dot_variable() {
+    assert_module_error!(
+        "
+pub type Wibble {
+    Wibble(field1: Int, field2: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(1, 2)
+  let wobble = Wibble(field1: 0, ..)
+}
+        "
+    );
+}
+
+#[test]
+fn record_trailing_update_no_close_paran_variable() {
+    assert_module_error!(
+        "
+pub type Wibble {
+    Wibble(field1: Int, field2: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(1, 2)
+  let wobble = Wibble(field1: 0, ..wibble
+}
+        "
+    );
+}

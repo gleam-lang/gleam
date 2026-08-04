@@ -195,6 +195,7 @@ pub enum ParseErrorType {
     },
     // `const x = todo as` with no message after the `as`.
     MissingConstantAsMessage,
+    RecordUpdateAfterFields,
 }
 
 pub(crate) struct ParseErrorDetails {
@@ -881,6 +882,20 @@ See: https://tour.gleam.run/data-types/generic-custom-types/"
                     extra_labels: vec![],
                 }
             }
+
+            ParseErrorType::RecordUpdateAfterFields => ParseErrorDetails {
+                text: "\
+When updating a record, the previous record comes before the fields to change
+
+    let record = Record(field1:, field2:)
+    let updated_record = Record(..record, field1: \"new_value\")
+
+See: https://tour.gleam.run/data-types/record-updates/"
+                    .into(),
+                label_text: "I wasn't expecting a record update here".into(),
+                extra_labels: vec![],
+                hint: None,
+            },
         }
     }
 }
