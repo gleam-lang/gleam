@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 2330
+expression: "\nimport aliases.{type Aliased}\n\npub fn main() {\n  let value: Aliased = #(1, \"one\")\n}\n"
+---
+----- SOURCE CODE
+-- aliases.gleam
+pub type Aliased = Result(Int, String)
+
+-- main.gleam
+
+import aliases.{type Aliased}
+
+pub fn main() {
+  let value: Aliased = #(1, "one")
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:5:24
+  │
+5 │   let value: Aliased = #(1, "one")
+  │                        ^^^^^^^^^^^
+
+Expected type:
+
+    Aliased
+
+Found type:
+
+    #(Int, String)

@@ -319,6 +319,22 @@ fn function_arg_and_return_annotation() {
     assert_error!("fn(x: Int) -> Float { x }");
 }
 
+#[test]
+fn error_uses_type_alias_with_internal_generic_argument() {
+    assert_module_error!(
+        "
+@internal
+pub type Connection
+
+pub type Request = List(Connection)
+
+pub fn main(request: Request) {
+  request == [1]
+}
+"
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/1378
 #[test]
 fn function_return_annotation_mismatch_with_pipe() {
@@ -2306,6 +2322,20 @@ fn qualified_type_mismatched_type_error() {
 import wibble
 const my_wobble: wibble.Wobble = Nil
 "
+    );
+}
+
+#[test]
+fn error_uses_unqualified_imported_type_alias() {
+    assert_module_error!(
+        ("aliases", "pub type Aliased = Result(Int, String)"),
+        r#"
+import aliases.{type Aliased}
+
+pub fn main() {
+  let value: Aliased = #(1, "one")
+}
+"#
     );
 }
 

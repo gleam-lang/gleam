@@ -4,11 +4,15 @@
 use bimap::{BiHashMap, BiMap};
 use ecow::{EcoString, eco_format};
 use im::HashMap;
+use itertools::Itertools;
 use std::{collections::HashSet, sync::Arc};
 
 use crate::{
     ast::SrcSpan,
-    type_::{Type, TypeAliasConstructor, TypeVar},
+    type_::{
+        Type, TypeAliasConstructor, TypeVar, collapse_links, fn_, generalise, tuple, unbound_var,
+        unify,
+    },
 };
 
 /// This class keeps track of what names are used for modules in the current
@@ -121,16 +125,13 @@ pub struct Names {
     ///
     local_value_constructors: BiMap<(EcoString, EcoString), EcoString>,
 
-    /// A map containing information about public alias of internal types in
-    /// other packages. This is a common pattern in Gleam, in order to reexport
-    /// an internal type, without exposing its implementation details. Because
-    /// of this, we want to be able to properly handle this case, and use the
-    /// public alias rather than the internal underlying type. Since Gleam type
-    /// aliases are not part of the type system, we have to track them manually
-    /// here.
-    ///
-    /// This is a mapping of internal types to their public aliases that we want
-    /// to favour over the internal types.
+    /// A map containing information about type aliases available to the printer.
+    /// This includes all aliases in the current module, as well as public
+    /// aliases of internal types discovered in other modules. Reexporting an
+    /// internal type without exposing its implementation details is a common
+    /// pattern in Gleam, so we want to use the public alias rather than the
+    /// internal underlying type. Since Gleam type aliases are not part of the
+    /// type system, the printer has to track them separately here.
     ///
     /// For example, if we had the following code:
     ///
@@ -141,24 +142,216 @@ pub struct Names {
     /// pub type Element(a) = internal.Element(a)
     /// ```
     ///
-    /// This map would contain a key of `("lustre/internal", "Element")` with a
-    /// value of `("lustre/element", "Element")`. This can then be used to look
-    /// up the alias we want to print based on the type we are printing.
+    /// This map would contain a named key for `("lustre/internal", "Element")`
+    /// with a value for `("lustre/element", "Element")`. This can then be used
+    /// to look up the alias we want to print based on the type we are printing.
     ///
-    reexport_aliases: HashMap<(EcoString, EcoString), (EcoString, EcoString)>,
+    type_aliases: HashMap<TypeAliasKey, Vec<TypeAlias>>,
 }
 
-/// The `PartialEq` implementation for `Type` doesn't account for `TypeVar::Link`,
-/// so we implement an equality check that does account for it here.
-fn compare_arguments(arguments: &[Arc<Type>], parameters: &[Arc<Type>]) -> bool {
-    if arguments.len() != parameters.len() {
-        return false;
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+enum TypeAliasKey {
+    /// Named types are grouped by their module and name
+    Named(EcoString, EcoString),
+    /// Functions are grouped by their arity
+    Function { arity: usize },
+    /// Tuples are grouped by their arity
+    Tuple { size: usize },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+struct TypeAlias {
+    // This is the right-hand side of the alias declaration. It is stored as a
+    // generic pattern so it can be instantiated and matched against types that
+    // are being printed.
+    underlying_type_pattern: Arc<Type>,
+    // The alias itself might also be generic
+    alias_parameter_ids: Vec<u64>,
+    // This is information about the alias type, used to print the type if it matches.
+    alias_package: EcoString,
+    alias_module: EcoString,
+    alias_name: EcoString,
+    availability: TypeAliasAvailability,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+enum TypeAliasAvailability {
+    // Private local aliases and ordinary unqualified imports can be printed in
+    // errors and the language server, but not in generated documentation.
+    InScopeOnly,
+    // Public local aliases and reexports can also be used in documentation.
+    Public,
+}
+
+#[derive(Debug)]
+pub struct ResolvedTypeAlias {
+    pub package: EcoString,
+    pub module: EcoString,
+    pub name: EcoString,
+    pub arguments: Vec<Arc<Type>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum AliasResolutionMode<'a> {
+    /// Errors and the language server use aliases available in the current
+    /// scope, and never discover aliases globally.
+    InScope,
+    /// Documentation uses public aliases, including a unique global reexport.
+    Public,
+    /// Alias declarations use public aliases, but exclude aliases from the
+    /// module being printed to avoid resolving an alias back to itself.
+    PublicExcludingModule {
+        package: &'a EcoString,
+        module: &'a EcoString,
+    },
+}
+
+impl AliasResolutionMode<'_> {
+    fn excludes(&self, alias: &TypeAlias) -> bool {
+        matches!(
+            self,
+            Self::PublicExcludingModule { package, module }
+                if (*package, *module) == (&alias.alias_package, &alias.alias_module)
+        )
+    }
+}
+
+impl TypeAliasKey {
+    fn new(type_: &Type) -> Option<Self> {
+        match type_ {
+            Type::Named { module, name, .. } => Some(Self::Named(module.clone(), name.clone())),
+            Type::Fn { arguments, .. } => Some(Self::Function {
+                arity: arguments.len(),
+            }),
+            Type::Tuple { elements } => Some(Self::Tuple {
+                size: elements.len(),
+            }),
+            Type::Var { type_ } => match &*type_.borrow() {
+                TypeVar::Link { type_ } => Self::new(type_),
+                TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
+            },
+        }
+    }
+}
+
+impl TypeAlias {
+    /// Try to make a `TypeAlias` from a discovered type alias declaration.
+    /// This function may fail if its type parameters cannot be matched.
+    fn new(
+        alias_package: &EcoString,
+        alias_name: &EcoString,
+        alias: &TypeAliasConstructor,
+        availability: TypeAliasAvailability,
+    ) -> Option<Self> {
+        // we need to preserve the order in which type variables go in the
+        // type alias so when printing the final type, we can print the
+        // generics in the correct order.
+        let alias_parameter_ids = alias
+            .parameters
+            .iter()
+            .map(|parameter| parameter.type_variable_id())
+            .collect::<Option<Vec<_>>>()?;
+
+        Some(Self {
+            underlying_type_pattern: generalise(alias.type_.clone()),
+            alias_parameter_ids,
+            alias_package: alias_package.clone(),
+            alias_module: alias.module.clone(),
+            alias_name: alias_name.clone(),
+            availability,
+        })
     }
 
-    arguments
-        .iter()
-        .zip(parameters)
-        .all(|(argument, parameter)| argument.same_as(parameter))
+    /// Clone the stored type into a disposable pattern for alias matching.
+    ///
+    /// This is similar to a combination of generalise and instantiate.
+    /// Unbound and generic variables become new unbound variables with the
+    /// same IDs.
+    fn instantiate_pattern(type_: Arc<Type>, variables: &mut HashMap<u64, Arc<Type>>) -> Arc<Type> {
+        match type_.as_ref() {
+            Type::Named {
+                publicity,
+                package,
+                module,
+                name,
+                arguments,
+                inferred_variant: _,
+            } => Arc::new(Type::Named {
+                publicity: *publicity,
+                package: package.clone(),
+                module: module.clone(),
+                name: name.clone(),
+                arguments: arguments
+                    .iter()
+                    .map(|type_| Self::instantiate_pattern(type_.clone(), variables))
+                    .collect(),
+                inferred_variant: None,
+            }),
+            Type::Fn { arguments, return_ } => fn_(
+                arguments
+                    .iter()
+                    .map(|type_| Self::instantiate_pattern(type_.clone(), variables))
+                    .collect(),
+                Self::instantiate_pattern(return_.clone(), variables),
+            ),
+            Type::Tuple { elements } => tuple(
+                elements
+                    .iter()
+                    .map(|type_| Self::instantiate_pattern(type_.clone(), variables))
+                    .collect(),
+            ),
+            Type::Var { type_ } => match &*type_.borrow() {
+                TypeVar::Link { type_ } => Self::instantiate_pattern(type_.clone(), variables),
+                TypeVar::Unbound { id } | TypeVar::Generic { id } => {
+                    if let Some(type_) = variables.get(id) {
+                        return type_.clone();
+                    }
+
+                    let type_ = unbound_var(*id);
+                    let _ = variables.insert(*id, type_.clone());
+                    type_
+                }
+            },
+        }
+    }
+
+    /// Try to match a type to the underlying type this `TypeAlias` specifies.
+    fn match_type(&self, type_: &Type) -> Option<Vec<Arc<Type>>> {
+        let mut pattern_variables = HashMap::new();
+
+        // The stored pattern is generic and reused for every match attempt, so
+        // instantiate it with fresh unbound variables which `unify` can
+        // specialise.
+        let pattern =
+            Self::instantiate_pattern(self.underlying_type_pattern.clone(), &mut pattern_variables);
+
+        // Make the variables in the type being printed rigid to ensure
+        // unify only specialises our disposable pattern variables.
+        let type_ = generalise(Arc::new(type_.clone()));
+
+        // The alias can only represent this type if the complete underlying
+        // type pattern matches.
+        unify(pattern, type_).ok()?;
+
+        // here, we now know we found a match, but we have to re-order the
+        // types in the pattern according to the order the outer alias uses.
+        let mut alias_arguments = Vec::with_capacity(self.alias_parameter_ids.len());
+        for id in &self.alias_parameter_ids {
+            let variable = pattern_variables.get(id)?;
+            alias_arguments.push(collapse_links(variable.clone()));
+        }
+
+        Some(alias_arguments)
+    }
+
+    fn resolved(&self, arguments: Vec<Arc<Type>>) -> ResolvedTypeAlias {
+        ResolvedTypeAlias {
+            package: self.alias_package.clone(),
+            module: self.alias_module.clone(),
+            name: self.alias_name.clone(),
+            arguments,
+        }
+    }
 }
 
 impl Names {
@@ -168,7 +361,7 @@ impl Names {
             imported_modules: HashMap::new(),
             type_variables: HashMap::new(),
             local_value_constructors: BiHashMap::new(),
-            reexport_aliases: HashMap::new(),
+            type_aliases: HashMap::new(),
         }
     }
 
@@ -187,23 +380,57 @@ impl Names {
 
     pub fn type_in_scope(
         &mut self,
-        local_alias: EcoString,
-        type_: &Type,
-        parameters: &[Arc<Type>],
+        package: &EcoString,
+        alias_name: &EcoString,
+        alias: &TypeAliasConstructor,
     ) {
-        match type_ {
-            Type::Named {
-                module,
-                name,
-                arguments,
-                ..
-            } if compare_arguments(arguments, parameters) => {
-                self.named_type_in_scope(module.clone(), name.clone(), local_alias);
-            }
-            Type::Named { .. } | Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => {
-                _ = self.local_types.remove_by_right(&local_alias);
-            }
+        let availability = if alias.publicity.is_public() {
+            TypeAliasAvailability::Public
+        } else {
+            TypeAliasAvailability::InScopeOnly
+        };
+        if self.register_type_alias(package, alias_name, alias, availability) {
+            self.named_type_in_scope(alias.module.clone(), alias_name.clone(), alias_name.clone());
+        } else {
+            _ = self.local_types.remove_by_right(alias_name);
         }
+    }
+
+    pub fn imported_type_alias_in_scope(
+        &mut self,
+        package: &EcoString,
+        alias_name: &EcoString,
+        local_name: &EcoString,
+        alias: &TypeAliasConstructor,
+    ) {
+        if self.register_type_alias(
+            package,
+            alias_name,
+            alias,
+            TypeAliasAvailability::InScopeOnly,
+        ) {
+            self.named_type_in_scope(alias.module.clone(), alias_name.clone(), local_name.clone());
+        } else {
+            _ = self.local_types.remove_by_right(local_name);
+        }
+    }
+
+    fn register_type_alias(
+        &mut self,
+        package: &EcoString,
+        alias_name: &EcoString,
+        alias: &TypeAliasConstructor,
+        availability: TypeAliasAvailability,
+    ) -> bool {
+        let Some(alias) = TypeAlias::new(package, alias_name, alias, availability) else {
+            return false;
+        };
+        let Some(key) = TypeAliasKey::new(&alias.underlying_type_pattern) else {
+            return false;
+        };
+
+        self.type_aliases.entry(key).or_default().push(alias);
+        true
     }
 
     /// Record a type variable in this module.
@@ -233,31 +460,14 @@ impl Names {
         alias_name: &EcoString,
         alias: &TypeAliasConstructor,
     ) {
-        match alias.type_.as_ref() {
-            Type::Named {
-                publicity,
-                package: type_package,
-                module,
-                name,
-                arguments,
-                ..
-            } => {
-                // We only count this alias as a reexport if it is:
-                // - aliasing a type in the same package
-                // - the type is internal
-                // - the alias exposes the same type parameters as the internal type
-                if type_package == package
-                    && publicity.is_internal()
-                    && compare_arguments(arguments, &alias.parameters)
-                {
-                    _ = self.reexport_aliases.insert(
-                        (module.clone(), name.clone()),
-                        (alias.module.clone(), alias_name.clone()),
-                    );
-                }
-            }
-            Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => {}
+        //  We only count this alias as a reexport if it is:
+        // - a public alias
+        // - exposes an internal type
+        if !alias.publicity.is_public() || alias.type_.find_internal_type().is_none() {
+            return;
         }
+
+        _ = self.register_type_alias(package, alias_name, alias, TypeAliasAvailability::Public);
     }
 
     /// Get the name and optional module qualifier for a named type.
@@ -267,36 +477,26 @@ impl Names {
         name: &'a EcoString,
         print_mode: PrintMode,
     ) -> NameContextInformation<'a> {
-        if print_mode == PrintMode::ExpandAliases {
-            if let Some((module, _)) = self.imported_modules.get(module) {
-                return NameContextInformation::Qualified(module, name.as_str());
-            }
+        match print_mode {
+            PrintMode::ExpandAliases => match self.imported_modules.get(module) {
+                Some((module, _)) => NameContextInformation::Qualified(module, name.as_str()),
+                None => NameContextInformation::Unimported(module, name),
+            },
 
-            return NameContextInformation::Unimported(module, name);
-        }
+            PrintMode::Normal => {
+                let key = (module.clone(), name.clone());
 
-        let key = (module.clone(), name.clone());
-
-        // Only check for local aliases if we want to print aliases
-        // There is a local name for this type, use that.
-        if let Some(name) = self.local_types.get_by_left(&key) {
-            return NameContextInformation::Unqualified(name.as_str());
-        }
-
-        if let Some((module, alias)) = self.reexport_aliases.get(&key) {
-            if let Some((module, _)) = self.imported_modules.get(module) {
-                return NameContextInformation::Qualified(module, alias);
-            } else {
-                return NameContextInformation::Unimported(module, alias);
+                // There is a local name for this type, use that.
+                if let Some(name) = self.local_types.get_by_left(&key) {
+                    NameContextInformation::Unqualified(name.as_str())
+                // This type is from a module that has been imported.
+                } else if let Some((module, _)) = self.imported_modules.get(module) {
+                    NameContextInformation::Qualified(module, name.as_str())
+                } else {
+                    NameContextInformation::Unimported(module, name)
+                }
             }
         }
-
-        // This type is from a module that has been imported
-        if let Some((module, _)) = self.imported_modules.get(module) {
-            return NameContextInformation::Qualified(module, name.as_str());
-        }
-
-        NameContextInformation::Unimported(module, name)
     }
 
     /// Record a named value in this module.
@@ -341,12 +541,85 @@ impl Names {
         self.type_variables.get(&id)
     }
 
-    pub fn reexport_alias(
+    pub fn type_alias(
         &self,
-        module: EcoString,
-        name: EcoString,
-    ) -> Option<&(EcoString, EcoString)> {
-        self.reexport_aliases.get(&(module, name))
+        type_: &Type,
+        mode: AliasResolutionMode<'_>,
+    ) -> Option<ResolvedTypeAlias> {
+        let scoped_alias = match mode {
+            AliasResolutionMode::InScope => {
+                // Errors and the language server first prefer an unqualified
+                // alias, including private aliases in the current module.
+                self.find_matching_type_alias(type_, |alias| {
+                    self.unqualified_alias_is_in_scope(alias)
+                })
+                .or_else(|| {
+                    self.find_matching_type_alias(type_, |alias| {
+                        alias.availability == TypeAliasAvailability::Public
+                            && self.type_alias_is_in_scope(alias)
+                    })
+                })
+            }
+            AliasResolutionMode::Public | AliasResolutionMode::PublicExcludingModule { .. } => self
+                .find_matching_type_alias(type_, |alias| {
+                    alias.availability == TypeAliasAvailability::Public
+                        && self.type_alias_is_in_scope(alias)
+                        && !mode.excludes(alias)
+                }),
+        };
+
+        let (alias, arguments) = match scoped_alias {
+            Some(alias) => alias,
+            None if matches!(mode, AliasResolutionMode::InScope) => return None,
+            None => self.find_unique_global_reexport(type_, mode)?,
+        };
+
+        Some(alias.resolved(arguments))
+    }
+
+    fn find_matching_type_alias<'a>(
+        &'a self,
+        type_: &Type,
+        is_candidate: impl Fn(&TypeAlias) -> bool,
+    ) -> Option<(&'a TypeAlias, Vec<Arc<Type>>)> {
+        let aliases = self.type_aliases.get(&TypeAliasKey::new(type_)?)?;
+        aliases
+            .iter()
+            .rev()
+            .filter(|alias| is_candidate(alias))
+            .find_map(|alias| alias.match_type(type_).map(|arguments| (alias, arguments)))
+    }
+
+    fn find_unique_global_reexport<'a>(
+        &'a self,
+        type_: &Type,
+        mode: AliasResolutionMode<'_>,
+    ) -> Option<(&'a TypeAlias, Vec<Arc<Type>>)> {
+        let aliases = self.type_aliases.get(&TypeAliasKey::new(type_)?)?;
+
+        // An out-of-scope reexport is safe to use in documentation only when
+        // it is public, is not excluded by alias expansion, and is the sole
+        // matching global reexport.
+        aliases
+            .iter()
+            .filter(|alias| {
+                alias.availability == TypeAliasAvailability::Public
+                    && !self.type_alias_is_in_scope(alias)
+                    && !mode.excludes(alias)
+            })
+            .filter_map(|alias| alias.match_type(type_).map(|arguments| (alias, arguments)))
+            .exactly_one()
+            .ok()
+    }
+
+    fn unqualified_alias_is_in_scope(&self, alias: &TypeAlias) -> bool {
+        self.local_types
+            .contains_left(&(alias.alias_module.clone(), alias.alias_name.clone()))
+    }
+
+    fn type_alias_is_in_scope(&self, alias: &TypeAlias) -> bool {
+        self.imported_modules.contains_key(&alias.alias_module)
+            || self.unqualified_alias_is_in_scope(alias)
     }
 }
 
@@ -477,6 +750,18 @@ impl<'a> Printer<'a> {
     }
 
     fn print(&mut self, type_: &Type, buffer: &mut EcoString, print_mode: PrintMode) {
+        // If this type can be represented as an alias,
+        // replace the complete type before printing its underlying structure.
+        if print_mode == PrintMode::Normal
+            && let Some(type_alias) = self.names.type_alias(type_, AliasResolutionMode::InScope)
+        {
+            let name = self
+                .names
+                .named_type(&type_alias.module, &type_alias.name, print_mode);
+            self.print_named_type(name, &type_alias.arguments, buffer, print_mode);
+            return;
+        }
+
         match type_ {
             Type::Named {
                 name,
@@ -484,27 +769,10 @@ impl<'a> Printer<'a> {
                 module,
                 ..
             } => {
-                let (module, name) = match self.names.named_type(module, name, print_mode) {
-                    NameContextInformation::Qualified(module, name) => (Some(module), name),
-                    NameContextInformation::Unqualified(name) => (None, name),
-                    // TODO: indicate that the module is not import and as such
-                    // needs to be, as well as how.
-                    NameContextInformation::Unimported(module, name) => {
-                        (module.split('/').next_back(), name)
-                    }
-                };
-
-                if let Some(module) = module {
-                    buffer.push_str(module);
-                    buffer.push('.');
-                }
-                buffer.push_str(name);
-
-                if !arguments.is_empty() {
-                    buffer.push('(');
-                    self.print_arguments(arguments, buffer, print_mode);
-                    buffer.push(')');
-                }
+                // No alias represented this type, so resolve how the original
+                // named type should be qualified and print it.
+                let name = self.names.named_type(module, name, print_mode);
+                self.print_named_type(name, arguments, buffer, print_mode);
             }
 
             Type::Fn { arguments, return_ } => {
@@ -526,6 +794,36 @@ impl<'a> Printer<'a> {
                 self.print_arguments(elements, buffer, print_mode);
                 buffer.push(')');
             }
+        }
+    }
+
+    fn print_named_type(
+        &mut self,
+        name: NameContextInformation<'_>,
+        arguments: &[Arc<Type>],
+        buffer: &mut EcoString,
+        print_mode: PrintMode,
+    ) {
+        let (module, name) = match name {
+            NameContextInformation::Qualified(module, name) => (Some(module), name),
+            NameContextInformation::Unqualified(name) => (None, name),
+            // TODO: indicate that the module is not import and as such
+            // needs to be, as well as how.
+            NameContextInformation::Unimported(module, name) => {
+                (module.split('/').next_back(), name)
+            }
+        };
+
+        if let Some(module) = module {
+            buffer.push_str(module);
+            buffer.push('.');
+        }
+        buffer.push_str(name);
+
+        if !arguments.is_empty() {
+            buffer.push('(');
+            self.print_arguments(arguments, buffer, print_mode);
+            buffer.push(')');
         }
     }
 
@@ -784,7 +1082,28 @@ fn test_module_alias() {
 fn test_type_alias_and_generics() {
     let mut names = Names::new();
 
-    names.named_type_in_scope("mod".into(), "Tiger".into(), "Cat".into());
+    let parameter = crate::type_::generic_var(0);
+    names.type_in_scope(
+        &"package".into(),
+        &"Cat".into(),
+        &TypeAliasConstructor {
+            publicity: crate::ast::Publicity::Private,
+            module: "local".into(),
+            type_: Arc::new(Type::Named {
+                name: "Tiger".into(),
+                arguments: vec![parameter.clone()],
+                module: "mod".into(),
+                publicity: crate::ast::Publicity::Public,
+                package: "package".into(),
+                inferred_variant: None,
+            }),
+            arity: 1,
+            deprecation: crate::type_::Deprecation::NotDeprecated,
+            documentation: None,
+            origin: SrcSpan::new(0, 0),
+            parameters: vec![parameter],
+        },
+    );
 
     names.type_variable_in_scope(0, "one".into());
 
@@ -797,7 +1116,7 @@ fn test_type_alias_and_generics() {
         })],
         module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
-        package: "".into(),
+        package: "package".into(),
         inferred_variant: None,
     };
 

@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- SOURCE CODE
+-- thepackage/internal.gleam
+pub type Wibble(a)
+
+-- main.gleam
+
+import thepackage/internal
+
+pub type Wobble(a) = internal.Wibble(List(a))
+
+pub fn wobble(value: internal.Wibble(List(Int))) -> Wobble(Int) {
+  value
+}
+
+
+---- TYPES
+
+--- Wobble
+<pre><code>pub type Wobble(a) =
+  @internal Wibble(List(a))</code></pre>
+
+---- VALUES
+
+--- wobble
+<pre><code>pub fn wobble(value: <a href="#Wobble">Wobble</a>(Int)) -> <a href="#Wobble">Wobble</a>(Int)</code></pre>
