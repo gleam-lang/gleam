@@ -117,6 +117,17 @@ pub enum Type {
 }
 
 impl Type {
+    pub fn type_variable_id(&self) -> Option<u64> {
+        let Self::Var { type_ } = self else {
+            return None;
+        };
+
+        match type_.borrow().deref() {
+            TypeVar::Unbound { id } | TypeVar::Generic { id } => Some(*id),
+            TypeVar::Link { type_ } => type_.type_variable_id(),
+        }
+    }
+
     pub fn is_result_constructor(&self) -> bool {
         match self {
             Type::Fn { return_, .. } => return_.is_result(),
