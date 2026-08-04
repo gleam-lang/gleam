@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub type Wibble {\n    Wibble(field1: Int, field2: Int)\n}\n\nconst wibble = Wibble(1, 2)\nconst wobble = Wibble(field1: 0, ..wibble)\n        "
+---
+----- SOURCE CODE
+
+pub type Wibble {
+    Wibble(field1: Int, field2: Int)
+}
+
+const wibble = Wibble(1, 2)
+const wobble = Wibble(field1: 0, ..wibble)
+        
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:7:34
+  │
+7 │ const wobble = Wibble(field1: 0, ..wibble)
+  │                                  ^^^^^^^^ I wasn't expecting a record update here
+
+When updating a record, the previous record comes before the fields to change
+
+    let record = Record(field1:, field2:)
+    let updated_record = Record(..record, field1: "new_value")
+
+See: https://tour.gleam.run/data-types/record-updates/

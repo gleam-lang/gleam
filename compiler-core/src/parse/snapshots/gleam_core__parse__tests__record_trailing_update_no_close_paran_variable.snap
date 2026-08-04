@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub type Wibble {\n    Wibble(field1: Int, field2: Int)\n}\n\npub fn main() {\n  let wibble = Wibble(1, 2)\n  let wobble = Wibble(field1: 0, ..wibble\n}\n        "
+---
+----- SOURCE CODE
+
+pub type Wibble {
+    Wibble(field1: Int, field2: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(1, 2)
+  let wobble = Wibble(field1: 0, ..wibble
+}
+        
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:9:1
+  │
+9 │ }
+  │ ^ I was not expecting this
+
+Found `}`, expected one of: 
+- `)`
