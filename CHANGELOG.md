@@ -34,7 +34,13 @@
   making the cache files noticeably smaller.
   ([Andrey Kozhev](httos://github.com/ankddev))
 
-- Added support for installing Git dependencies via `gleam add`.
+- The `gleam add` command now supports a `--git` flag that allows the user to
+  add Git dependencies without manually editing `gleam.toml`. Optional `--ref`
+  and `--path` flags can be provided; these behave the same as `path` and `ref`
+  in the `gleam.toml` Git dependency syntax. When `--ref` is omitted,
+  `gleam add` pins the dependency to the commit at the tip of the default
+  branch; the user may opt in to tracking a branch instead by explicitly
+  providing `--ref <branch_name>`.
   ([Hari Mohan](https://github.com/seafoamteal))
 
 ### Language server
