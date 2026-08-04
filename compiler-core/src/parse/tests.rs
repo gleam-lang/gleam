@@ -402,6 +402,113 @@ wobble %= 1"
     );
 }
 
+#[test]
+fn merge_conflict_full() {
+    assert_error!(
+        "<<<<<<< HEAD
+  io.println(\"Hello Wibble!\")
+=======
+  io.println(\"Hello Wobble!\")
+>>>>>>> main"
+    );
+}
+
+#[test]
+fn merge_conflict_equals() {
+    assert_error!(
+        "let wobble: Int = 32
+======="
+    );
+}
+
+#[test]
+fn six_equals_not_merge_conflict() {
+    assert_error!(
+        "let wobble: Int = 32
+======"
+    );
+}
+
+#[test]
+fn merge_conflict_lt() {
+    assert_error!(
+        "let wobble: Int = 32
+<<<<<<<"
+    );
+}
+
+#[test]
+fn merge_conflict_lt_with_head() {
+    assert_error!(
+        "let wobble: Int = 32
+<<<<<<< HEAD"
+    );
+}
+
+#[test]
+fn four_lt_not_merge_conflict() {
+    assert_error!(
+        "let wobble: Int = 32
+<<<<"
+    );
+}
+
+#[test]
+fn five_lt_not_merge_conflict() {
+    assert_error!(
+        "let wobble: Int = 32
+<<<<<"
+    );
+}
+
+#[test]
+fn six_lt_not_merge_conflict() {
+    assert_error!(
+        "let wobble: Int = 32
+<<<<<<"
+    );
+}
+
+#[test]
+fn merge_conflict_gt() {
+    assert_error!(
+        "let wobble: Int = 32
+>>>>>>>"
+    );
+}
+
+#[test]
+fn merge_conflict_gt_with_branch_name() {
+    assert_error!(
+        "let wobble: Int = 32
+>>>>>>> main"
+    );
+}
+
+#[test]
+fn four_gt_not_merge_conflict() {
+    assert_error!(
+        "let wobble: Int = 32
+>>>>"
+    );
+}
+
+#[test]
+fn five_gt_not_merge_conflict() {
+    assert_error!(
+        "let wobble: Int = 32
+>>>>>"
+    );
+}
+
+#[test]
+fn six_gt_not_merge_conflict() {
+    assert_error!(
+        "let wobble: Int = 32
+>>>>>>"
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/1231
 #[test]
 fn pointless_spread() {
