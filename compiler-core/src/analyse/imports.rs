@@ -106,11 +106,20 @@ impl<'context, 'problems> Importer<'context, 'problems> {
 
         let type_info = type_info.clone().with_location(import.location);
 
-        self.environment.names.named_type_in_scope(
-            type_info.module.clone(),
-            import.name.clone(),
-            imported_name.clone(),
-        );
+        if let Some(alias) = module.type_aliases.get(&import.name) {
+            self.environment.names.imported_type_alias_in_scope(
+                &module.package,
+                &import.name,
+                imported_name,
+                alias,
+            );
+        } else {
+            self.environment.names.named_type_in_scope(
+                type_info.module.clone(),
+                import.name.clone(),
+                imported_name.clone(),
+            );
+        }
 
         self.environment.references.register_type(
             imported_name.clone(),

@@ -1215,6 +1215,24 @@ pub fn do_thing(value: something.External) {
 }
 
 #[test]
+fn function_does_not_use_unqualified_imported_non_reexport_alias() {
+    assert_documentation!(
+        (
+            "thepackage/aliases",
+            "pub type Aliased = Result(Int, String)"
+        ),
+        "
+import thepackage/aliases.{type Aliased}
+
+pub fn do_thing(value: Result(Int, String)) -> Result(Int, String) {
+  value
+}
+",
+        ONLY_LINKS
+    );
+}
+
+#[test]
 fn function_uses_generic_reexport_of_internal_type_in_other_module() {
     assert_documentation!(
         ("thepackage/internal", "pub type Wibble(a)"),

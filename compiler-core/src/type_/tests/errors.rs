@@ -2326,6 +2326,20 @@ const my_wobble: wibble.Wobble = Nil
 }
 
 #[test]
+fn error_uses_unqualified_imported_type_alias() {
+    assert_module_error!(
+        ("aliases", "pub type Aliased = Result(Int, String)"),
+        r#"
+import aliases.{type Aliased}
+
+pub fn main() {
+  let value: Aliased = #(1, "one")
+}
+"#
+    );
+}
+
+#[test]
 fn qualified_type_similar_type_name() {
     assert_module_error!(
         ("wibble", "pub type Int"),
