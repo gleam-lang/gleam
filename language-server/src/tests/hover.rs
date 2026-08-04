@@ -1208,7 +1208,7 @@ fn main(wibble: Wubble) {
 }
 
 #[test]
-fn hover_print_underlying_for_alias_with_parameters() {
+fn hover_print_alias_with_fixed_arguments() {
     let code = "
 type LocalResult = Result(String, Int)
 
@@ -1240,7 +1240,7 @@ fn do_thing() -> MyResult(Int, Int) {
 }
 
 #[test]
-fn hover_print_underlying_for_imported_alias() {
+fn hover_print_unqualified_imported_alias_with_fixed_arguments() {
     let code = "
 import alias.{type A}
 
