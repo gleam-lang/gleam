@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub fn wibble() { todo }\nwibble()\n"
+---
+----- SOURCE CODE
+
+pub fn wibble() { todo }
+wibble()
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:1
+  │
+3 │ wibble()
+  │ ^^^^^^^^ Functions can only be called within other functions
