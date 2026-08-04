@@ -13,5 +13,5 @@ fn do_thing() -> LocalResult {
 
 ----- Hover content (markdown) -----
 ```gleam
-fn() -> Result(String, Int)
+fn() -> LocalResult
 ```
