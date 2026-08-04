@@ -472,24 +472,38 @@ fn type_parameter_name(type_: &Type) -> EcoString {
     }
 }
 
-/// Extract Bits, Unit and Size options from a bit array segment in a
-/// Returns a tuple of (has_bits, unit_value, size_value).
+/// Extract bits, unit and size options from a bit array segment in a
+/// single pass. Returns the unit value (only when the segment has a
+/// Bits option) and the Size option value.
 fn collect_bit_array_options<Value>(
     options: &[BitArrayOption<Value>],
-) -> (bool, Option<u8>, Option<&Box<Value>>) {
+) -> (Option<u8>, Option<&Value>) {
     let mut has_bits = false;
     let mut unit_value = None;
     let mut size_value = None;
-    #[allow(clippy::wildcard_enum_match_arm)]
     for option in options {
         match option {
             BitArrayOption::Bits { .. } => has_bits = true,
             BitArrayOption::Unit { value, .. } => unit_value = Some(*value),
-            BitArrayOption::Size { value, .. } => size_value = Some(value),
-            _ => {}
+            BitArrayOption::Size { value, .. } => size_value = Some(value.as_ref()),
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. } => {}
         }
     }
-    (has_bits, unit_value, size_value)
+    let unit_value = if has_bits { unit_value } else { None };
+    (unit_value, size_value)
 }
 
 impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
@@ -2369,13 +2383,11 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         builder: &mut impl ErlangBuilder<Output>,
         segment: &'a TypedConstantBitArraySegment,
     ) {
-        let (has_bits, unit_value, size_value) = collect_bit_array_options(&segment.options);
-        let bits_unit_value = if has_bits { unit_value } else { None };
-        let size = size_value.map(|v| v.as_ref());
+        let (bits_unit_value, size_value) = collect_bit_array_options(&segment.options);
 
         builder.bit_array_segment();
         self.inlined_constant(builder, &segment.value);
-        match (size, bits_unit_value) {
+        match (size_value, bits_unit_value) {
             (Some(TypedConstant::Int { int_value, .. }), _) if int_value.is_negative() => {
                 builder.int(BigInt::ZERO);
             }
@@ -2818,14 +2830,14 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         } else {
             // If the bit array segment doesn't need any special handling we use the
             // regular printing functions to format its value and options.
-            let (has_bits, unit_value, size_value) = collect_bit_array_options(&segment.options);
-            let bits_unit_value = if has_bits { unit_value } else { None };
-            let size = size_value.map(|v| v.as_ref());
+            let (bits_unit_value, size_value) = collect_bit_array_options(&segment.options);
             builder.bit_array_segment();
 
-            // Fold unit into size for bits segments with unit
+            // Multiply the unit into the size for bits segments so the
+            // unit specifier can be dropped from the Erlang output.
+            // The BEAM rejects unit with the bitstring type.
             self.maybe_block_expr(builder, &segment.value);
-            self.bit_array_expression_segment_size(builder, size, bits_unit_value);
+            self.bit_array_expression_segment_size(builder, size_value, bits_unit_value);
             self.bit_array_segment_specifiers(builder, segment, bits_unit_value.is_some());
         }
     }
@@ -2850,8 +2862,8 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         // results in a runtime error. We can't do that in Gleam! So any
         // negative value must be turned to zero instead.
         //
-        // And when `bits_unit_value` is set the unit has been folded into
-        // the size so the unit specifier can be omitted.
+        // And when `bits_unit_value` is set the unit has been multiplied
+        // into the size so the unit specifier can be omitted.
         //
         // For example, size=8 with unit=8 produces 64, emitting <<X:64/bitstring>>
         // instead of <<X:8/bitstring-unit:8>>.

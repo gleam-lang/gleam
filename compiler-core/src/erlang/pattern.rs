@@ -240,31 +240,14 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                     // When a bits segment has both size and unit as literal
                     // ints, multiply them so the unit specifier can be
                     // dropped. The BEAM rejects unit with bitstring.
-                    let mut has_bits = false;
-                    let mut bits_unit_value = None;
-                    let mut int_value = None;
-                    for option in &segment.options {
-                        #[allow(clippy::wildcard_enum_match_arm)]
-                        match option {
-                            BitArrayOption::Bits { .. } => has_bits = true,
-                            BitArrayOption::Unit { value, .. } => bits_unit_value = Some(*value),
-                            BitArrayOption::Size { value, .. } => {
-                                if let Pattern::BitArraySize(BitArraySize::Int {
-                                    int_value: iv,
-                                    ..
-                                }) = value.as_ref()
-                                {
-                                    int_value = Some(iv);
-                                }
-                            }
-                            _ => {}
+                    let (bits_unit_value, size_value) = collect_bit_array_options(&segment.options);
+                    let int_value = size_value.and_then(|v| match v {
+                        Pattern::BitArraySize(BitArraySize::Int { int_value, .. }) => {
+                            Some(int_value)
                         }
-                    }
-                    let bits_unit_value = if has_bits && int_value.is_some() {
-                        bits_unit_value
-                    } else {
-                        None
-                    };
+                        _ => None,
+                    });
+                    let bits_unit_value = bits_unit_value.filter(|_| int_value.is_some());
 
                     builder.bit_array_segment();
                     self.bit_array_pattern_segment_value(builder, segment);
