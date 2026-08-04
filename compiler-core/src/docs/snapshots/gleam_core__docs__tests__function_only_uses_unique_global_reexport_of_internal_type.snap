@@ -1,0 +1,59 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- SOURCE CODE
+-- thepackage/internal.gleam
+
+@internal pub type Wibble(a)
+@internal pub type Wobble(a)
+
+
+-- thepackage/types.gleam
+
+import thepackage/internal
+
+pub type Wibble(a) = internal.Wibble(a)
+pub type First(a) = internal.Wobble(a)
+
+
+-- thepackage/api.gleam
+
+import thepackage/types
+
+pub fn wibble() -> types.Wibble(Int) {
+  todo
+}
+
+pub fn wobble() -> types.First(Int) {
+  todo
+}
+
+
+-- thepackage/second.gleam
+
+import thepackage/internal
+
+pub type Second(a) = internal.Wobble(a)
+
+
+-- main.gleam
+
+import thepackage/api
+
+pub fn wibble() {
+  api.wibble()
+}
+
+pub fn wobble() {
+  api.wobble()
+}
+
+
+---- VALUES
+
+--- wibble
+<pre><code>pub fn wibble() -> <a href="thepackage/types.html#Wibble" title="thepackage/types.{type Wibble}">types.Wibble</a>(Int)</code></pre>
+
+--- wobble
+<pre><code>pub fn wobble() -> @internal Wobble(Int)</code></pre>

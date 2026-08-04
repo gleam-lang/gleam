@@ -15,7 +15,7 @@ use crate::{
     },
     type_::{
         Deprecation, PRELUDE_MODULE_NAME, PRELUDE_PACKAGE_NAME, Type, TypeVar,
-        printer::{Names, PrintMode},
+        printer::{AliasResolutionMode, Names, PrintMode},
     },
 };
 use pretty_arena::*;
@@ -511,6 +511,37 @@ impl<'a, 'doc> Printer<'a> {
         type_: &Type,
         print_mode: PrintMode,
     ) -> Document<'a, 'doc> {
+        let alias_mode = match print_mode {
+            PrintMode::Normal => AliasResolutionMode::Public,
+            PrintMode::ExpandAliases => AliasResolutionMode::PublicExcludingModule {
+                package: &self.package,
+                module: &self.module,
+            },
+        };
+        if let Some(alias) = self.names.type_alias(type_, alias_mode) {
+            let name = self.named_type_name(
+                arena,
+                &Publicity::Public,
+                &alias.package,
+                &alias.module,
+                &alias.name,
+            );
+            return if alias.arguments.is_empty() {
+                name
+            } else {
+                name.append(
+                    arena,
+                    Self::type_arguments(
+                        arena,
+                        alias
+                            .arguments
+                            .iter()
+                            .map(|argument| self.type_(arena, argument, PrintMode::Normal)),
+                    ),
+                )
+            };
+        }
+
         match type_ {
             Type::Named {
                 package,
@@ -520,31 +551,7 @@ impl<'a, 'doc> Printer<'a> {
                 publicity,
                 ..
             } => {
-                let name = match print_mode {
-                    // If we are printing a type for a type alias, and the alias
-                    // is reexporting an internal type, we want to show that it
-                    // is aliasing that internal type, rather than showing it as
-                    // aliasing itself.
-                    PrintMode::ExpandAliases if *package == self.package => {
-                        self.named_type_name(arena, publicity, package, module, name)
-                    }
-                    // If we are printing a type alias which aliases an internal
-                    // type from a different package, we still want to print the
-                    // public name for that type. If we are not printing a type
-                    // alias at all, we also want to use the public name.
-                    PrintMode::ExpandAliases | PrintMode::Normal => {
-                        // If we are using a reexported internal type, we want to
-                        // print it public name, whether it is from this package
-                        // or otherwise.
-                        if let Some((module, alias)) =
-                            self.names.reexport_alias(module.clone(), name.clone())
-                        {
-                            self.named_type_name(arena, &Publicity::Public, package, module, alias)
-                        } else {
-                            self.named_type_name(arena, publicity, package, module, name)
-                        }
-                    }
-                };
+                let name = self.named_type_name(arena, publicity, package, module, name);
 
                 if arguments.is_empty() {
                     name
