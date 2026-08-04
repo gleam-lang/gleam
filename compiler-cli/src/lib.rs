@@ -90,9 +90,8 @@ pub use gleam_core::error::{Error, Result};
 
 use camino::Utf8PathBuf;
 use clap::{
-    Args, CommandFactory, Parser, Subcommand,
+    Args, Parser, Subcommand,
     builder::{Styles, styling},
-    error::ErrorKind,
 };
 use gleam_core::{
     analyse::TargetSupport,
@@ -447,7 +446,7 @@ pub enum Command {
     )]
     Add {
         /// The names of Hex packages to add
-        #[arg()]
+        #[arg(required_unless_present = "git")]
         packages: Option<Vec<String>>,
 
         /// Add the packages as dev-only dependencies
@@ -455,15 +454,25 @@ pub enum Command {
         dev: bool,
 
         /// Add a package from a remote git repository
-        #[arg(long, value_name = "URI", help_heading = "Git Dependencies")]
+        #[arg(
+            long,
+            value_name = "URI",
+            help_heading = "Git Dependencies",
+            conflicts_with = "packages"
+        )]
         git: Option<String>,
 
         /// The tag, branch, or commit to check out
-        #[arg(long, alias = "ref", help_heading = "Git Dependencies")]
+        #[arg(
+            long,
+            alias = "ref",
+            help_heading = "Git Dependencies",
+            conflicts_with = "packages"
+        )]
         ref_: Option<String>,
 
         /// The path inside the git repo where the package is located
-        #[arg(long, help_heading = "Git Dependencies")]
+        #[arg(long, help_heading = "Git Dependencies", conflicts_with = "packages")]
         path: Option<String>,
     },
 
@@ -658,44 +667,6 @@ impl Command {
                 ref_: git_ref,
                 path,
             } => {
-                let mut cmd = Self::command();
-
-                if packages.is_some() == git_uri.is_some() {
-                    cmd.error(
-                        ErrorKind::ArgumentConflict,
-                        "Exactly one of PACKAGES and --git must be provided",
-                    )
-                    .exit();
-                }
-
-                if git_ref.is_some() && git_uri.is_none() {
-                    cmd.error(
-                        ErrorKind::MissingRequiredArgument,
-                        "--git must be provided for --ref",
-                    )
-                    .exit();
-                }
-
-                match path {
-                    Some(path) if path.is_empty() => {
-                        cmd.error(
-                            ErrorKind::InvalidValue,
-                            "Git dependency path must not be empty",
-                        )
-                        .exit();
-                    }
-
-                    Some(_) if git_uri.is_none() => {
-                        cmd.error(
-                            ErrorKind::MissingRequiredArgument,
-                            "--git must be provided for --path",
-                        )
-                        .exit();
-                    }
-
-                    _ => (),
-                }
-
                 let paths = find_project_paths(directory)?;
 
                 if let Some(packages) = packages {
@@ -1118,4 +1089,27 @@ fn download_dependencies(paths: &ProjectPaths) -> Result<()> {
         },
     )?;
     Ok(())
+}
+
+#[test]
+fn test_gleam_add_option_validation() {
+    assert!(Command::try_parse_from(&["gleam", "add", "lustre", "birdie"]).is_ok());
+    assert!(Command::try_parse_from(&["gleam", "add", "--dev", "lustre"]).is_ok());
+    assert!(
+        Command::try_parse_from(&[
+            "gleam",
+            "add",
+            "--git=repo",
+            "--ref=branch",
+            "--path=subdir"
+        ])
+        .is_ok()
+    );
+    assert!(
+        Command::try_parse_from(&["gleam", "add", "--dev", "--git=repo", "--ref=branch"]).is_ok()
+    );
+    assert!(Command::try_parse_from(&["gleam", "add", "--ref=12345"]).is_err());
+    assert!(Command::try_parse_from(&["gleam", "add", "lustre", "--git=repo"]).is_err());
+    assert!(Command::try_parse_from(&["gleam", "add"]).is_err());
+    assert!(Command::try_parse_from(&["gleam", "add", "lustre", "--ref=branch"]).is_err());
 }
