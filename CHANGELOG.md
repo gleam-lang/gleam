@@ -117,6 +117,32 @@
   merge conflict indicator
   ([0xda157](https://github.com/0xda157))
 
+- Gleam can now show type aliases using generic types in the docs,
+  the language server, and error messages.
+
+  For example, the following type alias would have been printed in its expanded form previously:
+
+  ```gleam
+  import gleam/http/request
+
+  @internal
+  pub type Connection
+
+  pub type Request =
+    request.Request(Connection) 
+
+  // the `Request` type alias would print as `request.Request(@internal Connection)`
+  // previously and as `Request` in the new version.
+  pub fn require_text(
+    request: Request,
+    next: fn(String) -> Response(String)
+  ) -> Response(String) {
+    todo
+  }
+  ```
+
+  ([rebecca](https://tangled.org/becca.monster))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
