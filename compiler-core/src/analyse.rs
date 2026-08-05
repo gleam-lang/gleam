@@ -1499,7 +1499,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let arity = parameters.len();
         let tryblock = || {
             hydrator.disallow_new_type_variables();
-            let type_ = hydrator.type_from_ast(resolved_type, environment, &mut self.problems)?;
+            let hydrator_result =
+                hydrator.type_from_ast(resolved_type, environment, &mut self.problems);
+
+            let type_ = match &hydrator_result {
+                Ok(type_) => type_.clone(),
+                Err(Error::UnknownType { .. }) => environment.new_unbound_var(),
+                Err(e) => return Err(e.clone()),
+            };
 
             environment
                 .names
@@ -1545,7 +1552,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 });
             }
 
-            Ok(())
+            if let Err(e) = hydrator_result {
+                Err(e)
+            } else {
+                Ok(())
+            }
         };
         let result = tryblock();
         self.record_if_error(result);
