@@ -20,11 +20,3 @@ error: Unknown type
   │        ^^^^ Did you mean `Int`?
 
 The type `Intt` is not defined or imported in this module.
-
-error: Unknown type
-  ┌─ /src/one/two.gleam:5:15
-  │
-5 │ fn example(a: X) {
-  │               ^
-
-The type `X` is not defined or imported in this module.

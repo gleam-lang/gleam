@@ -124,11 +124,12 @@ type UnknownType =
     );
 }
 
-// https://github.com/gleam-lang/gleam/issues/3191
+// Original:        https://github.com/gleam-lang/gleam/issues/3191
+// Superceded by:   https://github.com/gleam-lang/gleam/issues/6072
 #[test]
-fn both_errors_are_shown() {
-    // The alias has an error, and it causes the function to have an error as it
-    // refers to the type that does not exist.
+fn invalid_alias_error_shows_root_cause_without_cascading() {
+    // The alias has an error which gets reported, but using that alias 
+    // should not generate a further UnknownType error
     assert_module_error!(
         r#"
 type X =
@@ -147,5 +148,27 @@ fn conflict_with_import() {
     assert_module_error!(
         ("wibble", "pub type Wobble = String"),
         "import wibble.{type Wobble} type Wobble = Int",
+    );
+}
+
+#[test]
+fn aliasing_of_unknown_type() {
+    assert_module_error!(
+        r#"
+pub type UnknownAlias = UnknownType
+pub type UsageOfUnknownAlias = UnknownAlias
+"#
+    );
+}
+
+#[test]
+fn multiple_aliases_of_unknown_type() {
+    assert_module_error!(
+        r#"
+pub type UnknownAlias = UnknownType
+
+pub type One = List(UnknownAlias)
+pub type Two = Result(UnknownAlias, Nil)
+"#
     );
 }
