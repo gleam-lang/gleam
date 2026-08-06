@@ -279,14 +279,23 @@ pub enum ArgNames {
 }
 
 impl ArgNames {
-    pub fn get_label(&self) -> Option<&EcoString> {
+    pub fn get_label(&self) -> Option<(&EcoString, &SrcSpan)> {
         match self {
             ArgNames::Discard { .. } | ArgNames::Named { .. } => None,
-            ArgNames::LabelledDiscard { label, .. } | ArgNames::NamedLabelled { label, .. } => {
-                Some(label)
+
+            ArgNames::LabelledDiscard {
+                label,
+                label_location,
+                ..
             }
+            | ArgNames::NamedLabelled {
+                label,
+                label_location,
+                ..
+            } => Some((label, label_location)),
         }
     }
+
     pub fn get_variable_name(&self) -> Option<&EcoString> {
         match self {
             ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
