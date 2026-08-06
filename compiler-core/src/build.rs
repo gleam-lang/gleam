@@ -667,30 +667,28 @@ impl<'a> Located<'a> {
         })
     }
 
-    /// Looks up the location at which a record field label was defined, using
-    /// the label definitions gathered during analysis.
-    fn record_label_definition_location(
+    /// Looks up the location at which a label was defined, using the label
+    /// definitions gathered during analysis.
+    fn label_definition_location(
         &self,
         importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
-        record_type: &Arc<Type>,
+        owner: reference::LabelOwner,
         label: &EcoString,
         variant: Option<&EcoString>,
     ) -> Option<DefinitionLocation> {
-        let (module_name, type_name) = record_type.named_type_name()?;
+        let module_name = owner.module().clone();
         let module = importable_modules.get(&module_name)?;
         let key = reference::LabelKey {
-            owner: reference::LabelOwner::Type {
-                module: module_name.clone(),
-                name: type_name,
-            },
+            owner,
             label: label.clone(),
         };
         let definitions = module.references.label_definitions.get(&key)?;
-        // A label can be defined in multiple variants of the same type. If we
-        // know which variant the label was used with we jump to its
-        // definition in that variant. Otherwise the label comes from a
-        // `record.field` access, which works across all the variants defining
-        // it, so we jump to the first definition.
+        // A record field can be defined in multiple variants of the same type.
+        // If we know which variant the label was used with we jump to its
+        // definition in that variant. Otherwise we jump to the first
+        // definition. Either the label comes from a `record.field` access,
+        // which works across all the variants defining it, or a function
+        // which only defines labels once anyway.
         let definition = match variant {
             None => definitions.first()?,
             Some(variant) => definitions
@@ -777,16 +775,25 @@ impl<'a> Located<'a> {
                 label,
                 variant,
                 ..
-            } => self.record_label_definition_location(
-                importable_modules,
-                record_type,
-                label,
-                Some(variant),
-            ),
+            } => {
+                let (module, name) = record_type.named_type_name()?;
+                self.label_definition_location(
+                    importable_modules,
+                    reference::LabelOwner::Type { module, name },
+                    label,
+                    Some(variant),
+                )
+            }
             Self::RecordAccessLabel {
                 record_type, label, ..
             } => {
-                self.record_label_definition_location(importable_modules, record_type, label, None)
+                let (module, name) = record_type.named_type_name()?;
+                self.label_definition_location(
+                    importable_modules,
+                    reference::LabelOwner::Type { module, name },
+                    label,
+                    None,
+                )
             }
             // Already at the definition; go-to-definition jumps to itself.
             Self::RecordLabelDefinition { location, .. }
@@ -794,7 +801,20 @@ impl<'a> Located<'a> {
                 module: None,
                 span: *location,
             }),
-            Self::FunctionLabelUsage { .. } => None,
+            Self::FunctionLabelUsage {
+                function_module,
+                function_name,
+                label,
+                ..
+            } => self.label_definition_location(
+                importable_modules,
+                reference::LabelOwner::Function {
+                    module: function_module.clone(),
+                    name: function_name.clone(),
+                },
+                label,
+                None,
+            ),
             Self::TypeVariable { .. } => None,
             Self::ModuleName { module_name, .. } => Some(DefinitionLocation {
                 module: Some(module_name.clone()),
