@@ -237,6 +237,15 @@ pub enum LabelOwner {
     },
 }
 
+impl LabelOwner {
+    /// The module the type or function this label belongs to is defined in.
+    pub fn module(&self) -> &EcoString {
+        match self {
+            LabelOwner::Type { module, .. } | LabelOwner::Function { module, .. } => module,
+        }
+    }
+}
+
 /// Identifies a label within a custom type or function argument, used to look up the
 /// references to that label.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
