@@ -1790,7 +1790,7 @@ impl CallArg<TypedExpr> {
                     let label_location = self
                         .label_location()
                         .filter(|location| location.contains(byte_index));
- 
+
                     if let Some(label_location) = label_location
                         && let Some(variant) = called_function.record_constructor_variant_name()
                     {
