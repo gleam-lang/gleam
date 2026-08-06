@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub type Wibble {\n  Wibble(one: Int, two: Int)\n}\n\npub fn main() {\n  let wibble = Wibble(one: 1, two: 2)\n  Wibble(two: 3, ..wibble)\n}\n"
+---
+----- SOURCE CODE
+pub type Wibble {
+  Wibble(one: Int, two: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(one: 1, two: 2)
+  Wibble(two: 3, ..wibble)
+}
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:7:16
+  │
+7 │   Wibble(two: 3, ..wibble)
+  │                 ^^ I was not expecting a record update here
+
+When updating a record, the spread (`..`) must come before the fields to change.
+Try: `Constructor(..record, field: value)` instead.
+
+See https://tour.gleam.run/data-types/record-updates/
