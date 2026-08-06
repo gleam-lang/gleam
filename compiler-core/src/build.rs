@@ -581,6 +581,28 @@ pub enum Located<'a> {
         /// The type of the labelled argument's value (used for hover).
         field_type: Arc<Type>,
     },
+    /// An argument label at its definition in a function.
+    FunctionLabelDefinition {
+        location: SrcSpan,
+        /// The type of the argument (used for hover).
+        field_type: Arc<Type>,
+        label: EcoString,
+        /// The name of the function this label belongs to. The function is
+        /// being defined in the module being analysed, so only its name is
+        /// needed.
+        function_name: EcoString,
+    },
+    /// An argument label used in a call to a module function.
+    FunctionLabelUsage {
+        location: SrcSpan,
+        /// The type of the labelled argument's value (used for hover).
+        field_type: Arc<Type>,
+        label: EcoString,
+        /// The module the function this label belongs to is defined in.
+        function_module: EcoString,
+        /// The name of the function this label belongs to.
+        function_name: EcoString,
+    },
     /// A record field label at its definition in a custom type variant.
     RecordLabelDefinition {
         location: SrcSpan,
@@ -765,10 +787,12 @@ impl<'a> Located<'a> {
                 record_type, label, ..
             } => self.label_definition_location(importable_modules, record_type, label, None),
             // Already at the definition; go-to-definition jumps to itself.
-            Self::RecordLabelDefinition { location, .. } => Some(DefinitionLocation {
+            Self::RecordLabelDefinition { location, .. }
+            | Self::FunctionLabelDefinition { location, .. } => Some(DefinitionLocation {
                 module: None,
                 span: *location,
             }),
+            Self::FunctionLabelUsage { .. } => None,
             Self::TypeVariable { .. } => None,
             Self::ModuleName { module_name, .. } => Some(DefinitionLocation {
                 module: Some(module_name.clone()),
@@ -790,7 +814,9 @@ impl<'a> Located<'a> {
             Located::Label { field_type, .. }
             | Located::RecordLabelDefinition { field_type, .. }
             | Located::RecordLabelUsage { field_type, .. }
-            | Located::RecordAccessLabel { field_type, .. } => Some(field_type.clone()),
+            | Located::RecordAccessLabel { field_type, .. }
+            | Located::FunctionLabelDefinition { field_type, .. }
+            | Located::FunctionLabelUsage { field_type, .. } => Some(field_type.clone()),
             Located::Annotation { type_, .. } => Some(type_.clone()),
             Located::Constant(constant) => Some(constant.type_()),
             Located::ClauseGuard(guard) => Some(guard.type_()),
