@@ -191,6 +191,9 @@ pub enum ParseErrorType {
     },
     // `const x = todo as` with no message after the `as`.
     MissingConstantAsMessage,
+    // When the spread in a record update comes after the fields, like:
+    // `Wibble(two: 2, ..wibble)` instead of `Wibble(..wibble, two: 2)`
+    RecordUpdateAfterFields,
 }
 
 pub(crate) struct ParseErrorDetails {
@@ -797,6 +800,18 @@ See: https://tour.gleam.run/flow-control/case-expressions/"
                 text: "".into(),
                 hint: None,
                 label_text: "I was expecting to see a constant expression after this `as`".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::RecordUpdateAfterFields => ParseErrorDetails {
+                text: "".into(),
+                hint: Some(
+                    "When updating a record, the spread (`..`) must come before \
+the fields to change, like: `Constructor(..record, field: value)`.\n\
+See https://tour.gleam.run/data-types/record-updates/"
+                        .into(),
+                ),
+                label_text: "I was not expecting a record update here".into(),
                 extra_labels: vec![],
             },
 
