@@ -669,7 +669,7 @@ impl<'a> Located<'a> {
 
     /// Looks up the location at which a record field label was defined, using
     /// the label definitions gathered during analysis.
-    fn label_definition_location(
+    fn record_label_definition_location(
         &self,
         importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
         record_type: &Arc<Type>,
@@ -777,7 +777,7 @@ impl<'a> Located<'a> {
                 label,
                 variant,
                 ..
-            } => self.label_definition_location(
+            } => self.record_label_definition_location(
                 importable_modules,
                 record_type,
                 label,
@@ -785,7 +785,9 @@ impl<'a> Located<'a> {
             ),
             Self::RecordAccessLabel {
                 record_type, label, ..
-            } => self.label_definition_location(importable_modules, record_type, label, None),
+            } => {
+                self.record_label_definition_location(importable_modules, record_type, label, None)
+            }
             // Already at the definition; go-to-definition jumps to itself.
             Self::RecordLabelDefinition { location, .. }
             | Self::FunctionLabelDefinition { location, .. } => Some(DefinitionLocation {
