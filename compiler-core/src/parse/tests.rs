@@ -2548,3 +2548,20 @@ pub type Wibble {
 "#
     );
 }
+
+#[test]
+fn record_update_spread_after_fields() {
+    // https://github.com/gleam-lang/gleam/issues/6132
+    assert_module_error!(
+        r#"
+pub type Wibble {
+  Wibble(one: Int, two: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(one: 1, two: 2)
+  Wibble(two: 3, ..wibble)
+}
+"#
+    );
+}
