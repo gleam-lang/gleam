@@ -618,10 +618,10 @@ impl<'a> Located<'a> {
         // `record.field` access, which works across all the variants defining
         // it, so we jump to the first definition.
         let definition = match variant {
+            None => definitions.first()?,
             Some(variant) => definitions
                 .iter()
-                .find(|definition| &definition.variant == variant)?,
-            None => definitions.first()?,
+                .find(|definition| definition.variant.as_ref() == Some(variant))?,
         };
         Some(DefinitionLocation {
             module: Some(module_name),
