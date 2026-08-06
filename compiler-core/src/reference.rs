@@ -214,20 +214,30 @@ pub enum LabelSyntax {
 pub struct LabelDefinition {
     pub location: SrcSpan,
     /// The name of the variant this label is defined in.
-    pub variant: EcoString,
+    /// None means this label was not associated with a particular record's
+    /// variant, for example in the case of function argument labels
+    pub variant: Option<EcoString>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum LabelOwner {
+    /// Labels of types (record fields)
     Type {
         /// The module the type this label belongs to is defined in.
         module: EcoString,
         /// The name of the type this label belongs to.
         name: EcoString,
     },
+    /// Labels of function arguments
+    Function {
+        /// The module the function this label belongs to is defined in.
+        module: EcoString,
+        /// The name of the function this label is defined in.
+        name: EcoString,
+    },
 }
 
-/// Identifies a record field label within a custom type, used to look up the
+/// Identifies a label within a custom type or function argument, used to look up the
 /// references to that label.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub struct LabelKey {
@@ -692,20 +702,13 @@ impl ReferenceTracker {
     /// returned by [`Type::named_type_name`].
     pub fn register_label_reference(
         &mut self,
-        type_: (EcoString, EcoString),
+        owner: LabelOwner,
         label: EcoString,
         location: SrcSpan,
         syntax: LabelSyntax,
     ) {
-        let (type_module, type_name) = type_;
         self.label_references
-            .entry(LabelKey {
-                owner: LabelOwner::Type {
-                    module: type_module,
-                    name: type_name,
-                },
-                label,
-            })
+            .entry(LabelKey { owner, label })
             .or_default()
             .push(LabelReference { location, syntax });
     }
@@ -717,20 +720,13 @@ impl ReferenceTracker {
     /// by [`Type::named_type_name`].
     pub fn register_label_definition(
         &mut self,
-        type_: (EcoString, EcoString),
+        owner: LabelOwner,
         label: EcoString,
         location: SrcSpan,
-        variant: EcoString,
+        variant: Option<EcoString>,
     ) {
-        let (type_module, type_name) = type_;
         self.label_definitions
-            .entry(LabelKey {
-                owner: LabelOwner::Type {
-                    module: type_module,
-                    name: type_name,
-                },
-                label,
-            })
+            .entry(LabelKey { owner, label })
             .or_default()
             .push(LabelDefinition { location, variant });
     }
