@@ -417,7 +417,9 @@ where
 
                 Located::Label { .. }
                 | Located::RecordLabelDefinition { .. }
-                | Located::RecordLabelUsage { .. } => None,
+                | Located::RecordLabelUsage { .. }
+                | Located::FunctionLabelDefinition { .. }
+                | Located::FunctionLabelUsage { .. } => None,
 
                 Located::RecordAccessLabel {
                     field_type,
@@ -1453,6 +1455,16 @@ Unused labelled fields:
                     ..
                 }
                 | Located::RecordLabelUsage {
+                    location,
+                    field_type,
+                    ..
+                }
+                | Located::FunctionLabelDefinition {
+                    location,
+                    field_type,
+                    ..
+                }
+                | Located::FunctionLabelUsage {
                     location,
                     field_type,
                     ..

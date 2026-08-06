@@ -9,7 +9,7 @@ fn add(wibble a, wobble b) {
 
 pub fn main() {
   add(wibble: 1, wobble: 2)
-      ▔↑▔▔▔▔▔▔▔            
+      ▔↑▔▔▔▔               
 }
 
 
