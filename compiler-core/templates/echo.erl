@@ -84,11 +84,21 @@ inspect@bit_array_pieces(Bits, Acc) ->
 inspect@binary(Binary) ->
     case inspect@maybe_utf8_string(Binary, <<>>) of
         {ok, InspectedUtf8String} ->
-            InspectedUtf8String;
+            case inspect@has_printable(Binary) of
+                true -> InspectedUtf8String;
+                false ->
+                    Segments = [erlang:integer_to_list(X) || <<X>> <= Binary],
+                    ["<<", lists:join(", ", Segments), ">>"]
+            end;
         {error, not_a_utf8_string} ->
             Segments = [erlang:integer_to_list(X) || <<X>> <= Binary],
             ["<<", lists:join(", ", Segments), ">>"]
     end.
+
+inspect@has_printable(<<>>) -> false;
+inspect@has_printable(<<C, Rest/binary>>) when C >= 32, C =< 126 -> true;
+inspect@has_printable(<<C, Rest/binary>>) when C == $\n; C == $\r; C == $\t; C == $\f -> true;
+inspect@has_printable(<<_, Rest/binary>>) -> inspect@has_printable(Rest).
 
 inspect@atom(Atom) ->
     Binary = erlang:atom_to_binary(Atom),
