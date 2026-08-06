@@ -1214,9 +1214,8 @@ impl TypedExpr {
                         ..
                     },
                 ..
-            } => *arity > 0,
-
-            TypedExpr::ModuleSelect {
+            }
+            | TypedExpr::ModuleSelect {
                 constructor: ModuleValueConstructor::Record { arity, .. },
                 ..
             } => *arity > 0,
@@ -1245,6 +1244,51 @@ impl TypedExpr {
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. }
             | TypedExpr::Invalid { .. } => false,
+        }
+    }
+
+    /// Returns the name of the module and the function, if this is a well-defined (named)
+    /// function.
+    ///
+    pub fn module_function_name(&self) -> Option<(&EcoString, &EcoString)> {
+        match self {
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::ModuleFn { module, name, .. },
+                        ..
+                    },
+                ..
+            }
+            | TypedExpr::ModuleSelect {
+                constructor: ModuleValueConstructor::Fn { module, name, .. },
+                ..
+            } => Some((module, name)),
+
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => None,
         }
     }
 
