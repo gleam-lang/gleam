@@ -12,7 +12,7 @@ use gleam_core::{
     ast::{self, SrcSpan},
     build::Module,
     line_numbers::LineNumbers,
-    reference::{LabelSyntax, ModuleNameReference, RecordLabel, ReferenceKind},
+    reference::{LabelKey, LabelOwner, LabelSyntax, ModuleNameReference, ReferenceKind},
     type_::{ModuleInterface, error::Named},
 };
 
@@ -266,9 +266,11 @@ pub fn rename_label(
         change_annotations: None,
     };
 
-    let key = RecordLabel {
-        type_module: type_module.clone(),
-        type_name: type_name.clone(),
+    let key = LabelKey {
+        owner: LabelOwner::Type {
+            module: type_module.clone(),
+            name: type_name.clone(),
+        },
         label: label.clone(),
     };
 
@@ -300,7 +302,7 @@ fn rename_label_references_in_module(
     module: &ModuleInterface,
     source_information: &ModuleSourceInformation,
     workspace_edit: &mut WorkspaceEdit,
-    key: &RecordLabel,
+    key: &LabelKey,
     label: &EcoString,
     new_name: &str,
 ) {
