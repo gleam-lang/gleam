@@ -247,7 +247,10 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                         }
                         _ => None,
                     });
-                    let bits_unit_value = bits_unit_value.filter(|_| int_value.is_some());
+                    let bits_unit_value = match (bits_unit_value, int_value) {
+                        (Some(unit), Some(_)) => Some(unit),
+                        _ => None,
+                    };
 
                     builder.bit_array_segment();
                     self.bit_array_pattern_segment_value(builder, segment);

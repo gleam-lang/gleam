@@ -576,9 +576,21 @@ pub fn main(x) {
 fn unit_with_bits_option_variable_size() {
     assert_erl!(
         "
-pub fn main(x) {
-  let size = 8
+pub fn main(x, size) {
   <<x:bits-size(size)-unit(8)>>
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5984
+#[test]
+fn unit_with_bits_option_variable_size_pattern() {
+    assert_erl!(
+        "
+pub fn main(x, size) {
+  let assert <<a:size(size)-unit(8)-bits, _:bits>> = x
+  a
 }
 "
     );

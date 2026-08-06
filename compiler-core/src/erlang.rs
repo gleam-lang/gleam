@@ -2833,9 +2833,6 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             let (bits_unit_value, size_value) = collect_bit_array_options(&segment.options);
             builder.bit_array_segment();
 
-            // Multiply the unit into the size for bits segments so the
-            // unit specifier can be dropped from the Erlang output.
-            // The BEAM rejects unit with the bitstring type.
             self.maybe_block_expr(builder, &segment.value);
             self.bit_array_expression_segment_size(builder, size_value, bits_unit_value);
             self.bit_array_segment_specifiers(builder, segment, bits_unit_value.is_some());
