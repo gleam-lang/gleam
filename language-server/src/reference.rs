@@ -473,6 +473,8 @@ pub fn reference_for_ast_node(
         | Located::Expression { .. }
         | Located::FunctionBody(_)
         | Located::Label { .. }
+        | Located::FunctionLabelDefinition { .. }
+        | Located::FunctionLabelUsage { .. }
         | Located::Constant(_)
         | Located::ModuleFunction(_)
         | Located::ModuleTypeAlias(_) => None,
