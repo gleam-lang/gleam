@@ -14,7 +14,7 @@ use gleam_core::{
         TypedModule, visit::Visit,
     },
     build::{Located, UnqualifiedImport},
-    reference::RecordLabel,
+    reference::{LabelKey, LabelOwner},
     type_::{
         ModuleInterface, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant,
         error::{Named, VariableOrigin},
@@ -584,13 +584,17 @@ pub fn find_label_references_in_module(
         return reference_locations;
     };
 
-    let key = RecordLabel {
-        type_module,
-        type_name,
+    let key = LabelKey {
+        owner: LabelOwner::Type {
+            module: type_module,
+            name: type_name,
+        },
         label,
     };
+
     let definitions = module.references.label_definitions.get(&key);
     let references = module.references.label_references.get(&key);
+
     let locations = definitions
         .into_iter()
         .flatten()
