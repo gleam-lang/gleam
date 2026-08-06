@@ -993,6 +993,20 @@ where
                             _ => {
                                 // Call
                                 let arguments = self.parse_fn_arguments()?;
+                                // Check if the user wrote a record update with the spread
+                                // after the fields, like `Wibble(two: 2, ..wibble)` instead
+                                // of `Wibble(..wibble, two: 2)`
+                                if let Some((dot_start, Token::DotDot, dot_end)) = self.token0 {
+                                    if !arguments.is_empty() {
+                                        return Err(parse_error(
+                                            ParseErrorType::RecordUpdateAfterFields,
+                                            SrcSpan {
+                                                start: dot_start,
+                                                end: dot_end,
+                                            },
+                                        ));
+                                    }
+                                }
                                 let (_, end) = self.expect_one(&Token::RightParen)?;
                                 expr = make_call(expr, arguments, start, end, left_paren)?;
                             }
