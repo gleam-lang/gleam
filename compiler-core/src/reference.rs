@@ -217,14 +217,21 @@ pub struct LabelDefinition {
     pub variant: EcoString,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum LabelOwner {
+    Type {
+        /// The module the type this label belongs to is defined in.
+        module: EcoString,
+        /// The name of the type this label belongs to.
+        name: EcoString,
+    },
+}
+
 /// Identifies a record field label within a custom type, used to look up the
 /// references to that label.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
-pub struct RecordLabel {
-    /// The module the type this label belongs to is defined in.
-    pub type_module: EcoString,
-    /// The name of the type this label belongs to.
-    pub type_name: EcoString,
+pub struct LabelKey {
+    pub owner: LabelOwner,
     pub label: EcoString,
 }
 
@@ -301,10 +308,10 @@ pub struct ReferenceTracker {
     pub module_references: HashMap<EcoString, Vec<ModuleNameReference>>,
     /// The locations of the references to each record field label in this
     /// module, used for renaming and go-to reference.
-    pub label_references: HashMap<RecordLabel, Vec<LabelReference>>,
+    pub label_references: HashMap<LabelKey, Vec<LabelReference>>,
     /// The locations at which each record field label is defined, one per
     /// variant that defines it, used for renaming and go-to definition.
-    pub label_definitions: HashMap<RecordLabel, Vec<LabelDefinition>>,
+    pub label_definitions: HashMap<LabelKey, Vec<LabelDefinition>>,
 
     /// Maps a module's canonical name to the node of the import it was brought
     /// in by. Every import is inserted here (aliased or not), keyed by its full
@@ -692,9 +699,11 @@ impl ReferenceTracker {
     ) {
         let (type_module, type_name) = type_;
         self.label_references
-            .entry(RecordLabel {
-                type_module,
-                type_name,
+            .entry(LabelKey {
+                owner: LabelOwner::Type {
+                    module: type_module,
+                    name: type_name,
+                },
                 label,
             })
             .or_default()
@@ -715,9 +724,11 @@ impl ReferenceTracker {
     ) {
         let (type_module, type_name) = type_;
         self.label_definitions
-            .entry(RecordLabel {
-                type_module,
-                type_name,
+            .entry(LabelKey {
+                owner: LabelOwner::Type {
+                    module: type_module,
+                    name: type_name,
+                },
                 label,
             })
             .or_default()
