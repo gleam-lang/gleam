@@ -114,7 +114,13 @@ pub fn revert(
     )
     .map_err(Error::hex)?;
     let response = runtime.block_on(http.send(request))?;
-    hexpm::api_revert_release_response(response).map_err(Error::hex)?;
+    match hexpm::api_revert_release_response(response) {
+        Ok(()) => (),
+        Err(hexpm::ApiError::NotFound) => {
+            return Err(Error::HexReleaseNotFound { package, version });
+        }
+        Err(error) => return Err(Error::hex(error)),
+    }
 
     // Done!
     println!("{package} {version} has been removed from Hex");

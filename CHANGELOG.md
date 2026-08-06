@@ -34,6 +34,11 @@
   making the cache files noticeably smaller.
   ([Andrey Kozhev](httos://github.com/ankddev))
 
+- `gleam hex revert` now shows a clearer error when the specified package
+  version does not exist on Hex, including the package name and version in the
+  message rather than the generic "Resource was not found".
+  ([KevesDev](https://github.com/KevesDev))
+
 ### Language server
 
 - The "Generate dynamic decoder" code action is now only offered when the

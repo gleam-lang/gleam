@@ -86,6 +86,13 @@ fn revert_release_response_too_old_error() {
 }
 
 #[test]
+fn revert_release_response_not_found() {
+    let response = make_response(404, vec![]);
+    let result = crate::api_revert_release_response(response);
+    assert!(matches!(result, Err(ApiError::NotFound)));
+}
+
+#[test]
 fn add_owner_request() {
     let key = WriteActionCredentials::OAuthAccessToken {
         access_token: EcoString::from("my-api-key-here"),
