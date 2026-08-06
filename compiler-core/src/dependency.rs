@@ -44,11 +44,13 @@ where
     let root = hexpm::Package {
         name: root_name.as_str().into(),
         repository: "local".into(),
+        advisories: vec![],
         releases: vec![Release {
             version: root_version.clone(),
             outer_checksum: vec![],
             retirement_status: None,
             requirements,
+            security_advisories: vec![],
             meta: (),
         }],
     };
@@ -1172,6 +1174,7 @@ but it is locked to 0.2.0, which is incompatible."
             requirements: all_requirements,
             retirement_status: None,
             outer_checksum: vec![1, 2, 3],
+            security_advisories: vec![],
             meta: (),
         }
     }
@@ -1184,6 +1187,7 @@ but it is locked to 0.2.0, which is incompatible."
                 Rc::new(hexpm::Package {
                     name: package.into(),
                     repository: "hexpm".into(),
+                    advisories: vec![],
                     releases,
                 }),
             );

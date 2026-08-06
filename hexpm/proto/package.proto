@@ -12,6 +12,8 @@ message Package {
   required string name = 2;
   // Name of repository
   required string repository = 3;
+  // All security advisories affecting any release of the package
+  repeated SecurityAdvisory advisories = 4;
 }
 
 message Release {
@@ -28,6 +30,11 @@ message Release {
   // sha256 checksum of outer package tarball
   // required when encoding but optional when decoding
   optional bytes outer_checksum = 5;
+  // Indexes into Package.advisories for advisories affecting this release
+  repeated uint32 advisory_indexes = 6;
+  // Release published timestamp. Optional for backwards compatibility —
+  // clients treat absence as "no information".
+  optional Timestamp published_at = 7;
 }
 
 message RetirementStatus {
@@ -43,6 +50,32 @@ enum RetirementReason {
   RETIRED_RENAMED = 4;
 }
 
+message SecurityAdvisory {
+  // Advisory identifier (e.g. GHSA-xxxx-xxxx-xxxx or CVE-xxxx-xxxxx)
+  required string id = 1;
+  // Short description of the advisory
+  required string summary = 2;
+  // OSV web URL for the advisory
+  required string html_url = 3;
+  // Severity of the advisory
+  optional AdvisorySeverity severity = 4;
+  // CVSS score (0.0–10.0)
+  optional float cvss_score = 5;
+  // OSV API URL for the advisory
+  required string api_url = 6;
+  // Other identifiers for the same vulnerability (e.g. a CVE id when the
+  // primary id is a GHSA id, or vice versa).
+  repeated string aliases = 7;
+}
+
+enum AdvisorySeverity {
+  SEVERITY_NONE = 0;
+  SEVERITY_LOW = 1;
+  SEVERITY_MEDIUM = 2;
+  SEVERITY_HIGH = 3;
+  SEVERITY_CRITICAL = 4;
+}
+
 message Dependency {
   // Package name of dependency
   required string package = 1;
@@ -55,4 +88,11 @@ message Dependency {
   optional string app = 4;
   // If set, the repository where the dependency is located
   optional string repository = 5;
+}
+
+// Based on google.protobuf.Timestamp
+// https://github.com/protocolbuffers/protobuf/blob/v3.15.8/src/google/protobuf/timestamp.proto#L136:L147
+message Timestamp {
+  required int64 seconds = 1;
+  required int32 nanos = 2;
 }

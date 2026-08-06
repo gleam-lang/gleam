@@ -11,8 +11,10 @@
 fn main() {
     // prost_build::compile_protos(
     //     &[
-    //         "proto/signed.proto",
+    //         "proto/names.proto",
     //         "proto/package.proto",
+    //         "proto/policy.proto",
+    //         "proto/signed.proto",
     //         "proto/versions.proto",
     //     ],
     //     &["proto/"],

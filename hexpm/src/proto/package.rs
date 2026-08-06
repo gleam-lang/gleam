@@ -13,6 +13,9 @@ pub struct Package {
     /// Name of repository
     #[prost(string, required, tag = "3")]
     pub repository: ::prost::alloc::string::String,
+    /// All security advisories affecting any release of the package
+    #[prost(message, repeated, tag = "4")]
+    pub advisories: ::prost::alloc::vec::Vec<SecurityAdvisory>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Release {
@@ -34,8 +37,15 @@ pub struct Release {
     /// required when encoding but optional when decoding
     #[prost(bytes = "vec", optional, tag = "5")]
     pub outer_checksum: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+    /// Indexes into Package.advisories for advisories affecting this release
+    #[prost(uint32, repeated, packed = "false", tag = "6")]
+    pub advisory_indexes: ::prost::alloc::vec::Vec<u32>,
+    /// Release published timestamp. Optional for backwards compatibility —
+    /// clients treat absence as "no information".
+    #[prost(message, optional, tag = "7")]
+    pub published_at: ::core::option::Option<Timestamp>,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RetirementStatus {
     #[prost(enumeration = "RetirementReason", required, tag = "1")]
     pub reason: i32,
@@ -43,6 +53,31 @@ pub struct RetirementStatus {
     pub message: ::core::option::Option<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SecurityAdvisory {
+    /// Advisory identifier (e.g. GHSA-xxxx-xxxx-xxxx or CVE-xxxx-xxxxx)
+    #[prost(string, required, tag = "1")]
+    pub id: ::prost::alloc::string::String,
+    /// Short description of the advisory
+    #[prost(string, required, tag = "2")]
+    pub summary: ::prost::alloc::string::String,
+    /// OSV web URL for the advisory
+    #[prost(string, required, tag = "3")]
+    pub html_url: ::prost::alloc::string::String,
+    /// Severity of the advisory
+    #[prost(enumeration = "AdvisorySeverity", optional, tag = "4")]
+    pub severity: ::core::option::Option<i32>,
+    /// CVSS score (0.0–10.0)
+    #[prost(float, optional, tag = "5")]
+    pub cvss_score: ::core::option::Option<f32>,
+    /// OSV API URL for the advisory
+    #[prost(string, required, tag = "6")]
+    pub api_url: ::prost::alloc::string::String,
+    /// Other identifiers for the same vulnerability (e.g. a CVE id when the
+    /// primary id is a GHSA id, or vice versa).
+    #[prost(string, repeated, tag = "7")]
+    pub aliases: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Dependency {
     /// Package name of dependency
     #[prost(string, required, tag = "1")]
@@ -60,6 +95,15 @@ pub struct Dependency {
     /// If set, the repository where the dependency is located
     #[prost(string, optional, tag = "5")]
     pub repository: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// Based on google.protobuf.Timestamp
+/// <https://github.com/protocolbuffers/protobuf/blob/v3.15.8/src/google/protobuf/timestamp.proto#L136:L147>
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Timestamp {
+    #[prost(int64, required, tag = "1")]
+    pub seconds: i64,
+    #[prost(int32, required, tag = "2")]
+    pub nanos: i32,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
@@ -92,6 +136,41 @@ impl RetirementReason {
             "RETIRED_SECURITY" => Some(Self::RetiredSecurity),
             "RETIRED_DEPRECATED" => Some(Self::RetiredDeprecated),
             "RETIRED_RENAMED" => Some(Self::RetiredRenamed),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum AdvisorySeverity {
+    SeverityNone = 0,
+    SeverityLow = 1,
+    SeverityMedium = 2,
+    SeverityHigh = 3,
+    SeverityCritical = 4,
+}
+impl AdvisorySeverity {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::SeverityNone => "SEVERITY_NONE",
+            Self::SeverityLow => "SEVERITY_LOW",
+            Self::SeverityMedium => "SEVERITY_MEDIUM",
+            Self::SeverityHigh => "SEVERITY_HIGH",
+            Self::SeverityCritical => "SEVERITY_CRITICAL",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "SEVERITY_NONE" => Some(Self::SeverityNone),
+            "SEVERITY_LOW" => Some(Self::SeverityLow),
+            "SEVERITY_MEDIUM" => Some(Self::SeverityMedium),
+            "SEVERITY_HIGH" => Some(Self::SeverityHigh),
+            "SEVERITY_CRITICAL" => Some(Self::SeverityCritical),
             _ => None,
         }
     }
