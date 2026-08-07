@@ -954,9 +954,9 @@ where
                 Some(Referenced::Label {
                     location,
                     label,
-                    type_module,
+                    owner,
                     ..
-                }) if this.is_same_package(current_module, &type_module) => {
+                }) if this.is_same_package(current_module, owner.module()) => {
                     success_response(SrcSpan {
                         start: location.start,
                         end: location.start + label.len() as u32,
@@ -1065,15 +1065,9 @@ where
                     rename_type_variable(module, &lines, &params, location, name).into_result()
                 }
 
-                Some(Referenced::Label {
-                    type_module,
-                    type_name,
-                    label,
-                    ..
-                }) => rename_label(
+                Some(Referenced::Label { owner, label, .. }) => rename_label(
                     &params,
-                    &type_module,
-                    &type_name,
+                    owner,
                     &label,
                     this.compiler.project_compiler.get_importable_modules(),
                     &this.compiler.sources,
@@ -1180,15 +1174,9 @@ where
                     ))
                 }
             },
-            Some(Referenced::Label {
-                type_module,
-                type_name,
-                label,
-                ..
-            }) => match search_scope {
+            Some(Referenced::Label { owner, label, .. }) => match search_scope {
                 FindReferencesSearchScope::AllModules => Some(find_label_references(
-                    type_module,
-                    type_name,
+                    owner,
                     label,
                     self.compiler.project_compiler.get_importable_modules(),
                     &self.compiler.sources,
@@ -1197,8 +1185,7 @@ where
                     let source_information = self.compiler.get_source(&source_module.name)?;
                     let source_module = self.compiler.get_module_interface(&source_module.name)?;
                     Some(find_label_references_in_module(
-                        type_module,
-                        type_name,
+                        owner,
                         label,
                         source_module,
                         source_information,

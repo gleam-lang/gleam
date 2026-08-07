@@ -240,7 +240,7 @@ fn rename_references_in_module(
     }
 }
 
-/// Renames a record field label across the whole project.
+/// Renames a record field or function argument label across the whole project.
 ///
 /// Unlike module entities, labels are never imported or qualified, so every
 /// reference is simply replaced with the new name. The one special case is the
@@ -249,8 +249,7 @@ fn rename_references_in_module(
 ///
 pub fn rename_label(
     params: &RenameParams,
-    type_module: &EcoString,
-    type_name: &EcoString,
+    owner: LabelOwner,
     label: &EcoString,
     modules: &im::HashMap<EcoString, ModuleInterface>,
     sources: &HashMap<EcoString, ModuleSourceInformation>,
@@ -267,15 +266,12 @@ pub fn rename_label(
     };
 
     let key = LabelKey {
-        owner: LabelOwner::Type {
-            module: type_module.clone(),
-            name: type_name.clone(),
-        },
+        owner,
         label: label.clone(),
     };
 
-    // A label can be referenced in a module that doesn't import the type's
-    // defining module: a record value can be obtained transitively through
+    // A label can be referenced in a module that doesn't import the module it
+    // is defined in: a record value can be obtained transitively through
     // another module and have its fields accessed. So every module has to be
     // searched.
     for module in modules.values() {
