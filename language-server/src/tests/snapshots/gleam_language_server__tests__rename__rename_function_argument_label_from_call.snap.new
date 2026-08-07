@@ -1,0 +1,28 @@
+---
+source: language-server/src/tests/rename.rs
+assertion_line: 3974
+expression: "\npub fn replace(in string: String, each pattern: String) -> String {\n  todo\n}\n\npub fn main() {\n  replace(in: \"hello\", each: \"l\")\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+pub fn replace(in string: String, each pattern: String) -> String {
+  todo
+}
+
+pub fn main() {
+  replace(in: "hello", each: "l")
+          ↑▔                     
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+pub fn replace(inside string: String, each pattern: String) -> String {
+  todo
+}
+
+pub fn main() {
+  replace(inside: "hello", each: "l")
+}

@@ -1,0 +1,19 @@
+---
+source: language-server/src/tests/definition.rs
+assertion_line: 1142
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+import wibble
+
+pub fn main() {
+  wibble.replace(in: "hello", each: "l")
+                 ↑                      
+}
+
+----- Jumped to `src/wibble.gleam`
+pub fn replace(in string: String, each pattern: String) -> String {
+               ↑▔                                                  
+  todo
+}
