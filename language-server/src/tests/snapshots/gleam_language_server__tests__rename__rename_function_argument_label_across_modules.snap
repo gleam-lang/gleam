@@ -1,6 +1,5 @@
 ---
 source: language-server/src/tests/rename.rs
-assertion_line: 4010
 expression: "\nimport wibble.{replace}\n\npub fn main() {\n  replace(in: \"hello\", each: \"l\")\n  wibble.replace(in: \"world\", each: \"o\")\n}\n"
 ---
 ----- BEFORE RENAME

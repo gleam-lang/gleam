@@ -1,8 +1,8 @@
 ---
-source: language-server/src/tests/reference.rs
-assertion_line: 1815
+source: language-server/src/tests/rename.rs
 expression: "\npub fn replace(in string: String) -> String {\n  todo\n}\n\npub fn insert(in list: List(a)) -> List(a) {\n  todo\n}\n\npub fn main() {\n  replace(in: \"hello\")\n  insert(in: [])\n}\n"
 ---
+----- BEFORE RENAME
 -- app.gleam
 
 pub fn replace(in string: String) -> String {
@@ -16,6 +16,22 @@ pub fn insert(in list: List(a)) -> List(a) {
 
 pub fn main() {
   replace(in: "hello")
-          ▔▔          
+  insert(in: [])
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+pub fn replace(inside string: String) -> String {
+  todo
+}
+
+pub fn insert(in list: List(a)) -> List(a) {
+  todo
+}
+
+pub fn main() {
+  replace(inside: "hello")
   insert(in: [])
 }

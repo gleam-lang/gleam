@@ -1,17 +1,16 @@
 ---
 source: language-server/src/tests/definition.rs
-assertion_line: 1153
 expression: output
 ---
 ----- Jumping from `src/app.gleam`
 
 pub fn replace(in string: String, each pattern: String) -> String {
-               ↑                                                   
   todo
 }
 
 pub fn main() {
   replace(in: "hello", each: "l")
+          ↑                      
 }
 
 ----- Jumped to `src/app.gleam`
