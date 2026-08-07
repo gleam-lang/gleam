@@ -423,11 +423,58 @@ impl<'a, IO> Completer<'a, IO> {
     // For unqualified imports we special case the word being completed to allow for whitespace but not dots.
     // This is to allow `type MyType` to be treated as 1 "phrase" for the sake of completion.
     fn get_phrase_surrounding_completion_for_import(&'a self) -> CursorSurroundings {
-        self.get_phrase_surrounding_for_completion(&|c: char| {
+        let cursor_surroundings = self.get_phrase_surrounding_for_completion(&|c: char| {
             // Checks if a character is not a valid name/upname character or whitespace.
             // The newline character is not included as well.
             c.is_ascii_alphanumeric() || c == '_' || c == ' ' || c == '\t'
-        })
+        });
+
+        // The text before the cursor might start with whitespace — for example,
+        // in `{wibble, wo|}` it is captured as " wo". We strip the blank space
+        // here so that later the completion won't affect it.
+        let leading_whitespace = cursor_surroundings.text_before_cursor.len()
+            - cursor_surroundings
+                .text_before_cursor
+                .trim_start_matches(|c: char| c == ' ' || c == '\t')
+                .len();
+
+        if leading_whitespace == 0 {
+            return cursor_surroundings;
+        }
+
+        let CursorSurroundings {
+            surrounding_text,
+            surrounding_text_range,
+            text_before_cursor,
+            text_before_cursor_range,
+            text_after_cursor,
+        } = cursor_surroundings;
+
+        let (_, text_before_cursor) = text_before_cursor.split_at(leading_whitespace);
+        let text_before_cursor_range = Range {
+            start: Position {
+                character: text_before_cursor_range.start.character + leading_whitespace as u32,
+                ..text_before_cursor_range.start
+            },
+            ..text_before_cursor_range
+        };
+
+        let (_, surrounding_text) = surrounding_text.split_at(leading_whitespace);
+        let surrounding_text_range = Range {
+            start: Position {
+                character: surrounding_text_range.start.character + leading_whitespace as u32,
+                ..surrounding_text_range.start
+            },
+            ..surrounding_text_range
+        };
+
+        CursorSurroundings {
+            surrounding_text: EcoString::from(surrounding_text),
+            surrounding_text_range,
+            text_before_cursor: EcoString::from(text_before_cursor),
+            text_before_cursor_range,
+            text_after_cursor,
+        }
     }
 
     /// Checks if the line being edited is an import line and provides completions if it is.
