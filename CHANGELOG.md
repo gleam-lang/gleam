@@ -28,6 +28,10 @@
   to optimise.
   ([John Downey](https://github.com/jtdowney))
 
+- The compiler now provides a specific error message directing the user to the
+  correct syntax when trying to update a record after providing fields.
+  ([0xda157](https://github.com/0xda157))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,

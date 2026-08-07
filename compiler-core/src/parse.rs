@@ -993,6 +993,40 @@ where
                             _ => {
                                 // Call
                                 let arguments = self.parse_fn_arguments()?;
+
+                                if let Some((dot_dot_start, dot_dot_end)) =
+                                    self.maybe_one(&Token::DotDot)
+                                {
+                                    return match self.parse_const_value() {
+                                        Ok(None) | Err(_) => Err(ParseError {
+                                            error: ParseErrorType::UnexpectedToken {
+                                                token: Token::DotDot,
+                                                expected: vec![
+                                                    Token::RightParen.to_string().into(),
+                                                ],
+                                                hint: None,
+                                            },
+                                            location: SrcSpan {
+                                                start: dot_dot_start,
+                                                end: dot_dot_end,
+                                            },
+                                        }),
+                                        Ok(Some(value)) => {
+                                            let update_location = SrcSpan {
+                                                start: dot_dot_start,
+                                                end: value.location().end,
+                                            };
+
+                                            let (_, _) = self.expect_one(&Token::RightParen)?;
+
+                                            Err(ParseError {
+                                                location: update_location,
+                                                error: ParseErrorType::RecordUpdateAfterFields,
+                                            })
+                                        }
+                                    };
+                                }
+
                                 let (_, end) = self.expect_one(&Token::RightParen)?;
                                 expr = make_call(expr, arguments, start, end, left_paren)?;
                             }
@@ -3680,6 +3714,38 @@ where
                 } else {
                     let arguments =
                         self.series_of(&Parser::parse_const_record_argument, Some(&Token::Comma))?;
+
+                    if let Some((dot_dot_start, dot_dot_end)) = self.maybe_one(&Token::DotDot) {
+                        return match self.parse_const_value() {
+                            Ok(None) | Err(_) => Err(ParseError {
+                                error: ParseErrorType::UnexpectedToken {
+                                    token: Token::DotDot,
+                                    expected: vec![Token::RightParen.to_string().into()],
+                                    hint: None,
+                                },
+                                location: SrcSpan {
+                                    start: dot_dot_start,
+                                    end: dot_dot_end,
+                                },
+                            }),
+                            Ok(Some(value)) => {
+                                let update_location = SrcSpan {
+                                    start: dot_dot_start,
+                                    end: value.location().end,
+                                };
+
+                                let (_, _) = self.expect_one_following_series(
+                                    &Token::RightParen,
+                                    "a constant record argument",
+                                )?;
+
+                                Err(ParseError {
+                                    location: update_location,
+                                    error: ParseErrorType::RecordUpdateAfterFields,
+                                })
+                            }
+                        };
+                    }
 
                     let (_, par_e) = self.expect_one_following_series(
                         &Token::RightParen,
