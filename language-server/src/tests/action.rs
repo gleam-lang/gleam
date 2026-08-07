@@ -209,6 +209,8 @@ const DISCARD_UNUSED_VARIABLE: &str = "Discard unused variable";
 const ADD_EXTRA_PARENTHESES: &str = "Add extra parentheses";
 const CONVERT_TO_DOCUMENTATION_COMMENT: &str = "Convert to documentation comment";
 const CONVERT_TO_REGULAR_COMMENT: &str = "Convert to regular comment";
+const WRAP_IN_OK: &str = "Wrap in Ok()";
+const WRAP_IN_ERROR: &str = "Wrap in Error()";
 
 fn generate_variant_message(type_name: &str) -> String {
     format!("Generate `{type_name}` variant")
@@ -15962,5 +15964,37 @@ fn convert_to_int_has_nicely_separated_digits() {
         "Convert to `1_234_567`",
         "pub fn main() { 0b100101101011010000111 }",
         find_position_of("0b100101101011010000111").to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6058
+#[test]
+fn wrap_in_result_constructor_suggests_wrapping_in_ok() {
+    assert_code_action!(
+        WRAP_IN_OK,
+        "pub fn main() -> Result(Int, Nil) { 2 }",
+        find_position_of("2").to_selection()
+    );
+}
+
+#[test]
+fn wrap_in_result_constructor_suggest_wrapping_in_error() {
+    assert_code_action!(
+        WRAP_IN_ERROR,
+        "pub fn main() -> Result(Int, Nil) { Nil }",
+        find_position_of("Nil").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn wrap_in_result_constructor_not_offered_on_unrelated_type_errors() {
+    assert_no_code_actions!(
+        WRAP_IN_OK | WRAP_IN_ERROR,
+        "
+pub fn main() -> String {
+    2
+}
+        ",
+        find_position_of("2").to_selection()
     );
 }
