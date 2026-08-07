@@ -1,0 +1,26 @@
+---
+source: language-server/src/tests/rename.rs
+assertion_line: 4141
+expression: "\n@external(erlang, \"wibble\", \"replace\")\npub fn replace(in string: String, each pattern: String) -> String\n\npub fn main() {\n  replace(in: \"hello\", each: \"l\")\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+@external(erlang, "wibble", "replace")
+pub fn replace(in string: String, each pattern: String) -> String
+               ↑▔                                                
+
+pub fn main() {
+  replace(in: "hello", each: "l")
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+@external(erlang, "wibble", "replace")
+pub fn replace(inside string: String, each pattern: String) -> String
+
+pub fn main() {
+  replace(inside: "hello", each: "l")
+}
