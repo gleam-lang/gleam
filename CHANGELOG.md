@@ -94,6 +94,10 @@
   `gleam_stdlib` package is available.
   ([0xda157](https://github.com/0xda157))
 
+- The language server now supports go-to-definition, find-references and
+  renaming for function argument labels.  
+  ([Alistair Smith](https://github.com/alii))
+
 ### Formatter
 
 ### Bug fixes
