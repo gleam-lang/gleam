@@ -244,7 +244,7 @@ pub enum Error {
         reason: UnsafeRecordUpdateReason,
     },
 
-    UnnecessarySpreadOperator {
+    RecordUpdateWithoutChanges {
         location: SrcSpan,
         arity: usize,
     },
@@ -1396,7 +1396,7 @@ impl Error {
             | Error::UnknownRecordField { location, .. }
             | Error::IncorrectArity { location, .. }
             | Error::UnsafeRecordUpdate { location, .. }
-            | Error::UnnecessarySpreadOperator { location, .. }
+            | Error::RecordUpdateWithoutChanges { location, .. }
             | Error::IncorrectTypeArity { location, .. }
             | Error::TypeUsedAsAConstructor { location, .. }
             | Error::CouldNotUnify { location, .. }

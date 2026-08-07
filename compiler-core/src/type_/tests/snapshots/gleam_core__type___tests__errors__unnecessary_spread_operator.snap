@@ -14,7 +14,7 @@ fn main() {
 }
 
 ----- ERROR
-error: Unnecessary spread operator
+error: Record update without changes
   ┌─ /src/one/two.gleam:8:23
   │
 8 │   let Triple(a, b, c, ..) = triple
