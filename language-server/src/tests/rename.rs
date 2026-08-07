@@ -3951,3 +3951,220 @@ pub fn go() -> Wibble {
         find_position_of("Wibble").nth_occurrence(2).under_char('b')
     );
 }
+
+#[test]
+fn rename_function_argument_label_from_definition() {
+    assert_rename!(
+        "
+pub fn replace(in string: String, each pattern: String) -> String {
+  todo
+}
+
+pub fn main() {
+  replace(in: \"hello\", each: \"l\")
+}
+",
+        "inside",
+        find_position_of("in string").under_char('i')
+    );
+}
+
+#[test]
+fn rename_function_argument_label_from_call() {
+    assert_rename!(
+        "
+pub fn replace(in string: String, each pattern: String) -> String {
+  todo
+}
+
+pub fn main() {
+  replace(in: \"hello\", each: \"l\")
+}
+",
+        "inside",
+        find_position_of("in: \"hello\"").under_char('i')
+    );
+}
+
+#[test]
+fn rename_function_argument_label_from_qualified_call() {
+    assert_rename!(
+        (
+            "wibble",
+            "pub fn replace(in string: String, each pattern: String) -> String {\n  todo\n}"
+        ),
+        "
+import wibble
+
+pub fn main() {
+  wibble.replace(in: \"hello\", each: \"l\")
+}
+",
+        "inside",
+        find_position_of("in: \"hello\"").under_char('i')
+    );
+}
+
+#[test]
+fn rename_function_argument_label_across_modules() {
+    assert_rename!(
+        (
+            "wibble",
+            "pub fn replace(in string: String, each pattern: String) -> String {\n  todo\n}"
+        ),
+        "
+import wibble.{replace}
+
+pub fn main() {
+  replace(in: \"hello\", each: \"l\")
+  wibble.replace(in: \"world\", each: \"o\")
+}
+",
+        "inside",
+        find_position_of("in: \"hello\"").under_char('i')
+    );
+}
+
+#[test]
+fn rename_function_argument_label_expands_label_shorthand() {
+    assert_rename!(
+        "
+pub fn replace(in string: String, each pattern: String) -> String {
+  todo
+}
+
+pub fn main() {
+  let in = \"hello\"
+  replace(in:, each: \"l\")
+}
+",
+        "inside",
+        find_position_of("in string").under_char('i')
+    );
+}
+
+#[test]
+fn rename_function_argument_label_with_invalid_name() {
+    assert_rename_error!(
+        "
+pub fn replace(in string: String, each pattern: String) -> String {
+  todo
+}
+
+pub fn main() {
+  replace(in: \"hello\", each: \"l\")
+}
+",
+        "Inside",
+        find_position_of("in string").under_char('i')
+    );
+}
+
+#[test]
+fn no_rename_function_argument_label_from_other_package() {
+    let src = "
+import wibble
+
+pub fn main() {
+  wibble.replace(in: \"hello\", each: \"l\")
+}
+";
+
+    assert_no_rename!(
+        &TestProject::for_source(src).add_hex_module(
+            "wibble",
+            "pub fn replace(in string: String, each pattern: String) -> String {\n  todo\n}"
+        ),
+        "inside",
+        find_position_of("in: \"hello\"").under_char('i')
+    );
+}
+
+#[test]
+fn rename_function_argument_label_of_discarded_argument() {
+    assert_rename!(
+        "
+pub fn replace(in _string: String, each pattern: String) -> String {
+  todo
+}
+
+pub fn main() {
+  replace(in: \"hello\", each: \"l\")
+}
+",
+        "inside",
+        find_position_of("in _string").under_char('i')
+    );
+}
+
+#[test]
+fn rename_function_argument_label_of_call_with_incorrect_arity() {
+    assert_rename!(
+        "
+pub fn replace(in string: String, each pattern: String) -> String {
+  todo
+}
+
+pub fn main() {
+  replace(in: \"hello\")
+}
+",
+        "inside",
+        find_position_of("in string").under_char('i')
+    );
+}
+
+#[test]
+fn rename_function_argument_label_does_not_rename_other_function() {
+    assert_rename!(
+        "
+pub fn replace(in string: String) -> String {
+  todo
+}
+
+pub fn insert(in list: List(a)) -> List(a) {
+  todo
+}
+
+pub fn main() {
+  replace(in: \"hello\")
+  insert(in: [])
+}
+",
+        "inside",
+        find_position_of("in string").under_char('i')
+    );
+}
+
+#[test]
+fn rename_function_argument_label_of_external_function() {
+    assert_rename!(
+        "
+@external(erlang, \"wibble\", \"replace\")
+pub fn replace(in string: String, each pattern: String) -> String
+
+pub fn main() {
+  replace(in: \"hello\", each: \"l\")
+}
+",
+        "inside",
+        find_position_of("in string").under_char('i')
+    );
+}
+
+#[test]
+fn rename_function_argument_label_ignored_by_pipe() {
+    assert_rename!(
+        "
+pub fn replace(in string: String, each pattern: String) -> String {
+  todo
+}
+
+pub fn main() {
+  \"hello\" |> replace(each: \"l\")
+}
+",
+        "inside",
+        find_position_of("in string").under_char('i')
+    );
+}
