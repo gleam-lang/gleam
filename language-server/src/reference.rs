@@ -69,8 +69,8 @@ pub enum Referenced {
         name: EcoString,
     },
     Label {
-        type_module: EcoString,
-        type_name: EcoString,
+        /// The type or function this label belongs to.
+        owner: LabelOwner,
         label: EcoString,
         location: SrcSpan,
     },
@@ -445,9 +445,8 @@ pub fn reference_for_ast_node(
             ..
         } => record_type
             .named_type_name()
-            .map(|(type_module, type_name)| Referenced::Label {
-                type_module,
-                type_name,
+            .map(|(module, name)| Referenced::Label {
+                owner: LabelOwner::Type { module, name },
                 label: label.clone(),
                 location,
             }),
@@ -460,12 +459,42 @@ pub fn reference_for_ast_node(
             location,
             ..
         } => Some(Referenced::Label {
-            type_module: current_module.clone(),
-            type_name,
+            owner: LabelOwner::Type {
+                module: current_module.clone(),
+                name: type_name,
+            },
             label,
             location,
         }),
 
+        Located::FunctionLabelDefinition {
+            function_name,
+            label,
+            location,
+            ..
+        } => Some(Referenced::Label {
+            owner: LabelOwner::Function {
+                module: current_module.clone(),
+                name: function_name,
+            },
+            label,
+            location,
+        }),
+
+        Located::FunctionLabelUsage {
+            function_module,
+            function_name,
+            label,
+            location,
+            ..
+        } => Some(Referenced::Label {
+            owner: LabelOwner::Function {
+                module: function_module,
+                name: function_name,
+            },
+            label,
+            location,
+        }),
         Located::Pattern(_)
         | Located::ClauseGuard(_)
         | Located::PatternSpread { .. }
@@ -473,8 +502,6 @@ pub fn reference_for_ast_node(
         | Located::Expression { .. }
         | Located::FunctionBody(_)
         | Located::Label { .. }
-        | Located::FunctionLabelDefinition { .. }
-        | Located::FunctionLabelUsage { .. }
         | Located::Constant(_)
         | Located::ModuleFunction(_)
         | Located::ModuleTypeAlias(_) => None,
@@ -532,8 +559,7 @@ pub fn find_module_references_in_module(
 }
 
 pub fn find_label_references(
-    type_module: EcoString,
-    type_name: EcoString,
+    owner: LabelOwner,
     label: EcoString,
     modules: &im::HashMap<EcoString, ModuleInterface>,
     sources: &HashMap<EcoString, ModuleSourceInformation>,
@@ -541,7 +567,7 @@ pub fn find_label_references(
     let mut reference_locations = Vec::new();
 
     // Unlike values and types, a label can be referenced in a module that
-    // doesn't import the type's defining module: a record value can be
+    // doesn't import the module it is defined in: a record value can be
     // obtained transitively through another module and have its fields
     // accessed. So every module has to be searched.
     for module in modules.values() {
@@ -549,8 +575,7 @@ pub fn find_label_references(
             continue;
         };
         reference_locations.extend(find_label_references_in_module(
-            type_module.clone(),
-            type_name.clone(),
+            owner.clone(),
             label.clone(),
             module,
             source_information,
@@ -561,8 +586,7 @@ pub fn find_label_references(
 }
 
 pub fn find_label_references_in_module(
-    type_module: EcoString,
-    type_name: EcoString,
+    owner: LabelOwner,
     label: EcoString,
     module: &ModuleInterface,
     source_information: &ModuleSourceInformation,
@@ -573,13 +597,7 @@ pub fn find_label_references_in_module(
         return reference_locations;
     };
 
-    let key = LabelKey {
-        owner: LabelOwner::Type {
-            module: type_module,
-            name: type_name,
-        },
-        label,
-    };
+    let key = LabelKey { owner, label };
 
     let definitions = module.references.label_definitions.get(&key);
     let references = module.references.label_references.get(&key);
