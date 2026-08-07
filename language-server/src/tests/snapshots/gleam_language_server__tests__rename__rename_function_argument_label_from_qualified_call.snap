@@ -1,0 +1,33 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\nimport wibble\n\npub fn main() {\n  wibble.replace(in: \"hello\", each: \"l\")\n}\n"
+---
+----- BEFORE RENAME
+-- wibble.gleam
+pub fn replace(in string: String, each pattern: String) -> String {
+  todo
+}
+
+-- app.gleam
+
+import wibble
+
+pub fn main() {
+  wibble.replace(in: "hello", each: "l")
+                 ↑▔                     
+}
+
+
+----- AFTER RENAME
+-- wibble.gleam
+pub fn replace(inside string: String, each pattern: String) -> String {
+  todo
+}
+
+-- app.gleam
+
+import wibble
+
+pub fn main() {
+  wibble.replace(inside: "hello", each: "l")
+}

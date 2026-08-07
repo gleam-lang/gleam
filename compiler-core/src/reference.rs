@@ -213,17 +213,43 @@ pub enum LabelSyntax {
 pub struct LabelDefinition {
     pub location: SrcSpan,
     /// The name of the variant this label is defined in.
-    pub variant: EcoString,
+    /// None means this label was not associated with a particular record's
+    /// variant, for example in the case of function argument labels
+    pub variant: Option<EcoString>,
 }
 
-/// Identifies a record field label within a custom type, used to look up the
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum LabelOwner {
+    /// Labels of types (record fields)
+    Type {
+        /// The module the type this label belongs to is defined in.
+        module: EcoString,
+        /// The name of the type this label belongs to.
+        name: EcoString,
+    },
+    /// Labels of function arguments
+    Function {
+        /// The module the function this label belongs to is defined in.
+        module: EcoString,
+        /// The name of the function this label is defined in.
+        name: EcoString,
+    },
+}
+
+impl LabelOwner {
+    /// The module the type or function this label belongs to is defined in.
+    pub fn module(&self) -> &EcoString {
+        match self {
+            LabelOwner::Type { module, .. } | LabelOwner::Function { module, .. } => module,
+        }
+    }
+}
+
+/// Identifies a label within a custom type or function argument, used to look up the
 /// references to that label.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
-pub struct RecordLabel {
-    /// The module the type this label belongs to is defined in.
-    pub type_module: EcoString,
-    /// The name of the type this label belongs to.
-    pub type_name: EcoString,
+pub struct LabelKey {
+    pub owner: LabelOwner,
     pub label: EcoString,
 }
 
@@ -300,10 +326,10 @@ pub struct ReferenceTracker {
     pub module_references: HashMap<EcoString, Vec<ModuleNameReference>>,
     /// The locations of the references to each record field label in this
     /// module, used for renaming and go-to reference.
-    pub label_references: HashMap<RecordLabel, Vec<LabelReference>>,
+    pub label_references: HashMap<LabelKey, Vec<LabelReference>>,
     /// The locations at which each record field label is defined, one per
     /// variant that defines it, used for renaming and go-to definition.
-    pub label_definitions: HashMap<RecordLabel, Vec<LabelDefinition>>,
+    pub label_definitions: HashMap<LabelKey, Vec<LabelDefinition>>,
 
     /// Maps a module's canonical name to the node of the import it was brought
     /// in by. Every import is inserted here (aliased or not), keyed by its full
@@ -684,18 +710,13 @@ impl ReferenceTracker {
     /// returned by [`Type::named_type_name`].
     pub fn register_label_reference(
         &mut self,
-        type_: (EcoString, EcoString),
+        owner: LabelOwner,
         label: EcoString,
         location: SrcSpan,
         syntax: LabelSyntax,
     ) {
-        let (type_module, type_name) = type_;
         self.label_references
-            .entry(RecordLabel {
-                type_module,
-                type_name,
-                label,
-            })
+            .entry(LabelKey { owner, label })
             .or_default()
             .push(LabelReference { location, syntax });
     }
@@ -707,18 +728,13 @@ impl ReferenceTracker {
     /// by [`Type::named_type_name`].
     pub fn register_label_definition(
         &mut self,
-        type_: (EcoString, EcoString),
+        owner: LabelOwner,
         label: EcoString,
         location: SrcSpan,
-        variant: EcoString,
+        variant: Option<EcoString>,
     ) {
-        let (type_module, type_name) = type_;
         self.label_definitions
-            .entry(RecordLabel {
-                type_module,
-                type_name,
-                label,
-            })
+            .entry(LabelKey { owner, label })
             .or_default()
             .push(LabelDefinition { location, variant });
     }
