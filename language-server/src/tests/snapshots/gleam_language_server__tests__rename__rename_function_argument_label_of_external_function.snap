@@ -1,6 +1,5 @@
 ---
 source: language-server/src/tests/rename.rs
-assertion_line: 4141
 expression: "\n@external(erlang, \"wibble\", \"replace\")\npub fn replace(in string: String, each pattern: String) -> String\n\npub fn main() {\n  replace(in: \"hello\", each: \"l\")\n}\n"
 ---
 ----- BEFORE RENAME

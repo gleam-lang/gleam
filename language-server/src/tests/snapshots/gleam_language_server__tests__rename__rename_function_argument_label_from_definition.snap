@@ -1,7 +1,6 @@
 ---
 source: language-server/src/tests/rename.rs
-assertion_line: 4102
-expression: "\npub fn replace(in string: String, each pattern: String) -> String {\n  todo\n}\n\npub fn main() {\n  replace(in: \"hello\")\n}\n"
+expression: "\npub fn replace(in string: String, each pattern: String) -> String {\n  todo\n}\n\npub fn main() {\n  replace(in: \"hello\", each: \"l\")\n}\n"
 ---
 ----- BEFORE RENAME
 -- app.gleam
@@ -12,7 +11,7 @@ pub fn replace(in string: String, each pattern: String) -> String {
 }
 
 pub fn main() {
-  replace(in: "hello")
+  replace(in: "hello", each: "l")
 }
 
 
@@ -24,5 +23,5 @@ pub fn replace(inside string: String, each pattern: String) -> String {
 }
 
 pub fn main() {
-  replace(inside: "hello")
+  replace(inside: "hello", each: "l")
 }
