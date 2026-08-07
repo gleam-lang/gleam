@@ -1019,7 +1019,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             // record's fields throws an error
                             if pattern_arguments.len() == field_map.arity as usize {
                                 {
-                                    self.problems.error(Error::UnnecessarySpreadOperator {
+                                    self.problems.error(Error::RecordUpdateWithoutChanges {
                                         location: spread_location,
                                         arity: field_map.arity as usize,
                                     });

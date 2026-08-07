@@ -3290,13 +3290,13 @@ being used as a type constructor."
             }
         }
 
-        TypeError::UnnecessarySpreadOperator { location, arity } => {
+        TypeError::RecordUpdateWithoutChanges { location, arity } => {
             let text = wrap_format!(
                 "This record has {arity} fields and you have already \
 assigned variables to all of them."
             );
             Diagnostic {
-                title: "Unnecessary spread operator".into(),
+                title: "Record update without changes".into(),
                 text,
                 hint: None,
                 level: Level::Error,
