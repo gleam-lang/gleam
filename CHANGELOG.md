@@ -181,6 +181,10 @@
   code action in constants, patterns and bit array "size" options.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The language server now supports go-to-definition, find-references and
+  renaming for function argument labels.  
+  ([Alistair Smith](https://github.com/alii))
+
 ### Formatter
 
 ### Compiler Wasm API
