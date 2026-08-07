@@ -15964,3 +15964,615 @@ fn convert_to_int_has_nicely_separated_digits() {
         find_position_of("0b100101101011010000111").to_selection()
     );
 }
+
+#[test]
+fn convert_int_decimal_to_binary_in_constants() {
+    assert_code_action!(
+        "Convert to `0b1101111`",
+        "const wibble = 111",
+        find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_decimal_to_octal_in_constants() {
+    assert_code_action!(
+        "Convert to `0o157`",
+        "const wibble = 111",
+        find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_decimal_to_hexadecimal_in_constants() {
+    assert_code_action!(
+        "Convert to `0x6f`",
+        "const wibble = 111",
+        find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_binary_to_octal_in_constants() {
+    assert_code_action!(
+        "Convert to `0o157`",
+        "const wibble = 0b1101111",
+        find_position_of("0b1101111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_binary_to_decimal_in_constants() {
+    assert_code_action!(
+        "Convert to `111`",
+        "const wibble = 0b1101111",
+        find_position_of("0b1101111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_binary_to_hexadecimal_in_constants() {
+    assert_code_action!(
+        "Convert to `0x6f`",
+        "const wibble = 0b1101111",
+        find_position_of("0b1101111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_octal_to_binary_in_constants() {
+    assert_code_action!(
+        "Convert to `0b1101111`",
+        "const wibble = 0o157",
+        find_position_of("0o157").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_octal_to_decimal_in_constants() {
+    assert_code_action!(
+        "Convert to `111`",
+        "const wibble = 0o157",
+        find_position_of("0o157").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_octal_to_hexadecimal_in_constants() {
+    assert_code_action!(
+        "Convert to `0x6f`",
+        "const wibble = 0o157",
+        find_position_of("0o157").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_hexadecimal_to_binary_in_constants() {
+    assert_code_action!(
+        "Convert to `0b1101111`",
+        "const wibble = 0x6f",
+        find_position_of("0x6f").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_hexadecimal_to_octal_in_constants() {
+    assert_code_action!(
+        "Convert to `0o157`",
+        "const wibble = 0x6f",
+        find_position_of("0x6f").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_hexadecimal_to_decimal_in_constants() {
+    assert_code_action!(
+        "Convert to `111`",
+        "const wibble = 0x6f",
+        find_position_of("0x6f").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_decimal_to_binary_in_constants() {
+    assert_code_action!(
+        "Convert to `-0b1101111`",
+        "const wibble = -111",
+        find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_decimal_to_octal_in_constants() {
+    assert_code_action!(
+        "Convert to `-0o157`",
+        "const wibble = -111",
+        find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_decimal_to_hexadecimal_in_constants() {
+    assert_code_action!(
+        "Convert to `-0x6f`",
+        "const wibble = -111",
+        find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_binary_to_octal_in_constants() {
+    assert_code_action!(
+        "Convert to `-0o157`",
+        "const wibble = -0b1101111",
+        find_position_of("0b1101111").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_binary_to_decimal_in_constants() {
+    assert_code_action!(
+        "Convert to `-111`",
+        "const wibble = -0b1101111",
+        find_position_of("0b1101111").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_binary_to_hexadecimal_in_constants() {
+    assert_code_action!(
+        "Convert to `-0x6f`",
+        "const wibble = -0b1101111",
+        find_position_of("0b1101111").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_octal_to_binary_in_constants() {
+    assert_code_action!(
+        "Convert to `-0b1101111`",
+        "const wibble = -0o157",
+        find_position_of("0o157").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_octal_to_decimal_in_constants() {
+    assert_code_action!(
+        "Convert to `-111`",
+        "const wibble = -0o157",
+        find_position_of("0o157").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_octal_to_hexadecimal_in_constants() {
+    assert_code_action!(
+        "Convert to `-0x6f`",
+        "const wibble = -0o157",
+        find_position_of("0o157").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_hexadecimal_to_binary_in_constants() {
+    assert_code_action!(
+        "Convert to `-0b1101111`",
+        "const wibble = -0x6f",
+        find_position_of("0x6f").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_hexadecimal_to_octal_in_constants() {
+    assert_code_action!(
+        "Convert to `-0o157`",
+        "const wibble = -0x6f",
+        find_position_of("0x6f").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_hexadecimal_to_decimal_in_constants() {
+    assert_code_action!(
+        "Convert to `-111`",
+        "const wibble = -0x6f",
+        find_position_of("0x6f").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_decimal_to_binary_in_patterns() {
+    assert_code_action!(
+        "Convert to `0b1101111`",
+        "pub fn go(x) {
+  let assert <<111>> = x
+}",
+        find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_decimal_to_octal_in_patterns() {
+    assert_code_action!(
+        "Convert to `0o157`",
+        "pub fn go(x) {
+  let assert <<111>> = x
+}",
+        find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_decimal_to_hexadecimal_in_patterns() {
+    assert_code_action!(
+        "Convert to `0x6f`",
+        "pub fn go(x) {
+  let assert <<111>> = x
+}",
+        find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_binary_to_octal_in_patterns() {
+    assert_code_action!(
+        "Convert to `0o157`",
+        "pub fn go(x) {
+  let assert <<0b1101111>> = x
+}",
+        find_position_of("0b1101111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_binary_to_decimal_in_patterns() {
+    assert_code_action!(
+        "Convert to `111`",
+        "pub fn go(x) {
+  let assert <<0b1101111>> = x
+}",
+        find_position_of("0b1101111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_binary_to_hexadecimal_in_patterns() {
+    assert_code_action!(
+        "Convert to `0x6f`",
+        "pub fn go(x) {
+  let assert <<0b1101111>> = x
+}",
+        find_position_of("0b1101111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_octal_to_binary_in_patterns() {
+    assert_code_action!(
+        "Convert to `0b1101111`",
+        "pub fn go(x) {
+  let assert <<0o157>> = x
+}",
+        find_position_of("0o157").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_octal_to_decimal_in_patterns() {
+    assert_code_action!(
+        "Convert to `111`",
+        "pub fn go(x) {
+  let assert <<0o157>> = x
+}",
+        find_position_of("0o157").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_octal_to_hexadecimal_in_patterns() {
+    assert_code_action!(
+        "Convert to `0x6f`",
+        "pub fn go(x) {
+  let assert <<0o157>> = x
+}",
+        find_position_of("0o157").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_hexadecimal_to_binary_in_patterns() {
+    assert_code_action!(
+        "Convert to `0b1101111`",
+        "pub fn go(x) {
+  let assert <<0x6f>> = x
+}",
+        find_position_of("0x6f").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_hexadecimal_to_octal_in_patterns() {
+    assert_code_action!(
+        "Convert to `0o157`",
+        "pub fn go(x) {
+  let assert <<0x6f>> = x
+}",
+        find_position_of("0x6f").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_hexadecimal_to_decimal_in_patterns() {
+    assert_code_action!(
+        "Convert to `111`",
+        "pub fn go(x) {
+  let assert <<0x6f>> = x
+}",
+        find_position_of("0x6f").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_decimal_to_binary_in_patterns() {
+    assert_code_action!(
+        "Convert to `-0b1101111`",
+        "pub fn go(x) {
+  let assert <<-111>> = x
+}",
+        find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_decimal_to_octal_in_patterns() {
+    assert_code_action!(
+        "Convert to `-0o157`",
+        "pub fn go(x) {
+  let assert <<-111>> = x
+}",
+        find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_decimal_to_hexadecimal_in_patterns() {
+    assert_code_action!(
+        "Convert to `-0x6f`",
+        "pub fn go(x) {
+  let assert <<-111>> = x
+}",
+        find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_binary_to_octal_in_patterns() {
+    assert_code_action!(
+        "Convert to `-0o157`",
+        "pub fn go(x) {
+  let assert <<-0b1101111>> = x
+}",
+        find_position_of("0b1101111").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_binary_to_decimal_in_patterns() {
+    assert_code_action!(
+        "Convert to `-111`",
+        "pub fn go(x) {
+  let assert <<-0b1101111>> = x
+}",
+        find_position_of("0b1101111").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_binary_to_hexadecimal_in_patterns() {
+    assert_code_action!(
+        "Convert to `-0x6f`",
+        "pub fn go(x) {
+  let assert <<-0b1101111>> = x
+}",
+        find_position_of("0b1101111").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_octal_to_binary_in_patterns() {
+    assert_code_action!(
+        "Convert to `-0b1101111`",
+        "pub fn go(x) {
+  let assert <<-0o157>> = x
+}",
+        find_position_of("0o157").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_octal_to_decimal_in_patterns() {
+    assert_code_action!(
+        "Convert to `-111`",
+        "pub fn go(x) {
+  let assert <<-0o157>> = x
+}",
+        find_position_of("0o157").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_octal_to_hexadecimal_in_patterns() {
+    assert_code_action!(
+        "Convert to `-0x6f`",
+        "pub fn go(x) {
+  let assert <<-0o157>> = x
+}",
+        find_position_of("0o157").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_hexadecimal_to_binary_in_patterns() {
+    assert_code_action!(
+        "Convert to `-0b1101111`",
+        "pub fn go(x) {
+  let assert <<-0x6f>> = x
+}",
+        find_position_of("0x6f").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_hexadecimal_to_octal_in_patterns() {
+    assert_code_action!(
+        "Convert to `-0o157`",
+        "pub fn go(x) {
+  let assert <<-0x6f>> = x
+}",
+        find_position_of("0x6f").to_selection()
+    );
+}
+
+#[test]
+fn convert_negative_int_hexadecimal_to_decimal_in_patterns() {
+    assert_code_action!(
+        "Convert to `-111`",
+        "pub fn go(x) {
+  let assert <<-0x6f>> = x
+}",
+        find_position_of("0x6f").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_decimal_to_binary_in_size_options() {
+    assert_code_action!(
+        "Convert to `0b1101111`",
+        "pub fn go(x) {
+  let assert <<2:size(111)>> = x
+}",
+        find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_decimal_to_octal_in_size_options() {
+    assert_code_action!(
+        "Convert to `0o157`",
+        "pub fn go(x) {
+  let assert <<2:size(111)>> = x
+}",
+        find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_decimal_to_hexadecimal_in_size_options() {
+    assert_code_action!(
+        "Convert to `0x6f`",
+        "pub fn go(x) {
+  let assert <<2:size(111)>> = x
+}",
+        find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_binary_to_octal_in_size_options() {
+    assert_code_action!(
+        "Convert to `0o157`",
+        "pub fn go(x) {
+  let assert <<2:size(0b1101111)>> = x
+}",
+        find_position_of("0b1101111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_binary_to_decimal_in_size_options() {
+    assert_code_action!(
+        "Convert to `111`",
+        "pub fn go(x) {
+  let assert <<2:size(0b1101111)>> = x
+}",
+        find_position_of("0b1101111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_binary_to_hexadecimal_in_size_options() {
+    assert_code_action!(
+        "Convert to `0x6f`",
+        "pub fn go(x) {
+  let assert <<2:size(0b1101111)>> = x
+}",
+        find_position_of("0b1101111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_octal_to_binary_in_size_options() {
+    assert_code_action!(
+        "Convert to `0b1101111`",
+        "pub fn go(x) {
+  let assert <<2:size(0o157)>> = x
+}",
+        find_position_of("0o157").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_octal_to_decimal_in_size_options() {
+    assert_code_action!(
+        "Convert to `111`",
+        "pub fn go(x) {
+  let assert <<2:size(0o157)>> = x
+}",
+        find_position_of("0o157").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_octal_to_hexadecimal_in_size_options() {
+    assert_code_action!(
+        "Convert to `0x6f`",
+        "pub fn go(x) {
+  let assert <<2:size(0o157)>> = x
+}",
+        find_position_of("0o157").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_hexadecimal_to_binary_in_size_options() {
+    assert_code_action!(
+        "Convert to `0b1101111`",
+        "pub fn go(x) {
+  let assert <<2:size(0x6f)>> = x
+}",
+        find_position_of("0x6f").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_hexadecimal_to_octal_in_size_options() {
+    assert_code_action!(
+        "Convert to `0o157`",
+        "pub fn go(x) {
+  let assert <<2:size(0x6f)>> = x
+}",
+        find_position_of("0x6f").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_hexadecimal_to_decimal_in_size_options() {
+    assert_code_action!(
+        "Convert to `111`",
+        "pub fn go(x) {
+  let assert <<2:size(0x6f)>> = x
+}",
+        find_position_of("0x6f").to_selection()
+    );
+}

@@ -482,8 +482,13 @@ pub trait Visit<'ast> {
         visit_typed_pattern(self, pattern);
     }
 
-    fn visit_typed_pattern_int(&mut self, location: &'ast SrcSpan, value: &'ast EcoString) {
-        visit_typed_pattern_int(self, location, value);
+    fn visit_typed_pattern_int(
+        &mut self,
+        location: &'ast SrcSpan,
+        string_value: &'ast EcoString,
+        int_value: &'ast BigInt,
+    ) {
+        visit_typed_pattern_int(self, location, string_value, int_value);
     }
 
     fn visit_typed_pattern_float(&mut self, location: &'ast SrcSpan, value: &'ast EcoString) {
@@ -508,8 +513,13 @@ pub trait Visit<'ast> {
         visit_typed_pattern_bit_array_size(self, size);
     }
 
-    fn visit_typed_bit_array_size_int(&mut self, location: &'ast SrcSpan, value: &'ast EcoString) {
-        visit_typed_bit_array_size_int(self, location, value);
+    fn visit_typed_bit_array_size_int(
+        &mut self,
+        location: &'ast SrcSpan,
+        string_value: &'ast EcoString,
+        int_value: &'ast BigInt,
+    ) {
+        visit_typed_bit_array_size_int(self, location, string_value, int_value);
     }
 
     fn visit_typed_bit_array_size_variable(
@@ -700,10 +710,10 @@ pub trait Visit<'ast> {
     fn visit_typed_constant_int(
         &mut self,
         location: &'ast SrcSpan,
-        value: &'ast EcoString,
+        string_value: &'ast EcoString,
         int_value: &'ast BigInt,
     ) {
-        visit_typed_constant_int(self, location, value, int_value);
+        visit_typed_constant_int(self, location, string_value, int_value);
     }
 
     fn visit_typed_constant_float(
@@ -945,7 +955,7 @@ fn visit_typed_constant_float<'a, V: Visit<'a> + ?Sized>(
 fn visit_typed_constant_int<'a, V: Visit<'a> + ?Sized>(
     _v: &mut V,
     _location: &'a SrcSpan,
-    _value: &'a EcoString,
+    _string_value: &'a EcoString,
     _int_value: &'a BigInt,
 ) {
     // No further traversal needed for constant ints
@@ -1997,9 +2007,9 @@ where
     match pattern {
         Pattern::Int {
             location,
-            value,
-            int_value: _,
-        } => v.visit_typed_pattern_int(location, value),
+            value: string_value,
+            int_value,
+        } => v.visit_typed_pattern_int(location, string_value, int_value),
         Pattern::Float {
             location,
             value,
@@ -2071,8 +2081,12 @@ where
     }
 }
 
-fn visit_typed_pattern_int<'a, V>(_v: &mut V, _location: &'a SrcSpan, _value: &'a EcoString)
-where
+fn visit_typed_pattern_int<'a, V>(
+    _v: &mut V,
+    _location: &'a SrcSpan,
+    _string_value: &'a EcoString,
+    _int_value: &'a BigInt,
+) where
     V: Visit<'a> + ?Sized,
 {
 }
@@ -2107,9 +2121,9 @@ where
     match size {
         BitArraySize::Int {
             location,
-            value,
-            int_value: _,
-        } => v.visit_typed_bit_array_size_int(location, value),
+            value: string_value,
+            int_value,
+        } => v.visit_typed_bit_array_size_int(location, string_value, int_value),
         BitArraySize::Variable {
             location,
             name,
@@ -2127,7 +2141,8 @@ where
 pub fn visit_typed_bit_array_size_int<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
-    _value: &'a EcoString,
+    _string_value: &'a EcoString,
+    _int_value: &'a BigInt,
 ) where
     V: Visit<'a> + ?Sized,
 {

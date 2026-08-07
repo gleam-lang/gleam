@@ -40,6 +40,10 @@
   `gleam_stdlib` package is available.
   ([0xda157](https://github.com/0xda157))
 
+- The language server now supports triggering "Convert int to different base"
+  code action in constants, patterns and bit array "size" options.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Formatter
 
 ### Bug fixes
