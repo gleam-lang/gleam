@@ -1,6 +1,5 @@
 ---
 source: language-server/src/tests/rename.rs
-assertion_line: 4048
 expression: "\npub fn replace(in string: String, each pattern: String) -> String {\n  todo\n}\n\npub fn main() {\n  replace(in: \"hello\", each: \"l\")\n}\n"
 ---
 Error response message:
