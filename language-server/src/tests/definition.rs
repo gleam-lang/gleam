@@ -1114,3 +1114,51 @@ pub fn main(x: Outer) {
         find_position_of("b: y").under_char('b')
     );
 }
+
+#[test]
+fn goto_definition_function_argument_label() {
+    assert_goto!(
+        "
+pub fn replace(in string: String, each pattern: String) -> String {
+  todo
+}
+
+pub fn main() {
+  replace(in: \"hello\", each: \"l\")
+}",
+        find_position_of("in: \"hello\"").under_char('i')
+    );
+}
+
+#[test]
+fn goto_definition_function_argument_label_in_other_module() {
+    let src = "
+import wibble
+
+pub fn main() {
+  wibble.replace(in: \"hello\", each: \"l\")
+}";
+
+    assert_goto!(
+        TestProject::for_source(src).add_module(
+            "wibble",
+            "pub fn replace(in string: String, each pattern: String) -> String {\n  todo\n}"
+        ),
+        find_position_of("in: \"hello\"").under_char('i')
+    );
+}
+
+#[test]
+fn goto_definition_function_argument_label_from_definition() {
+    assert_goto!(
+        "
+pub fn replace(in string: String, each pattern: String) -> String {
+  todo
+}
+
+pub fn main() {
+  replace(in: \"hello\", each: \"l\")
+}",
+        find_position_of("in string").under_char('i')
+    );
+}

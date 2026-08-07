@@ -1,0 +1,20 @@
+---
+source: language-server/src/tests/reference.rs
+assertion_line: 1765
+expression: "\nimport wibble\n\npub fn main() {\n  wibble.replace(in: \"hello\", each: \"l\")\n}\n"
+---
+-- wibble.gleam
+pub fn replace(in string: String, each pattern: String) -> String {
+               ▔▔                                                  
+  todo
+}
+
+
+-- app.gleam
+
+import wibble
+
+pub fn main() {
+  wibble.replace(in: "hello", each: "l")
+                 ↑▔                     
+}

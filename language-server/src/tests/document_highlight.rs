@@ -1165,3 +1165,19 @@ pub fn main(w: Wibble) {
         find_position_of("wobble: Int").under_char('w'),
     );
 }
+
+#[test]
+fn highlights_for_function_argument_label() {
+    assert_highlights!(
+        "
+pub fn replace(in string: String, each pattern: String) -> String {
+  todo
+}
+
+pub fn main() {
+  replace(in: \"hello\", each: \"l\")
+}
+",
+        find_position_of("in: \"hello\"").under_char('i')
+    );
+}

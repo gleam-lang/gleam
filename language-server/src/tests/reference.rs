@@ -1726,3 +1726,107 @@ pub fn main() -> Wobble {
         find_position_of("Wobble"),
     );
 }
+
+#[test]
+fn references_for_function_argument_label() {
+    assert_references!(
+        "
+pub fn replace(in string: String, each pattern: String) -> String {
+  todo
+}
+
+pub fn main() {
+  replace(in: \"hello\", each: \"l\")
+}
+",
+        find_position_of("in: \"hello\"").under_char('i')
+    );
+}
+
+#[test]
+fn references_for_function_argument_label_from_definition() {
+    assert_references!(
+        "
+pub fn replace(in string: String, each pattern: String) -> String {
+  todo
+}
+
+pub fn main() {
+  replace(in: \"hello\", each: \"l\")
+  replace(in: \"world\", each: \"o\")
+}
+",
+        find_position_of("in string").under_char('i')
+    );
+}
+
+#[test]
+fn references_for_function_argument_label_in_other_module() {
+    assert_references!(
+        (
+            "wibble",
+            "pub fn replace(in string: String, each pattern: String) -> String {\n  todo\n}"
+        ),
+        "
+import wibble
+
+pub fn main() {
+  wibble.replace(in: \"hello\", each: \"l\")
+}
+",
+        find_position_of("in: \"hello\"").under_char('i')
+    );
+}
+
+#[test]
+fn references_for_function_argument_label_ignored_by_pipe() {
+    assert_references!(
+        "
+pub fn replace(in string: String, each pattern: String) -> String {
+  todo
+}
+
+pub fn main() {
+  \"hello\" |> replace(each: \"l\")
+}
+",
+        find_position_of("in string").under_char('i')
+    );
+}
+
+#[test]
+fn references_for_function_argument_label_of_call_with_incorrect_arity() {
+    assert_references!(
+        "
+pub fn replace(in string: String, each pattern: String) -> String {
+  todo
+}
+
+pub fn main() {
+  replace(in: \"hello\")
+}
+",
+        find_position_of("in string").under_char('i')
+    );
+}
+
+#[test]
+fn references_for_function_argument_label_does_not_include_other_function() {
+    assert_references!(
+        "
+pub fn replace(in string: String) -> String {
+  todo
+}
+
+pub fn insert(in list: List(a)) -> List(a) {
+  todo
+}
+
+pub fn main() {
+  replace(in: \"hello\")
+  insert(in: [])
+}
+",
+        find_position_of("in string").under_char('i')
+    );
+}

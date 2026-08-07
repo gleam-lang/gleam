@@ -1,0 +1,30 @@
+---
+source: language-server/src/tests/rename.rs
+assertion_line: 4030
+expression: "\npub fn replace(in string: String, each pattern: String) -> String {\n  todo\n}\n\npub fn main() {\n  let in = \"hello\"\n  replace(in:, each: \"l\")\n}\n"
+---
+----- BEFORE RENAME
+-- app.gleam
+
+pub fn replace(in string: String, each pattern: String) -> String {
+               ↑▔                                                  
+  todo
+}
+
+pub fn main() {
+  let in = "hello"
+  replace(in:, each: "l")
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+
+pub fn replace(inside string: String, each pattern: String) -> String {
+  todo
+}
+
+pub fn main() {
+  let in = "hello"
+  replace(inside: in, each: "l")
+}

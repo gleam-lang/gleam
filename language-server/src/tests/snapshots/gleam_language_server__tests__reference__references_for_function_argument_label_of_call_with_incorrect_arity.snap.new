@@ -1,0 +1,16 @@
+---
+source: language-server/src/tests/reference.rs
+assertion_line: 1799
+expression: "\npub fn replace(in string: String, each pattern: String) -> String {\n  todo\n}\n\npub fn main() {\n  replace(in: \"hello\")\n}\n"
+---
+-- app.gleam
+
+pub fn replace(in string: String, each pattern: String) -> String {
+               ↑▔                                                  
+  todo
+}
+
+pub fn main() {
+  replace(in: "hello")
+          ▔▔          
+}
