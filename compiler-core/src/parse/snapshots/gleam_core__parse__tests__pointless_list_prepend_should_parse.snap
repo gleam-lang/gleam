@@ -1,0 +1,61 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "let xs = [] [..xs]"
+---
+[
+    Assignment(
+        Assignment {
+            location: SrcSpan {
+                start: 0,
+                end: 11,
+            },
+            value: List {
+                location: SrcSpan {
+                    start: 9,
+                    end: 11,
+                },
+                elements: [],
+                tail: None,
+            },
+            pattern: Variable {
+                location: SrcSpan {
+                    start: 4,
+                    end: 6,
+                },
+                name: "xs",
+                type_: (),
+                origin: VariableOrigin {
+                    syntax: Variable(
+                        "xs",
+                    ),
+                    declaration: LetPattern,
+                },
+            },
+            kind: Let,
+            compiled_case: CompiledCase {
+                tree: Fail,
+                subject_variables: [],
+                unreachable: {},
+            },
+            annotation: None,
+        },
+    ),
+    Expression(
+        List {
+            location: SrcSpan {
+                start: 12,
+                end: 18,
+            },
+            elements: [],
+            tail: Some(
+                Var {
+                    location: SrcSpan {
+                        start: 15,
+                        end: 17,
+                    },
+                    name: "xs",
+                },
+            ),
+        },
+    ),
+]

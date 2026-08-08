@@ -697,15 +697,6 @@ where
                     }
                     _ => {}
                 }
-                if tail.is_some()
-                    && elements.is_empty()
-                    && elements_after_tail.as_ref().is_none_or(|e| e.is_empty())
-                {
-                    return parse_error(
-                        ParseErrorType::ListSpreadWithoutElements,
-                        SrcSpan { start, end },
-                    );
-                }
 
                 match elements_after_tail {
                     Some(elements) if !elements.is_empty() => {
@@ -3460,15 +3451,6 @@ where
                         );
                     }
                     _ => {}
-                }
-                if tail.is_some()
-                    && elements.is_empty()
-                    && elements_after_tail.as_ref().is_none_or(|e| e.is_empty())
-                {
-                    return parse_error(
-                        ParseErrorType::ListSpreadWithoutElements,
-                        SrcSpan { start, end },
-                    );
                 }
 
                 match elements_after_tail {

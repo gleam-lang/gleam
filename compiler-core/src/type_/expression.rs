@@ -1273,6 +1273,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
             None => None,
         };
+
+        // We're checking if we have a prepend but no elements, so we can
+        // provide an error telling the developer to just use the list directly.
+        // Like this: `[..tail]`.
+        if let Some(ref tail) = tail
+            && inferred_elements.is_empty()
+        {
+            self.problems.error(Error::ListPrependWithoutElements {
+                location,
+                tail_location: tail.location(),
+            })
+        }
+
         TypedExpr::List {
             location,
             type_,
@@ -4679,6 +4692,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         } else {
             None
         };
+
+        // We're checking if we have a prepend but no elements, so we can
+        // provide an error telling the developer to just use the list directly.
+        // Like this: `[..tail]`.
+        if let Some(ref tail) = tail
+            && elements.is_empty()
+        {
+            self.problems.error(Error::ListPrependWithoutElements {
+                location,
+                tail_location: tail.location(),
+            })
+        }
 
         Constant::List {
             elements,
