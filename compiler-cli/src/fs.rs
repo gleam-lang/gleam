@@ -828,11 +828,6 @@ fn is_inside_git_work_tree(path: &Utf8Path) -> Result<bool, Error> {
     }
 }
 
-pub(crate) fn is_git_work_tree_root(path: &Utf8Path) -> bool {
-    tracing::debug!(path=?path, "checking_for_git_repo_root");
-    exists(path.join(".git")).unwrap_or(false)
-}
-
 pub(crate) fn is_bare_git_repo_root(path: &Utf8Path) -> bool {
     tracing::debug!(path=?path, "checking_for_bare_git_repo_root");
     exists(path.join("HEAD")).unwrap_or(false) && exists(path.join("objects")).unwrap_or(false)
