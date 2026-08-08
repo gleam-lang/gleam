@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/javascript/tests/typescript.rs
+expression: "\npub type Box(value) {\n    Full(value)\n    Empty\n}\n"
+---
+----- SOURCE CODE
+
+pub type Box(value) {
+    Full(value)
+    Empty
+}
+
+
+----- TYPESCRIPT DEFINITIONS
+import type * as _ from "../gleam.d.mts";
+
+export class Full<I> extends _.CustomType {
+  /** @deprecated */
+  constructor(argument$0: I);
+  /** @deprecated */
+  0: I;
+}
+export function Box$Full<I>($0: I): Box$<I>;
+export function Box$isFull<I>(value: Box$<I>): value is Full<I>;
+export function Box$isFull<I>(value: any): value is Box$<unknown>;
+export function Box$Full$0<I>(value: Box$<I>): I;
+
+export class Empty extends _.CustomType {}
+export function Box$Empty<I>(): Box$<I>;
+export function Box$isEmpty<I>(value: Box$<I>): value is Empty;
+export function Box$isEmpty<I>(value: any): value is Box$<unknown>;
+
+export type Box$<I> = Full<I> | Empty;

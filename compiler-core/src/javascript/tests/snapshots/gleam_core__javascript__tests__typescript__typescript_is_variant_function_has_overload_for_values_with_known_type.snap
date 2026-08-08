@@ -1,0 +1,48 @@
+---
+source: compiler-core/src/javascript/tests/typescript.rs
+expression: "\npub type Wibble(a, b, c) {\n    Wobble(a, c)\n    Woo(b)\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble(a, b, c) {
+    Wobble(a, c)
+    Woo(b)
+}
+
+
+----- TYPESCRIPT DEFINITIONS
+import type * as _ from "../gleam.d.mts";
+
+export class Wobble<I, K> extends _.CustomType {
+  /** @deprecated */
+  constructor(argument$0: I, argument$1: K);
+  /** @deprecated */
+  0: I;
+  /** @deprecated */
+  1: K;
+}
+export function Wibble$Wobble<I, J, K>($0: I, $1: K): Wibble$<I, J, K>;
+export function Wibble$isWobble<I, J, K>(value: Wibble$<I, J, K>): value is Wobble<
+  I,
+  K
+>;
+export function Wibble$isWobble<I, J, K>(
+  value: any,
+): value is Wibble$<unknown, unknown, unknown>;
+export function Wibble$Wobble$0<I, J, K>(value: Wibble$<I, J, K>): I;
+export function Wibble$Wobble$1<I, J, K>(value: Wibble$<I, J, K>): K;
+
+export class Woo<J> extends _.CustomType {
+  /** @deprecated */
+  constructor(argument$0: J);
+  /** @deprecated */
+  0: J;
+}
+export function Wibble$Woo<I, J, K>($0: J): Wibble$<I, J, K>;
+export function Wibble$isWoo<I, J, K>(value: Wibble$<I, J, K>): value is Woo<J>;
+export function Wibble$isWoo<I, J, K>(
+  value: any,
+): value is Wibble$<unknown, unknown, unknown>;
+export function Wibble$Woo$0<I, J, K>(value: Wibble$<I, J, K>): J;
+
+export type Wibble$<I, J, K> = Wobble<I, K> | Woo<J>;
