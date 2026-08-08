@@ -28,6 +28,10 @@
   to optimise.
   ([John Downey](https://github.com/jtdowney))
 
+- The compiler now provides a more specific error message when encountering a
+  merge conflict indicator
+  ([0xda157](https://github.com/0xda157))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,

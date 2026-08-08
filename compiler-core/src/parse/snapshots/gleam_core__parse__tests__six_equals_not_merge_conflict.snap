@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "let wobble: Int = 32\n======"
+---
+----- SOURCE CODE
+let wobble: Int = 32
+======
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:1
+  │
+2 │ ======
+  │ ^^ This operator has no value on its right side
+
+Hint: Remove it or put a value after it.

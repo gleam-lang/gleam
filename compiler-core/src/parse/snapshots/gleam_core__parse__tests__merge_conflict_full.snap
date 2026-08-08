@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "<<<<<<< HEAD\n  io.println(\"Hello Wibble!\")\n=======\n  io.println(\"Hello Wobble!\")\n>>>>>>> main"
+---
+----- SOURCE CODE
+<<<<<<< HEAD
+  io.println("Hello Wibble!")
+=======
+  io.println("Hello Wobble!")
+>>>>>>> main
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:1
+  │
+1 │ <<<<<<< HEAD
+  │ ^^^^^^^ Merge conflict marker found
+
+Your code appears to have a merge conflict. Resolve it by removing
+the code you do not want to keep.
+
+If you are in a merge, the top chunk is the checked-out code, and the
+bottom chunk is the new code being merged.
+
+If you are in a rebase, the top chunk is the code being rebased onto,
+and the chunk section is the checked-out code which is being rebased.
+
+More information can be found in the official git documentation:
+https://git-scm.com/book/en/v2/Git-Tools-Advanced-Merging#_checking_out_conflicts
