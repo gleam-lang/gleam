@@ -390,7 +390,7 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
             // Aliasing a discard is the same as just producing a variable
             // pattern, that makes things even simpler, we can just produce the
             // code for a variable pattern with the wanted name and call it a day
-            Pattern::Discard { location, .. } => {
+            Pattern::Discard { .. } => {
                 builder.variable_pattern(
                     *location,
                     &self.generator.new_erlang_variable(name, *location),
