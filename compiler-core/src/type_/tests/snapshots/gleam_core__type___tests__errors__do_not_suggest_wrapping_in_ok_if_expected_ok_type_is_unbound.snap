@@ -1,40 +1,32 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\npub type SomeError {\n  WibbleError\n}\n\npub type OtherError {\n  WobbleError\n}\n\npub fn main() {\n  wibble(wobble(todo))\n}\n\npub fn wobble(arg: a) -> Result(a, SomeError) {\n  todo\n}\n\npub fn wibble(arg: Result(a, OtherError)) -> a {\n  todo\n}"
+expression: "\npub fn main() {\n  wibble(wobble(todo))\n}\n\npub fn wobble(arg: a) -> Result(a, String) {\n  todo\n}\n\npub fn wibble(arg: Result(a, Int)) -> a {\n  todo\n}"
 ---
 ----- SOURCE CODE
-
-pub type SomeError {
-  WibbleError
-}
-
-pub type OtherError {
-  WobbleError
-}
 
 pub fn main() {
   wibble(wobble(todo))
 }
 
-pub fn wobble(arg: a) -> Result(a, SomeError) {
+pub fn wobble(arg: a) -> Result(a, String) {
   todo
 }
 
-pub fn wibble(arg: Result(a, OtherError)) -> a {
+pub fn wibble(arg: Result(a, Int)) -> a {
   todo
 }
 
 ----- ERROR
 error: Type mismatch
-   ┌─ /src/one/two.gleam:11:10
-   │
-11 │   wibble(wobble(todo))
-   │          ^^^^^^^^^^^^
+  ┌─ /src/one/two.gleam:3:10
+  │
+3 │   wibble(wobble(todo))
+  │          ^^^^^^^^^^^^
 
 Expected type:
 
-    Result(a, OtherError)
+    Result(a, Int)
 
 Found type:
 
-    Result(a, SomeError)
+    Result(a, String)
