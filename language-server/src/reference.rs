@@ -287,14 +287,25 @@ pub fn reference_for_ast_node(
                 RenameTarget::Unqualified
             },
         }),
-        Located::StringPrefixPatternVariable { location, name, .. } => {
+        Located::StringPrefixPatternPrefixAlias {
+            name_start_position,
+            location,
+            name,
+        } => {
+            let name_location = SrcSpan::new(name_start_position, location.end);
             Some(Referenced::LocalVariable {
-                definition_location: location,
-                location,
+                definition_location: name_location,
+                location: name_location,
                 origin: None,
                 name: name.clone(),
             })
         }
+        Located::StringPrefixPatternSuffix { location, name } => Some(Referenced::LocalVariable {
+            definition_location: location,
+            location,
+            origin: None,
+            name: name.clone(),
+        }),
         Located::Annotation { ast, type_ } => match ast {
             ast::TypeAst::Constructor(constructor)
                 if let Some((module, name)) = type_.named_type_name() =>

@@ -24,6 +24,6 @@ pub type Wibble {
 
 fn wobble(wibble: Wibble) -> Int {
   case wibble {
-    Wibble(a: _) | Wobble(a:) -> 0
+    Wibble(a: _) | Wobble(a: _) -> 0
   }
 }
