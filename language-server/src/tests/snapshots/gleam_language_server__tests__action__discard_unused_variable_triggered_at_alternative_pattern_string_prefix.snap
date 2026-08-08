@@ -15,7 +15,7 @@ fn wobble(wibble) {
 ----- AFTER ACTION
 fn wobble(wibble) {
   case wibble {
-    "Hello, " as hello <> _name | "Hey, " as hello <> name -> hello
+    "Hello, " as hello <> _name | "Hey, " as hello <> _name -> hello
     _ -> "unknown"
   }
 }

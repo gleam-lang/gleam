@@ -15,7 +15,7 @@ fn wobble(wibble, wubble) {
 ----- AFTER ACTION
 fn wobble(wibble, wubble) {
   case wibble, wubble {
-    0, [_y] | y, [] | _, [1, 2, y] -> todo
+    0, [_y] | _y, [] | _, [1, 2, _y] -> todo
     _ -> todo
   }
 }

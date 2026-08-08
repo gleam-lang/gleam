@@ -754,7 +754,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         string(),
                         left_name_location,
                         VariableOrigin {
-                            syntax: VariableSyntax::AssignmentPattern(*left_location),
+                            syntax: VariableSyntax::AssignmentPattern {
+                                name: left_name.clone(),
+                                location: *left_location,
+                            },
                             declaration: self.position.to_declaration(),
                         },
                     );
@@ -816,7 +819,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     pattern.type_(),
                     location,
                     VariableOrigin {
-                        syntax: VariableSyntax::AssignmentPattern(full_location),
+                        syntax: VariableSyntax::AssignmentPattern {
+                            name: name.clone(),
+                            location: full_location,
+                        },
                         declaration: self.position.to_declaration(),
                     },
                 );

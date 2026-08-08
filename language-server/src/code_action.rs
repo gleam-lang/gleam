@@ -12912,6 +12912,8 @@ impl<'a> DiscardUnusedVariable<'a> {
                         self.params.range,
                         self.edits.src_span_to_lsp_range(*location),
                     )
+                    // We do not want code action for generated variables.
+                    && !origin.is_generated()
                 {
                     Some(UnusedVariable { location, origin })
                 } else {
@@ -12923,22 +12925,53 @@ impl<'a> DiscardUnusedVariable<'a> {
             return vec![];
         };
 
-        match unused_variable.origin.syntax {
-            type_::error::VariableSyntax::Variable(_) => {
-                self.edits
-                    .insert(unused_variable.location.start, ("_").to_string());
-            }
-            type_::error::VariableSyntax::LabelShorthand(_) => {
-                self.edits
-                    .insert(unused_variable.location.end, (" _").to_string());
-            }
-            type_::error::VariableSyntax::AssignmentPattern(location) => {
-                self.edits.delete(SrcSpan {
-                    start: location.start,
+        // Discard hovered variable definition.
+        self.discard_variable(unused_variable.origin, unused_variable.location);
+
+        // In case there are alternative patterns like:
+        //
+        // ```gleam
+        // [0, y] | [1, y] | [2, y]
+        // ```
+        //
+        // with code action triggered at first `y`, to discard the second and
+        // third `y` we need to find references of variable. Since the variable
+        // is unused, only alternative patterns will be there.
+        let references = FindVariableReferences::new(
+            *unused_variable.location,
+            // Name can be `None` only if the variable is generated, and here
+            // we know that it is not.
+            unused_variable.origin.name().expect("variable name"),
+        )
+        .find_in_module(&self.module.ast);
+
+        for reference in references {
+            let located = self.module.ast.find_node(reference.location.start);
+            match located {
+                // For bindings like `x`, `[x, y]` we have origin and location
+                // directly, so we can simply discard them with regard to origin.
+                Some(Located::Pattern(Pattern::Variable {
+                    location, origin, ..
+                })) => self.discard_variable(origin, location),
+                // For pattern assignments like `[1, 2] as tail` we can remove
+                // the part from the end of the pattern to the end of the assign.
+                Some(Located::Pattern(Pattern::Assign {
+                    location, pattern, ..
+                })) => self.edits.delete(SrcSpan {
+                    start: pattern.location().end,
                     end: location.end,
-                });
+                }),
+                // For prefix alias of string prefix pattern we can remove
+                // assignment.
+                Some(Located::StringPrefixPatternPrefixAlias { location, .. }) => {
+                    self.edits.delete(location)
+                }
+                // For suffix of string prefix pattern we can add `_` before the name
+                Some(Located::StringPrefixPatternSuffix { location, .. }) => {
+                    self.edits.insert(location.start, "_".to_string())
+                }
+                _ => (),
             }
-            type_::error::VariableSyntax::Generated => (),
         }
 
         let mut action = Vec::with_capacity(1);
@@ -12948,6 +12981,24 @@ impl<'a> DiscardUnusedVariable<'a> {
             .preferred(true)
             .push_to(&mut action);
         action
+    }
+
+    fn discard_variable(&mut self, origin: &VariableOrigin, location: &SrcSpan) {
+        match origin.syntax {
+            type_::error::VariableSyntax::Variable(_) => {
+                self.edits.insert(location.start, ("_").to_string());
+            }
+            type_::error::VariableSyntax::LabelShorthand(_) => {
+                self.edits.insert(location.end, (" _").to_string());
+            }
+            type_::error::VariableSyntax::AssignmentPattern { name: _, location } => {
+                self.edits.delete(SrcSpan {
+                    start: location.start,
+                    end: location.end,
+                });
+            }
+            type_::error::VariableSyntax::Generated => (),
+        }
     }
 }
 

@@ -15,7 +15,7 @@ fn wibble(wobble: List(Int)) -> Nil {
 ----- AFTER ACTION
 fn wibble(wobble: List(Int)) -> Nil {
   case wobble {
-    [1, 2, ..] | [2, 1, ..] as tail -> Nil
+    [1, 2, ..] | [2, 1, ..] -> Nil
     _ -> Nil
   }
 }

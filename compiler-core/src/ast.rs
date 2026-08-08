@@ -3405,17 +3405,18 @@ impl TypedPattern {
                 // Handle the prefix alias: "prefix" as name
                 if let Some(StringPrefixLeftSideAssignment {
                     name,
-                    name_start_position: left_side_assignment_start_position,
-                    location: full_left_side_assignment_location,
+                    name_start_position: left_side_assignment_name_start_position,
+                    location: left_side_assignment_location,
                 }) = left_side_assignment
                 {
-                    let left_side_assignment_location = SrcSpan::new(
-                        *left_side_assignment_start_position,
-                        full_left_side_assignment_location.end,
+                    let left_side_assignment_name_location = SrcSpan::new(
+                        *left_side_assignment_name_start_position,
+                        left_side_assignment_location.end,
                     );
-                    if left_side_assignment_location.contains(byte_index) {
-                        return Some(Located::StringPrefixPatternVariable {
-                            location: left_side_assignment_location,
+                    if left_side_assignment_name_location.contains(byte_index) {
+                        return Some(Located::StringPrefixPatternPrefixAlias {
+                            name_start_position: *left_side_assignment_name_start_position,
+                            location: *left_side_assignment_location,
                             name,
                         });
                     }
@@ -3425,7 +3426,7 @@ impl TypedPattern {
                 if let AssignName::Variable(name) = right_side_assignment
                     && right_location.contains(byte_index)
                 {
-                    return Some(Located::StringPrefixPatternVariable {
+                    return Some(Located::StringPrefixPatternSuffix {
                         location: *right_location,
                         name,
                     });
