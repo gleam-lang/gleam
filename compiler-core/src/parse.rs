@@ -1600,15 +1600,27 @@ where
                     None => None,
                 };
 
-                if elements.is_empty() && tail.as_ref().is_some_and(|pattern| pattern.is_discard())
-                {
-                    self.warnings
-                        .push(DeprecatedSyntaxWarning::DeprecatedListCatchAllPattern {
-                            location: SrcSpan {
-                                start,
-                                end: closing_square_bracket_end,
-                            },
-                        });
+                if elements.is_empty() {
+                    let location = SrcSpan {
+                        start,
+                        end: closing_square_bracket_end,
+                    };
+
+                    match tail.as_ref() {
+                        Some(Pattern::Discard { .. }) => {
+                            self.warnings.push(
+                                DeprecatedSyntaxWarning::DeprecatedListCatchAllPattern { location },
+                            );
+                        }
+                        Some(Pattern::Variable { .. }) => {
+                            self.warnings.push(
+                                DeprecatedSyntaxWarning::DeprecatedListSpreadAsVariablePattern {
+                                    location,
+                                },
+                            );
+                        }
+                        _ => {}
+                    }
                 }
 
                 Pattern::List {
