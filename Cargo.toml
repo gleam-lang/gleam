@@ -1,6 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: 2020 The Gleam contributors
 
+[profile.dev]
+debug = "line-tables-only"
+split-debuginfo = "unpacked"
+
+[profile.dev.package."*"]
+debug = false
+
 [workspace]
 resolver = "2"
 members = [
@@ -19,6 +26,7 @@ members = [
   "format",
   "erlang-term-format",
   "erlang-generation",
+  "src-span",
 ]
 
 # common dependencies
@@ -88,3 +96,5 @@ num-traits = "0.2.19"
 unicode-segmentation = "1.13.2"
 # Checksums
 xxhash-rust = { version = "0", features = ["xxh3"] }
+# Source spans and line numbers
+src-span = { path = "./src-span" }

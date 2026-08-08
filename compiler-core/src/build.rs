@@ -26,7 +26,7 @@ use crate::reference;
 use crate::type_::error::Named;
 use crate::type_::{Type, TypedCallArg};
 use crate::{
-    ast::{SrcSpan, TypedModule},
+    ast::TypedModule,
     config::PackageConfig,
     parse::extra::{Comment, ModuleExtra},
     type_,
@@ -36,7 +36,9 @@ use clap::ValueEnum;
 use ecow::EcoString;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use src_span::SrcSpan;
 use std::fmt::Debug;
+
 use std::sync::Arc;
 use std::time::SystemTime;
 use std::{collections::HashMap, iter::Peekable};
@@ -323,7 +325,7 @@ impl Module {
 
     pub fn compiled_erlang_path(&self) -> Utf8PathBuf {
         let mut path = Utf8PathBuf::from(&module_erlang_name(&self.name));
-        assert!(path.set_extension("erl"), "Couldn't set file extension");
+        assert!(path.set_extension("abstr"), "Couldn't set file extension");
         path
     }
 

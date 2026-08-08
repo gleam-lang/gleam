@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2023 The Gleam contributors
 
+use src_span::LineNumbers;
+
 use super::*;
 use crate::{
     build::SourceFingerprint,
     io::{FileSystemWriter, memory::InMemoryFileSystem},
-    line_numbers::LineNumbers,
 };
 use std::time::Duration;
 

@@ -62,3 +62,15 @@ pub fn main() {
 "
     )
 }
+
+#[test]
+fn tuple_destructuring() {
+    assert_erl!(
+        "
+pub fn main(tuple) {
+  let #(a, _) = tuple
+  a
+}
+"
+    )
+}

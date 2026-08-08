@@ -9,12 +9,12 @@ use lsp_types::{Range, RenameParams, TextEdit, Uri as Url, WorkspaceEdit};
 
 use gleam_core::{
     analyse::name,
-    ast::{self, SrcSpan},
+    ast::{self},
     build::Module,
-    line_numbers::LineNumbers,
     reference::{LabelSyntax, ModuleNameReference, RecordLabel, ReferenceKind},
     type_::{ModuleInterface, error::Named},
 };
+use src_span::{LineNumbers, SrcSpan};
 
 use crate::reference::FindTypeVariableReferences;
 

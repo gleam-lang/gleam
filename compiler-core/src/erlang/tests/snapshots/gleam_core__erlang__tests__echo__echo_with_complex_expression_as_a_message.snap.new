@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/erlang/tests/echo.rs
+assertion_line: 30
+expression: "\npub fn main() {\n  echo 1 as case name() {\n    \"Giacomo\" -> \"hello Jak!\"\n    _ -> \"hello!\"\n  }\n}\n\nfn name() { \"Giacomo\" }\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  echo 1 as case name() {
+    "Giacomo" -> "hello Jak!"
+    _ -> "hello!"
+  }
+}
+
+fn name() { "Giacomo" }
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([main/0]).
+
+-file("project/test/my/mod.gleam", 9).
+-spec name() -> binary().
+name() ->
+    ~"Giacomo".
+
+-file("project/test/my/mod.gleam", 2).
+-spec main() -> integer().
+main() ->
+    echo(1, case name() of
+        ~"Giacomo" ->
+            ~"hello Jak!";
+
+        _ ->
+            ~"hello!"
+    end, ~"project/test/my/mod.gleam", 3).
