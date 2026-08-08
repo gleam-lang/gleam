@@ -151,6 +151,7 @@
   ([John Downey](https://github.com/jtdowney))
 
 ### Bug fixes
+
 - Fixed a bug where on the JavaScript target a case clause whose guard's top
   level operator was `||` could run for a subject its pattern did not match.
   ([John Downey](https://github.com/jtdowney))
@@ -206,5 +207,3 @@
   referencing constants that are aliases to other constants in bit array
   segments, string concatenation and clause guards.
   ([Andrey Kozhev](https://github.com/ankddev))
-
-
