@@ -28,6 +28,10 @@
   to optimise.
   ([John Downey](https://github.com/jtdowney))
 
+- The compiler now gives a clearer error message when `&` is used
+  so it points to `gleam/int` bitwise functions and bit array syntax.
+  ([Jack Programs](https://github.com/jackprogramsjp))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
