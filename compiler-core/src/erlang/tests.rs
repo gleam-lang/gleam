@@ -4,10 +4,12 @@
 use std::time::SystemTime;
 
 use camino::Utf8PathBuf;
+use erlang_generation::{ErlangBuilder, ErlangSourceBuilder};
 use src_span::LineNumbers;
 
 use crate::analyse::TargetSupport;
 use crate::config::PackageConfig;
+use crate::erlang::echo::echo_with_helpers;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::warning::WarningEmitter;
 use crate::{build, inline};
@@ -134,10 +136,12 @@ pub fn compile_test_project(
     built_module.attach_doc_and_module_comments();
 
     let line_numbers = LineNumbers::new(src);
-    module(&built_module.ast, &line_numbers, root).replace(
-        std::include_str!("../../templates/echo.erl"),
-        "% ...omitted code from `templates/echo.erl`...",
-    )
+
+    let mut echo_builder = ErlangSourceBuilder::new(None);
+    echo_with_helpers(&mut echo_builder);
+
+    module(&built_module.ast, line_numbers, root)
+        .replace(&echo_builder.into_output(), "\n% ...omitted echo code...")
 }
 
 #[macro_export]

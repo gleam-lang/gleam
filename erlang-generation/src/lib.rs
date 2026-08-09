@@ -55,6 +55,36 @@ impl ErlangModuleName {
         Self("erlang".into())
     }
 
+    /// The Erlang/OTP `binary` module.
+    pub fn binary() -> Self {
+        Self("binary".into())
+    }
+
+    /// The Erlang/OTP `maps` module.
+    pub fn maps() -> Self {
+        Self("maps".into())
+    }
+
+    /// The Erlang/OTP `io` module.
+    pub fn io() -> Self {
+        Self("io".into())
+    }
+
+    /// The Erlang/OTP `io_lib_format` module.
+    pub fn io_lib_format() -> Self {
+        Self("io_lib_format".into())
+    }
+
+    /// The Erlang/OTP `io_lib` module.
+    pub fn io_lib() -> Self {
+        Self("io_lib".into())
+    }
+
+    /// The Erlang/OTP `lists` module.
+    pub fn lists() -> Self {
+        Self("lists".into())
+    }
+
     /// The Erlang/OTP `unicode` module.
     pub fn unicode() -> Self {
         Self("unicode".into())
@@ -841,8 +871,8 @@ pub trait ErlangBuilder<Output> {
     /// to generate three distinct bits in the following order:
     ///
     /// 1. The expression representing the bit array segment
-    /// 2. The expression representing the segment size (or the atom `default`
-    ///    if you want to use... you guessed it, the default)
+    /// 2. The expression representing the segment size (or call
+    ///    `bit_array_default_segment_size` if you want to use the erlang default)
     /// 3. A list of type specifiers (those are atoms like `utf8`, `binary`,
     ///    ...) or the atom `default` if you're ok with Erlang's default value,
     ///    those are generated using the `bit_array_segment_specifiers` function.
@@ -1282,6 +1312,7 @@ pub trait ErlangBuilder<Output> {
     /// This creates a string literal, where the string is represented as a
     /// bit array with the utf8 bytes making up the string.
     /// This is how Gleam string literals are represented in Erlang.
+    /// This is expected to be passed a valid Gleam string!
     ///
     /// For example:
     ///
@@ -1875,9 +1906,9 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
 
     fn doc_attribute(&mut self, content: DocContent<'_>) {
         self.new_top_level_form();
-        self.code.push_str("-doc(");
+        self.code.push_str("\n-doc(");
         self.doc_content(content);
-        self.code.push_str(").\n")
+        self.code.push_str(").")
     }
 
     fn moduledoc_attribute(&mut self, content: DocContent<'_>) {
@@ -2077,6 +2108,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         arguments_names: impl IntoIterator<Item = (SrcSpan, Name)>,
     ) -> Self::Function {
         self.new_top_level_form();
+        self.code.push('\n');
         self.code.push_str(&quote_atom_name(name));
         self.code.push('(');
 
@@ -3087,9 +3119,14 @@ impl ErlangSourceBuilder {
                 self.code.push_str("end");
             }
             // When we're done generating code for a function spec we want to
-            // add a `.` and go to a new line so we can start generating the
-            // function itself.
-            ErlangSourceBuilderPosition::FunctionSpec => self.code.push_str(".\n"),
+            // add a `.` so we can start generating the function itself.
+            // Notice one crucial detail: we don't add the newline here, because
+            // that will be added by the function that is generated right after
+            // this. We do it this way so that, even if we're generating
+            // functions that have no annotation (like the echo functions
+            // automatically added by the compiler), they will be spaced
+            // correctly!
+            ErlangSourceBuilderPosition::FunctionSpec => self.code.push('.'),
             // When we're done generating the arguments of a function we need
             // to add the closed parentheses for the function call!
             ErlangSourceBuilderPosition::FunctionCall {
