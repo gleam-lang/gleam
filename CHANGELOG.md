@@ -54,6 +54,13 @@
   making the cache files noticeably smaller.
   ([Andrey Kozhev](httos://github.com/ankddev))
 
+- The `ext` protocol is now explicitly disabled when when fetching git
+  dependencies. This protocol is disabled by default since 2015, so this
+  has no impact unless the user is using a very old version of git or has
+  enabled this protocol in their configuration.
+  ([Amr Kadry](httos://github.com/Amrkadry) and
+  ([Louis Pilfold](httos://github.com/lpil))
+
 ### Language server
 
 - The "Generate dynamic decoder" code action is now only offered when the
