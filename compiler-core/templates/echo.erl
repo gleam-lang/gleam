@@ -82,13 +82,26 @@ inspect@bit_array_pieces(Bits, Acc) ->
     end.
 
 inspect@binary(Binary) ->
-    case inspect@maybe_utf8_string(Binary, <<>>) of
-        {ok, InspectedUtf8String} ->
+    case inspect@maybe_utf8_string(Binary, <<>>, true) of
+        {ok, InspectedUtf8String, _IsPrintable} ->
             InspectedUtf8String;
         {error, not_a_utf8_string} ->
             Segments = [erlang:integer_to_list(X) || <<X>> <= Binary],
             ["<<", lists:join(", ", Segments), ">>"]
     end.
+
+inspect@maybe_utf8_string(<<>>, Acc, IsPrintable) ->
+    {ok, <<$", Acc/binary, $">>, IsPrintable};
+inspect@maybe_utf8_string(<<First/utf8, Rest/binary>>, Acc, IsPrintable) ->
+    Escaped = inspect@escape_grapheme(First),
+    StillPrintable = IsPrintable andalso inspect@is_printable_char(First),
+    inspect@maybe_utf8_string(Rest, <<Acc/binary, Escaped/binary>>, StillPrintable);
+inspect@maybe_utf8_string(_, _Acc, _IsPrintable) ->
+    {error, not_a_utf8_string}.
+
+inspect@is_printable_char(C) when C >= 32, C =< 126 -> true;
+inspect@is_printable_char(C) when C == $\n; C == $\r; C == $\t; C == $\f -> true;
+inspect@is_printable_char(_) -> false.
 
 inspect@atom(Atom) ->
     Binary = erlang:atom_to_binary(Atom),
@@ -132,17 +145,6 @@ inspect@function(Function) ->
     ArgsAsciiCodes = lists:seq($a, $a + Arity - 1),
     Args = lists:join(", ", lists:map(fun(Arg) -> <<Arg>> end, ArgsAsciiCodes)),
     ["//fn(", Args, ") { ... }"].
-
-inspect@maybe_utf8_string(Binary, Acc) ->
-    case Binary of
-        <<>> ->
-            {ok, <<$", Acc/binary, $">>};
-        <<First/utf8, Rest/binary>> ->
-            Escaped = inspect@escape_grapheme(First),
-            inspect@maybe_utf8_string(Rest, <<Acc/binary, Escaped/binary>>);
-        _ ->
-            {error, not_a_utf8_string}
-    end.
 
 inspect@escape_grapheme(Char) ->
     case Char of
