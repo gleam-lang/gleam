@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2024 The Gleam contributors
 
-use crate::assert_erl;
+use erlang_generation::{ErlangBuilder, ErlangSourceBuilder};
+
+use crate::{assert_erl, erlang::echo::echo_with_helpers};
+
+#[test]
+pub fn echo_generated_code() {
+    let mut builder = ErlangSourceBuilder::new(None);
+    echo_with_helpers(&mut builder);
+    let echo_code = builder.into_output();
+    insta::assert_snapshot!("echo generated code", echo_code);
+}
 
 #[test]
 pub fn echo_with_a_simple_expression() {

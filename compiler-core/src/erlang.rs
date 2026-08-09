@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2018 The Gleam contributors
 
+mod echo;
 mod pattern;
 #[cfg(test)]
 mod tests;
@@ -254,6 +255,12 @@ impl<'a> Generator<'a> {
         // And finally generate all the functions that the module defined.
         for function in &self.module.definitions.functions {
             FunctionGenerator::new(function, self).module_function(builder, function);
+        }
+
+        // If echo is needed in this module we also have to add the echo
+        // functions.
+        if self.echo_used {
+            echo::echo_with_helpers(builder);
         }
     }
 
@@ -3597,21 +3604,16 @@ pub fn record_definition(record_name: &str, fields: &[(SrcSpan, &str, Arc<Type>)
 
 pub fn module<'a>(
     module: &'a TypedModule,
-    line_numbers: &'a LineNumbers,
+    line_numbers: LineNumbers,
     root: &'a Utf8Path,
 ) -> String {
-    let mut generator = Generator::new(module, line_numbers, root);
+    let mut generator = Generator::new(module, &line_numbers, root);
 
     let module_name = ErlangModuleName::new(&module.name);
     // TODO) remove this clone
     let mut builder = ErlangSourceBuilder::new(Some((module_name, line_numbers.clone())));
     generator.module_document(&mut builder);
-
-    let mut output = builder.into_output();
-    if generator.echo_used {
-        output.push_str(std::include_str!("../templates/echo.erl"));
-    }
-    output
+    builder.into_output()
 }
 
 /// If the given function should be exported from the current Erlang module then

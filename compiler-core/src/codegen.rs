@@ -59,7 +59,7 @@ impl<'a> Erlang<'a> {
         let name = format!("{erl_name}.erl");
         let path = self.build_directory.join(&name);
         let line_numbers = LineNumbers::new(&module.code);
-        let output = erlang::module(&module.ast, &line_numbers, root);
+        let output = erlang::module(&module.ast, line_numbers, root);
         tracing::debug!(name = ?name, "Generated Erlang module");
         writer.write(&path, &output)
     }
