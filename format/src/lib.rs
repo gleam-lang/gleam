@@ -670,13 +670,9 @@ impl<'a, 'doc> Formatter<'a> {
                 right,
                 operator,
                 ..
-            } => self.constant_binary_operator(
-                arena,
-                &operator,
-                left.as_ref(),
-                right.as_ref(),
-                false,
-            ),
+            } => {
+                self.constant_binary_operator(arena, operator, left.as_ref(), right.as_ref(), false)
+            }
 
             Constant::RecordUpdate {
                 module,
@@ -3701,7 +3697,7 @@ impl<'a, 'doc> Formatter<'a> {
             Some(comment) => docvec![
                 arena,
                 TRAILING_COMMA_BREAK_DOCUMENT.nest(arena, INDENT),
-                comment,
+                comment.nest(arena, INDENT),
                 LINE_DOCUMENT,
                 CLOSE_PAREN_DOCUMENT
             ]
