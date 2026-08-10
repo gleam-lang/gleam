@@ -9,7 +9,7 @@
 
 ### Compiler
 
-- When compiling to JavaScript any case clauses found to be unreachable will no
+- When compiling to Erlang any case clauses found to be unreachable will no
   longer generate any code.
   ([Jack Programs](https://github.com/jackprogramsjp))
 
