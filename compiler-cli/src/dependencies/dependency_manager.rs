@@ -276,7 +276,7 @@ where
                         commit
                     } else {
                         // If the package is unlocked or we haven't resolved a version yet, we use
-                        // the ref specified in `gleam.toml`.
+                        // the ref specified in `gleam.toml` or via `gleam add ... --ref`.
                         &ref_
                     };
 

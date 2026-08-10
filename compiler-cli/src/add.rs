@@ -2,12 +2,14 @@
 // SPDX-FileCopyrightText: 2021 The Gleam contributors
 
 use camino::{Utf8Path, Utf8PathBuf};
+use ecow::EcoString;
 use std::fmt::Write as _;
 
 use gleam_core::{
     Error, Result,
     error::{FileIoAction, FileKind},
     paths::ProjectPaths,
+    requirement::Requirement,
 };
 use hexpm::version::{Identifier, Version};
 
@@ -17,7 +19,11 @@ use crate::{
     fs,
 };
 
-pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) -> Result<()> {
+pub fn hex_dependencies(
+    paths: &ProjectPaths,
+    packages_to_add: Vec<String>,
+    dev: bool,
+) -> Result<()> {
     let config = crate::config::root_config(paths)?;
     if packages_to_add.iter().any(|name| name == &config.name) {
         return Err(Error::CannotAddSelfAsDependency { name: config.name });
@@ -43,12 +49,9 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
 
     // Read gleam.toml and manifest.toml so we can insert new deps into it
     let mut gleam_toml = read_toml_edit(&paths.root_config())?;
-    let mut manifest_toml = read_toml_edit(&paths.manifest())?;
 
     // Insert the new deps
     for (added_package, _) in new_package_requirements {
-        let added_package = added_package.to_string();
-
         // Pull the selected version out of the new manifest so we know what it is
         let version = &manifest
             .packages
@@ -61,44 +64,153 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
 
         // Produce a version requirement locked to the major version.
         // i.e. if 1.2.3 is selected we want >= 1.2.3 and < 2.0.0
-        let range = format!(
+        let range = toml_edit::value(format!(
             ">= {} and < {}.0.0",
             version_to_string(version),
             version.major + 1
-        );
+        ));
 
-        // False positive. This package doesn't use the indexing API correctly.
-        #[allow(clippy::indexing_slicing)]
-        {
-            if dev {
-                let canonical_name = "dev_dependencies";
-                let deprecated_name = "dev-dependencies";
-                let has_canonical = gleam_toml.as_table().contains_key(canonical_name);
-                let has_deprecated = gleam_toml.as_table().contains_key(deprecated_name);
-                if !has_canonical && !has_deprecated {
-                    gleam_toml["dev_dependencies"] = toml_edit::table();
-                }
-                let name = if has_deprecated {
-                    deprecated_name
-                } else {
-                    canonical_name
-                };
-                gleam_toml[name][&added_package] = toml_edit::value(range.clone());
-            } else {
-                if !gleam_toml.as_table().contains_key("dependencies") {
-                    gleam_toml["dependencies"] = toml_edit::table();
-                }
-                gleam_toml["dependencies"][&added_package] = toml_edit::value(range.clone());
-            }
-            manifest_toml["requirements"][&added_package]["version"] = range.into();
-        }
+        // The manifest.toml file has already been updated on disk by
+        // `resolve_and_download`; we just have to update `gleam.toml` now.
+        add_dependency_to_gleam_toml(added_package, &mut gleam_toml, range, dev);
     }
 
     // Write the updated config
     fs::write(&paths.root_config(), &gleam_toml.to_string())?;
-    fs::write(&paths.manifest(), &manifest_toml.to_string())?;
 
     Ok(())
+}
+
+pub fn git_dependency(
+    paths: &ProjectPaths,
+    repository: String,
+    ref_: Option<String>,
+    path: Option<Utf8PathBuf>,
+    dev: bool,
+) -> Result<()> {
+    let config = crate::config::root_config(paths)?;
+    // When a user adds a git dependency, we do NOT know its name! The rest
+    // of this dependency resolution code path needs to know the names of the
+    // packages it's working with, and we don't want to maintain a second,
+    // near-identical copy. Instead, we fetch the repo and resolve the name
+    // of the package upfront, letting us continue as usual from here.
+    //
+    // When we get to the bit where we actually download and provide the package,
+    // we can simply reuse the clone from here. A second small request will be made
+    // to fetch the refs, but since they (almost certainly) haven't changed, no more
+    // deltas will be downloaded.
+    let (package_to_add, requirement) = dependencies::resolve_git_requirement(
+        &repository,
+        ref_.as_deref(),
+        path.as_deref(),
+        paths,
+    )?;
+
+    if package_to_add == config.name {
+        return Err(Error::CannotAddSelfAsDependency { name: config.name });
+    }
+
+    let new_package_requirements = vec![(package_to_add.clone(), requirement.clone())];
+    // Insert the new packages into the manifest and perform dependency
+    // resolution to determine suitable versions
+    let manifest = dependencies::resolve_and_download(
+        paths,
+        cli::Reporter::new(),
+        Some((new_package_requirements, dev)),
+        Vec::new(),
+        dependencies::DependencyManagerConfig {
+            use_manifest: dependencies::UseManifest::Yes,
+            check_major_versions: dependencies::CheckMajorVersions::No,
+        },
+    )?;
+
+    // Read gleam.toml and manifest.toml so we can insert new deps into it
+    let mut gleam_toml = read_toml_edit(&paths.root_config())?;
+
+    // Pull the selected version out of the new manifest so we know what it is
+    let version = &manifest
+        .packages
+        .iter()
+        .find(|package| package.name == package_to_add)
+        .expect("Added package not found in resolved manifest")
+        .version;
+
+    tracing::info!(version=%version, "new_package_version_resolved");
+
+    let specifier: toml_edit::Item = match &requirement {
+        Requirement::Git {
+            git,
+            path,
+            ref_: commit_hash,
+        } => {
+            // The manifest's ref will always be a fully resolved commit-SHA, even if the
+            // user provides a branch as the ref. This will pin the dep to the tip of the
+            // branch at the moment the command was run, which is not the user's intent:
+            // they most likely want to TRACK the branch.
+            //
+            // At this point, we know that their ref resolved correctly and the dep has
+            // been added, so we can safely use the value they explicitly provided via --ref
+            // as the ref to insert into gleam.toml.
+            let ref_: EcoString = if let Some(user_ref) = &ref_ {
+                user_ref.into()
+            } else {
+                commit_hash.into()
+            };
+
+            let mut git_specifier = toml_edit::InlineTable::new();
+            let _ = git_specifier.insert("git", git.to_string().into());
+            let _ = git_specifier.insert("ref", ref_.to_string().into());
+
+            if let Some(path) = path {
+                let _ = git_specifier.insert("path", path.to_string().into());
+            }
+
+            git_specifier.into()
+        }
+
+        _ => {
+            unreachable!("dependencies::resolve_git_requirement must return Requirement::Git")
+        }
+    };
+
+    // The manifest.toml file has already been updated on disk by
+    // `resolve_and_download`; we just have to update `gleam.toml` now.
+    add_dependency_to_gleam_toml(package_to_add, &mut gleam_toml, specifier, dev);
+
+    // Write the updated config
+    fs::write(&paths.root_config(), &gleam_toml.to_string())?;
+
+    Ok(())
+}
+
+fn add_dependency_to_gleam_toml(
+    package_to_add: EcoString,
+    gleam_toml: &mut toml_edit::DocumentMut,
+    specifier: toml_edit::Item,
+    dev: bool,
+) {
+    // False positive. This package doesn't use the indexing API correctly.
+    #[allow(clippy::indexing_slicing)]
+    if dev {
+        let canonical_name = "dev_dependencies";
+        let deprecated_name = "dev-dependencies";
+        let has_canonical = gleam_toml.as_table().contains_key(canonical_name);
+        let has_deprecated = gleam_toml.as_table().contains_key(deprecated_name);
+        if !has_canonical && !has_deprecated {
+            gleam_toml["dev_dependencies"] = toml_edit::table();
+        }
+        let name = if has_deprecated {
+            deprecated_name
+        } else {
+            canonical_name
+        };
+        gleam_toml[name][&package_to_add.to_string()] = specifier;
+    } else {
+        if !gleam_toml.as_table().contains_key("dependencies") {
+            gleam_toml["dependencies"] = toml_edit::table();
+        }
+        gleam_toml["dependencies"][&package_to_add.to_string()] = specifier;
+    }
 }
 
 fn read_toml_edit(name: &Utf8Path) -> Result<toml_edit::DocumentMut, Error> {

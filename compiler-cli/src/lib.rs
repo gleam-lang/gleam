@@ -275,6 +275,13 @@ pub enum Command {
     /// for bug fixes that have not yet been published to Hex.
     ///
     ///    [dependencies]
+    ///    wibble = { git = "https://example.com/wibble.git", path = "wibblewobble" }
+    ///
+    /// A Git dependency from a monorepo. This is useful if you like to organise
+    /// related packages in one shared Git repository. Provide the path from
+    /// the root of your repository to the Gleam package you wish to use.
+    ///
+    ///    [dependencies]
     ///    wibble = { path = "../wibble" }
     ///
     /// A local dependency, on your computer. This is useful for testing and
@@ -416,19 +423,57 @@ pub enum Command {
     /// Add a package as a non-production dependency:
     ///     gleam add --dev wibble
     ///
+    /// Add a package from a Git source:
+    ///     gleam add --git https://github.com/gleam-lang/json
+    ///
+    /// Add a package from Git, referencing a specific branch, commit, or tag:
+    ///     gleam add --git git@github.com:gleam-lang/crypto --ref main
+    ///
+    /// Without `--ref`, the dependency will be pinned to the newest commit on
+    /// the repository's default branch. If you would like to _track_ a branch
+    /// instead, use `--ref <branch>`.
+    ///
     /// You can also edit `gleam.toml` directly, for further control over your
     /// package dependencies. Run `gleam help deps` for documentation on the
     /// format.
     ///
-    #[command(verbatim_doc_comment)]
+    #[command(
+        verbatim_doc_comment,
+        override_usage = "
+        gleam add [OPTIONS] [PACKAGES]
+        gleam add [OPTIONS] --git <URI> [--ref <REF>] [--path <PATH>]
+    "
+    )]
     Add {
         /// The names of Hex packages to add
-        #[arg(required = true)]
-        packages: Vec<String>,
+        #[arg(required_unless_present = "git")]
+        packages: Option<Vec<String>>,
 
         /// Add the packages as dev-only dependencies
         #[arg(long)]
         dev: bool,
+
+        /// Add a package from a remote git repository
+        #[arg(
+            long,
+            value_name = "URI",
+            help_heading = "Git Dependencies",
+            conflicts_with = "packages"
+        )]
+        git: Option<String>,
+
+        /// The tag, branch, or commit to check out
+        #[arg(
+            long,
+            alias = "ref",
+            help_heading = "Git Dependencies",
+            conflicts_with = "packages"
+        )]
+        ref_: Option<String>,
+
+        /// The path inside the git repo where the package is located
+        #[arg(long, help_heading = "Git Dependencies", conflicts_with = "packages")]
+        path: Option<String>,
     },
 
     /// Remove project dependencies
@@ -615,9 +660,22 @@ impl Command {
                 username_or_email,
             })) => owner::transfer(package, username_or_email),
 
-            Self::Add { packages, dev } => {
+            Self::Add {
+                packages,
+                dev,
+                git: git_uri,
+                ref_: git_ref,
+                path,
+            } => {
                 let paths = find_project_paths(directory)?;
-                add::command(&paths, packages, dev)
+
+                if let Some(packages) = packages {
+                    add::hex_dependencies(&paths, packages, dev)
+                } else if let Some(git_uri) = git_uri {
+                    add::git_dependency(&paths, git_uri, git_ref, path.map(Utf8PathBuf::from), dev)
+                } else {
+                    unreachable!("Exactly one of PACKAGES and --git must be provided")
+                }
             }
 
             Self::Remove { packages } => {
@@ -1031,4 +1089,27 @@ fn download_dependencies(paths: &ProjectPaths) -> Result<()> {
         },
     )?;
     Ok(())
+}
+
+#[test]
+fn test_gleam_add_option_validation() {
+    assert!(Command::try_parse_from(&["gleam", "add", "lustre", "birdie"]).is_ok());
+    assert!(Command::try_parse_from(&["gleam", "add", "--dev", "lustre"]).is_ok());
+    assert!(
+        Command::try_parse_from(&[
+            "gleam",
+            "add",
+            "--git=repo",
+            "--ref=branch",
+            "--path=subdir"
+        ])
+        .is_ok()
+    );
+    assert!(
+        Command::try_parse_from(&["gleam", "add", "--dev", "--git=repo", "--ref=branch"]).is_ok()
+    );
+    assert!(Command::try_parse_from(&["gleam", "add", "--ref=12345"]).is_err());
+    assert!(Command::try_parse_from(&["gleam", "add", "lustre", "--git=repo"]).is_err());
+    assert!(Command::try_parse_from(&["gleam", "add"]).is_err());
+    assert!(Command::try_parse_from(&["gleam", "add", "lustre", "--ref=branch"]).is_err());
 }
