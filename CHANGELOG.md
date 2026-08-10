@@ -63,7 +63,6 @@
 ### Formatter
 
 ### Bug fixes
-
 - Fixed a bug where on the JavaScript target a case clause whose guard's top
   level operator was `||` could run for a subject its pattern did not match.
   ([John Downey](https://github.com/jtdowney))
@@ -84,9 +83,15 @@
   types with a same-named import alias.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Fixed a bug where the compiler would suggest wrapping a mismatched type in
+  `Ok()` even when doing so would not fix the type unification error.
+  ([Hari Mohan](https://github.com/seafoamteal))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when
   referencing constants that are aliases to other constants in bit array
   segments, string concatenation and clause guards.
   ([Andrey Kozhev](https://github.com/ankddev))
+
+
