@@ -3610,8 +3610,7 @@ pub fn module<'a>(
     let mut generator = Generator::new(module, &line_numbers, root);
 
     let module_name = ErlangModuleName::new(&module.name);
-    // TODO) remove this clone
-    let mut builder = ErlangSourceBuilder::new(Some((module_name, line_numbers.clone())));
+    let mut builder = ErlangSourceBuilder::new(Some(module_name));
     generator.module_document(&mut builder);
     builder.into_output()
 }

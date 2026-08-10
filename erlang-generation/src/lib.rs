@@ -216,7 +216,7 @@ pub trait ErlangBuilder<Output> {
     /// It's optional because it might not always be needed. For example when
     /// producing `-record` annotations there's no need to have a module name.
     ///
-    fn new(module_info: Option<(ErlangModuleName, LineNumbers)>) -> Self;
+    fn new(module_name: Option<ErlangModuleName>) -> Self;
 
     /// Consumes the given `ErlangBuilder` turning it into some other
     /// representation.
@@ -1824,10 +1824,10 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
     type UnionType = ();
     type TypeSpec = ();
 
-    fn new(module: Option<(ErlangModuleName, LineNumbers)>) -> Self {
+    fn new(module_name: Option<ErlangModuleName>) -> Self {
         Self {
-            code: if let Some((module, _)) = module {
-                format!("-module({}).\n", quote_atom_name(&module.0))
+            code: if let Some(module_name) = module_name {
+                format!("-module({}).\n", quote_atom_name(&module_name.0))
             } else {
                 String::new()
             },
@@ -3763,7 +3763,7 @@ fn is_erlang_reserved_word(name: &str) -> bool {
 /// This is a structure that implements the `ErlangBuilder` interface, producing
 /// the binary Erlang Abstract Format representation of a module.
 /// <https://www.erlang.org/doc/apps/erts/absform.html>
-pub struct ErlangBinaryBuilder {
+pub struct ErlangBinaryBuilder<'line_numbers> {
     /// This keeps track of the number of top level forms that have been
     /// generated for this module.
     top_level_forms: u32,
@@ -3782,7 +3782,7 @@ pub struct ErlangBinaryBuilder {
     /// inside the module.
     /// Might be null in case we're not generating code for a module, for
     /// example if we're just generating record headers!
-    line_numbers: Option<LineNumbers>,
+    line_numbers: Option<&'line_numbers LineNumbers>,
 }
 
 #[derive(Debug)]
@@ -3958,7 +3958,7 @@ enum ExpectedBinaryFunctionTypeItem {
     ReturnType,
 }
 
-impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
+impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers> {
     type Function = (erlang_term_format::ListEnder, erlang_term_format::ListEnder);
     type Call = erlang_term_format::ListEnder;
     type CalledExpression = ();
@@ -3987,16 +3987,16 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
 
     type TypeSpec = Vec<EcoString>;
 
-    fn new(module_info: Option<(ErlangModuleName, LineNumbers)>) -> Self {
+    fn new(module_name: Option<ErlangModuleName>) -> Self {
         let mut etf = erlang_term_format::TermBuilder::new();
         let module_ender = etf.start_list();
 
-        let top_level_forms = match module_info.as_ref() {
+        let top_level_forms = match module_name.as_ref() {
             None => 0,
             // If there's a `module` declaration we need to add it to the
             // module.
             // The line numbers are not needed by the pretty printer!
-            Some((module_name, _line_numbers)) => {
+            Some(module_name) => {
                 // The EAF representation of `-module(Module).` is
                 // `{attribute, ANNOTATION, module, Module}`.
                 etf.small_tuple(4);
@@ -4013,7 +4013,7 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
             top_level_forms,
             module_ender,
             etf,
-            line_numbers: module_info.map(|(_, line_numbers)| line_numbers),
+            line_numbers: None,
             position: vec![],
         }
     }
@@ -5204,7 +5204,14 @@ impl ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder {
     }
 }
 
-impl ErlangBinaryBuilder {
+impl<'line_numbers> ErlangBinaryBuilder<'line_numbers> {
+    /// This sets the `LineNumbers` this builder should use when producing
+    /// annotations for the nodes of the current module.
+    ///
+    pub fn set_line_numbers(&mut self, line_numbers: &'line_numbers LineNumbers) {
+        self.line_numbers = Some(line_numbers)
+    }
+
     fn annotation(&mut self, location: Option<SrcSpan>) {
         match (location, &self.line_numbers) {
             (Some(src_span), Some(line_numbers)) => {
@@ -5714,46 +5721,5 @@ impl ErlangBinaryBuilder {
         }
 
         chars
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::*;
-
-    #[test]
-    fn wibble() {
-        let mut builder = ErlangBinaryBuilder::new(Some((
-            ErlangModuleName::new("wibble"),
-            LineNumbers::new(""),
-        )));
-
-        builder.moduledoc_attribute(DocContent::String("Hello 📖🐦‍⬛"));
-        builder.export_attribute([("wibble", 1)]);
-
-        let fun = builder.start_function(
-            SrcSpan::default(),
-            "wibble",
-            1,
-            [(SrcSpan::default(), "Name")],
-        );
-        builder.match_operator(SrcSpan::default());
-        builder.int_pattern(SrcSpan::default(), 1.into());
-        builder.variable(SrcSpan::default(), "Name");
-        builder.int(SrcSpan::default(), 1.into());
-        builder.end_function(fun);
-
-        let output = builder
-            .into_output()
-            .iter()
-            .map(|n| format!("{n}"))
-            .join(", ");
-        println!(
-            "
-            simplifile:write_bits(\"wibble.beam\", erlang:element(3, compile:forms(binary_to_term(<<{output}>>)))).
-
-            binary_to_term(<<{output}>>).
-            "
-        );
     }
 }
