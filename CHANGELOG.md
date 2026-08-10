@@ -75,14 +75,14 @@
 
 - The build tool now stores its build cache in a more compact binary format,
   making the cache files noticeably smaller.
-  ([Andrey Kozhev](httos://github.com/ankddev))
+  ([Andrey Kozhev](https://github.com/ankddev))
 
 - The `ext` protocol is now explicitly disabled when when fetching git
   dependencies. This protocol is disabled by default since 2015, so this
   has no impact unless the user is using a very old version of git or has
   enabled this protocol in their configuration.
-  ([Amr Kadry](httos://github.com/Amrkadry) and
-  ([Louis Pilfold](httos://github.com/lpil))
+  ([Amr Kadry](https://github.com/Amrkadry) and
+  ([Louis Pilfold](https://github.com/lpil))
 
 ### Language server
 
