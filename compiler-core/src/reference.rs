@@ -221,11 +221,11 @@ pub struct LabelDefinition {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum LabelOwner {
-    /// Labels of types (record fields)
-    Type {
-        /// The module the type this label belongs to is defined in.
+    /// Labels of record fields
+    Record {
+        /// The module the record is defined in.
         module: EcoString,
-        /// The name of the type this label belongs to.
+        /// The name of the type of the record.
         name: EcoString,
     },
     /// Labels of function arguments
@@ -238,10 +238,10 @@ pub enum LabelOwner {
 }
 
 impl LabelOwner {
-    /// The module the type or function this label belongs to is defined in.
+    /// The module the owner is defined in.
     pub fn module(&self) -> &EcoString {
         match self {
-            LabelOwner::Type { module, .. } | LabelOwner::Function { module, .. } => module,
+            LabelOwner::Record { module, .. } | LabelOwner::Function { module, .. } => module,
         }
     }
 }

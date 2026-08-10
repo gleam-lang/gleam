@@ -1263,7 +1263,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     && !argument.is_implicit()
                                 {
                                     self.environment.references.register_label_reference(
-                                        LabelOwner::Type {
+                                        LabelOwner::Record {
                                             module: type_module.clone(),
                                             name: type_name.clone(),
                                         },
