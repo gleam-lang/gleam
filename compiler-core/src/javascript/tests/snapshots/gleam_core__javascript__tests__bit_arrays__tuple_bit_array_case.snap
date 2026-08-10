@@ -14,8 +14,7 @@ pub fn go(x) {
 
 ----- COMPILED JAVASCRIPT
 export function go(x) {
-  let $ = x[0];
-  if ($.bitSize === 0) {
+  if (x[0].bitSize === 0) {
     return 1;
   } else {
     return 2;

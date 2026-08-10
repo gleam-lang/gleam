@@ -41,21 +41,18 @@ export function go(x, y) {
       "Pattern match failed, no pattern matched the value.",
       { value: x, start: 41, end: 59, pattern_start: 52, pattern_end: 55 }
     )
+  } else if (x.tail instanceof $Empty) {
+    a = x.head;
   } else {
-    let $ = x.tail;
-    if ($ instanceof $Empty) {
-      a = x.head;
-    } else {
-      throw makeError(
-        "let_assert",
-        FILEPATH,
-        "my/mod",
-        4,
-        "go",
-        "Pattern match failed, no pattern matched the value.",
-        { value: x, start: 41, end: 59, pattern_start: 52, pattern_end: 55 }
-      )
-    }
+    throw makeError(
+      "let_assert",
+      FILEPATH,
+      "my/mod",
+      4,
+      "go",
+      "Pattern match failed, no pattern matched the value.",
+      { value: x, start: 41, end: 59, pattern_start: 52, pattern_end: 55 }
+    )
   }
   if (x instanceof $Empty) {
     throw makeError(
@@ -68,8 +65,8 @@ export function go(x, y) {
       { value: x, start: 62, end: 83, pattern_start: 73, pattern_end: 79 }
     )
   } else {
-    let $1 = x.tail;
-    if ($1 instanceof $Empty) {
+    let $ = x.tail;
+    if ($ instanceof $Empty) {
       throw makeError(
         "let_assert",
         FILEPATH,
@@ -79,51 +76,16 @@ export function go(x, y) {
         "Pattern match failed, no pattern matched the value.",
         { value: x, start: 62, end: 83, pattern_start: 73, pattern_end: 79 }
       )
-    } else {
-      let $2 = $1.tail;
-      if ($2 instanceof $Empty) {
-        let $3 = x.head;
-        if ($3 === 1) {
-          let $4 = $1.head;
-          if (!($4 === 2)) {
-            throw makeError(
-              "let_assert",
-              FILEPATH,
-              "my/mod",
-              5,
-              "go",
-              "Pattern match failed, no pattern matched the value.",
-              {
-                value: x,
-                start: 62,
-                end: 83,
-                pattern_start: 73,
-                pattern_end: 79
-              }
-            )
-          }
-        } else {
-          throw makeError(
-            "let_assert",
-            FILEPATH,
-            "my/mod",
-            5,
-            "go",
-            "Pattern match failed, no pattern matched the value.",
-            { value: x, start: 62, end: 83, pattern_start: 73, pattern_end: 79 }
-          )
-        }
-      } else {
-        throw makeError(
-          "let_assert",
-          FILEPATH,
-          "my/mod",
-          5,
-          "go",
-          "Pattern match failed, no pattern matched the value.",
-          { value: x, start: 62, end: 83, pattern_start: 73, pattern_end: 79 }
-        )
-      }
+    } else if (!($.tail instanceof $Empty && x.head === 1 && $.head === 2)) {
+      throw makeError(
+        "let_assert",
+        FILEPATH,
+        "my/mod",
+        5,
+        "go",
+        "Pattern match failed, no pattern matched the value.",
+        { value: x, start: 62, end: 83, pattern_start: 73, pattern_end: 79 }
+      )
     }
   }
   let b;
@@ -138,8 +100,8 @@ export function go(x, y) {
       { value: y, start: 86, end: 113, pattern_start: 97, pattern_end: 109 }
     )
   } else {
-    let $5 = y.tail;
-    if ($5 instanceof $Empty) {
+    let $1 = y.tail;
+    if ($1 instanceof $Empty) {
       throw makeError(
         "let_assert",
         FILEPATH,
@@ -149,40 +111,18 @@ export function go(x, y) {
         "Pattern match failed, no pattern matched the value.",
         { value: y, start: 86, end: 113, pattern_start: 97, pattern_end: 109 }
       )
+    } else if ($1.tail instanceof $Empty && $1.head[0] === 3) {
+      b = $1.head[1];
     } else {
-      let $6 = $5.tail;
-      if ($6 instanceof $Empty) {
-        let $7 = $5.head[0];
-        if ($7 === 3) {
-          b = $5.head[1];
-        } else {
-          throw makeError(
-            "let_assert",
-            FILEPATH,
-            "my/mod",
-            6,
-            "go",
-            "Pattern match failed, no pattern matched the value.",
-            {
-              value: y,
-              start: 86,
-              end: 113,
-              pattern_start: 97,
-              pattern_end: 109
-            }
-          )
-        }
-      } else {
-        throw makeError(
-          "let_assert",
-          FILEPATH,
-          "my/mod",
-          6,
-          "go",
-          "Pattern match failed, no pattern matched the value.",
-          { value: y, start: 86, end: 113, pattern_start: 97, pattern_end: 109 }
-        )
-      }
+      throw makeError(
+        "let_assert",
+        FILEPATH,
+        "my/mod",
+        6,
+        "go",
+        "Pattern match failed, no pattern matched the value.",
+        { value: y, start: 86, end: 113, pattern_start: 97, pattern_end: 109 }
+      )
     }
   }
   let head;

@@ -24,6 +24,33 @@
 - Constants that are assigned a type variant are now narrowed within the module they
   were defined.
   ([James Dolan](https://github.com/jamesdolan16))
+  
+- Pattern matching on the JavaScript target now generates flatter code, with
+  nested `if` statements collapsed into a single condition and fewer
+  intermediate variables. This makes little difference to the size of a bundled
+  application, but the resulting code has fewer branches for JavaScript engines
+  to optimise.
+  ([John Downey](https://github.com/jtdowney))
+
+- When producing TypeScript annotations, the compiler now produces overloads to
+  narrow the type of variants of a custom type. For example, given the following
+  type:
+
+  ```gleam
+  pub type Box(value) {
+    Full(value)
+    Empty
+  }
+  ```
+
+  Will now produce these two additional overloads:
+
+  ```ts
+  export function Box$isFull<I>(value: Box$<I>): value is Full<I>;
+  export function Box$isEmpty<I>(value: Box$<I>): value is Empty;
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Build tool
 

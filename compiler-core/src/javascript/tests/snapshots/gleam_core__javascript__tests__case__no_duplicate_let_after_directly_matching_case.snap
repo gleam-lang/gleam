@@ -20,8 +20,7 @@ pub fn go() {
 export function go() {
   let _block;
   let $ = [1, 2];
-  let $1 = $[0];
-  if ($1 === 1) {
+  if ($[0] === 1) {
     let b = $[1];
     _block = b;
   } else {
@@ -29,7 +28,7 @@ export function go() {
     _block = b;
   }
   let x = _block;
-  let $2 = [x, 3];
-  let a = $2[0];
+  let $1 = [x, 3];
+  let a = $1[0];
   return a;
 }

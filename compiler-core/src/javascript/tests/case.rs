@@ -1127,3 +1127,51 @@ pub fn go(bit_array) {
 "
     );
 }
+
+#[test]
+fn single_choice_switch_does_not_bind_subject() {
+    assert_js!(
+        "
+pub type Wibble {
+  Wibble(Int, Int)
+  Wobble
+}
+
+pub fn go(x) {
+  case x {
+    Wibble(1, 2) -> 1
+    _ -> 2
+  }
+}
+"
+    );
+}
+
+#[test]
+fn single_choice_switch_binds_subject_referenced_more_than_once() {
+    assert_js!(
+        "
+pub fn go(sequences) {
+  case sequences {
+    [] -> 0
+    [_] -> 1
+    [a, b, ..rest] -> a + b + go(rest)
+  }
+}
+"
+    );
+}
+
+#[test]
+fn single_choice_switch_binds_subject_referenced_by_guard() {
+    assert_js!(
+        "
+pub fn go(x) {
+  case x {
+    [a, b, ..rest] if b > 0 -> [a, b, ..rest]
+    _ -> []
+  }
+}
+"
+    );
+}

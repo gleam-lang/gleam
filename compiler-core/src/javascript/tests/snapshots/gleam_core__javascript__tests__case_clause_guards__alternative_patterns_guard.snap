@@ -26,18 +26,15 @@ export function main(xs) {
       } else {
         return 0;
       }
-    } else {
-      let $1 = $.tail;
-      if ($1 instanceof $Empty) {
-        let x = $.head;
-        if (x === 1) {
-          return x;
-        } else {
-          return 0;
-        }
+    } else if ($.tail instanceof $Empty) {
+      let x = $.head;
+      if (x === 1) {
+        return x;
       } else {
         return 0;
       }
+    } else {
+      return 0;
     }
   }
 }

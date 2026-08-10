@@ -24,13 +24,10 @@ export function go(xs) {
     let $ = xs.tail;
     if ($ instanceof $Empty) {
       return 1;
+    } else if ($.tail instanceof $Empty) {
+      return 2;
     } else {
-      let $1 = $.tail;
-      if ($1 instanceof $Empty) {
-        return 2;
-      } else {
-        return 9999;
-      }
+      return 9999;
     }
   }
 }
