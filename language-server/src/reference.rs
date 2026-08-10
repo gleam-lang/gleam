@@ -70,7 +70,7 @@ pub enum Referenced {
         name: EcoString,
     },
     Label {
-        /// The type or function this label belongs to.
+        /// The record or function this label belongs to.
         owner: LabelOwner,
         label: EcoString,
         location: SrcSpan,
@@ -447,7 +447,7 @@ pub fn reference_for_ast_node(
         } => record_type
             .named_type_name()
             .map(|(module, name)| Referenced::Label {
-                owner: LabelOwner::Type { module, name },
+                owner: LabelOwner::Record { module, name },
                 label: label.clone(),
                 location,
             }),
@@ -460,7 +460,7 @@ pub fn reference_for_ast_node(
             location,
             ..
         } => Some(Referenced::Label {
-            owner: LabelOwner::Type {
+            owner: LabelOwner::Record {
                 module: current_module.clone(),
                 name: type_name,
             },

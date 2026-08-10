@@ -718,7 +718,7 @@ impl<'a> Located<'a> {
                 let (module, name) = record_type.named_type_name()?;
                 self.label_definition_location(
                     importable_modules,
-                    reference::LabelOwner::Type { module, name },
+                    reference::LabelOwner::Record { module, name },
                     label,
                     Some(variant),
                 )
@@ -729,7 +729,7 @@ impl<'a> Located<'a> {
                 let (module, name) = record_type.named_type_name()?;
                 self.label_definition_location(
                     importable_modules,
-                    reference::LabelOwner::Type { module, name },
+                    reference::LabelOwner::Record { module, name },
                     label,
                     None,
                 )
