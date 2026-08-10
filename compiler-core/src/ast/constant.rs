@@ -144,6 +144,42 @@ impl<T> Constant<T> {
             None
         }
     }
+
+    pub fn is_tuple(&self) -> bool {
+        match self {
+            Constant::Tuple { .. } => true,
+
+            Constant::Int { .. }
+            | Constant::Float { .. }
+            | Constant::String { .. }
+            | Constant::List { .. }
+            | Constant::Record { .. }
+            | Constant::RecordUpdate { .. }
+            | Constant::BitArray { .. }
+            | Constant::Var { .. }
+            | Constant::BinaryOperator { .. }
+            | Constant::Invalid { .. }
+            | Constant::Todo { .. } => false,
+        }
+    }
+
+    pub fn is_binop(&self) -> bool {
+        match self {
+            Constant::BinaryOperator { .. } => true,
+
+            Constant::Tuple { .. }
+            | Constant::Int { .. }
+            | Constant::Float { .. }
+            | Constant::String { .. }
+            | Constant::List { .. }
+            | Constant::Record { .. }
+            | Constant::RecordUpdate { .. }
+            | Constant::BitArray { .. }
+            | Constant::Var { .. }
+            | Constant::Invalid { .. }
+            | Constant::Todo { .. } => false,
+        }
+    }
 }
 
 impl TypedConstant {
