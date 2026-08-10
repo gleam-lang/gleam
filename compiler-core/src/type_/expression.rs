@@ -4353,8 +4353,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 BinOp::Concatenate => self.infer_constant_string_concatenation(
                     location,
                     operator_start,
-                    left,
-                    right,
+                    *left,
+                    *right,
                     operator,
                 ),
             },
@@ -4392,12 +4392,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         location: SrcSpan,
         operator_start: u32,
-        left: Box<UntypedConstant>,
-        right: Box<UntypedConstant>,
+        left: UntypedConstant,
+        right: UntypedConstant,
         operator: BinOp,
     ) -> TypedConstant {
         self.track_feature_usage(FeatureKind::ConstantStringConcatenation, location);
-        let left = self.infer_const(&None, *left);
+        let left = self.infer_const(&None, left);
 
         if let Err(error) = unify(string(), left.type_()) {
             self.problems.error(
@@ -4407,7 +4407,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             );
         }
 
-        let right = self.infer_const(&None, *right);
+        let right = self.infer_const(&None, right);
         if let Err(error) = unify(string(), right.type_()) {
             self.problems.error(
                 error
