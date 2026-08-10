@@ -972,6 +972,7 @@ pub struct Release<Meta> {
     #[serde(alias = "checksum", deserialize_with = "deserialize_checksum")]
     pub outer_checksum: Vec<u8>,
     /// Security advisories affecting this release of the package
+    #[serde(default)]
     pub security_advisories: Vec<SecurityAdvisory>,
     /// This is not present in all API endpoints so may be absent sometimes.
     pub meta: Meta,
