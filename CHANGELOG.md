@@ -48,6 +48,29 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler is now fault tolerant when it runs into unsupported binary
+  operators used in constants. Instead than stopping to analyse the whole module
+  the compiler now produces an error message explaining the operator is not
+  supported. For example:
+
+  ```gleam
+  pub const wibble = 1.1 *. 11.0
+  ```
+
+  Results in the following error:
+
+  ```
+  error: Unsupported operator in constant expression
+    ┌─ /Users/giacomocavalieri/Desktop/prova/src/prova.gleam:1:24
+    │
+  1 │ pub const wibble = 1.1 *. 11.0
+    │                        ^^
+
+  This operator is currently not supported in constants.
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
