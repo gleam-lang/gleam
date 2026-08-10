@@ -54,6 +54,9 @@
   making the cache files noticeably smaller.
   ([Andrey Kozhev](httos://github.com/ankddev))
 
+- Make links to Tangled repositories use their new domain & URL format.
+  ([Naomi Roberts](https://github.com/naomieow))
+
 ### Language server
 
 - The "Generate dynamic decoder" code action is now only offered when the
