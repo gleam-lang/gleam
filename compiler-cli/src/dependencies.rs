@@ -1355,7 +1355,7 @@ fn prepare_git_clone(clone_path: &Utf8Path, repo: &str, format: CloneFormat) -> 
             // run shell commands by inserting them into the git remote value,
             // e.g. `"ext::sh -c 'touch /tmp/pwned'"`.
             // This protocol has been disabled by default in git since 2015,
-            // but it's good to extra careful.
+            // but it's good to be extra careful.
             .arg("-c")
             .arg("protocol.ext.allow=never")
             // Fetch the remote named "origin"
