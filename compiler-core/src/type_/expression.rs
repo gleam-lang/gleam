@@ -1427,7 +1427,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     // reference to the field for the language server.
                     if let Some((type_module, type_name)) = record.type_().named_type_name() {
                         self.environment.references.register_label_reference(
-                            LabelOwner::Type {
+                            LabelOwner::Record {
                                 module: type_module,
                                 name: type_name,
                             },
@@ -2822,7 +2822,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                 if let Some((type_module, type_name)) = return_type.named_type_name() {
                     self.environment.references.register_label_reference(
-                        LabelOwner::Type {
+                        LabelOwner::Record {
                             module: type_module,
                             name: type_name,
                         },
@@ -3836,7 +3836,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let label_owner = if fun.is_record_constructor_function() {
             return_type
                 .named_type_name()
-                .map(|(module, name)| LabelOwner::Type { module, name })
+                .map(|(module, name)| LabelOwner::Record { module, name })
         } else {
             fun.module_function_name()
                 .map(|(module, name)| LabelOwner::Function {

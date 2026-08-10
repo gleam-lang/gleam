@@ -299,7 +299,7 @@ impl<'expression_typer, 'env, 'module> ConstantTyper<'expression_typer, 'env, 'm
 
                     if let Some((type_module, type_name)) = expected_type.named_type_name() {
                         self.typer.environment.references.register_label_reference(
-                            LabelOwner::Type {
+                            LabelOwner::Record {
                                 module: type_module,
                                 name: type_name,
                             },
@@ -744,7 +744,7 @@ impl<'expression_typer, 'env, 'module> ConstantTyper<'expression_typer, 'env, 'm
                     && let Some(label_location) = argument.label_location()
                 {
                     self.typer.environment.references.register_label_reference(
-                        LabelOwner::Type {
+                        LabelOwner::Record {
                             module: type_module.clone(),
                             name: type_name.clone(),
                         },
@@ -761,7 +761,7 @@ impl<'expression_typer, 'env, 'module> ConstantTyper<'expression_typer, 'env, 'm
                     && argument.implicit.is_none()
                 {
                     self.typer.environment.references.register_label_reference(
-                        LabelOwner::Type {
+                        LabelOwner::Record {
                             module: type_module.clone(),
                             name: type_name.clone(),
                         },
