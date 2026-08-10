@@ -223,3 +223,50 @@ fn handle_fish(fish: Fish) {
 "#
     );
 }
+
+#[test]
+fn narrow_const_variant() {
+    assert_module_infer!(
+        "
+pub type Ty {
+  StrVar(str: String)
+  IntVar(int: Int)
+}
+
+pub const foo = IntVar(42)
+
+pub fn main() {
+  foo.int
+}
+",
+        vec![
+          ("IntVar", "fn(Int) -> Ty"),
+          ("StrVar", "fn(String) -> Ty"),
+          ("foo", "Ty"),
+          ("main", "fn() -> Int")
+        ],
+    );
+}
+
+#[test]
+fn const_variant_narrowing_is_not_public() {
+  assert_module_error!(
+    (
+      "other/module",
+      "
+pub type Ty { 
+  IntVar(int: Int)
+  StrVar(str: String)
+}
+pub const foobar = IntVar(42)
+"
+    ),
+    "
+import other/module
+
+pub fn main() {
+  module.foobar.int
+}
+"
+  );
+}
