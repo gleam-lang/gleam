@@ -193,6 +193,10 @@
   alternative patterns.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Fixed a bug where the language server would not suggest prefix pattern
+  prefix alias.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when
