@@ -40,6 +40,24 @@ pub fn long_comparison_chain() {
 }
 
 #[test]
+pub fn long_constant_comparison_chain() {
+    assert_format!(
+        r#"pub const wibble =
+  trying_a_comparison > with_ints
+  && trying_other_comparisons < with_ints
+  || trying_other_comparisons <= with_ints
+  && trying_other_comparisons >= with_ints
+  || and_now_an_equality_check == with_a_const
+  && trying_other_comparisons >. with_floats
+  || trying_other_comparisons <. with_floats
+  && trying_other_comparisons <=. with_floats
+  || trying_other_comparisons >=. with_floats
+  && wibble <> wobble
+"#
+    );
+}
+
+#[test]
 pub fn long_chain_mixing_operators() {
     assert_format!(
         r#"pub fn main() {
@@ -56,6 +74,28 @@ pub fn long_chain_mixing_operators() {
   == variable *. variable /. variable -. variable +. variable
   || wibble *. wobble >=. 11
 }
+"#
+    );
+}
+
+#[test]
+pub fn long_constant_chain_mixing_operators() {
+    assert_format!(
+        r#"pub const wibble =
+  variable + variable - variable * variable / variable
+  == variable * variable / variable - variable + variable
+  || wibble * wobble > 11
+"#
+    );
+}
+
+#[test]
+pub fn long_constant_chain_mixing_operators_2() {
+    assert_format!(
+        r#"pub const wibble =
+  variable +. variable -. variable *. variable /. variable
+  == variable *. variable /. variable -. variable +. variable
+  || wibble *. wobble >=. 11
 "#
     );
 }
@@ -219,6 +259,19 @@ fn binop_inside_list_gets_nested() {
 }
 
 #[test]
+fn constant_binop_inside_list_gets_nested() {
+    assert_format!(
+        r#"pub const wibble = [
+  wibble,
+  a_variable_with_a_long_name
+    <> another_variable_with_a_long_name
+    <> yet_another_variable_with_a_long_name,
+]
+"#
+    );
+}
+
+#[test]
 fn binop_inside_list_is_not_nested_if_only_item() {
     assert_format!(
         r#"pub fn main() {
@@ -228,6 +281,18 @@ fn binop_inside_list_is_not_nested_if_only_item() {
     <> yet_another_variable_with_a_long_name,
   ]
 }
+"#
+    );
+}
+
+#[test]
+fn constant_binop_inside_list_is_not_nested_if_only_item() {
+    assert_format!(
+        r#"pub const wibble = [
+  a_variable_with_a_long_name
+  <> another_variable_with_a_long_name
+  <> yet_another_variable_with_a_long_name,
+]
 "#
     );
 }
@@ -248,6 +313,19 @@ fn binop_inside_tuple_gets_nested() {
 }
 
 #[test]
+fn constant_binop_inside_tuple_gets_nested() {
+    assert_format!(
+        r#"pub const wibble = #(
+  wibble,
+  a_variable_with_a_long_name
+    <> another_variable_with_a_long_name
+    <> yet_another_variable_with_a_long_name,
+)
+"#
+    );
+}
+
+#[test]
 fn binop_inside_tuple_is_not_nested_if_only_item() {
     assert_format!(
         r#"pub fn main() {
@@ -257,6 +335,18 @@ fn binop_inside_tuple_is_not_nested_if_only_item() {
     <> yet_another_variable_with_a_long_name,
   )
 }
+"#
+    );
+}
+
+#[test]
+fn constant_binop_inside_tuple_is_not_nested_if_only_item() {
+    assert_format!(
+        r#"pub const wibble = #(
+  a_variable_with_a_long_name
+  <> another_variable_with_a_long_name
+  <> yet_another_variable_with_a_long_name,
+)
 "#
     );
 }
@@ -273,6 +363,20 @@ fn binop_as_argument_in_variant_with_spread_gets_nested() {
       <> "another string",
   )
 }
+"#
+    );
+}
+
+#[test]
+fn constant_binop_as_argument_in_variant_with_spread_gets_nested() {
+    assert_format!(
+        r#"pub const wibble =
+  Wibble(
+    ..wibble,
+    label: string
+      <> "a long string that is making things go on multiple lines"
+      <> "another string",
+  )
 "#
     );
 }

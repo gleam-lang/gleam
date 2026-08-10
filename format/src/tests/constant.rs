@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2025 The Gleam contributors
 
-use crate::assert_format;
+use crate::{assert_format, assert_format_rewrite};
 
 // https://github.com/gleam-lang/gleam/issues/5143
 #[test]
@@ -36,10 +36,11 @@ fn const_record_update_long() {
 
 pub const c = Counter(0)
 
-pub const c2 = Counter(
-  ..c,
-  loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: 1,
-)
+pub const c2 =
+  Counter(
+    ..c,
+    loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: 1,
+  )
 "#
     );
 }
@@ -111,8 +112,13 @@ fn constant_todo_message() {
 fn constant_todo_commented_message() {
     assert_format!(
         r#"pub const wibble = todo as
-  // some comment
-  "message"
+    // some comment
+    "message"
 "#
     );
+}
+
+#[test]
+fn constant_sum() {
+    assert_format_rewrite!("const wibble = 1 +   2", "const wibble = 1 + 2\n");
 }
