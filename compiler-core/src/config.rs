@@ -971,7 +971,7 @@ impl Repository {
                 format!("https://git.sr.ht/~{user}/{repo}")
             }
             Repository::Tangled { repo, user, .. } => {
-                format!("https://tangled.sh/{user}/{repo}")
+                format!("https://tangled.org/{user}/{repo}")
             }
             Repository::Gitea {
                 repo, user, host, ..

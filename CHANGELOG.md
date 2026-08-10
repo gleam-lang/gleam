@@ -117,6 +117,9 @@
   ([Amr Kadry](https://github.com/Amrkadry) and
   ([Louis Pilfold](https://github.com/lpil))
 
+- Make links to Tangled repositories use their new domain & URL format.
+  ([Naomi Roberts](https://github.com/naomieow))
+
 ### Language server
 
 - The "Generate dynamic decoder" code action is now only offered when the

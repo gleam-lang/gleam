@@ -65,7 +65,7 @@ impl SourceLinker {
                     "-".into(),
                 )),
                 Repository::Tangled { user, repo, .. } => Some((
-                    format!("https://tangled.sh/{user}/{repo}/tree/{tag}/{path_in_repo}#L"),
+                    format!("https://tangled.org/{user}/{repo}/blob/{tag}/{path_in_repo}#L"),
                     "-".into(),
                 )),
                 Repository::Gitea {
