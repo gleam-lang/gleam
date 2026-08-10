@@ -1504,8 +1504,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
             let type_ = match &hydrator_result {
                 Ok(type_) => type_.clone(),
-                Err(Error::UnknownType { .. }) => environment.new_unbound_var(),
-                Err(e) => return Err(e.clone()),
+                Err(_) => environment.new_unbound_var(),
             };
 
             environment
