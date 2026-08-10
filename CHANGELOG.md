@@ -21,6 +21,10 @@
   expression now points to the entire function call.
   ([mmustafasenoglu](https://github.com/mmustafasenoglu))
 
+- Constants that are assigned a type variant are now narrowed within the module they
+  were defined.
+  ([James Dolan](https://github.com/jamesdolan16))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
