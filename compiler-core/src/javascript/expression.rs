@@ -3567,7 +3567,7 @@ pub fn eco_string_int<'a, 'doc>(
     } else if value.starts_with('+') {
         out.push('+');
     }
-    let value = value.trim_start_matches(['+', '-'].as_ref());
+    let value = value.trim_start_matches(['+', '-']);
 
     let value = if value.starts_with("0x") {
         out.push_str("0x");
@@ -3600,7 +3600,7 @@ pub fn float<'a, 'doc>(arena: &'doc DocumentArena<'a, 'doc>, value: &'a str) -> 
     } else if value.starts_with('+') {
         out.push('+');
     }
-    let value = value.trim_start_matches(['+', '-'].as_ref());
+    let value = value.trim_start_matches(['+', '-']);
 
     let value = value.trim_start_matches(['0', '_']);
     if value.starts_with(['.', 'e', 'E']) {
