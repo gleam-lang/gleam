@@ -5105,22 +5105,33 @@ Be sure to finish it before running your program.",
         },
         TypeError::ListPrependWithoutElements {
             location,
-            tail_location: _,
-        } => Diagnostic {
-            title: "Redundant list prepend".to_string(),
-            text: "See: https://tour.gleam.run/basics/lists/".to_string(),
-            hint: Some("`list` can be used directly instead of `[..list]`".into()),
-            level: Level::Error,
-            location: Some(Location {
-                label: Label {
-                    text: Some("This prepend does nothing".into()),
-                    span: *location,
-                },
-                path: path.clone(),
-                src: src.clone(),
-                extra_labels: vec![],
-            }),
-        },
+            tail_location,
+        } => {
+            let list_text = src
+                .get(location.start as usize..location.end as usize)
+                .expect("list location must be valid");
+            let tail_text = src
+                .get(tail_location.start as usize..tail_location.end as usize)
+                .expect("list tail location must be valid");
+
+            Diagnostic {
+                title: "Redundant list prepend".to_string(),
+                text: "See: https://tour.gleam.run/basics/lists/".to_string(),
+                hint: Some(format!(
+                    "`{tail_text}` can be used directly instead of `{list_text}`"
+                )),
+                level: Level::Error,
+                location: Some(Location {
+                    label: Label {
+                        text: Some("This prepend does nothing".into()),
+                        span: *location,
+                    },
+                    path: path.clone(),
+                    src: src.clone(),
+                    extra_labels: vec![],
+                }),
+            }
+        }
     })
 }
 
