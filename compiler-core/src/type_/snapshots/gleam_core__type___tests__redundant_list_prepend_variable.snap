@@ -17,4 +17,4 @@ error: Redundant list prepend
 
 See: https://tour.gleam.run/basics/lists/
 
-Hint: `list` can be used directly instead of `[..list]`
+Hint: `wibble` can be used directly instead of `[..wibble]`
