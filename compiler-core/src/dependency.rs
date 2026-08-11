@@ -481,6 +481,7 @@ where
 #[cfg(test)]
 mod tests {
     use hexpm::RetirementStatus;
+    use itertools::Itertools;
 
     use crate::{
         manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource},
@@ -678,16 +679,19 @@ mod tests {
             HashMap::new(),
             "app".into(),
             vec![
+                ("gleam_stdlib".into(), Range::new("~> 0.1".into()).unwrap()),
                 (
                     "package_with_optional".into(),
                     Range::new("~> 0.1".into()).unwrap(),
                 ),
-                ("gleam_stdlib".into(), Range::new("~> 0.1".into()).unwrap()),
             ]
             .into_iter(),
             &vec![].into_iter().collect(),
         )
-        .unwrap();
+        .unwrap()
+        .into_iter()
+        .sorted_by(|left, right| left.0.cmp(&right.0))
+        .collect_vec();
         assert_eq!(
             result,
             vec![
@@ -697,8 +701,6 @@ mod tests {
                     Version::try_from("0.1.0").unwrap()
                 ),
             ]
-            .into_iter()
-            .collect()
         );
     }
 
@@ -737,24 +739,22 @@ mod tests {
             .into_iter(),
             &vec![].into_iter().collect(),
         )
-        .unwrap();
+        .unwrap()
+        .into_iter()
+        .sorted_by(|left, right| left.0.cmp(&right.0))
+        .collect_vec();
         assert_eq!(
             result,
             vec![
-                ("gleam_stdlib".into(), Version::try_from("0.2.2").unwrap()),
                 ("gleam_otp".into(), Version::try_from("0.2.0").unwrap()),
+                ("gleam_stdlib".into(), Version::try_from("0.2.2").unwrap()),
                 (
                     "package_with_optional".into(),
                     Version::try_from("0.1.0").unwrap()
                 ),
             ]
-            .into_iter()
-            .collect()
         );
     }
-
-    #[test]
-    fn resolution_with_optional_deps_keep_constraints() {}
 
     #[test]
     fn resolution_locked_to_older_version() {
