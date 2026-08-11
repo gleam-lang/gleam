@@ -14,7 +14,8 @@ error: Redundant list prepend
 
 See: https://tour.gleam.run/basics/lists/
 
-Hint: `list` can be used directly instead of `[..list]`
+Hint: `[..[..[..[1, 2]]]]` can be used directly instead of `[..[..[..[..[1,
+2]]]]]`
 
 error: Redundant list prepend
   ┌─ /src/one/two.gleam:1:19
@@ -24,7 +25,7 @@ error: Redundant list prepend
 
 See: https://tour.gleam.run/basics/lists/
 
-Hint: `list` can be used directly instead of `[..list]`
+Hint: `[..[..[1, 2]]]` can be used directly instead of `[..[..[..[1, 2]]]]`
 
 error: Redundant list prepend
   ┌─ /src/one/two.gleam:1:22
@@ -34,7 +35,7 @@ error: Redundant list prepend
 
 See: https://tour.gleam.run/basics/lists/
 
-Hint: `list` can be used directly instead of `[..list]`
+Hint: `[..[1, 2]]` can be used directly instead of `[..[..[1, 2]]]`
 
 error: Redundant list prepend
   ┌─ /src/one/two.gleam:1:25
@@ -44,4 +45,4 @@ error: Redundant list prepend
 
 See: https://tour.gleam.run/basics/lists/
 
-Hint: `list` can be used directly instead of `[..list]`
+Hint: `[1, 2]` can be used directly instead of `[..[1, 2]]`
