@@ -532,7 +532,7 @@ pub trait ErlangBuilder<Output> {
     /// This starts a tuple type.
     /// Any code generated after this is gonna be one of the tuple items.
     ///
-    /// For example:n
+    /// For example:
     ///
     /// ```ignore
     /// let tuple = builder.start_tuple_type();
