@@ -62,6 +62,14 @@ https://github.com/gleam-lang/gleam/issues/6161
 FIX-DEADLINE: 2026-12-11
 """
 
+[[advisories.ignore]]
+id = "RUSTSEC-2023-0126"
+reason = """
+im's OrdSet in unsound. We do not use it.
+
+FIX-DEADLINE: 2027-04-11
+"""
+
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
 allow = [
