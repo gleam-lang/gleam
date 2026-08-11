@@ -3120,7 +3120,7 @@ impl ErlangSourceBuilder {
             // functions that have no annotation (like the echo functions
             // automatically added by the compiler), they will be spaced
             // correctly!
-            ErlangSourceBuilderPosition::FunctionSpec => self.code.push_str("."),
+            ErlangSourceBuilderPosition::FunctionSpec => self.code.push('.'),
             // When we're done generating the arguments of a function we need
             // to add the closed parentheses for the function call!
             ErlangSourceBuilderPosition::FunctionCall {
@@ -5079,9 +5079,9 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
 
         self.new_pattern();
         if is_segment_value {
-            self.charlist_representation(Some(location), &content);
+            self.charlist_representation(Some(location), content);
         } else {
-            self.binary_string_representation(Some(location), &content);
+            self.binary_string_representation(Some(location), content);
         }
     }
 
