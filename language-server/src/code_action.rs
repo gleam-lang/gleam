@@ -13205,6 +13205,21 @@ impl<'a> ConvertIntToDifferentBase<'a> {
         }
         action
     }
+
+    fn insert_int(&mut self, string_value: &EcoString, int_value: &BigInt, location: &SrcSpan) {
+        let string_value = string_value.trim_start_matches('-');
+        let base = if string_value.starts_with("0b") {
+            Base::Binary
+        } else if string_value.starts_with("0o") {
+            Base::Octal
+        } else if string_value.starts_with("0x") {
+            Base::Hexadecimal
+        } else {
+            Base::Decimal
+        };
+
+        self.int = Some((*location, base, int_value.clone()))
+    }
 }
 
 fn format_int_with_thousands_separator(int: &BigInt) -> String {
@@ -13275,18 +13290,7 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
             return;
         }
 
-        let string_value = string_value.trim_start_matches('-');
-        let base = if string_value.starts_with("0b") {
-            Base::Binary
-        } else if string_value.starts_with("0o") {
-            Base::Octal
-        } else if string_value.starts_with("0x") {
-            Base::Hexadecimal
-        } else {
-            Base::Decimal
-        };
-
-        self.int = Some((*location, base, int_value.clone()))
+        self.insert_int(string_value, int_value, location);
     }
 
     fn visit_typed_constant_int(
@@ -13300,18 +13304,7 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
             return;
         }
 
-        let string_value = string_value.trim_start_matches('-');
-        let base = if string_value.starts_with("0b") {
-            Base::Binary
-        } else if string_value.starts_with("0o") {
-            Base::Octal
-        } else if string_value.starts_with("0x") {
-            Base::Hexadecimal
-        } else {
-            Base::Decimal
-        };
-
-        self.int = Some((*location, base, int_value.clone()))
+        self.insert_int(string_value, int_value, location);
     }
 
     fn visit_typed_pattern_int(
@@ -13325,18 +13318,7 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
             return;
         }
 
-        let string_value = string_value.trim_start_matches('-');
-        let base = if string_value.starts_with("0b") {
-            Base::Binary
-        } else if string_value.starts_with("0o") {
-            Base::Octal
-        } else if string_value.starts_with("0x") {
-            Base::Hexadecimal
-        } else {
-            Base::Decimal
-        };
-
-        self.int = Some((*location, base, int_value.clone()))
+        self.insert_int(string_value, int_value, location);
     }
 
     fn visit_typed_bit_array_size_int(
@@ -13350,17 +13332,6 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
             return;
         }
 
-        let string_value = string_value.trim_start_matches('-');
-        let base = if string_value.starts_with("0b") {
-            Base::Binary
-        } else if string_value.starts_with("0o") {
-            Base::Octal
-        } else if string_value.starts_with("0x") {
-            Base::Hexadecimal
-        } else {
-            Base::Decimal
-        };
-
-        self.int = Some((*location, base, int_value.clone()))
+        self.insert_int(string_value, int_value, location);
     }
 }
