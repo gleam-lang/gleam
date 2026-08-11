@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// SPDX-FileCopyrightText: 2026 The Gleam contributors
+// SPDX-FileCopyrightText: 2021 The Gleam contributors
 
 use lsp_types::Position;
 use std::collections::HashMap;
