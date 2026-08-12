@@ -1646,10 +1646,11 @@ where
                                 DeprecatedSyntaxWarning::DeprecatedListCatchAllPattern { location },
                             );
                         }
-                        Some(Pattern::Variable { .. }) => {
+                        Some(Pattern::Variable { name, .. }) => {
                             self.warnings.push(
                                 DeprecatedSyntaxWarning::DeprecatedListSpreadAsVariablePattern {
                                     location,
+                                    name: name.clone(),
                                 },
                             );
                         }

@@ -1,25 +1,25 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-expression: "\n    pub fn main() {\n      let letters = [\"b\", \"c\"]\n      case letters {\n        [] -> []\n        [..x] -> x\n      }\n    }\n        "
+expression: "\npub fn main() {\n  let letters = [\"b\", \"c\"]\n  case letters {\n    [] -> []\n    [..x] -> x\n  }\n}\n"
 ---
 ----- SOURCE CODE
 
-    pub fn main() {
-      let letters = ["b", "c"]
-      case letters {
-        [] -> []
-        [..x] -> x
-      }
-    }
-        
+pub fn main() {
+  let letters = ["b", "c"]
+  case letters {
+    [] -> []
+    [..x] -> x
+  }
+}
+
 
 ----- WARNING
 warning: Deprecated list pattern matching syntax
-  ┌─ test/path:6:9
+  ┌─ test/path:6:5
   │
-6 │         [..x] -> x
-  │         ^^^^^ This can be replaced with the variable itself
+6 │     [..x] -> x
+  │     ^^^^^ Replace this with `x`
 
 This syntax for pattern matching on lists is deprecated.
-This spread matches the entire list, so the variable can be used as the
+This spread matches the entire list, so the variable x can be used as the
 pattern directly instead.

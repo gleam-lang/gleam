@@ -188,7 +188,7 @@ pub enum Warning {
     },
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Copy)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum DeprecatedSyntaxWarning {
     /// If someone uses the deprecated syntax to append to a list:
     /// `["a"..rest]`, notice how there's no comma!
@@ -235,6 +235,7 @@ pub enum DeprecatedSyntaxWarning {
     ///
     DeprecatedListSpreadAsVariablePattern {
         location: SrcSpan,
+        name: EcoString,
     },
 
     /// If a record pattern has a spread that is not preceded by a comma:
@@ -365,7 +366,7 @@ To match on all possible lists, use the `_` catch-all pattern instead.",
                 level: diagnostic::Level::Warning,
                 location: Some(Location {
                     label: diagnostic::Label {
-                        text: Some("This can be replaced with `_`".into()),
+                        text: Some("Replace this with `_`".into()),
                         span: *location,
                     },
                     path: path.clone(),
@@ -377,19 +378,20 @@ To match on all possible lists, use the `_` catch-all pattern instead.",
             Warning::DeprecatedSyntax {
                 path,
                 src,
-                warning: DeprecatedSyntaxWarning::DeprecatedListSpreadAsVariablePattern { location },
+                warning:
+                    DeprecatedSyntaxWarning::DeprecatedListSpreadAsVariablePattern { location, name },
             } => Diagnostic {
                 title: "Deprecated list pattern matching syntax".into(),
-                text: wrap(
+                text: wrap_format!(
                     "This syntax for pattern matching on lists is deprecated.
-This spread matches the entire list, so the variable can be used as \
+This spread matches the entire list, so the variable {name} can be used as \
 the pattern directly instead.",
                 ),
                 hint: None,
                 level: diagnostic::Level::Warning,
                 location: Some(Location {
                     label: diagnostic::Label {
-                        text: Some("This can be replaced with the variable itself".into()),
+                        text: Some(format!("Replace this with `{name}`")),
                         span: *location,
                     },
                     path: path.clone(),
