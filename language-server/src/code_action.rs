@@ -1313,10 +1313,12 @@ pub fn code_action_generate_type(
             continue;
         }
 
-        // Insert the new type stub before the top-level definition that
-        // contains the error, so it appears close to where it is used.
+        // Insert the new type stub near the top-level definition that
+        // contains the error. When the definition is a custom type the new
+        // type is placed after it (sub-types belong below their parent);
+        // otherwise it is placed before the definition.
         let (insert_at, is_public) =
-            definition_start_and_publicity_containing(&module.ast.definitions, location.start)
+            definition_insert_point_and_publicity_containing(&module.ast.definitions, location.start)
                 .unwrap_or((module.code.len() as u32, false));
         let insert_range = src_span_to_lsp_range(
             SrcSpan {
@@ -1347,22 +1349,27 @@ pub fn code_action_generate_type(
     }
 }
 
-/// Returns the source offset and publicity of the top-level definition that
-/// contains `position`, so the caller can insert code before it.
-fn definition_start_and_publicity_containing(
+/// Returns the insertion offset and publicity of the top-level definition that
+/// contains `position`. When the definition is a custom type, the insertion
+/// point is placed after it so that generated sub-types appear below their
+/// parent type. For all other definitions the insertion is before them.
+fn definition_insert_point_and_publicity_containing(
     definitions: &TypedDefinitions,
     position: u32,
 ) -> Option<(u32, bool)> {
+    // Check custom types first – if the position is inside one, insert after it.
+    for custom_type in &definitions.custom_types {
+        let span = custom_type.full_location();
+        if span.start <= position && position <= span.end {
+            // Insert after the custom type definition.
+            return Some((span.end, custom_type.publicity.is_public()));
+        }
+    }
+
     let functions = definitions
         .functions
         .iter()
         .map(|function| (function.full_location(), function.publicity.is_public()));
-    let custom_types = definitions.custom_types.iter().map(|custom_type| {
-        (
-            custom_type.full_location(),
-            custom_type.publicity.is_public(),
-        )
-    });
     let type_aliases = definitions
         .type_aliases
         .iter()
@@ -1373,7 +1380,6 @@ fn definition_start_and_publicity_containing(
         .map(|constant| (constant.location, constant.publicity.is_public()));
 
     functions
-        .chain(custom_types)
         .chain(type_aliases)
         .chain(constants)
         .filter(|(span, _)| span.start <= position && position <= span.end)
