@@ -197,6 +197,9 @@ pub enum Error {
     #[error("{error}")]
     GitInitialization { error: String },
 
+    #[error("{error}")]
+    LspTransport { error: String },
+
     #[error("io operation failed")]
     StandardIo {
         action: StandardIoAction,
@@ -1956,6 +1959,18 @@ with `gleam hex authenticate`."
                     location: None,
                 }]
             }
+
+            Error::LspTransport { error } => vec![Diagnostic {
+                title: "LSP transport error".into(),
+                text: format!(
+                    "An error occurred with the LSP transport connection:
+
+{error}"
+                ),
+                hint: None,
+                level: Level::Error,
+                location: None,
+            }],
 
             Error::Type {
                 skipped_modules: _,

@@ -197,19 +197,24 @@ impl MessageBuffer {
         // If the buffer is empty, wait indefinitely for the first message.
         // If the buffer is not empty, wait for a short time to see if more messages are
         // coming before processing the ones we have.
-        let message = if self.messages.is_empty() {
-            Some(conn.receiver.recv().expect("Receiving LSP message"))
+        let was_empty = self.messages.is_empty();
+        let message = if was_empty {
+            conn.receiver.recv().ok()
         } else {
             conn.receiver.recv_timeout(pause).ok()
         };
 
-        // If have have not received a message then it means there is a pause in the
-        // messages from the client, implying the programmer has stopped typing. Process
-        // the currently enqueued messages.
+        // If we have not received a message, check whether the client has disconnected
+        // or if there is just a pause in typing.
         let message = match message {
             Some(message) => message,
             None => {
-                // A compile please message it added in the instance of this
+                // If the buffer was empty, the client disconnected without sending
+                // a shutdown request. Stop the server gracefully.
+                if was_empty {
+                    return Next::Stop;
+                }
+                // A compile please message is added in the instance of this
                 // pause of activity so that the client gets feedback on the
                 // state of the code as it is now.
                 self.push_compile_please_message();

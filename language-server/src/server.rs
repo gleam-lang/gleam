@@ -61,7 +61,7 @@ where
         + Clone,
 {
     pub fn new(connection: &'a lsp_server::Connection, io: IO) -> Result<Self> {
-        let initialise_params = initialisation_handshake(connection);
+        let initialise_params = initialisation_handshake(connection)?;
         let reporter = ConnectionProgressReporter::new(connection, &initialise_params);
         let io = FileSystemProxy::new(io);
         let router = Router::new(reporter, io.clone());
@@ -134,10 +134,10 @@ where
             },
         };
 
-        self.connection
+        let _ = self
+            .connection
             .sender
-            .send(lsp_server::Message::Response(response))
-            .expect("channel send LSP response");
+            .send(lsp_server::Message::Response(response));
     }
 
     fn handle_notification(&mut self, notification: Notification) {
@@ -178,10 +178,10 @@ where
                 params: serde_json::to_value(diagnostic_params)
                     .expect("textDocument/publishDiagnostics to json"),
             };
-            self.connection
+            let _ = self
+                .connection
                 .sender
-                .send(lsp_server::Message::Notification(notification))
-                .expect("send textDocument/publishDiagnostics");
+                .send(lsp_server::Message::Notification(notification));
         }
     }
 
@@ -223,10 +223,10 @@ where
             })
             .expect("client/registerCapability to json"),
         };
-        self.connection
+        let _ = self
+            .connection
             .sender
-            .send(lsp_server::Message::Request(request))
-            .expect("send client/registerCapability");
+            .send(lsp_server::Message::Request(request));
     }
 
     fn publish_messages(&self, messages: Vec<Diagnostic>) {
@@ -242,10 +242,10 @@ where
                 method: "window/showMessage".into(),
                 params: serde_json::to_value(params).expect("window/showMessage to json"),
             };
-            self.connection
+            let _ = self
+                .connection
                 .sender
-                .send(lsp_server::Message::Notification(notification))
-                .expect("send window/showMessage");
+                .send(lsp_server::Message::Notification(notification));
         }
     }
 
@@ -534,7 +534,7 @@ where
     }
 }
 
-fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializeParams {
+fn initialisation_handshake(connection: &lsp_server::Connection) -> Result<InitializeParams> {
     let server_capabilities = lsp::ServerCapabilities {
         text_document_sync: Some(
             lsp::TextDocumentSyncOptions {
@@ -633,10 +633,12 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         serde_json::to_value(server_capabilities).expect("server_capabilities_serde");
     let initialise_params_json = connection
         .initialize(server_capabilities_json)
-        .expect("LSP initialize");
+        .map_err(|e| gleam_core::Error::LspTransport {
+            error: e.to_string(),
+        })?;
     let initialise_params: InitializeParams =
         serde_json::from_value(initialise_params_json).expect("LSP InitializeParams from json");
-    initialise_params
+    Ok(initialise_params)
 }
 
 fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
