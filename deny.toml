@@ -63,6 +63,21 @@ FIX-DEADLINE: 2026-12-11
 """
 
 [[advisories.ignore]]
+id = "RUSTSEC-2026-0255"
+reason = """
+The sized-chunks crate is unsound: several methods drop elements before
+updating length/boundary metadata, which is reachable from safe Rust via
+catch_unwind with a panicking Drop (use-after-free / double-free).
+
+It is used by im, which is currently unmaintained, so there is no safe
+upgrade available. See the related advisory for the unmaintained dependency.
+
+https://github.com/gleam-lang/gleam/issues/6161
+
+FIX-DEADLINE: 2026-12-11
+"""
+
+[[advisories.ignore]]
 id = "RUSTSEC-2023-0126"
 reason = """
 im's OrdSet in unsound. We do not use it.

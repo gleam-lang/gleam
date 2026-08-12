@@ -1317,9 +1317,11 @@ pub fn code_action_generate_type(
         // contains the error. When the definition is a custom type the new
         // type is placed after it (sub-types belong below their parent);
         // otherwise it is placed before the definition.
-        let (insert_at, is_public) =
-            definition_insert_point_and_publicity_containing(&module.ast.definitions, location.start)
-                .unwrap_or((module.code.len() as u32, false));
+        let (insert_at, is_public) = definition_insert_point_and_publicity_containing(
+            &module.ast.definitions,
+            location.start,
+        )
+        .unwrap_or((module.code.len() as u32, false));
         let insert_range = src_span_to_lsp_range(
             SrcSpan {
                 start: insert_at,
