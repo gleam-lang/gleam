@@ -18,7 +18,7 @@ warning: Deprecated list pattern matching syntax
   ┌─ test/path:6:9
   │
 6 │         [..] -> []
-  │         ^^^^ This can be replaced with `_`
+  │         ^^^^ Replace this with `_`
 
 This syntax for pattern matching on lists is deprecated.
 To match on all possible lists, use the `_` catch-all pattern instead.
