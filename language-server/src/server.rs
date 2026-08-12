@@ -76,16 +76,16 @@ where
     }
 
     pub fn run(&mut self) -> Result<()> {
-        self.start_watching_gleam_toml();
+        self.start_watching_gleam_toml()?;
         let mut buffer = MessageBuffer::new();
 
         loop {
-            match buffer.receive(*self.connection) {
+            match buffer.receive(*self.connection)? {
                 Next::Stop => break,
                 Next::MorePlease => (),
                 Next::Handle(messages) => {
                     for message in messages {
-                        self.handle_message(message);
+                        self.handle_message(message)?;
                     }
                 }
             }
@@ -94,14 +94,14 @@ where
         Ok(())
     }
 
-    fn handle_message(&mut self, message: Message) {
+    fn handle_message(&mut self, message: Message) -> Result<()> {
         match message {
             Message::Request(id, request) => self.handle_request(id, request),
             Message::Notification(notification) => self.handle_notification(notification),
         }
     }
 
-    fn handle_request(&mut self, id: lsp_server::RequestId, request: Request) {
+    fn handle_request(&mut self, id: lsp_server::RequestId, request: Request) -> Result<()> {
         let (outcome, feedback) = match request {
             Request::Format(param) => self.format(param),
             Request::Hover(param) => self.hover(param),
@@ -119,7 +119,7 @@ where
             Request::RenameFiles(param) => self.rename_files(param),
         };
 
-        self.publish_feedback(feedback);
+        self.publish_feedback(feedback)?;
 
         let response = match outcome {
             Ok(payload) => lsp_server::Response {
@@ -134,13 +134,16 @@ where
             },
         };
 
-        let _ = self
-            .connection
+        self.connection
             .sender
-            .send(lsp_server::Message::Response(response));
+            .send(lsp_server::Message::Response(response))
+            .map_err(|error| gleam_core::Error::LspMessageSendFailed {
+                error: error.to_string(),
+            })?;
+        Ok(())
     }
 
-    fn handle_notification(&mut self, notification: Notification) {
+    fn handle_notification(&mut self, notification: Notification) -> Result<()> {
         let feedback = match notification {
             Notification::CompilePlease => self.compile_please(),
             Notification::SourceFileOpened { path, text } => self.source_file_opened(path, text),
@@ -151,15 +154,19 @@ where
             }
             Notification::ConfigFileChanged { path } => self.watched_files_changed(path),
         };
-        self.publish_feedback(feedback);
+        self.publish_feedback(feedback)
     }
 
-    fn publish_feedback(&self, feedback: Feedback) {
-        self.publish_diagnostics(feedback.diagnostics);
-        self.publish_messages(feedback.messages);
+    fn publish_feedback(&self, feedback: Feedback) -> Result<()> {
+        self.publish_diagnostics(feedback.diagnostics)?;
+        self.publish_messages(feedback.messages)?;
+        Ok(())
     }
 
-    fn publish_diagnostics(&self, diagnostics: HashMap<Utf8PathBuf, Vec<Diagnostic>>) {
+    fn publish_diagnostics(
+        &self,
+        diagnostics: HashMap<Utf8PathBuf, Vec<Diagnostic>>,
+    ) -> Result<()> {
         for (path, diagnostics) in diagnostics {
             let diagnostics = diagnostics
                 .into_iter()
@@ -178,14 +185,17 @@ where
                 params: serde_json::to_value(diagnostic_params)
                     .expect("textDocument/publishDiagnostics to json"),
             };
-            let _ = self
-                .connection
+            self.connection
                 .sender
-                .send(lsp_server::Message::Notification(notification));
+                .send(lsp_server::Message::Notification(notification))
+                .map_err(|error| gleam_core::Error::LspMessageSendFailed {
+                    error: error.to_string(),
+                })?;
         }
+        Ok(())
     }
 
-    fn start_watching_gleam_toml(&mut self) {
+    fn start_watching_gleam_toml(&mut self) -> Result<()> {
         let supports_watch_files = self
             .initialise_params
             .capabilities
@@ -197,7 +207,7 @@ where
 
         if !supports_watch_files {
             tracing::warn!("lsp_client_cannot_watch_gleam_toml");
-            return;
+            return Ok(());
         }
 
         // Register gleam.toml as a watched file so we get a notification when
@@ -223,13 +233,16 @@ where
             })
             .expect("client/registerCapability to json"),
         };
-        let _ = self
-            .connection
+        self.connection
             .sender
-            .send(lsp_server::Message::Request(request));
+            .send(lsp_server::Message::Request(request))
+            .map_err(|error| gleam_core::Error::LspMessageSendFailed {
+                error: error.to_string(),
+            })?;
+        Ok(())
     }
 
-    fn publish_messages(&self, messages: Vec<Diagnostic>) {
+    fn publish_messages(&self, messages: Vec<Diagnostic>) -> Result<()> {
         for message in messages {
             let params = lsp::ShowMessageParams {
                 kind: match message.level {
@@ -242,11 +255,14 @@ where
                 method: "window/showMessage".into(),
                 params: serde_json::to_value(params).expect("window/showMessage to json"),
             };
-            let _ = self
-                .connection
+            self.connection
                 .sender
-                .send(lsp_server::Message::Notification(notification));
+                .send(lsp_server::Message::Notification(notification))
+                .map_err(|error| gleam_core::Error::LspMessageSendFailed {
+                    error: error.to_string(),
+                })?;
         }
+        Ok(())
     }
 
     fn respond_with_engine<T, Handler>(
@@ -631,11 +647,12 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> Result<Initi
     };
     let server_capabilities_json =
         serde_json::to_value(server_capabilities).expect("server_capabilities_serde");
-    let initialise_params_json = connection
-        .initialize(server_capabilities_json)
-        .map_err(|e| gleam_core::Error::LspTransport {
-            error: e.to_string(),
-        })?;
+    let initialise_params_json =
+        connection
+            .initialize(server_capabilities_json)
+            .map_err(|error| gleam_core::Error::LspMessageReceiveFailed {
+                error: error.to_string(),
+            })?;
     let initialise_params: InitializeParams =
         serde_json::from_value(initialise_params_json).expect("LSP InitializeParams from json");
     Ok(initialise_params)
