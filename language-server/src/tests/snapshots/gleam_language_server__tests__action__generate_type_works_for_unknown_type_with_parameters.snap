@@ -13,8 +13,8 @@ type Wibble {
 
 ----- AFTER ACTION
 
-type Wobble(a, b)
-
 type Wibble {
   Wibble(Wobble(Int, String))
 }
+
+type Wobble(a, b)
