@@ -5638,10 +5638,25 @@ impl<'line_numbers> ErlangBinaryBuilder<'line_numbers> {
     /// Erlang Abstract Format.
     /// No additional check about the current position is performed!
     fn float_representation(&mut self, location: Option<SrcSpan>, number: f64) {
-        self.etf.small_tuple(3);
-        self.etf.atom("float");
-        self.annotation(location);
-        self.etf.new_float(number);
+        // Positive and negative zero have to be explicitly written as the
+        // appropriate unary operator applied to 0.0:
+        if number.is_zero() {
+            self.etf.small_tuple(4);
+            self.etf.atom("op");
+            self.annotation(location);
+            self.etf
+                .atom(if number.is_sign_negative() { "-" } else { "+" });
+
+            self.etf.small_tuple(3);
+            self.etf.atom("float");
+            self.annotation(location);
+            self.etf.new_float(0.0);
+        } else {
+            self.etf.small_tuple(3);
+            self.etf.atom("float");
+            self.annotation(location);
+            self.etf.new_float(number);
+        }
     }
 
     fn new_clause_guard(&mut self) {
