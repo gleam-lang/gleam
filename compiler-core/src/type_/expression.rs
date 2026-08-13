@@ -209,7 +209,7 @@ impl Implementations {
             || (self.can_run_on_javascript && (*gleam || *other_can_run_on_javascript));
 
         // If a function uses a function that relies on external code (be it
-        // javascript or Erlang) then it's considered as using external code as
+        // JavaScript or Erlang) then it's considered as using external code as
         // well.
         //
         // For example:
