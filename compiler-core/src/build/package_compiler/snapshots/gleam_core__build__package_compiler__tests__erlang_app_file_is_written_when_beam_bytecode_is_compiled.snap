@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/build/package_compiler/tests.rs
+expression: app_file
+---
+{application, a_package, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [main]},
+    {registered, []}
+]}.
