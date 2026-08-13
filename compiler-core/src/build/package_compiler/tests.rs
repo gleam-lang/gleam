@@ -9,8 +9,8 @@ use ecow::EcoString;
 use crate::{
     Error,
     build::{
-        self, NullTelemetry, Outcome, PackageCompiler, StaleTracker, TargetCodegenConfiguration,
-        package_compiler::Compiled,
+        self, ErlangOutput, NullTelemetry, Outcome, PackageCompiler, StaleTracker,
+        TargetCodegenConfiguration, package_compiler::Compiled,
     },
     config::PackageConfig,
     error::DefinedModuleOrigin,
@@ -40,7 +40,10 @@ fn compile_modules(
         Utf8Path::new("/"),
         Utf8Path::new("/out"),
         Utf8Path::new("/lib"),
-        &TargetCodegenConfiguration::Erlang { app_file: None },
+        &TargetCodegenConfiguration::Erlang {
+            app_file: None,
+            output: ErlangOutput::Binary,
+        },
         UniqueIdGenerator::new(),
         fs,
     );

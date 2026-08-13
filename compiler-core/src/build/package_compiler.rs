@@ -5,8 +5,8 @@
 mod tests;
 
 use crate::analyse::TargetSupport;
-use crate::build::module_erlang_name;
 use crate::build::package_loader::CacheFiles;
+use crate::build::{ErlangOutput, module_erlang_name};
 
 use crate::error::{DefinedModuleOrigin, FailedModule, SkipReason, SkippedModule};
 
@@ -376,14 +376,18 @@ where
                 *emit_source_maps,
                 prelude_location,
             ),
-            TargetCodegenConfiguration::Erlang { app_file } => {
-                self.perform_erlang_codegen(modules, cached_module_names, app_file.as_ref())
-            }
+            TargetCodegenConfiguration::Erlang { app_file, output } => self.perform_erlang_codegen(
+                *output,
+                modules,
+                cached_module_names,
+                app_file.as_ref(),
+            ),
         }
     }
 
     fn perform_erlang_codegen(
         &mut self,
+        output: ErlangOutput,
         modules: &[Module],
         cached_module_names: &[EcoString],
         app_file_config: Option<&ErlangAppCodegenConfiguration>,
@@ -424,10 +428,13 @@ where
         // we overwrite any precompiled Erlang that was included in the Hex
         // package. Otherwise we will build the potentially outdated precompiled
         // version and not the newly compiled version.
-        Erlang::new(&build_dir, &include_dir).render(io.clone(), modules, self.root)?;
+        Erlang::new(&build_dir, &include_dir).render(output, io.clone(), modules, self.root)?;
 
         let native_modules: Vec<EcoString> = if self.compile_beam_bytecode {
-            written.extend(modules.iter().map(Module::compiled_erlang_path));
+            written.extend(modules.iter().map(match output {
+                ErlangOutput::Binary => Module::compiled_erlang_path,
+                ErlangOutput::Textual => Module::compiled_textual_erlang_path,
+            }));
             self.compile_erlang_to_beam(&written)?
         } else {
             tracing::debug!("skipping_erlang_bytecode_compilation");

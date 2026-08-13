@@ -7,8 +7,8 @@ mod generated_tests;
 use camino::Utf8PathBuf;
 use gleam_core::{
     build::{
-        ErlangAppCodegenConfiguration, Mode, NullTelemetry, Outcome, StaleTracker, Target,
-        TargetCodegenConfiguration,
+        ErlangAppCodegenConfiguration, ErlangOutput, Mode, NullTelemetry, Outcome, StaleTracker,
+        Target, TargetCodegenConfiguration,
     },
     config::PackageConfig,
     io::{FileSystemReader, FileSystemWriter},
@@ -31,6 +31,7 @@ pub fn prepare(path: &str) -> String {
                 include_dev_deps: true,
                 package_name_overrides: HashMap::new(),
             }),
+            output: ErlangOutput::Binary,
         },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
             emit_typescript_definitions: config.javascript.typescript_declarations,

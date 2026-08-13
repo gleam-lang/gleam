@@ -31,6 +31,7 @@ pub fn run(paths: &ProjectPaths) -> Result<()> {
             mode: Mode::Dev,
             target: None,
             no_print_progress: false,
+            building_hex_tarball: false,
         },
         build::download_dependencies(paths, cli::Reporter::new())?,
         warnings.clone(),

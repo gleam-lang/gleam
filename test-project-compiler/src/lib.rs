@@ -33,6 +33,7 @@ pub fn prepare(path: &str, mode: Mode) -> String {
         warnings_as_errors: false,
         root_target_support: TargetSupport::Enforced,
         no_print_progress: true,
+        building_hex_tarball: false,
     };
 
     let compiler = ProjectCompiler::new(

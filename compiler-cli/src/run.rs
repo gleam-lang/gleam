@@ -124,6 +124,7 @@ pub fn setup(
             PackageKind::Dependency => TargetSupport::NotEnforced,
         },
         no_print_progress,
+        building_hex_tarball: false,
     };
 
     let built = crate::build::main(paths, options, manifest)?;
