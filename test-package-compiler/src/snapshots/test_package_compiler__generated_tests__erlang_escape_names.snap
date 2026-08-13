@@ -3,7 +3,7 @@ source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/erlang_escape_names"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.abstr
-<666 byte binary>
+<490 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache
 <.cache binary>
@@ -12,7 +12,7 @@ expression: "./cases/erlang_escape_names"
 <32 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.abstr
-<2374 byte binary>
+<1670 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>

@@ -3,7 +3,7 @@ source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/alias_unqualified_import"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.abstr
-<715 byte binary>
+<539 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache
 <.cache binary>
@@ -12,7 +12,7 @@ expression: "./cases/alias_unqualified_import"
 <36 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.abstr
-<788 byte binary>
+<568 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>

@@ -12,7 +12,7 @@ expression: "./cases/erlang_import_shadowing_prelude"
 <32 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.abstr
-<643 byte binary>
+<511 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>
