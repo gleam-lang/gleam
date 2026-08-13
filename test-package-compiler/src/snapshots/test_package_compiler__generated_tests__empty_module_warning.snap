@@ -12,7 +12,7 @@ expression: "./cases/empty_module_warning"
 <28 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/internal.abstr
-<673 byte binary>
+<541 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/internal.cache
 <.cache binary>
@@ -30,7 +30,7 @@ expression: "./cases/empty_module_warning"
 <31 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/public.abstr
-<825 byte binary>
+<605 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/public.cache
 <.cache binary>

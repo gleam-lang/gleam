@@ -3,7 +3,7 @@ source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/variable_or_module"
 ---
 //// /out/lib/the_package/_gleam_artefacts/main.abstr
-<1655 byte binary>
+<1083 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/main.cache
 <.cache binary>
@@ -12,7 +12,7 @@ expression: "./cases/variable_or_module"
 <68 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/power.abstr
-<1134 byte binary>
+<738 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/power.cache
 <.cache binary>

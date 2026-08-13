@@ -3,7 +3,7 @@ source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/erlang_nested"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one@two.abstr
-<776 byte binary>
+<556 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache
 <.cache binary>

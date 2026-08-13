@@ -6,7 +6,7 @@ use itertools::Itertools;
 use num_bigint::BigInt;
 use num_traits::Zero;
 use regex::Regex;
-use src_span::{LineColumn, LineNumbers, SrcSpan};
+use src_span::{LineNumbers, SrcSpan};
 use std::sync::OnceLock;
 
 /// This is to raise an `unreachable` pretty printed error when we try producing
@@ -5221,25 +5221,8 @@ impl<'line_numbers> ErlangBinaryBuilder<'line_numbers> {
     fn annotation(&mut self, location: Option<SrcSpan>) {
         match (location, &self.line_numbers) {
             (Some(src_span), Some(line_numbers)) => {
-                let list = self.etf.start_list();
-
-                let LineColumn { line, column } =
-                    line_numbers.line_and_utf8_column_number(src_span.start);
-                self.etf.small_tuple(2);
-                self.etf.atom("location");
-                self.etf.small_tuple(2);
+                let line = line_numbers.line_number(src_span.start);
                 self.etf.usize(line as usize);
-                self.etf.usize((column + 1) as usize);
-
-                let LineColumn { line, column } =
-                    line_numbers.line_and_utf8_column_number(src_span.end);
-                self.etf.small_tuple(2);
-                self.etf.atom("end_location");
-                self.etf.small_tuple(2);
-                self.etf.usize(line as usize);
-                self.etf.usize((column + 1) as usize);
-
-                self.etf.end_list(list, 2);
             }
             (None, Some(_) | None) | (Some(_), None) => self.etf.usize(0),
         }
