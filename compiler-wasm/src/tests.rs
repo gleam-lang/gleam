@@ -6,6 +6,26 @@ use super::*;
 use wasm_bindgen_test::wasm_bindgen_test;
 
 #[wasm_bindgen_test]
+fn test_format_source() {
+    let source = "// Keep this comment\npub fn main(){1}";
+    let mut expected = String::new();
+    gleam_format::pretty(
+        &mut expected,
+        &source.into(),
+        camino::Utf8Path::new("<stdin>"),
+    )
+    .expect("format source with the CLI formatter API");
+
+    assert_eq!(expected, "// Keep this comment\npub fn main() {\n  1\n}\n");
+    assert_eq!(format_source(source), Ok(expected));
+}
+
+#[wasm_bindgen_test]
+fn test_format_source_invalid_source() {
+    assert!(format_source("pub fn main(").is_err());
+}
+
+#[wasm_bindgen_test]
 fn test_reset_filesystem() {
     reset_filesystem(0);
     assert_eq!(read_file_bytes(0, "hello"), None);

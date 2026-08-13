@@ -125,6 +125,12 @@
 
 ### Formatter
 
+### Compiler Wasm API
+
+- The WebAssembly build of the compiler now exposes a `format_source` function
+  for formatting Gleam source code.
+  ([John Downey](https://github.com/jtdowney))
+
 ### Bug fixes
 
 - Fixed a bug where on the JavaScript target a case clause whose guard's top

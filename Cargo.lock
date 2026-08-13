@@ -1387,6 +1387,7 @@ dependencies = [
  "console_error_panic_hook",
  "getrandom 0.2.15",
  "gleam-core",
+ "gleam-format",
  "hexpm",
  "im",
  "itertools 0.15.0",

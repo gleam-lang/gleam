@@ -5,7 +5,7 @@
 mod tests;
 mod wasm_filesystem;
 
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use gleam_core::{
     Error,
     analyse::TargetSupport,
@@ -165,6 +165,16 @@ pub fn reset_warnings(project_id: usize) {
 #[wasm_bindgen]
 pub fn pop_warning(project_id: usize) -> Option<String> {
     get_warnings(project_id).pop().map(|w| w.to_pretty_string())
+}
+
+/// Format the given source code using the Gleam formatter.
+///
+#[wasm_bindgen]
+pub fn format_source(source: &str) -> Result<String, String> {
+    let mut output = String::new();
+    gleam_format::pretty(&mut output, &source.into(), Utf8Path::new("<stdin>"))
+        .map_err(|e| e.pretty_string())?;
+    Ok(output)
 }
 
 fn do_compile_package(project: Project, target: Target) -> Result<(), Error> {
