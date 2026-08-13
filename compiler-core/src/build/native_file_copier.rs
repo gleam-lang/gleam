@@ -48,8 +48,8 @@ pub(crate) struct NativeFileCopier<'a, IO> {
     /// If we're copying some `.erl` files those must be the ffi files included
     /// in the project and nothing else.
     ///
-    /// So this contains a set with the names of the precompiled erlang files
-    /// that we have to ignore when copying erlang files over.
+    /// So this contains a set with the names of the precompiled Erlang files
+    /// that we have to ignore when copying Erlang files over.
     precompiled_erlang_file_names: HashSet<EcoString>,
 }
 
@@ -139,7 +139,7 @@ where
             return Ok(());
         }
 
-        // Skip precompiled erlang files
+        // Skip precompiled Erlang files
         if self
             .precompiled_erlang_file_names
             .contains(relative_path.as_str())

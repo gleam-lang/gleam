@@ -10,7 +10,7 @@ fn build_in_erlang_type_escaping() {
 
 #[test]
 fn escape_erlang_reserved_keywords_in_type_names() {
-    // list of all reserved words in erlang
+    // list of all reserved words in Erlang
     // http://erlang.org/documentation/doc-5.8/doc/reference_manual/introduction.html
     assert_erl!(
         r#"pub type After { TestAfter }

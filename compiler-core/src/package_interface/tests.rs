@@ -127,7 +127,7 @@ pub fn compile_package(
     .expect("should successfully infer");
 
     // TODO: all the bits above are basically copy pasted from the javascript
-    // and erlang test helpers. A refactor might be due here.
+    // and Erlang test helpers. A refactor might be due here.
     let mut module = Module {
         name: module_name,
         code: src.into(),

@@ -26,7 +26,7 @@ pub fn command(paths: &ProjectPaths) -> Result<(), Error> {
         crate::build::download_dependencies(paths, crate::cli::Reporter::new())?,
     )?;
 
-    // Don't exit on ctrl+c as it is used by child erlang shell
+    // Don't exit on ctrl+c as it is used by child Erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
 
     // Prepare the Erlang shell command
