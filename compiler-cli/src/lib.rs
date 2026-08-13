@@ -955,6 +955,7 @@ fn command_check(paths: &ProjectPaths, target: Option<Target>) -> Result<()> {
             mode: Mode::Dev,
             target,
             no_print_progress: false,
+            building_hex_tarball: false,
         },
         build::download_dependencies(paths, cli::Reporter::new())?,
     )?;
@@ -982,6 +983,7 @@ fn command_build(
             mode: Mode::Dev,
             target,
             no_print_progress,
+            building_hex_tarball: false,
         },
         manifest,
     )?;

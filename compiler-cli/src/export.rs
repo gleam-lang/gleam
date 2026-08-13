@@ -41,6 +41,7 @@ pub fn escript(paths: &ProjectPaths) -> Result<()> {
         mode,
         target: Some(target),
         no_print_progress: false,
+        building_hex_tarball: false,
     };
     let built = crate::build::main(paths, build_options, manifest)?;
     let package_name = &built.root_package.config.name;
@@ -146,6 +147,7 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
             mode,
             target: Some(target),
             no_print_progress: false,
+            building_hex_tarball: false,
         },
         crate::build::download_dependencies(paths, crate::cli::Reporter::new())?,
     )?;
@@ -252,6 +254,7 @@ pub fn package_interface(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
             warnings_as_errors: false,
             root_target_support: TargetSupport::Enforced,
             no_print_progress: false,
+            building_hex_tarball: false,
         },
         crate::build::download_dependencies(paths, crate::cli::Reporter::new())?,
     )?;

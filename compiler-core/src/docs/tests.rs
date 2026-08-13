@@ -14,7 +14,7 @@ use super::{
 };
 use crate::{
     build::{
-        self, Mode, NullTelemetry, Origin, PackageCompiler, StaleTracker,
+        self, ErlangOutput, Mode, NullTelemetry, Origin, PackageCompiler, StaleTracker,
         TargetCodegenConfiguration,
     },
     config::{DocsPage, PackageConfig, Repository},
@@ -67,7 +67,10 @@ fn compile_with_markdown_pages(
     let mut type_manifests = im::HashMap::new();
     let mut defined_modules = im::HashMap::new();
     let warnings = WarningEmitter::null();
-    let target = TargetCodegenConfiguration::Erlang { app_file: None };
+    let target = TargetCodegenConfiguration::Erlang {
+        app_file: None,
+        output: ErlangOutput::Binary,
+    };
 
     let root = Utf8PathBuf::from("/");
     let build = root.join("build");

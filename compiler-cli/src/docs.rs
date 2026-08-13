@@ -99,6 +99,7 @@ pub fn build(paths: &ProjectPaths, options: BuildOptions) -> Result<()> {
             warnings_as_errors: false,
             root_target_support: TargetSupport::Enforced,
             no_print_progress: false,
+            building_hex_tarball: false,
         },
         manifest,
     )?;
@@ -221,6 +222,7 @@ pub fn publish(paths: &ProjectPaths) -> Result<()> {
             mode: Mode::Prod,
             target: None,
             no_print_progress: false,
+            building_hex_tarball: false,
         },
         manifest,
     )?;

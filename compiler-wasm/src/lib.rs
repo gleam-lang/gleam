@@ -10,7 +10,8 @@ use gleam_core::{
     Error,
     analyse::TargetSupport,
     build::{
-        Mode, NullTelemetry, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration,
+        ErlangOutput, Mode, NullTelemetry, PackageCompiler, StaleTracker, Target,
+        TargetCodegenConfiguration,
     },
     config::PackageConfig,
     io::{FileSystemReader, FileSystemWriter},
@@ -191,7 +192,13 @@ fn do_compile_package(project: Project, target: Target) -> Result<(), Error> {
     };
 
     let target = match target {
-        Target::Erlang => TargetCodegenConfiguration::Erlang { app_file: None },
+        Target::Erlang => TargetCodegenConfiguration::Erlang {
+            app_file: None,
+            // The wasm compiler is used for the Gleam playground, so we want
+            // to produce textual Erlang files that can be displayed, rather
+            // than the binary format that is used to run the code.
+            output: ErlangOutput::Textual,
+        },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
             emit_typescript_definitions: false,
             emit_source_maps: false,

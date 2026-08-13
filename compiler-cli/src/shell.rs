@@ -21,6 +21,7 @@ pub fn command(paths: &ProjectPaths) -> Result<(), Error> {
             mode: Mode::Dev,
             target: Some(Target::Erlang),
             no_print_progress: false,
+            building_hex_tarball: false,
         },
         crate::build::download_dependencies(paths, crate::cli::Reporter::new())?,
     )?;

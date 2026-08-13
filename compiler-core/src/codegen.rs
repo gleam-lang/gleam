@@ -4,7 +4,8 @@
 use crate::{
     Result,
     build::{
-        ErlangAppCodegenConfiguration, Module, module_erlang_name, package_compiler::StdlibPackage,
+        ErlangAppCodegenConfiguration, ErlangOutput, Module, module_erlang_name,
+        package_compiler::StdlibPackage,
     },
     config::PackageConfig,
     erlang,
@@ -13,7 +14,9 @@ use crate::{
 };
 use ecow::EcoString;
 use erlang::escape_atom_string;
-use erlang_generation::{ErlangBinaryBuilder, ErlangBuilder, ErlangModuleName};
+use erlang_generation::{
+    ErlangBinaryBuilder, ErlangBuilder, ErlangModuleName, ErlangSourceBuilder,
+};
 use itertools::Itertools;
 use src_span::LineNumbers;
 use std::fmt::Debug;
@@ -38,13 +41,14 @@ impl<'a> Erlang<'a> {
 
     pub fn render<Writer: FileSystemWriter>(
         &self,
+        output: ErlangOutput,
         writer: Writer,
         modules: &[Module],
         root: &Utf8Path,
     ) -> Result<()> {
         for module in modules {
             let erl_name = module.erlang_name();
-            self.erlang_module(&writer, module, &erl_name, root)?;
+            self.erlang_module(output, &writer, module, &erl_name, root)?;
             self.erlang_record_headers(&writer, module, &erl_name)?;
         }
         Ok(())
@@ -52,25 +56,36 @@ impl<'a> Erlang<'a> {
 
     fn erlang_module<Writer: FileSystemWriter>(
         &self,
+        output: ErlangOutput,
         writer: &Writer,
         module: &Module,
         erl_name: &str,
         root: &Utf8Path,
     ) -> Result<()> {
-        let name = format!("{erl_name}.abstr");
-        let path = self.build_directory.join(&name);
         let line_numbers = LineNumbers::new(&module.code);
 
-        // We create the builder and set the line numbers so the ast will be
-        // properly annotated.
         let erlang_module_name = ErlangModuleName::new(&module.name);
-        let mut builder = ErlangBinaryBuilder::new(Some(erlang_module_name));
-        builder.set_line_numbers(&line_numbers);
+        match output {
+            ErlangOutput::Binary => {
+                let name = format!("{erl_name}.abstr");
+                let path = self.build_directory.join(&name);
 
-        // Then we generate the module using the builder.
-        let output = erlang::module(builder, &module.ast, &line_numbers, root);
-        tracing::debug!(name = ?name, "Generated Erlang module");
-        writer.write_bytes(&path, &output)
+                let mut builder = ErlangBinaryBuilder::new(Some(erlang_module_name));
+                builder.set_line_numbers(&line_numbers);
+                let output = erlang::module(builder, &module.ast, &line_numbers, root);
+                tracing::debug!(name = ?name, "Generated Erlang module");
+                writer.write_bytes(&path, &output)
+            }
+            ErlangOutput::Textual => {
+                let name = format!("{erl_name}.erl");
+                let path = self.build_directory.join(&name);
+
+                let builder = ErlangSourceBuilder::new(Some(erlang_module_name));
+                let output = erlang::module(builder, &module.ast, &line_numbers, root);
+                tracing::debug!(name = ?name, "Generated Erlang module");
+                writer.write(&path, &output)
+            }
+        }
     }
 
     fn erlang_record_headers<Writer: FileSystemWriter>(
