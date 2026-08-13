@@ -466,7 +466,7 @@ fn phantom_type_variables(custom_type: &CustomType<Arc<Type>>) -> Vec<EcoString>
 
 /// Given a custom type's type parameter (that is expected to be generic or
 /// unbound), this will return the name the corresponding type variable should
-/// have in the generated erlang code.
+/// have in the generated Erlang code.
 ///
 /// If the type passed is not generic this will panic!
 fn type_parameter_name(type_: &Type) -> EcoString {
@@ -3009,7 +3009,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
             builder.bit_array_segment(segment.location);
 
-            // For utf16 and utf32 we need an explicit conversion using erlang's
+            // For utf16 and utf32 we need an explicit conversion using Erlang's
             // `unicode:characters_to_binary`. The segment value will be
             // something like this:
             // ```erl
@@ -3378,7 +3378,7 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
 }
 
 /// Given an expression, this tells us how we should be calling it as a
-/// function in the generated erlang code.
+/// function in the generated Erlang code.
 fn how_to_call<'a>(function: &'a TypedExpr) -> FunctionCall<'a> {
     match function {
         // This is a record constructor from the current module.
@@ -3399,7 +3399,7 @@ fn how_to_call<'a>(function: &'a TypedExpr) -> FunctionCall<'a> {
             ..
         } => FunctionCall::BuildRecord { name },
 
-        // Notice how whenever we have a function that has an erlang
+        // Notice how whenever we have a function that has an Erlang
         // external definition we will always directly call that and not go
         // through the Gleam function. For example:
         //
@@ -3958,7 +3958,7 @@ fn variable_name(name: &str) -> EcoString {
     first_uppercased.chain(chars).collect()
 }
 
-/// When rendering a type variable to an erlang type spec we need all type
+/// When rendering a type variable to an Erlang type spec we need all type
 /// variables with the same id to end up with the same name in the generated
 /// Erlang.
 /// This function converts a usize into base 26 A-Z for this purpose.

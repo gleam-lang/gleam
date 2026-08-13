@@ -938,7 +938,7 @@ pub enum ModuleValueConstructor {
         ///     pub fn wibble() { Nil }
         ///
         /// This function has module "themodule" and name "wibble"
-        /// and erlang external "other" and "whoop".
+        /// and Erlang external "other" and "whoop".
         ///     @external(erlang, "other", "whoop")
         ///     pub fn wibble() -> Nil
         ///

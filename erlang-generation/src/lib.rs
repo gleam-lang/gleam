@@ -30,8 +30,8 @@ macro_rules! invalid_code_for_position {
     };
 }
 
-/// This represent an erlang module name.
-/// Gleam modules use `/` as a separator, but when turned into erlang `@` is
+/// This represent an Erlang module name.
+/// Gleam modules use `/` as a separator, but when turned into Erlang `@` is
 /// used as a separator instead.
 ///
 /// If we were to allow strings directly, a very common mistake to make would be
@@ -45,7 +45,7 @@ pub struct ErlangModuleName(EcoString);
 
 impl ErlangModuleName {
     #[inline]
-    /// Creates a new erlang module name from a Gleam module name.
+    /// Creates a new Erlang module name from a Gleam module name.
     pub fn new(gleam_module_name: &str) -> Self {
         Self(gleam_module_name.replace("/", "@").into())
     }
@@ -872,7 +872,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// 1. The expression representing the bit array segment
     /// 2. The expression representing the segment size (or call
-    ///    `bit_array_default_segment_size` if you want to use the erlang default)
+    ///    `bit_array_default_segment_size` if you want to use the Erlang default)
     /// 3. A list of type specifiers (those are atoms like `utf8`, `binary`,
     ///    ...) or the atom `default` if you're ok with Erlang's default value,
     ///    those are generated using the `bit_array_segment_specifiers` function.
@@ -1018,7 +1018,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// A clause might have multiple guards but, the way Gleam is compiled, you
     /// should always call this function just once. A gleam guard is always
-    /// compiled as a single erlang guard with a single expression.
+    /// compiled as a single Erlang guard with a single expression.
     ///
     fn start_clause_guard(&mut self) -> Self::Guard;
 
@@ -3865,7 +3865,7 @@ enum BinaryBuilderPosition {
     BitArraySegment {
         expected: ExpectedBitArraySegmentItem,
     },
-    /// We're generating a list. Lists are represented as cons lists in erlang
+    /// We're generating a list. Lists are represented as cons lists in Erlang
     /// so the only expected items are either the head or the tail.
     List { expected: ExpectedListItem },
     /// We're generating a unary operator and we're waiting for the expression

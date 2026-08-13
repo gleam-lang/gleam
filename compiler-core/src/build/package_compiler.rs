@@ -399,7 +399,7 @@ where
 
         io.mkdir(&build_dir)?;
 
-        // We don't want to copy the precompiled erlang files of deps over, so
+        // We don't want to copy the precompiled Erlang files of deps over, so
         // we make sure the native file copier will ignore those.
         let precompiled_erlang_file_names = modules
             .iter()
