@@ -2753,3 +2753,40 @@ pub fn go(wibble) {
 "#;
     assert_completion!(TestProject::for_source(code), Position::new(3, 35));
 }
+
+// https://github.com/gleam-lang/gleam/issues/6167
+#[test]
+fn completions_for_an_unqualified_import_without_braces() {
+    let code = "import dep.";
+    let dep = "
+pub const wibble = \"wibble\"
+
+pub fn wobble() {
+  todo
+}
+
+pub type Wibble {
+  Wibble
+}";
+
+    let position = Position::new(0, 11);
+    let tester = TestProject::for_source("import dep").add_module("dep", dep);
+    let mut io = LanguageServerTestIO::new();
+    let mut engine = tester.build_engine(&mut io);
+    // Pass a valid source to compile once
+    _ = io.src_module("app", tester.src);
+    let _ = engine.compile_please();
+    // Update source to the one we want to test
+    _ = io.src_module("app", code);
+    let param = tester.build_path(position);
+    let response = engine.completion(param, code.into());
+
+    let mut completions = response.result.unwrap().unwrap_or_default();
+    completions.sort_by(|a, b| a.label.cmp(&b.label));
+    let output = format!(
+        "{}\n\n----- Completion content -----\n{}",
+        show_complete(code, position),
+        format_completion_results(completions)
+    );
+    insta::assert_snapshot!(insta::internals::AutoName, output, code);
+}
