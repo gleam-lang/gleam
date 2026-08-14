@@ -58,10 +58,10 @@ impl BeamCompilerInstance {
 
         tracing::debug!(args=?args, "call_beam_compiler");
 
-        writeln!(self.stdin.as_ref().expect("stdin present"), "{args}.").map_err(|e| {
+        writeln!(self.stdin.as_ref().expect("stdin present"), "{args}.").map_err(|error| {
             Error::ShellCommand {
                 program: "escript".into(),
-                reason: ShellCommandFailureReason::IoError(e.kind()),
+                reason: ShellCommandFailureReason::IoError(error.kind()),
             }
         })?;
 
@@ -103,8 +103,8 @@ impl BeamCompilerInstance {
     pub fn new<IO: FileSystemWriter>(io: &IO) -> Result<Self, Error> {
         let escript_source = std::include_str!("../templates/gleam@@compile.erl");
         let escript_file =
-            tempfile::NamedTempFile::new().map_err(|e| Error::CouldNotCreateTempFile {
-                error: e.to_string(),
+            tempfile::NamedTempFile::new().map_err(|error| Error::CouldNotCreateTempFile {
+                error: error.to_string(),
             })?;
         let escript_path =
             Utf8PathBuf::from_path_buf(escript_file.path().to_path_buf()).expect("UTF8 temp");
@@ -118,7 +118,7 @@ impl BeamCompilerInstance {
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .spawn()
-            .map_err(|e| match e.kind() {
+            .map_err(|error| match error.kind() {
                 io::ErrorKind::NotFound => Error::ShellProgramNotFound {
                     program: "escript".into(),
                     os: get_os(),

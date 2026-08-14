@@ -1385,7 +1385,9 @@ impl<'a, 'doc> Formatter<'a> {
                 let segment_docs = segments
                     .iter()
                     .map(|segment| {
-                        bit_array_segment(arena, segment, |e| self.bit_array_segment_expr(arena, e))
+                        bit_array_segment(arena, segment, |segment| {
+                            self.bit_array_segment_expr(arena, segment)
+                        })
                     })
                     .collect_vec();
 

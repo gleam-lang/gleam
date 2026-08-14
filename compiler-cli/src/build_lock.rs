@@ -53,12 +53,13 @@ impl BuildLock {
 
         crate::fs::mkdir(&self.directory)?;
 
-        let mut file = fslock::LockFile::open(lock_path.as_str()).map_err(|e| Error::FileIo {
-            kind: FileKind::File,
-            path: lock_path.clone(),
-            action: FileIoAction::Create,
-            err: Some(e.to_string()),
-        })?;
+        let mut file =
+            fslock::LockFile::open(lock_path.as_str()).map_err(|error| Error::FileIo {
+                kind: FileKind::File,
+                path: lock_path.clone(),
+                action: FileIoAction::Create,
+                err: Some(error.to_string()),
+            })?;
 
         let lock_error = |error: fslock::Error| Error::FileIo {
             kind: FileKind::File,

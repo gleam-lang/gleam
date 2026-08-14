@@ -38,9 +38,11 @@ pub enum Requirement {
 impl Requirement {
     pub fn hex(range: &str) -> Result<Requirement> {
         Ok(Requirement::Hex {
-            version: Range::new(range.to_string()).map_err(|e| Error::InvalidVersionFormat {
-                input: range.to_string(),
-                error: e.to_string(),
+            version: Range::new(range.to_string()).map_err(|error| {
+                Error::InvalidVersionFormat {
+                    input: range.to_string(),
+                    error: error.to_string(),
+                }
             })?,
         })
     }

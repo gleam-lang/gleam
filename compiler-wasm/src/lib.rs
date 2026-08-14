@@ -125,7 +125,7 @@ pub fn compile_package(project_id: usize, target: &str) -> Result<(), String> {
         }
     };
 
-    do_compile_package(get_project(project_id), target).map_err(|e| e.pretty_string())
+    do_compile_package(get_project(project_id), target).map_err(|error| error.pretty_string())
 }
 
 /// Get the compiled JavaScript output for a given module.

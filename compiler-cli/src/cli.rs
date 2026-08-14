@@ -72,9 +72,9 @@ pub fn ask(question: &str) -> Result<String, Error> {
     let mut answer = String::new();
     let _ = std::io::stdin()
         .read_line(&mut answer)
-        .map_err(|e| Error::StandardIo {
+        .map_err(|error| Error::StandardIo {
             action: StandardIoAction::Read,
-            err: Some(e.kind()),
+            err: Some(error.kind()),
         })?;
     Ok(answer.trim().to_string())
 }
@@ -95,9 +95,9 @@ pub fn confirm_with_text(response: &str) -> Result<bool, Error> {
 pub fn ask_password(question: &str) -> Result<EcoString, Error> {
     let prompt = format!("{question} (will not be printed as you type): ");
     rpassword::prompt_password(prompt)
-        .map_err(|e| Error::StandardIo {
+        .map_err(|error| Error::StandardIo {
             action: StandardIoAction::Read,
-            err: Some(e.kind()),
+            err: Some(error.kind()),
         })
         .map(|s| EcoString::from(s.trim()))
 }

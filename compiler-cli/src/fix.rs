@@ -52,11 +52,11 @@ fn fix_minimum_required_version(paths: &ProjectPaths, warnings: Vec<Warning>) ->
     let root_config = paths.root_config();
     let mut toml = crate::fs::read(&root_config)?
         .parse::<toml_edit::DocumentMut>()
-        .map_err(|e| Error::FileIo {
+        .map_err(|error| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Parse,
             path: root_config.to_path_buf(),
-            err: Some(e.to_string()),
+            err: Some(error.to_string()),
         })?;
 
     #[allow(clippy::indexing_slicing)]

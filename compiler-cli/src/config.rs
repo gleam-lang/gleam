@@ -61,11 +61,11 @@ pub fn root_config(paths: &ProjectPaths) -> Result<PackageConfig, Error> {
 
 pub fn read(config_path: Utf8PathBuf) -> Result<PackageConfig, Error> {
     let toml = crate::fs::read(&config_path)?;
-    let config: PackageConfig = toml::from_str(&toml).map_err(|e| Error::FileIo {
+    let config: PackageConfig = toml::from_str(&toml).map_err(|error| Error::FileIo {
         action: FileIoAction::Parse,
         kind: FileKind::File,
         path: config_path,
-        err: Some(e.to_string()),
+        err: Some(error.to_string()),
     })?;
     config.check_gleam_compatibility()?;
     Ok(config)

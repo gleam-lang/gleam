@@ -44,9 +44,9 @@ pub fn command(paths: &ProjectPaths) -> Result<(), Error> {
 
     // Run the shell
     tracing::info!("Running OS process {:?}", command);
-    let _ = command.status().map_err(|e| Error::ShellCommand {
+    let _ = command.status().map_err(|error| Error::ShellCommand {
         program: "erl".into(),
-        reason: ShellCommandFailureReason::IoError(e.kind()),
+        reason: ShellCommandFailureReason::IoError(error.kind()),
     })?;
     Ok(())
 }

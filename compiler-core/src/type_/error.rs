@@ -37,8 +37,9 @@ impl Problems {
     /// Sort the warnings and errors by their location.
     ///
     pub fn sort(&mut self) {
-        self.errors.sort_by_key(|e| e.start_location());
-        self.warnings.sort_by_key(|w| w.location().start);
+        self.errors.sort_by_key(|error| error.start_location());
+        self.warnings
+            .sort_by_key(|warning| warning.location().start);
     }
 
     /// Register an error.
