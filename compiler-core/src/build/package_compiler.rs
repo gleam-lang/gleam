@@ -18,12 +18,16 @@ use crate::{
     build::{
         Mode, Module, Origin, Outcome, SourceFingerprint, Target,
         elixir_libraries::ElixirLibraries,
+        module_erlang_name,
         native_file_copier::NativeFileCopier,
         package_loader::{CodegenRequired, PackageLoader, StaleTracker},
     },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
-    io::{BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
+    io::{
+        BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio,
+        files_with_extension,
+    },
     parse::extra::ModuleExtra,
     paths, type_,
     uid::UniqueIdGenerator,
@@ -410,15 +414,15 @@ where
         // version and not the newly compiled version.
         Erlang::new(&build_dir, &include_dir).render(io.clone(), modules, self.root)?;
 
-        let native_modules: Vec<EcoString> = if self.compile_beam_bytecode {
+        if self.compile_beam_bytecode {
             written.extend(modules.iter().map(Module::compiled_erlang_path));
-            self.compile_erlang_to_beam(&written)?
+            let _ = self.compile_erlang_to_beam(&written)?;
         } else {
             tracing::debug!("skipping_erlang_bytecode_compilation");
-            Vec::new()
-        };
+        }
 
         if let Some(config) = app_file_config {
+            let native_modules = self.native_modules_in_ebin(modules, cached_module_names)?;
             ErlangApp::new(&self.out.join("ebin"), config).render(
                 io,
                 self.config,
@@ -428,6 +432,36 @@ where
             )?;
         }
         Ok(())
+    }
+
+    /// Every native (Erlang/Elixir) module that currently has a compiled
+    /// `.beam` file in the `ebin` directory but is not one of the Gleam
+    /// modules just compiled or read from cache.
+    ///
+    /// We can't rely on `compile_erlang_to_beam`'s return value alone for
+    /// this, as it only reports modules that were *just* compiled: a native
+    /// source file that is unchanged since the previous build is skipped by
+    /// `NativeFileCopier` and so wouldn't be recompiled, even though its
+    /// `.beam` file (and thus the need for it to appear in the `.app` file's
+    /// `modules` list) is still there from that previous build.
+    fn native_modules_in_ebin(
+        &self,
+        modules: &[Module],
+        cached_module_names: &[EcoString],
+    ) -> Result<Vec<EcoString>, Error> {
+        let gleam_module_names: HashSet<EcoString> = modules
+            .iter()
+            .map(Module::erlang_name)
+            .chain(cached_module_names.iter().map(module_erlang_name))
+            .collect();
+        let entrypoint_name: EcoString = format!("{}@@main", self.config.name).into();
+
+        Ok(
+            files_with_extension(&self.io, &self.out.join("ebin"), "beam")
+                .filter_map(|path| path.file_stem().map(EcoString::from))
+                .filter(|name| *name != entrypoint_name && !gleam_module_names.contains(name))
+                .collect(),
+        )
     }
 
     fn perform_javascript_codegen(

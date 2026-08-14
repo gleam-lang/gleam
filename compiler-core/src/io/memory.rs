@@ -28,6 +28,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InMemoryFileSystem {
     files: Rc<RefCell<HashMap<Utf8PathBuf, InMemoryFile>>>,
+    external_module_names: Rc<RefCell<HashMap<Utf8PathBuf, String>>>,
 }
 
 impl Default for InMemoryFileSystem {
@@ -39,6 +40,7 @@ impl Default for InMemoryFileSystem {
 
         Self {
             files: Rc::new(RefCell::new(files)),
+            external_module_names: Rc::new(RefCell::new(HashMap::new())),
         }
     }
 }
@@ -109,6 +111,32 @@ impl InMemoryFileSystem {
             })?
             .modification_time = time;
         Ok(())
+    }
+
+    #[cfg(test)]
+    /// here we fake having a colocated erlang module file
+    pub fn write_erlang_module(&self, path: &Utf8Path, module_name: &str, body: &str) {
+        let code = format!("-module({module_name}).\n{body}");
+        self.write(&Utf8Path::new("/src").join(path), &code)
+            .expect("write erlang module");
+        let _ = self
+            .external_module_names
+            .deref()
+            .borrow_mut()
+            .insert(path.to_path_buf(), module_name.to_string());
+    }
+
+    #[cfg(test)]
+    /// here we fake having a colocated Elixir module file
+    pub fn write_elixir_module(&self, path: &Utf8Path, module_name: &str, body: &str) {
+        let code = format!("defmodule {module_name} do\n{body}\nend\n");
+        self.write(&Utf8Path::new("/src").join(path), &code)
+            .expect("write elixir module");
+        let _ = self
+            .external_module_names
+            .deref()
+            .borrow_mut()
+            .insert(path.to_path_buf(), format!("Elixir.{module_name}"));
     }
 }
 
@@ -455,12 +483,29 @@ impl CommandExecutor for InMemoryFileSystem {
 impl BeamCompilerIO for InMemoryFileSystem {
     fn compile_beam(
         &self,
-        _out: &Utf8Path,
+        out: &Utf8Path,
         _lib: &Utf8Path,
-        _modules: &HashSet<Utf8PathBuf>,
+        modules: &HashSet<Utf8PathBuf>,
         _stdio: Stdio,
     ) -> Result<Vec<String>, Error> {
-        Ok(Vec::new()) // Always succeed.
+        // Always succeed, pretending to have compiled every given module and
+        // reporting back the name declared via `write_erlang_module`/
+        // `write_elixir_module`, the same way the real BEAM compiler reports
+        // back the name of each module it compiled. We also write out an
+        // (empty) `.beam` file per module, mirroring the real compiler,
+        // since callers may look for these in `ebin` afterwards.
+        let registered = self.external_module_names.deref().borrow();
+        let ebin = out.join("ebin");
+        let mut compiled = Vec::new();
+        for module in modules {
+            let Some(name) = registered.get(module) else {
+                continue;
+            };
+            self.write_bytes(&ebin.join(format!("{name}.beam")), &[])
+                .expect("write fake beam file");
+            compiled.push(name.clone());
+        }
+        Ok(compiled)
     }
 }
 

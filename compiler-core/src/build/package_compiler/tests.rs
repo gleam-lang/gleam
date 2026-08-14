@@ -89,27 +89,7 @@ pub fn same_package_defining_duplicate_module() {
     insta::assert_snapshot!(insta::internals::AutoName, output);
 }
 
-fn compile_package_with_colocation(compile_beam_bytecode: bool) -> InMemoryFileSystem {
-    let fs = InMemoryFileSystem::new();
-    fs.write(
-        Utf8Path::new("/src/main.gleam"),
-        "pub fn main() -> Nil { Nil }",
-    )
-    .expect("write gleam module");
-    fs.write(Utf8Path::new("/src/native.erl"), "-module(native).\n")
-        .expect("write erlang file");
-    fs.write(
-        Utf8Path::new("/src/native.ex"),
-        "defmodule Native do\nend\n",
-    )
-    .expect("write elixir file");
-    // Pre-populate the Elixir core library pathfinder cache so that
-    // `ElixirLibraries::make_available` doesn't try to shell out to a real
-    // `elixir` executable (which the in-memory command executor can't run)
-    // to regenerate it.
-    fs.write(Utf8Path::new("/lib/gleam_elixir_paths"), "/fake/eex")
-        .expect("write elixir paths cache");
-
+fn compile_once(fs: &InMemoryFileSystem, compile_beam_bytecode: bool) {
     let mut config = PackageConfig::default();
     config.name = "a_package".into();
 
@@ -143,6 +123,33 @@ fn compile_package_with_colocation(compile_beam_bytecode: bool) -> InMemoryFileS
         )
         .into_result()
         .expect("compilation should succeed");
+}
+
+fn compile_package_with_colocation(compile_beam_bytecode: bool) -> InMemoryFileSystem {
+    let fs = InMemoryFileSystem::new();
+    fs.write(
+        Utf8Path::new("/src/main.gleam"),
+        "pub fn main() -> Nil { Nil }",
+    )
+    .expect("write gleam module");
+    fs.write_erlang_module(
+        Utf8Path::new("native.erl"),
+        "native",
+        "-export([hello/0]).\n\nhello() ->\n    hello.\n",
+    );
+    fs.write_elixir_module(
+        Utf8Path::new("native.ex"),
+        "Native",
+        "  def hello do\n    :hello\n  end",
+    );
+    // Pre-populate the Elixir core library pathfinder cache so that
+    // `ElixirLibraries::make_available` doesn't try to shell out to a real
+    // `elixir` executable (which the in-memory command executor can't run)
+    // to regenerate it.
+    fs.write(Utf8Path::new("/lib/gleam_elixir_paths"), "/fake/eex")
+        .expect("write elixir paths cache");
+
+    compile_once(&fs, compile_beam_bytecode);
 
     fs
 }
@@ -156,6 +163,32 @@ fn erlang_app_file_is_written_when_beam_bytecode_is_compiled() {
         .expect("app file should exist");
 
     insta::assert_snapshot!(insta::internals::AutoName, app_file);
+}
+
+#[test]
+fn native_modules_are_included_in_app_file_on_warm_rebuild() {
+    let fs = compile_package_with_colocation(true);
+
+    // Compile again, reusing the same filesystem/output directories, to
+    // simulate a warm `gleam build`: the native source files haven't changed
+    // since the previous build, so the incremental native file copier will
+    // skip recompiling them. Their previously compiled `.beam` files are
+    // still present in `ebin` though, and the generated `.app` file must
+    // still list them.
+    compile_once(&fs, true);
+
+    let app_file = fs
+        .read(Utf8Path::new("/out/ebin/a_package.app"))
+        .expect("app file should exist");
+
+    assert!(
+        app_file.contains("native"),
+        "erlang native module missing from a warm rebuild's app file: {app_file}"
+    );
+    assert!(
+        app_file.contains("'Elixir.Native'"),
+        "elixir native module missing from a warm rebuild's app file: {app_file}"
+    );
 }
 
 #[test]
