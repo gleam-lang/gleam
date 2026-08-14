@@ -29,6 +29,14 @@ FIX-DEADLINE: 2026-10-08
 """
 
 [[advisories.ignore]]
+id = "RUSTSEC-2026-0255"
+reason = """
+sized-chunks depends on im, which is unmaintained
+
+FIX-DEADLINE: 2026-12-11
+"""
+
+[[advisories.ignore]]
 id = "RUSTSEC-2026-0248"
 reason = """
 The im crate is unmaintained.
@@ -73,16 +81,16 @@ FIX-DEADLINE: 2027-04-11
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
 allow = [
-    "Apache-2.0",
-    "BSD-3-Clause",
-    "BSL-1.0",
-    "CC0-1.0",
-    "CDLA-Permissive-2.0",
-    "ISC",
-    "MIT",
-    "MPL-2.0",
-    "Unicode-3.0",
-    "Zlib",
+  "Apache-2.0",
+  "BSD-3-Clause",
+  "BSL-1.0",
+  "CC0-1.0",
+  "CDLA-Permissive-2.0",
+  "ISC",
+  "MIT",
+  "MPL-2.0",
+  "Unicode-3.0",
+  "Zlib",
 ]
 confidence-threshold = 0.8
 
@@ -112,13 +120,11 @@ unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 allow-git = [
-    # "https://github.com/gleam-lang/hexpm-rust",
+  # "https://github.com/gleam-lang/hexpm-rust",
 ]
 
 [[licenses.clarify]]
 name = "encoding_rs"
 version = "*"
 expression = "(Apache-2.0 OR MIT) AND BSD-3-Clause"
-license-files = [
-    { path = "COPYRIGHT", hash = 0x39f8ad31 }
-]
+license-files = [{ path = "COPYRIGHT", hash = 0x39f8ad31 }]
