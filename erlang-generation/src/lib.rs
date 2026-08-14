@@ -214,14 +214,8 @@ pub trait ErlangBuilder<Output> {
     /// generating the type it stands for.
     type TypeSpec;
 
-    /// Creates a new `ErlangBuilder` data structure to generate Erlang code.
-    /// If a module name is provided this will also automatically take care of
-    /// generating the appropriate `-module` annotation at the very beginning.
-    ///
-    /// It's optional because it might not always be needed. For example when
-    /// producing `-record` annotations there's no need to have a module name.
-    ///
-    fn new(module_name: Option<ErlangModuleName>) -> Self;
+    /// Adds to the module a `-module` attribute with the given name.
+    fn module_attribute(&mut self, module_name: ErlangModuleName);
 
     /// Consumes the given `ErlangBuilder` turning it into some other
     /// representation.
@@ -1386,7 +1380,7 @@ pub trait ErlangBuilder<Output> {
 
 /// A structure that implements the `ErlangBuilder` trait and produces a nice
 /// and readable Erlang source string.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ErlangSourceBuilder {
     code: String,
     /// This keeps track of what we're generating
@@ -1830,16 +1824,11 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
     type UnionType = ();
     type TypeSpec = ();
 
-    fn new(module_name: Option<ErlangModuleName>) -> Self {
-        Self {
-            code: if let Some(module_name) = module_name {
-                format!("-module({}).\n", quote_atom_name(&module_name.0))
-            } else {
-                String::new()
-            },
-            indentation: 0,
-            position: vec![],
-        }
+    fn module_attribute(&mut self, module_name: ErlangModuleName) {
+        self.new_top_level_form();
+        self.code.push_str("-module(");
+        self.code.push_str(&quote_atom_name(&module_name.0));
+        self.code.push_str(").\n");
     }
 
     fn into_output(mut self) -> String {
@@ -3993,35 +3982,15 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
 
     type TypeSpec = Vec<EcoString>;
 
-    fn new(module_name: Option<ErlangModuleName>) -> Self {
-        let mut etf = erlang_term_format::TermBuilder::new();
-        let module_ender = etf.start_list();
-
-        let top_level_forms = match module_name.as_ref() {
-            None => 0,
-            // If there's a `module` declaration we need to add it to the
-            // module.
-            // The line numbers are not needed by the pretty printer!
-            Some(module_name) => {
-                // The EAF representation of `-module(Module).` is
-                // `{attribute, ANNOTATION, module, Module}`.
-                etf.small_tuple(4);
-                etf.atom("attribute");
-                etf.usize(0);
-                etf.atom("module");
-                etf.atom(&module_name.0);
-
-                1
-            }
-        };
-
-        Self {
-            top_level_forms,
-            module_ender,
-            etf,
-            line_numbers: None,
-            position: vec![],
-        }
+    fn module_attribute(&mut self, module_name: ErlangModuleName) {
+        self.new_top_level_form();
+        // The EAF representation of `-module(Module).` is
+        // `{attribute, ANNOTATION, module, Module}`.
+        self.etf.small_tuple(4);
+        self.etf.atom("attribute");
+        self.etf.usize(0);
+        self.etf.atom("module");
+        self.etf.atom(&module_name.0);
     }
 
     fn into_output(mut self) -> Vec<u8> {
@@ -5211,11 +5180,17 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
 }
 
 impl<'line_numbers> ErlangBinaryBuilder<'line_numbers> {
-    /// This sets the `LineNumbers` this builder should use when producing
-    /// annotations for the nodes of the current module.
-    ///
-    pub fn set_line_numbers(&mut self, line_numbers: &'line_numbers LineNumbers) {
-        self.line_numbers = Some(line_numbers)
+    pub fn new(line_numbers: Option<&'line_numbers LineNumbers>) -> Self {
+        let mut etf = erlang_term_format::TermBuilder::new();
+        let module_ender = etf.start_list();
+
+        Self {
+            top_level_forms: 0,
+            module_ender,
+            etf,
+            line_numbers,
+            position: vec![],
+        }
     }
 
     fn annotation(&mut self, location: Option<SrcSpan>) {
