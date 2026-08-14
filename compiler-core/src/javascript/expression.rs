@@ -1956,7 +1956,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. }
             | TypedExpr::Invalid { .. } => {
-                let fun = self.not_in_tail_position(None, |this| -> Document<'_, '_> {
+                let fun = self.not_in_tail_position(None, |this| {
                     let is_fn_literal = matches!(fun, TypedExpr::Fn { .. });
                     let fun = this.wrap_expression(arena, fun);
                     if is_fn_literal {

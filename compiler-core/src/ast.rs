@@ -2148,7 +2148,7 @@ impl TypedClause {
             &self.alternative_patterns,
             &other.alternative_patterns,
             |(patterns_one, patterns_other)| {
-                pairwise_all(patterns_one, patterns_other, |(one, other)| -> bool {
+                pairwise_all(patterns_one, patterns_other, |(one, other)| {
                     one.syntactically_eq(other)
                 })
             },
