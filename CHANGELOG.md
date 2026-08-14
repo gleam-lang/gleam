@@ -151,6 +151,22 @@
   "discard unused argument" code action.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server will now surround value completions right after dot in
+  imports with braces. For example, consider following code:
+
+  ```gleam
+  import wibble.|
+  ```
+
+  where cursor is denoted with `|`. Completing value `Wibble` will result in
+  following code:
+
+  ```gleam
+  import wibble.{Wibble}
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Formatter
 
 ### Compiler Wasm API
