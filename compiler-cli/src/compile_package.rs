@@ -53,9 +53,11 @@ pub fn command(options: CompilePackage) -> Result<()> {
 
     tracing::info!("Compiling package");
 
+    let mode = if options.prod { Mode::Prod } else { Mode::Dev };
+
     let mut compiler = PackageCompiler::new(
         &config,
-        Mode::Dev,
+        mode,
         &options.package_directory,
         &options.output_directory,
         &options.libraries_directory,
