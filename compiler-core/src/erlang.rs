@@ -214,7 +214,9 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn module_document<Output>(&mut self, builder: &mut impl ErlangBuilder<Output>) {
+    fn module<Output>(&mut self, builder: &mut impl ErlangBuilder<Output>) {
+        builder.module_attribute(ErlangModuleName::new(&self.module.name));
+
         // We need to know which private functions are referenced in importable
         // constants so that we can export them anyway in the generated Erlang.
         // This is because otherwise when the constant is used in another module it
@@ -3564,7 +3566,7 @@ fn how_to_divide(left: &TypedExpr, right: &TypedExpr) -> HowToDivide {
 }
 
 pub fn record_definition(record_name: &str, fields: &[(SrcSpan, &str, Arc<Type>)]) -> String {
-    let mut builder = ErlangSourceBuilder::new(None);
+    let mut builder = ErlangSourceBuilder::default();
 
     let attribute = builder.start_record_attribute(&to_snake_case(record_name));
 
@@ -3586,7 +3588,7 @@ pub fn module<'a, Output>(
     root: &'a Utf8Path,
 ) -> Output {
     let mut generator = Generator::new(module, line_numbers, root);
-    generator.module_document(&mut builder);
+    generator.module(&mut builder);
     builder.into_output()
 }
 
