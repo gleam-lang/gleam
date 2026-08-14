@@ -120,8 +120,8 @@ impl<'runtime> HexAuthentication<'runtime> {
         let local_password = self.get_local_password()?;
         let encrypted_refresh_token =
             encryption::encrypt_with_passphrase(tokens.refresh_token.as_bytes(), &local_password)
-                .map_err(|e| Error::FailedToEncryptLocalHexApiKey {
-                detail: e.to_string(),
+                .map_err(|error| Error::FailedToEncryptLocalHexApiKey {
+                detail: error.to_string(),
             })?;
 
         let credentials = StoredOAuthCredentials {
@@ -250,11 +250,11 @@ It will be used to locally encrypt your Hex API tokens.
         }
         let toml = crate::fs::read(&path)?;
         let credentials: StoredOAuthCredentials =
-            toml::from_str(&toml).map_err(|e| Error::FileIo {
+            toml::from_str(&toml).map_err(|error| Error::FileIo {
                 action: FileIoAction::Parse,
                 kind: FileKind::File,
                 path,
-                err: Some(e.to_string()),
+                err: Some(error.to_string()),
             })?;
         Ok(Some(credentials.hexpm))
     }

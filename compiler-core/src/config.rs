@@ -124,9 +124,9 @@ impl GleamVersion {
 
     pub fn new(spec: String) -> Result<GleamVersion> {
         let hex =
-            version::Range::new(spec.to_string()).map_err(|e| Error::InvalidVersionFormat {
+            version::Range::new(spec.to_string()).map_err(|error| Error::InvalidVersionFormat {
                 input: spec,
-                error: e.to_string(),
+                error: error.to_string(),
             })?;
         Ok(hex.into())
     }
@@ -343,11 +343,11 @@ fn deserialise_config<P: AsRef<Utf8Path>>(
     path: P,
     toml: String,
 ) -> std::result::Result<PackageConfig, Error> {
-    let config: PackageConfig = toml::from_str(&toml).map_err(|e| Error::FileIo {
+    let config: PackageConfig = toml::from_str(&toml).map_err(|error| Error::FileIo {
         action: FileIoAction::Parse,
         kind: FileKind::File,
         path: path.as_ref().to_path_buf(),
-        err: Some(e.to_string()),
+        err: Some(error.to_string()),
     })?;
     Ok(config)
 }

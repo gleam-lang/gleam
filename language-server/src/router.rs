@@ -136,11 +136,11 @@ where
         let config_path = paths.root_config();
         let modification_time = io.modification_time(&config_path)?;
         let toml = io.read(&config_path)?;
-        let config = toml::from_str(&toml).map_err(|e| Error::FileIo {
+        let config = toml::from_str(&toml).map_err(|error| Error::FileIo {
             action: FileIoAction::Parse,
             kind: FileKind::File,
             path: config_path,
-            err: Some(e.to_string()),
+            err: Some(error.to_string()),
         })?;
         let engine = LanguageServerEngine::new(config, progress_reporter, io, paths)?;
         let project = Project {

@@ -1157,7 +1157,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // function being type checked, resulting in better type errors and the
         // record field access syntax working.
         if let Some(expected) = expected {
-            unify(expected, type_.clone()).map_err(|e| convert_unify_error(e, location))?;
+            unify(expected, type_.clone()).map_err(|error| convert_unify_error(error, location))?;
         }
 
         Ok(Arg {
@@ -1814,7 +1814,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         unify(type_.clone(), value.type_())
-            .map_err(|e| convert_unify_error(e, value.location()))?;
+            .map_err(|error| convert_unify_error(error, value.location()))?;
 
         let segment = BitArraySegment {
             location,
@@ -2172,7 +2172,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             {
                 Ok(annotated_type) => {
                     if let Err(error) = unify(annotated_type, type_)
-                        .map_err(|e| convert_unify_error(e, value.type_defining_location()))
+                        .map_err(|error| convert_unify_error(error, value.type_defining_location()))
                     {
                         self.problems.error(error);
                     }
@@ -3110,7 +3110,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let accessor_record_type = self.instantiate(accessor_record_type, &mut type_vars);
         let type_ = self.instantiate(type_, &mut type_vars);
         unify(accessor_record_type, record_type)
-            .map_err(|e| convert_unify_error(e, record_location))?;
+            .map_err(|error| convert_unify_error(error, record_location))?;
         Ok(RecordAccessor {
             index,
             label,
@@ -3433,8 +3433,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 let mut type_vars = im::HashMap::new();
                 let accessor_type = self.instantiate(accessor_type, &mut type_vars);
                 let type_ = self.instantiate(type_, &mut type_vars);
-                unify(accessor_type, record_type.clone()).map_err(|e| {
-                    convert_incompatible_fields_error(e, RecordField::Unlabelled(index))
+                unify(accessor_type, record_type.clone()).map_err(|error| {
+                    convert_incompatible_fields_error(error, RecordField::Unlabelled(index))
                 })?;
 
                 let record_access = TypedExpr::PositionalAccess {
@@ -3543,7 +3543,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         unify(return_type_copy, record_type.clone())
-            .map_err(|e| convert_unify_error(e, record.location()))?;
+            .map_err(|error| convert_unify_error(error, record.location()))?;
 
         let record_index = record_type.custom_type_inferred_variant();
         // Updating a record with only one variant is always safe
@@ -4960,7 +4960,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // Check to see if the function accepts labelled arguments
         let field_map = self
             .get_field_map(&fun)
-            .map_err(|e| convert_get_value_constructor_error(e, location, None))
+            .map_err(|error| convert_get_value_constructor_error(error, location, None))
             .and_then(|field_map| {
                 match field_map {
                     // The fun has a field map so labelled arguments may be

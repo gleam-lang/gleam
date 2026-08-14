@@ -74,11 +74,11 @@ pub fn unformatted_files(files: Vec<String>) -> Result<Vec<Unformatted>> {
     let mut problem_files = Vec::with_capacity(files.len());
 
     for file_path in files {
-        let path = Utf8PathBuf::from_str(&file_path).map_err(|e| Error::FileIo {
+        let path = Utf8PathBuf::from_str(&file_path).map_err(|error| Error::FileIo {
             action: FileIoAction::Open,
             kind: FileKind::File,
             path: Utf8PathBuf::from(file_path),
-            err: Some(e.to_string()),
+            err: Some(error.to_string()),
         })?;
 
         if path.is_dir() {
@@ -113,9 +113,9 @@ pub fn read_stdin() -> Result<String> {
     let mut src = String::new();
     let _ = std::io::stdin()
         .read_to_string(&mut src)
-        .map_err(|e| Error::StandardIo {
+        .map_err(|error| Error::StandardIo {
             action: StandardIoAction::Read,
-            err: Some(e.kind()),
+            err: Some(error.kind()),
         })?;
     Ok(src)
 }

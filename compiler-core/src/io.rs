@@ -64,7 +64,7 @@ pub fn make_relative(source_path: &Utf8Path, target_path: &Utf8Path) -> Utf8Path
 pub trait Reader: io::Read {
     /// A wrapper around `std::io::Read` that has Gleam's error handling.
     fn read_bytes(&mut self, buffer: &mut [u8]) -> Result<usize> {
-        self.read(buffer).map_err(|e| self.convert_err(e))
+        self.read(buffer).map_err(|error| self.convert_err(error))
     }
 
     fn convert_err<E: std::error::Error>(&self, error: E) -> Error;
@@ -73,7 +73,7 @@ pub trait Reader: io::Read {
 pub trait Utf8Writer: std::fmt::Write {
     /// A wrapper around `fmt::Write` that has Gleam's error handling.
     fn str_write(&mut self, str: &str) -> Result<()> {
-        self.write_str(str).map_err(|e| self.convert_err(e))
+        self.write_str(str).map_err(|error| self.convert_err(error))
     }
 
     fn convert_err<E: std::error::Error>(&self, err: E) -> Error;
@@ -95,7 +95,7 @@ pub trait Writer: io::Write + Utf8Writer {
     fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
         io::Write::write(self, bytes)
             .map(|_| ())
-            .map_err(|e| self.convert_err(e))
+            .map_err(|error| self.convert_err(error))
     }
 }
 
@@ -423,8 +423,8 @@ pub trait TarUnpacker {
     ) -> Result<tar::Entries<'a, WrappedReader>> {
         tracing::debug!("iterating through tar archive");
         self.io_result_entries(archive)
-            .map_err(|e| Error::ExpandTar {
-                error: e.to_string(),
+            .map_err(|error| Error::ExpandTar {
+                error: error.to_string(),
             })
     }
 
@@ -441,11 +441,11 @@ pub trait TarUnpacker {
     ) -> Result<()> {
         tracing::debug!(path = ?path, "unpacking tar archive");
         self.io_result_unpack(path, archive)
-            .map_err(|e| Error::FileIo {
+            .map_err(|error| Error::FileIo {
                 action: FileIoAction::WriteTo,
                 kind: FileKind::Directory,
                 path: path.to_path_buf(),
-                err: Some(e.to_string()),
+                err: Some(error.to_string()),
             })
     }
 }

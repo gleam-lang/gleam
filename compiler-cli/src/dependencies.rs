@@ -123,9 +123,9 @@ fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) 
         .collect_vec();
     let out = space_table(&["Package", "Version"], packages);
 
-    write!(buffer, "{out}").map_err(|e| Error::StandardIo {
+    write!(buffer, "{out}").map_err(|error| Error::StandardIo {
         action: StandardIoAction::Write,
-        err: Some(e.kind()),
+        err: Some(error.kind()),
     })
 }
 
@@ -153,9 +153,9 @@ fn list_package_and_dependencies_tree<W: std::io::Write>(
 
         tree.iter()
             .try_for_each(|line| writeln!(buffer, "{line}"))
-            .map_err(|e| Error::StandardIo {
+            .map_err(|error| Error::StandardIo {
                 action: StandardIoAction::Write,
-                err: Some(e.kind()),
+                err: Some(error.kind()),
             })
     } else {
         writeln!(buffer, "Package not found. Please check the package name.").map_err(|e| {
@@ -610,11 +610,11 @@ fn read_manifest_from_disc(paths: &ProjectPaths) -> Result<Manifest> {
     tracing::debug!("reading_manifest_toml");
     let manifest_path = paths.manifest();
     let toml = fs::read(&manifest_path)?;
-    let manifest = toml::from_str(&toml).map_err(|e| Error::FileIo {
+    let manifest = toml::from_str(&toml).map_err(|error| Error::FileIo {
         action: FileIoAction::Parse,
         kind: FileKind::File,
         path: manifest_path.clone(),
-        err: Some(e.to_string()),
+        err: Some(error.to_string()),
     })?;
     Ok(manifest)
 }
@@ -699,11 +699,11 @@ impl LocalPackages {
             });
         }
         let toml = fs::read(&path)?;
-        toml::from_str(&toml).map_err(|e| Error::FileIo {
+        toml::from_str(&toml).map_err(|error| Error::FileIo {
             action: FileIoAction::Parse,
             kind: FileKind::File,
             path: path.clone(),
-            err: Some(e.to_string()),
+            err: Some(error.to_string()),
         })
     }
 
@@ -1824,7 +1824,7 @@ impl dependency::PackageFetcher for PackageFetcher {
             .map_err(PackageFetchError::fetch_error)?;
 
         let pkg = hexpm::repository_v2_get_package_response(response, HEXPM_PUBLIC_KEY)
-            .map_err(|e| PackageFetchError::from_api_error(e, package))?;
+            .map_err(|error| PackageFetchError::from_api_error(error, package))?;
         let pkg = Rc::new(pkg);
         let pkg_ref = Rc::clone(&pkg);
         self.cache_package(package, pkg);

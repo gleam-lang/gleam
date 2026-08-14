@@ -277,11 +277,11 @@ where
         self.io.mkdir(&build_path)?;
         self.io
             .write(&path, &fingerprint)
-            .map_err(|e| Error::FileIo {
+            .map_err(|error| Error::FileIo {
                 action: FileIoAction::WriteTo,
                 kind: FileKind::File,
                 path,
-                err: Some(e.to_string()),
+                err: Some(error.to_string()),
             })
     }
 

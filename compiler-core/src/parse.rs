@@ -595,7 +595,9 @@ where
                     // stop analysis from happening everywhere and be fault
                     // tolerant like everything else.
                     let expression = self.parse_expression()?;
-                    let end = expression.as_ref().map_or(echo_end, |e| e.location().end);
+                    let end = expression
+                        .as_ref()
+                        .map_or(echo_end, |expression| expression.location().end);
 
                     let message = self.maybe_parse_as_message()?;
                     let end = message.as_ref().map_or(end, |m| m.location().end);
@@ -699,7 +701,9 @@ where
                 }
                 if tail.is_some()
                     && elements.is_empty()
-                    && elements_after_tail.as_ref().is_none_or(|e| e.is_empty())
+                    && elements_after_tail
+                        .as_ref()
+                        .is_none_or(|elements| elements.is_empty())
                 {
                     return parse_error(
                         ParseErrorType::ListSpreadWithoutElements,
@@ -3553,7 +3557,9 @@ where
                 }
                 if tail.is_some()
                     && elements.is_empty()
-                    && elements_after_tail.as_ref().is_none_or(|e| e.is_empty())
+                    && elements_after_tail
+                        .as_ref()
+                        .is_none_or(|elements| elements.is_empty())
                 {
                     return parse_error(
                         ParseErrorType::ListSpreadWithoutElements,

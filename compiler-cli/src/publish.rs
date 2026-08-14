@@ -757,7 +757,7 @@ where
     header.set_cksum();
     tarball
         .append_data(&mut header, path, data)
-        .map_err(|e| Error::add_tar(path, e))
+        .map_err(|error| Error::add_tar(path, error))
 }
 
 fn add_to_tar_from_file_system<P, W>(
@@ -780,7 +780,7 @@ where
 
     tarball
         .append_path(path)
-        .map_err(|e| Error::add_tar(path, e))
+        .map_err(|error| Error::add_tar(path, error))
 }
 
 #[test]

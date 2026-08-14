@@ -104,11 +104,11 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
 fn read_toml_edit(name: &Utf8Path) -> Result<toml_edit::DocumentMut, Error> {
     fs::read(name)?
         .parse::<toml_edit::DocumentMut>()
-        .map_err(|e| Error::FileIo {
+        .map_err(|error| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Parse,
             path: Utf8PathBuf::from("gleam.toml"),
-            err: Some(e.to_string()),
+            err: Some(error.to_string()),
         })
 }
 

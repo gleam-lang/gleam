@@ -443,7 +443,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                     .into_iter()
                     .map(|element| self.fold_expr(element))
                     .collect();
-                let tail = tail.map(|e| Box::new(self.fold_expr(*e)));
+                let tail = tail.map(|tail| Box::new(self.fold_expr(*tail)));
                 UntypedExpr::List {
                     location,
                     elements,
@@ -492,7 +492,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             }
 
             UntypedExpr::PipeLine { expressions } => {
-                let expressions = expressions.mapped(|e| self.fold_expr(e));
+                let expressions = expressions.mapped(|expression| self.fold_expr(expression));
                 UntypedExpr::PipeLine { expressions }
             }
 
@@ -501,7 +501,10 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 subjects,
                 clauses,
             } => {
-                let subjects = subjects.into_iter().map(|e| self.fold_expr(e)).collect();
+                let subjects = subjects
+                    .into_iter()
+                    .map(|subject| self.fold_expr(subject))
+                    .collect();
                 let clauses = clauses.map(|clauses| {
                     clauses
                         .into_iter()
