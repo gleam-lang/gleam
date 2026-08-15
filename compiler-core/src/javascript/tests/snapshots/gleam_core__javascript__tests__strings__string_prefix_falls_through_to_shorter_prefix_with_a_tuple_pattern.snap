@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\npub fn go(a: #(Int), b: String) -> Int {\n  case a, b {\n    #(1), \"ab\" <> _ -> 1\n    _, \"a\" <> _ -> 2\n    _, _ -> 3\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(a: #(Int), b: String) -> Int {
+  case a, b {
+    #(1), "ab" <> _ -> 1
+    _, "a" <> _ -> 2
+    _, _ -> 3
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function go(a, b) {
+  if (b.startsWith("ab") && a[0] === 1) {
+    return 1;
+  } else if (b.charCodeAt(0) === 97) {
+    return 2;
+  } else {
+    return 3;
+  }
+}
