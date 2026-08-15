@@ -21,19 +21,33 @@ import { Ok, Error } from "../gleam.mjs";
 export function go(wrap, input) {
   if (input === "abc") {
     return 100;
-  } else if (input.startsWith("abc") && wrap instanceof Ok) {
-    let $ = wrap[0];
-    if ($ instanceof Ok && $[0] === 0) {
-      return 200;
+  } else if (input.startsWith("abc")) {
+    if (wrap instanceof Ok) {
+      let $ = wrap[0];
+      if ($ instanceof Ok) {
+        if ($[0] === 0) {
+          return 200;
+        } else {
+          return 500;
+        }
+      } else if ($[0] === 1) {
+        return 300;
+      } else {
+        return 500;
+      }
     } else {
-      return 999;
+      return 500;
     }
-  } else if (input.startsWith("ab") && wrap instanceof Ok) {
-    let $ = wrap[0];
-    if ($ instanceof Error && $[0] === 1) {
-      return 300;
+  } else if (input.startsWith("ab")) {
+    if (wrap instanceof Ok) {
+      let $ = wrap[0];
+      if ($ instanceof Error && $[0] === 1) {
+        return 300;
+      } else {
+        return 500;
+      }
     } else {
-      return 999;
+      return 500;
     }
   } else if (input.charCodeAt(0) === 97) {
     return 500;

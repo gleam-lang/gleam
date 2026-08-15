@@ -15,8 +15,12 @@ pub fn go(a: #(Int), b: String) -> Int {
 
 ----- COMPILED JAVASCRIPT
 export function go(a, b) {
-  if (b.startsWith("ab") && a[0] === 1) {
-    return 1;
+  if (b.startsWith("ab")) {
+    if (a[0] === 1) {
+      return 1;
+    } else {
+      return 2;
+    }
   } else if (b.charCodeAt(0) === 97) {
     return 2;
   } else {
