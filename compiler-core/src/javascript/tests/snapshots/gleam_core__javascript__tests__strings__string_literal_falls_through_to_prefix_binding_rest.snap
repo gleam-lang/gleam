@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\npub fn go(input: String, x: Int) -> String {\n  case input, x {\n    \"ab\", y if y > 4 -> \"exact\"\n    \"a\" <> rest, _ -> rest\n    _, _ -> \"other\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(input: String, x: Int) -> String {
+  case input, x {
+    "ab", y if y > 4 -> "exact"
+    "a" <> rest, _ -> rest
+    _, _ -> "other"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function go(input, x) {
+  if (input === "ab") {
+    let y = x;
+    if (y > 4) {
+      return "exact";
+    } else {
+      return "other";
+    }
+  } else if (input.charCodeAt(0) === 97) {
+    let rest = input.slice(1);
+    return rest;
+  } else {
+    return "other";
+  }
+}
