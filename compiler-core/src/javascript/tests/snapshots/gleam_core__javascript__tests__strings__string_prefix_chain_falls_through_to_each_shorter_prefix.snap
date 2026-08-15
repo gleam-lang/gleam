@@ -1,0 +1,43 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\npub fn go(wrap: Result(Result(Int, Int), Nil), input: String) -> Int {\n  case wrap, input {\n    _, \"abc\" -> 100\n    Ok(Ok(0)), \"abc\" <> _ -> 200\n    Ok(Error(1)), \"ab\" <> _ -> 300\n    _, \"a\" <> _ -> 500\n    _, _ -> 999\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(wrap: Result(Result(Int, Int), Nil), input: String) -> Int {
+  case wrap, input {
+    _, "abc" -> 100
+    Ok(Ok(0)), "abc" <> _ -> 200
+    Ok(Error(1)), "ab" <> _ -> 300
+    _, "a" <> _ -> 500
+    _, _ -> 999
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { Ok, Error } from "../gleam.mjs";
+
+export function go(wrap, input) {
+  if (input === "abc") {
+    return 100;
+  } else if (input.startsWith("abc") && wrap instanceof Ok) {
+    let $ = wrap[0];
+    if ($ instanceof Ok && $[0] === 0) {
+      return 200;
+    } else {
+      return 999;
+    }
+  } else if (input.startsWith("ab") && wrap instanceof Ok) {
+    let $ = wrap[0];
+    if ($ instanceof Error && $[0] === 1) {
+      return 300;
+    } else {
+      return 999;
+    }
+  } else if (input.charCodeAt(0) === 97) {
+    return 500;
+  } else {
+    return 999;
+  }
+}

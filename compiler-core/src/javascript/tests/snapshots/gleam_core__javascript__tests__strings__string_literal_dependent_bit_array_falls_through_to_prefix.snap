@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\npub fn go(input: String, bits: BitArray) -> Int {\n  case input, bits {\n    \"ab\", <<length, _:bytes-size(length)>> -> 1\n    \"a\" <> _, _ -> 2\n    _, _ -> 3\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(input: String, bits: BitArray) -> Int {
+  case input, bits {
+    "ab", <<length, _:bytes-size(length)>> -> 1
+    "a" <> _, _ -> 2
+    _, _ -> 3
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function go(input, bits) {
+  if (input === "ab" && bits.bitSize >= 8) {
+    let length = bits.byteAt(0);
+    if (bits.bitSize === 8 + length * 8) {
+      let length$1 = length;
+      return 1;
+    } else {
+      return 3;
+    }
+  } else if (input.charCodeAt(0) === 97) {
+    return 2;
+  } else {
+    return 3;
+  }
+}
