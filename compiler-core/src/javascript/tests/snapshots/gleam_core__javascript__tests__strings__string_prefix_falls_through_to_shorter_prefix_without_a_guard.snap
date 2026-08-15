@@ -25,7 +25,7 @@ export function go(wrap, input) {
     if ($ instanceof Ok && $[0] === 0) {
       return 200;
     } else {
-      return 999;
+      return 500;
     }
   } else if (input.charCodeAt(0) === 97 && wrap instanceof Ok) {
     return 500;
