@@ -282,6 +282,11 @@
   `gleam deps download` would needlessly resolve versions again.
   ([John Downey](https://github.com/jtdowney))
 
+- Fixed a bug where on the JavaScript target a string prefix pattern could be
+  skipped when an earlier clause matched an overlapping string, but then failed
+  for another reason.
+  ([John Downey](https://github.com/jtdowney))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when

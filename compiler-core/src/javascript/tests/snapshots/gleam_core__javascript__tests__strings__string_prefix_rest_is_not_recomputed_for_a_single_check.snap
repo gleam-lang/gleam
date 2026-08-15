@@ -16,8 +16,14 @@ pub fn classify(input: String, a: Bool, b: Bool) -> String {
 
 ----- COMPILED JAVASCRIPT
 export function classify(input, a, b) {
-  if (input.startsWith("aa") && a) {
-    return "aa";
+  if (input.startsWith("aa")) {
+    if (a) {
+      return "aa";
+    } else if (b) {
+      return "a-guard";
+    } else {
+      return "other";
+    }
   } else if (input.charCodeAt(0) === 97) {
     if (b) {
       return "a-guard";

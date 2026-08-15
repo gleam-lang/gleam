@@ -15,13 +15,17 @@ pub fn go(input: String, bits: BitArray) -> Int {
 
 ----- COMPILED JAVASCRIPT
 export function go(input, bits) {
-  if (input === "ab" && bits.bitSize >= 8) {
-    let length = bits.byteAt(0);
-    if (bits.bitSize === 8 + length * 8) {
-      let length$1 = length;
-      return 1;
+  if (input === "ab") {
+    if (bits.bitSize >= 8) {
+      let length = bits.byteAt(0);
+      if (bits.bitSize === 8 + length * 8) {
+        let length$1 = length;
+        return 1;
+      } else {
+        return 2;
+      }
     } else {
-      return 3;
+      return 2;
     }
   } else if (input.charCodeAt(0) === 97) {
     return 2;

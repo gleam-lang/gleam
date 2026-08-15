@@ -260,3 +260,158 @@ pub fn disjoint_string_prefixes_with_guard_test() {
   assert classify("bcd") == "b-start"
   assert classify("zzz") == "other"
 }
+
+// https://github.com/gleam-lang/gleam/issues/6168
+pub fn string_literal_guard_falls_through_to_prefix_test() {
+  let go = fn(input: String, x: Int) -> Int {
+    case input, x {
+      "ab", y if y > 4 -> 1
+      "a" <> _, _ -> 400
+      _, _ -> 999
+    }
+  }
+
+  assert go("ab", 1) == 400
+  assert go("ab", 9) == 1
+  assert go("az", 1) == 400
+  assert go("zz", 9) == 999
+}
+
+// https://github.com/gleam-lang/gleam/issues/6168
+pub fn string_prefix_falls_through_to_shorter_prefix_without_a_guard_test() {
+  let go = fn(wrap: Result(Result(Int, Int), Nil), input: String) -> String {
+    case wrap, input {
+      _, "ab" -> "exact"
+      Ok(Ok(0)), "ab" <> _ -> "zero"
+      Ok(_), "a" <> rest -> rest
+      _, _ -> "other"
+    }
+  }
+
+  assert go(Ok(Error(1)), "abc") == "bc"
+  assert go(Ok(Ok(0)), "abc") == "zero"
+  assert go(Ok(Ok(0)), "ab") == "exact"
+  assert go(Error(Nil), "zz") == "other"
+}
+
+// https://github.com/gleam-lang/gleam/issues/6168
+pub fn string_literal_falls_through_to_prefix_binding_rest_test() {
+  let go = fn(input: String, x: Int) -> String {
+    case input, x {
+      "ab", y if y > 4 -> "exact"
+      "a" <> rest, _ -> rest
+      _, _ -> "other"
+    }
+  }
+
+  assert go("ab", 1) == "b"
+  assert go("ab", 9) == "exact"
+  assert go("axy", 1) == "xy"
+  assert go("zz", 9) == "other"
+}
+
+// https://github.com/gleam-lang/gleam/issues/6168
+pub fn string_literal_dependent_bit_array_falls_through_to_prefix_test() {
+  let go = fn(input: String, bits: BitArray) -> Int {
+    case input, bits {
+      "ab", <<length, _:bytes-size(length)>> -> 1
+      "a" <> _, _ -> 2
+      _, _ -> 3
+    }
+  }
+
+  assert go("ab", <<2, 1>>) == 2
+  assert go("ab", <<>>) == 2
+  assert go("ab", <<2, 1, 2>>) == 1
+  assert go("zz", <<2, 1>>) == 3
+}
+
+// https://github.com/gleam-lang/gleam/issues/6168
+pub fn string_prefix_chain_falls_through_to_each_shorter_prefix_test() {
+  let go = fn(wrap: Result(Result(Int, Int), Nil), input: String) -> String {
+    case wrap, input {
+      _, "abc" -> "exact"
+      Ok(Ok(0)), "abc" <> _ -> "zero"
+      Ok(Error(1)), "ab" <> _ -> "one"
+      _, "a" <> rest -> rest
+      _, _ -> "other"
+    }
+  }
+
+  assert go(Ok(Ok(0)), "abc") == "exact"
+  assert go(Ok(Ok(0)), "abcd") == "zero"
+  assert go(Ok(Error(1)), "abcd") == "one"
+  assert go(Ok(Error(9)), "abcd") == "bcd"
+  assert go(Error(Nil), "zz") == "other"
+}
+
+// https://github.com/gleam-lang/gleam/issues/6168
+pub fn guarded_string_prefix_falls_through_to_shorter_prefix_test() {
+  let go = fn(input: String, y: Int) -> Int {
+    case input, y {
+      "abc" <> _, _ if y > 4 -> 1
+      "a" <> _, _ if y > 3 -> 2
+      _, 0 -> 7
+      "ab" <> _, _ -> 3
+      _, _ -> 9
+    }
+  }
+
+  assert go("abcd", 5) == 1
+  assert go("abcd", 4) == 2
+  assert go("abcd", 0) == 7
+  assert go("abz", 1) == 3
+  assert go("zz", 1) == 9
+}
+
+// https://github.com/gleam-lang/gleam/issues/6168
+pub fn string_prefix_falls_through_past_a_second_guard_test() {
+  let go = fn(input: String, x: Bool, y: Bool) -> Int {
+    case input {
+      "wibble" <> _ if x -> 1
+      "wibble" <> _ if y -> 2
+      "wib" <> _ -> 3
+      _ -> 4
+    }
+  }
+
+  assert go("wibble", True, False) == 1
+  assert go("wibble", False, True) == 2
+  assert go("wibble", False, False) == 3
+  assert go("wib", False, False) == 3
+  assert go("zz", False, False) == 4
+}
+
+// https://github.com/gleam-lang/gleam/issues/6168
+pub fn string_prefix_falls_through_when_the_fallback_binds_test() {
+  let go = fn(a: String, b: String, c: Int) -> Int {
+    case a, b, c {
+      "ab" <> _, _, _ if c > 4 -> 1
+      "a" <> _, _, _ -> 2
+      _, "z" <> _, _ -> 7
+      _, _, _ -> 9
+    }
+  }
+
+  assert go("ab", "q", 5) == 1
+  assert go("ab", "q", 1) == 2
+  assert go("zz", "zq", 1) == 7
+  assert go("zz", "q", 1) == 9
+}
+
+// https://github.com/gleam-lang/gleam/issues/6168
+pub fn string_prefix_falls_through_to_shorter_prefix_matched_later_test() {
+  let go = fn(s: String, m: Int, n: Int) -> Int {
+    case s, m {
+      "ab" <> _, _ if n > 4 -> 1
+      "a" <> _, 1 -> 2
+      "ab" <> _, 2 -> 3
+      _, _ -> 4
+    }
+  }
+
+  assert go("abz", 1, 5) == 1
+  assert go("abz", 1, 1) == 2
+  assert go("abz", 2, 1) == 3
+  assert go("zz", 1, 1) == 4
+}

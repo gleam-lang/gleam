@@ -20,7 +20,8 @@ export function go(input, x) {
     if (y > 4) {
       return "exact";
     } else {
-      return "other";
+      let rest = input.slice(1);
+      return rest;
     }
   } else if (input.charCodeAt(0) === 97) {
     let rest = input.slice(1);
