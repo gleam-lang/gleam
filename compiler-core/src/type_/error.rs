@@ -727,6 +727,13 @@ pub enum Error {
         operator_start: u32,
         operator: BinOp,
     },
+
+    /// This happens when we try to use a private value from another module.
+    UseOfPrivateModuleValue {
+        location: SrcSpan,
+        name: EcoString,
+        module_name: EcoString,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1414,7 +1421,8 @@ impl Error {
             | Error::RecordUpdateVariantWithNoFields { location }
             | Error::QualifiedTypeMissingName { location }
             | Error::TodoConstant { location }
-            | Error::LowercaseBoolPattern { location } => location.start,
+            | Error::LowercaseBoolPattern { location }
+            | Error::UseOfPrivateModuleValue { location, .. } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }

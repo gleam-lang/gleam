@@ -163,8 +163,9 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         let used_name = import.as_name.as_ref().unwrap_or(&import.name);
 
         // Register the unqualified import if it is a value
-        let variant = match module.get_importable_value(import_name) {
-            Some(value) => {
+
+        let variant = match module.values.get(import_name) {
+            Some(value) if value.publicity.is_importable() => {
                 let implementations = value.variant.implementations();
                 // Check the target support of the imported value
                 if self.environment.target_support.is_enforced()
@@ -185,7 +186,20 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                 );
                 &value.variant
             }
-            None => {
+            // If the value belongs to current package, but isn't importable,
+            // then we produce error message about usage of private value.
+            Some(_) if self.environment.current_package == module.package => {
+                self.problems.error(Error::UseOfPrivateModuleValue {
+                    location,
+                    name: import_name.clone(),
+                    module_name: module.name.clone(),
+                });
+                return;
+            }
+            // Otherwise, the value either doesn't exist or is from another
+            // module, where we do not want to expose information, we produce
+            // error message about usage of unknown value.
+            Some(_) | None => {
                 self.problems.error(Error::UnknownModuleValue {
                     location,
                     name: import_name.clone(),

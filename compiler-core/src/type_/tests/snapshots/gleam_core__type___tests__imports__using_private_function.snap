@@ -14,10 +14,10 @@ pub fn main() {
 }
 
 ----- ERROR
-error: Unknown module value
+error: Use of private module value
   ┌─ /src/one/two.gleam:4:7
   │
 4 │   one.two
   │       ^^^
 
-The module `one` does not have a `two` value.
+`one.two` is a private value.

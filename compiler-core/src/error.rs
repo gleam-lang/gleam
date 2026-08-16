@@ -5103,6 +5103,27 @@ Be sure to finish it before running your program.",
                 extra_labels: vec![],
             }),
         },
+        TypeError::UseOfPrivateModuleValue {
+            location,
+            name,
+            module_name,
+        } => Diagnostic {
+            title: "Use of private module value".into(),
+            text: wrap_format!(
+                "`{module_name}.{name}` is a private value."
+            ),
+            hint: None,
+            level: Level::Error,
+            location: Some(Location {
+                label: Label {
+                    text: None,
+                    span: *location,
+                },
+                path: path.clone(),
+                src: src.clone(),
+                extra_labels: vec![],
+            }),
+        },
     })
 }
 
