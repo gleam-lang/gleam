@@ -31,7 +31,9 @@ FIX-DEADLINE: 2026-10-08
 [[advisories.ignore]]
 id = "RUSTSEC-2026-0255"
 reason = """
-sized-chunks depends on im, which is unmaintained
+sized-chunks is unmaintained
+
+https://github.com/gleam-lang/gleam/issues/6161
 
 FIX-DEADLINE: 2026-12-11
 """
