@@ -86,7 +86,7 @@
   has no impact unless the user is using a very old version of git or has
   enabled this protocol in their configuration.
   ([Amr Kadry](https://github.com/Amrkadry) and
-  ([Louis Pilfold](https://github.com/lpil))
+  [Louis Pilfold](https://github.com/lpil))
 
 ### Language server
 
@@ -117,6 +117,10 @@
 - Fixed a bug where the language server would incorrectly rename values and
   types with a same-named import alias.
   ([Andrey Kozhev](https://github.com/ankddev))
+
+- Fixed a bug where a bit array segment pattern of an empty string would
+  generate invalid code on JavaScript.
+  ([Louis Pilfold](https://github.com/lpil))
 
 - Fixed a bug where comments after the last item in a tuple, or after the last
   argument in a function call wouldn't be formatted properly.
