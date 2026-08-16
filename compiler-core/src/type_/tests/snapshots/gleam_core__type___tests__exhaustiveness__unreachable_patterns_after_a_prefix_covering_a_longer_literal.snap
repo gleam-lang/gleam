@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+expression: "pub fn main(string: String, result: Result(Int, Nil), flag: Bool) -> String {\n  case string, result {\n    \"abcd\", _ if flag -> \"0\"\n    \"abc\" <> _, _ -> \"2\"\n    \"abcd\", Ok(_) -> \"3\"\n    \"abcd\" <> rest, _ if flag -> rest\n    _, _ -> \"X\"\n  }\n}"
+---
+----- SOURCE CODE
+pub fn main(string: String, result: Result(Int, Nil), flag: Bool) -> String {
+  case string, result {
+    "abcd", _ if flag -> "0"
+    "abc" <> _, _ -> "2"
+    "abcd", Ok(_) -> "3"
+    "abcd" <> rest, _ if flag -> rest
+    _, _ -> "X"
+  }
+}
+
+----- WARNING
+warning: Unreachable pattern
+  ┌─ /src/warning/wrn.gleam:5:5
+  │
+5 │     "abcd", Ok(_) -> "3"
+  │     ^^^^^^^^^^^^^
+
+This pattern cannot be reached as a previous pattern matches the same
+values.
+
+Hint: It can be safely removed.
+
+warning: Unreachable pattern
+  ┌─ /src/warning/wrn.gleam:6:5
+  │
+6 │     "abcd" <> rest, _ if flag -> rest
+  │     ^^^^^^^^^^^^^^^^^
+
+This pattern cannot be reached as a previous pattern matches the same
+values.
+
+Hint: It can be safely removed.
