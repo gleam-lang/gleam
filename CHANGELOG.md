@@ -128,7 +128,7 @@
   has no impact unless the user is using a very old version of git or has
   enabled this protocol in their configuration.
   ([Amr Kadry](https://github.com/Amrkadry) and
-  ([Louis Pilfold](https://github.com/lpil))
+  [Louis Pilfold](https://github.com/lpil))
 
 - The ordering of import statements in generated JavaScript code is now stable.
   Previously the same code compiled twice could produce different output, as
@@ -214,6 +214,10 @@
 - Fixed a bug where the language server would crash if the client disconnected
   unexpectedly.
   ([Senthilnathan](https://github.com/ssenthilnathan3))
+
+- Fixed a bug where a bit array segment pattern of an empty string would
+  generate invalid code on JavaScript.
+  ([Louis Pilfold](https://github.com/lpil))
 
 - Fixed a bug where comments after the last item in a tuple, or after the last
   argument in a function call wouldn't be formatted properly.
