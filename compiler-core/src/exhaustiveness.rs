@@ -3896,13 +3896,10 @@ fn segment_matched_value(
         ast::Pattern::Variable { name, .. } => Some(BitArrayMatchedValue::Variable(name.clone())),
         ast::Pattern::Discard { name, .. } => Some(BitArrayMatchedValue::Discard(name.clone())),
         ast::Pattern::Assign { name, pattern, .. } => {
-            match segment_matched_value(segment, Some(pattern), read_action) {
-                Some(value) => Some(BitArrayMatchedValue::Assign {
+            segment_matched_value(segment, Some(pattern), read_action).map(|value| BitArrayMatchedValue::Assign {
                     name: name.clone(),
                     value: Box::new(value),
-                }),
-                None => None,
-            }
+                })
         }
         ast::Pattern::BitArraySize(_)
         | ast::Pattern::List { .. }
