@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn main(x) {\n  case x {\n    <<\"x\":utf32, \"\":utf32, \"z\":utf32, >> -> \"a\"\n    _ -> \"b\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(x) {
+  case x {
+    <<"x":utf32, "":utf32, "z":utf32, >> -> "a"
+    _ -> "b"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function main(x) {
+  if (
+    x.bitSize >= 32 &&
+    x.byteAt(0) === 0 &&
+      x.byteAt(1) === 0 &&
+      x.byteAt(2) === 0 &&
+      x.byteAt(3) === 120 &&
+    x.bitSize === 64 &&
+    x.byteAt(4) === 0 &&
+      x.byteAt(5) === 0 &&
+      x.byteAt(6) === 0 &&
+      x.byteAt(7) === 122
+  ) {
+    return "a";
+  } else {
+    return "b";
+  }
+}
