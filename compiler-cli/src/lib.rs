@@ -310,6 +310,10 @@ pub enum Command {
         #[arg(default_value = ".")]
         files: Vec<String>,
 
+        /// Display diffs of files being rewritten
+        #[arg(long)]
+        diff: bool,
+
         /// Read source from standard-input
         #[arg(long)]
         stdin: bool,
@@ -481,9 +485,10 @@ impl Command {
 
             Self::Format {
                 stdin,
+                diff,
                 files,
                 check,
-            } => format::run(stdin, check, files),
+            } => format::run(stdin, check, diff, files),
 
             Self::Fix => {
                 let paths = find_project_paths(directory)?;

@@ -9,19 +9,31 @@ use gleam_core::{
 use std::{io::Read, str::FromStr};
 
 use camino::{Utf8Path, Utf8PathBuf};
+use similar::TextDiff;
 
-pub fn run(stdin: bool, check: bool, files: Vec<String>) -> Result<()> {
+pub fn run(stdin: bool, check: bool, diff: bool, files: Vec<String>) -> Result<()> {
     if stdin {
-        process_stdin(check)
+        process_stdin(check, diff)
     } else {
-        process_files(check, files)
+        process_files(check, diff, files)
     }
 }
 
-fn process_stdin(check: bool) -> Result<()> {
+fn process_stdin(check: bool, diff: bool) -> Result<()> {
     let src = read_stdin()?.into();
     let mut out = String::new();
     gleam_format::pretty(&mut out, &src, Utf8Path::new("<stdin>"))?;
+
+    if diff && check {
+        let text_diff = TextDiff::from_lines(src.as_str(), &out);
+        print!(
+            "{}",
+            text_diff
+                .unified_diff()
+                .context_radius(3)
+                .header("<standard input>", "<standard output>")
+        );
+    }
 
     if !check {
         print!("{out}");
@@ -42,16 +54,16 @@ fn process_stdin(check: bool) -> Result<()> {
     Ok(())
 }
 
-fn process_files(check: bool, files: Vec<String>) -> Result<()> {
+fn process_files(check: bool, diff: bool, files: Vec<String>) -> Result<()> {
     if check {
-        check_files(files)
+        check_files(files, diff)
     } else {
-        format_files(files)
+        format_files(files, diff)
     }
 }
 
-fn check_files(files: Vec<String>) -> Result<()> {
-    let problem_files = unformatted_files(files)?;
+fn check_files(files: Vec<String>, diff: bool) -> Result<()> {
+    let problem_files = unformatted_files(files, diff)?;
 
     if problem_files.is_empty() {
         Ok(())
@@ -60,8 +72,8 @@ fn check_files(files: Vec<String>) -> Result<()> {
     }
 }
 
-fn format_files(files: Vec<String>) -> Result<()> {
-    for file in unformatted_files(files)? {
+fn format_files(files: Vec<String>, diff: bool) -> Result<()> {
+    for file in unformatted_files(files, diff)? {
         crate::fs::write_output(&OutputFile {
             path: file.destination,
             content: Content::Text(file.output),
@@ -70,7 +82,7 @@ fn format_files(files: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-pub fn unformatted_files(files: Vec<String>) -> Result<Vec<Unformatted>> {
+pub fn unformatted_files(files: Vec<String>, diff: bool) -> Result<Vec<Unformatted>> {
     let mut problem_files = Vec::with_capacity(files.len());
 
     for file_path in files {
@@ -83,20 +95,31 @@ pub fn unformatted_files(files: Vec<String>) -> Result<Vec<Unformatted>> {
 
         if path.is_dir() {
             for path in crate::fs::gleam_files(&path) {
-                format_file(&mut problem_files, path)?;
+                format_file(&mut problem_files, diff, path)?;
             }
         } else {
-            format_file(&mut problem_files, path)?;
+            format_file(&mut problem_files, diff, path)?;
         }
     }
 
     Ok(problem_files)
 }
 
-fn format_file(problem_files: &mut Vec<Unformatted>, path: Utf8PathBuf) -> Result<()> {
+fn format_file(problem_files: &mut Vec<Unformatted>, diff: bool, path: Utf8PathBuf) -> Result<()> {
     let src = crate::fs::read(&path)?.into();
     let mut output = String::new();
     gleam_format::pretty(&mut output, &src, &path)?;
+
+    if diff {
+        let text_diff = TextDiff::from_lines(src.as_str(), &output);
+        print!(
+            "{}",
+            text_diff
+                .unified_diff()
+                .context_radius(3)
+                .header(&format!("{}.bak", path), &format!("{}", path))
+        );
+    }
 
     if src != output {
         problem_files.push(Unformatted {

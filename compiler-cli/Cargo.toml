@@ -70,6 +70,7 @@ termcolor.workspace = true
 toml.workspace = true
 tracing.workspace = true
 xxhash-rust.workspace = true
+similar = "3.2.0"
 
 [dev-dependencies]
 # Setting file modification times for tests
