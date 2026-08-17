@@ -31,7 +31,10 @@ FIX-DEADLINE: 2026-10-08
 [[advisories.ignore]]
 id = "RUSTSEC-2026-0255"
 reason = """
-sized-chunks is unmaintained
+sized-chunks (used by im):
+
+Panic-safety unsoundness in Chunk, RingBuffer, and InlineArray
+(use-after-free / double-free)
 
 https://github.com/gleam-lang/gleam/issues/6161
 
