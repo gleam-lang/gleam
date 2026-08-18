@@ -321,8 +321,8 @@
   for another reason.
   ([John Downey](https://github.com/jtdowney))
 
-- Fixed a bug where on the JavaScript target a name given to a string prefix
-  would not be bound in every branch it was used in.
+- Fixed a bug where on the JavaScript target a name given to a string prefix or
+  bit array in a pattern would not be bound in every branch it was used in.
   ([John Downey](https://github.com/jtdowney))
 
 ## v1.18.1 - 2026-08-01
