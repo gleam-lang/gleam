@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn go(bits: BitArray, flag: Bool) -> Int {\n  case bits {\n    <<_:8, 2>> if flag -> 0\n    <<1, 2 as y>> -> y\n    _ -> -1\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(bits: BitArray, flag: Bool) -> Int {
+  case bits {
+    <<_:8, 2>> if flag -> 0
+    <<1, 2 as y>> -> y
+    _ -> -1
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function go(bits, flag) {
+  if (bits.bitSize >= 8 && bits.bitSize === 16 && bits.byteAt(1) === 2) {
+    if (flag) {
+      return 0;
+    } else if (bits.byteAt(0) === 1) {
+      return y;
+    } else {
+      return -1;
+    }
+  } else {
+    return -1;
+  }
+}

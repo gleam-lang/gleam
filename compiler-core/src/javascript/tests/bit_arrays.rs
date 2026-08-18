@@ -2906,3 +2906,18 @@ pub fn go(b: Bool, flag: Bool, r: Result(BitArray, Nil)) -> BitArray {
 "#,
     );
 }
+
+#[test]
+fn bit_array_segment_assignment_proved_by_a_guarded_clause() {
+    assert_js!(
+        r#"
+pub fn go(bits: BitArray, flag: Bool) -> Int {
+  case bits {
+    <<_:8, 2>> if flag -> 0
+    <<1, 2 as y>> -> y
+    _ -> -1
+  }
+}
+"#,
+    );
+}
