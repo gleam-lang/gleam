@@ -273,76 +273,111 @@ impl Branch {
                     // any size test, so if we find a `ReadAction` that is the first
                     // test to perform in a bit array pattern we know it's always
                     // going to match and can be safely moved into the branch's body.
-                    Pattern::BitArray { tests } => match tests.front_mut() {
-                        Some(BitArrayTest::Match(MatchTest {
-                            value: BitArrayMatchedValue::Variable(name),
-                            read_action,
-                        })) => {
-                            let bit_array = check.var.clone();
-                            self.body.assign_bit_array_slice(
-                                name.clone(),
-                                bit_array,
-                                read_action.clone(),
-                            );
-                            let _ = tests.pop_front();
+                    Pattern::BitArray { tests } => {
+                        // Most patterns start with a test we can't move into the
+                        // body, like a size check. There's nothing to pop in that
+                        // case, so we leave the shared pattern alone rather than
+                        // copying it into an identical one.
+                        if !matches!(
+                            tests.front(),
+                            None | Some(BitArrayTest::Match(MatchTest {
+                                value: BitArrayMatchedValue::Variable(_)
+                                    | BitArrayMatchedValue::Assign { .. }
+                                    | BitArrayMatchedValue::Discard(_),
+                                ..
+                            }))
+                        ) {
+                            return true;
                         }
 
-                        Some(test) => match test {
-                            // If we have `_ as a` we treat that as a regular variable
-                            // assignment.
-                            BitArrayTest::Match(MatchTest {
-                                value: BitArrayMatchedValue::Assign { name, value },
-                                read_action,
-                            }) if value.is_discard() => {
-                                *test = BitArrayTest::Match(MatchTest {
-                                    value: BitArrayMatchedValue::Variable(name.clone()),
-                                    read_action: read_action.clone(),
-                                });
+                        // Patterns live in an arena shared by every branch, and
+                        // splitting can leave several branches pointing at this
+                        // one. Popping the unconditional tests out would bind
+                        // them only in the branch that happens to be compiled
+                        // first, so work on a copy and give this branch's check
+                        // a pattern of its own.
+                        let mut tests = tests.clone();
+                        let keep_pattern = loop {
+                            match tests.front_mut() {
+                                Some(BitArrayTest::Match(MatchTest {
+                                    value: BitArrayMatchedValue::Variable(name),
+                                    read_action,
+                                })) => {
+                                    let bit_array = check.var.clone();
+                                    self.body.assign_bit_array_slice(
+                                        name.clone(),
+                                        bit_array,
+                                        read_action.clone(),
+                                    );
+                                    let _ = tests.pop_front();
+                                }
+
+                                Some(test) => match test {
+                                    // If we have `_ as a` we treat that as a regular variable
+                                    // assignment.
+                                    BitArrayTest::Match(MatchTest {
+                                        value: BitArrayMatchedValue::Assign { name, value },
+                                        read_action,
+                                    }) if value.is_discard() => {
+                                        *test = BitArrayTest::Match(MatchTest {
+                                            value: BitArrayMatchedValue::Variable(name.clone()),
+                                            read_action: read_action.clone(),
+                                        });
+                                    }
+
+                                    // Just like regular assigns, those patterns are unrefutable
+                                    // and will become assignments in the branch's body.
+                                    BitArrayTest::Match(MatchTest {
+                                        value: BitArrayMatchedValue::Assign { name, value },
+                                        read_action,
+                                    }) => {
+                                        self.body.assign_segment_constant_value(
+                                            name.clone(),
+                                            value.as_ref(),
+                                        );
+
+                                        // We will still need to check the aliased value!
+                                        *test = BitArrayTest::Match(MatchTest {
+                                            value: value.as_ref().clone(),
+                                            read_action: read_action.clone(),
+                                        });
+                                    }
+
+                                    // An empty string always matches so there is no test to perform.
+                                    BitArrayTest::Match(MatchTest {
+                                        value: BitArrayMatchedValue::LiteralString { value, .. },
+                                        ..
+                                    }) if value.is_empty() => {
+                                        let _ = tests.pop_front();
+                                    }
+
+                                    // Discards are removed directly without even binding them
+                                    // in the branch's body.
+                                    _ if test.is_discard() => {
+                                        let _ = tests.pop_front();
+                                    }
+
+                                    // Otherwise there's no unconditional test to pop, we
+                                    // keep the pattern without changing it.
+                                    BitArrayTest::Size(_)
+                                    | BitArrayTest::Match(_)
+                                    | BitArrayTest::CatchAllIsBytes { .. }
+                                    | BitArrayTest::ReadSizeIsNotNegative { .. }
+                                    | BitArrayTest::SegmentIsFiniteFloat { .. } => break true,
+                                },
+
+                                // If a bit array pattern has no tests then it's always
+                                // going to match, no matter what. We just remove it.
+                                None => break false,
                             }
+                        };
 
-                            // Just like regular assigns, those patterns are unrefutable
-                            // and will become assignments in the branch's body.
-                            BitArrayTest::Match(MatchTest {
-                                value: BitArrayMatchedValue::Assign { name, value },
-                                read_action,
-                            }) => {
-                                self.body
-                                    .assign_segment_constant_value(name.clone(), value.as_ref());
-
-                                // We will still need to check the aliased value!
-                                *test = BitArrayTest::Match(MatchTest {
-                                    value: value.as_ref().clone(),
-                                    read_action: read_action.clone(),
-                                });
-                            }
-
-                            // An empty string always matches so there is no test to perform.
-                            BitArrayTest::Match(MatchTest {
-                                value: BitArrayMatchedValue::LiteralString { value, .. },
-                                ..
-                            }) if value.is_empty() => {
-                                let _ = tests.pop_front();
-                            }
-
-                            // Discards are removed directly without even binding them
-                            // in the branch's body.
-                            _ if test.is_discard() => {
-                                let _ = tests.pop_front();
-                            }
-
-                            // Otherwise there's no unconditional test to pop, we
-                            // keep the pattern without changing it.
-                            BitArrayTest::Size(_)
-                            | BitArrayTest::Match(_)
-                            | BitArrayTest::CatchAllIsBytes { .. }
-                            | BitArrayTest::ReadSizeIsNotNegative { .. }
-                            | BitArrayTest::SegmentIsFiniteFloat { .. } => return true,
-                        },
-
-                        // If a bit array pattern has no tests then it's always
-                        // going to match, no matter what. We just remove it.
-                        None => return false,
-                    },
+                        if !keep_pattern {
+                            return false;
+                        }
+                        check.pattern = compiler.bit_array_pattern(tests);
+                        return true;
+                    }
 
                     // The pattern binds the rest of the string to a slice of the
                     // subject and nothing else. Splitting only ever builds it from
