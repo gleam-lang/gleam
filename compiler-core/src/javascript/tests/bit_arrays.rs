@@ -2891,3 +2891,18 @@ pub fn main(x) {
 "#
     );
 }
+
+#[test]
+fn bit_array_slice_assignment_inside_a_nested_pattern_after_a_guard() {
+    assert_js!(
+        r#"
+pub fn go(b: Bool, flag: Bool, r: Result(BitArray, Nil)) -> BitArray {
+  case b, r {
+    True, _ if flag -> <<1>>
+    _, Ok(<<x:bits>>) -> x
+    _, _ -> <<>>
+  }
+}
+"#,
+    );
+}
