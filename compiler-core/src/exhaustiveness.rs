@@ -249,11 +249,18 @@ impl Branch {
                     Pattern::StringPrefix {
                         prefix,
                         prefix_name,
-                        rest: _,
+                        rest,
                     } => {
-                        if let Some(variable) = std::mem::take(prefix_name) {
-                            self.body.assign_literal_string(variable, prefix.clone());
-                        }
+                        let Some(variable) = prefix_name.clone() else {
+                            return true;
+                        };
+                        let prefix = prefix.clone();
+                        let rest = *rest;
+                        // Move the literal prefix assignment to this branch's
+                        // body and give its check a pattern without the assignment.
+                        // Other branches still use the original shared pattern.
+                        check.pattern = compiler.string_prefix_pattern(&prefix, rest);
+                        self.body.assign_literal_string(variable, prefix);
                         return true;
                     }
                     // There's a special case of assignments when it comes to bit
@@ -337,12 +344,10 @@ impl Branch {
                         None => return false,
                     },
 
-                    // A guaranteed-match slice binds the rest of the string to a
-                    // slice of the subject. There's no prefix name left to bind:
-                    // this pattern is only ever built while splitting branches,
-                    // which happens after the `StringPrefix` case above has
-                    // already moved any `"a" as name <> rest` binding into the
-                    // body.
+                    // The pattern binds the rest of the string to a slice of the
+                    // subject and nothing else. Splitting only ever builds it from
+                    // a `StringPrefix` whose prefix name the case above has already
+                    // bound in the body, so no name is left to bind here.
                     Pattern::StringPrefixSlice { rest_name, prefix } => {
                         self.body.assign_string_slice(
                             std::mem::take(rest_name),
