@@ -566,3 +566,18 @@ pub fn go(a: #(Int), b: String) -> Int {
 "#,
     );
 }
+
+#[test]
+fn string_prefix_assignment_inside_a_nested_pattern_after_a_guard() {
+    assert_js!(
+        r#"
+pub fn go(b: Bool, r: Result(String, Nil)) -> String {
+  case b, r {
+    True, _ if True -> "x"
+    _, Ok("ab" as p <> _) -> p
+    _, _ -> "no"
+  }
+}
+"#,
+    );
+}

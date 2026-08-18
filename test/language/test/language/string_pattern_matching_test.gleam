@@ -415,3 +415,18 @@ pub fn string_prefix_falls_through_to_shorter_prefix_matched_later_test() {
   assert go("abz", 2, 1) == 3
   assert go("zz", 1, 1) == 4
 }
+
+pub fn string_prefix_assignment_inside_a_nested_pattern_after_a_guard_test() {
+  let go = fn(b: Bool, r: Result(String, Nil)) -> String {
+    case b, r {
+      True, _ if b -> "guard"
+      _, Ok("ab" as p <> rest) -> p <> rest
+      _, _ -> "other"
+    }
+  }
+
+  assert go(True, Ok("abc")) == "guard"
+  assert go(False, Ok("abc")) == "abc"
+  assert go(False, Ok("zz")) == "other"
+  assert go(False, Error(Nil)) == "other"
+}
