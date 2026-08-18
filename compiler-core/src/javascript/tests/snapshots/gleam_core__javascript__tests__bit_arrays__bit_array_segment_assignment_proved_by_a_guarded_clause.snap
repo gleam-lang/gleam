@@ -19,6 +19,7 @@ export function go(bits, flag) {
     if (flag) {
       return 0;
     } else if (bits.byteAt(0) === 1) {
+      let y = 2;
       return y;
     } else {
       return -1;

@@ -3170,7 +3170,7 @@ impl BranchSplitter {
     fn add_checked_bit_array_branch(
         &mut self,
         pattern_check: PatternCheck,
-        tests: VecDeque<BitArrayTest>,
+        mut tests: VecDeque<BitArrayTest>,
         mut branch: Branch,
         compiler: &mut Compiler<'_>,
     ) {
@@ -3207,12 +3207,36 @@ impl BranchSplitter {
             // if the succeeding pivot test is `size >= 20` there's no point
             // in checking that `size >= 10`, we know that's always true in this
             // path of the decision tree!
-            let tests = tests
-                .into_iter()
-                .filter(|test| test.succeeds_if_succeeding(&pivot_test) == Confidence::Uncertain)
-                .collect::<VecDeque<_>>();
-
             let mut branch = branch.clone();
+            tests.retain(|test| {
+                if test.succeeds_if_succeeding(&pivot_test) == Confidence::Uncertain {
+                    return true;
+                }
+
+                // A test we're about to drop might still be giving a name to
+                // the segment it matches on, so we turn that into an
+                // assignment in the branch's body. Otherwise the name would
+                // be left unbound in this path of the decision tree.
+                if let BitArrayTest::Match(MatchTest { value, read_action }) = test {
+                    match value {
+                        BitArrayMatchedValue::Variable(name) => branch.body.assign_bit_array_slice(
+                            name.clone(),
+                            pattern_check.var.clone(),
+                            read_action.clone(),
+                        ),
+                        BitArrayMatchedValue::Assign { name, value } => branch
+                            .body
+                            .assign_segment_constant_value(name.clone(), value.as_ref()),
+                        BitArrayMatchedValue::LiteralFloat(_)
+                        | BitArrayMatchedValue::LiteralInt { .. }
+                        | BitArrayMatchedValue::LiteralString { .. }
+                        | BitArrayMatchedValue::Discard(_) => {}
+                    }
+                }
+
+                false
+            });
+
             let variable = &pattern_check.var;
             branch.add_check(variable.is(compiler.bit_array_pattern(tests)));
 
