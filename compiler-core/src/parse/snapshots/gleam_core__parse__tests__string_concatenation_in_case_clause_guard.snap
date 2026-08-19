@@ -34,7 +34,6 @@ expression: "\nlet my_string = \"hello \"\ncase my_string {\n    _ if my_string 
             compiled_case: CompiledCase {
                 tree: Fail,
                 subject_variables: [],
-                unreachable: {},
             },
             annotation: None,
         },

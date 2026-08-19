@@ -67,7 +67,6 @@ expression: "\nlet tup = #(#(#(#(4))))\ntup.0.0.0.0\n"
             compiled_case: CompiledCase {
                 tree: Fail,
                 subject_variables: [],
-                unreachable: {},
             },
             annotation: None,
         },

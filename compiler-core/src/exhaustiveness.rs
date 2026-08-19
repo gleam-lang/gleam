@@ -2222,24 +2222,6 @@ impl CompileCaseResult {
 pub struct CompiledCase {
     pub tree: Decision,
     pub subject_variables: Vec<Variable>,
-
-    /// The patterns that are unreachable. If a pattern is in this list,
-    /// it will be omitted from the Erlang generated code.
-    /// Each entry is a pair of zero-based indices: The index of the clause
-    /// the pattern belongs to, followed by the index of the pattern itself
-    /// within the clause (`0` is the main pattern, `1+` are alternatives).
-    /// For example, in this case expression:
-    /// ```gleam
-    /// case x {
-    ///   1 -> todo
-    ///   2 | 3 -> todo
-    ///   _ -> todo
-    /// }
-    /// ```
-    ///
-    /// The `3` pattern would be `(1, 1)`: second clause, second pattern.
-    ///
-    pub unreachable: HashSet<(usize, usize)>,
 }
 
 impl CompiledCase {
@@ -2247,7 +2229,6 @@ impl CompiledCase {
         Self {
             tree: Decision::Fail,
             subject_variables: vec![],
-            unreachable: HashSet::new(),
         }
     }
 
@@ -2263,7 +2244,6 @@ impl CompiledCase {
         Self {
             tree: Decision::Run { body },
             subject_variables: vec![variable],
-            unreachable: HashSet::new(),
         }
     }
 }
@@ -3606,7 +3586,6 @@ impl CaseToCompile {
             compiled_case: CompiledCase {
                 tree: decision,
                 subject_variables: self.subject_variables,
-                unreachable: HashSet::new(),
             },
         }
     }

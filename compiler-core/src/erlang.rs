@@ -8,7 +8,6 @@ mod tests;
 
 use crate::build::Target;
 use crate::erlang::pattern::{AliasedLiteral, PatternGenerator};
-use crate::exhaustiveness::CompiledCase;
 use crate::strings::to_snake_case;
 use crate::type_::{self, is_prelude_module};
 use crate::{
@@ -1119,9 +1118,8 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 location,
                 subjects,
                 clauses,
-                compiled_case,
                 ..
-            } => self.case(builder, *location, subjects, clauses, compiled_case),
+            } => self.case(builder, *location, subjects, clauses),
 
             //
             // Something went wrong!
@@ -2259,7 +2257,6 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         case_location: SrcSpan,
         subjects: &'a [TypedExpr],
         clauses: &'a [TypedClause],
-        compiled_case: &'a CompiledCase,
     ) {
         let case = builder.start_case(case_location);
 
@@ -2285,13 +2282,9 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         }
         let case = builder.end_case_subject(case);
 
-        for (clause_index, clause) in clauses.iter().enumerate() {
+        for clause in clauses.iter() {
             let taken_names_before_clause = self.taken_names.clone();
-
-            // If the main pattern is not unreachable, emit an Erlang case arm for it.
-            if !compiled_case.unreachable.contains(&(clause_index, 0)) {
-                self.clause_branch(builder, &clause.pattern, clause);
-            }
+            self.clause_branch(builder, &clause.pattern, clause);
 
             // Erlang doesn't support alternative patterns so we're gonna have
             // to turn those into separate branches!
@@ -2319,23 +2312,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // end
             // ```
             //
-            for (alt_offset, pattern) in clause.alternative_patterns.iter().enumerate() {
-                // This specific for loop iterates over alternative patterns.
-                // Since we have already looked over the main pattern, we
-                // must add 1 to the `alt_offset` as we shift by one to line up
-                // with the real indexes for the unreachable. (Alternatives start at `1+`.)
-                let pattern_index = alt_offset + 1;
-
-                // If this alternative is unreachable based on
-                // the `compiled_case`, then the Erlang generated code
-                // will not contain this alternative's Erlang arm.
-                if compiled_case
-                    .unreachable
-                    .contains(&(clause_index, pattern_index))
-                {
-                    continue;
-                }
-
+            for pattern in &clause.alternative_patterns {
                 self.taken_names = taken_names_before_clause.clone();
                 self.clause_branch(builder, pattern, clause);
             }
