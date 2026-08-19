@@ -3219,13 +3219,14 @@ impl BranchSplitter {
                 // the segment it matches on, so we turn that into an
                 // assignment in the branch's body. Otherwise the name would
                 // be left unbound in this path of the decision tree.
-                if let BitArrayTest::Match(MatchTest { value, read_action }) = test {
+                if let BitArrayTest::Match(MatchTest { value, .. }) = test {
                     match value {
-                        BitArrayMatchedValue::Variable(name) => branch.body.assign_bit_array_slice(
-                            name.clone(),
-                            pattern_check.var.clone(),
-                            read_action.clone(),
-                        ),
+                        // A variable has no constant bits to compare with, and
+                        // a variable test at the front of a pattern is popped
+                        // before any split, so one never gets dropped here.
+                        BitArrayMatchedValue::Variable(_) => {
+                            unreachable!("variable segment dropped while splitting")
+                        }
                         BitArrayMatchedValue::Assign { name, value } => branch
                             .body
                             .assign_segment_constant_value(name.clone(), value.as_ref()),
