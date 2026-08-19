@@ -1254,6 +1254,10 @@ pub enum Warning {
     PipeIntoCallWhichReturnsFunction {
         location: SrcSpan,
     },
+
+    EmptyStringBitArraySegment {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
@@ -1529,7 +1533,8 @@ impl Warning {
             | Warning::RedundantComparison { location, .. }
             | Warning::JavaScriptBitArrayUnsafeInt { location, .. }
             | Warning::UnusedRecursiveArgument { location, .. }
-            | Warning::PipeIntoCallWhichReturnsFunction { location } => *location,
+            | Warning::PipeIntoCallWhichReturnsFunction { location }
+            | Warning::EmptyStringBitArraySegment { location } => *location,
         }
     }
 
