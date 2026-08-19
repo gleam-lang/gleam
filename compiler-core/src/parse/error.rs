@@ -922,7 +922,7 @@ impl LexicalError {
                 vec![
                     "Hint: Gleam does not have a bitwise '&' operator.".into(),
                     "Hint: Use `int.bitwise_and` from `gleam/int`, or bit array syntax `<<>>`.".into(),
-                    "See: https://hexdocs.pm/gleam_stdlib/gleam/int.html".into(),
+                    "See: https://gleam-stdlib.hexdocs.pm/gleam/int.html#bitwise_and".into(),
                 ],
             ),
             LexicalErrorType::UnrecognizedToken { .. } => (
