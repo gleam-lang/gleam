@@ -627,6 +627,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     location: *location,
                 });
             }
+            Pattern::String { value, location } if value.is_empty() => {
+                self.problems.warning(Warning::EmptyStringBitArraySegment {
+                    location: *location,
+                });
+            }
             Pattern::Int { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }

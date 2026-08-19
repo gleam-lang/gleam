@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn go(x) {\n  case x {\n    <<>> -> 1\n    <<\"\">> -> 2\n    _ -> 3\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    <<>> -> 1
+    <<"">> -> 2
+    _ -> 3
+  }
+}
+
+
+----- WARNING
+warning: Unreachable pattern
+  ┌─ /src/warning/wrn.gleam:5:5
+  │
+5 │     <<"">> -> 2
+  │     ^^^^^^
+
+This pattern cannot be reached as a previous pattern matches the same
+values.
+
+Hint: It can be safely removed.
+
+warning: Empty string segment
+  ┌─ /src/warning/wrn.gleam:5:7
+  │
+5 │     <<"">> -> 2
+  │       ^^ Remove this empty string
+
+This empty string segment is ignored in the pattern, so it can be safely
+removed. Empty string segments are deprecated and will become an error in a
+future version.
