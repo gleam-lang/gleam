@@ -92,16 +92,32 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         let import_location = import.location;
 
         // Register the unqualified import if it is a type constructor
-        let Some(type_info) = module.get_importable_type(&import.name) else {
-            // TODO: refine to a type specific error
-            self.problems.error(Error::UnknownModuleType {
-                location: import.location,
-                name: import.name.clone(),
-                module_name: module.name.clone(),
-                type_constructors: module.public_type_names(),
-                value_with_same_name: module.get_importable_value(&import.name).is_some(),
-            });
-            return;
+        let type_info = match module.types.get(&import.name) {
+            Some(type_info) if type_info.publicity.is_importable() => type_info,
+            // If the type belongs to current package, but isn't importable,
+            // then we produce error message about usage of private type.
+            Some(_) if self.environment.current_package == module.package => {
+                self.problems.error(Error::UseOfPrivateModuleType {
+                    location: import.location,
+                    name: import.name.clone(),
+                    module_name: module.name.clone(),
+                });
+                return;
+            }
+            // Otherwise, the type either doesn't exist or is from another
+            // module, where we do not want to expose information, we produce
+            // error message about usage of unknown type.
+            Some(_) | None => {
+                // TODO: refine to a type specific error
+                self.problems.error(Error::UnknownModuleType {
+                    location: import.location,
+                    name: import.name.clone(),
+                    module_name: module.name.clone(),
+                    type_constructors: module.public_type_names(),
+                    value_with_same_name: module.get_importable_value(&import.name).is_some(),
+                });
+                return;
+            }
         };
 
         let type_info = type_info.clone().with_location(import.location);
