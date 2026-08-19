@@ -1,0 +1,21 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "import gleam.{type Nil as Null}\n\npub fn go() -> Null {\n  Nil\n}"
+---
+----- BEFORE RENAME
+-- app.gleam
+import gleam.{type Nil as Null}
+
+pub fn go() -> Null {
+               ↑▔▔▔  
+  Nil
+}
+
+
+----- AFTER RENAME
+-- app.gleam
+import gleam.{type Nil}
+
+pub fn go() -> Nil {
+  Nil
+}

@@ -123,6 +123,10 @@
   `gleam_stdlib` package is available.
   ([0xda157](https://github.com/0xda157))
 
+- Renaming a prelude item to its original name no longer unnecessarily imports
+  it.
+  ([0xda157](https://github.com/0xda157))
+
 ### Formatter
 
 ### Bug fixes
