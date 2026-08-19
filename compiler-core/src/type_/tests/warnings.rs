@@ -5239,3 +5239,17 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn empty_string_in_bit_array_pattern_segment() {
+    assert_warning!(
+        r#"
+pub fn go(x) {
+  case x {
+    <<"">> -> True
+    _ -> False
+  }
+}
+"#
+    );
+}
