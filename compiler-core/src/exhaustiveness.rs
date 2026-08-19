@@ -3035,11 +3035,11 @@ struct BranchSplitter {
     indices: HashMap<RuntimeCheckKind, usize>,
 
     /// This is used to store the indices of just the prefix checks as they have
-    /// different rules from all the other `RuntimeCheckKinds` whose indices are
-    /// instead stored in the `indices` field.
+    /// different rules from the other `RuntimeCheckKinds` whose indices are
+    /// instead stored in the `indices` field, or in `literal_indices` in the
+    /// case of exact strings.
     ///
-    /// We discuss this in more detail in the `index_of_overlapping_runtime_check`
-    /// function!
+    /// We discuss this in more detail in the `check_overlaps` function!
     prefix_indices: Trie<String, usize>,
 
     /// The indices of the exact string literal choices, keyed by the literal
@@ -3296,12 +3296,11 @@ impl BranchSplitter {
             }
 
             // An exact literal is looked up both by its exact value, to find an
-            // identical check, and by prefix, to find the prefix checks it
-            // overlaps with. So it goes in both indices.
-            RuntimeCheckKind::String { ref value } => {
-                let literal = value.to_string();
-                let _ = self.literal_indices.insert(literal, index);
-                let _ = self.indices.insert(kind, index);
+            // identical check, and by any prefix it starts with, so a prefix
+            // check can find every literal it overlaps with. The literal trie
+            // answers both.
+            RuntimeCheckKind::String { value } => {
+                let _ = self.literal_indices.insert(value.to_string(), index);
             }
 
             RuntimeCheckKind::StringPrefix { prefix } => {
@@ -3419,7 +3418,7 @@ impl BranchSplitter {
                 // Unlike a prefix pattern, an exact literal can only overlap with one of
                 // its own prefixes. A longer prefix can never match an exact literal (the
                 // literal is too short), so we leave those out.
-                let first_index = self.indices.get(kind).cloned();
+                let first_index = self.literal_indices.get(value.as_str()).cloned();
                 let overlapping = first_index
                     .into_iter()
                     .chain(
