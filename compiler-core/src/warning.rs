@@ -1570,6 +1570,26 @@ not be used.",
                         extra_labels: vec![],
                     }),
                 },
+
+                type_::Warning::EmptyStringBitArraySegment { location } => Diagnostic {
+                    title: "Empty string segment".into(),
+                    text: wrap(
+                        "This empty string segment is ignored in the pattern, \
+so it can be safely removed. Empty string segments are deprecated and will become \
+an error in a future version.",
+                    ),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        label: diagnostic::Label {
+                            text: Some("Remove this empty string".into()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
             },
 
             Warning::EmptyModule { path: _, name } => Diagnostic {
