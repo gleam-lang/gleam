@@ -5219,13 +5219,18 @@ fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
 }
 
 fn hint_wrap_value_in_result(expected: &Arc<Type>, given: &Arc<Type>) -> Option<String> {
+    should_wrap_value_in_result(expected, given)
+        .map(|constructor| format!("Did you mean to wrap this in an `{constructor}`?"))
+}
+
+pub fn should_wrap_value_in_result(expected: &Arc<Type>, given: &Arc<Type>) -> Option<String> {
     let expected = collapse_links(expected.clone());
     let (expected_ok_type, expected_error_type) = expected.result_types()?;
 
     if given.same_as(expected_ok_type.as_ref()) {
-        Some("Did you mean to wrap this in an `Ok`?".into())
+        Some("Ok".into())
     } else if given.same_as(expected_error_type.as_ref()) {
-        Some("Did you mean to wrap this in an `Error`?".into())
+        Some("Error".into())
     } else {
         None
     }

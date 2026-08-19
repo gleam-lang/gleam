@@ -18,6 +18,7 @@ use gleam_core::{
     },
     build::{Located, Module, Origin},
     config::PackageConfig,
+    error::should_wrap_value_in_result,
     exhaustiveness::CompiledCase,
     parse::{extra::ModuleExtra, lexer::string_to_keyword},
     paths::ProjectPaths,
@@ -13269,5 +13270,61 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
         };
 
         self.int = Some((*location, base, int_value.clone()))
+    }
+}
+
+pub fn code_action_wrap_in_result_constructor(
+    module: &Module,
+    line_numbers: &LineNumbers,
+    params: &CodeActionParams,
+    error: &Option<Error>,
+    actions: &mut Vec<CodeAction>,
+) {
+    let Some(errors) = type_errors_for_module(error, module) else {
+        return;
+    };
+
+    let exprs_to_wrap = errors
+        .into_iter()
+        .filter_map(|error| {
+            let type_::Error::CouldNotUnify {
+                location,
+                expected,
+                given,
+                ..
+            } = error
+            else {
+                return None;
+            };
+
+            should_wrap_value_in_result(expected, given).map(|constructor| (*location, constructor))
+        })
+        .collect_vec();
+
+    if exprs_to_wrap.is_empty() {
+        return;
+    }
+
+    for (location, constructor) in exprs_to_wrap {
+        let mut text_edits = TextEdits::new(line_numbers);
+
+        let range = text_edits.src_span_to_lsp_range(location);
+        if !within(params.range, range) {
+            continue;
+        }
+
+        let expr_src = module
+            .code
+            .get(location.start as usize..location.end as usize)
+            .expect("Location must be valid");
+
+        text_edits.replace(location, format!("{constructor}({expr_src})"));
+
+        let action_name = format!("Wrap in {constructor}()");
+        CodeActionBuilder::new(&action_name)
+            .kind(CodeActionKind::QuickFix)
+            .changes(params.text_document.uri.clone(), text_edits.edits)
+            .preferred(true)
+            .push_to(actions);
     }
 }

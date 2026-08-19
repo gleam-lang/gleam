@@ -1,0 +1,11 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub fn main() -> Result(Int, Nil) { Nil }"
+---
+----- BEFORE ACTION
+pub fn main() -> Result(Int, Nil) { Nil }
+                                    ↑    
+
+
+----- AFTER ACTION
+pub fn main() -> Result(Int, Nil) { Error(Nil) }
