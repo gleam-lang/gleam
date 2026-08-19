@@ -117,6 +117,10 @@
   ([Amr Kadry](https://github.com/Amrkadry) and
   ([Louis Pilfold](https://github.com/lpil))
 
+- compile-package now generates a .app file in the ebin folder, listing all
+  .beam modules (this includes erlang and elixir ones).
+  ([Rodrigo Álvarez](https://github.com/Papipo))
+
 ### Language server
 
 - The "Generate dynamic decoder" code action is now only offered when the

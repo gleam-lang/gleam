@@ -10,7 +10,8 @@ use ecow::EcoString;
 use gleam_core::{
     Error, Result,
     build::{
-        Mode, NullTelemetry, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration,
+        ErlangAppCodegenConfiguration, Mode, NullTelemetry, PackageCompiler, StaleTracker, Target,
+        TargetCodegenConfiguration,
     },
     error::{FileIoAction, FileKind},
     metadata,
@@ -19,7 +20,10 @@ use gleam_core::{
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
 };
-use std::{collections::HashSet, rc::Rc};
+use std::{
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 pub fn command(options: CompilePackage) -> Result<()> {
     let ids = UniqueIdGenerator::new();
@@ -36,8 +40,13 @@ pub fn command(options: CompilePackage) -> Result<()> {
         io.initialise_beam_compiler()?;
     }
 
+    let app_file = (!options.skip_beam_compilation).then(|| ErlangAppCodegenConfiguration {
+        include_dev_deps: false,
+        package_name_overrides: HashMap::new(),
+    });
+
     let target = match options.target {
-        Target::Erlang => TargetCodegenConfiguration::Erlang { app_file: None },
+        Target::Erlang => TargetCodegenConfiguration::Erlang { app_file },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
             emit_typescript_definitions: false,
             emit_source_maps: false,
