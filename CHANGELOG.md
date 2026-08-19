@@ -9,10 +9,6 @@
 
 ### Compiler
 
-- When compiling to Erlang any case clauses found to be unreachable will no
-  longer generate any code.
-  ([Jack Programs](https://github.com/jackprogramsjp))
-
 - The compiler now emits a warning when trying to use the pattern of a spread
   and a variable when pattern matching inside a 'case' clause.
   This syntax may be removed in a future (major) release.

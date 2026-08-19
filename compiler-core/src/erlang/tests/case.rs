@@ -293,3 +293,18 @@ pub fn go(x) {
 "#
     )
 }
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/6179
+fn unreachable_case_does_not_panic() {
+    assert_erl!(
+        r#"
+pub fn go(x) {
+  case x {
+    [_, ..] -> []
+    [_, ..rest] | rest -> rest
+  }
+}
+"#
+    );
+}

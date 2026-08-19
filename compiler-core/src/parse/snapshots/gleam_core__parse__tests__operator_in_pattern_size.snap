@@ -113,7 +113,6 @@ expression: "let assert <<size, payload:size(size - 1)>> = <<>>"
             compiled_case: CompiledCase {
                 tree: Fail,
                 subject_variables: [],
-                unreachable: {},
             },
             annotation: None,
         },

@@ -5468,8 +5468,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> CompiledCase {
         let mut case = exhaustiveness::CaseToCompile::new(subject_types);
         clauses.iter().for_each(|clause| case.add_clause(clause));
-        let mut result = case.compile(self.environment);
-        let mut unreachable = HashSet::new();
+        let result = case.compile(self.environment);
 
         // Error for missing clauses that would cause a crash
         if result.diagnostics.missing {
@@ -5499,14 +5498,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                         self.problems
                             .warning(Warning::UnreachableCasePattern { location, reason });
-
-                        let _ = unreachable.insert((clause_index, pattern_index));
                     }
                 }
             }
         }
-
-        result.compiled_case.unreachable = unreachable;
 
         result.compiled_case
     }

@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/erlang/tests/case.rs
+expression: "\npub fn go(x) {\n  case x {\n    [_, ..] -> []\n    [_, ..rest] | rest -> rest\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    [_, ..] -> []
+    [_, ..rest] | rest -> rest
+  }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([go/1]).
+
+-file("project/test/my/mod.gleam", 2).
+-spec go(list(L)) -> list(L).
+go(X) ->
+    case X of
+        [_ | _] ->
+            [];
+
+        [_ | Rest] ->
+            Rest;
+
+        Rest ->
+            Rest
+    end.
