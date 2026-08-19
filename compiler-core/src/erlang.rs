@@ -4136,6 +4136,7 @@ fn erl_safe_type_name(mut name: EcoString) -> EcoString {
         | "pid"
         | "port"
         | "pos_integer"
+        | "record"
         | "reference"
         | "string"
         | "term"

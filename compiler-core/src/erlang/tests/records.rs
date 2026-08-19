@@ -472,3 +472,9 @@ pub fn main() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/6180
+#[test]
+fn type_called_record_does_not_overwrite_erlang_builtin_record_type() {
+    assert_erl!("pub type Record { Record(Int) }")
+}
