@@ -278,15 +278,10 @@ impl Branch {
                         // body, like a size check. There's nothing to pop in that
                         // case, so we leave the shared pattern alone rather than
                         // copying it into an identical one.
-                        if !matches!(
-                            tests.front(),
-                            None | Some(BitArrayTest::Match(MatchTest {
-                                value: BitArrayMatchedValue::Variable(_)
-                                    | BitArrayMatchedValue::Assign { .. }
-                                    | BitArrayMatchedValue::Discard(_),
-                                ..
-                            }))
-                        ) {
+                        if !tests
+                            .front()
+                            .is_none_or(BitArrayTest::binds_or_discards_value)
+                        {
                             return true;
                         }
 
@@ -1066,6 +1061,30 @@ pub enum BitArrayTest {
 }
 
 impl BitArrayTest {
+    /// Whether this test binds the matched value to a name (a variable or an
+    /// `as` assignment) or discards it, instead of checking it against
+    /// something. When such a test is the first one of a pattern,
+    /// `move_unconditional_patterns` can pop it into the branch's body, or
+    /// rewrite an assignment into a test on the value it aliases.
+    ///
+    fn binds_or_discards_value(&self) -> bool {
+        match self {
+            BitArrayTest::Match(MatchTest { value, .. }) => match value {
+                BitArrayMatchedValue::Variable(_)
+                | BitArrayMatchedValue::Assign { .. }
+                | BitArrayMatchedValue::Discard(_) => true,
+                BitArrayMatchedValue::LiteralString { value, .. } => value.is_empty(),
+                BitArrayMatchedValue::LiteralFloat(_) | BitArrayMatchedValue::LiteralInt { .. } => {
+                    false
+                }
+            },
+            BitArrayTest::Size(_)
+            | BitArrayTest::CatchAllIsBytes { .. }
+            | BitArrayTest::ReadSizeIsNotNegative { .. }
+            | BitArrayTest::SegmentIsFiniteFloat { .. } => false,
+        }
+    }
+
     fn is_discard(&self) -> bool {
         match self {
             BitArrayTest::Match(MatchTest {
