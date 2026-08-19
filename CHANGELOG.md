@@ -117,6 +117,10 @@
   merge conflict indicator
   ([0xda157](https://github.com/0xda157))
 
+- Matching on bit array patterns which contain empty string segments is now
+  deprecated.
+([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
