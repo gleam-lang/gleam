@@ -385,7 +385,9 @@ impl Branch {
                     // bound in the body, so no name is left to bind here.
                     Pattern::StringPrefixSlice { rest_name, prefix } => {
                         self.body.assign_string_slice(
-                            std::mem::take(rest_name),
+                            // Patterns live in an arena shared by every branch, so the
+                            // rest name is cloned rather than taken out of it.
+                            rest_name.clone(),
                             check.var.clone(),
                             prefix.clone(),
                         );
