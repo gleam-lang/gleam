@@ -117,6 +117,9 @@
   ([Amr Kadry](https://github.com/Amrkadry) and
   ([Louis Pilfold](https://github.com/lpil))
 
+- compile-package now supports a --prod flag to compile only the `/src` folder.
+  ([Rodrigo Álvarez](https://github.com/Papipo))
+
 ### Language server
 
 - The "Generate dynamic decoder" code action is now only offered when the
