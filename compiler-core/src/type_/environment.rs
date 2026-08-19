@@ -484,14 +484,27 @@ impl Environment<'_> {
                 })?;
                 self.references
                     .register_module_reference_by_alias(module_name.clone());
-                module.get_importable_type(name).ok_or_else(|| {
-                    UnknownTypeConstructorError::ModuleType {
+
+                match module.types.get(name) {
+                    Some(type_info) if type_info.publicity.is_importable() => Ok(type_info),
+                    // If the type belongs to current package, but isn't importable,
+                    // then we produce error message about usage of private type.
+                    Some(_) if self.current_package == module.package => {
+                        Err(UnknownTypeConstructorError::PrivateModuleType {
+                            name: name.clone(),
+                            module_name: module.name.clone(),
+                        })
+                    }
+                    // Otherwise, the type either doesn't exist or is from another
+                    // module, where we do not want to expose information, we produce
+                    // error message about usage of unknown type.
+                    Some(_) | None => Err(UnknownTypeConstructorError::ModuleType {
                         name: name.clone(),
                         module_name: module.name.clone(),
                         type_constructors: module.public_type_names(),
                         imported_type_as_value: false,
-                    }
-                })
+                    }),
+                }
             }
         }
     }

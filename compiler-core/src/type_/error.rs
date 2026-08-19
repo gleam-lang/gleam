@@ -734,6 +734,13 @@ pub enum Error {
         name: EcoString,
         module_name: EcoString,
     },
+
+    /// This happens when we try to use a private type from another module.
+    UseOfPrivateModuleType {
+        location: SrcSpan,
+        name: EcoString,
+        module_name: EcoString,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1422,7 +1429,8 @@ impl Error {
             | Error::QualifiedTypeMissingName { location }
             | Error::TodoConstant { location }
             | Error::LowercaseBoolPattern { location }
-            | Error::UseOfPrivateModuleValue { location, .. } => location.start,
+            | Error::UseOfPrivateModuleValue { location, .. }
+            | Error::UseOfPrivateModuleType { location, .. } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }
@@ -1609,6 +1617,11 @@ pub enum UnknownTypeConstructorError {
         type_constructors: Vec<EcoString>,
         imported_type_as_value: bool,
     },
+
+    PrivateModuleType {
+        name: EcoString,
+        module_name: EcoString,
+    },
 }
 
 pub fn convert_get_type_constructor_error(
@@ -1643,6 +1656,14 @@ pub fn convert_get_type_constructor_error(
             type_constructors,
             value_with_same_name: imported_type_as_value,
         },
+
+        UnknownTypeConstructorError::PrivateModuleType { name, module_name } => {
+            Error::UseOfPrivateModuleType {
+                location: *location,
+                name,
+                module_name,
+            }
+        }
     }
 }
 
