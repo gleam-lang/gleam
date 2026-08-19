@@ -3951,3 +3951,64 @@ pub fn go() -> Wibble {
         find_position_of("Wibble").nth_occurrence(2).under_char('b')
     );
 }
+
+#[test]
+fn rename_prelude_type_to_original_name_do_not_import() {
+    assert_rename!(
+        "pub fn go() -> Nil {
+  Nil
+}",
+        "Nil",
+        find_position_of("Nil")
+    );
+}
+
+#[test]
+fn rename_prelude_value_to_original_name_do_not_import() {
+    assert_rename!(
+        "pub fn go() -> Nil {
+  Nil
+}",
+        "Nil",
+        find_position_of("Nil").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_prelude_type_to_original_name_remove_full_import() {
+    assert_rename!(
+        "import gleam.{type Nil as Null}
+
+pub fn go() -> Null {
+  Nil
+}",
+        "Nil",
+        find_position_of("Null").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_prelude_value_to_original_name_remove_full_import() {
+    assert_rename!(
+        "import gleam.{Nil as Null}
+
+pub fn go() -> Nil {
+  Null
+}",
+        "Nil",
+        find_position_of("Null").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_prelude_value_to_original_name_remove_item_import() {
+    assert_rename!(
+        "import gleam.{Nil as Null, type Nil as Wibble}
+
+pub fn go() -> Wibble {
+  Null
+}",
+        "Nil",
+        find_position_of("Null").nth_occurrence(2)
+    );
+}

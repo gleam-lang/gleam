@@ -383,7 +383,9 @@ fn alias_references_in_module(
 
     // If we didn't find the import for the aliased type or value, then this is
     // a prelude value and we need to add the import so we can alias it.
-    if !found_import {
+    // We skip this if the existing name matches the new name so we don't
+    // unnecessarily import the prelude.
+    if !found_import && *name != params.new_name {
         let unqualified_import = match layer {
             ast::Layer::Value => format!("{name} as {}", params.new_name),
             ast::Layer::Type => format!("type {name} as {}", params.new_name),
