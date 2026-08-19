@@ -16,10 +16,10 @@ type Wibble {
 
 
 ----- ERROR
-error: Unknown module type
+error: Use of private module type
   ┌─ /src/one/two.gleam:5:10
   │
 5 │   Wibble(wibble.Wibble)
   │          ^^^^^^^^^^^^^
 
-The module `wibble` does not have a `Wibble` type.
+`wibble.Wibble` is a private type.
