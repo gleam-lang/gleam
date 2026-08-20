@@ -3409,6 +3409,17 @@ where
                 break;
             };
 
+            if operator == Token::Pipe {
+                return parse_error(
+                    ParseErrorType::UnexpectedToken {
+                        token: operator,
+                        expected: vec!["A binary operator".into()],
+                        hint: Some("Pipelines are not allowed in constants".into()),
+                    },
+                    SrcSpan::new(operator_start, operator_end),
+                );
+            }
+
             // Is Op
             self.advance();
             last_op_start = operator_start;
@@ -5106,11 +5117,11 @@ fn token_to_bit_array_size_operator(t: &Token) -> Option<IntOperator> {
 }
 
 /// Simple-Precedence-Parser, perform reduction for expression
-fn do_reduce_expression(op: Spanned, estack: &mut Vec<UntypedExpr>) {
+fn do_reduce_expression(operator: Spanned, estack: &mut Vec<UntypedExpr>) {
     match (estack.pop(), estack.pop()) {
-        (Some(er), Some(el)) => {
-            let new_e = expression_operator_reduction(op, el, er);
-            estack.push(new_e);
+        (Some(right), Some(left)) => {
+            let new_expression = expression_operator_reduction(operator, left, right);
+            estack.push(new_expression);
         }
         _ => panic!("Tried to reduce without 2 expressions"),
     }
@@ -5128,11 +5139,11 @@ fn do_reduce_clause_guard(operator: Spanned, estack: &mut Vec<UntypedClauseGuard
 }
 
 /// Simple-Precedence-Parser, perform reduction for clause guard
-fn do_reduce_constant(op: Spanned, estack: &mut Vec<UntypedConstant>) {
+fn do_reduce_constant(operator: Spanned, estack: &mut Vec<UntypedConstant>) {
     match (estack.pop(), estack.pop()) {
-        (Some(er), Some(el)) => {
-            let new_e = constant_binop_reduction(op, el, er);
-            estack.push(new_e);
+        (Some(left), Some(right)) => {
+            let new_expression = constant_binop_reduction(operator, right, left);
+            estack.push(new_expression);
         }
         _ => panic!("Tried to reduce without 2 guards"),
     }
