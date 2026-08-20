@@ -4,7 +4,7 @@ expression: "[] |> echo |> wibble"
 ---
 [
     Expression(
-        PipeLine {
+        Pipeline {
             expressions: [
                 List {
                     location: SrcSpan {

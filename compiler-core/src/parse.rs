@@ -5176,13 +5176,13 @@ fn expression_operator_reduction(
     right: UntypedExpr,
 ) -> UntypedExpr {
     if token == Token::Pipe {
-        let expressions = if let UntypedExpr::PipeLine { mut expressions } = left {
+        let expressions = if let UntypedExpr::Pipeline { mut expressions } = left {
             expressions.push(right);
             expressions
         } else {
             vec1![left, right]
         };
-        UntypedExpr::PipeLine { expressions }
+        UntypedExpr::Pipeline { expressions }
     } else {
         match token_to_binop(&token) {
             Some(operator) => UntypedExpr::BinOp {

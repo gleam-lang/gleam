@@ -11,7 +11,7 @@ expression: echo wibble |> wobble |> woo
             },
             keyword_end: 4,
             expression: Some(
-                PipeLine {
+                Pipeline {
                     expressions: [
                         Var {
                             location: SrcSpan {

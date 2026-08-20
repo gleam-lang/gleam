@@ -1295,7 +1295,7 @@ impl<'a, 'doc> Formatter<'a> {
                 message,
             } => self.echo(arena, expression, message),
 
-            UntypedExpr::PipeLine { expressions, .. } => self.pipeline(arena, expressions, false),
+            UntypedExpr::Pipeline { expressions, .. } => self.pipeline(arena, expressions, false),
 
             UntypedExpr::Int { value, .. } => self.int(arena, value),
 
@@ -1595,7 +1595,7 @@ impl<'a, 'doc> Formatter<'a> {
         location: &SrcSpan,
     ) -> Document<'a, 'doc> {
         let expression = match function {
-            UntypedExpr::PipeLine { .. } => break_block(arena, self.expr(arena, function)),
+            UntypedExpr::Pipeline { .. } => break_block(arena, self.expr(arena, function)),
 
             UntypedExpr::BinOp { .. }
             | UntypedExpr::Int { .. }
@@ -1990,7 +1990,7 @@ impl<'a, 'doc> Formatter<'a> {
             | UntypedExpr::Fn { .. }
             | UntypedExpr::List { .. }
             | UntypedExpr::Call { .. }
-            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Pipeline { .. }
             | UntypedExpr::Case { .. }
             | UntypedExpr::FieldAccess { .. }
             | UntypedExpr::Tuple { .. }
@@ -2562,7 +2562,7 @@ impl<'a, 'doc> Formatter<'a> {
             | UntypedExpr::Var { .. }
             | UntypedExpr::Call { .. }
             | UntypedExpr::BinOp { .. }
-            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Pipeline { .. }
             | UntypedExpr::FieldAccess { .. }
             | UntypedExpr::TupleIndex { .. }
             | UntypedExpr::Todo { .. }
@@ -2596,7 +2596,7 @@ impl<'a, 'doc> Formatter<'a> {
             | UntypedExpr::List { .. }
             | UntypedExpr::Call { .. }
             | UntypedExpr::BinOp { .. }
-            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Pipeline { .. }
             | UntypedExpr::FieldAccess { .. }
             | UntypedExpr::Tuple { .. }
             | UntypedExpr::TupleIndex { .. }
@@ -2993,7 +2993,7 @@ impl<'a, 'doc> Formatter<'a> {
                 let doc = self.bin_op(arena, operator, left, right, true).group(arena);
                 commented(arena, doc, comments)
             }
-            UntypedExpr::PipeLine { expressions } if siblings > 1 => {
+            UntypedExpr::Pipeline { expressions } if siblings > 1 => {
                 let comments = self.pop_comments(expression.start_byte_index());
                 let doc = self.pipeline(arena, expressions, true).group(arena);
                 commented(arena, doc, comments)
@@ -3007,7 +3007,7 @@ impl<'a, 'doc> Formatter<'a> {
             | UntypedExpr::List { .. }
             | UntypedExpr::Call { .. }
             | UntypedExpr::BinOp { .. }
-            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Pipeline { .. }
             | UntypedExpr::Case { .. }
             | UntypedExpr::FieldAccess { .. }
             | UntypedExpr::Tuple { .. }
@@ -3392,7 +3392,7 @@ impl<'a, 'doc> Formatter<'a> {
             | UntypedExpr::Fn { .. }
             | UntypedExpr::List { .. }
             | UntypedExpr::Call { .. }
-            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Pipeline { .. }
             | UntypedExpr::Case { .. }
             | UntypedExpr::FieldAccess { .. }
             | UntypedExpr::Tuple { .. }
@@ -3434,7 +3434,7 @@ impl<'a, 'doc> Formatter<'a> {
             | UntypedExpr::Fn { .. }
             | UntypedExpr::List { .. }
             | UntypedExpr::Call { .. }
-            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Pipeline { .. }
             | UntypedExpr::Case { .. }
             | UntypedExpr::FieldAccess { .. }
             | UntypedExpr::Tuple { .. }
@@ -3600,7 +3600,7 @@ impl<'a, 'doc> Formatter<'a> {
             | UntypedExpr::Fn { .. }
             | UntypedExpr::List { .. }
             | UntypedExpr::Call { .. }
-            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Pipeline { .. }
             | UntypedExpr::Case { .. }
             | UntypedExpr::FieldAccess { .. }
             | UntypedExpr::Tuple { .. }
@@ -4206,7 +4206,7 @@ fn is_breakable_argument(expression: &UntypedExpr, arity: usize) -> bool {
         | UntypedExpr::String { .. }
         | UntypedExpr::Var { .. }
         | UntypedExpr::BinOp { .. }
-        | UntypedExpr::PipeLine { .. }
+        | UntypedExpr::Pipeline { .. }
         | UntypedExpr::FieldAccess { .. }
         | UntypedExpr::TupleIndex { .. }
         | UntypedExpr::Todo { .. }
