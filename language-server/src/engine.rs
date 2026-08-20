@@ -460,7 +460,6 @@ where
 
             let lines = LineNumbers::new(&module.code);
 
-            code_action_unused_values(module, &lines, &params, &mut actions);
             actions.extend(RemoveUnusedImports::new(module, &lines, &params).code_actions());
             code_action_fix_names(module, &lines, &params, &this.error, &mut actions);
             code_action_import_module(module, &lines, &params, &this.error, &mut actions);
@@ -476,6 +475,7 @@ where
                 .extend(FixTruncatedBitArraySegment::new(module, &lines, &params).code_actions());
             actions.extend(RemovePrivateOpaque::new(module, &lines, &params).code_actions());
             actions.extend(AddMissingTypeParameter::new(module, &lines, &params).code_actions());
+            code_action_unused_values(module, &lines, &params, &mut actions);
             code_action_convert_qualified_constructor_to_unqualified(
                 module,
                 &this.compiler,
