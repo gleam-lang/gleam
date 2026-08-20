@@ -2271,7 +2271,7 @@ where
             return Err(ParseError {
                 error: ParseErrorType::UnexpectedToken {
                     token: Token::Colon,
-                    expected: vec!["`->`".into()],
+                    expected: vec![Token::RArrow.to_string().into()],
                     hint: Some("Return type annotations are written using `->`, not `:`".into()),
                 },
                 location: SrcSpan {
@@ -3661,7 +3661,7 @@ where
                     Some((start, token, end)) => parse_error(
                         ParseErrorType::UnexpectedToken {
                             token,
-                            expected: vec!["UpName".into(), "Name".into()],
+                            expected: vec!["A lowercase name".into(), "An uppercase name".into()],
                             hint: None,
                         },
                         SrcSpan { start, end },
