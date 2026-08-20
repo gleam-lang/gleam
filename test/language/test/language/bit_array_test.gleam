@@ -219,4 +219,23 @@ pub fn float_16_subnormal_rounds_ties_to_even_test() {
 pub fn zero_size_int_segment_test() {
   assert <<0:size(0), 1:size(8)>> == <<1>>
   assert bit_array.bit_size(<<0:size(0)>>) == 0
+
+pub fn bits_with_unit_literal_size_test() {
+  let data = <<1, 2>>
+  let result = <<data:bits-size(8)-unit(8)>>
+  assert result == <<1, 2>>
+}
+
+pub fn bits_with_unit_variable_size_test() {
+  let data = <<1, 2>>
+  let size = 16
+  let result = <<data:bits-size(size)-unit(8)>>
+  assert result == <<1, 2>>
+}
+
+pub fn bits_with_unit_pattern_test() {
+  let data = <<1, 2>>
+  let assert <<a:size(8)-unit(8)-bits, b:size(8)-unit(8)-bits>> = data
+  assert a == 1
+  assert b == 2
 }

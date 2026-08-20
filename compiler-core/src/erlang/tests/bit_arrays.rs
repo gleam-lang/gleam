@@ -532,6 +532,54 @@ pub fn go(wibble: String) {
 
 // https://github.com/gleam-lang/gleam/issues/5208
 #[test]
+fn unit_with_bits_option() {
+    assert_erl!(
+        "
+pub fn go(x) {
+  <<x:bits-size(8)-unit(8)>>
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5984
+#[test]
+fn unit_with_bits_option_constant() {
+    assert_erl!(
+        "
+pub const bits = <<1, 2, 3>>
+pub const more_bits = <<bits:bits-size(3)-unit(8)>>
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5984
+#[test]
+fn unit_with_bits_option_variable_size() {
+    assert_erl!(
+        "
+pub fn main(x, size) {
+  <<x:bits-size(size)-unit(8)>>
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5984
+#[test]
+fn unit_with_bits_option_variable_size_pattern() {
+    assert_erl!(
+        "
+pub fn main(x, size) {
+  let assert <<a:size(size)-unit(8)-bits, _:bits>> = x
+  a
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5984
+#[test]
 fn unit_option_ignores_bytes() {
     assert_erl!(
         "
