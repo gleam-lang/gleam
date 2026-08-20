@@ -4406,3 +4406,55 @@ const c = 1 - does_not_exist
 "
     );
 }
+
+#[test]
+fn import_of_private_value_in_the_same_package() {
+    assert_module_error!(
+        ("wibble", "const wobble = 0"),
+        "
+import wibble.{wobble}
+"
+    );
+}
+
+#[test]
+fn use_of_private_value_in_the_same_package() {
+    assert_module_error!(
+        ("wibble", "const wobble = 0"),
+        "
+import wibble
+
+pub fn go() {
+  wibble.wobble
+}
+"
+    );
+}
+
+#[test]
+fn import_of_private_value_in_other_package() {
+    assert_module_error!(
+        ("anotherpackage", "wibble", "const wobble = 0"),
+        "
+// Import of private value from another package should give error about unknown
+// module value.
+import wibble.{wobble}
+"
+    );
+}
+
+#[test]
+fn use_of_private_value_in_other_package() {
+    assert_module_error!(
+        ("anotherpackage", "wibble", "const wobble = 0"),
+        "
+import wibble
+
+pub fn go() {
+  // Use of private value from another package should give error about unknown
+  // module value.
+  wibble.wobble
+}
+"
+    );
+}
