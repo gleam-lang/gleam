@@ -127,6 +127,10 @@
   it.
   ([0xda157](https://github.com/0xda157))
 
+- The "add missing patterns" code action now has higher precedence than the code
+  action to discard an unused result.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Bug fixes
