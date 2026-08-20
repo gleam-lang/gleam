@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport wibble\n\n// Use of private type from another package should give error about unknown\n// module value.\npub fn go() -> wibble.Wibble {\n  todo\n}\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+
+type Wibble {
+  Wibble
+}
+
+
+-- main.gleam
+
+import wibble
+
+// Use of private type from another package should give error about unknown
+// module value.
+pub fn go() -> wibble.Wibble {
+  todo
+}
+
+
+----- ERROR
+error: Unknown module type
+  ┌─ /src/one/two.gleam:6:16
+  │
+6 │ pub fn go() -> wibble.Wibble {
+  │                ^^^^^^^^^^^^^
+
+The module `wibble` does not have a `Wibble` type.
