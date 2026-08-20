@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\n// Import of private value from another package should give error about unknown\n// module value.\nimport wibble.{wobble}\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+const wobble = 0
+
+-- main.gleam
+
+// Import of private value from another package should give error about unknown
+// module value.
+import wibble.{wobble}
+
+
+----- ERROR
+error: Unknown module value
+  ┌─ /src/one/two.gleam:4:16
+  │
+4 │ import wibble.{wobble}
+  │                ^^^^^^
+
+The module `wibble` does not have a `wobble` value.
