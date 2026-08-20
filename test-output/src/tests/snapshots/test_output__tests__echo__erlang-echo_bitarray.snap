@@ -17,6 +17,6 @@ pub fn main() {
 [90msrc/main.gleam:5[39m
 ""
 [90msrc/main.gleam:6[39m
-"\u{0001}\u{0002}\u{0003}"
+<<1, 2, 3>>
 [90msrc/main.gleam:7[39m
 <<1, 2, 3:size(2)>>

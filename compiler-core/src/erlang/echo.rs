@@ -455,14 +455,32 @@ fn inspect_binary<Output>(builder: &mut impl ErlangBuilder<Output>) {
     let location = SrcSpan::default();
     let function = builder.start_function(location, "inspect@binary", 1, [(location, "Binary")]);
 
-    // case inspect@maybe_utf8_string(Binary, <<>>) of ...
+    // case inspect@maybe_utf8_string(Binary, false, <<>>) of ...
     let case = builder.start_case(location);
     let call = call_function(builder, location, "inspect@maybe_utf8_string");
     builder.variable(location, "Binary");
+    builder.atom(location, "false");
     let bit_array = builder.start_bit_array(location);
     builder.end_bit_array(bit_array);
     builder.end_call(call);
     let case = builder.end_case_subject(case);
+
+    // We always display <<>> as the empty string, that's a totally arbitrary
+    // decision, we could have also gone with <<>> instead.
+
+    // _ when Binary =:= <<>> -> ~"\"\"";
+    let clause = builder.start_case_clause(location);
+    builder.discard_pattern(location);
+    let clause = builder.end_clause_pattern(clause);
+    let guard = builder.start_clause_guard();
+    builder.binary_operator(location, "=:=");
+    builder.variable(location, "Binary");
+    let bit_array = builder.start_bit_array(location);
+    builder.end_bit_array(bit_array);
+    builder.end_clause_guard(guard);
+    let clause = builder.end_clause_guards(clause);
+    builder.string(location, r#"\"\""#);
+    builder.end_clause_body(clause);
 
     // {ok, InspectedUtf8String} -> InspectedUtf8String;
     let clause = builder.start_case_clause(location);
@@ -475,13 +493,13 @@ fn inspect_binary<Output>(builder: &mut impl ErlangBuilder<Output>) {
     builder.variable(location, "InspectedUtf8String");
     builder.end_clause_body(clause);
 
-    // {error, not_a_utf8_string} ->
+    // {error, not_a_printable_string} ->
     //   Segments = [erlang:integer_to_list(X) || <<X>> <= Binary],
     //   ["<<", lists:join(", ", Segments), ">>"];
     let clause = builder.start_case_clause(location);
     let tuple = builder.start_tuple_pattern(location);
     builder.atom_pattern(location, "error");
-    builder.atom_pattern(location, "not_a_utf8_string");
+    builder.atom_pattern(location, "not_a_printable_string");
     builder.end_tuple_pattern(tuple);
     let clause = builder.end_clause_pattern(clause);
     let clause = builder.end_clause_guards(clause);
@@ -912,17 +930,24 @@ fn inspect_maybe_utf8_string<Output>(builder: &mut impl ErlangBuilder<Output>) {
         location,
         "inspect@maybe_utf8_string",
         2,
-        [(location, "Binary"), (location, "Acc")],
+        [
+            (location, "Binary"),
+            (location, "HasPrintableChars"),
+            (location, "Acc"),
+        ],
     );
     let case = builder.start_case(location);
     builder.variable(location, "Binary");
     let case = builder.end_case_subject(case);
 
-    // <<>> -> {ok, [~"\"", Acc, ~"\""]};
+    // <<>> if HasPrintableChars -> {ok, [~"\"", Acc, ~"\""]};
     let clause = builder.start_case_clause(location);
     let bit_array = builder.start_bit_array_pattern(location);
     builder.end_bit_array_pattern(bit_array);
     let clause = builder.end_clause_pattern(clause);
+    let guard = builder.start_clause_guard();
+    builder.variable(location, "HasPrintableChars");
+    builder.end_clause_guard(guard);
     let clause = builder.end_clause_guards(clause);
     let tuple = builder.start_tuple(location);
     builder.atom(location, "ok");
@@ -936,9 +961,22 @@ fn inspect_maybe_utf8_string<Output>(builder: &mut impl ErlangBuilder<Output>) {
     builder.end_tuple(tuple);
     builder.end_clause_body(clause);
 
+    // <<>> -> {error, not_a_printable_string};
+    let clause = builder.start_case_clause(location);
+    let bit_array = builder.start_bit_array_pattern(location);
+    builder.end_bit_array_pattern(bit_array);
+    let clause = builder.end_clause_pattern(clause);
+    let clause = builder.end_clause_guards(clause);
+    let tuple = builder.start_tuple(location);
+    builder.atom(location, "error");
+    builder.atom(location, "not_a_printable_string");
+    builder.end_tuple(tuple);
+    builder.end_clause_body(clause);
+
     // <<First/utf8, Rest/binary>> ->
-    //   Escaped = inspect@escape_grapheme(First),
-    //   inspect@maybe_utf8_string(Rest, <<Acc/binary, Escaped/binary>>);
+    //   {Escaped, IsPrintableChar} = inspect@escape_grapheme(First),
+    //   HasPrintableChars1 = HasPrintableChars orelse IsPrintableChar,
+    //   inspect@maybe_utf8_string(Rest, HasPrintableChars1, <<Acc/binary, Escaped/binary>>);
     let clause = builder.start_case_clause(location);
     let bit_array = builder.start_bit_array_pattern(location);
 
@@ -957,13 +995,23 @@ fn inspect_maybe_utf8_string<Output>(builder: &mut impl ErlangBuilder<Output>) {
     let clause = builder.end_clause_guards(clause);
 
     builder.match_operator(location);
+    let tuple = builder.start_tuple_pattern(location);
     builder.variable_pattern(location, "Escaped");
+    builder.variable_pattern(location, "IsPrintableChar");
+    builder.end_tuple_pattern(tuple);
     let call = call_function(builder, location, "inspect@escape_grapheme");
     builder.variable(location, "First");
     builder.end_call(call);
 
+    builder.match_operator(location);
+    builder.variable_pattern(location, "HasPrintableChars1");
+    builder.binary_operator(location, "orelse");
+    builder.variable(location, "HasPrintableChars");
+    builder.variable(location, "IsPrintableChar");
+
     let call = call_function(builder, location, "inspect@maybe_utf8_string");
     builder.variable(location, "Rest");
+    builder.variable(location, "HasPrintableChars1");
     let bit_array = builder.start_bit_array(location);
 
     builder.bit_array_segment(location);
@@ -981,14 +1029,14 @@ fn inspect_maybe_utf8_string<Output>(builder: &mut impl ErlangBuilder<Output>) {
 
     builder.end_clause_body(clause);
 
-    //  _ -> {error, not_a_utf8_string}
+    //  _ -> {error, not_a_printable_string}
     let clause = builder.start_case_clause(location);
     builder.variable_pattern(location, "_");
     let clause = builder.end_clause_pattern(clause);
     let clause = builder.end_clause_guards(clause);
     let tuple = builder.start_tuple(location);
     builder.atom(location, "error");
-    builder.atom(location, "not_a_utf8_string");
+    builder.atom(location, "not_a_printable_string");
     builder.end_tuple(tuple);
     builder.end_clause_body(clause);
     builder.end_case(case);
@@ -1012,7 +1060,7 @@ fn inspect_escape_grapheme<Output>(builder: &mut impl ErlangBuilder<Output>) {
     escape_character_clause(builder, '\t', "t");
     escape_character_clause(builder, 12 as char, "f");
 
-    // X when X > 126, X < 160 -> inspect@convert_to_u(X);
+    // X when X > 126, X < 160 -> {inspect@convert_to_u(X), false};
     let clause = builder.start_case_clause(location);
     builder.variable_pattern(location, "X");
     let clause = builder.end_clause_pattern(clause);
@@ -1030,12 +1078,18 @@ fn inspect_escape_grapheme<Output>(builder: &mut impl ErlangBuilder<Output>) {
     }
     builder.end_clause_guard(guard);
     let clause = builder.end_clause_guards(clause);
-    let call = call_function(builder, location, "inspect@convert_to_u");
-    builder.variable(location, "X");
-    builder.end_call(call);
+    let tuple = builder.start_tuple(location);
+    {
+        let call = call_function(builder, location, "inspect@convert_to_u");
+        builder.variable(location, "X");
+        builder.end_call(call);
+
+        builder.atom(location, "false");
+    }
+    builder.end_tuple(tuple);
     builder.end_clause_body(clause);
 
-    // X when X < 32 -> inspect@convert_to_u(X);
+    // X when X < 32 -> {inspect@convert_to_u(X), false};
     let clause = builder.start_case_clause(location);
     builder.variable_pattern(location, "X");
     let clause = builder.end_clause_pattern(clause);
@@ -1045,22 +1099,33 @@ fn inspect_escape_grapheme<Output>(builder: &mut impl ErlangBuilder<Output>) {
     builder.int(location, 32.into());
     builder.end_clause_guard(guard);
     let clause = builder.end_clause_guards(clause);
-    let call = call_function(builder, location, "inspect@convert_to_u");
-    builder.variable(location, "X");
-    builder.end_call(call);
+    let tuple = builder.start_tuple(location);
+    {
+        let call = call_function(builder, location, "inspect@convert_to_u");
+        builder.variable(location, "X");
+        builder.end_call(call);
+
+        builder.atom(location, "false");
+    }
+    builder.end_tuple(tuple);
     builder.end_clause_body(clause);
 
-    // Other -> <<Other/utf8>>
+    // Other -> {<<Other/utf8>>, true}
     let clause = builder.start_case_clause(location);
     builder.variable_pattern(location, "Other");
     let clause = builder.end_clause_pattern(clause);
     let clause = builder.end_clause_guards(clause);
+
+    let tuple = builder.start_tuple(location);
     let bit_array = builder.start_bit_array(location);
     builder.bit_array_segment(location);
     builder.variable(location, "Other");
     builder.bit_array_segment_default_size();
     builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Utf8]);
     builder.end_bit_array(bit_array);
+
+    builder.atom(location, "true");
+    builder.end_tuple(tuple);
     builder.end_clause_body(clause);
 
     builder.end_case(case);
@@ -1683,7 +1748,9 @@ fn is_ascii_character<Output>(builder: &mut impl ErlangBuilder<Output>, variable
     }
 }
 
-// This produces a case clause in the form: <char_value> -> ~"\\<char>"
+// This produces a case clause in the form: <char_value> -> {~"\\<char>", true}
+// Note how this returns a tuple with "true" as its second item, that's required
+// by `inspect@escape_grapheme` which uses this!
 fn escape_character_clause<Output>(
     builder: &mut impl ErlangBuilder<Output>,
     char: char,
@@ -1694,7 +1761,10 @@ fn escape_character_clause<Output>(
     builder.int_pattern(location, BigInt::from(char as usize));
     let clause = builder.end_clause_pattern(clause);
     let clause = builder.end_clause_guards(clause);
+    let tuple = builder.start_tuple(location);
     builder.string(location, &format!("\\\\{escaped}"));
+    builder.atom(location, "true");
+    builder.end_tuple(tuple);
     builder.end_clause_body(clause);
 }
 

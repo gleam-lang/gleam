@@ -158,6 +158,10 @@
 - Fixed a bug where file permissions were not set in Hex tarballs.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where echo would print BitArrays like `<<1, 2, 3>>` as strings on
+  the Erlang target.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when
