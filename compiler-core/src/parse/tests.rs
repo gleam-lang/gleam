@@ -2797,3 +2797,9 @@ pub fn main() {
         "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/6192
+#[test]
+fn pipeline_in_constant_does_not_panic() {
+    assert_module_error!("pub const wibble = 1 |> wobble");
+}
