@@ -4458,3 +4458,85 @@ pub fn go() {
 "
     );
 }
+
+#[test]
+fn import_of_private_type_in_the_same_package() {
+    assert_module_error!(
+        (
+            "wibble",
+            "
+type Wibble {
+  Wibble
+}
+"
+        ),
+        "
+import wibble.{type Wibble}
+"
+    );
+}
+
+#[test]
+fn use_of_private_type_in_the_same_package() {
+    assert_module_error!(
+        (
+            "wibble",
+            "
+type Wibble {
+  Wibble
+}
+"
+        ),
+        "
+import wibble
+
+pub fn go() -> wibble.Wibble {
+  todo
+}
+"
+    );
+}
+
+#[test]
+fn import_of_private_type_in_other_package() {
+    assert_module_error!(
+        (
+            "anotherpackage",
+            "wibble",
+            "
+type Wibble {
+  Wibble
+}
+"
+        ),
+        "
+// Import of private type from another package should give error about unknown
+// module value.
+import wibble.{type Wibble}
+"
+    );
+}
+
+#[test]
+fn use_of_private_type_in_other_package() {
+    assert_module_error!(
+        (
+            "anotherpackage",
+            "wibble",
+            "
+type Wibble {
+  Wibble
+}
+"
+        ),
+        "
+import wibble
+
+// Use of private type from another package should give error about unknown
+// module value.
+pub fn go() -> wibble.Wibble {
+  todo
+}
+"
+    );
+}
