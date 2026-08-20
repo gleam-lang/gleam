@@ -85,11 +85,14 @@ inspect@bit_array_pieces(Bits, Acc) ->
     end.
 
 inspect@binary(Binary) ->
-    case inspect@maybe_utf8_string(Binary, <<>>) of
+    case inspect@maybe_utf8_string(Binary, false, <<>>) of
+        _ when Binary =:= <<>> ->
+            ~"\"\"";
+
         {ok, InspectedUtf8String} ->
             InspectedUtf8String;
 
-        {error, not_a_utf8_string} ->
+        {error, not_a_printable_string} ->
             Segments = lists:map(fun erlang:integer_to_list/1, binary:bin_to_list(Binary)),
             [~"<<", lists:join(~", ", Segments), ~">>"]
     end.
@@ -153,47 +156,51 @@ inspect@function(Function) ->
     end, ArgsAsciiCodes)),
     [~"//fn(", Args, ~") { ... }"].
 
-inspect@maybe_utf8_string(Binary, Acc) ->
+inspect@maybe_utf8_string(Binary, HasPrintableChars, Acc) ->
     case Binary of
-        <<>> ->
+        <<>> when HasPrintableChars ->
             {ok, [~"\"", Acc, ~"\""]};
 
+        <<>> ->
+            {error, not_a_printable_string};
+
         <<First/utf8, Rest/binary>> ->
-            Escaped = inspect@escape_grapheme(First),
-            inspect@maybe_utf8_string(Rest, <<Acc/binary, Escaped/binary>>);
+            {Escaped, IsPrintableChar} = inspect@escape_grapheme(First),
+            HasPrintableChars1 = HasPrintableChars orelse IsPrintableChar,
+            inspect@maybe_utf8_string(Rest, HasPrintableChars1, <<Acc/binary, Escaped/binary>>);
 
         _ ->
-            {error, not_a_utf8_string}
+            {error, not_a_printable_string}
     end.
 
 inspect@escape_grapheme(Char) ->
     case Char of
         34 ->
-            ~"\\\"";
+            {~"\\\"", true};
 
         92 ->
-            ~"\\\\";
+            {~"\\\\", true};
 
         13 ->
-            ~"\\r";
+            {~"\\r", true};
 
         10 ->
-            ~"\\n";
+            {~"\\n", true};
 
         9 ->
-            ~"\\t";
+            {~"\\t", true};
 
         12 ->
-            ~"\\f";
+            {~"\\f", true};
 
         X when (X > 126) andalso (X < 160) ->
-            inspect@convert_to_u(X);
+            {inspect@convert_to_u(X), false};
 
         X when X < 32 ->
-            inspect@convert_to_u(X);
+            {inspect@convert_to_u(X), false};
 
         Other ->
-            <<Other/utf8>>
+            {<<Other/utf8>>, true}
     end.
 
 inspect@convert_to_u(Code) ->
