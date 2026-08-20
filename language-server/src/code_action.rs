@@ -12459,7 +12459,7 @@ impl<'a> WrapInAnonymousFunction<'a> {
                 .kind(CodeActionKind::RefactorRewrite)
                 .changes(
                     self.params.text_document.uri.clone(),
-                    self.edits.edits.drain(..).collect(),
+                    std::mem::take(&mut self.edits.edits),
                 )
                 .push_to(&mut actions);
         }
@@ -13198,7 +13198,7 @@ impl<'a> ConvertIntToDifferentBase<'a> {
                 .kind(CodeActionKind::RefactorRewrite)
                 .changes(
                     self.params.text_document.uri.clone(),
-                    self.edits.edits.drain(..).collect(),
+                    std::mem::take(&mut self.edits.edits),
                 )
                 .preferred(false)
                 .push_to(&mut action);
