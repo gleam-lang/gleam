@@ -222,7 +222,7 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            UntypedExpr::PipeLine { expressions } => {
+            UntypedExpr::Pipeline { expressions } => {
                 for expression in expressions {
                     self.expression(expression);
                 }

@@ -473,7 +473,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location, value, ..
             } => Ok(self.infer_string(value, location)),
 
-            UntypedExpr::PipeLine { expressions } => Ok(self.infer_pipeline(expressions)),
+            UntypedExpr::Pipeline { expressions } => Ok(self.infer_pipeline(expressions)),
 
             UntypedExpr::Fn {
                 location,
@@ -1640,7 +1640,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         | UntypedExpr::List { .. }
                         | UntypedExpr::Call { .. }
                         | UntypedExpr::BinOp { .. }
-                        | UntypedExpr::PipeLine { .. }
+                        | UntypedExpr::Pipeline { .. }
                         | UntypedExpr::Case { .. }
                         | UntypedExpr::FieldAccess { .. }
                         | UntypedExpr::Tuple { .. }
@@ -4849,7 +4849,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             | UntypedExpr::List { .. }
             | UntypedExpr::Call { .. }
             | UntypedExpr::BinOp { .. }
-            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Pipeline { .. }
             | UntypedExpr::Case { .. }
             | UntypedExpr::Tuple { .. }
             | UntypedExpr::TupleIndex { .. }

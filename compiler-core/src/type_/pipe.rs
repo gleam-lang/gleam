@@ -204,7 +204,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 | UntypedExpr::Var { .. }
                 | UntypedExpr::List { .. }
                 | UntypedExpr::BinOp { .. }
-                | UntypedExpr::PipeLine { .. }
+                | UntypedExpr::Pipeline { .. }
                 | UntypedExpr::Case { .. }
                 | UntypedExpr::FieldAccess { .. }
                 | UntypedExpr::Tuple { .. }
@@ -416,7 +416,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             | UntypedExpr::List { .. }
             | UntypedExpr::Call { .. }
             | UntypedExpr::BinOp { .. }
-            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Pipeline { .. }
             | UntypedExpr::Case { .. }
             | UntypedExpr::FieldAccess { .. }
             | UntypedExpr::Tuple { .. }

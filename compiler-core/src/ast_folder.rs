@@ -311,7 +311,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 right,
             } => self.fold_bin_op(location, operator, operator_start, left, right),
 
-            UntypedExpr::PipeLine { expressions } => self.fold_pipe_line(expressions),
+            UntypedExpr::Pipeline { expressions } => self.fold_pipe_line(expressions),
 
             UntypedExpr::Case {
                 location,
@@ -491,9 +491,9 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 }
             }
 
-            UntypedExpr::PipeLine { expressions } => {
+            UntypedExpr::Pipeline { expressions } => {
                 let expressions = expressions.mapped(|expression| self.fold_expr(expression));
-                UntypedExpr::PipeLine { expressions }
+                UntypedExpr::Pipeline { expressions }
             }
 
             UntypedExpr::Case {
@@ -824,7 +824,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
     }
 
     fn fold_pipe_line(&mut self, expressions: Vec1<UntypedExpr>) -> UntypedExpr {
-        UntypedExpr::PipeLine { expressions }
+        UntypedExpr::Pipeline { expressions }
     }
 
     fn fold_case(
