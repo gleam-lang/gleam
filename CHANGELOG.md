@@ -131,6 +131,10 @@
   action to discard an unused result.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The "pattern match on argument" code action now has higher precedence over the
+  "discard unused argument" code action.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Bug fixes

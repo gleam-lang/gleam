@@ -5820,9 +5820,9 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new(action_title)
-            .kind(CodeActionKind::RefactorRewrite)
+            .kind(CodeActionKind::QuickFix)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
-            .preferred(false)
+            .preferred(true)
             .push_to(&mut action);
         action
     }
