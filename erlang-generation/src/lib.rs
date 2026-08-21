@@ -3988,7 +3988,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         // `{attribute, ANNOTATION, module, Module}`.
         self.etf.small_tuple(4);
         self.etf.atom("attribute");
-        self.etf.usize(0);
+        self.annotation(None);
         self.etf.atom("module");
         self.etf.atom(&module_name.0);
     }
