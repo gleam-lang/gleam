@@ -133,6 +133,10 @@
 - Make links to Tangled repositories use their new domain & URL format.
   ([Naomi Roberts](https://github.com/naomieow))
 
+- The build tool now shows a better error when trying to add a package as a
+  dependency when it is already a development dependency (or vice-versa).
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Language server
 
 - The "Generate dynamic decoder" code action is now only offered when the
