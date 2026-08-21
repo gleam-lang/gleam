@@ -111,6 +111,7 @@ where
             Request::SignatureHelp(param) => self.signature_help(param),
             Request::DocumentSymbol(param) => self.document_symbol(param),
             Request::FoldingRange(param) => self.folding_range(param),
+            Request::WorkspaceSymbol(param) => self.workspace_symbol(param),
             Request::PrepareRename(param) => self.prepare_rename(param),
             Request::Rename(param) => self.rename(param),
             Request::GoToTypeDefinition(param) => self.goto_type_definition(param),
@@ -419,6 +420,60 @@ where
     ) -> (Result<Json, ResponseError>, Feedback) {
         let path = super::path(&params.text_document.uri);
         self.respond_with_engine(path, |engine| engine.folding_range(params))
+    }
+
+    fn workspace_symbol(
+        &mut self,
+        params: lsp_types::WorkspaceSymbolParams,
+    ) -> (Result<Json, ResponseError>, Feedback) {
+        match self.router.all_projects() {
+            Ok(projects) => {
+                let mut all_feedback = Feedback {
+                    diagnostics: HashMap::new(),
+                    messages: Vec::new(),
+                };
+
+                let mut values = Vec::new();
+
+                for project in projects {
+                    let engine::Response {
+                        result,
+                        warnings,
+                        compilation,
+                    } = project.engine.workspace_symbol(&params);
+
+                    match result {
+                        Ok(symbols) => {
+                            values.extend(symbols);
+
+                            let feedback = project.feedback.response(compilation, warnings);
+                            all_feedback.diagnostics.extend(feedback.diagnostics);
+                            all_feedback.messages.extend(feedback.messages);
+                        }
+
+                        Err(e) => {
+                            let feedback =
+                                project.feedback.build_with_error(e, compilation, warnings);
+                            all_feedback.diagnostics.extend(feedback.diagnostics);
+                            all_feedback.messages.extend(feedback.messages);
+                        }
+                    }
+                }
+
+                (
+                    Ok(
+                        serde_json::to_value(WorkspaceSymbolResponse::Nested(values))
+                            .expect("response to json"),
+                    ),
+                    all_feedback,
+                )
+            }
+
+            Err(error) => (
+                Ok(Json::Null),
+                self.outside_of_project_feedback.error(error),
+            ),
+        }
     }
 
     fn prepare_rename(
