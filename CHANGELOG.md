@@ -108,6 +108,56 @@
   merge conflict indicator
   ([0xda157](https://github.com/0xda157))
 
+- The compiler now provides better error message when trying to import or use
+  private value or type from modules within current package. For example:
+
+  ```gleam
+  import wibble.{Wibble, type Wibble}
+  //     ^^^^^^ `wibble` is a module in same package
+
+  fn go() -> wibble.Wobble {
+    wibble.Wobble
+  }
+  ```
+
+  Results in following errors:
+
+  ```
+  error: Use of private module type
+    ┌─ /workspaces/wobble/src/wobble.gleam:1:16
+    │
+  1 │ import wibble.{type Wibble, Wibble}
+    │                ^^^^^^^^^^^
+
+  `wibble.Wibble` is a private type.
+
+  error: Use of private module value
+    ┌─ /workspaces/wobble/src/wobble.gleam:1:29
+    │
+  1 │ import wibble.{type Wibble, Wibble}
+    │                             ^^^^^^
+
+  `wibble.Wibble` is a private value.
+
+  error: Use of private module type
+    ┌─ /workspaces/wobble/src/wobble.gleam:4:12
+    │
+  4 │ fn go() -> wibble.Wobble {
+    │            ^^^^^^^^^^^^^
+
+  `wibble.Wobble` is a private type.
+
+  error: Use of private module value
+    ┌─ /workspaces/wobble/src/wobble.gleam:5:10
+    │
+  5 │   wibble.Wobble
+    │          ^^^^^^
+
+  `wibble.Wobble` is a private value.
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
