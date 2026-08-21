@@ -3782,10 +3782,13 @@ impl CaseToCompile {
                 endianness: segment.endianness(),
                 signed: segment.signed(),
             };
+            previous_end = previous_end.add_size(&segment_size);
 
             // Each segment is also turned into a match test, checking the
             // selected bits match with the pattern's value.
-            let value = segment_matched_value(segment, None, &read_action);
+            let Some(value) = segment_matched_value(segment, None, &read_action) else {
+                continue;
+            };
 
             // Then if the matched value is a variable that is in scope for the
             // rest of the pattern we keep track of it, so it can be used in the
@@ -3809,9 +3812,8 @@ impl CaseToCompile {
                     read_action: read_action.clone(),
                 });
             }
-            tests.push_back(BitArrayTest::Match(MatchTest { value, read_action }));
 
-            previous_end = previous_end.add_size(&segment_size);
+            tests.push_back(BitArrayTest::Match(MatchTest { value, read_action }));
         }
         tests
     }
@@ -3825,14 +3827,14 @@ fn segment_matched_value(
     // pattern, so if they are different we set this argument to `Some`.
     pattern: Option<&TypedPattern>,
     read_action: &ReadAction,
-) -> BitArrayMatchedValue {
+) -> Option<BitArrayMatchedValue> {
     let pattern = pattern.unwrap_or(&segment.value);
     match pattern {
         ast::Pattern::Int {
             int_value,
             location,
             ..
-        } => BitArrayMatchedValue::LiteralInt {
+        } => Some(BitArrayMatchedValue::LiteralInt {
             value: int_value.clone(),
             location: *location,
             bits: int_to_bits(
@@ -3841,39 +3843,64 @@ fn segment_matched_value(
                 read_action.endianness,
                 read_action.signed,
             ),
-        },
-        ast::Pattern::Float { value, .. } => BitArrayMatchedValue::LiteralFloat(value.clone()),
+        }),
+        ast::Pattern::Float { value, .. } => {
+            Some(BitArrayMatchedValue::LiteralFloat(value.clone()))
+        }
+
+        // It is possible to write a bit array segment that will
+        // match an empty string. This doesn't do anything, but it
+        // is valid Gleam.
+        //
+        // The generated JavaScript code for a bit array segment looks
+        // like this:
+        //
+        //     if (SEGMENT_SIZE_CHECK && SEGMENT_MATCHED_CHECK) {
+        //
+        // The matchec value check being what this function returns.
+        // If the value is an empty string then there is nothing for
+        // this check to do, so if we were to emit it code could be
+        // generated like this:
+        //
+        //     if (x.bitSize === 0 && ) {
+        //
+        // This is a syntax error! So instead we return no check.
+        //
+        ast::Pattern::String { value, .. } if value.is_empty() => None,
+
         ast::Pattern::String { value, .. } if segment.has_utf16_option() => {
-            BitArrayMatchedValue::LiteralString {
+            Some(BitArrayMatchedValue::LiteralString {
                 value: value.clone(),
                 encoding: StringEncoding::Utf16,
                 bytes: string_to_utf16_bytes(
                     &convert_string_escape_chars(value),
                     read_action.endianness,
                 ),
-            }
+            })
         }
         ast::Pattern::String { value, .. } if segment.has_utf32_option() => {
-            BitArrayMatchedValue::LiteralString {
+            Some(BitArrayMatchedValue::LiteralString {
                 value: value.clone(),
                 encoding: StringEncoding::Utf32,
                 bytes: string_to_utf32_bytes(
                     &convert_string_escape_chars(value),
                     read_action.endianness,
                 ),
-            }
+            })
         }
-        ast::Pattern::String { value, .. } => BitArrayMatchedValue::LiteralString {
+        ast::Pattern::String { value, .. } => Some(BitArrayMatchedValue::LiteralString {
             value: value.clone(),
             encoding: StringEncoding::Utf8,
             bytes: convert_string_escape_chars(value).as_bytes().into(),
-        },
-        ast::Pattern::Variable { name, .. } => BitArrayMatchedValue::Variable(name.clone()),
-        ast::Pattern::Discard { name, .. } => BitArrayMatchedValue::Discard(name.clone()),
-        ast::Pattern::Assign { name, pattern, .. } => BitArrayMatchedValue::Assign {
-            name: name.clone(),
-            value: Box::new(segment_matched_value(segment, Some(pattern), read_action)),
-        },
+        }),
+        ast::Pattern::Variable { name, .. } => Some(BitArrayMatchedValue::Variable(name.clone())),
+        ast::Pattern::Discard { name, .. } => Some(BitArrayMatchedValue::Discard(name.clone())),
+        ast::Pattern::Assign { name, pattern, .. } => {
+            segment_matched_value(segment, Some(pattern), read_action).map(|value| BitArrayMatchedValue::Assign {
+                    name: name.clone(),
+                    value: Box::new(value),
+                })
+        }
         ast::Pattern::BitArraySize(_)
         | ast::Pattern::List { .. }
         | ast::Pattern::Constructor { .. }

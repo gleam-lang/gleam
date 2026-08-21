@@ -101,6 +101,7 @@ pub fn case<'a, 'doc>(
 }
 
 /// The generated code for a decision tree.
+#[derive(Debug)]
 enum CaseBody<'a, 'doc> {
     /// A JavaScript `if`` statement by itself. This can be merged with any
     /// preceding `else` statements to form an `else if` construct.

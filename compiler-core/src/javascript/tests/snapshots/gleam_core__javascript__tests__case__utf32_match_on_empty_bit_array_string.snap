@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn main(x) {\n  case x {\n    <<\"\":utf32>> -> \"a\"\n    _ -> \"b\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(x) {
+  case x {
+    <<"":utf32>> -> "a"
+    _ -> "b"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function main(x) {
+  if (x.bitSize === 0) {
+    return "a";
+  } else {
+    return "b";
+  }
+}

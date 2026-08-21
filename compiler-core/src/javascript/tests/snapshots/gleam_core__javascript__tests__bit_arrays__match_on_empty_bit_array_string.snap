@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn main(x) {\n  let assert <<\"\":utf8>> = x\n  Nil\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(x) {
+  let assert <<"":utf8>> = x
+  Nil
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function main(x) {
+  if (!(x.bitSize === 0)) {
+    throw makeError(
+      "let_assert",
+      FILEPATH,
+      "my/mod",
+      3,
+      "main",
+      "Pattern match failed, no pattern matched the value.",
+      { value: x, start: 20, end: 46, pattern_start: 31, pattern_end: 42 }
+    )
+  }
+  return undefined;
+}
