@@ -419,11 +419,11 @@ pub trait ErlangBuilder<Output> {
     /// -spec wibble(A) :: nil | list(A).
     /// ```
     ///
-    fn start_type_spec<Name: AsRef<str>>(
+    fn start_type_spec(
         &mut self,
         opaque: bool,
         name: &str,
-        type_parameters: impl IntoIterator<Item = Name>,
+        type_parameters: impl IntoIterator<Item = EcoString>,
     ) -> Self::TypeSpec;
 
     fn end_type_spec(&mut self, type_spec: Self::TypeSpec);
@@ -1968,11 +1968,11 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.close_currently_open_item();
     }
 
-    fn start_type_spec<Name: AsRef<str>>(
+    fn start_type_spec(
         &mut self,
         opaque: bool,
         name: &str,
-        type_variables: impl IntoIterator<Item = Name>,
+        type_variables: impl IntoIterator<Item = EcoString>,
     ) -> Self::TypeSpec {
         self.new_top_level_form();
         self.code.push('\n');
@@ -1988,7 +1988,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
             } else {
                 self.code.push_str(", ")
             }
-            self.code.push_str(type_variable.as_ref())
+            self.code.push_str(&type_variable)
         }
         self.code.push_str(") :: ");
         self.position.push(ErlangSourceBuilderPosition::TypeSpec {
@@ -4178,11 +4178,11 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         }
     }
 
-    fn start_type_spec<Name: AsRef<str>>(
+    fn start_type_spec(
         &mut self,
         opaque: bool,
         name: &str,
-        type_parameters: impl IntoIterator<Item = Name>,
+        type_parameters: impl IntoIterator<Item = EcoString>,
     ) -> Self::TypeSpec {
         self.new_top_level_form();
         self.position.push(BinaryBuilderPosition::TypeSpec);
@@ -4199,12 +4199,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         // parameters.
         // So we will carry those type parameters around waiting for the type
         // spec to be closed.
-        type_parameters
-            .into_iter()
-            // TODO) This doesn't feel great, probably could make the function take
-            // a vec of EcoStrings since that's the only way it is called.
-            .map(|param| EcoString::from(param.as_ref()))
-            .collect()
+        type_parameters.into_iter().collect()
     }
 
     fn end_type_spec(&mut self, type_spec: Self::TypeSpec) {
