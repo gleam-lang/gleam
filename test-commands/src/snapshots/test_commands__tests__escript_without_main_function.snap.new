@@ -1,8 +1,0 @@
----
-source: test-commands/src/tests.rs
-assertion_line: 64
-expression: error
----
-error: Shell command failure
-
-There was a problem when running the shell command `escript`.
