@@ -4240,20 +4240,20 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
 
     fn end_type_spec(&mut self, type_spec: Self::TypeSpec) {
         match self.pop_current_position() {
-            Some(BinaryBuilderPosition::TypeSpec) => {
-                // We need to generate a list with the representation of the
-                // type parameters.
-                let type_parameters = self.etf.start_list();
-                let mut count = 0;
-                for parameter in type_spec {
-                    count += 1;
-                    // Each type parameter is a simple type variable in Gleam.
-                    self.variable_representation(None, &parameter);
-                }
-                self.etf.end_list(type_parameters, count);
-            }
+            Some(BinaryBuilderPosition::TypeSpec) => {}
             position => invalid_code_for_position!(self, "end type spec", position),
         }
+
+        // We need to generate a list with the representation of the
+        // type parameters.
+        let type_parameters = self.etf.start_list();
+        let mut count = 0;
+        for parameter in type_spec {
+            count += 1;
+            // Each type parameter is a simple type variable in Gleam.
+            self.variable_representation(None, &parameter);
+        }
+        self.etf.end_list(type_parameters, count);
     }
 
     fn start_function_type(&mut self) -> Self::FunctionTypeArguments {
@@ -4284,20 +4284,21 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         &mut self,
         (outer_list, arguments): Self::FunctionTypeArguments,
     ) -> Self::FunctionType {
-        match self.current_position() {
-            Some(BinaryBuilderPosition::FunctionType { expected }) => {
-                let count = match expected {
-                    ExpectedBinaryFunctionTypeItem::Arguments { count } => *count,
-                    ExpectedBinaryFunctionTypeItem::ReturnType => {
-                        invalid_code_for_position!(self, "end function type arguments")
-                    }
-                };
-                *expected = ExpectedBinaryFunctionTypeItem::ReturnType;
-                self.etf.end_list(arguments, count);
-                outer_list
-            }
+        let expected = match self.current_position() {
+            Some(BinaryBuilderPosition::FunctionType { expected }) => expected,
             Some(_) | None => invalid_code_for_position!(self, "end function type arguments"),
-        }
+        };
+
+        let count = match expected {
+            ExpectedBinaryFunctionTypeItem::Arguments { count } => *count,
+            ExpectedBinaryFunctionTypeItem::ReturnType => {
+                invalid_code_for_position!(self, "end function type arguments")
+            }
+        };
+
+        *expected = ExpectedBinaryFunctionTypeItem::ReturnType;
+        self.etf.end_list(arguments, count);
+        outer_list
     }
 
     fn end_function_type(&mut self, function_type: Self::FunctionType) {
