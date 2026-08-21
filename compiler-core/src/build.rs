@@ -180,9 +180,13 @@ pub enum TargetCodegenConfiguration {
     },
 }
 
+/// Which Erlang format is used when compiling Gleam code for the
+/// Erlang target.
 #[derive(Debug, Clone, PartialEq, Copy, serde::Deserialize, serde::Serialize)]
 pub enum ErlangOutput {
+    /// Erlang abstract forms, using the .absr extension.
     Binary,
+    /// Erlang source code, using the .erl extension.
     Textual,
 }
 
