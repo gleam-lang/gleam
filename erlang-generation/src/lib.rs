@@ -3995,7 +3995,9 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
 
     fn into_output(mut self) -> Vec<u8> {
         // Before returning the binary representation we've gotta make sure
-        // we're ending the
+        // that we're not halfway through generating some other definition.
+        // If there's any current position that means we've made a mistake
+        // somewhere else!
         if self.current_position().is_some() {
             invalid_code_for_position!(self, "close module")
         }
