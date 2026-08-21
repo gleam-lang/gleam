@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/type_/tests/custom_types.rs
+expression: "\nimport other/module\n\npub fn main() {\n  module.foobar.int\n}\n"
+---
+----- SOURCE CODE
+-- other/module.gleam
+
+pub type Ty { 
+  IntVar(int: Int)
+  StrVar(str: String)
+}
+pub const foobar = IntVar(42)
+
+
+-- main.gleam
+
+import other/module
+
+pub fn main() {
+  module.foobar.int
+}
+
+
+----- ERROR
+error: Unknown record field
+  ┌─ /src/one/two.gleam:5:17
+  │
+5 │   module.foobar.int
+  │                 ^^^ This field does not exist
+
+The value being accessed has this type:
+
+    module.Ty
+
+It does not have any fields.
