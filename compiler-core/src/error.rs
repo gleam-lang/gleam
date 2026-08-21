@@ -441,6 +441,18 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("could not create temp file: {error}")]
     CouldNotCreateTempFile { error: String },
+
+    /// This happens when we try adding some packages as regular dependencies
+    /// (gleam add wibble wobble ...) but those are already listed in the dev
+    /// dependencies of the project!
+    #[error("these packages are already dev dependencies: {packages:?}")]
+    AddedDependenciesAreAlreadyDevDependencies { packages: Vec<EcoString> },
+
+    /// This happens when we try adding some packages as dev dependencies
+    /// (gleam add wibble wobble ... --dev) but those are already listed in the
+    /// dependencies of the project!
+    #[error("these packages are already dependencies: {packages:?}")]
+    AddedDevDependenciesAreAlreadyDependencies { packages: Vec<EcoString> },
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
@@ -2564,6 +2576,88 @@ add `gleam add {name}` in this project."
                 location: None,
                 hint: None,
             }],
+
+            Error::AddedDependenciesAreAlreadyDevDependencies { packages } => {
+                match packages.as_slice() {
+                    [package] => vec![Diagnostic {
+                        title: "Package is already a dev dependency".into(),
+                        text: wrap_format!(
+                            "{package} is already a development dependency of this project."
+                        ),
+                        level: Level::Error,
+                        location: None,
+                        hint: Some(
+                            "If you want to use this package as a regular \
+dependency, you can move it to the `dependencies` section of this project's \
+`gleam.toml`."
+                                .into(),
+                        ),
+                    }],
+                    packages => vec![Diagnostic {
+                        title: "Packages are already dev dependencies".into(),
+                        text: wrap_format!(
+                            "{} are already develpment dependencies of this project.",
+                            comma_separated_list(packages)
+                        ),
+                        level: Level::Error,
+                        location: None,
+                        hint: Some(
+                            "If you want to use these packages as regular \
+dependencies, you can move them to the `dependencies` section of this project's \
+`gleam.toml`."
+                                .into(),
+                        ),
+                    }],
+                }
+            }
+
+            Error::AddedDevDependenciesAreAlreadyDependencies { packages } => {
+                match packages.as_slice() {
+                    [package] => vec![Diagnostic {
+                        title: "Package is already a dependency".into(),
+                        text: wrap_format!("{package} is already a dependency of this project."),
+                        level: Level::Error,
+                        location: None,
+                        hint: Some(
+                            "If you want to use this package as a development \
+dependency only, you can move it to the `dev_dependencies` section of this \
+project's `gleam.toml`."
+                                .into(),
+                        ),
+                    }],
+                    packages => vec![Diagnostic {
+                        title: "Packages are already dependencies".into(),
+                        text: wrap_format!(
+                            "{} are already dependencies of this project.",
+                            comma_separated_list(packages)
+                        ),
+                        level: Level::Error,
+                        location: None,
+                        hint: Some(
+                            "If you want to use these packages as development \
+dependencies only, you can move them to the `dev_dependencies` section of this \
+project's `gleam.toml`."
+                                .into(),
+                        ),
+                    }],
+                }
+            }
+        }
+    }
+}
+
+/// Turns a list of strings into a comma separated list of items with a final
+/// "and":
+/// - "wibble"
+/// - "wibble and wobble"
+/// - "wibble, wobble, and woo"
+fn comma_separated_list(items: &[EcoString]) -> String {
+    match items {
+        [] => String::new(),
+        [first, second] => format!("{first} and {second}"),
+        [first, ..] => {
+            let (last, items) = items.split_last().unwrap_or((first, &[]));
+            format!("{}, and {last}", items.iter().join(", "))
         }
     }
 }
