@@ -302,14 +302,14 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                 int_value,
                 location,
                 ..
-            } => builder.int(*location, int_value.clone()),
+            } => builder.int_expression(*location, int_value.clone()),
             BitArraySize::Block { inner, .. } => self.bit_array_size(builder, inner),
 
             BitArraySize::Variable {
                 constructor, name, ..
             } => match self.variables_to_add_later.get(name) {
                 Some(AliasedLiteral::Int { value, location }) => {
-                    builder.int(*location, value.clone())
+                    builder.int_expression(*location, value.clone())
                 }
                 Some(_) => panic!("segment size that is not int made it through type checking"),
                 None => {
@@ -460,7 +460,7 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
             builder.int_pattern(*location, BigInt::ZERO);
             let clause = builder.end_clause_pattern(clause);
             let clause = builder.end_clause_guards(clause);
-            builder.int(*location, BigInt::ZERO);
+            builder.int_expression(*location, BigInt::ZERO);
             builder.end_clause_body(clause);
 
             let clause = builder.start_case_clause(*location);
