@@ -123,6 +123,32 @@
 - The compiler now provides hint about `|' in pattern matching
   ([n0kk23](https://github.com/n0kk23))
 
+- The compiler now provides better error message when trying to import or use
+  private value or type from modules within current package. For example:
+
+  ```gleam
+  import wibble
+  //     ^^^^^^ `wibble` is a module in same package
+
+  fn go() -> wibble.Wobble {
+    todo
+  }
+  ```
+
+  Results in following errors:
+
+  ```
+  error: Use of private module type
+    ┌─ /workspaces/wobble/src/wobble.gleam:4:12
+    │
+  4 │ fn go() -> wibble.Wobble {
+    │            ^^^^^^^^^^^^^
+
+  `wibble.Wobble` is a private type.
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
