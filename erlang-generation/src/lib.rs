@@ -3986,10 +3986,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         self.new_top_level_form();
         // The EAF representation of `-module(Module).` is
         // `{attribute, ANNOTATION, module, Module}`.
-        self.etf.small_tuple(4);
-        self.etf.atom("attribute");
-        self.annotation(None);
-        self.etf.atom("module");
+        self.attribute_tuple("module");
         self.etf.atom(&module_name.0);
     }
 
@@ -4014,10 +4011,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         // -export([Fun_1/A_1, ..., Fun_k/A_k])
         //   becomes
         // {attribute,ANNO,export,[{Fun_1,A_1}, ..., {Fun_k,A_k}]}
-        self.etf.small_tuple(4);
-        self.etf.atom("attribute");
-        self.annotation(None);
-        self.etf.atom("export");
+        self.attribute_tuple("export");
         let list = self.etf.start_list();
         let mut count = 0;
         for (name, arity) in exported {
@@ -4038,10 +4032,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         // -export_type([Type_1/A_1, ..., Type_k/A_k])
         //   becomes
         // {attribute,ANNO,export_type,[{Type_1,A_1}, ..., {Type_k,A_k}]}
-        self.etf.small_tuple(4);
-        self.etf.atom("attribute");
-        self.annotation(None);
-        self.etf.atom("export_type");
+        self.attribute_tuple("export_type");
         let list = self.etf.start_list();
         let mut count = 0;
         for (name, arity) in exported {
@@ -4059,10 +4050,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         // -doc(Content)
         //   becomes
         // {attribute,ANNO,doc,Content}
-        self.etf.small_tuple(4);
-        self.etf.atom("attribute");
-        self.annotation(None);
-        self.etf.atom("doc");
+        self.attribute_tuple("doc");
         match content {
             DocContent::String(content) => self.etf.binary(content.len() as u32, content.bytes()),
             DocContent::False => self.etf.atom("false"),
@@ -4075,10 +4063,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         // -moduledoc(Content)
         //   becomes
         // {attribute,ANNO,moduledoc,Content}
-        self.etf.small_tuple(4);
-        self.etf.atom("attribute");
-        self.annotation(None);
-        self.etf.atom("moduledoc");
+        self.attribute_tuple("moduledoc");
         match content {
             DocContent::String(content) => self.etf.binary(content.len() as u32, content.bytes()),
             DocContent::False => self.etf.atom("false"),
@@ -4091,10 +4076,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         // -compile([Option1, ..., OptionK])
         //   becomes
         // {attribute,ANNO,compile,[Option1,...,OptionK]}
-        self.etf.small_tuple(4);
-        self.etf.atom("attribute");
-        self.annotation(None);
-        self.etf.atom("compile");
+        self.attribute_tuple("compile");
         let options = self.etf.start_list();
         let mut count = 0;
         for argument in arguments {
@@ -4110,10 +4092,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         // -file(File)
         //   becomes
         // {attribute,ANNO,file,File,Line}}
-        self.etf.small_tuple(4);
-        self.etf.atom("attribute");
-        self.annotation(None);
-        self.etf.atom("file");
+        self.attribute_tuple("file");
         {
             self.etf.small_tuple(2);
 
@@ -4133,10 +4112,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         // -record(Name,{V_1, ..., V_k})
         //   becomes
         // {attribute,ANNO,record,{Name,[Rep(V_1), ..., Rep(V_k)]}}
-        self.etf.small_tuple(4);
-        self.etf.atom("attribute");
-        self.annotation(None);
-        self.etf.atom("record");
+        self.attribute_tuple("record");
 
         self.etf.small_tuple(2);
         self.etf.atom(record_name);
@@ -4183,12 +4159,8 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         // -spec Name Ft_1
         //   becomes
         // {attribute,ANNO,Spec,{{Name,Arity},[Rep(Ft_1)]}}
-        self.etf.small_tuple(4);
-        self.etf.atom("attribute");
-        self.annotation(None);
-        self.etf.atom("spec");
+        self.attribute_tuple("spec");
         self.etf.small_tuple(2);
-
         {
             self.etf.small_tuple(2);
             self.etf.atom(name);
@@ -4219,11 +4191,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         // -type Name(V_1, ..., V_k) :: T
         //   becomes
         // {attribute,ANNO,type,{Name,Rep(T),[Rep(V_1), ..., Rep(V_k)]}}
-        self.etf.small_tuple(4);
-        self.etf.atom("attribute");
-        self.annotation(None);
-        self.etf.atom(if opaque { "opaque" } else { "type" });
-
+        self.attribute_tuple(if opaque { "opaque" } else { "type" });
         self.etf.small_tuple(3);
         self.etf.atom(name);
 
@@ -5695,5 +5663,16 @@ impl<'line_numbers> ErlangBinaryBuilder<'line_numbers> {
         }
 
         chars
+    }
+
+    /// This generates the tuple for an attribute in the following form:
+    /// `{attribute, EMPTY_ANNOTATION, <attribute_name>, _}`.
+    /// You're supposed to then generate the fourth item in the tuple with the
+    /// appropriate value for the attribute you're generating!
+    fn attribute_tuple(&mut self, attribute_name: &str) {
+        self.etf.small_tuple(4);
+        self.etf.atom("attribute");
+        self.annotation(None);
+        self.etf.atom(attribute_name);
     }
 }
