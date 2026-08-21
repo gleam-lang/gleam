@@ -171,15 +171,58 @@ where
         let mut config = crate::config::read(paths.root_config())?;
         let project_name = config.name.clone();
 
-        // Insert the new packages to add, if it exists
-        if let Some((packages, dev)) = new_package {
-            for (package, requirement) in packages {
-                if dev {
-                    _ = config.dev_dependencies.insert(package, requirement);
-                } else {
-                    _ = config.dependencies.insert(package, requirement);
+        // Insert the new packages to add, if there's any
+        match new_package {
+            Some((packages_to_add, false)) => {
+                let mut already_existing_dev_packages = vec![];
+                for (package, requirement) in packages_to_add {
+                    if config.dev_dependencies.contains_key(&package) {
+                        already_existing_dev_packages.push(package);
+                    } else {
+                        _ = config.dependencies.insert(package, requirement);
+                    }
+                }
+
+                // If a dependency we want to add is a dev dependency already,
+                // then we want the whole process to fail and show an error
+                // message explaining why.
+                if !already_existing_dev_packages.is_empty() {
+                    return Err(Error::AddedDependenciesAreAlreadyDevDependencies {
+                        packages: already_existing_dev_packages,
+                    });
                 }
             }
+
+            Some((packages_to_add, true)) => {
+                let mut already_existing_packages = vec![];
+
+                for (package, requirement) in packages_to_add {
+                    match config.dependencies.get(&package) {
+                        // If the package exists already as a regular dependency
+                        // and it has the exact same requirement, then we can safely
+                        // ignore it. For example, we might have ran `gleam add wibble@1`
+                        // and later on run `gleam add wibble@1 --dev`.
+                        // This would do nothing!
+                        Some(existing_requirement) if *existing_requirement == requirement => (),
+
+                        // However, if the requirement is incompatible, we do want
+                        // to show an error. We can't just silently ignore it
+                        Some(_) => already_existing_packages.push(package),
+
+                        // If the package is not a dependency already we add it.
+                        None => {
+                            _ = config.dev_dependencies.insert(package, requirement);
+                        }
+                    }
+                }
+
+                if !already_existing_packages.is_empty() {
+                    return Err(Error::AddedDevDependenciesAreAlreadyDependencies {
+                        packages: already_existing_packages,
+                    });
+                }
+            }
+            None => (),
         }
 
         // Determine what versions we need
