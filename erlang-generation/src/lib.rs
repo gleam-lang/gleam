@@ -215,7 +215,7 @@ pub trait ErlangBuilder<Output> {
     type TypeSpec;
 
     /// Adds to the module a `-module` attribute with the given name.
-    fn module_attribute(&mut self, module_name: ErlangModuleName);
+    fn module_declaration(&mut self, module_name: ErlangModuleName);
 
     /// Consumes the given `ErlangBuilder` turning it into some other
     /// representation.
@@ -1824,7 +1824,7 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
     type UnionType = ();
     type TypeSpec = ();
 
-    fn module_attribute(&mut self, module_name: ErlangModuleName) {
+    fn module_declaration(&mut self, module_name: ErlangModuleName) {
         self.new_top_level_form();
         self.code.push_str("-module(");
         self.code.push_str(&quote_atom_name(&module_name.0));
@@ -3982,7 +3982,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
 
     type TypeSpec = Vec<EcoString>;
 
-    fn module_attribute(&mut self, module_name: ErlangModuleName) {
+    fn module_declaration(&mut self, module_name: ErlangModuleName) {
         self.new_top_level_form();
         // The EAF representation of `-module(Module).` is
         // `{attribute, ANNOTATION, module, Module}`.

@@ -215,7 +215,7 @@ impl<'a> Generator<'a> {
     }
 
     fn module<Output>(&mut self, builder: &mut impl ErlangBuilder<Output>) {
-        builder.module_attribute(ErlangModuleName::new(&self.module.name));
+        builder.module_declaration(ErlangModuleName::new(&self.module.name));
 
         // We need to know which private functions are referenced in importable
         // constants so that we can export them anyway in the generated Erlang.
