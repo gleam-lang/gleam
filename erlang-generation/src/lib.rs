@@ -1343,7 +1343,7 @@ pub trait ErlangBuilder<Output> {
     /// 2.
     /// ```
     ///
-    fn int(&mut self, location: SrcSpan, value: BigInt);
+    fn int_expression(&mut self, location: SrcSpan, value: BigInt);
 
     /// This creates a float literal from the given value.
     ///
@@ -1359,7 +1359,7 @@ pub trait ErlangBuilder<Output> {
     /// 1.2.
     /// ```
     ///
-    fn float(&mut self, location: SrcSpan, value: f64);
+    fn float_expression(&mut self, location: SrcSpan, value: f64);
 
     /// This creates a literal atom with the given name.
     ///
@@ -1375,7 +1375,7 @@ pub trait ErlangBuilder<Output> {
     /// wibble.
     /// ```
     ///
-    fn atom(&mut self, location: SrcSpan, name: &str);
+    fn atom_expression(&mut self, location: SrcSpan, name: &str);
 }
 
 /// A structure that implements the `ErlangBuilder` trait and produces a nice
@@ -2591,19 +2591,19 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.do_print_string_content(content);
     }
 
-    fn int(&mut self, _location: SrcSpan, number: BigInt) {
+    fn int_expression(&mut self, _location: SrcSpan, number: BigInt) {
         self.do_not_wrap_if_segment_value_or_size();
         self.new_expression();
         self.code.push_str(&number.to_string());
     }
 
-    fn float(&mut self, _location: SrcSpan, number: f64) {
+    fn float_expression(&mut self, _location: SrcSpan, number: f64) {
         self.do_not_wrap_if_segment_value_or_size();
         self.new_expression();
         self.code.push_str(&format_float(number));
     }
 
-    fn atom(&mut self, _location: SrcSpan, name: &str) {
+    fn atom_expression(&mut self, _location: SrcSpan, name: &str) {
         self.new_expression();
         self.code.push_str(&quote_atom_name(name));
     }
@@ -4328,8 +4328,8 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         // Erlang atom. That's why here we call `self.atom` and not `self.etf.atom`:
         // - `self.atom` produces an abstract form atom
         // - `self.etf.atom` produces an ETF atom
-        self.atom_representation(None, &module.0);
-        self.atom_representation(None, name);
+        self.atom(None, &module.0);
+        self.atom(None, name);
         let arguments = self.etf.start_list();
         (outer_list, arguments)
     }
@@ -4398,7 +4398,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
 
     fn literal_atom_type(&mut self, name: &str) {
         self.new_type();
-        self.atom_representation(None, name);
+        self.atom(None, name);
     }
 
     fn start_function<Name: AsRef<str>>(
@@ -4541,8 +4541,8 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
             // That's why here we call `self.atom` and not `self.etf.atom`:
             // - `self.atom` produces an abstract form atom
             // - `self.etf.atom` produces an ETF atom
-            self.atom_representation(None, &module.0);
-            self.atom_representation(None, function);
+            self.atom(None, &module.0);
+            self.atom(None, function);
         }
 
         self.etf.start_list()
@@ -4939,9 +4939,9 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
                 // {function,Rep(Module),Rep(Name),Rep(Arity)}
                 self.etf.small_tuple(4);
                 self.etf.atom("function");
-                self.atom_representation(None, &module.0);
-                self.atom_representation(None, name);
-                self.int_representation(None, arity.into());
+                self.atom(None, &module.0);
+                self.atom(None, name);
+                self.int(None, arity.into());
             }
             None => {
                 // Name/Arity
@@ -4996,12 +4996,12 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
 
     fn int_pattern(&mut self, location: SrcSpan, number: BigInt) {
         self.new_pattern();
-        self.int_representation(Some(location), number);
+        self.int(Some(location), number);
     }
 
     fn float_pattern(&mut self, location: SrcSpan, number: f64) {
         self.new_pattern();
-        self.float_representation(Some(location), number);
+        self.float(Some(location), number);
     }
 
     fn string_pattern(&mut self, location: SrcSpan, content: &str) {
@@ -5029,7 +5029,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
 
     fn atom_pattern(&mut self, location: SrcSpan, name: &str) {
         self.new_pattern();
-        self.atom_representation(Some(location), name);
+        self.atom(Some(location), name);
     }
 
     fn start_tuple_pattern(&mut self, location: SrcSpan) -> Self::TuplePattern {
@@ -5130,19 +5130,19 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         }
     }
 
-    fn int(&mut self, location: SrcSpan, value: BigInt) {
+    fn int_expression(&mut self, location: SrcSpan, value: BigInt) {
         self.new_expression();
-        self.int_representation(Some(location), value)
+        self.int(Some(location), value)
     }
 
-    fn float(&mut self, location: SrcSpan, value: f64) {
+    fn float_expression(&mut self, location: SrcSpan, value: f64) {
         self.new_expression();
-        self.float_representation(Some(location), value);
+        self.float(Some(location), value);
     }
 
-    fn atom(&mut self, location: SrcSpan, name: &str) {
+    fn atom_expression(&mut self, location: SrcSpan, name: &str) {
         self.new_expression();
-        self.atom_representation(Some(location), name);
+        self.atom(Some(location), name);
     }
 }
 
@@ -5536,7 +5536,7 @@ impl<'line_numbers> ErlangBinaryBuilder<'line_numbers> {
     /// - `self.int()`: `self.int()` performs additional checks and updates to
     ///   make sure that it is called only in certain places. This function does
     ///   not perform any additional check about the current position!
-    fn int_representation(&mut self, location: Option<SrcSpan>, number: BigInt) {
+    fn int(&mut self, location: Option<SrcSpan>, number: BigInt) {
         self.etf.small_tuple(3);
         self.etf.atom("integer");
         self.annotation(location);
@@ -5554,7 +5554,7 @@ impl<'line_numbers> ErlangBinaryBuilder<'line_numbers> {
     /// other bits of the EAF representation of some other expression node which
     /// needs a known atom representation as one of its pieces.
     ///
-    fn atom_representation(&mut self, location: Option<SrcSpan>, name: &str) {
+    fn atom(&mut self, location: Option<SrcSpan>, name: &str) {
         self.etf.small_tuple(3);
         self.etf.atom("atom");
         self.annotation(location);
@@ -5564,7 +5564,7 @@ impl<'line_numbers> ErlangBinaryBuilder<'line_numbers> {
     /// This pushes the representation of a literal float according to the
     /// Erlang Abstract Format.
     /// No additional check about the current position is performed!
-    fn float_representation(&mut self, location: Option<SrcSpan>, number: f64) {
+    fn float(&mut self, location: Option<SrcSpan>, number: f64) {
         // Positive and negative zero have to be explicitly written as the
         // appropriate unary operator applied to 0.0:
         if number.is_zero() {
