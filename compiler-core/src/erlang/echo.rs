@@ -929,7 +929,7 @@ fn inspect_maybe_utf8_string<Output>(builder: &mut impl ErlangBuilder<Output>) {
     let function = builder.start_function(
         location,
         "inspect@maybe_utf8_string",
-        2,
+        3,
         [
             (location, "Binary"),
             (location, "HasPrintableChars"),
