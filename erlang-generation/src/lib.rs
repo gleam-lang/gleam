@@ -4161,11 +4161,10 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         // {attribute,ANNO,Spec,{{Name,Arity},[Rep(Ft_1)]}}
         self.attribute_tuple("spec");
         self.etf.small_tuple(2);
-        {
-            self.etf.small_tuple(2);
-            self.etf.atom(name);
-            self.etf.usize(arity);
-        }
+
+        self.etf.small_tuple(2);
+        self.etf.atom(name);
+        self.etf.usize(arity);
 
         // This list will always contain just a single item since Gleam
         // functions are compiled to functions with a single clause.
@@ -4530,20 +4529,18 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         self.etf.atom("call");
         self.annotation(Some(location));
 
-        {
-            self.etf.small_tuple(4);
-            self.etf.atom("remote");
-            self.annotation(Some(location));
-            // Crucially, when it comes to a call, we require the
-            // _representation_ of the module and name of the called thing.
-            // Those are atoms so we want the Erlang Abstract Format
-            // representation of an atom, NOT a bare Erlang atom.
-            // That's why here we call `self.atom` and not `self.etf.atom`:
-            // - `self.atom` produces an abstract form atom
-            // - `self.etf.atom` produces an ETF atom
-            self.atom(None, &module.0);
-            self.atom(None, function);
-        }
+        self.etf.small_tuple(4);
+        self.etf.atom("remote");
+        self.annotation(Some(location));
+        // Crucially, when it comes to a call, we require the
+        // _representation_ of the module and name of the called thing.
+        // Those are atoms so we want the Erlang Abstract Format
+        // representation of an atom, NOT a bare Erlang atom.
+        // That's why here we call `self.atom` and not `self.etf.atom`:
+        // - `self.atom` produces an abstract form atom
+        // - `self.etf.atom` produces an ETF atom
+        self.atom(None, &module.0);
+        self.atom(None, function);
 
         self.etf.start_list()
     }
