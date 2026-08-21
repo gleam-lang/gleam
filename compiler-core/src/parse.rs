@@ -3413,7 +3413,7 @@ where
                 return parse_error(
                     ParseErrorType::UnexpectedToken {
                         token: operator,
-                        expected: vec!["A binary operator".into()],
+                        expected: vec!["<>".into(), "A new definition".into()],
                         hint: Some("Pipelines are not allowed in constants".into()),
                     },
                     SrcSpan::new(operator_start, operator_end),
