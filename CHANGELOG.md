@@ -108,6 +108,10 @@
   merge conflict indicator
   ([0xda157](https://github.com/0xda157))
 
+- The compiler is now fault tolerant when providing an error for a redundant list
+  prepend like `[..wobble]`.
+  ([0xda157](https://github.com/0xda157))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
@@ -141,6 +145,24 @@
 - The "pattern match on argument" code action now has higher precedence over the
   "discard unused argument" code action.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The language server can now offer a "Remove redundant list prepend" code
+  action, for example:
+
+  ```gleam
+  const wibble = [1, 2]
+  const wobble = [..wibble]
+               // ^^^^^^^^ Trigger code action here
+  ```
+
+  becomes
+
+  ```gleam
+  const wibble = [1, 2]
+  const wobble = wibble
+  ```
+
+  ([0xda157](https://github.com/0xda157))
 
 ### Formatter
 

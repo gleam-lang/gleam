@@ -10454,6 +10454,90 @@ impl<'a> RemoveRedundantRecordUpdate<'a> {
     }
 }
 
+/// A prepend without elements is invalid syntax. This provides a code action
+/// to rewrite it to the correct syntax, for example:
+///
+/// ```gleam
+/// let wibble = [1, 2]
+/// let wobble = [..wibble]
+/// ```
+///
+/// becomes
+///
+/// ```gleam
+/// let wibble = [1, 2]
+/// let wobble = wibble
+/// ```
+///
+pub struct RemoveRedundantListPrepend<'a> {
+    params: &'a CodeActionParams,
+    error: &'a Option<Error>,
+    edits: TextEdits<'a>,
+}
+
+impl<'a> RemoveRedundantListPrepend<'a> {
+    pub fn new(
+        params: &'a CodeActionParams,
+        error: &'a Option<Error>,
+        line_numbers: &'a LineNumbers,
+    ) -> Self {
+        Self {
+            params,
+            error,
+            edits: TextEdits::new(line_numbers),
+        }
+    }
+
+    pub fn code_action(mut self) -> Vec<CodeAction> {
+        let Some(Error::Type {
+            skipped_modules: _,
+            failed_modules,
+        }) = self.error
+        else {
+            return vec![];
+        };
+
+        for failed_module in failed_modules.values() {
+            for error in failed_module.errors.iter() {
+                if let type_::Error::ListPrependWithoutElements {
+                    location,
+                    tail_location,
+                } = error
+                {
+                    let list_range = self.edits.src_span_to_lsp_range(*location);
+                    if !within(self.params.range, list_range) {
+                        continue;
+                    }
+
+                    self.edits.delete(SrcSpan {
+                        start: location.start,
+                        end: tail_location.start,
+                    });
+
+                    self.edits.delete(SrcSpan {
+                        start: tail_location.end,
+                        end: location.end,
+                    });
+                }
+            }
+        }
+
+        if self.edits.edits.is_empty() {
+            return vec![];
+        }
+
+        let mut actions = Vec::with_capacity(1);
+
+        CodeActionBuilder::new("Remove redundant list prepend")
+            .kind(CodeActionKind::QuickFix)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(true)
+            .push_to(&mut actions);
+
+        actions
+    }
+}
+
 /// Code action to add labels to a constructor/call where all the labels where
 /// omitted.
 ///
