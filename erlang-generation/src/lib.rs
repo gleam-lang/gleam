@@ -4711,61 +4711,61 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
     }
 
     fn bit_array_segment_default_size(&mut self) {
-        if let Some(BinaryBuilderPosition::BitArraySegment {
+        let Some(BinaryBuilderPosition::BitArraySegment {
             expected: expected @ ExpectedBitArraySegmentItem::Size,
         }) = self.current_position()
-        {
-            // We are now expecting to see the specifiers list
-            *expected = ExpectedBitArraySegmentItem::Specifiers;
-            // The default size is represented by the default atom
-            self.etf.atom("default");
-        } else {
+        else {
             invalid_code_for_position!(self, "segment default size");
-        }
+        };
+
+        // We are now expecting to see the specifiers list
+        *expected = ExpectedBitArraySegmentItem::Specifiers;
+        // The default size is represented by the default atom
+        self.etf.atom("default");
     }
 
     fn bit_array_segment_specifiers(
         &mut self,
         specifiers: impl IntoIterator<Item = BitArraySegmentSpecifier>,
     ) {
-        match self.pop_current_position() {
-            Some(BinaryBuilderPosition::BitArraySegment {
-                expected: ExpectedBitArraySegmentItem::Specifiers,
-            }) => {
-                let mut specifiers = specifiers.into_iter().peekable();
-                if specifiers.peek().is_none() {
-                    self.etf.atom("default");
-                    return;
-                }
+        let Some(BinaryBuilderPosition::BitArraySegment {
+            expected: ExpectedBitArraySegmentItem::Specifiers,
+        }) = self.pop_current_position()
+        else {
+            invalid_code_for_position!(self, "bit array segment specifier");
+        };
 
-                let list = self.etf.start_list();
-                let mut count = 0;
-                for specifier in specifiers {
-                    count += 1;
-                    match specifier {
-                        BitArraySegmentSpecifier::Utf8 => self.etf.atom("utf8"),
-                        BitArraySegmentSpecifier::Utf16 => self.etf.atom("utf16"),
-                        BitArraySegmentSpecifier::Utf32 => self.etf.atom("utf32"),
-                        BitArraySegmentSpecifier::Integer => self.etf.atom("integer"),
-                        BitArraySegmentSpecifier::Float => self.etf.atom("float"),
-                        BitArraySegmentSpecifier::Binary => self.etf.atom("binary"),
-                        BitArraySegmentSpecifier::Bitstring => self.etf.atom("bitstring"),
-                        BitArraySegmentSpecifier::Signed => self.etf.atom("signed"),
-                        BitArraySegmentSpecifier::Unsigned => self.etf.atom("unsigned"),
-                        BitArraySegmentSpecifier::Little => self.etf.atom("little"),
-                        BitArraySegmentSpecifier::Big => self.etf.atom("big"),
-                        BitArraySegmentSpecifier::Native => self.etf.atom("native"),
-                        BitArraySegmentSpecifier::Unit(unit) => {
-                            self.etf.small_tuple(2);
-                            self.etf.atom("unit");
-                            self.etf.usize(unit as usize);
-                        }
-                    }
-                }
-                self.etf.end_list(list, count);
-            }
-            _ => invalid_code_for_position!(self, "bit array segment specifier"),
+        let mut specifiers = specifiers.into_iter().peekable();
+        if specifiers.peek().is_none() {
+            self.etf.atom("default");
+            return;
         }
+
+        let list = self.etf.start_list();
+        let mut count = 0;
+        for specifier in specifiers {
+            count += 1;
+            match specifier {
+                BitArraySegmentSpecifier::Utf8 => self.etf.atom("utf8"),
+                BitArraySegmentSpecifier::Utf16 => self.etf.atom("utf16"),
+                BitArraySegmentSpecifier::Utf32 => self.etf.atom("utf32"),
+                BitArraySegmentSpecifier::Integer => self.etf.atom("integer"),
+                BitArraySegmentSpecifier::Float => self.etf.atom("float"),
+                BitArraySegmentSpecifier::Binary => self.etf.atom("binary"),
+                BitArraySegmentSpecifier::Bitstring => self.etf.atom("bitstring"),
+                BitArraySegmentSpecifier::Signed => self.etf.atom("signed"),
+                BitArraySegmentSpecifier::Unsigned => self.etf.atom("unsigned"),
+                BitArraySegmentSpecifier::Little => self.etf.atom("little"),
+                BitArraySegmentSpecifier::Big => self.etf.atom("big"),
+                BitArraySegmentSpecifier::Native => self.etf.atom("native"),
+                BitArraySegmentSpecifier::Unit(unit) => {
+                    self.etf.small_tuple(2);
+                    self.etf.atom("unit");
+                    self.etf.usize(unit as usize);
+                }
+            }
+        }
+        self.etf.end_list(list, count);
     }
 
     fn cons_list(&mut self, location: SrcSpan) {
@@ -4844,23 +4844,23 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
     }
 
     fn end_clause_pattern(&mut self, clause_pattern: Self::ClausePattern) -> Self::ClauseGuards {
-        if let Some(BinaryBuilderPosition::CaseClause {
+        let Some(BinaryBuilderPosition::CaseClause {
             expected: ExpectedBinaryCaseClauseItem::Guards { guard: false },
         }) = self.current_position()
-        {
-            self.etf.end_list(clause_pattern, 1);
+        else {
+            invalid_code_for_position!(self, "end clause pattern");
+        };
 
-            // The guards of a pattern are repesented like this:
-            // `[Rep(G1),...,Rep(GN)]`, and each guard is represented as
-            // `[Rep(Cond1),...,Rep(CondN)]`.
-            //
-            // The way Gleam guards are represented, there's always gonna be at
-            // most a single guard. So this list will be closed with a 0 or a 1
-            // depending if a guard has been generated at all!
-            self.etf.start_list()
-        } else {
-            invalid_code_for_position!(self, "end clause pattern")
-        }
+        self.etf.end_list(clause_pattern, 1);
+
+        // The guards of a pattern are repesented like this:
+        // `[Rep(G1),...,Rep(GN)]`, and each guard is represented as
+        // `[Rep(Cond1),...,Rep(CondN)]`.
+        //
+        // The way Gleam guards are represented, there's always gonna be at
+        // most a single guard. So this list will be closed with a 0 or a 1
+        // depending if a guard has been generated at all!
+        self.etf.start_list()
     }
 
     fn start_clause_guard(&mut self) -> Self::Guard {
@@ -4870,31 +4870,31 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
     }
 
     fn end_clause_guard(&mut self, clause_guard: Self::Guard) {
-        match self.current_position() {
-            Some(BinaryBuilderPosition::CaseClause {
-                expected: ExpectedBinaryCaseClauseItem::Guards { guard: true },
-            }) => self.etf.end_list(clause_guard, 1),
-            Some(_) | None => invalid_code_for_position!(self, "end clause guard"),
-        }
+        let Some(BinaryBuilderPosition::CaseClause {
+            expected: ExpectedBinaryCaseClauseItem::Guards { guard: true },
+        }) = self.current_position()
+        else {
+            invalid_code_for_position!(self, "end clause guard");
+        };
+        self.etf.end_list(clause_guard, 1);
     }
 
     fn end_clause_guards(&mut self, clause_guards: Self::ClauseGuards) -> Self::ClauseBody {
-        if let Some(BinaryBuilderPosition::CaseClause { expected }) = self.current_position() {
-            let has_guard = match expected {
-                ExpectedBinaryCaseClauseItem::Guards { guard } => *guard,
-                ExpectedBinaryCaseClauseItem::Pattern
-                | ExpectedBinaryCaseClauseItem::Body { .. } => {
-                    invalid_code_for_position!(self, "end clause guards")
-                }
-            };
+        let Some(BinaryBuilderPosition::CaseClause { expected }) = self.current_position() else {
+            invalid_code_for_position!(self, "end clause pattern");
+        };
 
-            *expected = ExpectedBinaryCaseClauseItem::Body { count: 0 };
-            self.etf
-                .end_list(clause_guards, if has_guard { 1 } else { 0 });
-            self.etf.start_list()
-        } else {
-            invalid_code_for_position!(self, "end clause pattern")
-        }
+        let has_guard = match expected {
+            ExpectedBinaryCaseClauseItem::Guards { guard } => *guard,
+            ExpectedBinaryCaseClauseItem::Pattern | ExpectedBinaryCaseClauseItem::Body { .. } => {
+                invalid_code_for_position!(self, "end clause guards")
+            }
+        };
+
+        *expected = ExpectedBinaryCaseClauseItem::Body { count: 0 };
+        self.etf
+            .end_list(clause_guards, if has_guard { 1 } else { 0 });
+        self.etf.start_list()
     }
 
     fn end_clause_body(&mut self, clause_body: Self::ClauseBody) {
@@ -4950,15 +4950,23 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
     ) {
         self.new_expression();
 
+        // fun Fun
+        //  becomes
+        // {'fun',ANNO,Rep(Fun)}
+        self.etf.small_tuple(3);
+        self.etf.atom("fun");
+        self.annotation(Some(location));
+
+        // function references have two possible formats:
+        //
+        // - fun Module:Name/Arity
+        // - fun Name/Arity
+
         match module {
             Some(module) => {
-                // fun Module:Name/Arity
+                // Module:Name/Arity
                 //   becomes
-                // {'fun',ANNO,{function,Rep(Module),Rep(Name),Rep(Arity)}}
-                self.etf.small_tuple(3);
-                self.etf.atom("fun");
-                self.annotation(Some(location));
-
+                // {function,Rep(Module),Rep(Name),Rep(Arity)}
                 self.etf.small_tuple(4);
                 self.etf.atom("function");
                 // Crucially, when it comes to a function reference, we require
@@ -4975,12 +4983,9 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
                 self.int_representation(None, arity.into());
             }
             None => {
-                // fun Name/Arity
+                // Name/Arity
                 //   becomes
-                // {'fun',ANNO,{function,Name,Arity}}
-                self.etf.small_tuple(3);
-                self.etf.atom("fun");
-                self.annotation(Some(location));
+                // {function,Name,Arity}
                 self.etf.small_tuple(3);
                 self.etf.atom("function");
                 self.etf.atom(name);
