@@ -13,6 +13,7 @@ error: Syntax error
   │                      ^^ I was not expecting this
 
 Found `|>`, expected one of: 
-- A binary operator
+- <>
+- A new definition
 
 Hint: Pipelines are not allowed in constants
