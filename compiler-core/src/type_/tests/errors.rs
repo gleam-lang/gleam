@@ -2287,6 +2287,19 @@ pub fn main() {
 }
 
 #[test]
+fn unknown_module_suggest_alias_for_imported_module() {
+    assert_module_error!(
+        ("gleam/io", "pub fn println(message: String) {}"),
+        "
+import gleam/io as gleam_io
+pub fn main() {
+  io.println(\"Hello, world!\")
+}
+",
+    );
+}
+
+#[test]
 fn unknown_module_suggest_typo_for_unimported_module() {
     assert_module_error!(
         ("wibble/wobble", "pub fn wubble() {}"),

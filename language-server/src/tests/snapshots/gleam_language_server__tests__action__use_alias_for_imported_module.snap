@@ -1,0 +1,21 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\nimport gleam/io as gleam_io\n\npub fn main() {\n  io.println(\"Hello, world!\")\n}\n"
+---
+----- BEFORE ACTION
+
+import gleam/io as gleam_io
+
+pub fn main() {
+  io.println("Hello, world!")
+  ▔▔▔↑                       
+}
+
+
+----- AFTER ACTION
+
+import gleam/io as gleam_io
+
+pub fn main() {
+  gleam_io.println("Hello, world!")
+}
