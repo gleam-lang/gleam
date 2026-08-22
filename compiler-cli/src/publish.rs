@@ -8,7 +8,7 @@ use gleam_core::{
     Error, Result,
     analyse::TargetSupport,
     ast::{CallArg, Statement, TypedExpr, TypedFunction},
-    build::{Codegen, Compile, Mode, Options, Package, Target},
+    build::{Codegen, Compile, ErlangOutput, Mode, Options, Package, Target},
     config::{GleamVersion, PackageConfig, SpdxLicense},
     docs::{Dependency, DependencyKind, DocContext},
     error::{InvalidReadmeReason, SmallVersion, wrap},
@@ -453,7 +453,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
             codegen: Codegen::All,
             compile: Compile::All,
             no_print_progress: false,
-            building_hex_tarball: true,
+            erlang_output: ErlangOutput::Textual,
         },
         manifest,
     )?;

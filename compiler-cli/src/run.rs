@@ -7,7 +7,10 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use gleam_core::{
     analyse::TargetSupport,
-    build::{Built, Codegen, Compile, Mode, NullTelemetry, Options, Runtime, Target, Telemetry},
+    build::{
+        Built, Codegen, Compile, ErlangOutput, Mode, NullTelemetry, Options, Runtime, Target,
+        Telemetry,
+    },
     config::{DenoFlag, PackageConfig},
     error::Error,
     io::{Command, CommandExecutor, Stdio},
@@ -124,7 +127,7 @@ pub fn setup(
             PackageKind::Dependency => TargetSupport::NotEnforced,
         },
         no_print_progress,
-        building_hex_tarball: false,
+        erlang_output: ErlangOutput::Binary,
     };
 
     let built = crate::build::main(paths, options, manifest)?;

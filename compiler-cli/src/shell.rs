@@ -3,7 +3,7 @@
 
 use gleam_core::{
     analyse::TargetSupport,
-    build::{Codegen, Compile, Mode, Options, Target},
+    build::{Codegen, Compile, ErlangOutput, Mode, Options, Target},
     error::{Error, ShellCommandFailureReason},
     paths::ProjectPaths,
 };
@@ -21,7 +21,7 @@ pub fn command(paths: &ProjectPaths) -> Result<(), Error> {
             mode: Mode::Dev,
             target: Some(Target::Erlang),
             no_print_progress: false,
-            building_hex_tarball: false,
+            erlang_output: ErlangOutput::Binary,
         },
         crate::build::download_dependencies(paths, crate::cli::Reporter::new())?,
     )?;
