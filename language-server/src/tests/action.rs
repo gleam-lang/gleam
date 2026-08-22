@@ -2931,6 +2931,30 @@ pub fn main() {
 }
 
 #[test]
+fn test_use_alias_for_imported_module() {
+    let src = r#"
+import gleam/io as gleam_io
+
+pub fn main() {
+  io.println("Hello, world!")
+}
+"#;
+
+    assert_code_action!(
+        "Did you mean `gleam_io`",
+        TestProject::for_source(src)
+            .add_hex_module("gleam/io", "pub fn println(message: String) {}"),
+        find_position_of("io.").select_until(find_position_of("println"))
+    );
+    assert_no_code_actions!(
+        "Import `gleam/io`",
+        TestProject::for_source(src)
+            .add_hex_module("gleam/io", "pub fn println(message: String) {}"),
+        find_position_of("io.").select_until(find_position_of("println"))
+    );
+}
+
+#[test]
 fn test_import_similar_module() {
     let src = "
 pub fn main() {

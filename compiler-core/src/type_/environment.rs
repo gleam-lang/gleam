@@ -953,7 +953,9 @@ impl Environment<'_> {
 
     /// Suggest modules to import or use, for an unknown module
     pub fn suggest_modules(&self, module: &str, imported: Imported) -> Vec<ModuleSuggestion> {
-        let mut suggestions = self
+        let threshold = std::cmp::max(module.chars().count() / 3, 1);
+
+        let suggestions = self
             .importable_modules
             .iter()
             .filter_map(|(importable, module_info)| {
@@ -965,7 +967,8 @@ impl Environment<'_> {
                     // Don't suggest importing modules if they are already imported
                     _ if self
                         .imported_modules
-                        .contains_key(importable.split('/').next_back().unwrap_or(importable)) =>
+                        .values()
+                        .any(|(_, imported)| imported.name == *importable) =>
                     {
                         None
                     }
@@ -978,24 +981,30 @@ impl Environment<'_> {
                     Imported::Module | Imported::Type(_) | Imported::Value(_) => None,
                 }
             })
-            .collect_vec();
+            .filter_map(|suggestion| {
+                edit_distance(module, suggestion.last_name_component(), threshold)
+                    .map(|distance| (suggestion, distance))
+            });
 
-        suggestions.extend(
-            self.imported_modules
-                .keys()
-                .map(|module| ModuleSuggestion::Imported(module.clone())),
-        );
-
-        let threshold = std::cmp::max(module.chars().count() / 3, 1);
+        let suggestions = suggestions.chain(self.imported_modules.iter().filter_map(
+            |(alias, (_, imported))| {
+                let imported_name = imported
+                    .name
+                    .split('/')
+                    .next_back()
+                    .unwrap_or(&imported.name);
+                let distance = [alias.as_str(), imported_name]
+                    .into_iter()
+                    .filter_map(|name| edit_distance(module, name, threshold))
+                    .min()?;
+                Some((ModuleSuggestion::Imported(alias.clone()), distance))
+            },
+        ));
 
         // Filter and sort options based on edit distance.
         suggestions
             .into_iter()
             .sorted()
-            .filter_map(|suggestion| {
-                edit_distance(module, suggestion.last_name_component(), threshold)
-                    .map(|distance| (suggestion, distance))
-            })
             .sorted_by_key(|&(_, distance)| distance)
             .map(|(suggestion, _)| suggestion)
             .collect()
