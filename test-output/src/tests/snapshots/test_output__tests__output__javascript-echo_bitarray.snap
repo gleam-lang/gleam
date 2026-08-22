@@ -1,5 +1,5 @@
 ---
-source: test-output/src/tests/echo.rs
+source: test-output/src/tests/output.rs
 expression: output
 ---
 --- main.gleam ----------------------
@@ -7,28 +7,16 @@ expression: output
 // SPDX-FileCopyrightText: 2024 The Gleam contributors
 
 pub fn main() {
-  echo 1.0
-  echo 2.1
-  echo 11.11
-  echo 1.0e300
-  echo 1.5e300
-  echo 1.0e-300
-  echo 1.5e-300
+  echo <<>>
+  echo <<1, 2, 3>>
+  echo <<1, 2, 3:2>>
 }
 
 
 --- gleam run output ----------------
 [90msrc/main.gleam:5[39m
-1.0
+<<>>
 [90msrc/main.gleam:6[39m
-2.1
+<<1, 2, 3>>
 [90msrc/main.gleam:7[39m
-11.11
-[90msrc/main.gleam:8[39m
-1.0e300
-[90msrc/main.gleam:9[39m
-1.5e300
-[90msrc/main.gleam:10[39m
-1.0e-300
-[90msrc/main.gleam:11[39m
-1.5e-300
+<<1, 2, 3:size(2)>>

@@ -1,5 +1,5 @@
 ---
-source: test-output/src/tests/echo.rs
+source: test-output/src/tests/output.rs
 expression: output
 ---
 --- main.gleam ----------------------
@@ -7,13 +7,17 @@ expression: output
 // SPDX-FileCopyrightText: 2024 The Gleam contributors
 
 pub fn main() {
-  echo True
-  echo False
+  echo fn(n) { n + 1 }
+  echo private
+}
+
+fn private() {
+  1
 }
 
 
 --- gleam run output ----------------
 [90msrc/main.gleam:5[39m
-True
+//fn(a) { ... }
 [90msrc/main.gleam:6[39m
-False
+//fn() { ... }

@@ -1,5 +1,5 @@
 ---
-source: test-output/src/tests/echo.rs
+source: test-output/src/tests/output.rs
 expression: output
 ---
 --- main.gleam ----------------------
@@ -7,16 +7,10 @@ expression: output
 // SPDX-FileCopyrightText: 2025 The Gleam contributors
 
 pub fn main() {
-  echo circular_reference()
-  Nil
+  echo [72, 101, 108, 108, 111, 44, 32, 74, 111, 101, 33]
 }
-
-type Thing
-
-@external(javascript, "./main_ffi.mjs", "circular_reference")
-fn circular_reference() -> Thing
 
 
 --- gleam run output ----------------
 [90msrc/main.gleam:5[39m
-#(//js(circular reference))
+charlist.from_string("Hello, Joe!")

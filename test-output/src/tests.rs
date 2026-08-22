@@ -2,4 +2,4 @@
 // SPDX-FileCopyrightText: 2025 The Gleam contributors
 
 #[cfg(test)]
-mod echo;
+mod output;
