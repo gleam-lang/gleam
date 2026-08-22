@@ -1,23 +1,18 @@
 ---
-source: test-output/src/tests/echo.rs
+source: test-output/src/tests/output.rs
 expression: output
 ---
 --- main.gleam ----------------------
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2024 The Gleam contributors
 
-pub fn main() {
-  echo fn(n) { n + 1 }
-  echo private
-}
+import inspect
 
-fn private() {
-  1
+pub fn main() {
+  echo inspect.x
 }
 
 
 --- gleam run output ----------------
-[90msrc/main.gleam:5[39m
-//fn(a) { ... }
-[90msrc/main.gleam:6[39m
-//fn() { ... }
+[90msrc/main.gleam:7[39m
+Nil

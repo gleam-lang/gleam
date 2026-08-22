@@ -1,20 +1,21 @@
 ---
-source: test-output/src/tests/echo.rs
+source: test-output/src/tests/output.rs
 expression: output
 ---
 --- main.gleam ----------------------
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2024 The Gleam contributors
 
+import gleam/dict
+
 pub fn main() {
-  let infinity = 1.0e300 *. 1.0e300
-  echo infinity
-  echo infinity /. infinity
+  echo dict.new()
+  echo dict.from_list([#(1, "hello"), #(2, "world!")])
 }
 
 
 --- gleam run output ----------------
-[90msrc/main.gleam:6[39m
-//js(Infinity)
 [90msrc/main.gleam:7[39m
-//js(NaN)
+dict.from_list([])
+[90msrc/main.gleam:8[39m
+dict.from_list([#(1, "hello"), #(2, "world!")])

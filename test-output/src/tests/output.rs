@@ -93,14 +93,14 @@ fn run_and_capture_output(
     output
 }
 
-macro_rules! assert_echo {
+macro_rules! assert_output {
     ($project_name: expr) => {
         let snapshot_name = snapshot_name(None, None, $project_name);
         insta::allow_duplicates! {
-            assert_echo!(&snapshot_name, Some(Target::Erlang), None, $project_name);
-            assert_echo!(&snapshot_name, Some(Target::JavaScript), Some(Runtime::Bun), $project_name);
-            assert_echo!(&snapshot_name, Some(Target::JavaScript), Some(Runtime::Deno), $project_name);
-            assert_echo!(&snapshot_name, Some(Target::JavaScript), Some(Runtime::NodeJs), $project_name);
+            assert_output!(&snapshot_name, Some(Target::Erlang), None, $project_name);
+            assert_output!(&snapshot_name, Some(Target::JavaScript), Some(Runtime::Bun), $project_name);
+            assert_output!(&snapshot_name, Some(Target::JavaScript), Some(Runtime::Deno), $project_name);
+            assert_output!(&snapshot_name, Some(Target::JavaScript), Some(Runtime::NodeJs), $project_name);
         }
     };
 
@@ -108,12 +108,12 @@ macro_rules! assert_echo {
         let snapshot_name = snapshot_name(Some($target), None, $project_name);
         match $target {
             Target::JavaScript => insta::allow_duplicates! {
-                assert_echo!(&snapshot_name, Some($target), Some(Runtime::Bun), $project_name);
-                assert_echo!(&snapshot_name, Some($target), Some(Runtime::Deno), $project_name);
-                assert_echo!(&snapshot_name, Some($target), Some(Runtime::NodeJs), $project_name);
+                assert_output!(&snapshot_name, Some($target), Some(Runtime::Bun), $project_name);
+                assert_output!(&snapshot_name, Some($target), Some(Runtime::Deno), $project_name);
+                assert_output!(&snapshot_name, Some($target), Some(Runtime::NodeJs), $project_name);
             },
             Target::Erlang => {
-                assert_echo!(&snapshot_name, Some($target), None, $project_name);
+                assert_output!(&snapshot_name, Some($target), None, $project_name);
             }
         }
     };
@@ -149,98 +149,103 @@ fn snapshot_name(target: Option<Target>, runtime: Option<Runtime>, suffix: &str)
 
 #[test]
 fn echo_bitarray() {
-    assert_echo!(Target::JavaScript, "echo_bitarray");
-    assert_echo!(Target::Erlang, "echo_bitarray");
+    assert_output!(Target::JavaScript, "echo_bitarray");
+    assert_output!(Target::Erlang, "echo_bitarray");
 }
 
 #[test]
 fn echo_bool() {
-    assert_echo!("echo_bool");
+    assert_output!("echo_bool");
 }
 
 #[test]
 fn echo_charlist() {
-    assert_echo!("echo_charlist");
+    assert_output!("echo_charlist");
 }
 
 #[test]
 fn echo_custom_type() {
-    assert_echo!(Target::Erlang, "echo_custom_type");
-    assert_echo!(Target::JavaScript, "echo_custom_type");
+    assert_output!(Target::Erlang, "echo_custom_type");
+    assert_output!(Target::JavaScript, "echo_custom_type");
 }
 
 #[test]
 fn echo_dict() {
-    assert_echo!("echo_dict");
+    assert_output!("echo_dict");
 }
 
 #[test]
 fn echo_float() {
-    assert_echo!(Target::Erlang, "echo_float");
-    assert_echo!(Target::JavaScript, "echo_float");
+    assert_output!(Target::Erlang, "echo_float");
+    assert_output!(Target::JavaScript, "echo_float");
 }
 
 #[test]
 fn echo_nan_infinity() {
-    assert_echo!(Target::JavaScript, "echo_nan_infinity");
+    assert_output!(Target::JavaScript, "echo_nan_infinity");
 }
 
 #[test]
 fn echo_function() {
-    assert_echo!("echo_function");
+    assert_output!("echo_function");
 }
 
 #[test]
 fn echo_importing_module_named_inspect() {
-    assert_echo!("echo_importing_module_named_inspect");
+    assert_output!("echo_importing_module_named_inspect");
 }
 
 #[test]
 fn echo_int() {
-    assert_echo!("echo_int");
+    assert_output!("echo_int");
 }
 
 #[test]
 fn echo_list() {
-    assert_echo!("echo_list");
+    assert_output!("echo_list");
 }
 
 #[test]
 fn echo_nil() {
-    assert_echo!("echo_nil");
+    assert_output!("echo_nil");
 }
 
 #[test]
 fn echo_string() {
-    assert_echo!("echo_string");
+    assert_output!("echo_string");
 }
 
 #[test]
 fn echo_tuple() {
-    assert_echo!("echo_tuple");
+    assert_output!("echo_tuple");
 }
 
 #[test]
 fn echo_non_record_atom_tag() {
-    assert_echo!(Target::Erlang, "echo_non_record_atom_tag");
+    assert_output!(Target::Erlang, "echo_non_record_atom_tag");
 }
 
 #[test]
 fn echo_circular_reference() {
-    assert_echo!(Target::JavaScript, "echo_circular_reference");
+    assert_output!(Target::JavaScript, "echo_circular_reference");
 }
 
 #[test]
 fn echo_singleton() {
-    assert_echo!("echo_singleton");
+    assert_output!("echo_singleton");
 }
 
 #[test]
 fn echo_with_message() {
-    assert_echo!("echo_with_message");
+    assert_output!("echo_with_message");
 }
 
 #[test]
 fn linked_process_exit() {
-    assert_echo!(Target::Erlang, "linked_process_exit");
+    assert_output!(Target::Erlang, "linked_process_exit");
+}
+
+#[test]
+fn stack_trace() {
+    assert_output!(Target::Erlang, "panic_stack_trace");
 }

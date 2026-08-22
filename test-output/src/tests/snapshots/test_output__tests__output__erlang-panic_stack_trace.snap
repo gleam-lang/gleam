@@ -1,0 +1,31 @@
+---
+source: test-output/src/tests/output.rs
+expression: output
+---
+--- main.gleam ----------------------
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
+import module_one
+
+pub fn main() {
+  some_function()
+}
+
+fn some_function() {
+  // We call a function from another module so it won't be inlined and we'll see
+  // some lines in the stack trace!
+  module_one.panics_on_line_9()
+  Nil
+}
+
+
+--- gleam run output ----------------
+[31;1mruntime error[39m: panic[0m
+
+`panic` expression evaluated.
+
+stacktrace:
+  module_two.panics_on_line_5[90m src/module_two.gleam:5[0m
+  module_one.panics_on_line_9[90m src/module_one.gleam:9[0m
+  main.main[90m src/main.gleam:13[0m
