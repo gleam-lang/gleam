@@ -183,6 +183,11 @@
   the Erlang target.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the "Discard unused variable" language server code action
+  would produce invalid code when discarding left side assignment of string
+  prefix patterns.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when

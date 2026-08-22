@@ -3681,7 +3681,7 @@ impl CaseToCompile {
                 let prefix = left_side_string.clone();
                 let prefix_name = left_side_assignment
                     .as_ref()
-                    .map(|(label, _)| label.clone());
+                    .map(|assignment| assignment.name.clone());
                 let rest_pattern = match right_side_assignment {
                     AssignName::Variable(name) => Pattern::Variable { name: name.clone() },
                     AssignName::Discard(_) => Pattern::Discard,

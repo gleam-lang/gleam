@@ -1606,7 +1606,7 @@ impl<'ast> Visit<'ast> for LocalCompletion<'_> {
         &mut self,
         _: &'ast SrcSpan,
         _: &'ast SrcSpan,
-        _: &'ast Option<(EcoString, SrcSpan)>,
+        _: &'ast Option<ast::StringPrefixLeftSideAssignment>,
         _: &'ast SrcSpan,
         _: &'ast EcoString,
         right_side_assignment: &'ast ast::AssignName,

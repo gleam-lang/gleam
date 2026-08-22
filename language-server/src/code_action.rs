@@ -11,10 +11,11 @@ use gleam_core::{
         self, ArgNames, AssignName, AssignmentKind, BitArraySegmentTruncation, BoundVariable,
         BoundVariableName, CallArg, CustomType, FunctionLiteralKind, ImplicitCallArgOrigin, Import,
         InvalidExpression, PIPE_PRECEDENCE, Pattern, PatternUnusedArguments,
-        PipelineAssignmentKind, Publicity, RecordConstructor, TodoKind, TypeAstConstructorName,
-        TypedArg, TypedAssignment, TypedClauseGuard, TypedDefinitions, TypedExpr, TypedFunction,
-        TypedModuleConstant, TypedPattern, TypedPipelineAssignment, TypedRecordConstructor,
-        TypedStatement, TypedTailPattern, TypedUse, visit::Visit as _,
+        PipelineAssignmentKind, Publicity, RecordConstructor, StringPrefixLeftSideAssignment,
+        TodoKind, TypeAstConstructorName, TypedArg, TypedAssignment, TypedClauseGuard,
+        TypedDefinitions, TypedExpr, TypedFunction, TypedModuleConstant, TypedPattern,
+        TypedPipelineAssignment, TypedRecordConstructor, TypedStatement, TypedTailPattern,
+        TypedUse, visit::Visit as _,
     },
     build::{Located, Module, Origin},
     config::PackageConfig,
@@ -505,12 +506,12 @@ impl<'ast> ast::visit::Visit<'ast> for PatternVariableFinder {
         &mut self,
         _location: &'ast SrcSpan,
         _left_location: &'ast SrcSpan,
-        left_side_assignment: &'ast Option<(EcoString, SrcSpan)>,
+        left_side_assignment: &'ast Option<StringPrefixLeftSideAssignment>,
         _right_location: &'ast SrcSpan,
         _left_side_string: &'ast EcoString,
         right_side_assignment: &'ast AssignName,
     ) {
-        if let Some((name, _)) = left_side_assignment {
+        if let Some(StringPrefixLeftSideAssignment { name, .. }) = left_side_assignment {
             self.pattern_variables.push(name.clone());
         }
         if let AssignName::Variable(name) = right_side_assignment {
@@ -6447,19 +6448,25 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
         &mut self,
         _location: &'ast SrcSpan,
         _left_location: &'ast SrcSpan,
-        left_side_assignment: &'ast Option<(EcoString, SrcSpan)>,
+        left_side_assignment: &'ast Option<StringPrefixLeftSideAssignment>,
         right_location: &'ast SrcSpan,
         _left_side_string: &'ast EcoString,
         right_side_assignment: &'ast AssignName,
     ) {
-        if let Some((name, location)) = left_side_assignment
-            && within(
-                self.params.range,
-                self.edits.src_span_to_lsp_range(*location),
-            )
+        if let Some(StringPrefixLeftSideAssignment {
+            name,
+            name_start_position,
+            location,
+        }) = left_side_assignment
         {
-            let location = PatternLocation::regular(*location);
-            self.pattern_variable_under_cursor = Some((name, location, type_::string()));
+            let location = SrcSpan::new(*name_start_position, location.end);
+            if within(
+                self.params.range,
+                self.edits.src_span_to_lsp_range(location),
+            ) {
+                let location = PatternLocation::regular(location);
+                self.pattern_variable_under_cursor = Some((name, location, type_::string()));
+            }
         } else if let AssignName::Variable(name) = right_side_assignment
             && within(
                 self.params.range,

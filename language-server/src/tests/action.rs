@@ -15964,3 +15964,18 @@ fn convert_to_int_has_nicely_separated_digits() {
         find_position_of("0b100101101011010000111").to_selection()
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/6120
+#[test]
+fn discard_unused_variable_triggered_at_string_prefix_pattern() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        r#"fn wobble(wibble) {
+  case wibble {
+    "Hello" as hello <> name -> name
+    _ -> "unknown"
+  }
+}"#,
+        find_position_of("hello").to_selection()
+    );
+}

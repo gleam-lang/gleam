@@ -3131,7 +3131,7 @@ impl<'a, 'doc> Formatter<'a> {
             Pattern::StringPrefix {
                 left_side_string: left,
                 right_side_assignment: right,
-                left_side_assignment: left_assign,
+                left_side_assignment: left_assignment,
                 ..
             } => {
                 let left = self.string(arena, left);
@@ -3139,8 +3139,8 @@ impl<'a, 'doc> Formatter<'a> {
                     AssignName::Variable(name) => name.to_doc(arena),
                     AssignName::Discard(name) => name.to_doc(arena),
                 };
-                match left_assign {
-                    Some((name, _)) => {
+                match left_assignment {
+                    Some(StringPrefixLeftSideAssignment { name, .. }) => {
                         docvec![
                             arena,
                             left,
