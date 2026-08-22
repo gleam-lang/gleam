@@ -3,7 +3,7 @@ source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/empty_module_warning"
 ---
 //// /out/lib/the_package/_gleam_artefacts/empty.abstr
-<230 byte binary>
+<291 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/empty.cache
 <.cache binary>
@@ -21,7 +21,7 @@ expression: "./cases/empty_module_warning"
 <32 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/private.abstr
-<232 byte binary>
+<297 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/private.cache
 <.cache binary>

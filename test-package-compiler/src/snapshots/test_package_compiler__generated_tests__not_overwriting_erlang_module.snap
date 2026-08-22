@@ -3,7 +3,7 @@ source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/not_overwriting_erlang_module"
 ---
 //// /out/lib/the_package/_gleam_artefacts/app@code.abstr
-<233 byte binary>
+<300 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/app@code.cache
 <.cache binary>

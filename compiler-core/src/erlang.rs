@@ -248,6 +248,10 @@ impl<'a> Generator<'a> {
         // with its documentation.
         self.module_documentation(builder);
 
+        // We add a `-file` attribute a the top of the module to set the file
+        // for all functions coming after this.
+        builder.module_file_attribute(&self.module_source_path);
+
         // Then we generate `-type` definitions for the module's types.
         for custom_type in &self.module.definitions.custom_types {
             self.type_definition(builder, custom_type);

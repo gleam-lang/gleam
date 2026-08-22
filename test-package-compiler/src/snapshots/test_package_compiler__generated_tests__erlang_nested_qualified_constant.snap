@@ -3,7 +3,7 @@ source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/erlang_nested_qualified_constant"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one@two.abstr
-<284 byte binary>
+<349 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache
 <.cache binary>
@@ -12,7 +12,7 @@ expression: "./cases/erlang_nested_qualified_constant"
 <31 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.abstr
-<228 byte binary>
+<285 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>

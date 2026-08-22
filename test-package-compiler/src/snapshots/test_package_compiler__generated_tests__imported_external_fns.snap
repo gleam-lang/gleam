@@ -3,7 +3,7 @@ source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/imported_external_fns"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.abstr
-<827 byte binary>
+<770 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache
 <.cache binary>
@@ -12,7 +12,7 @@ expression: "./cases/imported_external_fns"
 <44 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/three.abstr
-<837 byte binary>
+<776 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/three.cache
 <.cache binary>
@@ -21,7 +21,7 @@ expression: "./cases/imported_external_fns"
 <44 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.abstr
-<6598 byte binary>
+<5857 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>

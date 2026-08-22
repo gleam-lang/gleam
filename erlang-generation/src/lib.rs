@@ -310,7 +310,7 @@ pub trait ErlangBuilder<Output> {
     ///
     fn compile_attribute<'a>(&mut self, arguments: impl IntoIterator<Item = &'a str>);
 
-    /// This generates a `-file` attribute.
+    /// This generates a `-file` attribute, to be added right before a function.
     /// For example:
     ///
     /// ```ignore
@@ -320,10 +320,26 @@ pub trait ErlangBuilder<Output> {
     /// Correspods to:
     ///
     /// ```erl
-    /// -file("wibble.gleam", 2)
+    /// -file("wibble.gleam", 2).
     /// ```
     ///
     fn file_attribute(&mut self, file: &str, line: u32);
+
+    /// This generates a `-file` attribute, to be used at the start of a module
+    /// to set the proper file for the entire module.
+    /// For example:
+    ///
+    /// ```ignore
+    /// builder.module_file_attribute("wibble.gleam");
+    /// ```
+    ///
+    /// Correspods to:
+    ///
+    /// ```erl
+    /// -file("wibble.gleam", 0).
+    /// ```
+    ///
+    fn module_file_attribute(&mut self, file: &str);
 
     /// Starts a `-record` attribute.
     /// After this you're supposed to generate a sequence of `record_field`, and
@@ -1932,6 +1948,14 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
         self.code.push_str("\", ");
         self.code.push_str(&line.to_string());
         self.code.push_str(").");
+    }
+
+    fn module_file_attribute(&mut self, _file: &str) {
+        // This does nothing for the textual pretty printer.
+        // All functions are gonna have their own annotation with a line number
+        // too, so this would be redundant.
+        //
+        // It's actually something we only need in the binary format!
     }
 
     fn start_record_attribute(&mut self, record_name: &str) -> Self::RecordAttribute {
@@ -4086,22 +4110,29 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         self.etf.end_list(options, count);
     }
 
-    fn file_attribute(&mut self, file: &str, line: u32) {
+    fn file_attribute(&mut self, _file: &str, _line: u32) {
+        // This does nothing for the binary generator.
+        // All nodes are already annotated with their line number, and a single
+        // file annotation is needed at the top of the module.
+        //
+        // Adding this attribute before each function would be redundant!
+    }
+
+    fn module_file_attribute(&mut self, file: &str) {
         self.new_top_level_form();
 
         // -file(File)
         //   becomes
-        // {attribute,ANNO,file,File,Line}}
+        // {attribute,ANNO,file,{File,Line}}
         self.attribute_tuple("file");
-        {
-            self.etf.small_tuple(2);
 
-            let file_name = self.etf.start_list();
-            let characters_count = self.push_string_chars(file);
-            self.etf.end_list(file_name, characters_count);
+        self.etf.small_tuple(2);
 
-            self.etf.usize(line as usize);
-        }
+        let file_name = self.etf.start_list();
+        let characters_count = self.push_string_chars(file);
+        self.etf.end_list(file_name, characters_count);
+
+        self.etf.usize(0);
     }
 
     fn start_record_attribute(&mut self, record_name: &str) -> Self::RecordAttribute {
