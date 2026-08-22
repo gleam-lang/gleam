@@ -1,0 +1,21 @@
+---
+source: language-server/src/tests/action.rs
+expression: "fn wibble(wobble: List(Int)) -> Nil {\n  case wobble {\n    [1, 2, ..] as tail | [2, 1, ..] as tail -> Nil\n    _ -> Nil\n  }\n}"
+---
+----- BEFORE ACTION
+fn wibble(wobble: List(Int)) -> Nil {
+  case wobble {
+    [1, 2, ..] as tail | [2, 1, ..] as tail -> Nil
+                  ↑                               
+    _ -> Nil
+  }
+}
+
+
+----- AFTER ACTION
+fn wibble(wobble: List(Int)) -> Nil {
+  case wobble {
+    [1, 2, ..] | [2, 1, ..] -> Nil
+    _ -> Nil
+  }
+}

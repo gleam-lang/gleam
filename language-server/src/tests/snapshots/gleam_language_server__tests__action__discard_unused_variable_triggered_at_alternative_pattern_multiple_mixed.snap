@@ -1,0 +1,21 @@
+---
+source: language-server/src/tests/action.rs
+expression: "fn wobble(wibble, wubble) {\n  case wibble, wubble {\n    0, [y] | y, [] | _, [1, 2, y] -> todo\n    _ -> todo\n  }\n}"
+---
+----- BEFORE ACTION
+fn wobble(wibble, wubble) {
+  case wibble, wubble {
+    0, [y] | y, [] | _, [1, 2, y] -> todo
+        ↑                                
+    _ -> todo
+  }
+}
+
+
+----- AFTER ACTION
+fn wobble(wibble, wubble) {
+  case wibble, wubble {
+    0, [_y] | _y, [] | _, [1, 2, _y] -> todo
+    _ -> todo
+  }
+}
