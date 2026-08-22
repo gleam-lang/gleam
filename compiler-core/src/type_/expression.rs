@@ -2930,17 +2930,31 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         .suggest_modules(module_alias, Imported::Value(label.clone())),
                 })?;
 
-            let constructor =
-                module
-                    .get_importable_value(&label)
-                    .ok_or_else(|| Error::UnknownModuleValue {
-                        name: label.clone(),
+            let constructor = match module.values.get(&label) {
+                Some(constructor) if constructor.publicity.is_importable() => constructor,
+                // If the value belongs to current package, but isn't importable,
+                // then we produce error message about usage of private value.
+                Some(_) if self.environment.current_package == module.package => {
+                    return Err(Error::UseOfPrivateModuleValue {
                         location: select_location,
+                        name: label.clone(),
+                        module_name: module.name.clone(),
+                    });
+                }
+                // Otherwise, the value either doesn't exist or is from another
+                // module, where we do not want to expose information, we produce
+                // error message about usage of unknown value.
+                Some(_) | None => {
+                    return Err(Error::UnknownModuleValue {
+                        location: select_location,
+                        name: label.clone(),
                         module_name: module.name.clone(),
                         value_constructors: module.public_value_names(),
                         type_with_same_name: module.get_importable_type(&label).is_some(),
-                        context: ModuleValueUsageContext::ModuleAccess,
-                    })?;
+                        context: ModuleValueUsageContext::UnqualifiedImport,
+                    });
+                }
+            };
 
             // Emit a warning if the value being used is deprecated.
             if let Deprecation::Deprecated { message } = &constructor.deprecation {

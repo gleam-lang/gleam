@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport wibble.{type Wibble}\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+
+type Wibble {
+  Wibble
+}
+
+
+-- main.gleam
+
+import wibble.{type Wibble}
+
+
+----- ERROR
+error: Use of private module type
+  ┌─ /src/one/two.gleam:2:16
+  │
+2 │ import wibble.{type Wibble}
+  │                ^^^^^^^^^^^
+
+`wibble.Wibble` is a private type.

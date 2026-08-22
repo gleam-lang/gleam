@@ -92,16 +92,32 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         let import_location = import.location;
 
         // Register the unqualified import if it is a type constructor
-        let Some(type_info) = module.get_importable_type(&import.name) else {
-            // TODO: refine to a type specific error
-            self.problems.error(Error::UnknownModuleType {
-                location: import.location,
-                name: import.name.clone(),
-                module_name: module.name.clone(),
-                type_constructors: module.public_type_names(),
-                value_with_same_name: module.get_importable_value(&import.name).is_some(),
-            });
-            return;
+        let type_info = match module.types.get(&import.name) {
+            Some(type_info) if type_info.publicity.is_importable() => type_info,
+            // If the type belongs to current package, but isn't importable,
+            // then we produce error message about usage of private type.
+            Some(_) if self.environment.current_package == module.package => {
+                self.problems.error(Error::UseOfPrivateModuleType {
+                    location: import.location,
+                    name: import.name.clone(),
+                    module_name: module.name.clone(),
+                });
+                return;
+            }
+            // Otherwise, the type either doesn't exist or is from another
+            // module, where we do not want to expose information, we produce
+            // error message about usage of unknown type.
+            Some(_) | None => {
+                // TODO: refine to a type specific error
+                self.problems.error(Error::UnknownModuleType {
+                    location: import.location,
+                    name: import.name.clone(),
+                    module_name: module.name.clone(),
+                    type_constructors: module.public_type_names(),
+                    value_with_same_name: module.get_importable_value(&import.name).is_some(),
+                });
+                return;
+            }
         };
 
         let type_info = type_info.clone().with_location(import.location);
@@ -163,8 +179,9 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         let used_name = import.as_name.as_ref().unwrap_or(&import.name);
 
         // Register the unqualified import if it is a value
-        let variant = match module.get_importable_value(import_name) {
-            Some(value) => {
+
+        let variant = match module.values.get(import_name) {
+            Some(value) if value.publicity.is_importable() => {
                 let implementations = value.variant.implementations();
                 // Check the target support of the imported value
                 if self.environment.target_support.is_enforced()
@@ -185,7 +202,20 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                 );
                 &value.variant
             }
-            None => {
+            // If the value belongs to current package, but isn't importable,
+            // then we produce error message about usage of private value.
+            Some(_) if self.environment.current_package == module.package => {
+                self.problems.error(Error::UseOfPrivateModuleValue {
+                    location,
+                    name: import_name.clone(),
+                    module_name: module.name.clone(),
+                });
+                return;
+            }
+            // Otherwise, the value either doesn't exist or is from another
+            // module, where we do not want to expose information, we produce
+            // error message about usage of unknown value.
+            Some(_) | None => {
                 self.problems.error(Error::UnknownModuleValue {
                     location,
                     name: import_name.clone(),
