@@ -1,0 +1,21 @@
+---
+source: language-server/src/tests/action.rs
+expression: "fn wobble(wibble) {\n  case wibble {\n    \"Hello, \" as hello <> name | \"Hey, \" as hello <> name -> name\n    _ -> \"unknown\"\n  }\n}"
+---
+----- BEFORE ACTION
+fn wobble(wibble) {
+  case wibble {
+    "Hello, " as hello <> name | "Hey, " as hello <> name -> name
+                 ↑                                               
+    _ -> "unknown"
+  }
+}
+
+
+----- AFTER ACTION
+fn wobble(wibble) {
+  case wibble {
+    "Hello, " <> name | "Hey, " <> name -> name
+    _ -> "unknown"
+  }
+}

@@ -64,11 +64,12 @@ use crate::ast::{
     BitArraySegment, BitArraySize, CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant,
     CustomType, Definition, Function, FunctionLiteralKind, HasLocation, Import, IntOperator,
     Module, ModuleConstant, Pattern, Publicity, RecordBeingUpdated, RecordConstructor,
-    RecordConstructorArg, RecordUpdateArg, Statement, TailPattern, TargetedDefinition, TodoKind,
-    TypeAlias, TypeAst, TypeAstConstructor, TypeAstConstructorName, TypeAstFn, TypeAstHole,
-    TypeAstTuple, TypeAstVar, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
-    UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern,
-    UntypedRecordUpdateArg, UntypedStatement, UntypedUseAssignment, Use, UseAssignment,
+    RecordConstructorArg, RecordUpdateArg, Statement, StringPrefixLeftSideAssignment, TailPattern,
+    TargetedDefinition, TodoKind, TypeAlias, TypeAst, TypeAstConstructor, TypeAstConstructorName,
+    TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport, UntypedArg, UntypedClause,
+    UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule,
+    UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, UntypedUseAssignment, Use,
+    UseAssignment,
 };
 use crate::build::Target;
 use crate::error::wrap;
@@ -1441,7 +1442,14 @@ where
                                         end: r_end,
                                     },
                                     left_side_string: value,
-                                    left_side_assignment: Some((name, name_span)),
+                                    left_side_assignment: Some(StringPrefixLeftSideAssignment {
+                                        name,
+                                        name_start_position: name_span.start,
+                                        location: SrcSpan {
+                                            start: end,
+                                            end: name_end,
+                                        },
+                                    }),
                                     right_side_assignment: right,
                                 }
                             }

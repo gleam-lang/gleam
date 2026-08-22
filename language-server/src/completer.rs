@@ -1606,11 +1606,16 @@ impl<'ast> Visit<'ast> for LocalCompletion<'_> {
         &mut self,
         _: &'ast SrcSpan,
         _: &'ast SrcSpan,
-        _: &'ast Option<(EcoString, SrcSpan)>,
+        string_prefix_left_side_assignment: &'ast Option<ast::StringPrefixLeftSideAssignment>,
         _: &'ast SrcSpan,
         _: &'ast EcoString,
         right_side_assignment: &'ast ast::AssignName,
     ) {
+        if let Some(ast::StringPrefixLeftSideAssignment { name, .. }) =
+            string_prefix_left_side_assignment
+        {
+            self.push_completion(name, type_::string());
+        }
         self.push_completion(right_side_assignment.name(), type_::string());
     }
 

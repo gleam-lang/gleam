@@ -14,8 +14,9 @@ use super::*;
 use crate::{
     analyse::{self, Inferred, name::check_name_case},
     ast::{
-        AssignName, BitArrayOption, BitArraySize, ImplicitCallArgOrigin, Layer, TailPattern,
-        TypedBitArraySize, UntypedPatternBitArraySegment,
+        AssignName, BitArrayOption, BitArraySize, ImplicitCallArgOrigin, Layer,
+        StringPrefixLeftSideAssignment, TailPattern, TypedBitArraySize,
+        UntypedPatternBitArraySegment,
     },
     parse::PatternPosition,
     reference::ReferenceKind,
@@ -740,13 +741,23 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 self.unify_types(type_, string(), location);
 
                 // The left hand side may assign a variable, which is the prefix of the string
-                if let Some((left, left_location)) = &left_side_assignment {
+                if let Some(StringPrefixLeftSideAssignment {
+                    name: left_name,
+                    name_start_position: left_name_start_position,
+                    location: left_location,
+                }) = &left_side_assignment
+                {
+                    let left_name_location =
+                        SrcSpan::new(*left_name_start_position, left_location.end);
                     self.insert_variable(
-                        left,
+                        left_name,
                         string(),
-                        *left_location,
+                        left_name_location,
                         VariableOrigin {
-                            syntax: VariableSyntax::AssignmentPattern(*left_location),
+                            syntax: VariableSyntax::AssignmentPattern {
+                                name: left_name.clone(),
+                                location: *left_location,
+                            },
                             declaration: self.position.to_declaration(),
                         },
                     );
@@ -808,7 +819,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     pattern.type_(),
                     location,
                     VariableOrigin {
-                        syntax: VariableSyntax::AssignmentPattern(full_location),
+                        syntax: VariableSyntax::AssignmentPattern {
+                            name: name.clone(),
+                            location: full_location,
+                        },
                         declaration: self.position.to_declaration(),
                     },
                 );

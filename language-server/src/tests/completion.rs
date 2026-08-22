@@ -2739,3 +2739,17 @@ pub type Wibble {
         Position::new(4, 9)
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/6142
+#[test]
+fn completions_for_left_side_of_string_prefix_pattern() {
+    let code = r#"
+pub fn go(wibble) {
+  case wibble {
+    "Hello, " as hello <> name -> h
+    _ -> "unknown"
+  }
+}
+"#;
+    assert_completion!(TestProject::for_source(code), Position::new(3, 35));
+}

@@ -502,9 +502,39 @@ pub enum Located<'a> {
         spread_location: SrcSpan,
         pattern: &'a TypedPattern,
     },
-    // A prefix alias or a suffix variable defined in a string prefix pattern:
-    // "prefix" as alias <> suffix
-    StringPrefixPatternVariable {
+    /// A prefix alias defined in a string prefix pattern:
+    ///
+    /// ```gleam
+    /// "prefix" as alias <> suffix
+    /// //       ^^^^^^^^
+    /// ```
+    StringPrefixPatternPrefixAlias {
+        /// Start position of the name:
+        /// ```gleam
+        /// "prefix" as alias <> suffix
+        /// //          ^
+        /// ```
+        name_start_position: u32,
+        /// Full location of the binding:
+        /// ```gleam
+        /// "prefix" as alias <> suffix
+        /// //      ^^^^^^^^^
+        /// ```
+        location: SrcSpan,
+        name: &'a EcoString,
+    },
+    /// A suffix variable defined in a string prefix pattern:
+    ///
+    /// ```gleam
+    /// "prefix" as alias <> suffix
+    /// //                   ^^^^^^
+    /// ```
+    StringPrefixPatternSuffix {
+        /// Location of the name:
+        /// ```gleam
+        /// "prefix" as alias <> suffix
+        /// //                   ^^^^^^
+        /// ```
         location: SrcSpan,
         name: &'a EcoString,
     },
@@ -636,7 +666,18 @@ impl<'a> Located<'a> {
         match self {
             Self::PatternSpread { .. } => None,
             Self::Pattern(pattern) => pattern.definition_location(),
-            Self::StringPrefixPatternVariable { location, .. } => Some(DefinitionLocation {
+            Self::StringPrefixPatternPrefixAlias {
+                name_start_position,
+                location,
+                ..
+            } => {
+                let name_location = SrcSpan::new(*name_start_position, location.end);
+                Some(DefinitionLocation {
+                    module: None,
+                    span: name_location,
+                })
+            }
+            Self::StringPrefixPatternSuffix { location, .. } => Some(DefinitionLocation {
                 module: None,
                 span: *location,
             }),
@@ -719,7 +760,8 @@ impl<'a> Located<'a> {
     pub(crate) fn type_(&self) -> Option<Arc<Type>> {
         match self {
             Located::Pattern(pattern) => Some(pattern.type_()),
-            Located::StringPrefixPatternVariable { .. } => Some(type_::string()),
+            Located::StringPrefixPatternPrefixAlias { .. }
+            | Located::StringPrefixPatternSuffix { .. } => Some(type_::string()),
             Located::Statement(statement) => Some(statement.type_()),
             Located::Expression { expression, .. } => Some(expression.type_()),
             Located::Arg(arg) => Some(arg.type_.clone()),

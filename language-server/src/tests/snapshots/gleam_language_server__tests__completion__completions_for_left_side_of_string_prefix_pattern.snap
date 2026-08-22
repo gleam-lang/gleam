@@ -1,0 +1,45 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "\npub fn go(wibble) {\n  case wibble {\n    \"Hello, \" as hello <> name -> h\n    _ -> \"unknown\"\n  }\n}\n"
+---
+
+pub fn go(wibble) {
+  case wibble {
+    "Hello, " as hello <> name -> h|
+    _ -> "unknown"
+  }
+}
+
+
+----- Completion content -----
+go
+  kind:   Function
+  detail: fn(String) -> String
+  sort:   03_go
+  desc:   app
+  edits:
+    [3:34-3:35]: "go"
+hello
+  kind:   Variable
+  detail: String
+  sort:   03_hello
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [3:34-3:35]: "hello"
+name
+  kind:   Variable
+  detail: String
+  sort:   03_name
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [3:34-3:35]: "name"
+wibble
+  kind:   Variable
+  detail: String
+  sort:   03_wibble
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [3:34-3:35]: "wibble"

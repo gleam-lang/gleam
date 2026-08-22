@@ -307,7 +307,8 @@ where
             let completions = match found {
                 Located::PatternSpread { .. } => None,
                 Located::Pattern(_pattern) => None,
-                Located::StringPrefixPatternVariable { .. } => None,
+                Located::StringPrefixPatternPrefixAlias { .. }
+                | Located::StringPrefixPatternSuffix { .. } => None,
 
                 // Do not show completions when typing inside a string.
                 Located::Expression {
@@ -885,7 +886,7 @@ where
                             .map(|len: u32| location.start + len)
                             .unwrap_or(location.end),
                     }),
-                    Some(VariableSyntax::AssignmentPattern(..)) | None => {
+                    Some(VariableSyntax::AssignmentPattern { .. }) | None => {
                         success_response(location)
                     }
                 },
@@ -998,7 +999,8 @@ where
                             VariableReferenceKind::LabelShorthand
                         }
                         Some(
-                            VariableSyntax::AssignmentPattern(..) | VariableSyntax::Variable { .. },
+                            VariableSyntax::AssignmentPattern { .. }
+                            | VariableSyntax::Variable { .. },
                         )
                         | None => VariableReferenceKind::Variable,
                     };
@@ -1107,7 +1109,7 @@ where
                 Some(VariableSyntax::Generated) => None,
                 Some(
                     VariableSyntax::LabelShorthand(_)
-                    | VariableSyntax::AssignmentPattern(..)
+                    | VariableSyntax::AssignmentPattern { .. }
                     | VariableSyntax::Variable { .. },
                 )
                 | None => {
@@ -1401,7 +1403,19 @@ Unused labelled fields:
                         range,
                     })
                 }
-                Located::StringPrefixPatternVariable { location, .. } => Some(
+                Located::StringPrefixPatternPrefixAlias {
+                    name_start_position,
+                    location,
+                    ..
+                } => {
+                    let name_location = SrcSpan::new(name_start_position, location.end);
+                    Some(hover_for_string_prefix_pattern_variable(
+                        name_location,
+                        &lines,
+                        module,
+                    ))
+                }
+                Located::StringPrefixPatternSuffix { location, .. } => Some(
                     hover_for_string_prefix_pattern_variable(location, &lines, module),
                 ),
                 Located::Expression {
