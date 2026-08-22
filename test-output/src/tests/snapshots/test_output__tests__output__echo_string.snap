@@ -1,5 +1,5 @@
 ---
-source: test-output/src/tests/echo.rs
+source: test-output/src/tests/output.rs
 expression: output
 ---
 --- main.gleam ----------------------
@@ -7,13 +7,17 @@ expression: output
 // SPDX-FileCopyrightText: 2024 The Gleam contributors
 
 pub fn main() {
-  echo []
-  echo [1, 2, 3]
+  echo "hello world"
+  echo "multiline
+string"
+  echo "string with\t\r\nescaped chars"
 }
 
 
 --- gleam run output ----------------
 [90msrc/main.gleam:5[39m
-[]
+"hello world"
 [90msrc/main.gleam:6[39m
-[1, 2, 3]
+"multiline\nstring"
+[90msrc/main.gleam:8[39m
+"string with\t\r\nescaped chars"

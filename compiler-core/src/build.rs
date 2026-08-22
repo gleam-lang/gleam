@@ -176,7 +176,18 @@ pub enum TargetCodegenConfiguration {
     },
     Erlang {
         app_file: Option<ErlangAppCodegenConfiguration>,
+        output: ErlangOutput,
     },
+}
+
+/// Which Erlang format is used when compiling Gleam code for the
+/// Erlang target.
+#[derive(Debug, Clone, PartialEq, Copy, serde::Deserialize, serde::Serialize)]
+pub enum ErlangOutput {
+    /// Erlang abstract forms, using the .absr extension.
+    Binary,
+    /// Erlang source code, using the .erl extension.
+    Textual,
 }
 
 impl TargetCodegenConfiguration {
@@ -323,7 +334,16 @@ impl Module {
         module_erlang_name(&self.name)
     }
 
+    /// This is where the compiled binary `.abstr` file can be found.
     pub fn compiled_erlang_path(&self) -> Utf8PathBuf {
+        let mut path = Utf8PathBuf::from(&module_erlang_name(&self.name));
+        assert!(path.set_extension("abstr"), "Couldn't set file extension");
+        path
+    }
+
+    /// If compiling to textual Erlang files, this is where the compiled `.erl`
+    /// file can be found.
+    pub fn compiled_textual_erlang_path(&self) -> Utf8PathBuf {
         let mut path = Utf8PathBuf::from(&module_erlang_name(&self.name));
         assert!(path.set_extension("erl"), "Couldn't set file extension");
         path

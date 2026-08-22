@@ -137,10 +137,11 @@ pub fn compile_test_project(
 
     let line_numbers = LineNumbers::new(src);
 
-    let mut echo_builder = ErlangSourceBuilder::new(None);
+    let mut echo_builder = ErlangSourceBuilder::default();
     echo_with_helpers(&mut echo_builder);
 
-    module(&built_module.ast, line_numbers, root)
+    let source_builder = ErlangSourceBuilder::default();
+    module(source_builder, &built_module.ast, &line_numbers, root)
         .replace(&echo_builder.into_output(), "\n% ...omitted echo code...")
 }
 

@@ -29,7 +29,7 @@ use std::{
 };
 
 use super::{
-    Codegen, Compile, ErlangAppCodegenConfiguration, Outcome,
+    Codegen, Compile, ErlangAppCodegenConfiguration, ErlangOutput, Outcome,
     elixir_libraries::ElixirLibraries,
     package_compiler::{CachedWarnings, CheckModuleConflicts, Compiled},
 };
@@ -57,6 +57,7 @@ pub struct Options {
     pub warnings_as_errors: bool,
     pub root_target_support: TargetSupport,
     pub no_print_progress: bool,
+    pub erlang_output: ErlangOutput,
 }
 
 #[derive(Debug)]
@@ -590,6 +591,7 @@ where
                     })
                     .collect();
                 super::TargetCodegenConfiguration::Erlang {
+                    output: self.options.erlang_output,
                     app_file: Some(ErlangAppCodegenConfiguration {
                         include_dev_deps: is_root && self.mode().includes_dev_dependencies(),
                         package_name_overrides,

@@ -6,7 +6,7 @@ use std::rc::Rc;
 use gleam_core::{
     Error, Result, Warning,
     analyse::TargetSupport,
-    build::{Codegen, Compile, Mode, Options},
+    build::{Codegen, Compile, ErlangOutput, Mode, Options},
     error::{FileIoAction, FileKind},
     paths::ProjectPaths,
     type_,
@@ -31,6 +31,7 @@ pub fn run(paths: &ProjectPaths) -> Result<()> {
             mode: Mode::Dev,
             target: None,
             no_print_progress: false,
+            erlang_output: ErlangOutput::Binary,
         },
         build::download_dependencies(paths, cli::Reporter::new())?,
         warnings.clone(),

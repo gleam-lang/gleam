@@ -75,6 +75,7 @@ where
             compile: build::Compile::All,
             root_target_support: TargetSupport::Enforced,
             no_print_progress: false,
+            erlang_output: build::ErlangOutput::Binary,
         };
         let mut project_compiler = ProjectCompiler::new(
             config,

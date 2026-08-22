@@ -32,6 +32,25 @@ pub(crate) struct NativeFileCopier<'a, IO> {
     to_compile: Vec<Utf8PathBuf>,
     elixir_files_copied: bool,
     check_module_conflicts: CheckModuleConflicts,
+
+    /// Gleam dependencies come with precompiled Erlang files as a nicety for
+    /// other build tools if they don’t have Gleam installed.
+    ///
+    /// When Gleam used to compile to textual Erlang we would simply overwrite
+    /// those and compile the up-to-date `.erl` files. So we could simply copy
+    /// over all `.erl` files and call it a day.
+    ///
+    /// However, now that Gleam compiler to `.abstr` files we need to explicitly
+    /// avoid to copy those precompiled `.erl` files, or we would be wasting a
+    /// lot of time compiling those and then compiling the up-to-date `.abstr`
+    /// files!
+    ///
+    /// If we're copying some `.erl` files those must be the ffi files included
+    /// in the project and nothing else.
+    ///
+    /// So this contains a set with the names of the precompiled Erlang files
+    /// that we have to ignore when copying Erlang files over.
+    precompiled_erlang_file_names: HashSet<EcoString>,
 }
 
 impl<'a, IO> NativeFileCopier<'a, IO>
@@ -43,6 +62,7 @@ where
         root: &'a Utf8Path,
         out: &'a Utf8Path,
         check_module_conflicts: CheckModuleConflicts,
+        precompiled_erlang_file_names: HashSet<EcoString>,
     ) -> Self {
         Self {
             io,
@@ -53,6 +73,7 @@ where
             seen_modules: HashMap::new(),
             elixir_files_copied: false,
             check_module_conflicts,
+            precompiled_erlang_file_names,
         }
     }
 
@@ -115,6 +136,14 @@ where
 
         // Skip unknown file formats that are not supported native files
         if !crate::io::is_native_file_extension(extension) {
+            return Ok(());
+        }
+
+        // Skip precompiled Erlang files
+        if self
+            .precompiled_erlang_file_names
+            .contains(relative_path.as_str())
+        {
             return Ok(());
         }
 

@@ -2,24 +2,17 @@
 source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/imported_record_constructors"
 ---
+//// /out/lib/the_package/_gleam_artefacts/one@one.abstr
+<595 byte binary>
+
 //// /out/lib/the_package/_gleam_artefacts/one@one.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@one.cache_meta
 <39 byte binary>
 
-//// /out/lib/the_package/_gleam_artefacts/one@one.erl
--module(one@one).
--compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export_type([a/0, b/0, user/0]).
-
--type a() :: a.
-
--type b() :: {b, a(), a()}.
-
--type user() :: {user, binary(), integer()}.
-
-
+//// /out/lib/the_package/_gleam_artefacts/one@two.abstr
+<595 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache
 <.cache binary>
@@ -27,126 +20,14 @@ expression: "./cases/imported_record_constructors"
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache_meta
 <39 byte binary>
 
-//// /out/lib/the_package/_gleam_artefacts/one@two.erl
--module(one@two).
--compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export_type([a/0, b/0, user/0]).
-
--type a() :: a.
-
--type b() :: {b, a(), a()}.
-
--type user() :: {user, binary(), integer()}.
-
-
+//// /out/lib/the_package/_gleam_artefacts/two.abstr
+<7530 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
 <254 byte binary>
-
-//// /out/lib/the_package/_gleam_artefacts/two.erl
--module(two).
--compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export([qualified_fn_a/0, qualified_fn_b/0, qualified_aliased_fn_a/0, qualified_aliased_fn_b/0, unqualified_fn_a/0, unqualified_fn_b/0, aliased_fn_a/0, aliased_fn_b/0, accessors/1, destructure_qualified/1, destructure_qualified_aliased/1, destructure_unqualified/1, destructure_aliased/1, update_qualified/1, update_qualified_aliased/1, update_unqualified/1, update_aliased/1]).
-
--file("src/two.gleam", 10).
--spec qualified_fn_a() -> one@one:a().
-qualified_fn_a() ->
-    a.
-
--file("src/two.gleam", 16).
--spec qualified_fn_b() -> one@one:b().
-qualified_fn_b() ->
-    {b, a, a}.
-
--file("src/two.gleam", 22).
--spec qualified_aliased_fn_a() -> one@two:a().
-qualified_aliased_fn_a() ->
-    a.
-
--file("src/two.gleam", 28).
--spec qualified_aliased_fn_b() -> one@two:b().
-qualified_aliased_fn_b() ->
-    {b, a, a}.
-
--file("src/two.gleam", 35).
--spec unqualified_fn_a() -> one@one:a().
-unqualified_fn_a() ->
-    a.
-
--file("src/two.gleam", 41).
--spec unqualified_fn_b() -> one@one:b().
-unqualified_fn_b() ->
-    {b, a, a}.
-
--file("src/two.gleam", 49).
--spec aliased_fn_a() -> one@one:a().
-aliased_fn_a() ->
-    a.
-
--file("src/two.gleam", 55).
--spec aliased_fn_b() -> one@one:b().
-aliased_fn_b() ->
-    {b, a, a}.
-
--file("src/two.gleam", 61).
--spec accessors(one@one:user()) -> {binary(), integer()}.
--doc(~" For these statements we use the accessors for the record from the other
- module").
-accessors(User) ->
-    Name = erlang:element(2, User),
-    Score = erlang:element(3, User),
-    {Name, Score}.
-
--file("src/two.gleam", 68).
--spec destructure_qualified(one@one:user()) -> {binary(), integer()}.
--doc(~" For these statements we use destructure the record").
-destructure_qualified(User) ->
-    {user, Name, Score} = User,
-    {Name, Score}.
-
--file("src/two.gleam", 73).
--spec destructure_qualified_aliased(one@two:user()) -> {binary(), integer()}.
-destructure_qualified_aliased(User) ->
-    {user, Name, Score} = User,
-    {Name, Score}.
-
--file("src/two.gleam", 78).
--spec destructure_unqualified(one@one:user()) -> {binary(), integer()}.
-destructure_unqualified(User) ->
-    {user, Name, Score} = User,
-    {Name, Score}.
-
--file("src/two.gleam", 83).
--spec destructure_aliased(one@one:user()) -> {binary(), integer()}.
-destructure_aliased(User) ->
-    {user, Name, Score} = User,
-    {Name, Score}.
-
--file("src/two.gleam", 89).
--spec update_qualified(one@one:user()) -> one@one:user().
--doc(~" For these statements we use update the record").
-update_qualified(User) ->
-    {user, ~"wibble", erlang:element(3, User)}.
-
--file("src/two.gleam", 93).
--spec update_qualified_aliased(one@two:user()) -> one@two:user().
-update_qualified_aliased(User) ->
-    {user, ~"wibble", erlang:element(3, User)}.
-
--file("src/two.gleam", 97).
--spec update_unqualified(one@one:user()) -> one@one:user().
-update_unqualified(User) ->
-    {user, ~"wibble", erlang:element(3, User)}.
-
--file("src/two.gleam", 101).
--spec update_aliased(one@one:user()) -> one@one:user().
-update_aliased(User) ->
-    {user, ~"wibble", erlang:element(3, User)}.
-
-
 
 //// /out/lib/the_package/ebin/importy.app
 {application, importy, [

@@ -10,7 +10,8 @@ use ecow::EcoString;
 use gleam_core::{
     Error, Result,
     build::{
-        Mode, NullTelemetry, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration,
+        ErlangOutput, Mode, NullTelemetry, PackageCompiler, StaleTracker, Target,
+        TargetCodegenConfiguration,
     },
     error::{FileIoAction, FileKind},
     metadata,
@@ -37,7 +38,10 @@ pub fn command(options: CompilePackage) -> Result<()> {
     }
 
     let target = match options.target {
-        Target::Erlang => TargetCodegenConfiguration::Erlang { app_file: None },
+        Target::Erlang => TargetCodegenConfiguration::Erlang {
+            app_file: None,
+            output: ErlangOutput::Binary,
+        },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
             emit_typescript_definitions: false,
             emit_source_maps: false,

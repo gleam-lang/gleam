@@ -7,7 +7,7 @@ use crate::{assert_erl, erlang::echo::echo_with_helpers};
 
 #[test]
 pub fn echo_generated_code() {
-    let mut builder = ErlangSourceBuilder::new(None);
+    let mut builder = ErlangSourceBuilder::default();
     echo_with_helpers(&mut builder);
     let echo_code = builder.into_output();
     insta::assert_snapshot!("echo generated code", echo_code);

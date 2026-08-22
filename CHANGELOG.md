@@ -9,6 +9,15 @@
 
 ### Compiler
 
+- When compiling to Erlang, Gleam now compiles to the Erlang Abstract Format
+  instead of textual Erlang.
+  This format supports mapping every generated Erlang line back to its
+  corresponding line in the original Gleam source file.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- When compiling to Erlang the Gleam compiler is roughly 8% faster.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler now emits a warning when trying to use the pattern of a spread
   and a variable when pattern matching inside a 'case' clause.
   This syntax may be removed in a future (major) release.

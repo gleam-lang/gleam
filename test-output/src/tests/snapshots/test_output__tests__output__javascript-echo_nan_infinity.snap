@@ -1,5 +1,5 @@
 ---
-source: test-output/src/tests/echo.rs
+source: test-output/src/tests/output.rs
 expression: output
 ---
 --- main.gleam ----------------------
@@ -7,16 +7,14 @@ expression: output
 // SPDX-FileCopyrightText: 2024 The Gleam contributors
 
 pub fn main() {
-  echo <<>>
-  echo <<1, 2, 3>>
-  echo <<1, 2, 3:2>>
+  let infinity = 1.0e300 *. 1.0e300
+  echo infinity
+  echo infinity /. infinity
 }
 
 
 --- gleam run output ----------------
-[90msrc/main.gleam:5[39m
-<<>>
 [90msrc/main.gleam:6[39m
-<<1, 2, 3>>
+//js(Infinity)
 [90msrc/main.gleam:7[39m
-<<1, 2, 3:size(2)>>
+//js(NaN)

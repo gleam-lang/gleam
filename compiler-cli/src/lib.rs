@@ -95,7 +95,7 @@ use clap::{
 };
 use gleam_core::{
     analyse::TargetSupport,
-    build::{Codegen, Compile, Mode, NullTelemetry, Options, Runtime, Target},
+    build::{Codegen, Compile, ErlangOutput, Mode, NullTelemetry, Options, Runtime, Target},
     hex::RetirementReason,
     paths::ProjectPaths,
     version::COMPILER_VERSION,
@@ -955,6 +955,7 @@ fn command_check(paths: &ProjectPaths, target: Option<Target>) -> Result<()> {
             mode: Mode::Dev,
             target,
             no_print_progress: false,
+            erlang_output: ErlangOutput::Binary,
         },
         build::download_dependencies(paths, cli::Reporter::new())?,
     )?;
@@ -982,6 +983,7 @@ fn command_build(
             mode: Mode::Dev,
             target,
             no_print_progress,
+            erlang_output: ErlangOutput::Binary,
         },
         manifest,
     )?;

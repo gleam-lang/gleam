@@ -50,7 +50,7 @@ pub struct Implementations {
     pub gleam: bool,
     pub can_run_on_erlang: bool,
     pub can_run_on_javascript: bool,
-    /// Whether the function has an implementation that uses external erlang
+    /// Whether the function has an implementation that uses external Erlang
     /// code.
     pub uses_erlang_externals: bool,
     /// Whether the function has an implementation that uses external javascript
@@ -209,7 +209,7 @@ impl Implementations {
             || (self.can_run_on_javascript && (*gleam || *other_can_run_on_javascript));
 
         // If a function uses a function that relies on external code (be it
-        // javascript or erlang) then it's considered as using external code as
+        // JavaScript or Erlang) then it's considered as using external code as
         // well.
         //
         // For example:
@@ -221,10 +221,10 @@ impl Implementations {
         //
         // pub fn main() { erlang_only_with_pure_gleam_default() }
         // ```
-        // Both functions will end up using external erlang code and have the
+        // Both functions will end up using external Erlang code and have the
         // following implementations:
         // `Implementations { gleam: true, uses_erlang_externals: true, uses_javascript_externals: false}`.
-        // They have a pure gleam implementation and an erlang specific external
+        // They have a pure gleam implementation and an Erlang specific external
         // implementation.
         self.uses_erlang_externals = self.uses_erlang_externals || *other_uses_erlang_externals;
         self.uses_javascript_externals =

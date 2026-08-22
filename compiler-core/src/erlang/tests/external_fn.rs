@@ -39,7 +39,7 @@ pub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#
 #[test]
 fn public_local_function_calls() {
     // Public external function calls are inlined but the wrapper function is
-    // also printed in the erlang output and exported
+    // also printed in the Erlang output and exported
     assert_erl!(
         r#"
 @external(erlang, "m", "f")

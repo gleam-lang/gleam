@@ -124,3 +124,16 @@ pub fn division_3_test() {
 pub fn division_4_test() {
   assert 3 / 0 == 0
 }
+
+pub fn negative_int_test() {
+  let one = -1
+  let other = 1
+  assert one != other
+  assert one * -1 == other
+}
+
+pub fn negative_zero_same_as_positive_zero_test() {
+  let negative = -0
+  let positive = 0
+  assert negative == positive
+}

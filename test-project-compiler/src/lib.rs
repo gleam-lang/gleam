@@ -7,7 +7,9 @@ mod generated_tests;
 use camino::Utf8PathBuf;
 use gleam_core::{
     analyse::TargetSupport,
-    build::{Codegen, Compile, Mode, NullTelemetry, Options, ProjectCompiler, Telemetry},
+    build::{
+        Codegen, Compile, ErlangOutput, Mode, NullTelemetry, Options, ProjectCompiler, Telemetry,
+    },
     config::PackageConfig,
     io::{FileSystemReader, FileSystemWriter},
     paths::ProjectPaths,
@@ -33,6 +35,7 @@ pub fn prepare(path: &str, mode: Mode) -> String {
         warnings_as_errors: false,
         root_target_support: TargetSupport::Enforced,
         no_print_progress: true,
+        erlang_output: ErlangOutput::Binary,
     };
 
     let compiler = ProjectCompiler::new(

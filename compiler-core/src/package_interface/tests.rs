@@ -126,8 +126,8 @@ pub fn compile_package(
     .infer_module(ast, LineNumbers::new(src), "".into())
     .expect("should successfully infer");
 
-    // TODO: all the bits above are basically copy pasted from the javascript
-    // and erlang test helpers. A refactor might be due here.
+    // TODO: all the bits above are basically copy pasted from the JavaScript
+    // and Erlang test helpers. A refactor might be due here.
     let mut module = Module {
         name: module_name,
         code: src.into(),

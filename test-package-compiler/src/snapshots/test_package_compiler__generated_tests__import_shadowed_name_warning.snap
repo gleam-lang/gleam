@@ -2,42 +2,23 @@
 source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/import_shadowed_name_warning"
 ---
+//// /out/lib/the_package/_gleam_artefacts/one.abstr
+<353 byte binary>
+
 //// /out/lib/the_package/_gleam_artefacts/one.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
 <31 byte binary>
 
-//// /out/lib/the_package/_gleam_artefacts/one.erl
--module(one).
--compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export_type([port_/0]).
-
--type port_() :: any().
-
-
+//// /out/lib/the_package/_gleam_artefacts/two.abstr
+<759 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
 <70 byte binary>
-
-//// /out/lib/the_package/_gleam_artefacts/two.erl
--module(two).
--compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export([use_type/1]).
--export_type([shadowing/0]).
--moduledoc(~" https://github.com/gleam-lang/otp/pull/22").
-
--type shadowing() :: port.
-
--file("src/two.gleam", 17).
--spec use_type(one:port_()) -> nil.
-use_type(Port) ->
-    wibble:wobble(Port).
-
-
 
 //// /out/lib/the_package/ebin/importy.app
 {application, importy, [

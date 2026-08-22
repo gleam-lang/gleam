@@ -2,49 +2,23 @@
 source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/variable_or_module"
 ---
+//// /out/lib/the_package/_gleam_artefacts/main.abstr
+<1024 byte binary>
+
 //// /out/lib/the_package/_gleam_artefacts/main.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/main.cache_meta
 <68 byte binary>
 
-//// /out/lib/the_package/_gleam_artefacts/main.erl
--module(main).
--compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export([module_function/1, record_field/1]).
-
--file("src/main.gleam", 7).
--spec module_function(power:power()) -> integer().
-module_function(Power) ->
-    power:to_int(Power).
-
--file("src/main.gleam", 13).
--spec record_field(power:power()) -> integer().
-record_field(Power) ->
-    erlang:element(2, Power).
-
-
+//// /out/lib/the_package/_gleam_artefacts/power.abstr
+<738 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/power.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/power.cache_meta
 <36 byte binary>
-
-//// /out/lib/the_package/_gleam_artefacts/power.erl
--module(power).
--compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export([to_int/1]).
--export_type([power/0]).
-
--type power() :: {power, integer()}.
-
--file("src/power.gleam", 9).
--spec to_int(power()) -> integer().
-to_int(P) ->
-    erlang:element(2, P) * 9000.
-
-
 
 //// /out/lib/the_package/ebin/importy.app
 {application, importy, [

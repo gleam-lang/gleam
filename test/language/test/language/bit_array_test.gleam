@@ -171,7 +171,7 @@ pub fn pattern_match_utf32_codepoint_little_test() {
 }
 
 pub fn unicode_overflow_test() {
-  // In erlang, literally creating binaries can cause entries to overflow.
+  // In Erlang, literally creating binaries can cause entries to overflow.
   // For example `<<"🌵">> == <<"5">>` evaluates to true.
   // This checks that we are not doing that.
   // See: https://github.com/gleam-lang/gleam/issues/457

@@ -7,7 +7,10 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use gleam_core::{
     analyse::TargetSupport,
-    build::{Built, Codegen, Compile, Mode, NullTelemetry, Options, Runtime, Target, Telemetry},
+    build::{
+        Built, Codegen, Compile, ErlangOutput, Mode, NullTelemetry, Options, Runtime, Target,
+        Telemetry,
+    },
     config::{DenoFlag, PackageConfig},
     error::Error,
     io::{Command, CommandExecutor, Stdio},
@@ -35,7 +38,7 @@ pub fn command(
     which: Which,
     no_print_progress: bool,
 ) -> Result<(), Error> {
-    // Don't exit on ctrl+c as it is used by child erlang shell
+    // Don't exit on ctrl+c as it is used by child Erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
     let command = setup(
         paths,
@@ -124,6 +127,7 @@ pub fn setup(
             PackageKind::Dependency => TargetSupport::NotEnforced,
         },
         no_print_progress,
+        erlang_output: ErlangOutput::Binary,
     };
 
     let built = crate::build::main(paths, options, manifest)?;
