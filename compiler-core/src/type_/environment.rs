@@ -962,13 +962,9 @@ impl Environment<'_> {
                 }
 
                 match &imported {
-                    // Don't suggest importing modules if they are already imported
-                    _ if self
-                        .imported_modules
-                        .contains_key(importable.split('/').next_back().unwrap_or(importable)) =>
-                    {
-                        None
-                    }
+                    // This lookup uses the full module path, rather than its local
+                    // name, so it also detects modules imported with an alias.
+                    _ if self.names.is_module_imported(importable) => None,
                     Imported::Type(name) if module_info.get_public_type(name).is_some() => {
                         Some(ModuleSuggestion::Importable(importable.clone()))
                     }
