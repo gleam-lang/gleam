@@ -14,4 +14,4 @@ error: Syntax error
 
 Hint: Gleam does not have a bitwise '&' operator.
 Hint: Use `int.bitwise_and` from `gleam/int`, or bit array syntax `<<>>`.
-See: https://hexdocs.pm/gleam_stdlib/gleam/int.html
+See: https://gleam-stdlib.hexdocs.pm/gleam/int.html#bitwise_and
