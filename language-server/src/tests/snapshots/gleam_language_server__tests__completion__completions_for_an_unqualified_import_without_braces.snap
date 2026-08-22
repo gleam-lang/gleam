@@ -1,0 +1,35 @@
+---
+source: language-server/src/tests/completion.rs
+expression: import dep.
+---
+import dep.|
+
+
+----- Completion content -----
+Wibble
+  kind:   Class
+  detail: Type
+  sort:   4_Wibble
+  edits:
+    [0:11-0:11]: "{type Wibble}"
+Wibble
+  kind:   EnumMember
+  detail: Wibble
+  sort:   4_Wibble
+  desc:   dep
+  edits:
+    [0:11-0:11]: "{Wibble}"
+wibble
+  kind:   Constant
+  detail: String
+  sort:   4_wibble
+  desc:   dep
+  edits:
+    [0:11-0:11]: "{wibble}"
+wobble
+  kind:   Function
+  detail: fn() -> a
+  sort:   4_wobble
+  desc:   dep
+  edits:
+    [0:11-0:11]: "{wobble}"

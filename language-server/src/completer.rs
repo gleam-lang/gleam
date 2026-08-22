@@ -142,6 +142,66 @@ enum TypeCompletionContext {
     QualifiedType,
 }
 
+/// The form in which a value completion is needed in context.
+#[derive(Debug)]
+enum ValueCompletionContext {
+    /// The valye completion is for an unqualified import that doesn't have an
+    /// import list yet. So adding the value will also require adding braces:
+    ///
+    /// ```gleam
+    /// import wibble.Wib|
+    /// //           ^^^^^ We're typing this...
+    /// import wibble.{Wibble}
+    /// //           ^^^^^^^^^ ...so this will be the completion
+    /// ```
+    ///
+    UnqualifiedImport,
+
+    /// The value completion is for an unqualified import within already
+    /// existing braces.
+    ///
+    /// ```gleam
+    /// import wibble.{AlreadyImported, Wibb|}
+    /// //                              ^^^^^ We're typing this...
+    /// import wibble.{AlreadyImported, Wibble}
+    /// //                              ^^^^^^ ...so this will be the completion
+    /// ```
+    ///
+    UnqualifiedImportWithinBraces,
+
+    /// The value completion is for an unqualified value (for example something
+    /// coming from the prelude, or a value that was already imported in an
+    /// unqualified way).
+    ///
+    /// ```gleam
+    /// import wobble.{Wobble}
+    ///
+    /// pub fn new_wobble() {
+    ///   Wob|
+    /// //^^^^ We're typing this...
+    ///   Wobble
+    /// //^^^^^^ ... so this will be the completion
+    /// }
+    /// ```
+    ///
+    UnqualifiedValue,
+
+    /// The value completion is for a qualified value.
+    ///
+    /// ```gleam
+    /// import wobble
+    ///
+    /// pub fn new_wobble() {
+    ///   wobble.W|
+    /// //^^^^^^^^ We're typing this...
+    ///   wobble.Wobble
+    /// //^^^^^^^^^^^^^ ...so this will be the completion
+    /// }
+    /// ```
+    ///
+    QualifiedValue,
+}
+
 /// Represents the surroundings of the cursor when trying to figure out a
 /// completion.
 ///
@@ -561,6 +621,11 @@ impl<'a, IO> Completer<'a, IO> {
                 name,
                 value,
                 &cursor_surroundings,
+                if within_braces {
+                    ValueCompletionContext::UnqualifiedImportWithinBraces
+                } else {
+                    ValueCompletionContext::UnqualifiedImport
+                },
                 CompletionKind::ImportedModule,
             ));
         }
@@ -890,6 +955,7 @@ impl<'a, IO> Completer<'a, IO> {
                     name,
                     value,
                     &cursor_surroundings,
+                    ValueCompletionContext::UnqualifiedValue,
                     CompletionKind::LocallyDefined,
                 ));
             }
@@ -992,6 +1058,7 @@ impl<'a, IO> Completer<'a, IO> {
                         name,
                         value,
                         &cursor_surroundings,
+                        ValueCompletionContext::QualifiedValue,
                         CompletionKind::ImportedModule,
                     ));
                 }
@@ -1012,6 +1079,7 @@ impl<'a, IO> Completer<'a, IO> {
                             name,
                             value,
                             &cursor_surroundings,
+                            ValueCompletionContext::UnqualifiedValue,
                             CompletionKind::ImportedModule,
                         ));
                     }
@@ -1066,6 +1134,7 @@ impl<'a, IO> Completer<'a, IO> {
                     name,
                     value,
                     &cursor_surroundings,
+                    ValueCompletionContext::QualifiedValue,
                     CompletionKind::ImportableModule,
                 );
 
@@ -1280,6 +1349,7 @@ impl<'a, IO> Completer<'a, IO> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn value_completion(
         &self,
         module_qualifier: Option<&str>,
@@ -1287,6 +1357,7 @@ impl<'a, IO> Completer<'a, IO> {
         name: &str,
         value: &type_::ValueConstructor,
         cursor_surrounding: &CursorSurroundings,
+        value_completion_context: ValueCompletionContext,
         priority: CompletionKind,
     ) -> CompletionItem {
         let type_match = match_type(&self.expected_type, &value.type_);
@@ -1305,6 +1376,13 @@ impl<'a, IO> Completer<'a, IO> {
             ValueConstructorVariant::Record { .. } => CompletionItemKind::Constructor,
         });
 
+        let completion_text = match value_completion_context {
+            ValueCompletionContext::UnqualifiedImport => format!("{{{label}}}"),
+            ValueCompletionContext::UnqualifiedImportWithinBraces
+            | ValueCompletionContext::QualifiedValue
+            | ValueCompletionContext::UnqualifiedValue => label.clone(),
+        };
+
         let documentation = value.get_documentation().map(|documentation| {
             Documentation::MarkupContent(MarkupContent {
                 kind: MarkupKind::Markdown,
@@ -1322,7 +1400,7 @@ impl<'a, IO> Completer<'a, IO> {
             }),
             documentation,
             sort_text: Some(sort_text(priority, &label, type_match)),
-            text_edit: cursor_surrounding.to_text_edit(label),
+            text_edit: cursor_surrounding.to_text_edit(completion_text),
             ..CompletionItem::default()
         }
     }
