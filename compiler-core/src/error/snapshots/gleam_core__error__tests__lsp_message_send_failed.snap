@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/error/tests.rs
+expression: error
+---
+error: Failed to send LSP message
+
+sending on a disconnected channel

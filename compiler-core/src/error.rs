@@ -197,6 +197,12 @@ pub enum Error {
     #[error("{error}")]
     GitInitialization { error: String },
 
+    #[error("Failed to send LSP message: {error}")]
+    LspMessageSendFailed { error: String },
+
+    #[error("Failed to receive LSP message: {error}")]
+    LspMessageReceiveFailed { error: String },
+
     #[error("io operation failed")]
     StandardIo {
         action: StandardIoAction,
@@ -1956,6 +1962,22 @@ with `gleam hex authenticate`."
                     location: None,
                 }]
             }
+
+            Error::LspMessageSendFailed { error } => vec![Diagnostic {
+                title: "Failed to send LSP message".into(),
+                text: error.clone(),
+                hint: None,
+                level: Level::Error,
+                location: None,
+            }],
+
+            Error::LspMessageReceiveFailed { error } => vec![Diagnostic {
+                title: "Failed to receive LSP message".into(),
+                text: error.clone(),
+                hint: None,
+                level: Level::Error,
+                location: None,
+            }],
 
             Error::Type {
                 skipped_modules: _,
