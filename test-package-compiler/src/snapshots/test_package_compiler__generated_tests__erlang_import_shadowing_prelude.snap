@@ -3,7 +3,7 @@ source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/erlang_import_shadowing_prelude"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.abstr
-<292 byte binary>
+<349 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache
 <.cache binary>

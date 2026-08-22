@@ -3,7 +3,7 @@ source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/erlang_app_generation"
 ---
 //// /out/lib/the_package/_gleam_artefacts/main.abstr
-<229 byte binary>
+<288 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/main.cache
 <.cache binary>

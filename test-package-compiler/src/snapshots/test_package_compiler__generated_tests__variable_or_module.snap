@@ -3,7 +3,7 @@ source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/variable_or_module"
 ---
 //// /out/lib/the_package/_gleam_artefacts/main.abstr
-<1083 byte binary>
+<1024 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/main.cache
 <.cache binary>
