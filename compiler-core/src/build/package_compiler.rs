@@ -784,29 +784,37 @@ fn analyse(
 
 #[derive(Debug)]
 pub(crate) enum Input {
-    New(Box<UncompiledModule>),
-    Cached(CachedModule),
+    New { module: Box<UncompiledModule> },
+    Cached { module: CachedModule },
 }
 
 impl Input {
     pub fn name(&self) -> &EcoString {
         match self {
-            Input::New(m) => &m.name,
-            Input::Cached(m) => &m.name,
+            Input::New { module } => &module.name,
+            Input::Cached { module } => &module.name,
         }
     }
 
     pub fn source_path(&self) -> &Utf8Path {
         match self {
-            Input::New(m) => &m.path,
-            Input::Cached(m) => &m.source_path,
+            Input::New { module } => &module.path,
+            Input::Cached { module } => &module.source_path,
         }
     }
 
     pub fn dependencies(&self) -> Vec<EcoString> {
         match self {
-            Input::New(m) => m.dependencies.iter().map(|(n, _)| n.clone()).collect(),
-            Input::Cached(m) => m.dependencies.iter().map(|(n, _)| n.clone()).collect(),
+            Input::New { module } => module
+                .dependencies
+                .iter()
+                .map(|(name, _)| name.clone())
+                .collect(),
+            Input::Cached { module } => module
+                .dependencies
+                .iter()
+                .map(|(name, _)| name.clone())
+                .collect(),
         }
     }
 
@@ -816,7 +824,7 @@ impl Input {
     #[cfg(test)]
     #[must_use]
     pub(crate) fn is_new(&self) -> bool {
-        matches!(self, Self::New(..))
+        matches!(self, Self::New { .. })
     }
 
     /// Returns `true` if the input is [`Cached`].
@@ -825,7 +833,7 @@ impl Input {
     #[cfg(test)]
     #[must_use]
     pub(crate) fn is_cached(&self) -> bool {
-        matches!(self, Self::Cached(..))
+        matches!(self, Self::Cached { .. })
     }
 }
 
