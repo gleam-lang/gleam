@@ -5,10 +5,10 @@
 use crate::ast::{self};
 use crate::bit_array::UnsupportedOption;
 use crate::build::{Origin, Outcome, Runtime, Target};
-use crate::dependency::{PackageFetcher, ResolutionError};
+use crate::dependency::{PackageFetcher, ResolutionError, ResolutionFailure};
+use crate::derivation_tree::DerivationTreePrinter;
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
 
-use crate::derivation_tree::DerivationTreePrinter;
 use crate::parse::error::ParseErrorDetails;
 use crate::strings::{to_snake_case, to_upper_camel_case};
 use crate::type_::collapse_links;
@@ -319,8 +319,7 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Could not find versions that satisfy dependency requirements")]
     DependencyResolutionNoSolution {
         root_package_name: EcoString,
-        derivation_tree:
-            Box<NeverEqual<pubgrub::DerivationTree<String, pubgrub::Ranges<Version>, String>>>,
+        derivation_tree: Box<NeverEqual<ResolutionFailure>>,
     },
 
     #[error("Dependency resolution failed: {0}")]
@@ -590,7 +589,7 @@ impl Error {
         match error {
             ResolutionError::NoSolution(derivation_tree) => Self::DependencyResolutionNoSolution {
                 root_package_name,
-                derivation_tree: Box::new(NeverEqual(derivation_tree)),
+                derivation_tree: Box::new(NeverEqual(ResolutionFailure(derivation_tree))),
             },
 
             ResolutionError::ErrorRetrievingDependencies {

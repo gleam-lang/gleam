@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/dependency.rs
+expression: message
+---
+error: Dependency resolution failed
+
+There's no compatible version of `gleam_stdlib`:
+  - You require package_with_optional >= 0.1.0 and < 1.0.0
+    - package_with_optional requires gleam_stdlib >= 0.1.0 and < 0.3.0
+  - You require gleam_stdlib >= 0.3.0 and < 1.0.0

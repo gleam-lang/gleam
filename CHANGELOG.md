@@ -242,6 +242,11 @@
   declaration and the whole module failed to parse.
   ([John Downey](https://github.com/jtdowney))
 
+- Fixed a bug where a package's optional dependency requirements could be
+  ignored, or could pull a package into the dependency tree that nothing
+  actually required.
+  ([John Downey](https://github.com/jtdowney))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when

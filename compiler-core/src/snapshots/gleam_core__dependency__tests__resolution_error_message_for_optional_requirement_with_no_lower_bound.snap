@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/dependency.rs
+expression: message
+---
+error: Dependency resolution failed
+
+There's no compatible version of `wobble`:
+  - You require wibble >= 1.0.0 and < 2.0.0
+    - wibble requires wobble < 3.0.0
+  - You require wobble >= 3.0.0
