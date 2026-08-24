@@ -891,7 +891,6 @@ fn proto_to_release(
 ) -> Result<Release<()>, ApiError> {
     let dependencies = release
         .dependencies
-        .clone()
         .into_iter()
         .map(proto_to_dep)
         .collect::<Result<HashMap<_, _>, _>>()?;
