@@ -249,11 +249,11 @@ fn remove_docs_response_rate_limited() {
 
 #[test]
 fn remove_docs_response_invalid_key() {
-    let resp_body = json!({
+    let response_body = json!({
         "message": "invalid API key",
         "status": 401,
     });
-    let response = make_json_response(401, resp_body);
+    let response = make_json_response(401, response_body);
     let result = crate::api_remove_docs_response(response).unwrap_err();
 
     match result {
@@ -264,11 +264,11 @@ fn remove_docs_response_invalid_key() {
 
 #[test]
 fn remove_docs_response_forbidden() {
-    let resp_body = json!({
+    let response_body = json!({
         "message": "account is not authorized for this action",
         "status": 403,
     });
-    let response = make_json_response(403, resp_body);
+    let response = make_json_response(403, response_body);
     let result = crate::api_remove_docs_response(response).unwrap_err();
 
     match result {
@@ -398,11 +398,11 @@ fn publish_docs_response_rate_limit() {
 
 #[test]
 fn publish_docs_response_invalid_api_key() {
-    let resp_body = json!({
+    let response_body = json!({
         "message": "invalid API key",
         "status": 401,
     });
-    let response = make_json_response(401, resp_body);
+    let response = make_json_response(401, response_body);
     let result = crate::api_publish_docs_response(response);
 
     match result {
@@ -413,10 +413,10 @@ fn publish_docs_response_invalid_api_key() {
 
 #[test]
 fn publish_docs_response_incorrect_totp_key() {
-    let resp_body = json!({
+    let response_body = json!({
         "status": 401,
     });
-    let mut response = make_json_response(401, resp_body);
+    let mut response = make_json_response(401, response_body);
     response.headers_mut().insert(
         "www-authenticate",
         "Bearer realm=\"hex\", error=\"invalid_totp\""
@@ -433,11 +433,11 @@ fn publish_docs_response_incorrect_totp_key() {
 
 #[test]
 fn publish_docs_response_forbidden() {
-    let resp_body = json!({
+    let response_body = json!({
         "message": "account is not authorized for this action",
         "status": 403,
     });
-    let response = make_json_response(403, resp_body);
+    let response = make_json_response(403, response_body);
     let result = crate::api_publish_docs_response(response);
 
     match result {
@@ -634,7 +634,7 @@ fn get_package_from_bytes_ok() {
 
 #[test]
 fn get_package_from_bytes_malformed() {
-    // public key should not be a valid protobuf and should therefore fail
+    // Public key should not be a valid protobuf and should therefore fail
     let bytes = std::include_bytes!("../test/public_key").to_vec();
     let package_error = crate::repository_v2_package_parse_body(&bytes, &bytes)
         .expect_err("parsing failed to fail");
@@ -713,7 +713,7 @@ fn get_repository_versions_from_bytes_ok() {
 
 #[test]
 fn get_repository_versions_from_bytes_malformed() {
-    // public key should not be a valid protobuf and should therefore fail
+    // Public key should not be a valid protobuf and should therefore fail
     let bytes = std::include_bytes!("../test/public_key").to_vec();
     let versions_error =
         crate::repository_v2_get_versions_body(&bytes, &bytes).expect_err("parsing failed to fail");
@@ -753,10 +753,10 @@ fn get_repository_tarball_response_bad_checksum() {
     let checksum = vec![1, 2, 3, 4, 5];
 
     let response = make_response(200, tarball_bytes.to_vec());
-    let err = crate::repository_get_package_tarball_response(response, &checksum).unwrap_err();
+    let error = crate::repository_get_package_tarball_response(response, &checksum).unwrap_err();
 
     assert_eq!(
-        err.to_string(),
+        error.to_string(),
         "The downloaded data did not have the expected checksum"
     );
 }
@@ -766,9 +766,9 @@ fn get_repository_tarball_response_not_found() {
     let checksum = vec![1, 2, 3, 4, 5];
 
     let response = make_response(404, vec![]);
-    let err = crate::repository_get_package_tarball_response(response, &checksum).unwrap_err();
+    let error = crate::repository_get_package_tarball_response(response, &checksum).unwrap_err();
 
-    assert_eq!(err.to_string(), "Resource was not found");
+    assert_eq!(error.to_string(), "Resource was not found");
 }
 
 #[test]
@@ -776,10 +776,10 @@ fn get_repository_tarball_response_rate_limited() {
     let checksum = vec![1, 2, 3, 4, 5];
 
     let response = make_response(429, vec![]);
-    let err = crate::repository_get_package_tarball_response(response, &checksum).unwrap_err();
+    let error = crate::repository_get_package_tarball_response(response, &checksum).unwrap_err();
 
     assert_eq!(
-        err.to_string(),
+        error.to_string(),
         "The rate limit for the Hex API has been exceeded"
     );
 }
@@ -840,12 +840,12 @@ fn publish_package_response_success() {
 
 #[test]
 fn modify_package_late() {
-    let resp_body = json!({
+    let response_body = json!({
         "errors": {"inserted_at": "can only modify a release up to one hour after publication"},
         "message": "Validation error(s)",
         "status": 422,
     });
-    let response = make_json_response(422, resp_body);
+    let response = make_json_response(422, response_body);
     let result = crate::api_publish_package_response(response);
 
     match result {
@@ -856,12 +856,12 @@ fn modify_package_late() {
 
 #[test]
 fn not_replacing() {
-    let resp_body = json!({
+    let response_body = json!({
         "errors": {"inserted_at": "must include the --replace flag to update an existing release"},
         "message": "Validation error(s)",
         "status": 422,
     });
-    let response = make_json_response(422, resp_body);
+    let response = make_json_response(422, response_body);
     let result = crate::api_publish_package_response(response);
 
     match result {
@@ -872,12 +872,12 @@ fn not_replacing() {
 
 #[test]
 fn unknown_error_422() {
-    let resp_body = json!({
+    let response_body = json!({
         "errors": {"tar": "file too big: metadata.config"},
         "message": "Validation error(s)",
         "status": 422,
     });
-    let response = make_json_response(422, resp_body);
+    let response = make_json_response(422, response_body);
     let result = crate::api_publish_package_response(response);
 
     match result {
@@ -912,7 +912,7 @@ fn get_package_release_response_not_found() {
 
 #[test]
 fn get_package_release_response_ok() {
-    let resp_body = json!({
+    let response_body = json!({
         "version": "0.0.1",
         "checksum": "41C6781B5F4B986BCE14C3578D39C497BCB8427F1D36D8CDE5FCAA6E03CAE2B1",
         "requirements": {
@@ -933,11 +933,11 @@ fn get_package_release_response_ok() {
             "build_tools": ["mix"]
         }
     });
-    let response = make_json_response(200, resp_body);
-    let resp = crate::api_get_package_release_response(response).unwrap();
+    let response = make_json_response(200, response_body);
+    let response = crate::api_get_package_release_response(response).unwrap();
 
     assert_eq!(
-        resp,
+        response,
         Release {
             version: Version::new(0, 0, 1),
             security_advisories: vec![],
@@ -1013,24 +1013,27 @@ fn oauth_device_authorisation_request() {
 #[test]
 fn oauth_device_authorisation_response_success() {
     let client_id = "test-client-id".to_string();
-    let resp_body = json!({
+    let response_body = json!({
         "device_code": "device-code-123",
         "user_code": "USER-CODE",
         "verification_uri": "https://hex.pm/oauth/device",
         "interval": 5
     });
 
-    let response = make_json_response(200, resp_body);
-    let auth = crate::oauth_device_authorisation_response(client_id, response).unwrap();
+    let response = make_json_response(200, response_body);
+    let authorisation = crate::oauth_device_authorisation_response(client_id, response).unwrap();
 
-    assert_eq!(auth.user_code, "USER-CODE");
-    assert_eq!(auth.verification_uri, "https://hex.pm/oauth/device");
+    assert_eq!(authorisation.user_code, "USER-CODE");
+    assert_eq!(
+        authorisation.verification_uri,
+        "https://hex.pm/oauth/device"
+    );
 }
 
 #[test]
 fn oauth_device_authorisation_response_success_with_complete_uri() {
     let client_id = "test-client-id".to_string();
-    let resp_body = json!({
+    let response_body = json!({
         "device_code": "device-code-123",
         "user_code": "USER-CODE",
         "verification_uri": "https://hex.pm/oauth/device",
@@ -1038,13 +1041,13 @@ fn oauth_device_authorisation_response_success_with_complete_uri() {
         "interval": 5
     });
 
-    let response = make_json_response(200, resp_body);
-    let auth = crate::oauth_device_authorisation_response(client_id, response).unwrap();
+    let response = make_json_response(200, response_body);
+    let authorisation = crate::oauth_device_authorisation_response(client_id, response).unwrap();
 
-    assert_eq!(auth.user_code, "USER-CODE");
+    assert_eq!(authorisation.user_code, "USER-CODE");
     // When verification_uri_complete is present, it should be used instead
     assert_eq!(
-        auth.verification_uri,
+        authorisation.verification_uri,
         "https://hex.pm/oauth/device?user_code=USER-CODE"
     );
 }
@@ -1053,17 +1056,20 @@ fn oauth_device_authorisation_response_success_with_complete_uri() {
 fn oauth_device_authorisation_response_default_interval() {
     let client_id = "test-client-id".to_string();
     // Response without "interval" field - should use default of 5 seconds
-    let resp_body = json!({
+    let response_body = json!({
         "device_code": "device-code-123",
         "user_code": "USER-CODE",
         "verification_uri": "https://hex.pm/oauth/device"
     });
 
-    let response = make_json_response(200, resp_body);
-    let auth = crate::oauth_device_authorisation_response(client_id, response).unwrap();
+    let response = make_json_response(200, response_body);
+    let authorisation = crate::oauth_device_authorisation_response(client_id, response).unwrap();
 
-    assert_eq!(auth.user_code, "USER-CODE");
-    assert_eq!(auth.verification_uri, "https://hex.pm/oauth/device");
+    assert_eq!(authorisation.user_code, "USER-CODE");
+    assert_eq!(
+        authorisation.verification_uri,
+        "https://hex.pm/oauth/device"
+    );
 }
 
 #[test]
@@ -1081,11 +1087,11 @@ fn oauth_device_authorisation_response_rate_limited() {
 #[test]
 fn oauth_device_authorisation_response_unexpected_status() {
     let client_id = "test-client-id".to_string();
-    let resp_body = json!({
+    let response_body = json!({
         "message": "Internal server error",
         "status": 500,
     });
-    let response = make_json_response(500, resp_body);
+    let response = make_json_response(500, response_body);
     let result = crate::oauth_device_authorisation_response(client_id, response).unwrap_err();
 
     match result {
@@ -1098,21 +1104,21 @@ fn oauth_device_authorisation_response_unexpected_status() {
 
 fn make_device_authorisation() -> crate::OAuthDeviceAuthorisation {
     let client_id = "test-client-id".to_string();
-    let resp_body = json!({
+    let response_body = json!({
         "device_code": "device-code-123",
         "user_code": "USER-CODE",
         "verification_uri": "https://hex.pm/oauth/device",
         "interval": 5
     });
-    let response = make_json_response(200, resp_body);
+    let response = make_json_response(200, response_body);
     crate::oauth_device_authorisation_response(client_id, response).unwrap()
 }
 
 #[test]
 fn poll_token_request() {
-    let auth = make_device_authorisation();
+    let authorisation = make_device_authorisation();
     let config = Config::new();
-    let request = auth.poll_token_request(&config);
+    let request = authorisation.poll_token_request(&config);
 
     assert_eq!(request.method(), http::Method::POST);
     assert_eq!(request.uri().path(), "/api/oauth/token");
@@ -1133,14 +1139,14 @@ fn poll_token_request() {
 
 #[test]
 fn poll_token_response_success() {
-    let mut auth = make_device_authorisation();
-    let resp_body = json!({
+    let mut authorisation = make_device_authorisation();
+    let response_body = json!({
         "access_token": "access-token-abc",
         "refresh_token": "refresh-token-xyz"
     });
-    let response = make_json_response(200, resp_body);
+    let response = make_json_response(200, response_body);
 
-    let result = auth.poll_token_response(response).unwrap();
+    let result = authorisation.poll_token_response(response).unwrap();
 
     match result {
         crate::PollStep::Done(tokens) => {
@@ -1153,13 +1159,13 @@ fn poll_token_response_success() {
 
 #[test]
 fn poll_token_response_authorization_pending() {
-    let mut auth = make_device_authorisation();
-    let resp_body = json!({
+    let mut authorisation = make_device_authorisation();
+    let response_body = json!({
         "error": "authorization_pending"
     });
-    let response = make_json_response(200, resp_body);
+    let response = make_json_response(200, response_body);
 
-    let result = auth.poll_token_response(response).unwrap();
+    let result = authorisation.poll_token_response(response).unwrap();
 
     match result {
         crate::PollStep::SleepThenPollAgain(duration) => {
@@ -1171,13 +1177,13 @@ fn poll_token_response_authorization_pending() {
 
 #[test]
 fn poll_token_response_slow_down() {
-    let mut auth = make_device_authorisation();
-    let resp_body = json!({
+    let mut authorisation = make_device_authorisation();
+    let response_body = json!({
         "error": "slow_down"
     });
-    let response = make_json_response(200, resp_body);
+    let response = make_json_response(200, response_body);
 
-    let result = auth.poll_token_response(response).unwrap();
+    let result = authorisation.poll_token_response(response).unwrap();
 
     match result {
         crate::PollStep::SleepThenPollAgain(duration) => {
@@ -1190,14 +1196,14 @@ fn poll_token_response_slow_down() {
 
 #[test]
 fn poll_token_response_unexpected_status() {
-    let mut auth = make_device_authorisation();
-    let resp_body = json!({
+    let mut authorisation = make_device_authorisation();
+    let response_body = json!({
         "message": "Internal server error",
         "status": 500,
     });
-    let response = make_json_response(500, resp_body);
+    let response = make_json_response(500, response_body);
 
-    let result = auth.poll_token_response(response).unwrap_err();
+    let result = authorisation.poll_token_response(response).unwrap_err();
 
     match result {
         ApiError::UnexpectedResponse(status, _) => {

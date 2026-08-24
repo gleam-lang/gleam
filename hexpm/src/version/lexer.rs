@@ -12,21 +12,21 @@ use self::Token::*;
 use std::str;
 
 macro_rules! scan_while {
-    ($slf:expr, $start:expr, $first:pat_param $(| $rest:pat)*) => {{
+    ($self:expr, $start:expr, $first:pat_param $(| $rest:pat)*) => {{
         let mut __end = $start;
 
         loop {
-            if let Some((idx, c)) = $slf.one() {
+            if let Some((idx, character)) = $self.one() {
                 __end = idx;
 
-                match c {
-                    $first $(| $rest)* => $slf.step(),
+                match character {
+                    $first $(| $rest)* => $self.step(),
                     _ => break,
                 }
 
                 continue;
             } else {
-                __end = $slf.input.len();
+                __end = $self.input.len();
             }
 
             break;
@@ -63,7 +63,7 @@ pub enum Token<'input> {
     Or,
     /// 'and'
     And,
-    /// any number of whitespace (`\t\r\n `) and its span.
+    /// Any number of whitespace (`\t\r\n `) and its span.
     Whitespace(usize, usize),
     /// Numeric component, like `0` or `42`.
     Numeric(u32),
@@ -100,9 +100,9 @@ impl std::fmt::Display for Token<'_> {
             Or => write!(f, "or"),
             And => write!(f, "and"),
             Whitespace(_, _) => write!(f, " "),
-            Numeric(i) => write!(f, "{i}"),
-            AlphaNumeric(a) => write!(f, "{a}"),
-            LeadingZero(z) => write!(f, "{z}"),
+            Numeric(number) => write!(f, "{number}"),
+            AlphaNumeric(string) => write!(f, "{string}"),
+            LeadingZero(string) => write!(f, "{string}"),
         }
     }
 }
@@ -110,7 +110,7 @@ impl std::fmt::Display for Token<'_> {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, thiserror::Error)]
 pub enum Error {
     #[error("Unexpected character {0}")]
-    UnexpectedChar(char),
+    UnexpectedCharacter(char),
 }
 
 /// Lexer for semver tokens belonging to a range.
@@ -118,30 +118,30 @@ pub enum Error {
 pub struct Lexer<'input> {
     input: &'input str,
     chars: str::CharIndices<'input>,
-    // lookahead
-    c1: Option<(usize, char)>,
-    c2: Option<(usize, char)>,
+    // Lookahead
+    char0: Option<(usize, char)>,
+    char1: Option<(usize, char)>,
 }
 
 impl<'input> Lexer<'input> {
     /// Construct a new lexer for the given input.
     pub fn new(input: &str) -> Lexer<'_> {
         let mut chars = input.char_indices();
-        let c1 = chars.next();
-        let c2 = chars.next();
+        let char0 = chars.next();
+        let char1 = chars.next();
 
         Lexer {
             input,
             chars,
-            c1,
-            c2,
+            char0,
+            char1,
         }
     }
 
     /// Shift all lookahead storage by one.
     fn step(&mut self) {
-        self.c1 = self.c2;
-        self.c2 = self.chars.next();
+        self.char0 = self.char1;
+        self.char1 = self.chars.next();
     }
 
     fn step_n(&mut self, n: usize) {
@@ -152,13 +152,13 @@ impl<'input> Lexer<'input> {
 
     /// Access the one character, or set it if it is not set.
     fn one(&mut self) -> Option<(usize, char)> {
-        self.c1
+        self.char0
     }
 
     /// Access two characters.
     fn two(&mut self) -> Option<(usize, char, char)> {
-        self.c1
-            .and_then(|(start, c1)| self.c2.map(|(_, c2)| (start, c1, c2)))
+        self.char0
+            .and_then(|(start, char0)| self.char1.map(|(_, char1)| (start, char0, char1)))
     }
 
     /// Consume a component.
@@ -169,18 +169,18 @@ impl<'input> Lexer<'input> {
         let end = scan_while!(self, start, '0'..='9' | 'A'..='Z' | 'a'..='z');
         let input = &self.input[start..end];
 
-        let mut it = input.chars();
-        let (a, b) = (it.next(), it.next());
+        let mut chars = input.chars();
+        let (char0, char1) = (chars.next(), chars.next());
 
-        // exactly zero
-        if a == Some('0') && b.is_none() {
+        // Exactly zero
+        if char0 == Some('0') && char1.is_none() {
             return Ok(Numeric(0));
         }
 
-        if let Ok(numeric) = input.parse::<u32>() {
+        if let Ok(number) = input.parse::<u32>() {
             // Only parse as a number if there is no leading zero
-            if a != Some('0') {
-                return Ok(Numeric(numeric));
+            if char0 != Some('0') {
+                return Ok(Numeric(number));
             } else {
                 return Ok(LeadingZero(input));
             }
@@ -212,9 +212,9 @@ impl<'input> Iterator for Lexer<'input> {
     fn next(&mut self) -> Option<Self::Item> {
         #[allow(clippy::never_loop)]
         loop {
-            // two subsequent char tokens.
-            if let Some((start, a, b)) = self.two() {
-                let two = match (a, b) {
+            // Two subsequent char tokens.
+            if let Some((start, char0, char1)) = self.two() {
+                let double_character_token = match (char0, char1) {
                     ('~', '>') => Some(Pessimistic),
                     ('!', '=') => Some(NotEq),
                     ('<', '=') => Some(LtEq),
@@ -228,15 +228,15 @@ impl<'input> Iterator for Lexer<'input> {
                     _ => None,
                 };
 
-                if let Some(two) = two {
+                if let Some(two) = double_character_token {
                     self.step_n(2);
                     return Some(Ok(two));
                 }
             }
 
-            // single char and start of numeric tokens.
-            if let Some((start, c)) = self.one() {
-                let tok = match c {
+            // Single char and start of numeric tokens.
+            if let Some((start, char2)) = self.one() {
+                let token = match char2 {
                     ' ' | '\t' | '\n' | '\r' => {
                         self.step();
                         return Some(self.whitespace(start));
@@ -250,11 +250,11 @@ impl<'input> Iterator for Lexer<'input> {
                         self.step();
                         return Some(self.component(start));
                     }
-                    c => return Some(Err(UnexpectedChar(c))),
+                    character => return Some(Err(UnexpectedCharacter(character))),
                 };
 
                 self.step();
-                return Some(Ok(tok));
+                return Some(Ok(token));
             };
 
             return None;
