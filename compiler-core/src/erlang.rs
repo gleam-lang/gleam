@@ -624,7 +624,14 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             &function.arguments,
             function.return_type.clone(),
         );
-        self.function_doc_attribute(builder, function);
+        self.function_doc_attribute(
+            builder,
+            function.publicity,
+            function
+                .documentation
+                .as_ref()
+                .map(|(_, documentation)| documentation),
+        );
 
         // Finally we start generating code for the function itself, how we do
         // it depends if the function is external or not.
@@ -707,17 +714,18 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     fn function_doc_attribute<Output>(
         &self,
         builder: &mut impl ErlangBuilder<Output>,
-        function: &TypedFunction,
+        function_publicity: Publicity,
+        documentation: Option<&'_ EcoString>,
     ) {
         // If a function is marked as internal or comes from an internal module
         // we want to hide its documentation in the Erlang shell!
         // So the doc directive will look like this: `-doc(false).`
         let is_internal =
-            self.module_generator.module.type_info.is_internal || function.publicity.is_internal();
+            self.module_generator.module.type_info.is_internal || function_publicity.is_internal();
 
         if is_internal {
             builder.doc_attribute(DocContent::False);
-        } else if let Some((_, documentation)) = &function.documentation
+        } else if let Some(documentation) = documentation
             && !documentation.is_empty()
         {
             builder.doc_attribute(DocContent::String(documentation));
