@@ -60,7 +60,7 @@ impl fmt::Display for Error {
     }
 }
 
-/// impl for backwards compatibility.
+/// Implementation for backwards compatibility.
 impl From<Error> for String {
     fn from(value: Error) -> Self {
         value.to_string()
@@ -72,7 +72,7 @@ pub struct Parser<'input> {
     /// Source of token.
     lexer: Lexer<'input>,
     /// Lookaehead.
-    c1: Option<Token<'input>>,
+    token0: Option<Token<'input>>,
 }
 
 impl<'input> Parser<'input> {
@@ -80,31 +80,31 @@ impl<'input> Parser<'input> {
     pub fn new(input: &'input str) -> Result<Parser<'input>, Error> {
         let mut lexer = Lexer::new(input);
 
-        let c1 = if let Some(c1) = lexer.next() {
-            Some(c1?)
+        let token0 = if let Some(token0) = lexer.next() {
+            Some(token0?)
         } else {
             None
         };
 
-        Ok(Parser { lexer, c1 })
+        Ok(Parser { lexer, token0 })
     }
 
     /// Pop one token.
     #[inline(always)]
     fn pop(&mut self) -> Result<Token<'input>, Error> {
-        let c1 = if let Some(c1) = self.lexer.next() {
-            Some(c1?)
+        let token0 = if let Some(token0) = self.lexer.next() {
+            Some(token0?)
         } else {
             None
         };
 
-        mem::replace(&mut self.c1, c1).ok_or(UnexpectedEnd)
+        mem::replace(&mut self.token0, token0).ok_or(UnexpectedEnd)
     }
 
     /// Peek one token.
     #[inline(always)]
     fn peek(&mut self) -> Option<&Token<'input>> {
-        self.c1.as_ref()
+        self.token0.as_ref()
     }
 
     /// Skip whitespace if present.
@@ -153,14 +153,14 @@ impl<'input> Parser<'input> {
                 // TODO: Borrow?
                 Identifier::AlphaNumeric(identifier.to_string())
             }
-            Token::Numeric(n) => Identifier::Numeric(n),
-            tok => return Err(UnexpectedToken(tok.to_string())),
+            Token::Numeric(number) => Identifier::Numeric(number),
+            token => return Err(UnexpectedToken(token.to_string())),
         };
 
         if let Some(&Token::Hyphen) = self.peek() {
-            // pop the peeked hyphen
+            // Pop the peeked hyphen
             self.pop()?;
-            // concat with any following identifiers
+            // Concat with any following identifiers
             Ok(identifier
                 .concat("-")
                 .concat(&self.identifier()?.to_string()))
@@ -178,7 +178,7 @@ impl<'input> Parser<'input> {
             _ => return Ok(vec![]),
         }
 
-        // pop the peeked hyphen.
+        // Pop the peeked hyphen.
         self.pop()?;
         self.parts()
     }
@@ -212,9 +212,9 @@ impl<'input> Parser<'input> {
         loop {
             match self.pop() {
                 Err(UnexpectedEnd) => break,
-                Ok(Token::LeadingZero(s)) => buffer.push_str(s),
-                Ok(Token::AlphaNumeric(s)) => buffer.push_str(s),
-                Ok(Token::Numeric(s)) => buffer.push_str(&s.to_string()),
+                Ok(Token::LeadingZero(string)) => buffer.push_str(string),
+                Ok(Token::AlphaNumeric(string)) => buffer.push_str(string),
+                Ok(Token::Numeric(number)) => buffer.push_str(&number.to_string()),
                 Ok(Token::Dot) => buffer.push('.'),
                 Ok(token) => return Err(UnexpectedToken(token.to_string())),
                 Err(error) => return Err(error),
@@ -390,23 +390,23 @@ impl<'input> Parser<'input> {
 
     /// Check if we have reached the end of input.
     pub fn is_eof(&mut self) -> bool {
-        self.c1.is_none()
+        self.token0.is_none()
     }
 
     /// Get the rest of the tokens in the parser.
     ///
     /// Useful for debugging.
     pub fn tail(&mut self) -> Result<Vec<Token<'input>>, Error> {
-        let mut out = Vec::new();
+        let mut output = Vec::new();
 
-        if let Some(t) = self.c1.take() {
-            out.push(t);
+        if let Some(token) = self.token0.take() {
+            output.push(token);
         }
 
-        for t in self.lexer.by_ref() {
-            out.push(t?);
+        for token in self.lexer.by_ref() {
+            output.push(token?);
         }
 
-        Ok(out)
+        Ok(output)
     }
 }

@@ -93,7 +93,7 @@ impl Version {
                 parser
                     .tail()?
                     .into_iter()
-                    .map(|t| t.to_string())
+                    .map(|token| token.to_string())
                     .collect::<Vec<_>>()
                     .join(""),
             ));
@@ -110,7 +110,7 @@ impl Version {
                 parser
                     .tail()?
                     .into_iter()
-                    .map(|t| t.to_string())
+                    .map(|token| token.to_string())
                     .collect::<Vec<_>>()
                     .join(""),
             ));
@@ -143,7 +143,7 @@ impl LowestVersion for pubgrub::Range<Version> {
     fn lowest_version(&self) -> Option<Version> {
         self.iter()
             .flat_map(|(lower, _higher)| match lower {
-                std::ops::Bound::Included(v) => Some(v.clone()),
+                std::ops::Bound::Included(version) => Some(version.clone()),
                 std::ops::Bound::Excluded(_) => None,
                 std::ops::Bound::Unbounded => Some(Version::lowest()),
             })
@@ -211,8 +211,8 @@ impl fmt::Display for Version {
         write!(f, "{}.{}.{}", self.major, self.minor, self.patch)?;
         if !self.pre.is_empty() {
             write!(f, "-")?;
-            for (i, identifier) in self.pre.iter().enumerate() {
-                if i != 0 {
+            for (index, identifier) in self.pre.iter().enumerate() {
+                if index != 0 {
                     write!(f, ".")?;
                 }
                 identifier.fmt(f)?;
@@ -241,12 +241,14 @@ impl fmt::Display for Identifier {
 }
 
 impl Identifier {
-    pub fn concat(self, add_str: &str) -> Identifier {
+    pub fn concat(self, add_string: &str) -> Identifier {
         match self {
-            Identifier::Numeric(n) => Identifier::AlphaNumeric(format!("{n}{add_str}")),
-            Identifier::AlphaNumeric(mut s) => {
-                s.push_str(add_str);
-                Identifier::AlphaNumeric(s)
+            Identifier::Numeric(number) => {
+                Identifier::AlphaNumeric(format!("{number}{add_string}"))
+            }
+            Identifier::AlphaNumeric(mut string) => {
+                string.push_str(add_string);
+                Identifier::AlphaNumeric(string)
             }
         }
     }
