@@ -197,6 +197,12 @@ pub enum Error {
     #[error("{error}")]
     GitInitialization { error: String },
 
+    #[error("Failed to send LSP message: {error}")]
+    LspMessageSendFailed { error: String },
+
+    #[error("Failed to receive LSP message: {error}")]
+    LspMessageReceiveFailed { error: String },
+
     #[error("io operation failed")]
     StandardIo {
         action: StandardIoAction,
@@ -1950,6 +1956,42 @@ with `gleam hex authenticate`."
                 );
                 vec![Diagnostic {
                     title: "Failed to initialize git repository".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: None,
+                }]
+            }
+
+            Error::LspMessageSendFailed { error } => {
+                let text = wrap_format!(
+                    "An error occurred when the Gleam language server \
+attempted to send a message to the client:
+
+    {error}
+
+Is your editor still running and connected to the language server?"
+                );
+                vec![Diagnostic {
+                    title: "Failed to send LSP message".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: None,
+                }]
+            }
+
+            Error::LspMessageReceiveFailed { error } => {
+                let text = wrap_format!(
+                    "An error occurred when the Gleam language server \
+attempted to receive a message from the client:
+
+    {error}
+
+Is your editor still running and connected to the language server?"
+                );
+                vec![Diagnostic {
+                    title: "Failed to send LSP message".into(),
                     text,
                     hint: None,
                     level: Level::Error,
