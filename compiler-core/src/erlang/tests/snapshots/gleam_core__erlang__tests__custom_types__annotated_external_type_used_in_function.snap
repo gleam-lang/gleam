@@ -19,7 +19,6 @@ pub fn get(dict: Dict(key, value), key: key) -> Result(value, Nil)
 
 -type dict(I, J) :: gleam_stdlib:dict(I, J).
 
--file("project/test/my/mod.gleam", 6).
 -spec get(dict(K, L), K) -> {ok, L} | {error, nil}.
 get(Dict, Key) ->
     maps:get(Dict, Key).

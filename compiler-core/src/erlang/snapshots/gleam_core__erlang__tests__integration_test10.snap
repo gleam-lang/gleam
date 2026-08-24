@@ -14,7 +14,6 @@ pub fn x() { Null }
 
 -type null() :: null.
 
--file("project/test/my/mod.gleam", 2).
 -spec x() -> null().
 x() ->
     null.

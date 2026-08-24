@@ -618,12 +618,6 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         let function_name = EcoString::from(escape_erlang_existing_name(self.function_name));
 
         // Then we add the function's documentation and type annotation.
-        builder.file_attribute(
-            &self.module_generator.module_source_path,
-            self.module_generator
-                .line_numbers
-                .line_number(function.location.start),
-        );
         self.function_spec_attribute(builder, &function_name, function);
         self.function_doc_attribute(builder, function);
 

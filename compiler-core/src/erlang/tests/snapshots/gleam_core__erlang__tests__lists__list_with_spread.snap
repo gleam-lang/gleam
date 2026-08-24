@@ -15,7 +15,6 @@ pub fn main() {
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/0]).
 
--file("project/test/my/mod.gleam", 2).
 -spec main() -> list(integer()).
 main() ->
     A = [3, 2, 1],

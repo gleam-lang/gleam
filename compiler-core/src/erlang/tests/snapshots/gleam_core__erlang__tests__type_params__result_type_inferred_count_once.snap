@@ -25,7 +25,6 @@ expression: "\n        pub fn wibble() {\n            let assert Ok(_) = wobble(
 
 -type wobble(I) :: wobble | {gleam_phantom, I}.
 
--file("project/test/my/mod.gleam", 10).
 -spec wobble() -> {ok, any()} | {error, wobble(any())}.
 wobble() ->
     erlang:error(#{
@@ -37,7 +36,6 @@ wobble() ->
         line => 11
     }).
 
--file("project/test/my/mod.gleam", 2).
 -spec wibble() -> {ok, any()} | {error, wobble(any())}.
 wibble() ->
     case wobble() of

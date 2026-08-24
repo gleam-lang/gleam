@@ -16,12 +16,10 @@ fn id(x) { x }
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/0]).
 
--file("project/test/my/mod.gleam", 6).
 -spec id(K) -> K.
 id(X) ->
     X.
 
--file("project/test/my/mod.gleam", 2).
 -spec main() -> fun(() -> integer()).
 main() ->
     X = fun 'Elixir.MyApp':run/0,

@@ -36,7 +36,6 @@ pub fn a(a: A) {
 
 -type c() :: {c, boolean()}.
 
--file("project/test/my/mod.gleam", 14).
 -spec a(a()) -> integer().
 a(A) ->
     case A of

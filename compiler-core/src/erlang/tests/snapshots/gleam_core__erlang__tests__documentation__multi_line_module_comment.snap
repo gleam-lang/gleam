@@ -18,7 +18,6 @@ pub fn main() { 1 }
  line module comment.
 ").
 
--file("project/test/my/mod.gleam", 6).
 -spec main() -> integer().
 main() ->
     1.

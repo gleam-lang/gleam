@@ -18,12 +18,10 @@ fn double(x) { x + x }
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/0]).
 
--file("project/test/my/mod.gleam", 8).
 -spec double(integer()) -> integer().
 double(X) ->
     X + X.
 
--file("project/test/my/mod.gleam", 4).
 -spec main() -> {ok, integer()} | {error, any()}.
 main() ->
     case {ok, 10} of

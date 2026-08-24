@@ -25,7 +25,6 @@ pub fn main() {
 
 -type wibble() :: {wibble, integer(), integer()}.
 
--file("project/test/my/mod.gleam", 8).
 -spec main() -> {ok, wibble()} | {error, any()}.
 main() ->
     W = {wibble, 1, 2},

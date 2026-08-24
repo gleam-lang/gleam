@@ -14,7 +14,6 @@ pub fn x() { go }
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([x/0]).
 
--file("project/test/my/mod.gleam", 4).
 -spec x() -> fun((integer(), integer()) -> integer()).
 x() ->
     fun m:f/2.

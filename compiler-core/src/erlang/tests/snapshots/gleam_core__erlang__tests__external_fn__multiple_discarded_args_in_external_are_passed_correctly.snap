@@ -13,7 +13,6 @@ pub fn woo(_: a, _: b) -> Nil
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([woo/2]).
 
--file("project/test/my/mod.gleam", 3).
 -spec woo(any(), any()) -> nil.
 woo(_value, _value@1) ->
     wibble:wobble(_value, _value@1).

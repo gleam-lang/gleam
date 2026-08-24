@@ -19,7 +19,6 @@ pub fn sum() {
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([sum/0]).
 
--file("project/test/my/mod.gleam", 2).
 -spec sum() -> integer().
 sum() ->
     case {1, 2} of

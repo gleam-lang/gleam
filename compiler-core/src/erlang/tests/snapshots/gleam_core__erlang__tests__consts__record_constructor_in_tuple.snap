@@ -22,7 +22,6 @@ pub fn main() {
 
 -type x() :: {x, integer()}.
 
--file("project/test/my/mod.gleam", 8).
 -spec main() -> {fun((integer()) -> x())}.
 main() ->
     {fun(_value) ->

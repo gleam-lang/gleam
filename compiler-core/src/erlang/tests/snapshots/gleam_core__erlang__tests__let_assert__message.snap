@@ -15,7 +15,6 @@ pub fn unwrap_or_panic(value) {
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([unwrap_or_panic/1]).
 
--file("project/test/my/mod.gleam", 2).
 -spec unwrap_or_panic({ok, K} | {error, any()}) -> K.
 unwrap_or_panic(Value) ->
     case Value of

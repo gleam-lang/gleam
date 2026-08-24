@@ -19,12 +19,10 @@ fn name() { "Giacomo" }
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/0]).
 
--file("project/test/my/mod.gleam", 9).
 -spec name() -> binary().
 name() ->
     ~"Giacomo".
 
--file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     echo(1, case name() of

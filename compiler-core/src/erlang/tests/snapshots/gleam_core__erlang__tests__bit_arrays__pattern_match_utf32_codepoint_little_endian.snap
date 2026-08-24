@@ -15,7 +15,6 @@ pub fn go(x) {
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([go/1]).
 
--file("project/test/my/mod.gleam", 2).
 -spec go(bitstring()) -> integer().
 go(X) ->
     case X of

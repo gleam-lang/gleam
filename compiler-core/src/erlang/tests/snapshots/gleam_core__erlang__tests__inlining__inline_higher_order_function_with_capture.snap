@@ -23,7 +23,6 @@ fn divide(a: Int, b: Int) -> Result(Int, Nil) {
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/0]).
 
--file("project/test/my/mod.gleam", 8).
 -spec divide(integer(), integer()) -> {ok, integer()} | {error, nil}.
 divide(A, B) ->
     case case B of
@@ -46,7 +45,6 @@ divide(A, B) ->
             {error, nil}
     end.
 
--file("project/test/my/mod.gleam", 4).
 -spec main() -> {ok, integer()} | {error, nil}.
 main() ->
     case {ok, 10} of
