@@ -896,8 +896,8 @@ fn proto_to_release(
         .into_iter()
         .map(proto_to_dependency)
         .collect::<Result<HashMap<_, _>, _>>()?;
-    let version = Version::try_from(release.version.as_str())
-        .expect("Failed to parse version format from Hex");
+    let version =
+        Version::try_from(release.version.as_str()).expect("valid version format from Hex");
     let security_advisories = release
         .advisory_indexes
         .iter()
