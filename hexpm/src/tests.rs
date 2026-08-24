@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 The Gleam contributors
 
-use std::{convert::TryFrom, io::Cursor};
+use std::{assert_matches, convert::TryFrom, io::Cursor};
 
 use super::*;
 use serde_json::json;
@@ -228,23 +228,17 @@ fn remove_key_response_success_200() {
 #[test]
 fn remove_docs_response_not_found() {
     let response = make_response(404, vec![]);
-    let result = crate::api_remove_docs_response(response).unwrap_err();
+    let result = crate::api_remove_docs_response(response);
 
-    match result {
-        ApiError::NotFound => (),
-        result => panic!("expected ApiError::NotFound got {result:?}"),
-    }
+    assert_matches!(result, Err(ApiError::NotFound));
 }
 
 #[test]
 fn remove_docs_response_rate_limited() {
     let response = make_response(429, vec![]);
-    let result = crate::api_remove_docs_response(response).unwrap_err();
+    let result = crate::api_remove_docs_response(response);
 
-    match result {
-        ApiError::RateLimited => (),
-        result => panic!("expected ApiError::RateLimited got {result:?}"),
-    }
+    assert_matches!(result, Err(ApiError::RateLimited));
 }
 
 #[test]
@@ -254,12 +248,9 @@ fn remove_docs_response_invalid_key() {
         "status": 401,
     });
     let response = make_json_response(401, response_body);
-    let result = crate::api_remove_docs_response(response).unwrap_err();
+    let result = crate::api_remove_docs_response(response);
 
-    match result {
-        ApiError::InvalidCredentials => (),
-        result => panic!("expected ApiError::InvalidApiKey got {result:?}"),
-    }
+    assert_matches!(result, Err(ApiError::InvalidCredentials));
 }
 
 #[test]
@@ -269,12 +260,9 @@ fn remove_docs_response_forbidden() {
         "status": 403,
     });
     let response = make_json_response(403, response_body);
-    let result = crate::api_remove_docs_response(response).unwrap_err();
+    let result = crate::api_remove_docs_response(response);
 
-    match result {
-        ApiError::Forbidden => (),
-        result => panic!("expected ApiError::Forbidden got {result:?}"),
-    }
+    assert_matches!(result, Err(ApiError::Forbidden));
 }
 
 #[test]
@@ -288,10 +276,13 @@ fn remove_docs_bad_package_name() {
 
     let config = Config::new();
 
-    match crate::api_remove_docs_request(package, version, &key, &config).unwrap_err() {
-        ApiError::InvalidPackageNameFormat(p) if p == package => (),
-        result => panic!("expected Err(ApiError::BadPackage), got {result:?}"),
-    }
+    let result = crate::api_remove_docs_request(package, version, &key, &config);
+
+    assert_matches!(
+        result,
+        Err(ApiError::InvalidPackageNameFormat(error_package))
+        if error_package == package
+    );
 }
 
 #[test]
@@ -330,12 +321,7 @@ fn publish_docs_request() {
 #[test]
 fn publish_docs_response_success() {
     let response = make_response(201, vec![]);
-    let result = crate::api_publish_docs_response(response);
-
-    match result {
-        Ok(()) => (),
-        result => panic!("expected Ok(()), got {result:?}"),
-    }
+    crate::api_publish_docs_response(response).unwrap();
 }
 
 #[test]
@@ -350,10 +336,13 @@ fn publish_docs_bad_package_name() {
 
     let config = Config::new();
 
-    match crate::api_publish_docs_request(package, version, tarball, &key, &config).unwrap_err() {
-        ApiError::InvalidPackageNameFormat(p) if p == package => (),
-        result => panic!("expected Err(ApiError::BadPackage), got {result:?}"),
-    }
+    let result = crate::api_publish_docs_request(package, version, tarball, &key, &config);
+
+    assert_matches!(
+        result,
+        Err(ApiError::InvalidPackageNameFormat(error_package))
+        if error_package == package
+    );
 }
 
 #[test]
@@ -368,10 +357,13 @@ fn publish_docs_bad_package_version() {
 
     let config = Config::new();
 
-    match crate::api_publish_docs_request(package, version, tarball, &key, &config).unwrap_err() {
-        ApiError::InvalidVersionFormat(v) if v == version => (),
-        result => panic!("expected ApiError::BadPackage, got {result:?}"),
-    }
+    let result = crate::api_publish_docs_request(package, version, tarball, &key, &config);
+
+    assert_matches!(
+        result,
+        Err(ApiError::InvalidVersionFormat(error_version))
+        if error_version == version
+    );
 }
 
 #[test]
@@ -379,10 +371,7 @@ fn publish_docs_response_not_found() {
     let response = make_response(404, vec![]);
     let result = crate::api_publish_docs_response(response);
 
-    match result {
-        Err(ApiError::NotFound) => (),
-        result => panic!("expected ApiError::NotFound, got {result:?}"),
-    }
+    assert_matches!(result, Err(ApiError::NotFound));
 }
 
 #[test]
@@ -390,10 +379,7 @@ fn publish_docs_response_rate_limit() {
     let response = make_response(429, vec![]);
     let result = crate::api_publish_docs_response(response);
 
-    match result {
-        Err(ApiError::RateLimited) => (),
-        result => panic!("expected ApiError::RateLimited, got {result:?}"),
-    }
+    assert_matches!(result, Err(ApiError::RateLimited));
 }
 
 #[test]
@@ -405,10 +391,7 @@ fn publish_docs_response_invalid_api_key() {
     let response = make_json_response(401, response_body);
     let result = crate::api_publish_docs_response(response);
 
-    match result {
-        Err(ApiError::InvalidCredentials) => (),
-        result => panic!("expected Err(ApiError::InvalidApiKey), got {result:?}"),
-    }
+    assert_matches!(result, Err(ApiError::InvalidCredentials));
 }
 
 #[test]
@@ -425,10 +408,7 @@ fn publish_docs_response_incorrect_totp_key() {
     );
     let result = crate::api_publish_docs_response(response);
 
-    match result {
-        Err(ApiError::IncorrectOneTimePassword) => (),
-        result => panic!("expected Err(ApiError::IncorrectOneTimePassword), got {result:?}"),
-    }
+    assert_matches!(result, Err(ApiError::IncorrectOneTimePassword));
 }
 
 #[test]
@@ -440,10 +420,7 @@ fn publish_docs_response_forbidden() {
     let response = make_json_response(403, response_body);
     let result = crate::api_publish_docs_response(response);
 
-    match result {
-        Err(ApiError::Forbidden) => (),
-        result => panic!("expected Err(ApiError::Forbidden), got {result:?}"),
-    }
+    assert_matches!(result, Err(ApiError::Forbidden));
 }
 
 fn expected_package_exfmt() -> Package {
@@ -1076,12 +1053,9 @@ fn oauth_device_authorisation_response_default_interval() {
 fn oauth_device_authorisation_response_rate_limited() {
     let client_id = "test-client-id".to_string();
     let response = make_response(429, vec![]);
-    let result = crate::oauth_device_authorisation_response(client_id, response).unwrap_err();
+    let result = crate::oauth_device_authorisation_response(client_id, response);
 
-    match result {
-        ApiError::RateLimited => (),
-        result => panic!("expected RateLimited, got {:?}", result),
-    }
+    assert_matches!(result, Err(ApiError::RateLimited));
 }
 
 #[test]
@@ -1092,14 +1066,15 @@ fn oauth_device_authorisation_response_unexpected_status() {
         "status": 500,
     });
     let response = make_json_response(500, response_body);
-    let result = crate::oauth_device_authorisation_response(client_id, response).unwrap_err();
+    let result = crate::oauth_device_authorisation_response(client_id, response);
 
-    match result {
-        ApiError::UnexpectedResponse(status, _) => {
-            assert_eq!(status, http::StatusCode::INTERNAL_SERVER_ERROR);
-        }
-        result => panic!("expected UnexpectedResponse, got {:?}", result),
-    }
+    assert_matches!(
+        result,
+        Err(ApiError::UnexpectedResponse(
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+            _
+        ))
+    )
 }
 
 fn make_device_authorisation() -> crate::OAuthDeviceAuthorisation {
@@ -1146,15 +1121,16 @@ fn poll_token_response_success() {
     });
     let response = make_json_response(200, response_body);
 
-    let result = authorisation.poll_token_response(response).unwrap();
+    let result = authorisation.poll_token_response(response);
 
-    match result {
-        crate::PollStep::Done(tokens) => {
-            assert_eq!(tokens.access_token, "access-token-abc");
-            assert_eq!(tokens.refresh_token, "refresh-token-xyz");
-        }
-        result => panic!("expected PollStep::Done, got {:?}", result),
-    }
+    assert_matches!(
+        result,
+        Ok(PollStep::Done(OAuthTokens {
+            access_token,
+            refresh_token,
+        }))
+        if access_token == "access-token-abc" && refresh_token == "refresh-token-xyz"
+    );
 }
 
 #[test]
@@ -1165,14 +1141,13 @@ fn poll_token_response_authorization_pending() {
     });
     let response = make_json_response(200, response_body);
 
-    let result = authorisation.poll_token_response(response).unwrap();
+    let result = authorisation.poll_token_response(response);
 
-    match result {
-        crate::PollStep::SleepThenPollAgain(duration) => {
-            assert_eq!(duration, std::time::Duration::from_secs(5));
-        }
-        result => panic!("expected PollStep::SleepThenPollAgain, got {:?}", result),
-    }
+    assert_matches!(
+        result,
+        Ok(PollStep::SleepThenPollAgain(duration))
+        if duration == std::time::Duration::from_secs(5)
+    );
 }
 
 #[test]
@@ -1183,15 +1158,14 @@ fn poll_token_response_slow_down() {
     });
     let response = make_json_response(200, response_body);
 
-    let result = authorisation.poll_token_response(response).unwrap();
+    let result = authorisation.poll_token_response(response);
 
-    match result {
-        crate::PollStep::SleepThenPollAgain(duration) => {
-            // Interval should be doubled from 5 to 10 seconds
-            assert_eq!(duration, std::time::Duration::from_secs(10));
-        }
-        result => panic!("expected PollStep::SleepThenPollAgain, got {:?}", result),
-    }
+    assert_matches!(
+        result,
+        Ok(PollStep::SleepThenPollAgain(duration))
+        // Interval should be doubled from 5 to 10 seconds
+        if duration == std::time::Duration::from_secs(10)
+    );
 }
 
 #[test]
@@ -1203,12 +1177,13 @@ fn poll_token_response_unexpected_status() {
     });
     let response = make_json_response(500, response_body);
 
-    let result = authorisation.poll_token_response(response).unwrap_err();
+    let result = authorisation.poll_token_response(response);
 
-    match result {
-        ApiError::UnexpectedResponse(status, _) => {
-            assert_eq!(status, http::StatusCode::INTERNAL_SERVER_ERROR);
-        }
-        result => panic!("expected UnexpectedResponse, got {:?}", result),
-    }
+    assert_matches!(
+        result,
+        Err(ApiError::UnexpectedResponse(
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+            _
+        ))
+    );
 }
