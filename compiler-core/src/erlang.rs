@@ -9,7 +9,7 @@ mod tests;
 use crate::build::Target;
 use crate::erlang::pattern::{AliasedLiteral, PatternGenerator};
 use crate::strings::to_snake_case;
-use crate::type_::{self, is_prelude_module};
+use crate::type_::{self, HasType, is_prelude_module};
 use crate::{
     ast::*,
     type_::{
@@ -445,13 +445,13 @@ fn phantom_type_variables(custom_type: &CustomType<Arc<Type>>) -> Vec<EcoString>
     // itself: any of those that isn't used by any of the constructors is going
     // to be a phantom type variable.
     let mut definition_type_variables =
-        collect_type_var_usages(HashMap::new(), custom_type.typed_parameters.iter());
+        collect_ref_type_var_usages(HashMap::new(), custom_type.typed_parameters.iter());
 
     // So we need to gather all the type variables referenced by all the
     // constructors.
     let mut constructors_type_variables = HashMap::new();
     for constructor in &custom_type.constructors {
-        constructors_type_variables = collect_type_var_usages(
+        constructors_type_variables = collect_ref_type_var_usages(
             constructors_type_variables,
             constructor.arguments.iter().map(|argument| &argument.type_),
         );
@@ -618,7 +618,12 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         let function_name = EcoString::from(escape_erlang_existing_name(self.function_name));
 
         // Then we add the function's documentation and type annotation.
-        self.function_spec_attribute(builder, &function_name, function);
+        self.function_spec_attribute(
+            builder,
+            &function_name,
+            &function.arguments,
+            function.return_type.clone(),
+        );
         self.function_doc_attribute(builder, function);
 
         // Finally we start generating code for the function itself, how we do
@@ -668,33 +673,33 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
     /// This generates the `-spec` attribute for a function with the given name.
     ///
-    fn function_spec_attribute<Output>(
+    fn function_spec_attribute<Output, Typed: HasType>(
         &mut self,
         builder: &mut impl ErlangBuilder<Output>,
         function_name: &EcoString,
-        function: &'a Function<Arc<Type>, TypedExpr>,
+        arguments: &[Typed],
+        return_type: Arc<Type>,
     ) {
         // We start by getting all the type variable usages from this function,
         // both in the argument types and return type.
         let module_name = &self.module_generator.module.name;
         let var_usages = &collect_type_var_usages(
             HashMap::new(),
-            function
-                .arguments
+            arguments
                 .iter()
-                .map(|argument| &argument.type_)
-                .chain(std::iter::once(&function.return_type)),
+                .map(|argument| argument.type_())
+                .chain([return_type.clone()]),
         );
         let generator = TypeGenerator::new(module_name).with_var_usages(var_usages);
 
         // We can then start generating the function spec.
-        let spec = builder.start_function_spec(function_name, function.arguments.len());
+        let spec = builder.start_function_spec(function_name, arguments.len());
         let function_type = builder.start_function_type();
-        for argument in &function.arguments {
-            generator.type_(builder, &argument.type_);
+        for argument in arguments {
+            generator.type_(builder, &argument.type_());
         }
         let function_type = builder.end_function_type_arguments(function_type);
-        generator.type_(builder, &function.return_type);
+        generator.type_(builder, &return_type);
         builder.end_function_type(function_type);
         builder.end_function_spec(spec);
     }
@@ -4023,12 +4028,22 @@ pub fn escape_erlang_existing_name(name: &str) -> &str {
 ///     fn(a) -> String       // `a` is `any()`
 ///     fn() -> Result(a, b)  // `a` and `b` are `any()`
 ///     fn(a) -> a            // `a` is a type var
-fn collect_type_var_usages<'a>(
+fn collect_ref_type_var_usages<'a>(
     mut ids: HashMap<u64, u64>,
     types: impl IntoIterator<Item = &'a Arc<Type>>,
 ) -> HashMap<u64, u64> {
     for type_ in types {
         type_var_ids(type_, &mut ids);
+    }
+    ids
+}
+
+fn collect_type_var_usages(
+    mut ids: HashMap<u64, u64>,
+    types: impl IntoIterator<Item = Arc<Type>>,
+) -> HashMap<u64, u64> {
+    for type_ in types {
+        type_var_ids(&type_, &mut ids);
     }
     ids
 }
