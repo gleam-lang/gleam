@@ -10,7 +10,6 @@ pub fn wibble(a, b, c) { !{ a && b || c } }
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([wibble/3]).
 
--file("project/test/my/mod.gleam", 1).
 -spec wibble(boolean(), boolean(), boolean()) -> boolean().
 wibble(A, B, C) ->
     not ((A andalso B) orelse C).

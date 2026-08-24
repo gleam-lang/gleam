@@ -20,13 +20,11 @@ fn trip(x, y, f) {
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/0]).
 
--file("project/test/my/mod.gleam", 7).
 -spec trip(J, K, fun(() -> N)) -> {J, K, N}.
 trip(X, Y, F) ->
     Z = F(),
     {X, Y, Z}.
 
--file("project/test/my/mod.gleam", 2).
 -spec main() -> {float(), binary(), integer()}.
 main() ->
     trip(1.0, ~"", fun() ->

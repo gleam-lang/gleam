@@ -14,7 +14,6 @@ pub fn assert_answer(x) {
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([assert_answer/1]).
 
--file("project/test/my/mod.gleam", 2).
 -spec assert_answer(integer()) -> nil.
 assert_answer(X) ->
     _value = 42,

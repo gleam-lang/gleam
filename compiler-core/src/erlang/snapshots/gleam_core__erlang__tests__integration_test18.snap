@@ -10,7 +10,6 @@ pub fn run() { case 1, 2 { a, b -> a } }
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([run/0]).
 
--file("project/test/my/mod.gleam", 1).
 -spec run() -> integer().
 run() ->
     case {1, 2} of

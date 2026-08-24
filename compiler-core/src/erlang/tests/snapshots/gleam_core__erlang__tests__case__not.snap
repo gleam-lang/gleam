@@ -16,7 +16,6 @@ pub fn main(x, y) {
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/2]).
 
--file("project/test/my/mod.gleam", 1).
 -spec main(any(), boolean()) -> integer().
 main(X, Y) ->
     case X of

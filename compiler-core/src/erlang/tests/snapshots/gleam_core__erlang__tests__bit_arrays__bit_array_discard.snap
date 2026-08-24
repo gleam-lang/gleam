@@ -17,7 +17,6 @@ pub fn bit_array_discard(x) -> Bool {
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([bit_array_discard/1]).
 
--file("project/test/my/mod.gleam", 2).
 -spec bit_array_discard(bitstring()) -> boolean().
 bit_array_discard(X) ->
     case X of

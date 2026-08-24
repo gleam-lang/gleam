@@ -16,7 +16,6 @@ pub fn go(a) {
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([go/1]).
 
--file("project/test/my/mod.gleam", 2).
 -spec go(any()) -> integer().
 go(A) ->
     A@1 = 1,

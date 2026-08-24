@@ -10,7 +10,6 @@ pub fn t() { True }
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([t/0]).
 
--file("project/test/my/mod.gleam", 1).
 -spec t() -> boolean().
 t() ->
     true.

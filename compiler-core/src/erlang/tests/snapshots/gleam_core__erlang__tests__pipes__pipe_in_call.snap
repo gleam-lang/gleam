@@ -22,12 +22,10 @@ pub fn two(a, b) {
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([two/2, main/0]).
 
--file("project/test/my/mod.gleam", 10).
 -spec two(J, any()) -> J.
 two(A, B) ->
     A.
 
--file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     _pipe = 123,

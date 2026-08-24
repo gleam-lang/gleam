@@ -16,7 +16,6 @@ pub fn go(x: List(Int), y: List(Int)) {
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([go/2]).
 
--file("project/test/my/mod.gleam", 2).
 -spec go(list(integer()), list(integer())) -> boolean().
 go(X, Y) ->
     case X of

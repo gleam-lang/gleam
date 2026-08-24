@@ -22,12 +22,10 @@ pub fn main() {
 
 -type thing() :: {thing, integer(), integer()}.
 
--file("project/test/my/mod.gleam", 5).
 -spec identity(I) -> I.
 identity(X) ->
     X.
 
--file("project/test/my/mod.gleam", 7).
 -spec main() -> thing().
 main() ->
     Thing = {thing, 1, 2},

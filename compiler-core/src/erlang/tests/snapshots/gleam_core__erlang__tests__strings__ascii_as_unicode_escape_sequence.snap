@@ -14,7 +14,6 @@ pub fn y() -> String {
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([y/0]).
 
--file("project/test/my/mod.gleam", 2).
 -spec y() -> binary().
 y() ->
     ~"\x{79}".

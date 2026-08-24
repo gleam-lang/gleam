@@ -23,12 +23,10 @@ pub fn main(x) {
 
 -type x() :: {x, integer(), integer()}.
 
--file("project/test/my/mod.gleam", 5).
 -spec id(I) -> I.
 id(X) ->
     X.
 
--file("project/test/my/mod.gleam", 9).
 -spec main(x()) -> x().
 main(X) ->
     {x, begin

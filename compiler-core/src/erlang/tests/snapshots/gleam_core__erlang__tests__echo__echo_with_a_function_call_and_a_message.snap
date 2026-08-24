@@ -17,17 +17,14 @@ fn message() { "Hello!" }
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([main/0]).
 
--file("project/test/my/mod.gleam", 7).
 -spec message() -> binary().
 message() ->
     ~"Hello!".
 
--file("project/test/my/mod.gleam", 6).
 -spec wibble(integer(), integer()) -> integer().
 wibble(N, M) ->
     N + M.
 
--file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     echo(wibble(1, 2), message(), ~"project/test/my/mod.gleam", 3).

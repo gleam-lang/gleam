@@ -12,7 +12,6 @@ pub fn size_16_literal_test() {
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([size_16_literal_test/0]).
 
--file("project/test/my/mod.gleam", 1).
 -spec size_16_literal_test() -> bitstring().
 size_16_literal_test() ->
     <<257:16>>.

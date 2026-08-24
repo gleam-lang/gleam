@@ -14,7 +14,6 @@ pub fn x() { Point(x: 4, y: 6) Point(y: 1, x: 9) }
 
 -type point() :: {point, integer(), integer()}.
 
--file("project/test/my/mod.gleam", 2).
 -spec x() -> point().
 x() ->
     {point, 4, 6},

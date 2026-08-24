@@ -12,7 +12,6 @@ pub fn tail(list) { case list { [x, ..xs] -> xs z -> list } }
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([second/1, tail/1]).
 
--file("project/test/my/mod.gleam", 1).
 -spec second(list(integer())) -> integer().
 second(List) ->
     case List of
@@ -23,7 +22,6 @@ second(List) ->
             1
     end.
 
--file("project/test/my/mod.gleam", 2).
 -spec tail(list(P)) -> list(P).
 tail(List) ->
     case List of

@@ -310,21 +310,6 @@ pub trait ErlangBuilder<Output> {
     ///
     fn compile_attribute<'a>(&mut self, arguments: impl IntoIterator<Item = &'a str>);
 
-    /// This generates a `-file` attribute, to be added right before a function.
-    /// For example:
-    ///
-    /// ```ignore
-    /// builder.file_attribute("wibble.gleam", 2.into());
-    /// ```
-    ///
-    /// Correspods to:
-    ///
-    /// ```erl
-    /// -file("wibble.gleam", 2).
-    /// ```
-    ///
-    fn file_attribute(&mut self, file: &str, line: u32);
-
     /// This generates a `-file` attribute, to be used at the start of a module
     /// to set the proper file for the entire module.
     /// For example:
@@ -1939,15 +1924,6 @@ impl ErlangBuilder<String> for ErlangSourceBuilder {
             self.code.push_str(argument);
         }
         self.code.push_str("]).\n");
-    }
-
-    fn file_attribute(&mut self, file: &str, line: u32) {
-        self.new_top_level_form();
-        self.code.push_str("\n-file(\"");
-        self.code.push_str(file);
-        self.code.push_str("\", ");
-        self.code.push_str(&line.to_string());
-        self.code.push_str(").");
     }
 
     fn module_file_attribute(&mut self, _file: &str) {
@@ -4108,14 +4084,6 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
             self.etf.atom(argument);
         }
         self.etf.end_list(options, count);
-    }
-
-    fn file_attribute(&mut self, _file: &str, _line: u32) {
-        // This does nothing for the binary generator.
-        // All nodes are already annotated with their line number, and a single
-        // file annotation is needed at the top of the module.
-        //
-        // Adding this attribute before each function would be redundant!
     }
 
     fn module_file_attribute(&mut self, file: &str) {

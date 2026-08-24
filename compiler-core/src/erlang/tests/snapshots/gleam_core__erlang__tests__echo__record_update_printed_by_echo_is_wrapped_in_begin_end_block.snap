@@ -20,7 +20,6 @@ pub fn main() {
 
 -type wobble() :: {wobble, integer(), binary()}.
 
--file("project/test/my/mod.gleam", 4).
 -spec main() -> wobble().
 main() ->
     Wobble = {wobble, 1, ~"wobble"},

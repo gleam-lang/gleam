@@ -21,7 +21,6 @@ expression: "\n        pub type Wibble(a, b) {\n            Wibble(a, b)\n      
 
 -type wibble(I, J) :: {wibble, I, J}.
 
--file("project/test/my/mod.gleam", 6).
 -spec wibble() -> {K, wibble(K, any())}.
 wibble() ->
     erlang:error(#{

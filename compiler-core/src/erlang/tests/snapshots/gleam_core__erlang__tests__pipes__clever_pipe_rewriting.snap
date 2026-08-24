@@ -12,7 +12,6 @@ pub fn apply(f: fn(a) -> b, a: a) { a |> f }
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
 -export([apply/2]).
 
--file("project/test/my/mod.gleam", 2).
 -spec apply(fun((I) -> J), I) -> J.
 apply(F, A) ->
     _pipe = A,
