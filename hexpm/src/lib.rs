@@ -865,15 +865,20 @@ fn proto_to_retirement_reason(reason: proto::package::RetirementReason) -> Retir
 }
 
 fn proto_to_dep(dep: proto::package::Dependency) -> Result<(String, Dependency), ApiError> {
-    let app = dep.app;
-    let repository = dep.repository;
-    let requirement = Range::new(dep.requirement.clone())
-        .map_err(|_| ApiError::InvalidVersionFormat(dep.requirement))?;
+    let proto::package::Dependency {
+        app,
+        package,
+        requirement,
+        optional,
+        repository,
+    } = dep;
+    let requirement =
+        Range::new(requirement.clone()).map_err(|_| ApiError::InvalidVersionFormat(requirement))?;
     Ok((
-        dep.package,
+        package,
         Dependency {
             requirement,
-            optional: dep.optional.is_some(),
+            optional: optional.is_some(),
             app,
             repository,
         },
