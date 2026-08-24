@@ -181,6 +181,10 @@
   types with a same-named import alias.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Fixed a bug where the language server would crash if the client disconnected
+  unexpectedly.
+  ([Senthilnathan](https://github.com/ssenthilnathan3))
+
 - Fixed a bug where comments after the last item in a tuple, or after the last
   argument in a function call wouldn't be formatted properly.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

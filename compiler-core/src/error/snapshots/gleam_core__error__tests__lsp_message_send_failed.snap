@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/error/tests.rs
+expression: error
+---
+error: Failed to send LSP message
+
+An error occurred when the Gleam language server attempted to send a
+message to the client:
+
+    sending on a disconnected channel
+
+Is your editor still running and connected to the language server?
