@@ -86,7 +86,9 @@ pub fn case<'a, 'doc>(
         tree @ (Decision::Run { .. }
         | Decision::Guard { .. }
         | Decision::Switch { .. }
-        | Decision::Fail) => printer.decision(arena, tree).into_doc(arena),
+        | Decision::Fail) => printer
+            .inside_enclosing_scope(|this| this.decision(arena, tree))
+            .into_doc(arena),
     };
     docvec![
         arena,
@@ -567,49 +569,10 @@ impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
                 self.variables.record_check_assignments(arena, var, check);
             }
 
-            // We can't use `inside_new_scope` here without care: the
-            // code we generate goes directly into the enclosing scope
-            // (there's no wrapping if-else block). User variables bound
-            // in the branch go out of scope at its end, so their counters
-            // are reset and later references resolve to the outer bindings.
-            // Compiler synthesised variables (the `$` case subjects, `_pipe`,
-            // `_block`, ...) can't be referenced by user code and their
-            // declarations leak into this scope. Restoring only the user-variable
-            // counters leaves the synthesised counters advanced, so later code
-            // can't redeclare one of them.
-            let old_user_variables = match &self.kind {
-                DecisionKind::Case { .. } => self
-                    .variables
-                    .expression_generator
-                    .current_scope
-                    .user_variables()
-                    .clone(),
-                DecisionKind::LetAssert { .. } => im::HashMap::new(),
-            };
-            let old_names = self.variables.scoped_variable_names.clone();
-            let old_segments = self.variables.segment_values.clone();
-            let old_segment_names = self.variables.scoped_segment_names.clone();
-
-            let result = self.decision(arena, fallback);
-
-            match &self.kind {
-                DecisionKind::Case { .. } => {
-                    // Restore the user variables that were in scope before the
-                    // branch. The synthesised counters are left advanced, and
-                    // the high-water marks keep any user variable that leaked
-                    // out of the branch from being redeclared by a later `let`.
-                    self.variables
-                        .expression_generator
-                        .current_scope
-                        .restore_user_variables(&old_user_variables);
-                }
-                DecisionKind::LetAssert { .. } => {}
-            }
-
-            self.variables.scoped_variable_names = old_names;
-            self.variables.segment_values = old_segments;
-            self.variables.scoped_segment_names = old_segment_names;
-            return result;
+            // We can't use `inside_new_scope` here: the code we generate goes
+            // directly into the enclosing scope, there's no wrapping if-else
+            // block to contain it.
+            return self.inside_enclosing_scope(|this| this.decision(arena, fallback));
         }
 
         // Otherwise we'll have to generate a series of if-else to check which
@@ -852,6 +815,52 @@ impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
                 document.into_doc(arena),
             ))
         }
+    }
+
+    /// Generate code that goes directly into the enclosing JavaScript scope,
+    /// with no wrapping if-else block to contain it, then put back the user
+    /// variables that were in scope beforehand.
+    ///
+    /// User variables bound in the branch go out of scope at its end, so their
+    /// counters are reset and later references resolve to the outer bindings.
+    /// Compiler synthesised variables (the `$` case subjects, `_pipe`,
+    /// `_block`, ...) can't be referenced by user code and their declarations
+    /// leak into this scope. Restoring only the user-variable counters leaves
+    /// the synthesised counters advanced, so later code can't redeclare one of
+    /// them, and the high-water marks keep any user variable that leaked out of
+    /// the branch from being redeclared by a later `let`.
+    fn inside_enclosing_scope<A, F>(&mut self, run: F) -> A
+    where
+        F: Fn(&mut Self) -> A,
+    {
+        let old_user_variables = match &self.kind {
+            DecisionKind::Case { .. } => self
+                .variables
+                .expression_generator
+                .current_scope
+                .user_variables()
+                .clone(),
+            DecisionKind::LetAssert { .. } => im::HashMap::new(),
+        };
+        let old_names = self.variables.scoped_variable_names.clone();
+        let old_segments = self.variables.segment_values.clone();
+        let old_segment_names = self.variables.scoped_segment_names.clone();
+
+        let output = run(self);
+
+        match &self.kind {
+            DecisionKind::Case { .. } => self
+                .variables
+                .expression_generator
+                .current_scope
+                .restore_user_variables(&old_user_variables),
+            DecisionKind::LetAssert { .. } => {}
+        }
+
+        self.variables.scoped_variable_names = old_names;
+        self.variables.segment_values = old_segments;
+        self.variables.scoped_segment_names = old_segment_names;
+        output
     }
 
     fn inside_new_scope<A, F>(&mut self, run: F) -> A
