@@ -3662,6 +3662,12 @@ fn produces_literal_string(value: &TypedExpr) -> bool {
                 },
             ..
         } => constant_produces_literal_string(literal),
+        TypedExpr::Block { statements, .. }
+            if statements.len() == 1
+                && let Statement::Expression(expression) = statements.first() =>
+        {
+            produces_literal_string(expression)
+        }
 
         TypedExpr::Int { .. }
         | TypedExpr::Var { .. }
