@@ -136,17 +136,15 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             Publicity::Private,
         );
 
-        let alias_location = SrcSpan {
-            start: import.name_location().end,
-            end: import.location.end,
-        };
-
         self.environment.references.register_type_reference(
             type_info.module.clone(),
             import.name.clone(),
             imported_name,
             import.name_location(),
-            ReferenceKind::Import(alias_location),
+            ReferenceKind::Import {
+                location: import.location,
+                alias_start_position: import.name_location().end,
+            },
         );
 
         // Register the type so we know whether it was imported with an import
@@ -243,17 +241,15 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     Publicity::Private,
                 );
 
-                let alias_location = SrcSpan {
-                    start: import.name_location().end,
-                    end: import.location.end,
-                };
-
                 self.environment.references.register_value_reference(
                     module.clone(),
                     import_name.clone(),
                     used_name,
                     import.name_location(),
-                    ReferenceKind::Import(alias_location),
+                    ReferenceKind::Import {
+                        location: import.location,
+                        alias_start_position: import.name_location().end,
+                    },
                 );
             }
             ValueConstructorVariant::ModuleConstant { module, .. }
@@ -267,17 +263,15 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     Publicity::Private,
                 );
 
-                let alias_location = SrcSpan {
-                    start: import.name_location().end,
-                    end: import.location.end,
-                };
-
                 self.environment.references.register_value_reference(
                     module.clone(),
                     import_name.clone(),
                     used_name,
                     import.name_location(),
-                    ReferenceKind::Import(alias_location),
+                    ReferenceKind::Import {
+                        location: import.location,
+                        alias_start_position: import.name_location().end,
+                    },
                 );
             }
             ValueConstructorVariant::LocalVariable { .. } => {}
