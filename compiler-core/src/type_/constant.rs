@@ -155,8 +155,8 @@ impl<'expression_typer, 'env, 'module> ConstantTyper<'expression_typer, 'env, 'm
                         return self.new_invalid_constant(location);
                     }
 
-                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                        return literal.clone();
+                    ValueConstructorVariant::ModuleConstant { .. } => {
+                        unreachable!("constant called as a record constructor")
                     }
                 };
 
