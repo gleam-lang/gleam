@@ -121,17 +121,9 @@ where
 
         self.publish_feedback(feedback)?;
 
-        let response = match outcome {
-            Ok(payload) => lsp_server::Response {
-                id,
-                error: None,
-                result: Some(payload),
-            },
-            Err(error) => lsp_server::Response {
-                id,
-                error: Some(error),
-                result: None,
-            },
+        let response = lsp_server::Response {
+            id,
+            response_result: outcome,
         };
 
         self.connection
