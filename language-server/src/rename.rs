@@ -223,7 +223,7 @@ fn rename_references_in_module(
             ReferenceKind::Alias => {}
             ReferenceKind::Qualified { .. }
             | ReferenceKind::Unqualified
-            | ReferenceKind::Import(_)
+            | ReferenceKind::Import { .. }
             | ReferenceKind::Definition => edits.replace(reference.location, new_name.clone()),
         }
     }
@@ -362,7 +362,11 @@ fn alias_references_in_module(
             ReferenceKind::Unqualified | ReferenceKind::Alias => {
                 edits.replace(reference.location, params.new_name.clone());
             }
-            ReferenceKind::Import(alias_location) => {
+            ReferenceKind::Import {
+                location,
+                alias_start_position,
+            } => {
+                let alias_location = SrcSpan::new(alias_start_position, location.end);
                 // If old name is equal to original name, we can just remove
                 // alias part.
                 if name == &params.new_name {
