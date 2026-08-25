@@ -1869,7 +1869,7 @@ where
             location: _,
             expression,
         } => v.visit_typed_clause_guard(expression),
-        super::ClauseGuard::Var {
+        super::ClauseGuard::LocalVariable {
             location,
             type_,
             name,

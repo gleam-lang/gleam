@@ -3319,7 +3319,7 @@ impl<'a, 'doc> Formatter<'a> {
                 ..
             } => self.clause_guard_bin_op(arena, operator, left, right),
 
-            ClauseGuard::Var { name, .. } => name.to_doc(arena),
+            ClauseGuard::LocalVariable { name, .. } => name.to_doc(arena),
 
             ClauseGuard::TupleIndex { tuple, index, .. } => self
                 .clause_guard(arena, tuple)

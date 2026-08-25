@@ -2496,7 +2496,7 @@ pub enum ClauseGuard<Type> {
         expression: Box<Self>,
     },
 
-    Var {
+    LocalVariable {
         location: SrcSpan,
         type_: Type,
         name: EcoString,
@@ -2544,7 +2544,7 @@ impl<A> ClauseGuard<A> {
             ClauseGuard::Constant(constant) => constant.location(),
             ClauseGuard::BinaryOperator { location, .. }
             | ClauseGuard::Not { location, .. }
-            | ClauseGuard::Var { location, .. }
+            | ClauseGuard::LocalVariable { location, .. }
             | ClauseGuard::TupleIndex { location, .. }
             | ClauseGuard::ModuleSelect { location, .. }
             | ClauseGuard::Invalid { location, .. }
@@ -2571,7 +2571,7 @@ impl<A> ClauseGuard<A> {
 
             ClauseGuard::Constant(_)
             | ClauseGuard::Invalid { .. }
-            | ClauseGuard::Var { .. }
+            | ClauseGuard::LocalVariable { .. }
             | ClauseGuard::Not { .. }
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::FieldAccess { .. }
@@ -2584,7 +2584,7 @@ impl<A> ClauseGuard<A> {
 impl TypedClauseGuard {
     pub fn type_(&self) -> Arc<Type> {
         match self {
-            ClauseGuard::Var { type_, .. } => type_.clone(),
+            ClauseGuard::LocalVariable { type_, .. } => type_.clone(),
             ClauseGuard::TupleIndex { type_, .. } => type_.clone(),
             ClauseGuard::FieldAccess { type_, .. } => type_.clone(),
             ClauseGuard::ModuleSelect { type_, .. } => type_.clone(),
@@ -2660,14 +2660,14 @@ impl TypedClauseGuard {
             }
             | ClauseGuard::Block { value, .. } => value.find_node(byte_index),
             ClauseGuard::Constant(constant) => constant.find_node(byte_index),
-            ClauseGuard::Var { .. } => Some(Located::ClauseGuard(self)),
+            ClauseGuard::LocalVariable { .. } => Some(Located::ClauseGuard(self)),
             ClauseGuard::Invalid { .. } => Some(Located::ClauseGuard(self)),
         }
     }
 
     pub(crate) fn referenced_variables(&self) -> im::HashSet<&EcoString> {
         match self {
-            ClauseGuard::Var { name, .. } => im::hashset![name],
+            ClauseGuard::LocalVariable { name, .. } => im::hashset![name],
 
             ClauseGuard::Block { value, .. } => value.referenced_variables(),
             ClauseGuard::Not { expression, .. } => expression.referenced_variables(),
@@ -2713,12 +2713,12 @@ impl TypedClauseGuard {
             (ClauseGuard::Not { .. }, _) => false,
 
             (
-                ClauseGuard::Var { name, .. },
-                ClauseGuard::Var {
+                ClauseGuard::LocalVariable { name, .. },
+                ClauseGuard::LocalVariable {
                     name: other_name, ..
                 },
             ) => name == other_name,
-            (ClauseGuard::Var { .. }, _) => false,
+            (ClauseGuard::LocalVariable { .. }, _) => false,
 
             (
                 ClauseGuard::TupleIndex { index, tuple, .. },
@@ -2775,7 +2775,7 @@ impl TypedClauseGuard {
             | ClauseGuard::Invalid { .. }
             | ClauseGuard::FieldAccess { .. } => None,
             ClauseGuard::Constant(constant) => constant.definition_location(),
-            ClauseGuard::Var {
+            ClauseGuard::LocalVariable {
                 definition_location,
                 ..
             } => Some(DefinitionLocation {

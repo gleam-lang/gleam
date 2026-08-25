@@ -80,7 +80,7 @@ expression: "\ncase 2, 3 {\n    x, y if x + y == 1 -> True\n}"
                                     },
                                     operator: AddInt,
                                     operator_start: 27,
-                                    left: Var {
+                                    left: LocalVariable {
                                         location: SrcSpan {
                                             start: 25,
                                             end: 26,
@@ -96,7 +96,7 @@ expression: "\ncase 2, 3 {\n    x, y if x + y == 1 -> True\n}"
                                             declaration: Generated,
                                         },
                                     },
-                                    right: Var {
+                                    right: LocalVariable {
                                         location: SrcSpan {
                                             start: 29,
                                             end: 30,
