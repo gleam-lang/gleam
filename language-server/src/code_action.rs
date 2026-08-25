@@ -13454,6 +13454,56 @@ impl<'a> InlineConstantUsage<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for InlineConstantUsage<'ast> {
+    fn visit_typed_constant(&mut self, constant: &'ast ast::TypedConstant) {
+        // We skip all the constants the cursor is not inside of.
+        // This is gonna make it faster to find the usage we're hovering, if
+        // any.
+        let constant_range = self.edits.src_span_to_lsp_range(constant.location());
+        if within(self.params.range, constant_range) {
+            ast::visit::visit_typed_constant(self, constant);
+        }
+    }
+
+    fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
+        // We skip all the functions the cursor is not inside of.
+        // This is gonna make it faster to find the usage we're hovering, if
+        // any.
+        let function_range = self.edits.src_span_to_lsp_range(fun.full_location());
+        if within(self.params.range, function_range) {
+            ast::visit::visit_typed_function(self, fun);
+        }
+    }
+
+    fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
+        // We skip all the expressions the cursor is not inside of.
+        // This is gonna make it faster to find the usage we're hovering, if
+        // any.
+        let expression_range = self.edits.src_span_to_lsp_range(expr.location());
+        if within(self.params.range, expression_range) {
+            ast::visit::visit_typed_expr(self, expr);
+        }
+    }
+
+    fn visit_typed_pattern(&mut self, pattern: &'ast TypedPattern) {
+        // We skip all the patterns the cursor is not inside of.
+        // This is gonna make it faster to find the usage we're hovering, if
+        // any.
+        let pattern_range = self.edits.src_span_to_lsp_range(pattern.location());
+        if within(self.params.range, pattern_range) {
+            ast::visit::visit_typed_pattern(self, pattern);
+        }
+    }
+
+    fn visit_typed_clause(&mut self, clause: &'ast ast::TypedClause) {
+        // We skip all the clauses the cursor is not inside of.
+        // This is gonna make it faster to find the usage we're hovering, if
+        // any.
+        let clause_range = self.edits.src_span_to_lsp_range(clause.location());
+        if within(self.params.range, clause_range) {
+            ast::visit::visit_typed_clause(self, clause);
+        }
+    }
+
     fn visit_typed_expr_var(
         &mut self,
         location: &'ast SrcSpan,
