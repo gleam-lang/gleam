@@ -6,6 +6,7 @@ pub(crate) mod environment;
 pub mod error;
 pub(crate) mod expression;
 pub(crate) mod fields;
+pub(crate) mod guard;
 pub(crate) mod hydrator;
 pub(crate) mod pattern;
 pub(crate) mod pipe;
