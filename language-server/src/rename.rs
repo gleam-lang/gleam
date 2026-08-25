@@ -373,29 +373,15 @@ fn alias_references_in_module(
             } => {
                 let alias_location = SrcSpan::new(alias_start_position, location.end);
                 if name == &params.new_name {
-                    // If new name is same as old name and item is from prelude,
-                    // we can delete entire import.
                     if module_name == "gleam" {
-                        let mut last_char_position = location.end as usize;
-
-                        while module.code.get(last_char_position..last_char_position + 1)
-                            == Some(" ")
-                        {
-                            last_char_position += 1;
-                        }
-                        if module.code.get(last_char_position..last_char_position + 1) == Some(",")
-                        {
-                            last_char_position += 1;
-                        }
-                        if module.code.get(last_char_position..last_char_position + 1) == Some(" ")
-                        {
-                            last_char_position += 1;
-                        }
-
-                        edits.delete(SrcSpan::new(location.start, last_char_position as u32));
+                        // If new name is same as old name and item is from prelude,
+                        // we can delete entire import.
+                        rename_same_named_prelude_import_reference(
+                            module, layer, &mut edits, location,
+                        );
                     } else {
                         // If new name is same as old name, we can delete
-                        // `as ..` part.
+                        // the `as ..` part.
                         edits.delete(alias_location);
                     }
                 } else {
@@ -442,6 +428,60 @@ fn alias_references_in_module(
                 .clone(),
             edits.edits,
         ),
+    }
+}
+
+/// Rename import of prelide item to original name.
+fn rename_same_named_prelude_import_reference(
+    module: &Module,
+    layer: ast::Layer,
+    edits: &mut TextEdits<'_>,
+    location: SrcSpan,
+) {
+    // Find import of prelude without alias, because we do not want to delete
+    // import with module alias.
+    let import = module
+        .ast
+        .definitions
+        .imports
+        .iter()
+        .find(|import| import.module == "gleam" && import.as_name.is_none());
+    match (import, layer) {
+        // If there's import of prelude with no module alias, and we're
+        // handling import of value, we check if there's no other imports in
+        // that import statement (no type imports and exactly one value import).
+        // If it's the case, we can remove the import statement entirely.
+        (Some(import), ast::Layer::Value)
+            if import.unqualified_values.len() == 1 && import.unqualified_types.is_empty() =>
+        {
+            edits.delete(import.location)
+        }
+        // If there's import of prelude with no module alias, and we're
+        // handling import of type, we check if there's no other imports in
+        // that import statement (no value imports and exactly one type import).
+        // If it's the case, we can remove the import statement entirely.
+        (Some(import), ast::Layer::Type)
+            if import.unqualified_types.len() == 1 && import.unqualified_values.is_empty() =>
+        {
+            edits.delete(import.location)
+        }
+        // Otherwise, there is either module alias or other imported items,
+        // so we only delete that item.
+        _ => {
+            let mut last_char_position = location.end as usize;
+
+            while module.code.get(last_char_position..last_char_position + 1) == Some(" ") {
+                last_char_position += 1;
+            }
+            if module.code.get(last_char_position..last_char_position + 1) == Some(",") {
+                last_char_position += 1;
+            }
+            if module.code.get(last_char_position..last_char_position + 1) == Some(" ") {
+                last_char_position += 1;
+            }
+
+            edits.delete(SrcSpan::new(location.start, last_char_position as u32));
+        }
     }
 }
 
