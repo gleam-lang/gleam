@@ -372,10 +372,32 @@ fn alias_references_in_module(
                 alias_start_position,
             } => {
                 let alias_location = SrcSpan::new(alias_start_position, location.end);
-                // If old name is equal to original name, we can just remove
-                // alias part.
                 if name == &params.new_name {
-                    edits.delete(alias_location);
+                    // If new name is same as old name and item is from prelude,
+                    // we can delete entire import.
+                    if module_name == "gleam" {
+                        let mut last_char_position = location.end as usize;
+
+                        while module.code.get(last_char_position..last_char_position + 1)
+                            == Some(" ")
+                        {
+                            last_char_position += 1;
+                        }
+                        if module.code.get(last_char_position..last_char_position + 1) == Some(",")
+                        {
+                            last_char_position += 1;
+                        }
+                        if module.code.get(last_char_position..last_char_position + 1) == Some(" ")
+                        {
+                            last_char_position += 1;
+                        }
+
+                        edits.delete(SrcSpan::new(location.start, last_char_position as u32));
+                    } else {
+                        // If new name is same as old name, we can delete
+                        // `as ..` part.
+                        edits.delete(alias_location);
+                    }
                 } else {
                     edits.replace(alias_location, format!(" as {}", params.new_name));
                 }
