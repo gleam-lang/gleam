@@ -14,7 +14,7 @@ pub fn go() -> Wibble {
 
 ----- AFTER RENAME
 -- app.gleam
-import gleam.{Nil, type Nil as Wibble}
+import gleam.{type Nil as Wibble}
 
 pub fn go() -> Wibble {
   Nil
