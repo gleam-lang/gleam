@@ -201,6 +201,10 @@
   would point to the definition of the constant instead of the guard.
   ([DualFroz](https://github.com/dualfroz))
 
+- The language server will now remove imports of prelude items when renaming
+  them to original name.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## v1.19.1 - 2026-10-07
 
 ### Bug fixes
