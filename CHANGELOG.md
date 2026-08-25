@@ -27,6 +27,36 @@
   alternative patterns.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The language server now provides "Inline constant usage" code action. For
+  example:
+
+  ```gleam
+  pub const wibble = "Hello"
+  pub const wobble = wibble <> " world"
+  //                 ^^^^^^
+
+  pub fn main() {
+    echo wibble
+    //   ^^^^^^
+    echo wobble
+    //   ^^^^^^
+  }
+  ```
+
+  Triggering this code action in all denoted places will result in following:
+
+  ```gleam
+  pub const wibble = "Hello"
+  pub const wobble = "Hello" <> " world"
+
+  pub fn main() {
+    echo "Hello"
+    echo "Hello" <> " world"
+  }
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Bug fixes
 
 - Fixed a bug where the language server "Generate variant" code action would
