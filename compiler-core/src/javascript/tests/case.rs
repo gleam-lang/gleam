@@ -1175,3 +1175,41 @@ pub fn go(x) {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/6213
+#[test]
+fn shadowing_in_directly_matching_case_does_not_leak_out() {
+    assert_js!(
+        r#"
+pub fn go() {
+  let m = 1
+  let _ = case 0 + 0 {
+    _ -> {
+      let m = 99
+      m
+    }
+  }
+  m
+}"#
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/6212
+#[test]
+fn pattern_shadowing_module_function_in_directly_matching_case() {
+    assert_js!(
+        r#"
+fn wibble(_: Int) -> Float {
+  0.0
+}
+
+pub fn go() {
+  case 0 + 0 {
+    wibble -> {
+      echo wibble
+    }
+  }
+  |> wibble
+}"#
+    )
+}
