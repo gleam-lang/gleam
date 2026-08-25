@@ -226,6 +226,12 @@
   prefix alias.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Fixed a bug where on the JavaScript target a name shadowed inside a case
+  clause that always matched would be used in place of the outer binding by the
+  code that followed the case expression. This could produce a wrong value, or a
+  runtime crash when the shadowed name was a module function or constant.
+  ([John Downey](https://github.com/jtdowney))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when

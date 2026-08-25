@@ -40,7 +40,7 @@ export function go() {
   let wibble$1 = $;
   _block = echo(wibble$1, undefined, "src/module.gleam", 9);
   let _pipe = _block;
-  return wibble$1(_pipe);
+  return wibble(_pipe);
 }
 
 // ...omitted code from `templates/echo.mjs`...
