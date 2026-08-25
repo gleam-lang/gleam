@@ -13527,6 +13527,31 @@ impl<'a> InlineConstantUsage<'a> {
 
         self.actions
     }
+
+    fn inline_constant(
+        &mut self,
+        module_name: &'a str,
+        literal_location: SrcSpan,
+        usage_location: SrcSpan,
+    ) {
+        let value = self
+            .sources
+            .get(module_name)
+            .expect("module exists")
+            .code
+            .get(literal_location.start as usize..literal_location.end as usize)
+            .expect("span is valid");
+
+        self.edits.replace(usage_location, value.to_string());
+        CodeActionBuilder::new("Inline constant usage")
+            .kind(CodeActionKind::RefactorInline)
+            .changes(
+                self.params.text_document.uri.clone(),
+                std::mem::take(&mut self.edits.edits),
+            )
+            .preferred(false)
+            .push_to(&mut self.actions);
+    }
 }
 
 impl<'ast> ast::visit::Visit<'ast> for InlineConstantUsage<'ast> {
@@ -13550,24 +13575,8 @@ impl<'ast> ast::visit::Visit<'ast> for InlineConstantUsage<'ast> {
         };
 
         let value_location = literal.location();
-        let value = self
-            .sources
-            .get(module)
-            .expect("module exists")
-            .code
-            .get(value_location.start as usize..value_location.end as usize)
-            .expect("span is valid");
 
-        self.edits.replace(*location, value.to_string());
-
-        CodeActionBuilder::new("Inline constant usage")
-            .kind(CodeActionKind::RefactorInline)
-            .changes(
-                self.params.text_document.uri.clone(),
-                std::mem::take(&mut self.edits.edits),
-            )
-            .preferred(false)
-            .push_to(&mut self.actions);
+        self.inline_constant(module, value_location, *location);
     }
 
     fn visit_typed_constant_var(
@@ -13592,23 +13601,8 @@ impl<'ast> ast::visit::Visit<'ast> for InlineConstantUsage<'ast> {
             return;
         };
         let value_location = literal.location();
-        let value = self
-            .sources
-            .get(module)
-            .expect("module exists")
-            .code
-            .get(value_location.start as usize..value_location.end as usize)
-            .expect("span is valid");
 
-        self.edits.replace(*location, value.to_string());
-        CodeActionBuilder::new("Inline constant usage")
-            .kind(CodeActionKind::RefactorInline)
-            .changes(
-                self.params.text_document.uri.clone(),
-                std::mem::take(&mut self.edits.edits),
-            )
-            .preferred(false)
-            .push_to(&mut self.actions);
+        self.inline_constant(module, value_location, *location);
     }
 
     fn visit_typed_expr_module_select(
@@ -13630,23 +13624,8 @@ impl<'ast> ast::visit::Visit<'ast> for InlineConstantUsage<'ast> {
             return;
         };
         let value_location = literal.location();
-        let value = self
-            .sources
-            .get(module_name)
-            .expect("module exists")
-            .code
-            .get(value_location.start as usize..value_location.end as usize)
-            .expect("span is valid");
 
-        self.edits.replace(*location, value.to_string());
-        CodeActionBuilder::new("Inline constant usage")
-            .kind(CodeActionKind::RefactorInline)
-            .changes(
-                self.params.text_document.uri.clone(),
-                std::mem::take(&mut self.edits.edits),
-            )
-            .preferred(false)
-            .push_to(&mut self.actions);
+        self.inline_constant(module_name, value_location, *location);
     }
 
     fn visit_typed_bit_array_size_variable(
@@ -13670,23 +13649,8 @@ impl<'ast> ast::visit::Visit<'ast> for InlineConstantUsage<'ast> {
             return;
         };
         let value_location = literal.location();
-        let value = self
-            .sources
-            .get(module)
-            .expect("module exists")
-            .code
-            .get(value_location.start as usize..value_location.end as usize)
-            .expect("span is valid");
 
-        self.edits.replace(*location, value.to_string());
-        CodeActionBuilder::new("Inline constant usage")
-            .kind(CodeActionKind::RefactorInline)
-            .changes(
-                self.params.text_document.uri.clone(),
-                std::mem::take(&mut self.edits.edits),
-            )
-            .preferred(false)
-            .push_to(&mut self.actions);
+        self.inline_constant(module, value_location, *location);
     }
 
     fn visit_typed_clause_guard_module_select(
@@ -13705,23 +13669,8 @@ impl<'ast> ast::visit::Visit<'ast> for InlineConstantUsage<'ast> {
             return;
         }
 
-        let value_location = definition_location;
-        let value = self
-            .sources
-            .get(module_name)
-            .expect("module exists")
-            .code
-            .get(value_location.start as usize..value_location.end as usize)
-            .expect("span is valid");
+        let value_location = *definition_location;
 
-        self.edits.replace(*location, value.to_string());
-        CodeActionBuilder::new("Inline constant usage")
-            .kind(CodeActionKind::RefactorInline)
-            .changes(
-                self.params.text_document.uri.clone(),
-                std::mem::take(&mut self.edits.edits),
-            )
-            .preferred(false)
-            .push_to(&mut self.actions);
+        self.inline_constant(module_name, value_location, *location);
     }
 }
