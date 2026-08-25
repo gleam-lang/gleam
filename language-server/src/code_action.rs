@@ -13468,4 +13468,45 @@ impl<'ast> ast::visit::Visit<'ast> for InlineConstantUsage<'ast> {
             .preferred(false)
             .push_to(&mut self.actions);
     }
+
+    fn visit_typed_constant_var(
+        &mut self,
+        location: &'ast SrcSpan,
+        _module: &'ast Option<(EcoString, SrcSpan)>,
+        _name: &'ast EcoString,
+        constructor: &'ast Option<Box<ValueConstructor>>,
+        _type_: &'ast Arc<Type>,
+    ) {
+        let range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, range) {
+            return;
+        }
+        let Some(constructor) = constructor else {
+            return;
+        };
+        let type_::ValueConstructorVariant::ModuleConstant {
+            literal, module, ..
+        } = &constructor.variant
+        else {
+            return;
+        };
+        let value_location = literal.location();
+        let value = self
+            .sources
+            .get(module)
+            .expect("module exists")
+            .code
+            .get(value_location.start as usize..value_location.end as usize)
+            .expect("span is valid");
+
+        self.edits.replace(*location, value.to_string());
+        CodeActionBuilder::new("Inline constant usage")
+            .kind(CodeActionKind::RefactorInline)
+            .changes(
+                self.params.text_document.uri.clone(),
+                std::mem::take(&mut self.edits.edits),
+            )
+            .preferred(false)
+            .push_to(&mut self.actions);
+    }
 }
