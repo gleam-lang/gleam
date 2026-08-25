@@ -212,6 +212,12 @@
   runtime crash when the shadowed name was a module function or constant.
   ([John Downey](https://github.com/jtdowney))
 
+- Fixed a bug where on the JavaScript target the variables a clause guard
+  needed would be declared in the enclosing scope of a case that always
+  matched, so a later `let` binding one of those names produced a duplicate
+  declaration and the whole module failed to parse.
+  ([John Downey](https://github.com/jtdowney))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when

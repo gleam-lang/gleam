@@ -919,9 +919,11 @@ impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
             .iter()
             .partition(|(variable, _)| guard_variables.contains(variable));
 
-        let (check_bindings, check, if_true) = self.inside_new_scope(|this| {
+        let (check_bindings, check, if_true) = self.inside_enclosing_scope(|this| {
             // check_bindings and if_true generation have to be in this scope so that pattern-bound
             // variables used in guards don't leak into other case branches (if_false).
+            // The check bindings are emitted before the `if`, so they end up in
+            // the enclosing scope and their names have to stay reserved there.
             let check_bindings = this.variables.bindings_ref_doc(arena, &check_bindings);
             let check = this.variables.expression_generator.guard(arena, guard);
             // All the other bindings that are not needed by the guard check will

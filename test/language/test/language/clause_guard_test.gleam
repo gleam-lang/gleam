@@ -595,3 +595,13 @@ pub fn or_guard_does_not_escape_its_pattern_test() {
       _ -> 0
     }
 }
+
+pub fn guard_binding_in_directly_matching_case_is_not_redeclared_test() {
+  let value = make_pair(1, 2)
+  case value {
+    #(_, b) if b == 2 -> b
+    #(_, b) -> b
+  }
+  let b = 5
+  assert b == 5
+}
