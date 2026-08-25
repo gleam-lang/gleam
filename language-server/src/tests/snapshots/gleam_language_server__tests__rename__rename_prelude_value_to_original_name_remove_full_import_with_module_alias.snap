@@ -14,7 +14,7 @@ pub fn go() -> Nil {
 
 ----- AFTER RENAME
 -- app.gleam
-import gleam.{Nil} as g
+import gleam.{} as g
 
 pub fn go() -> Nil {
   Nil
