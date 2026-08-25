@@ -190,13 +190,10 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
                 expression,
             } => {
                 let expression = self.do_infer(*expression);
-                match unify(bool(), expression.type_()) {
-                    Err(error) => {
-                        self.typer
-                            .problems
-                            .error(convert_unify_error(error, expression.location()));
-                    }
-                    _ => (),
+                if let Err(error) = unify(bool(), expression.type_()) {
+                    self.typer
+                        .problems
+                        .error(convert_unify_error(error, expression.location()));
                 }
                 ClauseGuard::Not {
                     location,

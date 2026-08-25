@@ -2142,7 +2142,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 if &self.module_generator.module.name == module {
                     // If a constant comes from the same module, we always
                     // inline its value.
-                    self.constant(builder, &literal);
+                    self.constant(builder, literal);
                 } else {
                     // But if it comes from another module, then that's turned
                     // into a function call of a 0-arity function:
@@ -3779,7 +3779,7 @@ fn function_export<'a>(
     Some((name, function.arguments.len()))
 }
 
-fn constant_export<'a>(constant: &'a TypedModuleConstant) -> Option<&'a str> {
+fn constant_export(constant: &TypedModuleConstant) -> Option<&str> {
     if !constant.implementations.supports(Target::Erlang) {
         return None;
     }
