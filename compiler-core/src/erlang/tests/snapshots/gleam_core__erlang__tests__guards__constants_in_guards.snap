@@ -22,7 +22,27 @@ pub fn main(arg) {
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export([main/1]).
+-export([main/1, int_value/0, float_value/0, string_value/0, tuple_value/0, list_value/0]).
+
+-spec int_value() -> integer().
+int_value() ->
+    42.
+
+-spec float_value() -> float().
+float_value() ->
+    3.14.
+
+-spec string_value() -> binary().
+string_value() ->
+    ~"constant value".
+
+-spec tuple_value() -> {integer(), float(), binary()}.
+tuple_value() ->
+    {1, 2.0, ~"3"}.
+
+-spec list_value() -> list(integer()).
+list_value() ->
+    [1, 2, 3].
 
 -spec main({{integer(), float(), binary()}, binary(), float(), integer()}) -> integer().
 main(Arg) ->

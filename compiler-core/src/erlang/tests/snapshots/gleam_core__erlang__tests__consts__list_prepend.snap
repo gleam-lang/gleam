@@ -15,7 +15,11 @@ pub fn main() {
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export([main/0]).
+-export([main/0, wobble/0]).
+
+-spec wobble() -> list(integer()).
+wobble() ->
+    [0, 1, 2, 3, 4].
 
 -spec main() -> list(integer()).
 main() ->

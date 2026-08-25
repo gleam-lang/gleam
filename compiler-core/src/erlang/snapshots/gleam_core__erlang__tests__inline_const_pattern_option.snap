@@ -18,7 +18,11 @@ pub fn main() {
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export([main/0]).
+-export([main/0, sixteen/0]).
+
+-spec sixteen() -> integer().
+sixteen() ->
+    16.
 
 -spec main() -> bitstring().
 main() ->

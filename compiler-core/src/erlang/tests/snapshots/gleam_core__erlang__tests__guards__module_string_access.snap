@@ -22,8 +22,9 @@ expression: "\n          import hero\n          pub fn main() {\n            let
 -spec main() -> boolean().
 main() ->
     Name = ~"Tony Stark",
+    _value = hero:ironman(),
     case Name of
-        N when N =:= ~"Tony Stark" ->
+        N when N =:= _value ->
             true;
 
         _ ->

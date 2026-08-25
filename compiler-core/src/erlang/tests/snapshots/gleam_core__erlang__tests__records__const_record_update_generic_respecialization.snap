@@ -19,10 +19,18 @@ pub fn main() {
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export([main/0]).
+-export([main/0, base/0, updated/0]).
 -export_type([box/1]).
 
 -type box(I) :: {box, binary(), I}.
+
+-spec base() -> box(integer()).
+base() ->
+    {box, ~"score", 50}.
+
+-spec updated() -> box(binary()).
+updated() ->
+    {box, ~"score", ~"Hello"}.
 
 -spec main() -> {box(integer()), box(binary())}.
 main() ->

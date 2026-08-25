@@ -22,12 +22,16 @@ expression: "\n          fn identity(a) {\n            a\n          }\n\n       
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export([identity/1]).
+-export([identity/1, id_mapper/0]).
 -export_type([mapper/1, funcs/1]).
 
 -type mapper(I) :: {mapper, fun((I) -> I)}.
 
 -type funcs(J) :: {funcs, mapper(J)}.
+
+-spec id_mapper() -> funcs(any()).
+id_mapper() ->
+    {funcs, {mapper, fun identity/1}}.
 
 -spec identity(K) -> K.
 identity(A) ->

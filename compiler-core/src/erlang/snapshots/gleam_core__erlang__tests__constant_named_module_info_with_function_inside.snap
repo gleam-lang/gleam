@@ -18,7 +18,11 @@ pub fn main() {
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export([function/0, main/0]).
+-export([function/0, main/0, 'moduleInfo'/0]).
+
+-spec 'moduleInfo'() -> fun(() -> integer()).
+'moduleInfo'() ->
+    fun function/0.
 
 -spec function() -> integer().
 function() ->

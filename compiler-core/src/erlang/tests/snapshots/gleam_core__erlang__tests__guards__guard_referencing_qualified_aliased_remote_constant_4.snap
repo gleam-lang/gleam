@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/erlang/tests/guards.rs
+expression: "\nimport wibble as wobble\npub fn go(x) {\n  case x {\n    _ if \"Jak\" == wobble.constant <> \"!\" -> Nil\n    _ -> Nil\n  }\n}\n"
+---
+----- SOURCE CODE
+
+import wibble as wobble
+pub fn go(x) {
+  case x {
+    _ if "Jak" == wobble.constant <> "!" -> Nil
+    _ -> Nil
+  }
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([go/1]).
+
+-spec go(any()) -> nil.
+go(X) ->
+    _value = wibble:constant(),
+    case X of
+        _ when ~"Jak" =:= <<_value/binary, "!"/utf8>> ->
+            nil;
+
+        _ ->
+            nil
+    end.
