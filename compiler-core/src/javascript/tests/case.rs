@@ -1213,3 +1213,18 @@ pub fn go() {
 }"#
     )
 }
+
+#[test]
+fn guard_binding_in_directly_matching_case_is_not_redeclared() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    #(_, b) if b == 2 -> b
+    #(_, b) -> b
+  }
+  let b = 5
+  b
+}"#
+    )
+}
