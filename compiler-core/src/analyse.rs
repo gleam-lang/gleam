@@ -314,11 +314,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
             // Now that the entire group has been inferred, generalise their types.
             for inferred_constant in working_constants.drain(..) {
-                typed_constants.push(generalise_module_constant(
-                    inferred_constant,
-                    &mut env,
-                    &self.module_name,
-                ));
+                typed_constants.push(generalise_module_constant(inferred_constant, &mut env));
             }
             for inferred_function in working_functions.drain(..) {
                 typed_functions.push(generalise_function(
@@ -1865,10 +1861,9 @@ where
 fn generalise_module_constant(
     constant: ModuleConstant<Arc<Type>>,
     environment: &mut Environment<'_>,
-    module_name: &EcoString,
 ) -> TypedModuleConstant {
     let ModuleConstant {
-        documentation: doc,
+        documentation,
         location,
         name,
         name_location,
@@ -1880,17 +1875,15 @@ fn generalise_module_constant(
         implementations,
     } = constant;
     let type_ = type_::generalise(type_);
-    let variant = ValueConstructorVariant::ModuleConstant {
-        documentation: doc.as_ref().map(|(_, doc)| doc.clone()),
-        location,
-        literal: *value.clone(),
-        module: module_name.clone(),
-        implementations,
-        name: name.clone(),
-    };
+
+    let constructor = environment
+        .get_variable(&name)
+        .expect("module constant not bound in the environment before being generalised")
+        .clone();
+
     environment.insert_variable(
         name.clone(),
-        variant.clone(),
+        constructor.variant.clone(),
         type_.clone(),
         publicity,
         deprecation.clone(),
@@ -1900,14 +1893,14 @@ fn generalise_module_constant(
         name.clone(),
         ValueConstructor {
             publicity,
-            variant,
+            variant: constructor.variant,
             deprecation: deprecation.clone(),
             type_: type_.clone(),
         },
     );
 
     ModuleConstant {
-        documentation: doc,
+        documentation,
         location,
         name,
         name_location,
