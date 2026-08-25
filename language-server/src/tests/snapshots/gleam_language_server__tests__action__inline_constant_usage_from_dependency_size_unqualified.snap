@@ -1,0 +1,25 @@
+---
+source: language-server/src/tests/action.rs
+expression: "import other.{wibble}\n\npub fn main(x) {\n  case x {\n    <<2:size(wibble)>> -> todo\n    _ -> todo\n  }\n}"
+---
+----- BEFORE ACTION
+import other.{wibble}
+
+pub fn main(x) {
+  case x {
+    <<2:size(wibble)>> -> todo
+             ↑                
+    _ -> todo
+  }
+}
+
+
+----- AFTER ACTION
+import other.{wibble}
+
+pub fn main(x) {
+  case x {
+    <<2:size(100)>> -> todo
+    _ -> todo
+  }
+}

@@ -1,0 +1,13 @@
+---
+source: language-server/src/tests/action.rs
+expression: "import other.{wibble}\npub const wobble = wibble"
+---
+----- BEFORE ACTION
+import other.{wibble}
+pub const wobble = wibble
+                   ↑     
+
+
+----- AFTER ACTION
+import other.{wibble}
+pub const wobble = 100
