@@ -23,7 +23,7 @@ export function go(x) {
     let first = x.head;
     return first * 2;
   } else {
-    let first = x.head;
-    return first;
+    let first$1 = x.head;
+    return first$1;
   }
 }

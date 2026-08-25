@@ -19,9 +19,9 @@ export function go(x) {
   if (b === 2) {
     b;
   } else {
-    let b = x[1];
-    b;
+    let b$1 = x[1];
+    b$1;
   }
-  let b = 5;
-  return b;
+  let b$1 = 5;
+  return b$1;
 }

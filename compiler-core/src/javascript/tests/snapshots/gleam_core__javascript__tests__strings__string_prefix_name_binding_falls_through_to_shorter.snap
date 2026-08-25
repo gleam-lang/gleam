@@ -21,8 +21,8 @@ export function classify(input) {
       return rest;
     } else {
       let first = "a";
-      let rest = input.slice(1);
-      return rest + first;
+      let rest$1 = input.slice(1);
+      return rest$1 + first;
     }
   } else if (input.charCodeAt(0) === 97) {
     let first = "a";

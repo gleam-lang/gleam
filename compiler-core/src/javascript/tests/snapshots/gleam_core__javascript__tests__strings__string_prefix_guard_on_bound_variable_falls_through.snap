@@ -20,8 +20,8 @@ export function classify(input) {
     if (rest === "x") {
       return "aa-x";
     } else {
-      let rest = input.slice(1);
-      return rest;
+      let rest$1 = input.slice(1);
+      return rest$1;
     }
   } else if (input.charCodeAt(0) === 97) {
     let rest = input.slice(1);

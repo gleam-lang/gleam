@@ -20,8 +20,8 @@ export function classify(input) {
     if (rest === "x") {
       return rest;
     } else {
-      let rest = input.slice(2);
-      return rest;
+      let rest$1 = input.slice(2);
+      return rest$1;
     }
   } else if (input.startsWith("🫥")) {
     let rest = input.slice(2);
