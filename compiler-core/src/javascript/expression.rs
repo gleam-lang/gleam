@@ -3235,7 +3235,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                 ]
             }
 
-            ClauseGuard::Var { name, .. } => self.local_var(name).to_doc(arena),
+            ClauseGuard::LocalVariable { name, .. } => self.local_var(name).to_doc(arena),
 
             ClauseGuard::TupleIndex { tuple, index, .. } => {
                 docvec![
@@ -3324,7 +3324,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
             ClauseGuard::Block { .. }
             | ClauseGuard::BinaryOperator { .. }
             | ClauseGuard::Not { .. }
-            | ClauseGuard::Var { .. }
+            | ClauseGuard::LocalVariable { .. }
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::FieldAccess { .. }
             | ClauseGuard::ModuleSelect { .. }
@@ -3340,7 +3340,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
     ) -> Document<'a, 'doc> {
         match guard {
             ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to code generation"),
-            ClauseGuard::Var { .. }
+            ClauseGuard::LocalVariable { .. }
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::Constant(_)
             | ClauseGuard::Not { .. }
@@ -3376,7 +3376,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
             ClauseGuard::BinaryOperator { .. }
             | ClauseGuard::Block { .. }
             | ClauseGuard::Not { .. }
-            | ClauseGuard::Var { .. }
+            | ClauseGuard::LocalVariable { .. }
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::FieldAccess { .. }
             | ClauseGuard::ModuleSelect { .. }

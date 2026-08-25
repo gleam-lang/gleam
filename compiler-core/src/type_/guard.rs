@@ -69,7 +69,7 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
                 unreachable!("untyped guard should never be invalid")
             }
 
-            ClauseGuard::Var { location, name, .. } => {
+            ClauseGuard::LocalVariable { location, name, .. } => {
                 match self.infer_clause_guard_variable(name, location) {
                     Ok(variable) => variable,
                     Err(error) => {
@@ -137,7 +137,7 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
                 type_: (),
             } => {
                 let container_location = container.location();
-                let result = if let ClauseGuard::Var { name, location, .. } = *container {
+                let result = if let ClauseGuard::LocalVariable { name, location, .. } = *container {
                     // If the container looks like a regular variable, then this
                     // could either be a module select, or a record access.
                     match self.infer_clause_guard_variable(name.clone(), location) {
@@ -382,7 +382,7 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
             }
         };
 
-        Ok(ClauseGuard::Var {
+        Ok(ClauseGuard::LocalVariable {
             location,
             name,
             origin,

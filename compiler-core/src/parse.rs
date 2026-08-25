@@ -1917,7 +1917,7 @@ where
                 let mut unit =
                     match self.parse_record_in_clause_guard(&name, SrcSpan { start, end })? {
                         Some(record) => record,
-                        _ => ClauseGuard::Var {
+                        _ => ClauseGuard::LocalVariable {
                             location: SrcSpan { start, end },
                             type_: (),
                             name,

@@ -3178,7 +3178,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
             // Only local variables are supported and the typer ensures that all
             // ClauseGuard::Vars are local variables
-            ClauseGuard::Var {
+            ClauseGuard::LocalVariable {
                 name,
                 definition_location,
                 location,
@@ -3735,7 +3735,7 @@ fn guard_produces_literal_string(guard: &ClauseGuard<Arc<Type>>) -> bool {
 
         ClauseGuard::BinaryOperator { .. }
         | ClauseGuard::Not { .. }
-        | ClauseGuard::Var { .. }
+        | ClauseGuard::LocalVariable { .. }
         | ClauseGuard::TupleIndex { .. }
         | ClauseGuard::FieldAccess { .. }
         | ClauseGuard::Invalid { .. } => false,
