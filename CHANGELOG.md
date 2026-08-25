@@ -9,6 +9,38 @@
 
 - The `--src-only` flag has been renamed to `--no-dev`.
 
+### Language server
+
+- The language server now provides "Inline constant usage" code action. For
+  example:
+
+  ```gleam
+  pub const wibble = "Hello"
+  pub const wobble = wibble <> " world"
+  //                 ^^^^^^
+
+  pub fn main() {
+    echo wibble
+    //   ^^^^^^
+    echo wobble
+    //   ^^^^^^
+  }
+  ```
+
+  Triggering this code action in all denoted places will result in following:
+
+  ```gleam
+  pub const wibble = "Hello"
+  pub const wobble = "Hello" <> " world"
+
+  pub fn main() {
+    echo "Hello"
+    echo "Hello" <> " world"
+  }
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## 1.19.0-rc1 - 2026-09-22
 
 ### Compiler
