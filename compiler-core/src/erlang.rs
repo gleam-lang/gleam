@@ -226,13 +226,6 @@ impl<'a> Generator<'a> {
     fn module<Output>(&mut self, builder: &mut impl ErlangBuilder<Output>) {
         builder.module_declaration(ErlangModuleName::new(&self.module.name));
 
-        // We need to know which private functions are referenced in importable
-        // constants so that we can export them anyway in the generated Erlang.
-        // This is because otherwise when the constant is used in another module it
-        // would result in an error as it tries to reference this private function.
-        let overridden_publicity =
-            find_private_functions_referenced_in_importable_constants(self.module);
-
         // We add a `-compile` attribute at the top of each module to instruct
         // the Erlang compiler.
         builder.compile_attribute([
@@ -248,7 +241,7 @@ impl<'a> Generator<'a> {
         // public functions and constants.
         builder.export_attribute(
             (self.module.definitions.functions.iter())
-                .filter_map(|function| function_export(function, &overridden_publicity))
+                .filter_map(|function| function_export(function))
                 .chain(
                     (self.module.definitions.constants.iter())
                         .filter_map(|constant| Some((constant_export(constant)?, 0))),
@@ -3754,10 +3747,7 @@ pub fn module<'a, Output>(
 /// this function will return its name and arity to be used when exporting it.
 /// For example: `pub fn wibble(a, b)` will produce `Some(("wibble", 2))`, so
 /// we can export `wibble/2`.
-fn function_export<'a>(
-    function: &'a TypedFunction,
-    overridden_publicity: &im::HashSet<EcoString>,
-) -> Option<(&'a str, usize)> {
+fn function_export(function: &TypedFunction) -> Option<(&str, usize)> {
     let (_, name) = function
         .name
         .as_ref()
@@ -3771,7 +3761,7 @@ fn function_export<'a>(
 
     // If the function is not importable and it's publicity has not been
     // overridden, don't attempt to export it.
-    if !function.publicity.is_importable() && !overridden_publicity.contains(name) {
+    if !function.publicity.is_importable() {
         return None;
     }
 
@@ -4535,70 +4525,5 @@ impl<'a> TypeGenerator<'a> {
             }
             builder.end_remote_named_type(type_);
         };
-    }
-}
-
-fn find_private_functions_referenced_in_importable_constants(
-    module: &TypedModule,
-) -> im::HashSet<EcoString> {
-    let mut overridden_publicity = im::HashSet::new();
-
-    for constant in &module.definitions.constants {
-        if constant.publicity.is_importable() {
-            find_referenced_private_functions(&constant.value, &mut overridden_publicity);
-        }
-    }
-    overridden_publicity
-}
-
-fn find_referenced_private_functions(
-    constant: &TypedConstant,
-    already_found: &mut im::HashSet<EcoString>,
-) {
-    match constant {
-        Constant::Todo { .. } => panic!("todo constants should not reach code generation"),
-        Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
-        Constant::RecordUpdate { .. } => {
-            panic!("record updates should not reach code generation")
-        }
-
-        Constant::Int { .. }
-        | Constant::Float { .. }
-        | Constant::String { .. }
-        | Constant::BitArray { .. } => (),
-
-        TypedConstant::Var {
-            name, constructor, ..
-        } => {
-            if let Some(ValueConstructor { type_, .. }) = constructor.as_deref()
-                && let Type::Fn { .. } = **type_
-            {
-                let _ = already_found.insert(name.clone());
-            }
-        }
-
-        TypedConstant::Record { arguments, .. } => arguments
-            .iter()
-            .flatten()
-            .for_each(|argument| find_referenced_private_functions(&argument.value, already_found)),
-
-        TypedConstant::BinaryOperator { left, right, .. } => {
-            find_referenced_private_functions(left, already_found);
-            find_referenced_private_functions(right, already_found);
-        }
-
-        Constant::Tuple { elements, .. } => elements
-            .iter()
-            .for_each(|element| find_referenced_private_functions(element, already_found)),
-
-        Constant::List { elements, tail, .. } => {
-            elements
-                .iter()
-                .for_each(|element| find_referenced_private_functions(element, already_found));
-
-            if let Some(tail) = tail {
-                find_referenced_private_functions(tail, already_found);
-            }
-        }
     }
 }
