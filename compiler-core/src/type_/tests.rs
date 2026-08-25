@@ -2987,6 +2987,7 @@ fn assert_suitable_main_function_not_module_function() {
                 can_run_on_javascript: true,
             },
             name: "main".into(),
+            remote_constants: HashSet::new(),
         },
     };
     assert!(

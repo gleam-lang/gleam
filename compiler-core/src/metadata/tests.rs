@@ -25,7 +25,10 @@ use crate::{
     uid::UniqueIdGenerator,
 };
 use src_span::{LineNumbers, SrcSpan};
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use pretty_assertions::assert_eq;
 
@@ -64,6 +67,7 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
                         can_run_on_javascript: true,
                     },
                     name: "one".into(),
+                    remote_constants: HashSet::new(),
                 },
             },
         )]
@@ -1233,6 +1237,7 @@ fn constant_var() {
                     can_run_on_javascript: true,
                 },
                 name: "one_original".into(),
+                remote_constants: HashSet::new(),
             },
         })),
     };
@@ -1266,6 +1271,7 @@ fn constant_var() {
                             can_run_on_javascript: true,
                         },
                         name: "one".into(),
+                        remote_constants: HashSet::new(),
                     },
                 },
             ),
@@ -1288,6 +1294,7 @@ fn constant_var() {
                             can_run_on_javascript: true,
                         },
                         name: "one_original".into(),
+                        remote_constants: HashSet::new(),
                     },
                 },
             ),

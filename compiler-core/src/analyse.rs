@@ -428,7 +428,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
     fn infer_module_constant(
         &mut self,
-        c: UntypedModuleConstant,
+        constant: UntypedModuleConstant,
         environment: &mut Environment<'_>,
     ) -> TypedModuleConstant {
         let ModuleConstant {
@@ -441,10 +441,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             value,
             deprecation,
             ..
-        } = c;
+        } = constant;
         self.check_name_case(name_location, &name, Named::Constant);
         // If the constant's name matches an unqualified import, emit a warning:
-        self.check_shadow_import(&name, c.location, environment);
+        self.check_shadow_import(&name, location, environment);
 
         environment.references.begin_constant();
 
@@ -454,7 +454,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             has_javascript_external: false,
         };
         let mut expr_typer = ExprTyper::new(environment, definition, &mut self.problems);
-        let typed_expr = expr_typer.infer_const(&annotation, *value);
+        let inferred = expr_typer.infer_const(&annotation, *value);
+        let typed_expr = inferred.constant;
         let type_ = typed_expr.type_();
         let implementations = expr_typer.implementations;
 
@@ -485,6 +486,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 module: self.module_name.clone(),
                 name: name.clone(),
                 implementations,
+                remote_constants: inferred.remote_constants,
             },
             type_: type_.clone(),
         };

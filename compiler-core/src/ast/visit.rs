@@ -1367,6 +1367,7 @@ where
             subjects,
             clauses,
             compiled_case,
+            remote_constants: _,
         } => v.visit_typed_expr_case(location, type_, subjects, clauses, compiled_case),
         TypedExpr::RecordAccess {
             location,

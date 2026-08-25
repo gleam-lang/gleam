@@ -165,7 +165,7 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
             }
 
             ClauseGuard::Constant(constant) => {
-                ClauseGuard::Constant(self.typer.infer_const(&None, constant))
+                ClauseGuard::Constant(self.typer.infer_const(&None, constant).constant)
             }
 
             ClauseGuard::Block { value, location } => ClauseGuard::Block {
