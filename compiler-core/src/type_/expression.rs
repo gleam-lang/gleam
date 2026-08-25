@@ -20,7 +20,10 @@ use crate::{
     exhaustiveness::{self, CompileCaseResult, CompiledCase, Reachability},
     parse::{LiteralFloatValue, PatternPosition},
     reference::{LabelSyntax, ReferenceKind},
-    type_::{constant::ConstantTyper, guard::GuardTyper},
+    type_::{
+        constant::{ConstantTyper, InferredConstant},
+        guard::GuardTyper,
+    },
 };
 use ecow::eco_format;
 use hexpm::version::{LowestVersion, Version};
@@ -2295,6 +2298,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     compiled_case: CompiledCase::failure(),
                     subjects: typed_subjects,
                     clauses: Vec::new(),
+                    remote_constants: HashSet::new(),
                 };
             }
         };
@@ -2308,8 +2312,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         for clause in clauses {
             has_a_guard = has_a_guard || clause.guard.is_some();
-            all_patterns_are_discards =
-                all_patterns_are_discards && clause.pattern.iter().all(|p| p.is_discard());
+            all_patterns_are_discards = all_patterns_are_discards
+                && clause.pattern.iter().all(|pattern| pattern.is_discard());
 
             self.previous_panics = false;
             let (typed_clause, error_typing_patterns) = self.infer_clause(clause, &typed_subjects);
@@ -2363,6 +2367,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             type_: return_type,
             subjects: typed_subjects,
             clauses: typed_clauses,
+            // TODO) take care of this
+            remote_constants: HashSet::new(),
         }
     }
 
@@ -3449,7 +3455,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         annotation: &Option<TypeAst>,
         value: UntypedConstant,
-    ) -> TypedConstant {
+    ) -> InferredConstant {
         let inferred = ConstantTyper::new(self).infer(value);
 
         match annotation
@@ -3464,10 +3470,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // If there's an annotation we try and unify it with the inferred
             // type.
             Some(Ok(annotated_type)) => {
-                if let Err(error) = unify(annotated_type.clone(), inferred.type_()) {
+                if let Err(error) = unify(annotated_type.clone(), inferred.constant.type_()) {
                     self.problems
-                        .error(convert_unify_error(error, inferred.location()));
-                    invalid_constant_with_annotated_type(inferred, annotated_type)
+                        .error(convert_unify_error(error, inferred.constant.location()));
+
+                    InferredConstant {
+                        constant: invalid_constant_with_annotated_type(
+                            inferred.constant,
+                            annotated_type,
+                        ),
+                        remote_constants: HashSet::new(),
+                    }
                 } else {
                     inferred
                 }

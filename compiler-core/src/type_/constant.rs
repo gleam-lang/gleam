@@ -30,15 +30,42 @@ use crate::{
 
 pub struct ConstantTyper<'expression_typer, 'env, 'module> {
     typer: &'expression_typer mut ExprTyper<'env, 'module>,
+    remote_constants: std::collections::HashSet<(EcoString, EcoString)>,
+}
+
+pub struct InferredConstant {
+    pub constant: TypedConstant,
+    /// These are all the remote constants referenced by this inferred constant,
+    /// either directly or indirectly.
+    /// For example if we have:
+    ///
+    /// ```gleam
+    /// import other_module.{another_constant}
+    ///
+    /// pub const wibble = other_module.a_constant
+    ///
+    /// pub const wobble = [another_constant, wibble]
+    /// ```
+    ///
+    /// `wobble` is referencing both `(other_module, another_constant)`
+    /// directly, and `(other_module, a_constant)` indirectly through
+    /// `wibble`.
+    pub remote_constants: std::collections::HashSet<(EcoString, EcoString)>,
 }
 
 impl<'expression_typer, 'env, 'module> ConstantTyper<'expression_typer, 'env, 'module> {
     pub fn new(typer: &'expression_typer mut ExprTyper<'env, 'module>) -> Self {
-        Self { typer }
+        Self {
+            typer,
+            remote_constants: std::collections::HashSet::new(),
+        }
     }
 
-    pub fn infer(mut self, constant: UntypedConstant) -> TypedConstant {
-        self.do_infer(constant)
+    pub fn infer(mut self, constant: UntypedConstant) -> InferredConstant {
+        InferredConstant {
+            constant: self.do_infer(constant),
+            remote_constants: self.remote_constants,
+        }
     }
 
     fn do_infer(&mut self, value: UntypedConstant) -> TypedConstant {
@@ -419,6 +446,25 @@ impl<'expression_typer, 'env, 'module> ConstantTyper<'expression_typer, 'env, 'm
                         };
                     }
                 };
+
+                if let ValueConstructorVariant::ModuleConstant {
+                    remote_constants,
+                    module,
+                    name,
+                    ..
+                } = &constructor.variant
+                {
+                    if *module == self.typer.environment.current_module {
+                        // If this variable is referencing a constant from the
+                        // current module, then it will be referencing all the
+                        // same remote constants.
+                        self.remote_constants
+                            .extend(remote_constants.iter().cloned());
+                    } else {
+                        // Or we're referencing a remote constant!
+                        let _ = self.remote_constants.insert((module.clone(), name.clone()));
+                    }
+                }
 
                 match constructor.variant {
                     ValueConstructorVariant::ModuleConstant { .. }
@@ -931,7 +977,11 @@ impl<'expression_typer, 'env, 'module> ConstantTyper<'expression_typer, 'env, 'm
                     *segment.value,
                     segment.options,
                     segment.location,
-                    |env, expr| Ok(env.infer_const(&None, expr)),
+                    |env, expr| {
+                        let inferred = env.infer_const(&None, expr);
+                        self.remote_constants.extend(inferred.remote_constants);
+                        Ok(inferred.constant)
+                    },
                 );
 
                 if let Ok(segment) = &segment {

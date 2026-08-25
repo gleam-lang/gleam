@@ -229,6 +229,7 @@ impl RemapIds {
                 name,
                 literal,
                 implementations,
+                remote_constants,
             } => ValueConstructorVariant::ModuleConstant {
                 documentation,
                 location,
@@ -236,6 +237,7 @@ impl RemapIds {
                 name,
                 literal: self.constant(literal),
                 implementations,
+                remote_constants,
             },
             ValueConstructorVariant::ModuleFn {
                 name,

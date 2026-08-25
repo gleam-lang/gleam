@@ -622,7 +622,15 @@ impl Inliner<'_> {
                 subjects,
                 clauses,
                 compiled_case,
-            } => self.case(location, type_, subjects, clauses, compiled_case),
+                remote_constants,
+            } => self.case(
+                location,
+                type_,
+                subjects,
+                clauses,
+                compiled_case,
+                remote_constants,
+            ),
 
             TypedExpr::RecordAccess {
                 location,
@@ -1159,6 +1167,7 @@ impl Inliner<'_> {
         subjects: Vec<TypedExpr>,
         clauses: Vec<TypedClause>,
         compiled_case: CompiledCase,
+        remote_constants: HashSet<(EcoString, EcoString)>,
     ) -> TypedExpr {
         let subjects = self.expressions(subjects);
         let clauses = clauses
@@ -1181,6 +1190,7 @@ impl Inliner<'_> {
             subjects,
             clauses,
             compiled_case,
+            remote_constants,
         }
     }
 
@@ -1595,6 +1605,7 @@ impl FunctionToInlinable {
                 clauses,
                 compiled_case,
                 type_,
+                remote_constants,
                 ..
             } => {
                 let subjects = subjects
@@ -1611,6 +1622,7 @@ impl FunctionToInlinable {
                     clauses,
                     compiled_case: Box::new(compiled_case.clone()),
                     type_: self.type_(type_),
+                    remote_constants: remote_constants.clone(),
                 })
             }
             TypedExpr::Var {
@@ -1855,6 +1867,7 @@ pub enum InlinableExpression {
         clauses: Vec<InlinableClause>,
         compiled_case: Box<CompiledCase>,
         type_: InlinableType,
+        remote_constants: HashSet<(EcoString, EcoString)>,
     },
 
     Variable {
@@ -1878,6 +1891,7 @@ impl InlinableExpression {
                 clauses,
                 compiled_case,
                 type_,
+                remote_constants,
             } => TypedExpr::Case {
                 location: BLANK_LOCATION,
                 type_: type_.to_type(),
@@ -1890,6 +1904,7 @@ impl InlinableExpression {
                     .map(|clause| clause.to_typed_clause())
                     .collect(),
                 compiled_case: compiled_case.as_ref().clone(),
+                remote_constants: remote_constants.clone(),
             },
             InlinableExpression::Variable {
                 name,
