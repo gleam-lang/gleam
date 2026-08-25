@@ -1,0 +1,25 @@
+---
+source: language-server/src/tests/action.rs
+expression: "import other\n\npub fn main(x) {\n  case x {\n    a if a > other.wibble -> True\n    _ -> False\n  }\n}"
+---
+----- BEFORE ACTION
+import other
+
+pub fn main(x) {
+  case x {
+    a if a > other.wibble -> True
+                   ↑             
+    _ -> False
+  }
+}
+
+
+----- AFTER ACTION
+import other
+
+pub fn main(x) {
+  case x {
+    a if a > 100 -> True
+    _ -> False
+  }
+}
