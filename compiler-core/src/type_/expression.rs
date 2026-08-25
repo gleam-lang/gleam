@@ -10,7 +10,7 @@ use crate::{
         CAPTURE_VARIABLE, CallArg, Clause, Constant, FunctionLiteralKind, HasLocation,
         ImplicitCallArgOrigin, InvalidExpression, Layer, RECORD_UPDATE_VARIABLE,
         RecordBeingUpdated, Statement, TodoKind, TypeAst, TypedArg, TypedAssert, TypedAssignment,
-        TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern, TypedStatement,
+        TypedClause, TypedConstant, TypedExpr, TypedMultiPattern, TypedStatement,
         USE_ASSIGNMENT_VARIABLE, UntypedArg, UntypedAssert, UntypedAssignment, UntypedClause,
         UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedExprBitArraySegment,
         UntypedMultiPattern, UntypedStatement, UntypedUse, UntypedUseAssignment, Use,
@@ -22,7 +22,7 @@ use crate::{
     reference::{LabelSyntax, ReferenceKind},
     type_::{
         constant::{ConstantTyper, InferredConstant},
-        guard::GuardTyper,
+        guard::{GuardTyper, InferredGuard},
     },
 };
 use ecow::eco_format;
@@ -2310,13 +2310,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut all_clauses_panic = !clauses.is_empty();
         let mut patterns_typechecked_successfully = true;
 
+        let mut case_remote_constants = HashSet::new();
         for clause in clauses {
             has_a_guard = has_a_guard || clause.guard.is_some();
             all_patterns_are_discards = all_patterns_are_discards
                 && clause.pattern.iter().all(|pattern| pattern.is_discard());
 
             self.previous_panics = false;
-            let (typed_clause, error_typing_patterns) = self.infer_clause(clause, &typed_subjects);
+            let (typed_clause, error_typing_patterns, remote_constants) =
+                self.infer_clause(clause, &typed_subjects);
+            case_remote_constants.extend(remote_constants);
             if error_typing_patterns {
                 patterns_typechecked_successfully = false;
             }
@@ -2367,8 +2370,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             type_: return_type,
             subjects: typed_subjects,
             clauses: typed_clauses,
-            // TODO) take care of this
-            remote_constants: HashSet::new(),
+            remote_constants: case_remote_constants,
         }
     }
 
@@ -2379,7 +2381,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         clause: UntypedClause,
         subjects: &[TypedExpr],
-    ) -> (TypedClause, bool) {
+    ) -> (TypedClause, bool, HashSet<(EcoString, EcoString)>) {
         let Clause {
             pattern,
             alternative_patterns,
@@ -2391,7 +2393,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             let (typed_pattern, typed_alternatives, error_encountered) =
                 this.infer_clause_pattern(pattern, alternative_patterns, subjects, &location);
 
-            let guard = this.infer_optional_clause_guard(guard);
+            let (guard, remote_constants) = match this.infer_optional_clause_guard(guard) {
+                Some(InferredGuard {
+                    guard,
+                    remote_constants,
+                }) => (Some(guard), remote_constants),
+                None => (None, HashSet::new()),
+            };
+
             let then = this.infer(then);
             let clause = Clause {
                 location,
@@ -2400,7 +2409,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 guard,
                 then,
             };
-            (clause, error_encountered)
+            (clause, error_encountered, remote_constants)
         })
     }
 
@@ -2445,15 +2454,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_optional_clause_guard(
         &mut self,
         guard: Option<UntypedClauseGuard>,
-    ) -> Option<TypedClauseGuard> {
+    ) -> Option<InferredGuard> {
         // If there is a guard we type check it and assert that it is of type
         // Bool.
-        let guard = GuardTyper::new(self).infer(guard?);
-        if let Err(error) = unify(bool(), guard.type_()) {
+        let inferred = GuardTyper::new(self).infer(guard?);
+        if let Err(error) = unify(bool(), inferred.guard.type_()) {
             self.problems
-                .error(convert_unify_error(error, guard.location()));
+                .error(convert_unify_error(error, inferred.guard.location()));
         }
-        Some(guard)
+        Some(inferred)
     }
 
     pub(crate) fn infer_module_access(
