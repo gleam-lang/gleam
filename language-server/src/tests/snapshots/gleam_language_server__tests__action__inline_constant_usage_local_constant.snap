@@ -1,0 +1,13 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub const wibble = \"Hello, world!\"\npub const wobble = wibble"
+---
+----- BEFORE ACTION
+pub const wibble = "Hello, world!"
+pub const wobble = wibble
+                   ↑     
+
+
+----- AFTER ACTION
+pub const wibble = "Hello, world!"
+pub const wobble = "Hello, world!"

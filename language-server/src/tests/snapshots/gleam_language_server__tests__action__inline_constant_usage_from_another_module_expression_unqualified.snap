@@ -1,0 +1,19 @@
+---
+source: language-server/src/tests/action.rs
+expression: "import other.{wibble}\n\npub fn main() {\n  echo wibble\n}"
+---
+----- BEFORE ACTION
+import other.{wibble}
+
+pub fn main() {
+  echo wibble
+       ↑     
+}
+
+
+----- AFTER ACTION
+import other.{wibble}
+
+pub fn main() {
+  echo 100
+}
