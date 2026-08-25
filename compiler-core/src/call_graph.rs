@@ -453,6 +453,8 @@ impl<'a> CallGraphBuilder<'a> {
 
             ClauseGuard::ModuleSelect { module_name, .. } => self.referenced(module_name),
 
+            ClauseGuard::UnqualifiedRemoteConstant { name, .. } => self.referenced(name),
+
             ClauseGuard::Constant(constant) => self.constant(constant),
         }
     }

@@ -14,7 +14,11 @@ expression: "\n          fn identity(a) {\n            a\n          }\n\n       
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export([identity/1]).
+-export([identity/1, id/0]).
+
+-spec id() -> fun((K) -> K).
+id() ->
+    fun identity/1.
 
 -spec identity(I) -> I.
 identity(A) ->
