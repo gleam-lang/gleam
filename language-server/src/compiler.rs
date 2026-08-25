@@ -134,13 +134,18 @@ where
                 .map(|s| s.to_string())
                 .unwrap_or(path);
             let line_numbers = LineNumbers::new(&module.code);
-            let source = ModuleSourceInformation { path, line_numbers };
+            let code = module.code.clone();
+            let source = ModuleSourceInformation {
+                path,
+                code,
+                line_numbers,
+            };
             _ = self.sources.insert(module.name.clone(), source);
         }
 
         // Since cached modules are not recompiled we need to manually add them
         for (name, module) in self.project_compiler.get_importable_modules() {
-            // It we already have the source for an importable module it means
+            // If we already have the source for an importable module it means
             // that we already have all the information we are adding here, so
             // we can skip past to to avoid doing extra work for no gain.
             if self.sources.contains_key(name) || name == "gleam" {
@@ -148,14 +153,24 @@ where
             }
             // Create the source information
             let path = module.src_path.to_string();
-            // strip canonicalised windows prefix
+            // Strip canonicalised Windows prefix
             #[cfg(target_family = "windows")]
             let path = path
                 .strip_prefix(r"\\?\")
                 .map(|s| s.to_string())
                 .unwrap_or(path);
             let line_numbers = module.line_numbers.clone();
-            let source = ModuleSourceInformation { path, line_numbers };
+            let code = self
+                .project_compiler
+                .io
+                .read(path.as_str().into())
+                .expect("successfully read source of module")
+                .into();
+            let source = ModuleSourceInformation {
+                path,
+                code,
+                line_numbers,
+            };
             _ = self.sources.insert(name.clone(), source);
         }
 
@@ -181,7 +196,12 @@ where
         for module in modules {
             let path = module.input_path.as_os_str().to_string_lossy().to_string();
             let line_numbers = LineNumbers::new(&module.code);
-            let source = ModuleSourceInformation { path, line_numbers };
+            let code = module.code.clone();
+            let source = ModuleSourceInformation {
+                path,
+                code,
+                line_numbers,
+            };
             // Record that this one has been compiled. This is returned by this
             // function and is used to determine what diagnostics to reset.
             compiled_modules.push(module.input_path.clone());
@@ -213,8 +233,11 @@ impl<IO> LspProjectCompiler<IO> {
 
 #[derive(Debug)]
 pub struct ModuleSourceInformation {
-    /// The path to the source file from within the project root
+    /// The path to the source file from within the project root.
     pub path: String,
+
+    /// Source code of the module.
+    pub code: EcoString,
 
     /// Useful for converting from Gleam's byte index offsets to the LSP line
     /// and column number positions.
