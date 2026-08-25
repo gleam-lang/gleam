@@ -226,6 +226,10 @@
   prefix alias.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Fixed a bug where the compiler would suggest wrapping a mismatched type in
+  `Ok()` even when doing so would not fix the type unification error.
+  ([Hari Mohan](https://github.com/seafoamteal))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when

@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main() {\n  wibble(wobble(todo))\n}\n\npub fn wobble(arg: a) -> Result(Int, a) {\n  todo\n}\n\npub fn wibble(arg: Result(Float, a)) -> a {\n  todo\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  wibble(wobble(todo))
+}
+
+pub fn wobble(arg: a) -> Result(Int, a) {
+  todo
+}
+
+pub fn wibble(arg: Result(Float, a)) -> a {
+  todo
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:10
+  │
+3 │   wibble(wobble(todo))
+  │          ^^^^^^^^^^^^
+
+Expected type:
+
+    Result(Float, a)
+
+Found type:
+
+    Result(Int, a)

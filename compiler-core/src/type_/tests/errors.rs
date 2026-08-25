@@ -2888,6 +2888,45 @@ pub fn want_result(wibble: fn() -> Result(Int, Bool)) {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/5914
+#[test]
+fn do_not_suggest_wrapping_in_ok_if_expected_ok_type_is_unbound() {
+    assert_module_error!(
+        "
+pub fn main() {
+  wibble(wobble(todo))
+}
+
+pub fn wobble(arg: a) -> Result(a, String) {
+  todo
+}
+
+pub fn wibble(arg: Result(a, Int)) -> a {
+  todo
+}"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/5914
+#[test]
+fn do_not_suggest_wrapping_in_error_if_expected_error_type_is_unbound() {
+    assert_module_error!(
+        "
+pub fn main() {
+  wibble(wobble(todo))
+}
+
+pub fn wobble(arg: a) -> Result(Int, a) {
+  todo
+}
+
+pub fn wibble(arg: Result(Float, a)) -> a {
+  todo
+}
+"
+    );
+}
+
 #[test]
 // https://github.com/gleam-lang/gleam/issues/4195
 fn let_assert_binding_cannot_be_used_in_panic_message() {
