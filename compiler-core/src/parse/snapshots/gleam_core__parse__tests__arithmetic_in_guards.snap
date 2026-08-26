@@ -113,8 +113,17 @@ expression: "\ncase 2, 3 {\n    x, y if x + y == 1 -> True\n}"
                                         },
                                     },
                                 },
-                                right: Constant(
-                                    Int {
+                                right: Constant {
+                                    location: SrcSpan {
+                                        start: 34,
+                                        end: 35,
+                                    },
+                                    definition_location: SrcSpan {
+                                        start: 34,
+                                        end: 35,
+                                    },
+                                    module: None,
+                                    literal: Int {
                                         location: SrcSpan {
                                             start: 34,
                                             end: 35,
@@ -122,7 +131,7 @@ expression: "\ncase 2, 3 {\n    x, y if x + y == 1 -> True\n}"
                                         value: "1",
                                         int_value: 1,
                                     },
-                                ),
+                                },
                             },
                         ),
                         then: Var {

@@ -1,0 +1,25 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub const wibble = 100\n\npub fn main(x) {\n  case x {\n    a if a > wibble -> True\n    _ -> False\n  }\n}"
+---
+----- BEFORE ACTION
+pub const wibble = 100
+
+pub fn main(x) {
+  case x {
+    a if a > wibble -> True
+             ↑             
+    _ -> False
+  }
+}
+
+
+----- AFTER ACTION
+pub const wibble = 100
+
+pub fn main(x) {
+  case x {
+    a if a > 100 -> True
+    _ -> False
+  }
+}

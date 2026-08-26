@@ -57,8 +57,17 @@ expression: "case 1 {\n  _ if { 1 || { 1 || 1 } } || 1  -> 1\n}"
                                         },
                                         operator: Or,
                                         operator_start: 20,
-                                        left: Constant(
-                                            Int {
+                                        left: Constant {
+                                            location: SrcSpan {
+                                                start: 18,
+                                                end: 19,
+                                            },
+                                            definition_location: SrcSpan {
+                                                start: 18,
+                                                end: 19,
+                                            },
+                                            module: None,
+                                            literal: Int {
                                                 location: SrcSpan {
                                                     start: 18,
                                                     end: 19,
@@ -66,7 +75,7 @@ expression: "case 1 {\n  _ if { 1 || { 1 || 1 } } || 1  -> 1\n}"
                                                 value: "1",
                                                 int_value: 1,
                                             },
-                                        ),
+                                        },
                                         right: Block {
                                             location: SrcSpan {
                                                 start: 23,
@@ -79,8 +88,17 @@ expression: "case 1 {\n  _ if { 1 || { 1 || 1 } } || 1  -> 1\n}"
                                                 },
                                                 operator: Or,
                                                 operator_start: 27,
-                                                left: Constant(
-                                                    Int {
+                                                left: Constant {
+                                                    location: SrcSpan {
+                                                        start: 25,
+                                                        end: 26,
+                                                    },
+                                                    definition_location: SrcSpan {
+                                                        start: 25,
+                                                        end: 26,
+                                                    },
+                                                    module: None,
+                                                    literal: Int {
                                                         location: SrcSpan {
                                                             start: 25,
                                                             end: 26,
@@ -88,9 +106,18 @@ expression: "case 1 {\n  _ if { 1 || { 1 || 1 } } || 1  -> 1\n}"
                                                         value: "1",
                                                         int_value: 1,
                                                     },
-                                                ),
-                                                right: Constant(
-                                                    Int {
+                                                },
+                                                right: Constant {
+                                                    location: SrcSpan {
+                                                        start: 30,
+                                                        end: 31,
+                                                    },
+                                                    definition_location: SrcSpan {
+                                                        start: 30,
+                                                        end: 31,
+                                                    },
+                                                    module: None,
+                                                    literal: Int {
                                                         location: SrcSpan {
                                                             start: 30,
                                                             end: 31,
@@ -98,13 +125,22 @@ expression: "case 1 {\n  _ if { 1 || { 1 || 1 } } || 1  -> 1\n}"
                                                         value: "1",
                                                         int_value: 1,
                                                     },
-                                                ),
+                                                },
                                             },
                                         },
                                     },
                                 },
-                                right: Constant(
-                                    Int {
+                                right: Constant {
+                                    location: SrcSpan {
+                                        start: 39,
+                                        end: 40,
+                                    },
+                                    definition_location: SrcSpan {
+                                        start: 39,
+                                        end: 40,
+                                    },
+                                    module: None,
+                                    literal: Int {
                                         location: SrcSpan {
                                             start: 39,
                                             end: 40,
@@ -112,7 +148,7 @@ expression: "case 1 {\n  _ if { 1 || { 1 || 1 } } || 1  -> 1\n}"
                                         value: "1",
                                         int_value: 1,
                                     },
-                                ),
+                                },
                             },
                         ),
                         then: Int {
