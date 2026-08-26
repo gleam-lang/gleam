@@ -16435,13 +16435,13 @@ pub fn main() {
 }
 
 #[test]
-fn inline_constant_usage_from_another_module_expression_unqualified() {
+fn no_inline_constant_usage_from_another_module_expression_unqualified() {
     let source = r#"import other.{wibble}
 
 pub fn main() {
   echo wibble
 }"#;
-    assert_code_action!(
+    assert_no_code_actions!(
         INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_module("other", "pub const wibble = 100"),
         find_position_of("wibble").nth_occurrence(2).to_selection()
@@ -16449,13 +16449,13 @@ pub fn main() {
 }
 
 #[test]
-fn inline_constant_usage_from_another_module_expression_qualified() {
+fn no_inline_constant_usage_from_another_module_expression_qualified() {
     let source = r#"import other
 
 pub fn main() {
   echo other.wibble
 }"#;
-    assert_code_action!(
+    assert_no_code_actions!(
         INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_module("other", "pub const wibble = 100"),
         find_position_of("wibble").to_selection()
@@ -16463,13 +16463,13 @@ pub fn main() {
 }
 
 #[test]
-fn inline_constant_usage_from_dependency_expression_unqualified() {
+fn no_inline_constant_usage_from_dependency_expression_unqualified() {
     let source = r#"import other.{wibble}
 
 pub fn main() {
   echo wibble
 }"#;
-    assert_code_action!(
+    assert_no_code_actions!(
         INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_dep_module("other", "pub const wibble = 100"),
         find_position_of("wibble").nth_occurrence(2).to_selection()
@@ -16477,13 +16477,13 @@ pub fn main() {
 }
 
 #[test]
-fn inline_constant_usage_from_dependency_expression_qualified() {
+fn no_inline_constant_usage_from_dependency_expression_qualified() {
     let source = r#"import other
 
 pub fn main() {
   echo other.wibble
 }"#;
-    assert_code_action!(
+    assert_no_code_actions!(
         INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_dep_module("other", "pub const wibble = 100"),
         find_position_of("wibble").to_selection()
@@ -16501,10 +16501,10 @@ pub const wobble = wibble"#,
 }
 
 #[test]
-fn inline_constant_usage_from_another_module_constant_unqualified() {
+fn no_inline_constant_usage_from_another_module_constant_unqualified() {
     let source = r#"import other.{wibble}
 pub const wobble = wibble"#;
-    assert_code_action!(
+    assert_no_code_actions!(
         INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_module("other", "pub const wibble = 100"),
         find_position_of("wibble").nth_occurrence(2).to_selection()
@@ -16512,10 +16512,10 @@ pub const wobble = wibble"#;
 }
 
 #[test]
-fn inline_constant_usage_from_another_module_constant_qualified() {
+fn no_inline_constant_usage_from_another_module_constant_qualified() {
     let source = r#"import other
 pub const wobble = other.wibble"#;
-    assert_code_action!(
+    assert_no_code_actions!(
         INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_module("other", "pub const wibble = 100"),
         find_position_of("wibble").to_selection()
@@ -16523,10 +16523,10 @@ pub const wobble = other.wibble"#;
 }
 
 #[test]
-fn inline_constant_usage_from_dependency_constant_unqualified() {
+fn no_inline_constant_usage_from_dependency_constant_unqualified() {
     let source = r#"import other.{wibble}
 pub const wobble = wibble"#;
-    assert_code_action!(
+    assert_no_code_actions!(
         INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_dep_module("other", "pub const wibble = 100"),
         find_position_of("wibble").nth_occurrence(2).to_selection()
@@ -16534,10 +16534,10 @@ pub const wobble = wibble"#;
 }
 
 #[test]
-fn inline_constant_usage_from_dependency_constant_qualified() {
+fn no_inline_constant_usage_from_dependency_constant_qualified() {
     let source = r#"import other
 pub const wobble = other.wibble"#;
-    assert_code_action!(
+    assert_no_code_actions!(
         INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_dep_module("other", "pub const wibble = 100"),
         find_position_of("wibble").to_selection()
@@ -16561,7 +16561,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn inline_constant_usage_from_another_module_size_unqualified() {
+fn no_inline_constant_usage_from_another_module_size_unqualified() {
     let source = r#"import other.{wibble}
 
 pub fn main(x) {
@@ -16570,7 +16570,7 @@ pub fn main(x) {
     _ -> todo
   }
 }"#;
-    assert_code_action!(
+    assert_no_code_actions!(
         INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_module("other", "pub const wibble = 100"),
         find_position_of("wibble").nth_occurrence(2).to_selection()
@@ -16578,7 +16578,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn inline_constant_usage_from_dependency_size_unqualified() {
+fn no_inline_constant_usage_from_dependency_size_unqualified() {
     let source = r#"import other.{wibble}
 
 pub fn main(x) {
@@ -16587,7 +16587,7 @@ pub fn main(x) {
     _ -> todo
   }
 }"#;
-    assert_code_action!(
+    assert_no_code_actions!(
         INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_dep_module("other", "pub const wibble = 100"),
         find_position_of("wibble").nth_occurrence(2).to_selection()
@@ -16595,7 +16595,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn inline_constant_usage_from_another_module_guard_qualified() {
+fn no_inline_constant_usage_from_another_module_guard_qualified() {
     let source = r#"import other
 
 pub fn main(x) {
@@ -16604,7 +16604,7 @@ pub fn main(x) {
     _ -> False
   }
 }"#;
-    assert_code_action!(
+    assert_no_code_actions!(
         INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_module("other", "pub const wibble = 100"),
         find_position_of("wibble").to_selection()
@@ -16612,7 +16612,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn inline_constant_usage_from_dependency_guard_qualified() {
+fn no_inline_constant_usage_from_dependency_guard_qualified() {
     let source = r#"import other
 
 pub fn main(x) {
@@ -16621,7 +16621,7 @@ pub fn main(x) {
     _ -> False
   }
 }"#;
-    assert_code_action!(
+    assert_no_code_actions!(
         INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_dep_module("other", "pub const wibble = 100"),
         find_position_of("wibble").to_selection()
