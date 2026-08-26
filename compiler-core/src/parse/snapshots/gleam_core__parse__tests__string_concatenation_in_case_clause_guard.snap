@@ -102,25 +102,35 @@ expression: "\nlet my_string = \"hello \"\ncase my_string {\n    _ if my_string 
                                             declaration: Generated,
                                         },
                                     },
-                                    right: Constant(
-                                        String {
+                                    right: Constant {
+                                        location: SrcSpan {
+                                            start: 65,
+                                            end: 72,
+                                        },
+                                        module: None,
+                                        literal: String {
                                             location: SrcSpan {
                                                 start: 65,
                                                 end: 72,
                                             },
                                             value: "world",
                                         },
-                                    ),
+                                    },
                                 },
-                                right: Constant(
-                                    String {
+                                right: Constant {
+                                    location: SrcSpan {
+                                        start: 76,
+                                        end: 89,
+                                    },
+                                    module: None,
+                                    literal: String {
                                         location: SrcSpan {
                                             start: 76,
                                             end: 89,
                                         },
                                         value: "hello world",
                                     },
-                                ),
+                                },
                             },
                         ),
                         then: Call {

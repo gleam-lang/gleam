@@ -16314,6 +16314,22 @@ pub fn main(x) {
 }
 
 #[test]
+fn inline_constant_usage_local_clause_guard() {
+    assert_code_action!(
+        INLINE_CONSTANT_VALUE,
+        r#"pub const wibble = 100
+
+pub fn main(x) {
+  case x {
+    a if a > wibble -> True
+    _ -> False
+  }
+}"#,
+        find_position_of("wibble").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
 fn no_inline_constant_usage_from_another_module_guard_qualified() {
     let source = r#"import other
 

@@ -161,9 +161,50 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
                 }
             }
 
-            ClauseGuard::Constant(constant) => {
-                ClauseGuard::Constant(self.typer.infer_const(&None, constant))
+            // We want to preserve module where the usage comes from, so it can
+            // be used here.
+            //
+            // ```gleam
+            // import wibble.{wobble}
+            //
+            // fn go(a) {
+            //   case a {
+            //     _ if wobble -> todo
+            //     //   ^^^^^^ We want to preserve that it was used from current
+            //     // module, otherwise we will lose this information, because
+            //     // we infer it to its literal.
+            //     _ -> todo
+            //   }
+            // }
+            // ```
+            ClauseGuard::Constant {
+                location,
+                literal:
+                    ref literal @ crate::ast::Constant::Var {
+                        constructor: Some(ref constructor),
+                        ..
+                    },
+                ..
+            } if let super::ValueConstructor {
+                variant: ValueConstructorVariant::ModuleConstant { ref module, .. },
+                ..
+            } = **constructor =>
+            {
+                ClauseGuard::Constant {
+                    location,
+                    module: Some(module.clone()),
+                    literal: self.typer.infer_const(&None, literal.clone()),
+                }
             }
+            ClauseGuard::Constant {
+                location,
+                module,
+                literal,
+            } => ClauseGuard::Constant {
+                location,
+                module,
+                literal: self.typer.infer_const(&None, literal),
+            },
 
             ClauseGuard::Block { value, location } => ClauseGuard::Block {
                 location,
@@ -319,8 +360,14 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
                 return Err(Error::NonLocalClauseGuardVariable { location, name });
             }
 
-            ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                return Ok(ClauseGuard::Constant(literal.clone()));
+            ValueConstructorVariant::ModuleConstant {
+                literal, module, ..
+            } => {
+                return Ok(ClauseGuard::Constant {
+                    location,
+                    module: Some(module.clone()),
+                    literal: literal.clone(),
+                });
             }
         };
 
