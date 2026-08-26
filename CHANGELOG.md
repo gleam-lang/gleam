@@ -11,7 +11,7 @@
 
 ### Language server
 
-- The language server now provides "Inline constant usage" code action. For
+- The language server now provides "Inline constant value" code action. For
   example:
 
   ```gleam

@@ -209,7 +209,7 @@ const DISCARD_UNUSED_VARIABLE: &str = "Discard unused variable";
 const ADD_EXTRA_PARENTHESES: &str = "Add extra parentheses";
 const CONVERT_TO_DOCUMENTATION_COMMENT: &str = "Convert to documentation comment";
 const CONVERT_TO_REGULAR_COMMENT: &str = "Convert to regular comment";
-const INLINE_CONSTANT_USAGE: &str = "Inline constant usage";
+const INLINE_CONSTANT_VALUE: &str = "Inline constant value";
 
 fn generate_variant_message(type_name: &str) -> String {
     format!("Generate `{type_name}` variant")
@@ -16143,7 +16143,7 @@ fn convert_int_between_bases_in_size_options() {
 #[test]
 fn inline_constant_usage_local_expression() {
     assert_code_action!(
-        INLINE_CONSTANT_USAGE,
+        INLINE_CONSTANT_VALUE,
         r#"pub const wibble = "Hello, world!"
 
 pub fn main() {
@@ -16161,7 +16161,7 @@ pub fn main() {
   echo wibble
 }"#;
     assert_code_action!(
-        INLINE_CONSTANT_USAGE,
+        INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_module("other", "pub const wibble = 100"),
         find_position_of("wibble").nth_occurrence(2).to_selection()
     );
@@ -16175,7 +16175,7 @@ pub fn main() {
   echo other.wibble
 }"#;
     assert_code_action!(
-        INLINE_CONSTANT_USAGE,
+        INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_module("other", "pub const wibble = 100"),
         find_position_of("wibble").to_selection()
     );
@@ -16189,7 +16189,7 @@ pub fn main() {
   echo wibble
 }"#;
     assert_code_action!(
-        INLINE_CONSTANT_USAGE,
+        INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_dep_module("other", "pub const wibble = 100"),
         find_position_of("wibble").nth_occurrence(2).to_selection()
     );
@@ -16203,7 +16203,7 @@ pub fn main() {
   echo other.wibble
 }"#;
     assert_code_action!(
-        INLINE_CONSTANT_USAGE,
+        INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_dep_module("other", "pub const wibble = 100"),
         find_position_of("wibble").to_selection()
     );
@@ -16212,7 +16212,7 @@ pub fn main() {
 #[test]
 fn inline_constant_usage_local_constant() {
     assert_code_action!(
-        INLINE_CONSTANT_USAGE,
+        INLINE_CONSTANT_VALUE,
         r#"pub const wibble = "Hello, world!"
 pub const wobble = wibble"#,
         find_position_of("wibble").nth_occurrence(2).to_selection()
@@ -16224,7 +16224,7 @@ fn inline_constant_usage_from_another_module_constant_unqualified() {
     let source = r#"import other.{wibble}
 pub const wobble = wibble"#;
     assert_code_action!(
-        INLINE_CONSTANT_USAGE,
+        INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_module("other", "pub const wibble = 100"),
         find_position_of("wibble").nth_occurrence(2).to_selection()
     );
@@ -16235,7 +16235,7 @@ fn inline_constant_usage_from_another_module_constant_qualified() {
     let source = r#"import other
 pub const wobble = other.wibble"#;
     assert_code_action!(
-        INLINE_CONSTANT_USAGE,
+        INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_module("other", "pub const wibble = 100"),
         find_position_of("wibble").to_selection()
     );
@@ -16246,7 +16246,7 @@ fn inline_constant_usage_from_dependency_constant_unqualified() {
     let source = r#"import other.{wibble}
 pub const wobble = wibble"#;
     assert_code_action!(
-        INLINE_CONSTANT_USAGE,
+        INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_dep_module("other", "pub const wibble = 100"),
         find_position_of("wibble").nth_occurrence(2).to_selection()
     );
@@ -16257,7 +16257,7 @@ fn inline_constant_usage_from_dependency_constant_qualified() {
     let source = r#"import other
 pub const wobble = other.wibble"#;
     assert_code_action!(
-        INLINE_CONSTANT_USAGE,
+        INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_dep_module("other", "pub const wibble = 100"),
         find_position_of("wibble").to_selection()
     );
@@ -16266,7 +16266,7 @@ pub const wobble = other.wibble"#;
 #[test]
 fn inline_constant_usage_local_size() {
     assert_code_action!(
-        INLINE_CONSTANT_USAGE,
+        INLINE_CONSTANT_VALUE,
         r#"pub const wibble = 100
 
 pub fn main(x) {
@@ -16290,7 +16290,7 @@ pub fn main(x) {
   }
 }"#;
     assert_code_action!(
-        INLINE_CONSTANT_USAGE,
+        INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_module("other", "pub const wibble = 100"),
         find_position_of("wibble").nth_occurrence(2).to_selection()
     );
@@ -16307,7 +16307,7 @@ pub fn main(x) {
   }
 }"#;
     assert_code_action!(
-        INLINE_CONSTANT_USAGE,
+        INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_dep_module("other", "pub const wibble = 100"),
         find_position_of("wibble").nth_occurrence(2).to_selection()
     );
@@ -16324,7 +16324,7 @@ pub fn main(x) {
   }
 }"#;
     assert_code_action!(
-        INLINE_CONSTANT_USAGE,
+        INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_module("other", "pub const wibble = 100"),
         find_position_of("wibble").to_selection()
     );
@@ -16341,7 +16341,7 @@ pub fn main(x) {
   }
 }"#;
     assert_code_action!(
-        INLINE_CONSTANT_USAGE,
+        INLINE_CONSTANT_VALUE,
         TestProject::for_source(source).add_dep_module("other", "pub const wibble = 100"),
         find_position_of("wibble").to_selection()
     );

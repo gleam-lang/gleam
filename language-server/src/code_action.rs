@@ -13398,7 +13398,7 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
     }
 }
 
-pub struct InlineConstantUsage<'a> {
+pub struct InlineConstantValue<'a> {
     module: &'a Module,
     sources: &'a std::collections::HashMap<EcoString, ModuleSourceInformation>,
     params: &'a CodeActionParams,
@@ -13406,7 +13406,7 @@ pub struct InlineConstantUsage<'a> {
     actions: Vec<CodeAction>,
 }
 
-impl<'a> InlineConstantUsage<'a> {
+impl<'a> InlineConstantValue<'a> {
     pub fn new(
         module: &'a Module,
         sources: &'a std::collections::HashMap<EcoString, ModuleSourceInformation>,
@@ -13443,7 +13443,7 @@ impl<'a> InlineConstantUsage<'a> {
             .expect("span is valid");
 
         self.edits.replace(usage_location, value.to_string());
-        CodeActionBuilder::new("Inline constant usage")
+        CodeActionBuilder::new("Inline constant value")
             .kind(CodeActionKind::RefactorInline)
             .changes(
                 self.params.text_document.uri.clone(),
@@ -13454,7 +13454,7 @@ impl<'a> InlineConstantUsage<'a> {
     }
 }
 
-impl<'ast> ast::visit::Visit<'ast> for InlineConstantUsage<'ast> {
+impl<'ast> ast::visit::Visit<'ast> for InlineConstantValue<'ast> {
     fn visit_typed_constant(&mut self, constant: &'ast ast::TypedConstant) {
         // We skip all the constants the cursor is not inside of.
         // This is gonna make it faster to find the usage we're hovering, if
