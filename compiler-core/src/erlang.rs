@@ -3093,7 +3093,9 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to code generation"),
 
             ClauseGuard::ModuleSelect { literal, .. } => self.inlined_constant(builder, literal),
-            ClauseGuard::Constant(constant) => self.inlined_constant(builder, constant),
+            ClauseGuard::Constant {
+                literal: constant, ..
+            } => self.inlined_constant(builder, constant),
 
             ClauseGuard::Block { value, .. } => self.clause_guard(builder, value, assignments),
 
@@ -3718,7 +3720,9 @@ fn guard_produces_literal_string(guard: &ClauseGuard<Arc<Type>>) -> bool {
         ClauseGuard::ModuleSelect {
             literal: constant, ..
         }
-        | ClauseGuard::Constant(constant) => constant_produces_literal_string(constant),
+        | ClauseGuard::Constant {
+            literal: constant, ..
+        } => constant_produces_literal_string(constant),
 
         ClauseGuard::BinaryOperator { .. }
         | ClauseGuard::Not { .. }

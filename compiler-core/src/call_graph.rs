@@ -453,7 +453,9 @@ impl<'a> CallGraphBuilder<'a> {
 
             ClauseGuard::ModuleSelect { module_name, .. } => self.referenced(module_name),
 
-            ClauseGuard::Constant(constant) => self.constant(constant),
+            ClauseGuard::Constant {
+                literal: constant, ..
+            } => self.constant(constant),
         }
     }
 

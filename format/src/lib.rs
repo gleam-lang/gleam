@@ -3343,7 +3343,9 @@ impl<'a, 'doc> Formatter<'a> {
                 .append(arena, label)
                 .to_doc(arena),
 
-            ClauseGuard::Constant(constant) => self.const_expr(arena, constant),
+            ClauseGuard::Constant {
+                literal: constant, ..
+            } => self.const_expr(arena, constant),
 
             ClauseGuard::Not { expression, .. } => {
                 docvec![

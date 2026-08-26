@@ -13575,4 +13575,19 @@ impl<'ast> ast::visit::Visit<'ast> for InlineConstantValue<'ast> {
 
         self.maybe_inline_constant(module, value_location, *location);
     }
+
+    fn visit_typed_clause_guard_constant(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast EcoString,
+        literal: &'ast ast::TypedConstant,
+    ) {
+        let range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, range) {
+            return;
+        }
+        let value_location = literal.location();
+
+        self.maybe_inline_constant(module, value_location, *location);
+    }
 }
