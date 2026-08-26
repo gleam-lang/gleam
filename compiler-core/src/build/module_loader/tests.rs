@@ -5,7 +5,7 @@ use src_span::LineNumbers;
 
 use super::*;
 use crate::{
-    build::SourceFingerprint,
+    build::{ApiFingerprint, SourceFingerprint},
     io::{FileSystemWriter, memory::InMemoryFileSystem},
 };
 use std::time::Duration;
@@ -202,6 +202,9 @@ fn write_cache(
         codegen_performed,
         dependencies: vec![],
         fingerprint: SourceFingerprint::new(source),
+        // For these tests we don't really care about the api fingerprint, we
+        // use a test value.
+        api_fingerprint: ApiFingerprint(0),
         line_numbers,
     };
     let path = Utf8Path::new(path);
