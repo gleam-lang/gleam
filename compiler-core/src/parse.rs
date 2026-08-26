@@ -2007,7 +2007,11 @@ where
                 match self.parse_const_value_unit()? {
                     Some(const_val) => {
                         // Constant
-                        Ok(Some(ClauseGuard::Constant(const_val)))
+                        Ok(Some(ClauseGuard::Constant {
+                            location: const_val.location(),
+                            literal: const_val,
+                            module: "".into(),
+                        })) // TODO(ankddev)
                     }
                     _ => Ok(None),
                 }
@@ -2065,7 +2069,11 @@ where
             name,
             end,
         )? {
-            Some(record) => Ok(Some(ClauseGuard::Constant(record))),
+            Some(record) => Ok(Some(ClauseGuard::Constant {
+                module: module.clone(),
+                location: record.location(),
+                literal: record,
+            })), // TODO(ankddev)
             _ => Ok(None),
         }
     }

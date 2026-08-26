@@ -2646,9 +2646,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
             }
 
-            ClauseGuard::Constant(constant) => {
-                ClauseGuard::Constant(self.infer_const(&None, constant))
-            }
+            ClauseGuard::Constant {
+                location,
+                module,
+                literal: constant,
+            } => ClauseGuard::Constant {
+                location,
+                module,
+                literal: self.infer_const(&None, constant),
+            },
 
             ClauseGuard::Block { value, location } => ClauseGuard::Block {
                 location,
@@ -2791,8 +2797,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 return Err(Error::NonLocalClauseGuardVariable { location, name });
             }
 
-            ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                return Ok(ClauseGuard::Constant(literal.clone()));
+            ValueConstructorVariant::ModuleConstant {
+                literal, module, ..
+            } => {
+                return Ok(ClauseGuard::Constant {
+                    location,
+                    module: module.clone(),
+                    literal: literal.clone(),
+                });
             }
         };
 

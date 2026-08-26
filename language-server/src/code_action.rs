@@ -13393,3 +13393,201 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
         self.insert_int(string_value, int_value, location);
     }
 }
+
+pub struct InlineConstantValue<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    actions: Vec<CodeAction>,
+}
+
+impl<'a> InlineConstantValue<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            actions: Vec::new(),
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        self.actions
+    }
+
+    fn maybe_inline_constant(
+        &mut self,
+        module_name: &'a str,
+        literal_location: SrcSpan,
+        usage_location: SrcSpan,
+    ) {
+        // Only show code action for values in same module
+        if module_name != self.module.name {
+            return;
+        }
+
+        let value = self
+            .module
+            .code
+            .get(literal_location.start as usize..literal_location.end as usize)
+            .expect("span is valid");
+
+        self.edits.replace(usage_location, value.to_string());
+        CodeActionBuilder::new("Inline constant value")
+            .kind(CodeActionKind::RefactorInline)
+            .changes(
+                self.params.text_document.uri.clone(),
+                std::mem::take(&mut self.edits.edits),
+            )
+            .preferred(false)
+            .push_to(&mut self.actions);
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for InlineConstantValue<'ast> {
+    fn visit_typed_constant(&mut self, constant: &'ast ast::TypedConstant) {
+        // We skip all the constants the cursor is not inside of.
+        // This is gonna make it faster to find the usage we're hovering, if
+        // any.
+        let constant_range = self.edits.src_span_to_lsp_range(constant.location());
+        if within(self.params.range, constant_range) {
+            ast::visit::visit_typed_constant(self, constant);
+        }
+    }
+
+    fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
+        // We skip all the functions the cursor is not inside of.
+        // This is gonna make it faster to find the usage we're hovering, if
+        // any.
+        let function_range = self.edits.src_span_to_lsp_range(fun.full_location());
+        if within(self.params.range, function_range) {
+            ast::visit::visit_typed_function(self, fun);
+        }
+    }
+
+    fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
+        // We skip all the expressions the cursor is not inside of.
+        // This is gonna make it faster to find the usage we're hovering, if
+        // any.
+        let expression_range = self.edits.src_span_to_lsp_range(expr.location());
+        if within(self.params.range, expression_range) {
+            ast::visit::visit_typed_expr(self, expr);
+        }
+    }
+
+    fn visit_typed_pattern(&mut self, pattern: &'ast TypedPattern) {
+        // We skip all the patterns the cursor is not inside of.
+        // This is gonna make it faster to find the usage we're hovering, if
+        // any.
+        let pattern_range = self.edits.src_span_to_lsp_range(pattern.location());
+        if within(self.params.range, pattern_range) {
+            ast::visit::visit_typed_pattern(self, pattern);
+        }
+    }
+
+    fn visit_typed_clause(&mut self, clause: &'ast ast::TypedClause) {
+        // We skip all the clauses the cursor is not inside of.
+        // This is gonna make it faster to find the usage we're hovering, if
+        // any.
+        let clause_range = self.edits.src_span_to_lsp_range(clause.location());
+        if within(self.params.range, clause_range) {
+            ast::visit::visit_typed_clause(self, clause);
+        }
+    }
+
+    fn visit_typed_expr_var(
+        &mut self,
+        location: &'ast SrcSpan,
+        constructor: &'ast ValueConstructor,
+        _name: &'ast EcoString,
+    ) {
+        let range = self.edits.src_span_to_lsp_range(*location);
+
+        if !within(self.params.range, range) {
+            return;
+        }
+
+        let type_::ValueConstructorVariant::ModuleConstant {
+            literal, module, ..
+        } = &constructor.variant
+        else {
+            return;
+        };
+
+        let value_location = literal.location();
+
+        self.maybe_inline_constant(module, value_location, *location);
+    }
+
+    fn visit_typed_constant_var(
+        &mut self,
+        location: &'ast SrcSpan,
+        _module: &'ast Option<(EcoString, SrcSpan)>,
+        _name: &'ast EcoString,
+        constructor: &'ast Option<Box<ValueConstructor>>,
+        _type_: &'ast Arc<Type>,
+    ) {
+        let range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, range) {
+            return;
+        }
+        let Some(constructor) = constructor else {
+            return;
+        };
+        let type_::ValueConstructorVariant::ModuleConstant {
+            literal, module, ..
+        } = &constructor.variant
+        else {
+            return;
+        };
+        let value_location = literal.location();
+
+        self.maybe_inline_constant(module, value_location, *location);
+    }
+
+    fn visit_typed_bit_array_size_variable(
+        &mut self,
+        location: &'ast SrcSpan,
+        _name: &'ast EcoString,
+        constructor: &'ast Option<Box<ValueConstructor>>,
+        _type_: &'ast Arc<Type>,
+    ) {
+        let range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, range) {
+            return;
+        }
+        let Some(constructor) = constructor else {
+            return;
+        };
+        let type_::ValueConstructorVariant::ModuleConstant {
+            literal, module, ..
+        } = &constructor.variant
+        else {
+            return;
+        };
+        let value_location = literal.location();
+
+        self.maybe_inline_constant(module, value_location, *location);
+    }
+
+    fn visit_typed_clause_guard_constant(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast EcoString,
+        literal: &'ast ast::TypedConstant,
+    ) {
+        let range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, range) {
+            return;
+        }
+        let value_location = literal.location();
+
+        self.maybe_inline_constant(module, value_location, *location);
+    }
+}
