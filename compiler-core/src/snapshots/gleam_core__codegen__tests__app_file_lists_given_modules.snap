@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/codegen.rs
+expression: app
+---
+{application, my_app, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [my_app@one,
+               my_app@two]},
+    {registered, []}
+]}.
