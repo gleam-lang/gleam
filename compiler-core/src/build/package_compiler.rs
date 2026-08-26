@@ -746,8 +746,8 @@ impl<'a> PackageModulesAnalyser<'a> {
                     self.analysed_modules.push(module);
                 }
 
-                // In case of a total failure the module could not be parsed
-                // at all! We just record the fact that it failed.
+                // In case of a total failure the module interface could not be
+                // built at all! We just record that analysis failed.
                 Outcome::TotalFailure(errors) => {
                     self.register_failed_module(&module_info, Names::new(), errors);
                 }
