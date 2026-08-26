@@ -171,7 +171,7 @@
   code action in constants, patterns and bit array "size" options.
   ([Andrey Kozhev](https://github.com/ankddev))
 
-- The language server now provides "Inline constant usage" code action. For
+- The language server now provides "Inline constant value" code action. For
   example:
 
   ```gleam

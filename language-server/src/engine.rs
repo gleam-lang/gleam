@@ -40,7 +40,7 @@ use std::{
 
 use crate::{
     code_action::{
-        ConvertIntToDifferentBase, DiscardUnusedVariable, InlineConstantUsage,
+        ConvertIntToDifferentBase, DiscardUnusedVariable, InlineConstantValue,
         RemoveRedundantRecordUpdate, ReplaceUnderscoreWithType, code_action_fix_deprecated_pipe,
         type_errors_for_module,
     },
@@ -563,7 +563,7 @@ where
             );
             actions.extend(ConvertIntToDifferentBase::new(module, &lines, &params).code_actions());
             actions.extend(
-                InlineConstantUsage::new(module, &this.compiler.sources, &lines, &params)
+                InlineConstantValue::new(module, &this.compiler.sources, &lines, &params)
                     .code_actions(),
             );
 
