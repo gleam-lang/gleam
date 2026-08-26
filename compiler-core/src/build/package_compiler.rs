@@ -609,24 +609,28 @@ struct PackageModulesAnalyser<'a> {
 /// its ast and `ModuleExtra` which would be expensive to clone.
 ///
 #[derive(Clone)]
-struct ModuleInfo {
-    name: EcoString,
-    origin: Origin,
+struct ModuleSourceData {
     path: Utf8PathBuf,
+    name: EcoString,
     code: EcoString,
-    mtime: SystemTime,
-    dependencies: Vec<(EcoString, SrcSpan)>,
 }
 
-impl ModuleInfo {
-    fn into_module(self, ast: TypedModule, extra: ModuleExtra) -> Module {
+impl ModuleSourceData {
+    fn into_module(
+        self,
+        ast: TypedModule,
+        extra: ModuleExtra,
+        origin: Origin,
+        dependencies: Vec<(EcoString, SrcSpan)>,
+        mtime: SystemTime,
+    ) -> Module {
         let mut module = Module {
             name: self.name,
             code: self.code,
-            mtime: self.mtime,
             input_path: self.path,
-            origin: self.origin,
-            dependencies: self.dependencies,
+            mtime,
+            origin,
+            dependencies,
             extra,
             ast,
         };
@@ -704,28 +708,21 @@ impl<'a> PackageModulesAnalyser<'a> {
             // it can be easily moved around separately from the `ast` and
             // `extra`. This way we can avoid to do expensive clones and keep
             // the code tidy passing this struct around.
-            let module_info = ModuleInfo {
-                name,
-                origin,
-                path,
-                code,
-                mtime,
-                dependencies,
-            };
+            let source_data = ModuleSourceData { name, path, code };
 
             // We first need to check if the module can actually be compiled.
             // If we weren't able to compile one of the modules it depends on, then
             // we have to skip this one to avoid reporting false errors.
-            if self.skip_if_erroring_dependencies(&module_info) {
+            if self.skip_if_erroring_dependencies(&source_data, &dependencies) {
                 continue;
             }
 
-            match self.infer_module(&module_info, ast) {
+            match self.infer_module(&source_data, origin, ast) {
                 // In case of success we register the typed module and its
                 // interface, making sure the module is no longer considered
                 // incomplete.
                 Outcome::Ok(ast) => {
-                    let module = module_info.into_module(ast, extra);
+                    let module = source_data.into_module(ast, extra, origin, dependencies, mtime);
                     let _ = self.incomplete_modules.remove(&module.name.clone());
                     self.register_module_interface(&module);
                     self.analysed_modules.push(module);
@@ -739,9 +736,12 @@ impl<'a> PackageModulesAnalyser<'a> {
                 // errors.
                 Outcome::PartialFailure(ast, errors) => {
                     let names = ast.names.clone();
-                    let module = module_info.clone().into_module(ast, extra);
-                    let _ = self.incomplete_modules.insert(module_info.name.clone());
-                    self.register_failed_module(&module_info, names, errors);
+                    let module =
+                        source_data
+                            .clone()
+                            .into_module(ast, extra, origin, dependencies, mtime);
+                    let _ = self.incomplete_modules.insert(module.name.clone());
+                    self.register_failed_module(&source_data, names, errors);
                     self.register_module_interface(&module);
                     self.analysed_modules.push(module);
                 }
@@ -749,7 +749,7 @@ impl<'a> PackageModulesAnalyser<'a> {
                 // In case of a total failure the module interface could not be
                 // built at all! We just record that analysis failed.
                 Outcome::TotalFailure(errors) => {
-                    self.register_failed_module(&module_info, Names::new(), errors);
+                    self.register_failed_module(&source_data, Names::new(), errors);
                 }
             };
         }
@@ -811,7 +811,7 @@ impl<'a> PackageModulesAnalyser<'a> {
     /// Registers the given module has failed with some errors.
     fn register_failed_module(
         &mut self,
-        module_info: &ModuleInfo,
+        module_info: &ModuleSourceData,
         names: Names,
         errors: vec1::Vec1<type_::Error>,
     ) {
@@ -829,18 +829,19 @@ impl<'a> PackageModulesAnalyser<'a> {
     /// Performs type inference for the given untyped module.
     fn infer_module(
         &self,
-        module_info: &ModuleInfo,
+        source_data: &ModuleSourceData,
+        origin: Origin,
         module_ast: UntypedModule,
     ) -> Outcome<TypedModule, vec1::Vec1<type_::Error>> {
-        let line_numbers = LineNumbers::new(&module_info.code);
+        let line_numbers = LineNumbers::new(&source_data.code);
         crate::analyse::ModuleAnalyzerConstructor {
             target: self.target,
             ids: self.ids,
-            origin: module_info.origin,
+            origin,
             importable_modules: self.module_interfaces,
             warnings: &TypeWarningEmitter::new(
-                module_info.path.clone(),
-                module_info.code.clone(),
+                source_data.path.clone(),
+                source_data.code.clone(),
                 self.warnings.clone(),
             ),
             direct_dependencies: &self.direct_dependencies,
@@ -848,7 +849,7 @@ impl<'a> PackageModulesAnalyser<'a> {
             target_support: self.target_support,
             package_config: self.package_config,
         }
-        .infer_module(module_ast, line_numbers, module_info.path.clone())
+        .infer_module(module_ast, line_numbers, source_data.path.clone())
     }
 
     /// Given an uncompiled module, this goes through the modules it depends on
@@ -856,28 +857,33 @@ impl<'a> PackageModulesAnalyser<'a> {
     /// If the module should be skipped because of this, it is marked as skipped
     /// and this will return `true`.
     ///
-    fn skip_if_erroring_dependencies(&mut self, module: &ModuleInfo) -> bool {
-        let mut dependencies = module.dependencies.iter();
-        let reason_to_skip = dependencies.find_map(|(dependency, import_location)| {
-            if self.failed_modules.contains_key(dependency) {
-                // We import a failing module directly, this module must be
-                // skipped too.
-                let reason = SkipReason::DependencyHasError {
-                    name: dependency.clone(),
-                };
-                Some((*import_location, reason))
-            } else if let Some(skipped_module) = self.skipped_modules.get(dependency) {
-                // We import a module that's not directly failing, but had
-                // to be skipped. This module must be skipped too!
-                let reason = SkipReason::DependencyWasSkipped {
-                    name: dependency.clone(),
-                    erroring_module: skipped_module.reason.erroring_module(),
-                };
-                Some((*import_location, reason))
-            } else {
-                None
-            }
-        });
+    fn skip_if_erroring_dependencies(
+        &mut self,
+        module: &ModuleSourceData,
+        dependencies: &[(EcoString, SrcSpan)],
+    ) -> bool {
+        let reason_to_skip = dependencies
+            .iter()
+            .find_map(|(dependency, import_location)| {
+                if self.failed_modules.contains_key(dependency) {
+                    // We import a failing module directly, this module must be
+                    // skipped too.
+                    let reason = SkipReason::DependencyHasError {
+                        name: dependency.clone(),
+                    };
+                    Some((*import_location, reason))
+                } else if let Some(skipped_module) = self.skipped_modules.get(dependency) {
+                    // We import a module that's not directly failing, but had
+                    // to be skipped. This module must be skipped too!
+                    let reason = SkipReason::DependencyWasSkipped {
+                        name: dependency.clone(),
+                        erroring_module: skipped_module.reason.erroring_module(),
+                    };
+                    Some((*import_location, reason))
+                } else {
+                    None
+                }
+            });
 
         match reason_to_skip {
             None => false,
