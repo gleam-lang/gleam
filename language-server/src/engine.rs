@@ -562,10 +562,7 @@ where
                 ConvertBetweenDocAndRegularComment::new(module, &lines, &params).code_actions(),
             );
             actions.extend(ConvertIntToDifferentBase::new(module, &lines, &params).code_actions());
-            actions.extend(
-                InlineConstantValue::new(module, &this.compiler.sources, &lines, &params)
-                    .code_actions(),
-            );
+            actions.extend(InlineConstantValue::new(module, &lines, &params).code_actions());
 
             actions.sort_by_key(|one| {
                 let preferred_key = if one.is_preferred == Some(true) { 0 } else { 1 };

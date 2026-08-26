@@ -40,10 +40,7 @@ use num_bigint::BigInt;
 use src_span::{LineNumbers, SrcSpan};
 use vec1::{Vec1, vec1};
 
-use crate::{
-    compiler::ModuleSourceInformation,
-    engine::{completely_within, position_within},
-};
+use crate::engine::{completely_within, position_within};
 
 use super::{
     TextEdits,
@@ -13399,7 +13396,6 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
 
 pub struct InlineConstantValue<'a> {
     module: &'a Module,
-    sources: &'a std::collections::HashMap<EcoString, ModuleSourceInformation>,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
     actions: Vec<CodeAction>,
@@ -13408,13 +13404,11 @@ pub struct InlineConstantValue<'a> {
 impl<'a> InlineConstantValue<'a> {
     pub fn new(
         module: &'a Module,
-        sources: &'a std::collections::HashMap<EcoString, ModuleSourceInformation>,
         line_numbers: &'a LineNumbers,
         params: &'a CodeActionParams,
     ) -> Self {
         Self {
             module,
-            sources,
             params,
             edits: TextEdits::new(line_numbers),
             actions: Vec::new(),
@@ -13427,16 +13421,19 @@ impl<'a> InlineConstantValue<'a> {
         self.actions
     }
 
-    fn inline_constant(
+    fn maybe_inline_constant(
         &mut self,
         module_name: &'a str,
         literal_location: SrcSpan,
         usage_location: SrcSpan,
     ) {
+        // Only show code action for values in same module
+        if module_name != self.module.name {
+            return;
+        }
+
         let value = self
-            .sources
-            .get(module_name)
-            .expect("module exists")
+            .module
             .code
             .get(literal_location.start as usize..literal_location.end as usize)
             .expect("span is valid");
@@ -13525,7 +13522,7 @@ impl<'ast> ast::visit::Visit<'ast> for InlineConstantValue<'ast> {
 
         let value_location = literal.location();
 
-        self.inline_constant(module, value_location, *location);
+        self.maybe_inline_constant(module, value_location, *location);
     }
 
     fn visit_typed_constant_var(
@@ -13551,30 +13548,7 @@ impl<'ast> ast::visit::Visit<'ast> for InlineConstantValue<'ast> {
         };
         let value_location = literal.location();
 
-        self.inline_constant(module, value_location, *location);
-    }
-
-    fn visit_typed_expr_module_select(
-        &mut self,
-        location: &'ast SrcSpan,
-        _field_start: &'ast u32,
-        _type_: &'ast Arc<Type>,
-        _label: &'ast EcoString,
-        module_name: &'ast EcoString,
-        _module_alias: &'ast EcoString,
-        constructor: &'ast ModuleValueConstructor,
-    ) {
-        let range = self.edits.src_span_to_lsp_range(*location);
-        if !within(self.params.range, range) {
-            return;
-        }
-
-        let ModuleValueConstructor::Constant { literal, .. } = constructor else {
-            return;
-        };
-        let value_location = literal.location();
-
-        self.inline_constant(module_name, value_location, *location);
+        self.maybe_inline_constant(module, value_location, *location);
     }
 
     fn visit_typed_bit_array_size_variable(
@@ -13599,27 +13573,6 @@ impl<'ast> ast::visit::Visit<'ast> for InlineConstantValue<'ast> {
         };
         let value_location = literal.location();
 
-        self.inline_constant(module, value_location, *location);
-    }
-
-    fn visit_typed_clause_guard_module_select(
-        &mut self,
-        location: &'ast SrcSpan,
-        _field_start: &'ast u32,
-        _definition_location: &'ast SrcSpan,
-        _type_: &'ast Arc<Type>,
-        _label: &'ast EcoString,
-        module_name: &'ast EcoString,
-        _module_alias: &'ast EcoString,
-        literal: &'ast ast::TypedConstant,
-    ) {
-        let range = self.edits.src_span_to_lsp_range(*location);
-        if !within(self.params.range, range) {
-            return;
-        }
-
-        let value_location = literal.location();
-
-        self.inline_constant(module_name, value_location, *location);
+        self.maybe_inline_constant(module, value_location, *location);
     }
 }
