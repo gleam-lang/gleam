@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/build/package_compiler/tests.rs
+assertion_line: 163
+expression: app_file
+---
+{application, a_package, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, ['Elixir.SomeElixir',
+               a_module,
+               some_erl]},
+    {registered, []}
+]}.

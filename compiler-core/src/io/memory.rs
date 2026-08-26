@@ -455,12 +455,37 @@ impl CommandExecutor for InMemoryFileSystem {
 impl BeamCompilerIO for InMemoryFileSystem {
     fn compile_beam(
         &self,
-        _out: &Utf8Path,
+        out: &Utf8Path,
         _lib: &Utf8Path,
-        _modules: &HashSet<Utf8PathBuf>,
+        modules: &HashSet<Utf8PathBuf>,
         _stdio: Stdio,
     ) -> Result<Vec<String>, Error> {
-        Ok(Vec::new()) // Always succeed.
+        // Always succeed, pretending to have compiled every given module and
+        // reporting back the name it would be compiled to, the same way the
+        // real BEAM compiler reports back the name of each module it
+        // compiled. We also write out an (empty) `.beam` file per module,
+        // mirroring the real compiler, since callers may look for these in
+        // `ebin` afterwards.
+        let ebin = out.join("ebin");
+        let mut compiled = Vec::with_capacity(modules.len());
+        for path in modules {
+            let stem = path.file_stem().unwrap_or_default();
+            let name = if path.extension() == Some("ex") {
+                let camel_case = crate::strings::to_upper_camel_case(stem);
+                let mut chars = camel_case.chars();
+                let capitalised = match chars.next() {
+                    Some(first) => format!("{}{}", first.to_ascii_uppercase(), chars.as_str()),
+                    None => String::new(),
+                };
+                format!("Elixir.{capitalised}")
+            } else {
+                stem.to_string()
+            };
+            self.write_bytes(&ebin.join(format!("{name}.beam")), &[])?;
+            compiled.push(name);
+        }
+        compiled.sort();
+        Ok(compiled)
     }
 }
 

@@ -15,5 +15,8 @@ expression: "./cases/with_dep"
 ]}.
 
 
+//// with_dep/build/lsp/erlang/example/ebin/example@@main.beam
+<0 byte binary>
+
 //// with_dep/build/lsp/erlang/fingerprint
 <gleam compiler version string> 0
