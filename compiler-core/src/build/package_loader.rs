@@ -15,7 +15,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::{
     Error, Result,
-    build::{Origin, module_loader::ModuleLoader},
+    build::{Origin, module_loader::ModuleLoader, package_compiler::WhyModuleNeedsCompiling},
     dep_tree,
     error::{DefinedModuleOrigin, FileIoAction, FileKind, ImportCycleLocationDetails},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter, files_with_extension},
@@ -153,27 +153,43 @@ where
 
             match input {
                 // A new uncached module is to be compiled
-                Input::New { module } => {
+                Input::New {
+                    module,
+                    cached_api_fingerprint,
+                } => {
                     tracing::debug!(module = %module.name, "new_module_to_be_compiled");
                     self.stale_modules.add(module.name.clone());
-                    loaded.to_compile.push(*module);
+                    let reason = match cached_api_fingerprint {
+                        None => WhyModuleNeedsCompiling::New,
+                        Some(cached_api_fingerprint) => WhyModuleNeedsCompiling::SourceChanged {
+                            cached_api_fingerprint,
+                        },
+                    };
+                    loaded.to_compile.push((reason, *module));
                 }
 
                 // A cached module with dependencies that are stale must be
                 // recompiled as the changes in the dependencies may have affect
                 // the output, making the cache invalid.
-                Input::Cached { module }
-                    if self.stale_modules.includes_any(&module.dependencies) =>
-                {
+                Input::Cached {
+                    module,
+                    cached_api_fingerprint,
+                } if self.stale_modules.includes_any(&module.dependencies) => {
                     tracing::debug!(module = %module.name, "stale_module_to_be_compiled");
                     self.stale_modules.add(module.name.clone());
                     let module = self.load_stale_module(&module)?;
-                    loaded.to_compile.push(module);
+                    let reason = WhyModuleNeedsCompiling::DependsOnStaleModule {
+                        cached_api_fingerprint,
+                    };
+                    loaded.to_compile.push((reason, module));
                 }
 
                 // A cached module with no stale dependencies can be used as-is
                 // and does not need to be recompiled.
-                Input::Cached { module } => {
+                Input::Cached {
+                    module,
+                    cached_api_fingerprint: _,
+                } => {
                     tracing::debug!(module = %module.name, "module_to_load_from_cache");
                     let module = self.load_cached_module(module)?;
                     loaded.cached.push(module);
@@ -185,26 +201,13 @@ where
     }
 
     fn load_cached_module(&self, info: CachedModule) -> Result<type_::ModuleInterface, Error> {
-        let cache_files = CacheFiles::new(self.artefact_directory, &info.name);
-        let bytes = self.io.read_bytes(&cache_files.cache_path)?;
-        let mut module = match metadata::decode(bytes.as_slice(), self.ids.clone()) {
-            Ok(module) => module,
-            Err(error) => {
-                return Err(Error::FileIo {
-                    kind: FileKind::File,
-                    action: FileIoAction::Parse,
-                    path: cache_files.cache_path,
-                    err: Some(error.to_string()),
-                });
-            }
-        };
-
-        // Discard warnings if they should not be cached
-        if !self.cached_warnings.should_use() {
-            module.warnings.clear();
-        }
-
-        Ok(module)
+        load_cached_module(
+            &info.name,
+            &self.io,
+            self.artefact_directory,
+            self.ids.clone(),
+            self.cached_warnings.should_use(),
+        )
     }
 
     fn read_sources_and_caches(
@@ -287,14 +290,6 @@ where
     fn load_stale_module(&self, cached: &CachedModule) -> Result<UncompiledModule> {
         let mtime = self.io.modification_time(&cached.source_path)?;
 
-        // We need to delete any existing cache files for this module.
-        // While we figured it out this time because the module has stale dependencies,
-        // next time the dependencies might no longer be stale, but we still need to be able to tell
-        // that this module needs to be recompiled until it successfully compiles at least once.
-        // This can happen if the stale dependency includes breaking changes.
-        let cache_files = CacheFiles::new(self.artefact_directory, &cached.name);
-        cache_files.delete(&self.io)?;
-
         read_source(
             self.io.clone(),
             self.target,
@@ -325,7 +320,7 @@ where
                             .expect("importing module must exist");
                         let input = dep_location_map.get(module).expect("dependency must exist");
                         let location = match input {
-                            Input::New { module } => {
+                            Input::New { module, .. } => {
                                 let (_, location) = module
                                     .dependencies
                                     .iter()
@@ -337,22 +332,20 @@ where
                                     src: module.code.clone(),
                                 }
                             }
-                            Input::Cached {
-                                module: cached_module,
-                            } => {
-                                let (_, location) = cached_module
+                            Input::Cached { module, .. } => {
+                                let (_, location) = module
                                     .dependencies
                                     .iter()
                                     .find(|(name, _)| name == imported_module)
                                     .expect("import must exist for there to be a cycle");
                                 let src = self
                                     .io
-                                    .read(&cached_module.source_path)
+                                    .read(&module.source_path)
                                     .expect("failed to read source")
                                     .into();
                                 ImportCycleLocationDetails {
                                     location: *location,
-                                    path: cached_module.source_path.clone(),
+                                    path: module.source_path.clone(),
                                     src,
                                 }
                             }
@@ -369,10 +362,41 @@ where
     }
 }
 
+pub(crate) fn load_cached_module<
+    IO: FileSystemWriter + FileSystemReader + CommandExecutor + Clone,
+>(
+    module_name: &EcoString,
+    io: &IO,
+    artefact_directory: &Utf8Path,
+    ids: UniqueIdGenerator,
+    should_use_warnings: bool,
+) -> Result<type_::ModuleInterface, Error> {
+    let cache_files = CacheFiles::new(artefact_directory, module_name);
+    let bytes = io.read_bytes(&cache_files.cache_path)?;
+    let mut module = match metadata::decode(bytes.as_slice(), ids) {
+        Ok(module) => module,
+        Err(error) => {
+            return Err(Error::FileIo {
+                kind: FileKind::File,
+                action: FileIoAction::Parse,
+                path: cache_files.cache_path,
+                err: Some(error.to_string()),
+            });
+        }
+    };
+
+    // Discard warnings if they should not be cached
+    if !should_use_warnings {
+        module.warnings.clear();
+    }
+
+    Ok(module)
+}
+
 fn ensure_gleam_module_does_not_overwrite_standard_erlang_module(input: &Input) -> Result<()> {
     // We only need to check uncached modules as it's not possible for these
     // to have compiled successfully.
-    let Input::New { module } = input else {
+    let Input::New { module, .. } = input else {
         return Ok(());
     };
 

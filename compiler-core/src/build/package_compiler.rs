@@ -6,8 +6,8 @@ mod tests;
 
 use crate::analyse::TargetSupport;
 use crate::ast::TypedModule;
-use crate::build::package_loader::CacheFiles;
-use crate::build::{ErlangOutput, module_erlang_name};
+use crate::build::package_loader::{CacheFiles, load_cached_module};
+use crate::build::{ApiFingerprint, ErlangOutput, module_erlang_name};
 
 use crate::error::{DefinedModuleOrigin, FailedModule, SkipReason, SkippedModule};
 
@@ -19,7 +19,7 @@ use crate::{
     Error, Result, Warning,
     ast::UntypedModule,
     build::{
-        Mode, Module, Origin, Outcome, SourceFingerprint, Target,
+        Mode, Module, Origin, Outcome, SourceFingerprint,
         elixir_libraries::ElixirLibraries,
         native_file_copier::NativeFileCopier,
         package_loader::{CodegenRequired, PackageLoader, StaleTracker},
@@ -199,9 +199,14 @@ where
 
         // Type check the modules that are new or have changed
         tracing::info!(count=%loaded.to_compile.len(), "analysing_modules");
-        let outcome =
-            PackageModulesAnalyser::new(&self, warnings, existing_modules, incomplete_modules)
-                .analyse(loaded.to_compile);
+        let outcome = PackageModulesAnalyser::new(
+            &self,
+            artefact_directory,
+            warnings,
+            existing_modules,
+            incomplete_modules,
+        )
+        .analyse(loaded.to_compile);
 
         let mut modules = match outcome {
             Outcome::Ok(modules) => modules,
@@ -326,6 +331,9 @@ where
                 codegen_performed: self.perform_codegen,
                 dependencies: module.dependencies.clone(),
                 fingerprint: SourceFingerprint::new(&module.code),
+                // TODO) this is computed in another place too, should we maybe
+                // add it as a field of the module?
+                api_fingerprint: ApiFingerprint::new(&module.ast),
                 line_numbers: module.ast.type_info.line_numbers.clone(),
             };
             self.io
@@ -562,11 +570,9 @@ pub enum StdlibPackage {
 
 /// A structure we use to hold data about used to analyse the packages of a
 /// module.
-struct PackageModulesAnalyser<'a> {
-    package_config: &'a PackageConfig,
-    target_support: TargetSupport,
-    target: Target,
-    ids: &'a UniqueIdGenerator,
+struct PackageModulesAnalyser<'a, 'package_compiler, IO> {
+    package_compiler: &'a PackageCompiler<'package_compiler, IO>,
+    artefact_directory: Utf8PathBuf,
     warnings: &'a WarningEmitter,
 
     module_interfaces: &'a mut im::HashMap<EcoString, type_::ModuleInterface>,
@@ -588,11 +594,18 @@ struct PackageModulesAnalyser<'a> {
     failed_modules: HashMap<EcoString, FailedModule>,
     /// Keeps track of the modules that could be analysed successfully.
     analysed_modules: Vec<Module>,
+
+    /// Keeps track of the module whose public api has changed since the last
+    /// build.
+    modules_with_new_public_api: HashSet<EcoString>,
 }
 
-impl<'a> PackageModulesAnalyser<'a> {
-    pub fn new<'package_compiler, IO>(
+impl<'a, 'package_compiler, IO: FileSystemWriter + FileSystemReader + CommandExecutor + Clone>
+    PackageModulesAnalyser<'a, 'package_compiler, IO>
+{
+    pub fn new(
         package_compiler: &'a PackageCompiler<'package_compiler, IO>,
+        artefact_directory: Utf8PathBuf,
         warnings: &'a WarningEmitter,
         module_interfaces: &'a mut im::HashMap<EcoString, type_::ModuleInterface>,
         incomplete_modules: &'a mut HashSet<EcoString>,
@@ -610,10 +623,8 @@ impl<'a> PackageModulesAnalyser<'a> {
             .collect();
 
         Self {
-            package_config: package_compiler.config,
-            target_support: package_compiler.target_support,
-            target: package_compiler.target.target(),
-            ids: &package_compiler.ids,
+            package_compiler,
+            artefact_directory,
             warnings,
             module_interfaces,
             incomplete_modules,
@@ -624,23 +635,25 @@ impl<'a> PackageModulesAnalyser<'a> {
             skipped_modules: HashMap::new(),
             failed_modules: HashMap::new(),
             analysed_modules: Vec::new(),
+            modules_with_new_public_api: HashSet::new(),
         }
     }
 
     pub fn analyse(
         mut self,
-        uncompiled_modules: Vec<UncompiledModule>,
+        uncompiled_modules: Vec<(WhyModuleNeedsCompiling, UncompiledModule)>,
     ) -> Outcome<Vec<Module>, Error> {
         // Insert the prelude
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = self
-            .module_interfaces
-            .insert(PRELUDE_MODULE_NAME.into(), type_::build_prelude(self.ids));
+        let _ = self.module_interfaces.insert(
+            PRELUDE_MODULE_NAME.into(),
+            type_::build_prelude(&self.package_compiler.ids),
+        );
 
-        for uncompiled_module in uncompiled_modules {
+        for (reason, uncompiled_module) in uncompiled_modules {
             let UncompiledModule {
                 name,
                 code,
@@ -667,6 +680,14 @@ impl<'a> PackageModulesAnalyser<'a> {
                 continue;
             }
 
+            if self.module_can_be_skipped(&reason, &dependencies) {
+                tracing::debug!(module = ?name, "Skip type checking, load cached");
+                if let Err(error) = self.register_cached_module(&name) {
+                    return error.into();
+                }
+                continue;
+            }
+
             match self.infer_module(path.clone(), code.clone(), origin, ast) {
                 // In case of success we register the typed module and its
                 // interface, making sure the module is no longer considered
@@ -685,7 +706,7 @@ impl<'a> PackageModulesAnalyser<'a> {
                     module.attach_doc_and_module_comments();
 
                     let _ = self.incomplete_modules.remove(&module.name);
-                    self.register_module_interface(&module);
+                    self.register_module_interface(&module, reason);
                     self.analysed_modules.push(module);
                 }
 
@@ -711,7 +732,7 @@ impl<'a> PackageModulesAnalyser<'a> {
 
                     let _ = self.incomplete_modules.insert(module.name.clone());
                     self.register_failed_module(path, name, code, names, errors);
-                    self.register_module_interface(&module);
+                    self.register_module_interface(&module, reason);
                     self.analysed_modules.push(module);
                 }
 
@@ -761,7 +782,7 @@ impl<'a> PackageModulesAnalyser<'a> {
     /// so that its types can be imported into other modules.
     ///
     /// This also cheks the module is not empty and raises a warning if it is.
-    fn register_module_interface(&mut self, module: &Module) {
+    fn register_module_interface(&mut self, module: &Module, reason: WhyModuleNeedsCompiling) {
         // Emit the empty module warning if the module has no definitions at all.
         // Modules with only private definitions already emit their own warnings.
         let interface = &module.ast.type_info;
@@ -770,6 +791,27 @@ impl<'a> PackageModulesAnalyser<'a> {
                 path: module.input_path.clone(),
                 name: module.name.clone(),
             });
+        }
+
+        match reason {
+            // We always register new modules.
+            WhyModuleNeedsCompiling::New => {
+                let _ = self.modules_with_new_public_api.insert(module.name.clone());
+            }
+            // Otherwise we only register a module if its public api has changed.
+            // We can tell if it has by comparing the previous api fingerprint
+            // with the new one computed from the new module interface.
+            WhyModuleNeedsCompiling::SourceChanged {
+                cached_api_fingerprint,
+            }
+            | WhyModuleNeedsCompiling::DependsOnStaleModule {
+                cached_api_fingerprint,
+            } => {
+                let new_api_fingerprint = ApiFingerprint::new(&module.ast);
+                if new_api_fingerprint != cached_api_fingerprint {
+                    let _ = self.modules_with_new_public_api.insert(module.name.clone());
+                }
+            }
         }
 
         let _ = self
@@ -807,15 +849,15 @@ impl<'a> PackageModulesAnalyser<'a> {
     ) -> Outcome<TypedModule, vec1::Vec1<type_::Error>> {
         let line_numbers = LineNumbers::new(&code);
         crate::analyse::ModuleAnalyzerConstructor {
-            target: self.target,
-            ids: self.ids,
+            target: self.package_compiler.target.target(),
+            ids: &self.package_compiler.ids,
             origin,
             importable_modules: self.module_interfaces,
             warnings: &TypeWarningEmitter::new(path.clone(), code, self.warnings.clone()),
             direct_dependencies: &self.direct_dependencies,
             dev_dependencies: &self.dev_dependencies,
-            target_support: self.target_support,
-            package_config: self.package_config,
+            target_support: self.package_compiler.target_support,
+            package_config: self.package_compiler.config,
         }
         .infer_module(module_ast, line_numbers, path)
     }
@@ -872,37 +914,129 @@ impl<'a> PackageModulesAnalyser<'a> {
             }
         }
     }
+
+    /// This returns true if we can avoid recompiling the module because we can
+    /// tell for sure recompiling it won't produce new warnings, error, or
+    /// change the code generated for the module.
+    ///
+    /// How can this be? If a module's source has changed the module must be
+    /// recompiled, there's no way around it.
+    /// If a module's source hasn't changed then it has to be recompiled only in
+    /// some cases: if any of the other modules it depends on has had a change
+    /// in its public api.
+    /// If all the modules it depends on did not have any change in their public
+    /// api, then we know for sure that nothing will happen by recompiling this
+    /// module!
+    ///
+    /// Take these two modules:
+    ///
+    /// ```gleam
+    /// // module_one.gleam
+    /// pub fn wibble(x: Int) -> Int {
+    ///   x + 1
+    /// }
+    /// ```
+    ///
+    /// ```gleam
+    /// // module_two.gleam
+    /// pub fn main() {
+    ///   echo wibble(1)
+    /// }
+    /// ```
+    ///
+    /// If we change the first module like this:
+    ///
+    /// ```diff
+    /// pub fn wibble(x: Int) -> Int {
+    /// -  x + 1
+    /// +  x * 3
+    /// }
+    /// ```
+    ///
+    /// That's just an internal detail, nothing about its public api has changed
+    /// so we know for sure that modules like `module_two.gleam` that depend on
+    /// it will not produce new errors, or warnings, and the generated code
+    /// coming from those doesn't have to change at all. `module_two.gleam` can
+    /// be safely skipped despite its dependency `module_one.gleam` being stale!
+    fn module_can_be_skipped(
+        &self,
+        reason: &WhyModuleNeedsCompiling,
+        dependencies: &[(EcoString, SrcSpan)],
+    ) -> bool {
+        match reason {
+            // New modules, and modules whose source has changed must always be
+            // compiled.
+            WhyModuleNeedsCompiling::New | WhyModuleNeedsCompiling::SourceChanged { .. } => false,
+            // If we depend on stale modules (our source hasn't changed), then
+            // we check if any of the modules we depend on had any changes in
+            // its public api. In that case we will have to recompile it.
+            WhyModuleNeedsCompiling::DependsOnStaleModule { .. } => {
+                for (dependency, _) in dependencies {
+                    if self.modules_with_new_public_api.contains(dependency) {
+                        // If any dependency changed its public api then we
+                        // can't skip the module.
+                        return false;
+                    }
+                }
+                // No dependency had changes in its public api, hooray!
+                true
+            }
+        }
+    }
+
+    /// This loads the module's cached interface and registers it so it can be
+    /// imported by other modules.
+    /// Make sure to only call this for modules that are deemed ok to not be
+    /// analysed again!!
+    fn register_cached_module(&mut self, name: &EcoString) -> Result<(), Error> {
+        let interface = load_cached_module(
+            name,
+            &self.package_compiler.io,
+            &self.artefact_directory,
+            self.package_compiler.ids.clone(),
+            self.package_compiler.cached_warnings.should_use(),
+        )?;
+
+        let _ = self.module_interfaces.insert(name.clone(), interface);
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
 pub(crate) enum Input {
-    New { module: Box<UncompiledModule> },
-    Cached { module: CachedModule },
+    New {
+        module: Box<UncompiledModule>,
+        cached_api_fingerprint: Option<ApiFingerprint>,
+    },
+    Cached {
+        module: CachedModule,
+        cached_api_fingerprint: ApiFingerprint,
+    },
 }
 
 impl Input {
     pub fn name(&self) -> &EcoString {
         match self {
-            Input::New { module } => &module.name,
-            Input::Cached { module } => &module.name,
+            Input::New { module, .. } => &module.name,
+            Input::Cached { module, .. } => &module.name,
         }
     }
 
     pub fn source_path(&self) -> &Utf8Path {
         match self {
-            Input::New { module } => &module.path,
-            Input::Cached { module } => &module.source_path,
+            Input::New { module, .. } => &module.path,
+            Input::Cached { module, .. } => &module.source_path,
         }
     }
 
     pub fn dependencies(&self) -> Vec<EcoString> {
         match self {
-            Input::New { module } => module
+            Input::New { module, .. } => module
                 .dependencies
                 .iter()
                 .map(|(name, _)| name.clone())
                 .collect(),
-            Input::Cached { module } => module
+            Input::Cached { module, .. } => module
                 .dependencies
                 .iter()
                 .map(|(name, _)| name.clone())
@@ -943,6 +1077,7 @@ pub(crate) struct CacheMetadata {
     pub codegen_performed: bool,
     pub dependencies: Vec<(EcoString, SrcSpan)>,
     pub fingerprint: SourceFingerprint,
+    pub api_fingerprint: ApiFingerprint,
     pub line_numbers: LineNumbers,
 }
 
@@ -961,8 +1096,59 @@ impl CacheMetadata {
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) struct Loaded {
-    pub to_compile: Vec<UncompiledModule>,
+    pub to_compile: Vec<(WhyModuleNeedsCompiling, UncompiledModule)>,
     pub cached: Vec<type_::ModuleInterface>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum WhyModuleNeedsCompiling {
+    /// The module is brand new, there's no cached previous version.
+    /// Everything that depends on this will had to be recompiled no matter
+    /// what.
+    New,
+
+    /// The source of the module has changed directly and we need to recompile
+    /// it.
+    SourceChanged {
+        /// This is the api fingerprint of the module's public api before the
+        /// change.
+        cached_api_fingerprint: ApiFingerprint,
+    },
+
+    /// The source of the module has not changed but the module itself depends
+    /// on some stale modules.
+    /// If any of those had any changes to their public api, then this will need
+    /// recompiling since those changes might introduce new errors and warnings!
+    DependsOnStaleModule {
+        /// This is the fingerprint of the module's public api before its
+        /// dependencies changed.
+        ///
+        /// Be careful: since annotation can be omitted from functions, even if
+        /// the source of the module hasn't changed explicitly the api of the
+        /// module _might_ still have changed as the result of a change of one
+        /// of its dependencies! For example:
+        ///
+        /// ```gleam
+        /// // other_module.gleam
+        /// pub type Wibble(a) {
+        ///   Wibble(Int)
+        /// }
+        ///
+        /// // module.gleam
+        /// pub fn main() {
+        ///   other_module.Wibble(1)
+        /// }
+        /// ```
+        ///
+        /// If the type `Wibble` changes, for example adding a new generic, then
+        /// the api of the second module will have changed in a breaking way
+        /// too.
+        /// So when you're checking for breaking changes make sure to also check
+        /// the api of modules whose source hasn't changed. Do not assume that
+        /// since the source of the file hasn't changed that the api is still
+        /// the same!
+        cached_api_fingerprint: ApiFingerprint,
+    },
 }
 
 impl Loaded {

@@ -9,7 +9,7 @@ expression: "./cases/imported_external_fns"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<44 byte binary>
+<53 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/three.abstr
 <776 byte binary>
@@ -18,7 +18,7 @@ expression: "./cases/imported_external_fns"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/three.cache_meta
-<44 byte binary>
+<53 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.abstr
 <5857 byte binary>
@@ -27,7 +27,7 @@ expression: "./cases/imported_external_fns"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<246 byte binary>
+<255 byte binary>
 
 //// /out/lib/the_package/ebin/importy.app
 {application, importy, [
