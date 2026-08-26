@@ -1879,7 +1879,17 @@ fn generalise_module_constant(
         deprecation,
         implementations,
     } = constant;
+
+    let inferred_variant = type_.custom_type_inferred_variant();
+
     let type_ = type_::generalise(type_);
+
+    let mut environment_type = type_.clone();
+
+    if let Some(inferred_variant) = inferred_variant {
+        Arc::make_mut(&mut environment_type).set_custom_type_variant(inferred_variant);
+    }
+
     let variant = ValueConstructorVariant::ModuleConstant {
         documentation: doc.as_ref().map(|(_, doc)| doc.clone()),
         location,
@@ -1891,7 +1901,7 @@ fn generalise_module_constant(
     environment.insert_variable(
         name.clone(),
         variant.clone(),
-        type_.clone(),
+        environment_type,
         publicity,
         deprecation.clone(),
     );

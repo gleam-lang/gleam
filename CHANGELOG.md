@@ -54,6 +54,10 @@
   expression now points to the entire function call.
   ([mmustafasenoglu](https://github.com/mmustafasenoglu))
 
+- Constants that are assigned a type variant are now narrowed within the module they
+  were defined.
+  ([James Dolan](https://github.com/jamesdolan16))
+  
 - Pattern matching on the JavaScript target now generates flatter code, with
   nested `if` statements collapsed into a single condition and fewer
   intermediate variables. This makes little difference to the size of a bundled
