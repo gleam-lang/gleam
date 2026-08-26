@@ -619,7 +619,7 @@ struct ModuleInfo {
 }
 
 impl ModuleInfo {
-    fn into_typed_module(self, ast: TypedModule, extra: ModuleExtra) -> Module {
+    fn into_module(self, ast: TypedModule, extra: ModuleExtra) -> Module {
         let mut module = Module {
             name: self.name,
             code: self.code,
@@ -725,7 +725,7 @@ impl<'a> PackageModulesAnalyser<'a> {
                 // interface, making sure the module is no longer considered
                 // incomplete.
                 Outcome::Ok(ast) => {
-                    let module = module_info.into_typed_module(ast, extra);
+                    let module = module_info.into_module(ast, extra);
                     let _ = self.incomplete_modules.remove(&module.name.clone());
                     self.register_module_interface(&module);
                     self.analysed_modules.push(module);
@@ -739,7 +739,7 @@ impl<'a> PackageModulesAnalyser<'a> {
                 // errors.
                 Outcome::PartialFailure(ast, errors) => {
                     let names = ast.names.clone();
-                    let module = module_info.clone().into_typed_module(ast, extra);
+                    let module = module_info.clone().into_module(ast, extra);
                     let _ = self.incomplete_modules.insert(module_info.name.clone());
                     self.register_failed_module(&module_info, names, errors);
                     self.register_module_interface(&module);
