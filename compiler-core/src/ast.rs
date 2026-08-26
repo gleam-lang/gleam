@@ -2567,7 +2567,25 @@ pub enum ClauseGuard<Type> {
         literal: Constant<Type>,
     },
 
-    Constant(Constant<Type>),
+    Constant {
+        location: SrcSpan,
+        /// Module, where variable was used, `None` otherwise. For example, if
+        /// this code is inside `woo` module, then this field will be "woo":
+        ///
+        /// ```gleam
+        /// import wibble.{wobble}
+        ///
+        /// fn go(a) {
+        ///   case a {
+        ///     _ if wobble -> todo
+        ///    //    ^^^^^^
+        ///     _ -> todo
+        ///   }
+        /// }
+        /// ```
+        module: Option<EcoString>,
+        literal: Constant<Type>,
+    },
 
     Invalid {
         location: SrcSpan,
@@ -2578,14 +2596,14 @@ pub enum ClauseGuard<Type> {
 impl<A> ClauseGuard<A> {
     pub fn location(&self) -> SrcSpan {
         match self {
-            ClauseGuard::Constant(constant) => constant.location(),
             ClauseGuard::BinaryOperator { location, .. }
             | ClauseGuard::Not { location, .. }
             | ClauseGuard::Var { location, .. }
             | ClauseGuard::TupleIndex { location, .. }
             | ClauseGuard::ModuleSelect { location, .. }
             | ClauseGuard::Invalid { location, .. }
-            | ClauseGuard::Block { location, .. } => *location,
+            | ClauseGuard::Block { location, .. }
+            | ClauseGuard::Constant { location, .. } => *location,
             ClauseGuard::FieldAccess {
                 label_location,
                 container,
@@ -2606,7 +2624,7 @@ impl<A> ClauseGuard<A> {
         match self {
             ClauseGuard::BinaryOperator { operator, .. } => Some(*operator),
 
-            ClauseGuard::Constant(_)
+            ClauseGuard::Constant { .. }
             | ClauseGuard::Invalid { .. }
             | ClauseGuard::Var { .. }
             | ClauseGuard::Not { .. }
@@ -2625,7 +2643,9 @@ impl TypedClauseGuard {
             ClauseGuard::TupleIndex { type_, .. } => type_.clone(),
             ClauseGuard::FieldAccess { type_, .. } => type_.clone(),
             ClauseGuard::ModuleSelect { type_, .. } => type_.clone(),
-            ClauseGuard::Constant(constant) => constant.type_(),
+            ClauseGuard::Constant {
+                literal: constant, ..
+            } => constant.type_(),
             ClauseGuard::Block { value, .. } => value.type_(),
             ClauseGuard::Invalid { type_, .. } => type_.clone(),
 
@@ -2696,7 +2716,9 @@ impl TypedClauseGuard {
                 container: value, ..
             }
             | ClauseGuard::Block { value, .. } => value.find_node(byte_index),
-            ClauseGuard::Constant(constant) => constant.find_node(byte_index),
+            ClauseGuard::Constant {
+                literal: constant, ..
+            } => constant.find_node(byte_index),
             ClauseGuard::Var { .. } => Some(Located::ClauseGuard(self)),
             ClauseGuard::Invalid { .. } => Some(Located::ClauseGuard(self)),
         }
@@ -2710,7 +2732,9 @@ impl TypedClauseGuard {
             ClauseGuard::Not { expression, .. } => expression.referenced_variables(),
             ClauseGuard::TupleIndex { tuple, .. } => tuple.referenced_variables(),
             ClauseGuard::FieldAccess { container, .. } => container.referenced_variables(),
-            ClauseGuard::Constant(constant) => constant.referenced_variables(),
+            ClauseGuard::Constant {
+                literal: constant, ..
+            } => constant.referenced_variables(),
             ClauseGuard::ModuleSelect { .. } => imbl::HashSet::new(),
             ClauseGuard::Invalid { .. } => imbl::HashSet::new(),
 
@@ -2793,10 +2817,11 @@ impl TypedClauseGuard {
             ) => label == other_label && module_alias == other_module_alias,
             (ClauseGuard::ModuleSelect { .. }, _) => false,
 
-            (ClauseGuard::Constant(one), ClauseGuard::Constant(other)) => {
-                one.syntactically_eq(other)
-            }
-            (ClauseGuard::Constant(_), _) => false,
+            (
+                ClauseGuard::Constant { literal: one, .. },
+                ClauseGuard::Constant { literal: other, .. },
+            ) => one.syntactically_eq(other),
+            (ClauseGuard::Constant { .. }, _) => false,
 
             // An invalid guard is never the same as another one
             (ClauseGuard::Invalid { .. }, _) => false,
@@ -2811,7 +2836,9 @@ impl TypedClauseGuard {
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::Invalid { .. }
             | ClauseGuard::FieldAccess { .. } => None,
-            ClauseGuard::Constant(constant) => constant.definition_location(),
+            ClauseGuard::Constant {
+                literal: constant, ..
+            } => constant.definition_location(),
             ClauseGuard::Var {
                 definition_location,
                 ..
