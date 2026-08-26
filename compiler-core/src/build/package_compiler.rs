@@ -197,17 +197,9 @@ where
 
         // Type check the modules that are new or have changed
         tracing::info!(count=%loaded.to_compile.len(), "analysing_modules");
-        let outcome = analyse(
-            self.config,
-            self.target.target(),
-            self.mode,
-            &self.ids,
-            loaded.to_compile,
-            existing_modules,
-            warnings,
-            self.target_support,
-            incomplete_modules,
-        );
+        let outcome =
+            PackageModulesAnalyser::new(&self, warnings, existing_modules, incomplete_modules)
+                .analyse(loaded.to_compile);
 
         let mut modules = match outcome {
             Outcome::Ok(modules) => modules,
@@ -581,204 +573,247 @@ pub enum StdlibPackage {
     Missing,
 }
 
-#[allow(clippy::too_many_arguments)]
-fn analyse(
-    package_config: &PackageConfig,
+/// A structure we use to hold data about used to analyse the packages of a
+/// module.
+struct PackageModulesAnalyser<'a> {
+    package_config: &'a PackageConfig,
+    target_support: TargetSupport,
     target: Target,
     mode: Mode,
-    ids: &UniqueIdGenerator,
-    parsed_modules: Vec<UncompiledModule>,
-    module_types: &mut im::HashMap<EcoString, type_::ModuleInterface>,
-    warnings: &WarningEmitter,
-    target_support: TargetSupport,
-    incomplete_modules: &mut HashSet<EcoString>,
-) -> Outcome<Vec<Module>, Error> {
-    let mut modules = Vec::with_capacity(parsed_modules.len() + 1);
-    let direct_dependencies = package_config.dependencies_for(mode).expect("Package deps");
-    let dev_dependencies = package_config.dev_dependencies.keys().cloned().collect();
 
-    // Insert the prelude
-    // DUPE: preludeinsertion
-    // TODO: Currently we do this here and also in the tests. It would be better
-    // to have one place where we create all this required state for use in each
-    // place.
-    let _ = module_types.insert(PRELUDE_MODULE_NAME.into(), type_::build_prelude(ids));
+    ids: &'a UniqueIdGenerator,
+    warnings: &'a WarningEmitter,
 
-    let mut skipped_modules: HashMap<EcoString, SkippedModule> = HashMap::new();
-    let mut failed_modules = HashMap::new();
+    module_interfaces: &'a mut im::HashMap<EcoString, type_::ModuleInterface>,
+    incomplete_modules: &'a mut HashSet<EcoString>,
+}
 
-    for UncompiledModule {
-        name,
-        code,
-        ast,
-        path,
-        mtime,
-        origin,
-        dependencies,
-        extra,
-        ..
-    } in parsed_modules
-    {
-        tracing::debug!(module = ?name, "Type checking");
-
-        // We first need to check if the module can actually be compiled.
-        // If we weren't able to compile one of the modules it depends on, then
-        // we have to skip this one to avoid reporting false errors.
-        let skipped_dependency = dependencies.iter().find_map(|(dependency, location)| {
-            if let Some(_failed_module) = failed_modules.get(dependency) {
-                // This module imports a module with an error.
-                let reason = SkipReason::DependencyHasError {
-                    name: dependency.clone(),
-                };
-                Some((*location, reason))
-            } else if let Some(skipped_module) = skipped_modules.get(dependency) {
-                // This module imports a module that has been skipped too.
-                let reason = SkipReason::DependencyWasSkipped {
-                    name: dependency.clone(),
-                    erroring_module: skipped_module.reason.erroring_module(),
-                };
-                Some((*location, reason))
-            } else {
-                None
-            }
-        });
-
-        // The module does depend on some other module that had to be skipped,
-        // so we have to skip this one as well.
-        if let Some((location, reason)) = skipped_dependency {
-            let _ = skipped_modules.insert(
-                name.clone(),
-                SkippedModule {
-                    path,
-                    name,
-                    code: code.clone(),
-                    location,
-                    reason,
-                },
-            );
-            continue;
+impl<'a> PackageModulesAnalyser<'a> {
+    pub fn new<'package_compiler, IO>(
+        package_compiler: &'a PackageCompiler<'package_compiler, IO>,
+        warnings: &'a WarningEmitter,
+        module_interfaces: &'a mut im::HashMap<EcoString, type_::ModuleInterface>,
+        incomplete_modules: &'a mut HashSet<EcoString>,
+    ) -> Self {
+        Self {
+            package_config: package_compiler.config,
+            target_support: package_compiler.target_support,
+            target: package_compiler.target.target(),
+            mode: package_compiler.mode,
+            ids: &package_compiler.ids,
+            warnings,
+            module_interfaces,
+            incomplete_modules,
         }
-
-        let line_numbers = LineNumbers::new(&code);
-
-        let analysis = crate::analyse::ModuleAnalyzerConstructor {
-            target,
-            ids,
-            origin,
-            importable_modules: module_types,
-            warnings: &TypeWarningEmitter::new(path.clone(), code.clone(), warnings.clone()),
-            direct_dependencies: &direct_dependencies,
-            dev_dependencies: &dev_dependencies,
-            target_support,
-            package_config,
-        }
-        .infer_module(ast, line_numbers, path.clone());
-
-        match analysis {
-            Outcome::Ok(ast) => {
-                // Module has compiled successfully.
-                // Make sure it isn't marked as incomplete.
-                let _ = incomplete_modules.remove(&name.clone());
-
-                let mut module = Module {
-                    dependencies,
-                    origin,
-                    extra,
-                    mtime,
-                    name,
-                    code,
-                    ast,
-                    input_path: path,
-                };
-                module.attach_doc_and_module_comments();
-
-                // Register the types from this module so they can be imported into
-                // other modules.
-                let _ = module_types.insert(module.name.clone(), module.ast.type_info.clone());
-
-                // Check for empty modules and emit warning
-                // Only emit the empty module warning if the module has no definitions at all.
-                // Modules with only private definitions already emit their own warnings.
-                if module_types
-                    .get(&module.name)
-                    .map(|interface| interface.values.is_empty() && interface.types.is_empty())
-                    .unwrap_or(false)
-                {
-                    warnings.emit(Warning::EmptyModule {
-                        path: module.input_path.clone(),
-                        name: module.name.clone(),
-                    });
-                }
-
-                // Register the successfully type checked module data so that it can be
-                // used for code generation and in the language server.
-                modules.push(module);
-            }
-
-            Outcome::PartialFailure(ast, errors) => {
-                // Mark as incomplete so that this module isn't reloaded from
-                // cache.
-                let _ = incomplete_modules.insert(name.clone());
-                // Register the partially type checked module data so that it
-                // can be used in the language server.
-                let names = ast.names.clone();
-                let mut module = Module {
-                    dependencies,
-                    origin,
-                    extra,
-                    mtime,
-                    name,
-                    code: code.clone(),
-                    ast,
-                    input_path: path.clone(),
-                };
-                module.attach_doc_and_module_comments();
-
-                let _ = module_types.insert(module.ast.name.clone(), module.ast.type_info.clone());
-                let _ = failed_modules.insert(
-                    module.name.clone(),
-                    FailedModule {
-                        names: Box::new(names),
-                        path,
-                        src: code,
-                        errors,
-                    },
-                );
-                modules.push(module);
-            }
-
-            Outcome::TotalFailure(errors) => {
-                let _ = failed_modules.insert(
-                    name.clone(),
-                    FailedModule {
-                        names: Box::new(Names::new()),
-                        path: path.clone(),
-                        src: code.clone(),
-                        errors,
-                    },
-                );
-            }
-        };
     }
 
-    // Now we need to check if any module has failed and return the appropriate
-    // outcome.
-    let skipped_modules = skipped_modules.into_values().collect();
+    pub fn analyse(self, uncompiled_modules: Vec<UncompiledModule>) -> Outcome<Vec<Module>, Error> {
+        let mut modules = Vec::with_capacity(uncompiled_modules.len() + 1);
+        let direct_dependencies = self
+            .package_config
+            .dependencies_for(self.mode)
+            .expect("Package deps");
+        let dev_dependencies = self
+            .package_config
+            .dev_dependencies
+            .keys()
+            .cloned()
+            .collect();
 
-    if failed_modules.is_empty() {
-        Outcome::Ok(modules)
-    } else if modules.is_empty() {
-        let error = Error::Type {
-            skipped_modules,
-            failed_modules,
-        };
-        Outcome::TotalFailure(error)
-    } else {
-        let error = Error::Type {
-            skipped_modules,
-            failed_modules,
-        };
-        Outcome::PartialFailure(modules, error)
+        // Insert the prelude
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = self
+            .module_interfaces
+            .insert(PRELUDE_MODULE_NAME.into(), type_::build_prelude(self.ids));
+
+        let mut skipped_modules: HashMap<EcoString, SkippedModule> = HashMap::new();
+        let mut failed_modules = HashMap::new();
+
+        for UncompiledModule {
+            name,
+            code,
+            ast,
+            path,
+            mtime,
+            origin,
+            dependencies,
+            extra,
+            ..
+        } in uncompiled_modules
+        {
+            tracing::debug!(module = ?name, "Type checking");
+
+            // We first need to check if the module can actually be compiled.
+            // If we weren't able to compile one of the modules it depends on, then
+            // we have to skip this one to avoid reporting false errors.
+            let skipped_dependency = dependencies.iter().find_map(|(dependency, location)| {
+                if let Some(_failed_module) = failed_modules.get(dependency) {
+                    // This module imports a module with an error.
+                    let reason = SkipReason::DependencyHasError {
+                        name: dependency.clone(),
+                    };
+                    Some((*location, reason))
+                } else if let Some(skipped_module) = skipped_modules.get(dependency) {
+                    // This module imports a module that has been skipped too.
+                    let reason = SkipReason::DependencyWasSkipped {
+                        name: dependency.clone(),
+                        erroring_module: skipped_module.reason.erroring_module(),
+                    };
+                    Some((*location, reason))
+                } else {
+                    None
+                }
+            });
+
+            // The module does depend on some other module that had to be skipped,
+            // so we have to skip this one as well.
+            if let Some((location, reason)) = skipped_dependency {
+                let _ = skipped_modules.insert(
+                    name.clone(),
+                    SkippedModule {
+                        path,
+                        name,
+                        code: code.clone(),
+                        location,
+                        reason,
+                    },
+                );
+                continue;
+            }
+
+            let line_numbers = LineNumbers::new(&code);
+
+            let analysis = crate::analyse::ModuleAnalyzerConstructor {
+                target: self.target,
+                ids: self.ids,
+                origin,
+                importable_modules: self.module_interfaces,
+                warnings: &TypeWarningEmitter::new(
+                    path.clone(),
+                    code.clone(),
+                    self.warnings.clone(),
+                ),
+                direct_dependencies: &direct_dependencies,
+                dev_dependencies: &dev_dependencies,
+                target_support: self.target_support,
+                package_config: self.package_config,
+            }
+            .infer_module(ast, line_numbers, path.clone());
+
+            match analysis {
+                Outcome::Ok(ast) => {
+                    // Module has compiled successfully.
+                    // Make sure it isn't marked as incomplete.
+                    let _ = self.incomplete_modules.remove(&name.clone());
+
+                    let mut module = Module {
+                        dependencies,
+                        origin,
+                        extra,
+                        mtime,
+                        name,
+                        code,
+                        ast,
+                        input_path: path,
+                    };
+                    module.attach_doc_and_module_comments();
+
+                    // Register the types from this module so they can be imported into
+                    // other modules.
+                    let _ = self
+                        .module_interfaces
+                        .insert(module.name.clone(), module.ast.type_info.clone());
+
+                    // Check for empty modules and emit warning
+                    // Only emit the empty module warning if the module has no definitions at all.
+                    // Modules with only private definitions already emit their own warnings.
+                    if self
+                        .module_interfaces
+                        .get(&module.name)
+                        .map(|interface| interface.values.is_empty() && interface.types.is_empty())
+                        .unwrap_or(false)
+                    {
+                        self.warnings.emit(Warning::EmptyModule {
+                            path: module.input_path.clone(),
+                            name: module.name.clone(),
+                        });
+                    }
+
+                    // Register the successfully type checked module data so that it can be
+                    // used for code generation and in the language server.
+                    modules.push(module);
+                }
+
+                Outcome::PartialFailure(ast, errors) => {
+                    // Mark as incomplete so that this module isn't reloaded from
+                    // cache.
+                    let _ = self.incomplete_modules.insert(name.clone());
+                    // Register the partially type checked module data so that it
+                    // can be used in the language server.
+                    let names = ast.names.clone();
+                    let mut module = Module {
+                        dependencies,
+                        origin,
+                        extra,
+                        mtime,
+                        name,
+                        code: code.clone(),
+                        ast,
+                        input_path: path.clone(),
+                    };
+                    module.attach_doc_and_module_comments();
+
+                    let _ = self
+                        .module_interfaces
+                        .insert(module.ast.name.clone(), module.ast.type_info.clone());
+                    let _ = failed_modules.insert(
+                        module.name.clone(),
+                        FailedModule {
+                            names: Box::new(names),
+                            path,
+                            src: code,
+                            errors,
+                        },
+                    );
+                    modules.push(module);
+                }
+
+                Outcome::TotalFailure(errors) => {
+                    let _ = failed_modules.insert(
+                        name.clone(),
+                        FailedModule {
+                            names: Box::new(Names::new()),
+                            path: path.clone(),
+                            src: code.clone(),
+                            errors,
+                        },
+                    );
+                }
+            };
+        }
+
+        // Now we need to check if any module has failed and return the appropriate
+        // outcome.
+        let skipped_modules = skipped_modules.into_values().collect();
+
+        if failed_modules.is_empty() {
+            Outcome::Ok(modules)
+        } else if modules.is_empty() {
+            let error = Error::Type {
+                skipped_modules,
+                failed_modules,
+            };
+            Outcome::TotalFailure(error)
+        } else {
+            let error = Error::Type {
+                skipped_modules,
+                failed_modules,
+            };
+            Outcome::PartialFailure(modules, error)
+        }
     }
 }
 
