@@ -9,7 +9,7 @@ expression: "./cases/erlang_bug_752"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<31 byte binary>
+<40 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.abstr
 <545 byte binary>
@@ -18,7 +18,7 @@ expression: "./cases/erlang_bug_752"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<41 byte binary>
+<50 byte binary>
 
 //// /out/lib/the_package/ebin/importy.app
 {application, importy, [

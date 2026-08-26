@@ -996,6 +996,289 @@ impl SourceFingerprint {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+/// A fingerprint of a module's public api, it will only change if the module's
+/// public api changes.
+pub struct ApiFingerprint(u64);
+
+impl ApiFingerprint {
+    pub fn new(module: &TypedModule) -> Self {
+        ApiFingerprint(hash_module_public_api(module))
+    }
+}
+
+const CONSTANT_TAG: u8 = 0;
+const CUSTOM_TYPE_TAG: u8 = 1;
+const TYPE_ALIAS_TAG: u8 = 2;
+const FUNCTION_TAG: u8 = 3;
+const DEPRECATED_TAG: u8 = 4;
+const NOT_DEPRECATED_TAG: u8 = 5;
+const NAMED_TYPE_TAG: u8 = 6;
+const TUPLE_TYPE_TAG: u8 = 7;
+const FN_TYPE_TAG: u8 = 8;
+const UNBOUND_TYPE_TAG: u8 = 9;
+const GENERIC_TYPE_TAG: u8 = 10;
+const IMPLEMENTATIONS_TAG: u8 = 11;
+
+fn hash_module_public_api(module: &TypedModule) -> u64 {
+    let mut hasher = xxhash_rust::xxh3::Xxh3Builder::new().build();
+
+    let TypedDefinitions {
+        imports: _,
+        constants,
+        custom_types,
+        type_aliases,
+        functions,
+    } = &module.definitions;
+
+    // When computing the hash of a module we want to go over all the
+    // definitions in a fixed order. We go over each definition in alphabetical
+    // order so that just moving things around in a module doesn't break the
+    // fingerprinting!
+    //
+    // ```gleam
+    // pub const a = 1
+    // pub const b = "wibble"
+    // ```
+    //
+    // Will be the same as:
+    //
+    // ```gleam
+    // pub const b = "wibble"
+    // pub const a = 1
+    // ```
+    //
+
+    for constant in constants.iter().sorted_by_key(|constant| &constant.name) {
+        let TypedModuleConstant {
+            documentation: _,
+            name_location: _,
+            annotation: _,
+            location: _,
+            value: _,
+            implementations,
+            deprecation,
+            publicity,
+            type_,
+            name,
+        } = constant;
+
+        // Only a change in importable constants means we'll have to recompile
+        // the module as other modules depending on it might break.
+        if !publicity.is_importable() {
+            continue;
+        }
+
+        hasher.update(&[CONSTANT_TAG]);
+        hasher.update(name.as_bytes());
+        hash_implementations(&mut hasher, implementations);
+        hash_deprecation(&mut hasher, deprecation);
+        hash_type(&mut hasher, type_);
+    }
+
+    for custom_type in custom_types.iter().sorted_by_key(|type_| &type_.name) {
+        let TypedCustomType {
+            external_javascript: _,
+            typed_parameters: _,
+            external_erlang: _,
+            name_location: _,
+            documentation: _,
+            end_position: _,
+            location: _,
+            constructors,
+            deprecation,
+            parameters,
+            publicity,
+            opaque,
+            name,
+        } = custom_type;
+
+        if !publicity.is_importable() {
+            continue;
+        }
+
+        // The name and number of type parameters of a custom type is always
+        // part of its public api.
+        hasher.update(&[CUSTOM_TYPE_TAG]);
+        hasher.update(name.as_bytes());
+        hash_deprecation(&mut hasher, deprecation);
+        hasher.update(&parameters.len().to_be_bytes());
+
+        // We need to keep track if the type is opaque or not.
+        hasher.update(&[if *opaque { 0 } else { 1 }]);
+
+        // But its constructors are part of the public api only if the type is
+        // not opaque!
+        if *opaque {
+            continue;
+        }
+        // The order of constructors doesn't matter, so we go over them in
+        // alphabetical order, like with definitions.
+        for variant in constructors
+            .iter()
+            .sorted_by_key(|constructor| &constructor.name)
+        {
+            hasher.update(variant.name.as_bytes());
+            // The order of the arguments is part of the constructor's public
+            // api, so we must go over those in the order in which they are
+            // defined!
+            for argument in &variant.arguments {
+                // Argument labels are part of the public api!
+                if let Some((_, label)) = &argument.label {
+                    hasher.update(label.as_bytes());
+                }
+                hash_type(&mut hasher, &argument.type_)
+            }
+        }
+    }
+
+    for alias in type_aliases.iter().sorted_by_key(|alias| &alias.alias) {
+        let TypedTypeAlias {
+            name_location: _,
+            documentation: _,
+            location: _,
+            type_ast: _,
+            deprecation,
+            parameters,
+            publicity,
+            alias,
+            type_,
+        } = alias;
+
+        if !publicity.is_importable() {
+            continue;
+        }
+
+        hasher.update(&[TYPE_ALIAS_TAG]);
+        hasher.update(alias.as_bytes());
+        hash_deprecation(&mut hasher, deprecation);
+        hasher.update(&parameters.len().to_be_bytes());
+        hash_type(&mut hasher, type_)
+    }
+
+    for function in functions.iter().sorted_by_key(|function| &function.name) {
+        let ast::Function {
+            external_javascript: _,
+            return_annotation: _,
+            external_erlang: _,
+            documentation: _,
+            end_position: _,
+            body_start: _,
+            location: _,
+            purity: _,
+            body: _,
+            implementations,
+            return_type,
+            deprecation,
+            arguments,
+            publicity,
+            name,
+        } = function;
+
+        if !publicity.is_importable() {
+            continue;
+        }
+
+        let (_, name) = name.as_ref().expect("module function with no name");
+        hasher.update(&[FUNCTION_TAG]);
+        hasher.update(name.as_bytes());
+        hash_implementations(&mut hasher, implementations);
+        hash_deprecation(&mut hasher, deprecation);
+
+        // The order of the arguments is part of the function's public api, so
+        // we must go over those in the order in which they are defined!
+        for argument in arguments {
+            // Labels are part of the public api of a function, so those need
+            // to end up in the hash!
+            match &argument.names {
+                ast::ArgNames::LabelledDiscard { label, .. }
+                | ast::ArgNames::NamedLabelled { label, .. } => hasher.update(label.as_bytes()),
+                ast::ArgNames::Discard { .. } | ast::ArgNames::Named { .. } => (),
+            }
+            hash_type(&mut hasher, &argument.type_)
+        }
+        hash_type(&mut hasher, return_type);
+    }
+
+    hasher.digest()
+}
+
+fn hash_implementations(
+    hasher: &mut xxhash_rust::xxh3::Xxh3,
+    implementations: &type_::expression::Implementations,
+) {
+    hasher.update(&[IMPLEMENTATIONS_TAG]);
+    hasher.update(&[
+        if implementations.supports(Target::Erlang) {
+            1
+        } else {
+            0
+        },
+        if implementations.supports(Target::JavaScript) {
+            1
+        } else {
+            0
+        },
+    ])
+}
+
+fn hash_deprecation(hasher: &mut xxhash_rust::xxh3::Xxh3, deprecation: &type_::Deprecation) {
+    match deprecation {
+        type_::Deprecation::NotDeprecated => {
+            hasher.update(&[NOT_DEPRECATED_TAG]);
+        }
+        type_::Deprecation::Deprecated { message } => {
+            hasher.update(&[DEPRECATED_TAG]);
+            hasher.update(message.as_bytes());
+        }
+    }
+}
+
+fn hash_type(hasher: &mut xxhash_rust::xxh3::Xxh3, type_: &Type) {
+    match type_ {
+        Type::Named {
+            inferred_variant: _,
+            publicity: _,
+            package,
+            module,
+            name,
+            arguments,
+        } => {
+            hasher.update(&[NAMED_TYPE_TAG]);
+            hasher.update(package.as_bytes());
+            hasher.update(module.as_bytes());
+            hasher.update(name.as_bytes());
+            for argument in arguments {
+                hash_type(hasher, argument);
+            }
+        }
+        Type::Fn { arguments, return_ } => {
+            hasher.update(&[FN_TYPE_TAG]);
+            for argument in arguments {
+                hash_type(hasher, argument);
+            }
+            hash_type(hasher, return_);
+        }
+        Type::Tuple { elements } => {
+            hasher.update(&[TUPLE_TYPE_TAG]);
+            for element in elements {
+                hash_type(hasher, element);
+            }
+        }
+        Type::Var { type_ } => match &*type_.borrow() {
+            type_::TypeVar::Link { type_ } => hash_type(hasher, type_),
+            type_::TypeVar::Unbound { id } => {
+                hasher.update(&[UNBOUND_TYPE_TAG]);
+                hasher.update(&id.to_be_bytes());
+            }
+            type_::TypeVar::Generic { id } => {
+                hasher.update(&[GENERIC_TYPE_TAG]);
+                hasher.update(&id.to_be_bytes());
+            }
+        },
+    }
+}
+
 /// Like a `Result`, but the operation can partially succeed or fail.
 ///
 #[derive(Debug)]
