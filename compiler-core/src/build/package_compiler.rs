@@ -5,12 +5,14 @@
 mod tests;
 
 use crate::analyse::TargetSupport;
+use crate::ast::TypedModule;
 use crate::build::package_loader::CacheFiles;
 use crate::build::{ErlangOutput, module_erlang_name};
 
 use crate::error::{DefinedModuleOrigin, FailedModule, SkipReason, SkippedModule};
 
 use crate::metadata;
+use crate::requirement::Requirement;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::type_::printer::Names;
 use crate::{
@@ -579,13 +581,58 @@ struct PackageModulesAnalyser<'a> {
     package_config: &'a PackageConfig,
     target_support: TargetSupport,
     target: Target,
-    mode: Mode,
-
     ids: &'a UniqueIdGenerator,
     warnings: &'a WarningEmitter,
 
     module_interfaces: &'a mut im::HashMap<EcoString, type_::ModuleInterface>,
     incomplete_modules: &'a mut HashSet<EcoString>,
+
+    /// The direct dependencies of this package, as needed by the
+    /// `ModuleAnalyzerConstructor`.
+    direct_dependencies: HashMap<EcoString, Requirement>,
+
+    /// The dev dependencies of this package, as needed by the
+    /// `ModuleAnalyzerConstructor`.
+    dev_dependencies: HashSet<EcoString>,
+
+    /// Keeps track of the modules whose analysis had to be skipped because
+    /// other modules they depend on failed to compile.
+    skipped_modules: HashMap<EcoString, SkippedModule>,
+    /// Keeps track of the modules whose compilation failed because of some
+    /// error.
+    failed_modules: HashMap<EcoString, FailedModule>,
+    /// Keeps track of the modules that could be analysed successfully.
+    analysed_modules: Vec<Module>,
+}
+
+/// Struct to carry around cheap to clone data about a module, separately from
+/// its ast and `ModuleExtra` which would be expensive to clone.
+///
+#[derive(Clone)]
+struct ModuleInfo {
+    name: EcoString,
+    origin: Origin,
+    path: Utf8PathBuf,
+    code: EcoString,
+    mtime: SystemTime,
+    dependencies: Vec<(EcoString, SrcSpan)>,
+}
+
+impl ModuleInfo {
+    fn into_typed_module(self, ast: TypedModule, extra: ModuleExtra) -> Module {
+        let mut module = Module {
+            name: self.name,
+            code: self.code,
+            mtime: self.mtime,
+            input_path: self.path,
+            origin: self.origin,
+            dependencies: self.dependencies,
+            extra,
+            ast,
+        };
+        module.attach_doc_and_module_comments();
+        module
+    }
 }
 
 impl<'a> PackageModulesAnalyser<'a> {
@@ -595,31 +642,40 @@ impl<'a> PackageModulesAnalyser<'a> {
         module_interfaces: &'a mut im::HashMap<EcoString, type_::ModuleInterface>,
         incomplete_modules: &'a mut HashSet<EcoString>,
     ) -> Self {
-        Self {
-            package_config: package_compiler.config,
-            target_support: package_compiler.target_support,
-            target: package_compiler.target.target(),
-            mode: package_compiler.mode,
-            ids: &package_compiler.ids,
-            warnings,
-            module_interfaces,
-            incomplete_modules,
-        }
-    }
-
-    pub fn analyse(self, uncompiled_modules: Vec<UncompiledModule>) -> Outcome<Vec<Module>, Error> {
-        let mut modules = Vec::with_capacity(uncompiled_modules.len() + 1);
-        let direct_dependencies = self
-            .package_config
-            .dependencies_for(self.mode)
+        let direct_dependencies = package_compiler
+            .config
+            .dependencies_for(package_compiler.mode)
             .expect("Package deps");
-        let dev_dependencies = self
-            .package_config
+
+        let dev_dependencies = package_compiler
+            .config
             .dev_dependencies
             .keys()
             .cloned()
             .collect();
 
+        Self {
+            package_config: package_compiler.config,
+            target_support: package_compiler.target_support,
+            target: package_compiler.target.target(),
+            ids: &package_compiler.ids,
+            warnings,
+            module_interfaces,
+            incomplete_modules,
+
+            direct_dependencies,
+            dev_dependencies,
+
+            skipped_modules: HashMap::new(),
+            failed_modules: HashMap::new(),
+            analysed_modules: Vec::new(),
+        }
+    }
+
+    pub fn analyse(
+        mut self,
+        uncompiled_modules: Vec<UncompiledModule>,
+    ) -> Outcome<Vec<Module>, Error> {
         // Insert the prelude
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
@@ -629,190 +685,215 @@ impl<'a> PackageModulesAnalyser<'a> {
             .module_interfaces
             .insert(PRELUDE_MODULE_NAME.into(), type_::build_prelude(self.ids));
 
-        let mut skipped_modules: HashMap<EcoString, SkippedModule> = HashMap::new();
-        let mut failed_modules = HashMap::new();
+        for uncompiled_module in uncompiled_modules {
+            let UncompiledModule {
+                name,
+                code,
+                ast,
+                path,
+                mtime,
+                origin,
+                dependencies,
+                extra,
+                ..
+            } = uncompiled_module;
 
-        for UncompiledModule {
-            name,
-            code,
-            ast,
-            path,
-            mtime,
-            origin,
-            dependencies,
-            extra,
-            ..
-        } in uncompiled_modules
-        {
             tracing::debug!(module = ?name, "Type checking");
+
+            // We bundle the uncompiled module's information into a struct so
+            // it can be easily moved around separately from the `ast` and
+            // `extra`. This way we can avoid to do expensive clones and keep
+            // the code tidy passing this struct around.
+            let module_info = ModuleInfo {
+                name,
+                origin,
+                path,
+                code,
+                mtime,
+                dependencies,
+            };
 
             // We first need to check if the module can actually be compiled.
             // If we weren't able to compile one of the modules it depends on, then
             // we have to skip this one to avoid reporting false errors.
-            let skipped_dependency = dependencies.iter().find_map(|(dependency, location)| {
-                if let Some(_failed_module) = failed_modules.get(dependency) {
-                    // This module imports a module with an error.
-                    let reason = SkipReason::DependencyHasError {
-                        name: dependency.clone(),
-                    };
-                    Some((*location, reason))
-                } else if let Some(skipped_module) = skipped_modules.get(dependency) {
-                    // This module imports a module that has been skipped too.
-                    let reason = SkipReason::DependencyWasSkipped {
-                        name: dependency.clone(),
-                        erroring_module: skipped_module.reason.erroring_module(),
-                    };
-                    Some((*location, reason))
-                } else {
-                    None
-                }
-            });
-
-            // The module does depend on some other module that had to be skipped,
-            // so we have to skip this one as well.
-            if let Some((location, reason)) = skipped_dependency {
-                let _ = skipped_modules.insert(
-                    name.clone(),
-                    SkippedModule {
-                        path,
-                        name,
-                        code: code.clone(),
-                        location,
-                        reason,
-                    },
-                );
+            if self.skip_if_erroring_dependencies(&module_info) {
                 continue;
             }
 
-            let line_numbers = LineNumbers::new(&code);
-
-            let analysis = crate::analyse::ModuleAnalyzerConstructor {
-                target: self.target,
-                ids: self.ids,
-                origin,
-                importable_modules: self.module_interfaces,
-                warnings: &TypeWarningEmitter::new(
-                    path.clone(),
-                    code.clone(),
-                    self.warnings.clone(),
-                ),
-                direct_dependencies: &direct_dependencies,
-                dev_dependencies: &dev_dependencies,
-                target_support: self.target_support,
-                package_config: self.package_config,
-            }
-            .infer_module(ast, line_numbers, path.clone());
-
-            match analysis {
+            match self.infer_module(&module_info, ast) {
+                // In case of success we register the typed module and its
+                // interface, making sure the module is no longer considered
+                // incomplete.
                 Outcome::Ok(ast) => {
-                    // Module has compiled successfully.
-                    // Make sure it isn't marked as incomplete.
-                    let _ = self.incomplete_modules.remove(&name.clone());
-
-                    let mut module = Module {
-                        dependencies,
-                        origin,
-                        extra,
-                        mtime,
-                        name,
-                        code,
-                        ast,
-                        input_path: path,
-                    };
-                    module.attach_doc_and_module_comments();
-
-                    // Register the types from this module so they can be imported into
-                    // other modules.
-                    let _ = self
-                        .module_interfaces
-                        .insert(module.name.clone(), module.ast.type_info.clone());
-
-                    // Check for empty modules and emit warning
-                    // Only emit the empty module warning if the module has no definitions at all.
-                    // Modules with only private definitions already emit their own warnings.
-                    if self
-                        .module_interfaces
-                        .get(&module.name)
-                        .map(|interface| interface.values.is_empty() && interface.types.is_empty())
-                        .unwrap_or(false)
-                    {
-                        self.warnings.emit(Warning::EmptyModule {
-                            path: module.input_path.clone(),
-                            name: module.name.clone(),
-                        });
-                    }
-
-                    // Register the successfully type checked module data so that it can be
-                    // used for code generation and in the language server.
-                    modules.push(module);
+                    let module = module_info.into_typed_module(ast, extra);
+                    let _ = self.incomplete_modules.remove(&module.name.clone());
+                    self.register_module_interface(&module);
+                    self.analysed_modules.push(module);
                 }
 
+                // If there's some errors in the module we mark it as incomplete
+                // (so it won't be reloaded from the cache) and register the
+                // failure.
+                // We still register the successfully type checked interface so
+                // that it can be used by the language server, even in case of
+                // errors.
                 Outcome::PartialFailure(ast, errors) => {
-                    // Mark as incomplete so that this module isn't reloaded from
-                    // cache.
-                    let _ = self.incomplete_modules.insert(name.clone());
-                    // Register the partially type checked module data so that it
-                    // can be used in the language server.
                     let names = ast.names.clone();
-                    let mut module = Module {
-                        dependencies,
-                        origin,
-                        extra,
-                        mtime,
-                        name,
-                        code: code.clone(),
-                        ast,
-                        input_path: path.clone(),
-                    };
-                    module.attach_doc_and_module_comments();
-
-                    let _ = self
-                        .module_interfaces
-                        .insert(module.ast.name.clone(), module.ast.type_info.clone());
-                    let _ = failed_modules.insert(
-                        module.name.clone(),
-                        FailedModule {
-                            names: Box::new(names),
-                            path,
-                            src: code,
-                            errors,
-                        },
-                    );
-                    modules.push(module);
+                    let module = module_info.clone().into_typed_module(ast, extra);
+                    let _ = self.incomplete_modules.insert(module_info.name.clone());
+                    self.register_failed_module(&module_info, names, errors);
+                    self.register_module_interface(&module);
+                    self.analysed_modules.push(module);
                 }
 
+                // In case of a total failure the module could not be parsed
+                // at all! We just record the fact that it failed.
                 Outcome::TotalFailure(errors) => {
-                    let _ = failed_modules.insert(
-                        name.clone(),
-                        FailedModule {
-                            names: Box::new(Names::new()),
-                            path: path.clone(),
-                            src: code.clone(),
-                            errors,
-                        },
-                    );
+                    self.register_failed_module(&module_info, Names::new(), errors);
                 }
             };
         }
 
-        // Now we need to check if any module has failed and return the appropriate
-        // outcome.
-        let skipped_modules = skipped_modules.into_values().collect();
+        self.into_outcome()
+    }
 
-        if failed_modules.is_empty() {
-            Outcome::Ok(modules)
-        } else if modules.is_empty() {
-            let error = Error::Type {
-                skipped_modules,
-                failed_modules,
-            };
-            Outcome::TotalFailure(error)
-        } else {
-            let error = Error::Type {
-                skipped_modules,
-                failed_modules,
-            };
-            Outcome::PartialFailure(modules, error)
+    /// After typing all the modules, turn this struct into an outcome, based
+    /// on the error we've ran into during the analysis of the given modules.
+    fn into_outcome(self) -> Outcome<Vec<Module>, Error> {
+        // There's three possible outcomes:
+        // - all modules could be analysed, success
+        // - no module could be analysed, total failure
+        // - there's a mix of analysed and failed modules, partial failure
+
+        // All modules could be analysed: there's no failure at all.
+        if self.failed_modules.is_empty() {
+            return Outcome::Ok(self.analysed_modules);
+        }
+
+        // No module could be analysed.
+        if self.analysed_modules.is_empty() {
+            return Outcome::TotalFailure(Error::Type {
+                skipped_modules: self.skipped_modules.into_values().collect(),
+                failed_modules: self.failed_modules,
+            });
+        }
+
+        // There's a mix of analysed and failed modules.
+        Outcome::PartialFailure(
+            self.analysed_modules,
+            Error::Type {
+                skipped_modules: self.skipped_modules.into_values().collect(),
+                failed_modules: self.failed_modules,
+            },
+        )
+    }
+
+    /// This adds the compiled module's interface to all the module interfaces
+    /// so that its types can be imported into other modules.
+    ///
+    /// This also cheks the module is not empty and raises a warning if it is.
+    fn register_module_interface(&mut self, module: &Module) {
+        // Emit the empty module warning if the module has no definitions at all.
+        // Modules with only private definitions already emit their own warnings.
+        let interface = &module.ast.type_info;
+        if interface.values.is_empty() && interface.types.is_empty() {
+            self.warnings.emit(Warning::EmptyModule {
+                path: module.input_path.clone(),
+                name: module.name.clone(),
+            });
+        }
+
+        let _ = self
+            .module_interfaces
+            .insert(module.name.clone(), interface.clone());
+    }
+
+    /// Registers the given module has failed with some errors.
+    fn register_failed_module(
+        &mut self,
+        module_info: &ModuleInfo,
+        names: Names,
+        errors: vec1::Vec1<type_::Error>,
+    ) {
+        let _ = self.failed_modules.insert(
+            module_info.name.clone(),
+            FailedModule {
+                names: Box::new(names),
+                path: module_info.path.clone(),
+                src: module_info.code.clone(),
+                errors,
+            },
+        );
+    }
+
+    /// Performs type inference for the given untyped module.
+    fn infer_module(
+        &self,
+        module_info: &ModuleInfo,
+        module_ast: UntypedModule,
+    ) -> Outcome<TypedModule, vec1::Vec1<type_::Error>> {
+        let line_numbers = LineNumbers::new(&module_info.code);
+        crate::analyse::ModuleAnalyzerConstructor {
+            target: self.target,
+            ids: self.ids,
+            origin: module_info.origin,
+            importable_modules: self.module_interfaces,
+            warnings: &TypeWarningEmitter::new(
+                module_info.path.clone(),
+                module_info.code.clone(),
+                self.warnings.clone(),
+            ),
+            direct_dependencies: &self.direct_dependencies,
+            dev_dependencies: &self.dev_dependencies,
+            target_support: self.target_support,
+            package_config: self.package_config,
+        }
+        .infer_module(module_ast, line_numbers, module_info.path.clone())
+    }
+
+    /// Given an uncompiled module, this goes through the modules it depends on
+    /// to see if any of them was skipped because of errors.
+    /// If the module should be skipped because of this, it is marked as skipped
+    /// and this will return `true`.
+    ///
+    fn skip_if_erroring_dependencies(&mut self, module: &ModuleInfo) -> bool {
+        let mut dependencies = module.dependencies.iter();
+        let reason_to_skip = dependencies.find_map(|(dependency, import_location)| {
+            if self.failed_modules.contains_key(dependency) {
+                // We import a failing module directly, this module must be
+                // skipped too.
+                let reason = SkipReason::DependencyHasError {
+                    name: dependency.clone(),
+                };
+                Some((*import_location, reason))
+            } else if let Some(skipped_module) = self.skipped_modules.get(dependency) {
+                // We import a module that's not directly failing, but had
+                // to be skipped. This module must be skipped too!
+                let reason = SkipReason::DependencyWasSkipped {
+                    name: dependency.clone(),
+                    erroring_module: skipped_module.reason.erroring_module(),
+                };
+                Some((*import_location, reason))
+            } else {
+                None
+            }
+        });
+
+        match reason_to_skip {
+            None => false,
+            Some((location, reason)) => {
+                let _ = self.skipped_modules.insert(
+                    module.name.clone(),
+                    SkippedModule {
+                        path: module.path.clone(),
+                        name: module.name.clone(),
+                        code: module.code.clone(),
+                        location,
+                        reason,
+                    },
+                );
+                true
+            }
         }
     }
 }
