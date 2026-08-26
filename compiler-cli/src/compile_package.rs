@@ -10,17 +10,20 @@ use ecow::EcoString;
 use gleam_core::{
     Error, Result,
     build::{
-        ErlangOutput, Mode, NullTelemetry, PackageCompiler, StaleTracker, Target,
-        TargetCodegenConfiguration,
+        ErlangAppCodegenConfiguration, ErlangOutput, Mode, NullTelemetry, PackageCompiler,
+        StaleTracker, Target, TargetCodegenConfiguration,
     },
     error::{FileIoAction, FileKind},
-    metadata,
+    manifest, metadata,
     paths::{self, ProjectPaths},
     type_::ModuleInterface,
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
 };
-use std::{collections::HashSet, rc::Rc};
+use std::{
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 pub fn command(options: CompilePackage) -> Result<()> {
     let ids = UniqueIdGenerator::new();
@@ -36,10 +39,24 @@ pub fn command(options: CompilePackage) -> Result<()> {
     if options.target.is_erlang() && !options.skip_beam_compilation {
         io.initialise_beam_compiler()?;
     }
-
+    let app_file = match options.skip_beam_compilation {
+        true => None,
+        false => {
+            let package_name_overrides = if paths.manifest().exists() {
+                let package_manifest = crate::dependencies::read_manifest_from_disc(&paths)?;
+                manifest::package_name_overrides(&package_manifest.packages)
+            } else {
+                HashMap::new()
+            };
+            Some(ErlangAppCodegenConfiguration {
+                include_dev_deps: false,
+                package_name_overrides,
+            })
+        }
+    };
     let target = match options.target {
         Target::Erlang => TargetCodegenConfiguration::Erlang {
-            app_file: None,
+            app_file,
             output: ErlangOutput::Binary,
         },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
