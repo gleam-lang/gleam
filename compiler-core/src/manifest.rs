@@ -132,6 +132,15 @@ impl Manifest {
     }
 }
 
+pub fn package_name_overrides<'a>(
+    packages: impl IntoIterator<Item = &'a ManifestPackage>,
+) -> HashMap<EcoString, EcoString> {
+    packages
+        .into_iter()
+        .flat_map(|package| Some((package.name.clone(), package.otp_app.as_ref()?.clone())))
+        .collect()
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Base16Checksum(pub Vec<u8>);
 

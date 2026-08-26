@@ -606,7 +606,7 @@ fn remove_unused_git_clones(paths: &ProjectPaths, manifest: &Manifest) -> Result
     Ok(())
 }
 
-fn read_manifest_from_disc(paths: &ProjectPaths) -> Result<Manifest> {
+pub(crate) fn read_manifest_from_disc(paths: &ProjectPaths) -> Result<Manifest> {
     tracing::debug!("reading_manifest_toml");
     let manifest_path = paths.manifest();
     let toml = fs::read(&manifest_path)?;

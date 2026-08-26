@@ -118,9 +118,7 @@ impl<'a> ErlangApp<'a> {
         &self,
         writer: Writer,
         config: &PackageConfig,
-        modules: &[Module],
-        cached_module_names: &[EcoString],
-        native_modules: Vec<EcoString>,
+        compiled_modules: Vec<EcoString>,
     ) -> Result<()> {
         fn tuple(key: &str, value: &str) -> String {
             format!("    {{{key}, {value}}},\n")
@@ -140,14 +138,13 @@ impl<'a> ErlangApp<'a> {
             }
         };
 
-        // Include the cached modules that were not recompiled this build, so a
-        // warm rebuild doesn't shrink the `modules` list (see #5834).
-        let modules = modules
-            .iter()
-            .map(|m| m.erlang_name())
-            .chain(cached_module_names.iter().map(module_erlang_name))
-            .chain(native_modules)
-            .unique()
+        // `compiled_modules` is resolved by the caller: either an `ebin` scan
+        // (which already includes modules left over from a previous build
+        // that weren't recompiled this time, so a warm rebuild doesn't shrink
+        // the `modules` list, see #5834) or the in-memory module list when no
+        // bytecode compilation happened this run.
+        let modules = compiled_modules
+            .into_iter()
             .sorted()
             .map(escape_atom_string)
             .join(",\n               ");
@@ -331,9 +328,9 @@ mod tests {
 
     #[test]
     fn app_file_includes_cached_modules() {
-        // A warm rebuild recompiles nothing, so every module arrives as a cached
-        // name rather than in `modules`; they must still be listed in the .app
-        // (https://github.com/gleam-lang/gleam/issues/5834).
+        // A warm rebuild recompiles nothing, so every module comes from the
+        // `ebin` scan rather than being freshly compiled; they must still be
+        // listed in the .app (https://github.com/gleam-lang/gleam/issues/5834).
         let fs = InMemoryFileSystem::new();
         let mut config = PackageConfig::default();
         config.name = "my_app".into();
@@ -342,13 +339,13 @@ mod tests {
             package_name_overrides: HashMap::new(),
         };
 
+        // Module names here are already in Erlang atom form (`@`, not `/`),
+        // matching what a real `ebin` scan of `.beam` filenames would yield.
         ErlangApp::new(Utf8Path::new("/ebin"), &codegen_config)
             .render(
                 fs.clone(),
                 &config,
-                &[],
-                &["my_app/one".into(), "my_app/two".into()],
-                vec![],
+                vec!["my_app@one".into(), "my_app@two".into()],
             )
             .expect("render .app");
 
