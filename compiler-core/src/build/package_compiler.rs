@@ -682,7 +682,7 @@ impl<'a> PackageModulesAnalyser<'a> {
                 continue;
             }
 
-            match self.infer_module(path.clone(), name.clone(), origin, ast) {
+            match self.infer_module(path.clone(), code.clone(), origin, ast) {
                 // In case of success we register the typed module and its
                 // interface, making sure the module is no longer considered
                 // incomplete.
@@ -699,7 +699,7 @@ impl<'a> PackageModulesAnalyser<'a> {
                     };
                     module.attach_doc_and_module_comments();
 
-                    let _ = self.incomplete_modules.remove(&module.name.clone());
+                    let _ = self.incomplete_modules.remove(&module.name);
                     self.register_module_interface(&module);
                     self.analysed_modules.push(module);
                 }
