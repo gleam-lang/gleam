@@ -1,0 +1,38 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 429
+expression: "./cases/variable_or_module"
+---
+//// /out/lib/the_package/_gleam_artefacts/main.abstr
+<1024 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/main.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/main.cache_meta
+<34 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/power.abstr
+<738 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/power.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/power.cache_meta
+<24 byte binary>
+
+//// /out/lib/the_package/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [main,
+               power]},
+    {registered, []}
+]}.
+
+
+//// /out/lib/the_package/include/power_Power.hrl
+-record(power, {
+    value :: integer()
+}).

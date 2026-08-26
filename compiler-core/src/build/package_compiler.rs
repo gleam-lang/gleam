@@ -605,40 +605,6 @@ struct PackageModulesAnalyser<'a> {
     analysed_modules: Vec<Module>,
 }
 
-/// Struct to carry around cheap to clone data about a module, separately from
-/// its ast and `ModuleExtra` which would be expensive to clone.
-///
-#[derive(Clone)]
-struct ModuleSourceData {
-    path: Utf8PathBuf,
-    name: EcoString,
-    code: EcoString,
-}
-
-impl ModuleSourceData {
-    fn into_module(
-        self,
-        ast: TypedModule,
-        extra: ModuleExtra,
-        origin: Origin,
-        dependencies: Vec<(EcoString, SrcSpan)>,
-        mtime: SystemTime,
-    ) -> Module {
-        let mut module = Module {
-            name: self.name,
-            code: self.code,
-            input_path: self.path,
-            mtime,
-            origin,
-            dependencies,
-            extra,
-            ast,
-        };
-        module.attach_doc_and_module_comments();
-        module
-    }
-}
-
 impl<'a> PackageModulesAnalyser<'a> {
     pub fn new<'package_compiler, IO>(
         package_compiler: &'a PackageCompiler<'package_compiler, IO>,
@@ -704,25 +670,35 @@ impl<'a> PackageModulesAnalyser<'a> {
 
             tracing::debug!(module = ?name, "Type checking");
 
-            // We bundle the uncompiled module's information into a struct so
-            // it can be easily moved around separately from the `ast` and
-            // `extra`. This way we can avoid to do expensive clones and keep
-            // the code tidy passing this struct around.
-            let source_data = ModuleSourceData { name, path, code };
-
             // We first need to check if the module can actually be compiled.
             // If we weren't able to compile one of the modules it depends on, then
             // we have to skip this one to avoid reporting false errors.
-            if self.skip_if_erroring_dependencies(&source_data, &dependencies) {
+            if self.skip_if_erroring_dependencies(
+                path.clone(),
+                name.clone(),
+                code.clone(),
+                &dependencies,
+            ) {
                 continue;
             }
 
-            match self.infer_module(&source_data, origin, ast) {
+            match self.infer_module(path.clone(), name.clone(), origin, ast) {
                 // In case of success we register the typed module and its
                 // interface, making sure the module is no longer considered
                 // incomplete.
                 Outcome::Ok(ast) => {
-                    let module = source_data.into_module(ast, extra, origin, dependencies, mtime);
+                    let mut module = Module {
+                        name,
+                        code,
+                        input_path: path,
+                        mtime,
+                        origin,
+                        dependencies,
+                        extra,
+                        ast,
+                    };
+                    module.attach_doc_and_module_comments();
+
                     let _ = self.incomplete_modules.remove(&module.name.clone());
                     self.register_module_interface(&module);
                     self.analysed_modules.push(module);
@@ -736,12 +712,20 @@ impl<'a> PackageModulesAnalyser<'a> {
                 // errors.
                 Outcome::PartialFailure(ast, errors) => {
                     let names = ast.names.clone();
-                    let module =
-                        source_data
-                            .clone()
-                            .into_module(ast, extra, origin, dependencies, mtime);
+                    let mut module = Module {
+                        name: name.clone(),
+                        code: code.clone(),
+                        input_path: path.clone(),
+                        mtime,
+                        origin,
+                        dependencies,
+                        extra,
+                        ast,
+                    };
+                    module.attach_doc_and_module_comments();
+
                     let _ = self.incomplete_modules.insert(module.name.clone());
-                    self.register_failed_module(&source_data, names, errors);
+                    self.register_failed_module(path, name, code, names, errors);
                     self.register_module_interface(&module);
                     self.analysed_modules.push(module);
                 }
@@ -749,7 +733,7 @@ impl<'a> PackageModulesAnalyser<'a> {
                 // In case of a total failure the module interface could not be
                 // built at all! We just record that analysis failed.
                 Outcome::TotalFailure(errors) => {
-                    self.register_failed_module(&source_data, Names::new(), errors);
+                    self.register_failed_module(path, name, code, Names::new(), errors);
                 }
             };
         }
@@ -811,16 +795,18 @@ impl<'a> PackageModulesAnalyser<'a> {
     /// Registers the given module has failed with some errors.
     fn register_failed_module(
         &mut self,
-        module_info: &ModuleSourceData,
+        path: Utf8PathBuf,
+        name: EcoString,
+        code: EcoString,
         names: Names,
         errors: vec1::Vec1<type_::Error>,
     ) {
         let _ = self.failed_modules.insert(
-            module_info.name.clone(),
+            name,
             FailedModule {
                 names: Box::new(names),
-                path: module_info.path.clone(),
-                src: module_info.code.clone(),
+                path,
+                src: code,
                 errors,
             },
         );
@@ -829,27 +815,24 @@ impl<'a> PackageModulesAnalyser<'a> {
     /// Performs type inference for the given untyped module.
     fn infer_module(
         &self,
-        source_data: &ModuleSourceData,
+        path: Utf8PathBuf,
+        code: EcoString,
         origin: Origin,
         module_ast: UntypedModule,
     ) -> Outcome<TypedModule, vec1::Vec1<type_::Error>> {
-        let line_numbers = LineNumbers::new(&source_data.code);
+        let line_numbers = LineNumbers::new(&code);
         crate::analyse::ModuleAnalyzerConstructor {
             target: self.target,
             ids: self.ids,
             origin,
             importable_modules: self.module_interfaces,
-            warnings: &TypeWarningEmitter::new(
-                source_data.path.clone(),
-                source_data.code.clone(),
-                self.warnings.clone(),
-            ),
+            warnings: &TypeWarningEmitter::new(path.clone(), code, self.warnings.clone()),
             direct_dependencies: &self.direct_dependencies,
             dev_dependencies: &self.dev_dependencies,
             target_support: self.target_support,
             package_config: self.package_config,
         }
-        .infer_module(module_ast, line_numbers, source_data.path.clone())
+        .infer_module(module_ast, line_numbers, path)
     }
 
     /// Given an uncompiled module, this goes through the modules it depends on
@@ -859,7 +842,9 @@ impl<'a> PackageModulesAnalyser<'a> {
     ///
     fn skip_if_erroring_dependencies(
         &mut self,
-        module: &ModuleSourceData,
+        path: Utf8PathBuf,
+        name: EcoString,
+        code: EcoString,
         dependencies: &[(EcoString, SrcSpan)],
     ) -> bool {
         let reason_to_skip = dependencies
@@ -889,11 +874,11 @@ impl<'a> PackageModulesAnalyser<'a> {
             None => false,
             Some((location, reason)) => {
                 let _ = self.skipped_modules.insert(
-                    module.name.clone(),
+                    name.clone(),
                     SkippedModule {
-                        path: module.path.clone(),
-                        name: module.name.clone(),
-                        code: module.code.clone(),
+                        path,
+                        name,
+                        code,
                         location,
                         reason,
                     },

@@ -1,0 +1,32 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 132
+expression: "./cases/erlang_import"
+---
+//// /out/lib/the_package/_gleam_artefacts/one.abstr
+<611 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/one.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/one.cache_meta
+<32 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/two.abstr
+<391 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/two.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/two.cache_meta
+<24 byte binary>
+
+//// /out/lib/the_package/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [one,
+               two]},
+    {registered, []}
+]}.
