@@ -4,7 +4,7 @@ expression: error
 ---
 error: Packages are already dev dependencies
 
-wibble, wobble, and woo are already develpment dependencies of this
+wibble, wobble, and woo are already development dependencies of this
 project.
 
 Hint: If you want to use these packages as regular dependencies, you can

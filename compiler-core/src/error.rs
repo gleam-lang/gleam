@@ -2596,7 +2596,7 @@ dependency, you can move it to the `dependencies` section of this project's \
                     packages => vec![Diagnostic {
                         title: "Packages are already dev dependencies".into(),
                         text: wrap_format!(
-                            "{} are already develpment dependencies of this project.",
+                            "{} are already development dependencies of this project.",
                             comma_separated_list(packages)
                         ),
                         level: Level::Error,
