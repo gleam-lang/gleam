@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/erlang/tests/consts.rs
+expression: "\nimport mod\n\npub fn wibble() {\n  \"Hello, \" <> mod.name <> \"!\"\n}\n"
+---
+----- SOURCE CODE
+
+import mod
+
+pub fn wibble() {
+  "Hello, " <> mod.name <> "!"
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([wibble/0]).
+
+-spec wibble() -> binary().
+wibble() ->
+    <<<<"Hello, "/utf8, (mod:name())/binary>>/binary, "!"/utf8>>.

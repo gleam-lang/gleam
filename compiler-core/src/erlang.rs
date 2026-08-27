@@ -2795,7 +2795,13 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             builder.bit_array_segment(segment.location());
             self.constant(builder, segment);
             builder.bit_array_segment_default_size();
-            builder.bit_array_segment_specifiers([BitArraySegmentSpecifier::Utf8]);
+            builder.bit_array_segment_specifiers([
+                if self.constant_produces_literal_string(segment) {
+                    BitArraySegmentSpecifier::Utf8
+                } else {
+                    BitArraySegmentSpecifier::Binary
+                },
+            ]);
         }
         builder.end_bit_array(bit_array);
     }
@@ -2827,7 +2833,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         builder.bit_array_segment(value.location());
         self.maybe_block_expr(builder, value);
         builder.bit_array_segment_default_size();
-        builder.bit_array_segment_specifiers(if produces_literal_string(value) {
+        builder.bit_array_segment_specifiers(if self.produces_literal_string(value) {
             [BitArraySegmentSpecifier::Utf8]
         } else {
             [BitArraySegmentSpecifier::Binary]
@@ -3097,7 +3103,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         //   ```
         //
         if segment.type_.is_string()
-            && !produces_literal_string(&segment.value)
+            && !self.produces_literal_string(&segment.value)
             && let Some(encoding) = expression_segment_string_encoding(segment)
         {
             let (size, endiannes) = match encoding {
@@ -3354,7 +3360,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         builder.bit_array_segment(guard.location());
         self.clause_guard(builder, guard, assignments);
         builder.bit_array_segment_default_size();
-        builder.bit_array_segment_specifiers(if guard_produces_literal_string(guard) {
+        builder.bit_array_segment_specifiers(if self.guard_produces_literal_string(guard) {
             [BitArraySegmentSpecifier::Utf8]
         } else {
             [BitArraySegmentSpecifier::Binary]
@@ -3492,6 +3498,121 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 escape_erlang_existing_name(name),
             );
             builder.end_call(call);
+        }
+    }
+
+    /// This returns true if the given expression is going to be compiled to a
+    /// single literal Erlang string.
+    /// This is not only true for literal Gleam strings like `"abc"`, but also for
+    /// variables referencing string constants (as those are inlined)
+    fn produces_literal_string(&self, value: &TypedExpr) -> bool {
+        match value {
+            TypedExpr::String { .. } => true,
+
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant:
+                            ValueConstructorVariant::ModuleConstant {
+                                literal, module, ..
+                            },
+                        ..
+                    },
+                ..
+            } => {
+                // Only constants from the same module are inlined (and so can
+                // produce a literal string if they reference one).
+                // Remote constants are never inlined and so produce no literal
+                // string.
+                *module == self.module_generator.module.name
+                    && self.constant_produces_literal_string(literal)
+            }
+
+            TypedExpr::Int { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::PositionalAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => false,
+        }
+    }
+
+    /// This returns true if the given constant is going to be compiled to a
+    /// single literal Erlang string.
+    /// This is not only true for literal Gleam strings like `"abc"`, but also for
+    /// variables referencing string constants (as those are inlined)
+    fn constant_produces_literal_string(&self, constant: &Constant<Arc<Type>>) -> bool {
+        match constant {
+            Constant::String { .. } => true,
+
+            Constant::Var {
+                constructor: Some(constructor),
+                ..
+            } if let ValueConstructor {
+                variant:
+                    ValueConstructorVariant::ModuleConstant {
+                        literal, module, ..
+                    },
+                ..
+            } = constructor.as_ref() =>
+            {
+                // Only constants from the same module are inlined (and so can
+                // produce a literal string if they reference one).
+                // Remote constants are never inlined and so produce no literal
+                // string.
+                *module == self.module_generator.module.name
+                    && self.constant_produces_literal_string(literal)
+            }
+
+            Constant::Int { .. }
+            | Constant::Float { .. }
+            | Constant::Tuple { .. }
+            | Constant::List { .. }
+            | Constant::Record { .. }
+            | Constant::RecordUpdate { .. }
+            | Constant::BitArray { .. }
+            | Constant::BinaryOperator { .. }
+            | Constant::Invalid { .. }
+            | Constant::Todo { .. }
+            | Constant::Var { .. } => false,
+        }
+    }
+
+    /// This returns true if the given guard is going to be compiled to a
+    /// single literal Erlang string.
+    /// This is not only true for literal Gleam strings like `"abc"`, but also for
+    /// variables referencing string constants (as those are inlined)
+    fn guard_produces_literal_string(&self, guard: &ClauseGuard<Arc<Type>>) -> bool {
+        match guard {
+            ClauseGuard::Block { value, .. } => self.guard_produces_literal_string(value),
+
+            ClauseGuard::Constant(constant) => self.constant_produces_literal_string(constant),
+
+            ClauseGuard::BinaryOperator { .. }
+            | ClauseGuard::ModuleSelect { .. }
+            | ClauseGuard::Not { .. }
+            | ClauseGuard::LocalVariable { .. }
+            | ClauseGuard::TupleIndex { .. }
+            | ClauseGuard::FieldAccess { .. }
+            | ClauseGuard::UnqualifiedRemoteConstant { .. }
+            | ClauseGuard::Invalid { .. } => false,
         }
     }
 }
@@ -3789,103 +3910,6 @@ fn type_export(custom_type: &TypedCustomType) -> (EcoString, usize) {
     let name = erl_safe_type_name(to_snake_case(&custom_type.name));
     let arity = custom_type.typed_parameters.len();
     (name, arity)
-}
-
-/// This returns true if the given expression is going to be compiled to a
-/// single literal Erlang string.
-/// This is not only true for literal Gleam strings like `"abc"`, but also for
-/// variables referencing string constants (as those are inlined)
-fn produces_literal_string(value: &TypedExpr) -> bool {
-    match value {
-        TypedExpr::String { .. } => true,
-
-        // Constants are inlined on the Erlang target, so we need to check if
-        // those produce literal strings too!
-        TypedExpr::Var {
-            constructor:
-                ValueConstructor {
-                    variant: ValueConstructorVariant::ModuleConstant { literal, .. },
-                    ..
-                },
-            ..
-        } => constant_produces_literal_string(literal),
-
-        TypedExpr::Int { .. }
-        | TypedExpr::Var { .. }
-        | TypedExpr::Float { .. }
-        | TypedExpr::Block { .. }
-        | TypedExpr::Pipeline { .. }
-        | TypedExpr::Fn { .. }
-        | TypedExpr::List { .. }
-        | TypedExpr::Call { .. }
-        | TypedExpr::BinOp { .. }
-        | TypedExpr::Case { .. }
-        | TypedExpr::RecordAccess { .. }
-        | TypedExpr::PositionalAccess { .. }
-        | TypedExpr::ModuleSelect { .. }
-        | TypedExpr::Tuple { .. }
-        | TypedExpr::TupleIndex { .. }
-        | TypedExpr::Todo { .. }
-        | TypedExpr::Panic { .. }
-        | TypedExpr::Echo { .. }
-        | TypedExpr::BitArray { .. }
-        | TypedExpr::RecordUpdate { .. }
-        | TypedExpr::NegateBool { .. }
-        | TypedExpr::NegateInt { .. }
-        | TypedExpr::Invalid { .. } => false,
-    }
-}
-
-/// This returns true if the given constant is going to be compiled to a
-/// single literal Erlang string.
-/// This is not only true for literal Gleam strings like `"abc"`, but also for
-/// variables referencing string constants (as those are inlined)
-fn constant_produces_literal_string(constant: &Constant<Arc<Type>>) -> bool {
-    match constant {
-        Constant::String { .. } => true,
-        Constant::Var {
-            constructor: Some(constructor),
-            ..
-        } if let ValueConstructor {
-            variant: ValueConstructorVariant::ModuleConstant { ref literal, .. },
-            ..
-        } = **constructor =>
-        {
-            constant_produces_literal_string(literal)
-        }
-        Constant::Int { .. }
-        | Constant::Float { .. }
-        | Constant::Tuple { .. }
-        | Constant::List { .. }
-        | Constant::Record { .. }
-        | Constant::RecordUpdate { .. }
-        | Constant::BitArray { .. }
-        | Constant::BinaryOperator { .. }
-        | Constant::Invalid { .. }
-        | Constant::Todo { .. }
-        | Constant::Var { .. } => false,
-    }
-}
-
-/// This returns true if the given guard is going to be compiled to a
-/// single literal Erlang string.
-/// This is not only true for literal Gleam strings like `"abc"`, but also for
-/// variables referencing string constants (as those are inlined)
-fn guard_produces_literal_string(guard: &ClauseGuard<Arc<Type>>) -> bool {
-    match guard {
-        ClauseGuard::Block { value, .. } => guard_produces_literal_string(value),
-
-        ClauseGuard::Constant(constant) => constant_produces_literal_string(constant),
-
-        ClauseGuard::BinaryOperator { .. }
-        | ClauseGuard::ModuleSelect { .. }
-        | ClauseGuard::Not { .. }
-        | ClauseGuard::LocalVariable { .. }
-        | ClauseGuard::TupleIndex { .. }
-        | ClauseGuard::FieldAccess { .. }
-        | ClauseGuard::UnqualifiedRemoteConstant { .. }
-        | ClauseGuard::Invalid { .. } => false,
-    }
 }
 
 static ATOM_PATTERN: OnceLock<Regex> = OnceLock::new();
