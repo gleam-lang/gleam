@@ -130,6 +130,12 @@
   ([Amr Kadry](https://github.com/Amrkadry) and
   ([Louis Pilfold](https://github.com/lpil))
 
+- The ordering of import statements in generated JavaScript code is now stable.
+  Previously the same code compiled twice could produce different output, as
+  the singleton constants imported for a type's fieldless variants were emitted
+  in a different order on each run.
+  ([John Downey](https://github.com/jtdowney))
+
 - Make links to Tangled repositories use their new domain & URL format.
   ([Naomi Roberts](https://github.com/naomieow))
 
@@ -245,11 +251,6 @@
 - Fixed a bug where a package's optional dependency requirements could be
   ignored, or could pull a package into the dependency tree that nothing
   actually required.
-  ([John Downey](https://github.com/jtdowney))
-
-- Fixed a bug where on the JavaScript target compiling the same code twice
-  could produce different output, as the singleton constants imported for a
-  type's fieldless variants were emitted in a different order on each run.
   ([John Downey](https://github.com/jtdowney))
 
 ## v1.18.1 - 2026-08-01
