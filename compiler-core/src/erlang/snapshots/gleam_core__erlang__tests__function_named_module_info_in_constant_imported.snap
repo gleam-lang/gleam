@@ -18,4 +18,4 @@ pub fn main() {
 
 -spec main() -> integer().
 main() ->
-    fun some_module:'moduleInfo'/0().
+    (some_module:constant())().

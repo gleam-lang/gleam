@@ -1160,9 +1160,12 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
             // Module constants.
             //
             TypedExpr::ModuleSelect {
-                constructor: ModuleValueConstructor::Constant { literal, .. },
+                constructor: ModuleValueConstructor::Constant { .. },
+                module_name,
+                label,
+                location,
                 ..
-            } => self.constant(builder, literal),
+            } => self.remote_constant(builder, *location, module_name, label),
 
             //
             // Control flow.
@@ -3795,13 +3798,10 @@ fn type_export(custom_type: &TypedCustomType) -> (EcoString, usize) {
 fn produces_literal_string(value: &TypedExpr) -> bool {
     match value {
         TypedExpr::String { .. } => true,
+
         // Constants are inlined on the Erlang target, so we need to check if
         // those produce literal strings too!
-        TypedExpr::ModuleSelect {
-            constructor: ModuleValueConstructor::Constant { literal, .. },
-            ..
-        }
-        | TypedExpr::Var {
+        TypedExpr::Var {
             constructor:
                 ValueConstructor {
                     variant: ValueConstructorVariant::ModuleConstant { literal, .. },
