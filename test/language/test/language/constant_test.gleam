@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 The Gleam contributors
 
+import language/constant
+
 const const_int = 5
 
 const const_float = 1.0
@@ -72,4 +74,18 @@ pub fn constant_aliased_string_in_bit_arrays_test() {
     wibble if wibble == message_2 <> "!" -> True
     _ -> False
   }
+}
+
+pub fn qualified_constant_string_test() {
+  assert constant.a_string == "hello"
+  assert constant.a_string <> ", world" == "hello, world"
+}
+
+pub fn qualified_constant_int_test() {
+  assert constant.a_number == 11
+}
+
+pub fn qualified_constant_constructor_test() {
+  assert constant.a_constructor(11) == constant.a_value
+  assert constant.a_constructor(11) == constant.Wibble(11)
 }
