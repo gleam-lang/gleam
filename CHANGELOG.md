@@ -117,10 +117,6 @@
   merge conflict indicator
   ([0xda157](https://github.com/0xda157))
 
-- Fixed a bug where comparing `0.0` and `-0.0` resulted in a redundant
-  comparison warning, which is incorrect on Erlang/OTP 27+.
-  ([Jack Programs](https://github.com/jackprogramsjp))
-
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
@@ -260,6 +256,10 @@
   ignored, or could pull a package into the dependency tree that nothing
   actually required.
   ([John Downey](https://github.com/jtdowney))
+
+- Fixed a bug where comparing `0.0` and `-0.0` resulted in a redundant
+  comparison warning, which is incorrect on Erlang/OTP 27+.
+  ([Jack Programs](https://github.com/jackprogramsjp))
 
 ## v1.18.1 - 2026-08-01
 
