@@ -18,4 +18,4 @@ pub fn go(x) {
 
 -spec go(binary()) -> binary().
 go(X) ->
-    <<<<X/binary, "-"/utf8>>/binary, (mod:wibble())/utf8>>.
+    <<<<X/binary, "-"/utf8>>/binary, (mod:wibble())/binary>>.

@@ -558,3 +558,124 @@ pub fn go(x) {
 "#
     );
 }
+
+#[test]
+fn constant_string_concatenation_with_qualified_remote_constant() {
+    assert_erl!(
+        (
+            "dep",
+            "mod",
+            r#"
+pub const name = "Giacomo"
+"#
+        ),
+        r#"
+import mod
+pub const greeting = "Hello, " <> mod.name <> "!"
+"#
+    );
+}
+
+#[test]
+fn constant_string_concatenation_with_unqualified_remote_constant() {
+    assert_erl!(
+        (
+            "dep",
+            "mod",
+            r#"
+pub const name = "Giacomo"
+"#
+        ),
+        r#"
+import mod.{name}
+pub const greeting = "Hello, " <> name <> "!"
+"#
+    );
+}
+
+#[test]
+fn guard_string_concatenation_with_qualified_remote_constant() {
+    assert_erl!(
+        (
+            "dep",
+            "mod",
+            r#"
+pub const name = "Giacomo"
+"#
+        ),
+        r#"
+import mod
+
+pub fn go(x) {
+  case x {
+    _ if "Hello, " <> mod.name <> "!" == "" -> Nil
+    _ -> Nil
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn guard_string_concatenation_with_unqualified_remote_constant() {
+    assert_erl!(
+        (
+            "dep",
+            "mod",
+            r#"
+pub const name = "Giacomo"
+"#
+        ),
+        r#"
+import mod.{name}
+
+pub fn go(x) {
+  case x {
+    _ if "Hello, " <> name <> "!" == "" -> Nil
+    _ -> Nil
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn string_concatenation_with_qualified_remote_constant() {
+    assert_erl!(
+        (
+            "dep",
+            "mod",
+            r#"
+pub const name = "Giacomo"
+"#
+        ),
+        r#"
+import mod
+
+pub fn wibble() {
+  "Hello, " <> mod.name <> "!"
+}
+"#
+    );
+}
+
+#[test]
+fn string_concatenation_with_unqualified_remote_constant() {
+    assert_erl!(
+        (
+            "dep",
+            "mod",
+            r#"
+pub const name = "Giacomo"
+"#
+        ),
+        r#"
+import mod.{name}
+
+pub fn wibble() {
+  "Hello, " <> name <> "!"
+}
+
+"#
+    );
+}
