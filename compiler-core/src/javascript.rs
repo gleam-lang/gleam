@@ -323,8 +323,7 @@ impl<'a, 'doc> Generator<'a> {
 
         // Sorted so that the imports we generate are the same on every
         // compilation.
-        let mut variant_constants: Vec<_> = self.tracker.variant_constants_used.iter().collect();
-        variant_constants.sort();
+        let variant_constants = self.tracker.variant_constants_used.iter().sorted();
 
         for (variant, alias) in variant_constants {
             let path = self.import_path(&variant.package, &variant.module);
