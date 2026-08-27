@@ -35,7 +35,7 @@ fn compile_modules(
         .expect("write elixir paths cache");
 
     for (path, code) in &modules {
-        fs.write(&Utf8Path::new("/src").join(path), code)
+        fs.write(&Utf8PathBuf::from(format!("/src/{path}")), code)
             .expect("write module");
     }
 
