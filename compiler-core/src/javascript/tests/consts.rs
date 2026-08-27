@@ -170,3 +170,57 @@ pub const wibble = [0, 1, ..[2, 3, 4]]
 "
     );
 }
+
+#[test]
+fn multiple_remote_constants_non_alphabetical_order() {
+    assert_js!(
+        (
+            "dep",
+            "mod",
+            "
+pub const b = 2
+pub const a = 1
+pub const c = 3
+"
+        ),
+        r#"
+import mod
+
+pub fn go(x) {
+  case x {
+    _ if x == mod.b -> "b"
+    _ if x == mod.a -> "a"
+    _ if x == mod.c -> "c"
+    _ -> "dunno"
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn multiple_remote_constants_non_alphabetical_order_unqualified() {
+    assert_js!(
+        (
+            "dep",
+            "mod",
+            "
+pub const b = 2
+pub const a = 1
+pub const c = 3
+"
+        ),
+        r#"
+import mod.{b, c, a}
+
+pub fn go(x) {
+  case x {
+    _ if x == b -> "b"
+    _ if x == a -> "a"
+    _ if x == c -> "c"
+    _ -> "dunno"
+  }
+}
+"#
+    );
+}
