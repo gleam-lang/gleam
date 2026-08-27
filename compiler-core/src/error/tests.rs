@@ -258,3 +258,21 @@ fn lsp_message_receive_failed() {
     .pretty_string();
     assert_snapshot!(error);
 }
+
+#[test]
+fn added_dependencies_are_already_dev_dependencies() {
+    let error = Error::AddedDependenciesAreAlreadyDevDependencies {
+        packages: vec!["wibble".into(), "wobble".into(), "woo".into()],
+    }
+    .pretty_string();
+    assert_snapshot!(error);
+}
+
+#[test]
+fn added_dev_dependencies_are_already_dependencies() {
+    let error = Error::AddedDevDependenciesAreAlreadyDependencies {
+        packages: vec!["wibble".into(), "wobble".into(), "woo".into()],
+    }
+    .pretty_string();
+    assert_snapshot!(error);
+}
