@@ -101,7 +101,7 @@ fn format_completion_results(completions: Vec<CompletionItem>) -> EcoString {
         kind,
         detail,
         documentation,
-        #[allow(deprecated)]
+        #[expect(deprecated)]
         deprecated,
         preselect,
         sort_text,

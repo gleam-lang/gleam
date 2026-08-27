@@ -25,7 +25,7 @@ use num_bigint::BigInt;
 use src_span::SrcSpan;
 use vec1::Vec1;
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 pub trait UntypedModuleFolder: TypeAstFolder + UntypedExprFolder {
     /// You probably don't want to override this method.
     fn fold_module(&mut self, mut module: UntypedModule) -> UntypedModule {
@@ -167,7 +167,7 @@ pub trait UntypedModuleFolder: TypeAstFolder + UntypedExprFolder {
     }
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 pub trait TypeAstFolder {
     /// Visit a node and potentially replace it with another node using the
     /// `fold_*` methods. Afterwards, the `walk` method is called on the new
@@ -242,7 +242,7 @@ pub trait TypeAstFolder {
     }
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFolder {
     /// Visit a node and potentially replace it with another node using the
     /// `fold_*` methods. Afterwards, the `walk` method is called on the new
@@ -951,7 +951,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
     }
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 pub trait UntypedConstantFolder {
     /// You probably don't want to override this method.
     fn fold_constant(&mut self, constant: UntypedConstant) -> UntypedConstant {
@@ -1352,7 +1352,7 @@ pub trait UntypedConstantFolder {
     }
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 pub trait PatternFolder {
     /// You probably don't want to override this method.
     fn fold_pattern(&mut self, pattern: UntypedPattern) -> UntypedPattern {

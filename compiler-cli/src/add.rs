@@ -68,7 +68,7 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
         );
 
         // False positive. This package doesn't use the indexing API correctly.
-        #[allow(clippy::indexing_slicing)]
+        #[expect(clippy::indexing_slicing)]
         {
             if dev {
                 let canonical_name = "dev_dependencies";

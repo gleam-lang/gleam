@@ -25,7 +25,6 @@ pub fn command(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
     let mut packages_not_exist = vec![];
     for package_to_remove in packages.iter() {
         let remove = |toml: &mut toml_edit::DocumentMut, name| {
-            #[allow(clippy::indexing_slicing)]
             toml[name]
                 .as_table_like_mut()
                 .and_then(|deps| deps.remove(package_to_remove))

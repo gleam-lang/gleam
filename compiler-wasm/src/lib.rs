@@ -182,7 +182,6 @@ fn do_compile_package(project: Project, target: Target) -> Result<(), Error> {
     let ids = UniqueIdGenerator::new();
     let mut type_manifests = im::HashMap::new();
     let mut defined_modules = im::HashMap::new();
-    #[allow(clippy::arc_with_non_send_sync)]
     let warning_emitter = WarningEmitter::new(Rc::new(project.warnings));
     let config = PackageConfig {
         name: "library".into(),

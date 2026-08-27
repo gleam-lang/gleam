@@ -1349,7 +1349,7 @@ impl<'a, IO> Completer<'a, IO> {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn value_completion(
         &self,
         module_qualifier: Option<&str>,
