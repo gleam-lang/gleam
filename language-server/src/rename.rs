@@ -4,6 +4,7 @@
 use std::collections::HashMap;
 
 use ecow::EcoString;
+use itertools::Itertools;
 use lsp_server::ResponseError;
 use lsp_types::{Range, RenameParams, TextEdit, Uri as Url, WorkspaceEdit};
 
@@ -375,10 +376,8 @@ fn alias_references_in_module(
                 if name == &params.new_name {
                     if module_name == "gleam" {
                         // If new name is same as old name and item is from prelude,
-                        // we can delete entire import.
-                        rename_same_named_prelude_import_reference(
-                            module, layer, &mut edits, location,
-                        );
+                        // we can delete the entire import.
+                        rename_same_named_prelude_import_reference(&mut edits, module, location);
                     } else {
                         // If new name is same as old name, we can delete
                         // the `as ..` part.
@@ -431,57 +430,97 @@ fn alias_references_in_module(
     }
 }
 
-/// Rename import of prelide item to original name.
+/// Rename import of prelude item to original name. For example:
+///
+/// ```gleam
+/// import gleam.{True as Yes, type Bool}
+/// //            ^^^^^^^^^^^ Renaming this to `True`
+/// ```
 fn rename_same_named_prelude_import_reference(
-    module: &Module,
-    layer: ast::Layer,
     edits: &mut TextEdits<'_>,
+    module: &Module,
     location: SrcSpan,
 ) {
-    // Find import of prelude without alias, because we do not want to delete
-    // import with module alias.
     let import = module
         .ast
         .definitions
         .imports
         .iter()
-        .find(|import| import.module == "gleam" && import.as_name.is_none());
-    match (import, layer) {
-        // If there's import of prelude with no module alias, and we're
-        // handling import of value, we check if there's no other imports in
-        // that import statement (no type imports and exactly one value import).
-        // If it's the case, we can remove the import statement entirely.
-        (Some(import), ast::Layer::Value)
-            if import.unqualified_values.len() == 1 && import.unqualified_types.is_empty() =>
-        {
-            edits.delete(import.location)
-        }
-        // If there's import of prelude with no module alias, and we're
-        // handling import of type, we check if there's no other imports in
-        // that import statement (no value imports and exactly one type import).
-        // If it's the case, we can remove the import statement entirely.
-        (Some(import), ast::Layer::Type)
-            if import.unqualified_types.len() == 1 && import.unqualified_values.is_empty() =>
-        {
-            edits.delete(import.location)
-        }
-        // Otherwise, there is either module alias or other imported items,
-        // so we only delete that item.
-        _ => {
-            let mut last_char_position = location.end as usize;
+        .find(|import| import.module == "gleam")
+        // This function only gets called when there's import of prelude.
+        .expect("import exists");
 
-            while module.code.get(last_char_position..last_char_position + 1) == Some(" ") {
-                last_char_position += 1;
-            }
-            if module.code.get(last_char_position..last_char_position + 1) == Some(",") {
-                last_char_position += 1;
-            }
-            if module.code.get(last_char_position..last_char_position + 1) == Some(" ") {
-                last_char_position += 1;
-            }
+    let imported_type_locations = import.unqualified_types.iter().map(|type_| type_.location);
+    let imported_value_locations = import.unqualified_values.iter().map(|value| value.location);
+    let imported_locations = imported_type_locations
+        .chain(imported_value_locations)
+        .sorted_by_key(|location| location.start)
+        .collect_vec();
 
-            edits.delete(SrcSpan::new(location.start, last_char_position as u32));
+    let renamed_index = imported_locations.binary_search(&location).ok();
+    let next_value_location =
+        renamed_index.and_then(|value_index| imported_locations.get(value_index + 1));
+    let previous_value_location = renamed_index.and_then(|value_index| {
+        value_index
+            .checked_sub(1)
+            .and_then(|previous_index| imported_locations.get(previous_index))
+    });
+
+    match (previous_value_location, next_value_location) {
+        // If there's an import following the renamed import, we need to delete everything before its start.
+        //
+        // ```gleam
+        // import gleam.{True,    False}
+        // //            ^^^^^^^^^
+        // ```
+        (_, Some(next_value_location)) => edits.delete(SrcSpan {
+            start: location.start,
+            end: next_value_location.start,
+        }),
+
+        // If this import is the last one and is preceded by another import, we
+        // need to delete everything from that import's end.
+        //
+        // ```gleam
+        // import gleam.{True, False}
+        // //                ^^^^^^^
+        // ```
+        (Some(previous_value_location), _) => {
+            edits.delete(SrcSpan {
+                start: previous_value_location.end,
+                end: location.end,
+            });
         }
+
+        // If it's the only import inside import statement, and the latter
+        // doesn't have alias, we can remove the entire item statement.
+        //
+        // ```gleam
+        // import gleam.{True}
+        // // ^ The entire statement above should be deleted
+        // ```
+        (_, _) if import.as_name.is_none() => {
+            // If import statement spans the entire line, we delete it
+            // along with newline character, otherwise only delete import
+            // statement itself.
+            if edits.line_numbers.spans_entire_line(&import.location) {
+                edits.delete(SrcSpan {
+                    start: import.location.start,
+                    end: import.location.end + 1,
+                });
+            } else {
+                edits.delete(import.location);
+            }
+        }
+
+        // Otherwise, it's the only import in import statement, but the latter
+        // has alias, so we delete only imported item.
+        //
+        // ```gleam
+        // import gleam.{True} as prelude
+        // //            ^^^^
+        // ```
+        (_, _) => edits.delete(location),
     }
 }
 
