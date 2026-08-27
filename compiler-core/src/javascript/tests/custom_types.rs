@@ -1091,6 +1091,23 @@ pub fn main() {
 }
 
 #[test]
+fn singletons_for_multiple_variants_from_one_module_are_imported_in_a_stable_order() {
+    assert_js!(
+        (
+            "colour",
+            "pub type Colour { Red Orange Yellow Green Blue Violet }"
+        ),
+        "
+import colour.{Blue, Green, Orange, Red, Violet, Yellow}
+
+pub fn main() {
+  #(Red, Orange, Yellow, Green, Blue, Violet)
+}
+"
+    );
+}
+
+#[test]
 fn fieldless_variant_still_imported_if_used_in_instanceof_comparison() {
     assert_js!(
         ("wibble", "pub type Wibble { Wibble Wobble }"),

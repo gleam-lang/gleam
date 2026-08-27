@@ -252,6 +252,11 @@
   actually required.
   ([John Downey](https://github.com/jtdowney))
 
+- Fixed a bug where on the JavaScript target compiling the same code twice
+  could produce different output, as the singleton constants imported for a
+  type's fieldless variants were emitted in a different order on each run.
+  ([John Downey](https://github.com/jtdowney))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when
