@@ -9,6 +9,10 @@
 
 ### Compiler
 
+- If a module is changed, but had no changes to its public api, modules that
+  depend on it will no longer be recompiled.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler will now show "Unused variable" warning for each of alternative
   patterns.
   ([Andrey Kozhev](https://github.com/ankddev))
@@ -210,5 +214,5 @@
 ### Bug fixes
 
 - Fixed a bug where the `export javascript-prelude` and `export
-  typescript-prelude` commands would not run.
+typescript-prelude` commands would not run.
   ([Louis Pilfold](https://github.com/lpil))
