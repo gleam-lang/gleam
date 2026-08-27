@@ -4988,7 +4988,19 @@ fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
 
         (TypedExpr::Float { float_value: n, .. }, TypedExpr::Float { float_value: m, .. }) => {
             if n == m {
-                StaticComparison::CertainlyEqual
+                // In Erlang, -0.0 =:= 0.0 will return False.
+                // This is because starting from OTP 27,
+                // the behavior of zero comparison changes.
+                // This removes the redundant comparison warning,
+                // as n == m already detects ±0.0 == ±0.0, so if we have
+                // alternating signs, then we do not send any guarantee of equality.
+                //
+                // https://erlangforums.com/t/in-erlang-otp-27-0-0-will-no-longer-be-exactly-equal-to-0-0/2586
+                if n.value().is_sign_negative() != m.value().is_sign_negative() {
+                    StaticComparison::CantTell
+                } else {
+                    StaticComparison::CertainlyEqual
+                }
             } else {
                 StaticComparison::CertainlyDifferent
             }
