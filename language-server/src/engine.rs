@@ -629,7 +629,7 @@ where
                 // to be able to construct the 'DocumentSymbol' type, so
                 // we suppress the warning. We specify 'None' as specifying 'Some'
                 // is what is actually deprecated.
-                #[allow(deprecated)]
+                #[expect(deprecated)]
                 symbols.push(DocumentSymbol {
                     name: name.to_string(),
                     detail: Some(
@@ -658,7 +658,7 @@ where
                 // to be able to construct the 'DocumentSymbol' type, so
                 // we suppress the warning. We specify 'None' as specifying 'Some'
                 // is what is actually deprecated.
-                #[allow(deprecated)]
+                #[expect(deprecated)]
                 symbols.push(DocumentSymbol {
                     name: alias.alias.to_string(),
                     detail: Some(
@@ -701,7 +701,7 @@ where
                 // to be able to construct the 'DocumentSymbol' type, so
                 // we suppress the warning. We specify 'None' as specifying 'Some'
                 // is what is actually deprecated.
-                #[allow(deprecated)]
+                #[expect(deprecated)]
                 symbols.push(DocumentSymbol {
                     name: constant.name.to_string(),
                     detail: Some(
@@ -1736,7 +1736,7 @@ fn custom_type_symbol(
                 // to be able to construct the 'DocumentSymbol' type, so
                 // we suppress the warning. We specify 'None' as specifying 'Some'
                 // is what is actually deprecated.
-                #[allow(deprecated)]
+                #[expect(deprecated)]
                 arguments.push(DocumentSymbol {
                     name: label.to_string(),
                     detail: Some(
@@ -1769,7 +1769,7 @@ fn custom_type_symbol(
             // to be able to construct the 'DocumentSymbol' type, so
             // we suppress the warning. We specify 'None' as specifying 'Some'
             // is what is actually deprecated.
-            #[allow(deprecated)]
+            #[expect(deprecated)]
             DocumentSymbol {
                 name: constructor.name.to_string(),
                 detail: None,
@@ -1808,7 +1808,7 @@ fn custom_type_symbol(
     // to be able to construct the 'DocumentSymbol' type, so
     // we suppress the warning. We specify 'None' as specifying 'Some'
     // is what is actually deprecated.
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     DocumentSymbol {
         name: type_.name.to_string(),
         detail: None,

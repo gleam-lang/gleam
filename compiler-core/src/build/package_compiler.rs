@@ -84,7 +84,7 @@ impl<'a, IO> PackageCompiler<'a, IO>
 where
     IO: FileSystemReader + FileSystemWriter + CommandExecutor + BeamCompilerIO + Clone,
 {
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     pub fn new(
         config: &'a PackageConfig,
         mode: Mode,

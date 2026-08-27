@@ -238,7 +238,7 @@ pub trait Visit<'ast> {
         visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn visit_typed_expr_record_access(
         &mut self,
         location: &'ast SrcSpan,
@@ -261,7 +261,7 @@ pub trait Visit<'ast> {
         );
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn visit_typed_expr_module_select(
         &mut self,
         location: &'ast SrcSpan,
@@ -331,7 +331,7 @@ pub trait Visit<'ast> {
         visit_typed_expr_bit_array(self, location, type_, segments);
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn visit_typed_expr_record_update(
         &mut self,
         location: &'ast SrcSpan,
@@ -446,7 +446,7 @@ pub trait Visit<'ast> {
         visit_typed_clause_guard_field_access(self, label_location, index, label, type_, container);
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn visit_typed_clause_guard_module_select(
         &mut self,
         location: &'ast SrcSpan,
@@ -561,7 +561,7 @@ pub trait Visit<'ast> {
         visit_typed_pattern_list(self, location, elements, tail, type_);
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn visit_typed_pattern_constructor(
         &mut self,
         location: &'ast SrcSpan,
@@ -749,7 +749,7 @@ pub trait Visit<'ast> {
         visit_typed_constant_list(self, location, elements, type_, tail);
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn visit_typed_constant_record(
         &mut self,
         location: &'ast SrcSpan,
@@ -774,7 +774,7 @@ pub trait Visit<'ast> {
         );
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn visit_typed_constant_record_update(
         &mut self,
         location: &'ast SrcSpan,
@@ -889,7 +889,7 @@ fn visit_typed_constant_bit_array<'a, V: Visit<'a> + ?Sized>(
     // TODO
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn visit_typed_constant_record<'a, V: Visit<'a> + ?Sized>(
     v: &mut V,
     _location: &'a SrcSpan,
@@ -906,7 +906,7 @@ pub fn visit_typed_constant_record<'a, V: Visit<'a> + ?Sized>(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn visit_typed_constant_record_update<'a, V: Visit<'a> + ?Sized>(
     v: &mut V,
     _location: &'a SrcSpan,
@@ -1637,7 +1637,7 @@ pub fn visit_typed_expr_case<'a, V>(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn visit_typed_expr_record_access<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
@@ -1653,7 +1653,7 @@ pub fn visit_typed_expr_record_access<'a, V>(
     v.visit_typed_expr(record);
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn visit_typed_expr_module_select<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
@@ -1751,7 +1751,7 @@ pub fn visit_typed_expr_bit_array<'a, V>(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn visit_typed_expr_record_update<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
@@ -1965,7 +1965,7 @@ pub fn visit_typed_clause_guard_field_access<'a, V>(
     v.visit_typed_clause_guard(container);
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn visit_typed_clause_guard_module_select<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
@@ -2222,7 +2222,7 @@ pub fn visit_typed_pattern_list<'a, V>(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn visit_typed_pattern_constructor<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,

@@ -147,7 +147,7 @@ where
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub(crate) fn read_source<IO>(
     io: IO,
     target: Target,

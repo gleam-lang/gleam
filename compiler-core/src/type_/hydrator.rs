@@ -248,7 +248,6 @@ impl Hydrator {
 
                 // Instantiate the constructor type for this specific usage
                 let mut type_vars = hashmap![];
-                #[allow(clippy::needless_collect)] // Not needless, used for side effects
                 let parameter_types: Vec<_> = parameters
                     .into_iter()
                     .map(|type_| environment.instantiate(type_, &mut type_vars, self))

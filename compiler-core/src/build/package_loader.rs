@@ -74,7 +74,7 @@ impl<'a, IO> PackageLoader<'a, IO>
 where
     IO: FileSystemWriter + FileSystemReader + CommandExecutor + Clone,
 {
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     pub(crate) fn new(
         io: IO,
         ids: UniqueIdGenerator,

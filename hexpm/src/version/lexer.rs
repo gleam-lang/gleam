@@ -210,7 +210,7 @@ impl<'input> Iterator for Lexer<'input> {
     type Item = Result<Token<'input>, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        #[allow(clippy::never_loop)]
+        #[expect(clippy::never_loop)]
         loop {
             // Two subsequent char tokens.
             if let Some((start, char0, char1)) = self.two() {

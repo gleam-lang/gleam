@@ -278,7 +278,7 @@ pub(crate) struct Generator<'module, 'ast, 'doc> {
 }
 
 impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
-    #[allow(clippy::too_many_arguments)] // TODO: FIXME
+    #[expect(clippy::too_many_arguments)] // TODO: FIXME
     pub fn new(
         module_name: EcoString,
         src_path: EcoString,
@@ -2392,7 +2392,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn singleton_equal(
         &mut self,
         arena: &'doc DocumentArena<'a, 'doc>,
