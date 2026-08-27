@@ -15,7 +15,6 @@ pub fn go() -> Null {
 ----- AFTER RENAME
 -- app.gleam
 
-
 pub fn go() -> Nil {
   Nil
 }
