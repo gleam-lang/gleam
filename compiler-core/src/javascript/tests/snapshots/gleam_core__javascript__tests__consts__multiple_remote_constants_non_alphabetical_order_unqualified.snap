@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/javascript/tests/consts.rs
+expression: "\nimport mod.{b, c, a}\n\npub fn go(x) {\n  case x {\n    _ if x == b -> \"b\"\n    _ if x == a -> \"a\"\n    _ if x == c -> \"c\"\n    _ -> \"dunno\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+import mod.{b, c, a}
+
+pub fn go(x) {
+  case x {
+    _ if x == b -> "b"
+    _ if x == a -> "a"
+    _ if x == c -> "c"
+    _ -> "dunno"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $mod from "../../dep/mod.mjs";
+import { b, c, a } from "../../dep/mod.mjs";
+
+export function go(x) {
+  if (x === b) {
+    return "b";
+  } else if (x === a) {
+    return "a";
+  } else if (x === c) {
+    return "c";
+  } else {
+    return "dunno";
+  }
+}
