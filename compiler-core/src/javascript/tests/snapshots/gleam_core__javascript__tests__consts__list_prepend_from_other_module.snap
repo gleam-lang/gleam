@@ -14,7 +14,13 @@ pub const wobble = [0, 1, ..mod.wibble]
 
 
 ----- COMPILED JAVASCRIPT
-import { toList } from "../gleam.mjs";
+import { List$Empty$const as $List$Empty$const, prepend as listPrepend } from "../gleam.mjs";
 import * as $mod from "../mod.mjs";
 
-export const wobble = /* @__PURE__ */ toList([0, 1, 2, 3, 4]);
+export const wobble = /* @__PURE__ */ listPrepend(
+  0,
+  listPrepend(
+    1,
+    listPrepend(2, listPrepend(3, listPrepend(4, $List$Empty$const))),
+  ),
+);

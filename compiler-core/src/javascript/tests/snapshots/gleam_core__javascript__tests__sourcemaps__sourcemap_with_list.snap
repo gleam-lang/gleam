@@ -10,10 +10,10 @@ expression: "\npub fn go(x) {\n  [1, 2, 3]\n}\n"
 
 ----- COMPILED JAVASCRIPT
 0 |//# sourceMappingURL=mod.mjs.map
-1 |import { toList } from "../gleam.mjs";
+1 |import { List$Empty$const as $List$Empty$const, prepend as listPrepend } from "../gleam.mjs";
 2 |
 3 |export function go(x) {
-4 |  return toList([1, 2, 3]);
+4 |  return listPrepend(1, listPrepend(2, listPrepend(3, $List$Empty$const)));
 5 |}
 
 ----- SOURCE MAP
@@ -25,7 +25,7 @@ Mappings:
 
 ⏷
 //# sourceMappingURL=mod.mjs.map
-import { toList } from "../gleam.mjs";
+import { List$Empty$const as $List$Empty$const, prepend as listPrepend } from "../gleam.mjs";
 
 
 ----- 
@@ -37,20 +37,20 @@ export function go(x) {
 ----- 
 [
 ⏷
-return toList([
+return listPrepend(
 ----- 
 1, 
 ⏷
-1, 
+1, listPrepend(
 ----- 
 2, 
 ⏷
-2, 
+2, listPrepend(
 ----- 
 3]
 }
 ⏷
-3]);
+3, $List$Empty$const)));
 }
 ----- 
 

@@ -12,7 +12,7 @@ pub fn go(x: List(Int), y: List(Int)) {
 }
 
 ----- COMPILED JAVASCRIPT
-import { toList, Empty as $Empty, prepend as listPrepend, isEqual } from "../gleam.mjs";
+import { Empty as $Empty, prepend as listPrepend, isEqual } from "../gleam.mjs";
 
 export function go(x, y) {
   if (x instanceof $Empty) {

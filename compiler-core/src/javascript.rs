@@ -224,7 +224,7 @@ impl<'a, 'doc> Generator<'a> {
             self.register_prelude_usage(arena, &mut imports, "Error", None);
         }
 
-        if self.tracker.list_used {
+        if self.tracker.to_list_used {
             self.register_prelude_usage(arena, &mut imports, "toList", None);
         }
 
@@ -1566,7 +1566,7 @@ fn maybe_escape_property(label: &str) -> EcoString {
 #[derive(Debug, Default)]
 pub(crate) struct UsageTracker {
     pub ok_used: bool,
-    pub list_used: bool,
+    pub to_list_used: bool,
     pub list_empty_class_used: bool,
     pub list_empty_const_used: bool,
     pub list_non_empty_class_used: bool,
