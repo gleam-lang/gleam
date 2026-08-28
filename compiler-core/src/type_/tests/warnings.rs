@@ -5239,3 +5239,19 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn unreachable_empty_bit_array() {
+    // <<>> and <<"">> are equivalent.
+    assert_warning!(
+        r#"
+pub fn thingy(wibble) {
+  case wibble {
+    <<>> -> 1
+    <<"">> -> 2
+    _ -> 3
+  }
+}
+    "#
+    );
+}
