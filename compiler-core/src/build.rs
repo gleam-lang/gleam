@@ -19,8 +19,9 @@ pub use self::telemetry::{NullTelemetry, Telemetry};
 
 use crate::ast::{
     self, CustomType, DefinitionLocation, TypeAst, TypedArg, TypedClauseGuard, TypedConstant,
-    TypedCustomType, TypedDefinitions, TypedExpr, TypedFunction, TypedImport, TypedModuleConstant,
-    TypedPattern, TypedRecordConstructor, TypedStatement, TypedTypeAlias,
+    TypedConstantBitArraySegment, TypedConstantBitArraySegmentOption, TypedCustomType,
+    TypedDefinitions, TypedExpr, TypedFunction, TypedImport, TypedModuleConstant, TypedPattern,
+    TypedRecordConstructor, TypedStatement, TypedTypeAlias,
 };
 use crate::reference;
 use crate::type_::error::Named;
@@ -35,6 +36,7 @@ use camino::Utf8PathBuf;
 use clap::ValueEnum;
 use ecow::EcoString;
 use itertools::Itertools;
+use num_traits::ToBytes;
 use serde::{Deserialize, Serialize};
 use src_span::SrcSpan;
 use std::fmt::Debug;
@@ -1019,6 +1021,18 @@ const FN_TYPE_TAG: u8 = 8;
 const UNBOUND_TYPE_TAG: u8 = 9;
 const GENERIC_TYPE_TAG: u8 = 10;
 const IMPLEMENTATIONS_TAG: u8 = 11;
+const CONSTANT_INT_TAG: u8 = 12;
+const CONSTANT_FLOAT_TAG: u8 = 13;
+const CONSTANT_STRING_TAG: u8 = 14;
+const CONSTANT_TUPLE_TAG: u8 = 15;
+const CONSTANT_LIST_TAG: u8 = 16;
+const CONSTANT_RECORD_TAG: u8 = 17;
+const CONSTANT_BIT_ARRAY_TAG: u8 = 18;
+const CONSTANT_BINARY_OPERATOR_TAG: u8 = 19;
+const CONSTANT_CONSTRUCTOR_LOCAL_VAR_TAG: u8 = 20;
+const CONSTANT_CONSTRUCTOR_MODULE_FN_TAG: u8 = 21;
+const CONSTANT_CONSTRUCTOR_RECORD_TAG: u8 = 22;
+const CONSTANT_BIT_ARRAY_SEGMENT_TAG: u8 = 23;
 
 fn hash_module_public_api(module: &TypedModule) -> u64 {
     let mut hasher = xxhash_rust::xxh3::Xxh3Builder::new().build();
@@ -1055,11 +1069,11 @@ fn hash_module_public_api(module: &TypedModule) -> u64 {
             name_location: _,
             annotation: _,
             location: _,
-            value: _,
             implementations,
             deprecation,
             publicity,
             type_,
+            value,
             name,
         } = constant;
 
@@ -1074,6 +1088,7 @@ fn hash_module_public_api(module: &TypedModule) -> u64 {
         hash_implementations(&mut hasher, implementations);
         hash_deprecation(&mut hasher, deprecation);
         hash_type(&mut hasher, type_);
+        hash_constant_value(&mut hasher, value);
     }
 
     for custom_type in custom_types.iter().sorted_by_key(|type_| &type_.name) {
@@ -1201,6 +1216,186 @@ fn hash_module_public_api(module: &TypedModule) -> u64 {
     }
 
     hasher.digest()
+}
+
+fn hash_constant_value(hasher: &mut xxhash_rust::xxh3::Xxh3, value: &TypedConstant) {
+    match value {
+        ast::Constant::Int { int_value, .. } => {
+            hasher.update(&[CONSTANT_INT_TAG]);
+            hasher.update(&int_value.to_be_bytes())
+        }
+        ast::Constant::Float { float_value, .. } => {
+            hasher.update(&[CONSTANT_FLOAT_TAG]);
+            hasher.update(&float_value.value().to_be_bytes())
+        }
+        ast::Constant::String { value, .. } => {
+            hasher.update(&[CONSTANT_STRING_TAG]);
+            hasher.update(value.as_bytes())
+        }
+        ast::Constant::Tuple { elements, .. } => {
+            hasher.update(&[CONSTANT_TUPLE_TAG]);
+            for element in elements {
+                hash_constant_value(hasher, element)
+            }
+        }
+        ast::Constant::List { elements, tail, .. } => {
+            hasher.update(&[CONSTANT_LIST_TAG]);
+            for element in elements {
+                hash_constant_value(hasher, element);
+            }
+            let Some(tail) = tail else { return };
+            hash_constant_value(hasher, tail);
+        }
+        ast::Constant::Record {
+            arguments,
+            record_constructor,
+            name,
+            ..
+        } => {
+            hasher.update(&[CONSTANT_RECORD_TAG]);
+            let type_::ValueConstructor {
+                publicity: _,
+                type_: _,
+                deprecation,
+                variant,
+            } = &**record_constructor
+                .as_ref()
+                .expect("typed record with no constructor");
+
+            hash_deprecation(hasher, deprecation);
+            hash_constructor_variant(hasher, name, variant);
+            let Some(arguments) = arguments else { return };
+            hasher.update(&arguments.len().to_be_bytes());
+            for argument in arguments {
+                hash_constant_value(hasher, &argument.value);
+            }
+        }
+        ast::Constant::BitArray { segments, .. } => {
+            hasher.update(&[CONSTANT_BIT_ARRAY_TAG]);
+            for segment in segments {
+                hash_constant_bit_array_segment(hasher, segment)
+            }
+        }
+        ast::Constant::Var {
+            constructor, name, ..
+        } => {
+            let constructor = constructor
+                .as_ref()
+                .expect("typed constant var with no constructor");
+            hash_constructor_variant(hasher, name, &constructor.variant);
+        }
+
+        ast::Constant::BinaryOperator {
+            operator,
+            left,
+            right,
+            ..
+        } => {
+            hasher.update(&[CONSTANT_BINARY_OPERATOR_TAG]);
+            match operator {
+                ast::BinOp::And => hasher.update(&[0]),
+                ast::BinOp::Or => hasher.update(&[1]),
+                ast::BinOp::Eq => hasher.update(&[2]),
+                ast::BinOp::NotEq => hasher.update(&[3]),
+                ast::BinOp::LtInt => hasher.update(&[4]),
+                ast::BinOp::LtEqInt => hasher.update(&[5]),
+                ast::BinOp::LtFloat => hasher.update(&[6]),
+                ast::BinOp::LtEqFloat => hasher.update(&[7]),
+                ast::BinOp::GtEqInt => hasher.update(&[8]),
+                ast::BinOp::GtInt => hasher.update(&[9]),
+                ast::BinOp::GtEqFloat => hasher.update(&[10]),
+                ast::BinOp::GtFloat => hasher.update(&[11]),
+                ast::BinOp::AddInt => hasher.update(&[12]),
+                ast::BinOp::AddFloat => hasher.update(&[13]),
+                ast::BinOp::SubInt => hasher.update(&[14]),
+                ast::BinOp::SubFloat => hasher.update(&[15]),
+                ast::BinOp::MultInt => hasher.update(&[16]),
+                ast::BinOp::MultFloat => hasher.update(&[17]),
+                ast::BinOp::DivInt => hasher.update(&[18]),
+                ast::BinOp::DivFloat => hasher.update(&[19]),
+                ast::BinOp::RemainderInt => hasher.update(&[20]),
+                ast::BinOp::Concatenate => hasher.update(&[21]),
+            }
+            hash_constant_value(hasher, left);
+            hash_constant_value(hasher, right);
+        }
+
+        ast::Constant::RecordUpdate { .. } => panic!("record update should never be in typed ast"),
+        ast::Constant::Invalid { .. } => panic!("tried hashing invalid constant"),
+        ast::Constant::Todo { .. } => panic!("tried hashing todo constant"),
+    }
+}
+
+fn hash_constant_bit_array_segment(
+    hasher: &mut xxhash_rust::xxh3::Xxh3,
+    segment: &TypedConstantBitArraySegment,
+) {
+    let ast::BitArraySegment { value, options, .. } = segment;
+    hasher.update(&[CONSTANT_BIT_ARRAY_SEGMENT_TAG]);
+    hash_constant_value(hasher, value);
+    for option in options {
+        hash_bit_array_option(hasher, option);
+    }
+}
+
+fn hash_bit_array_option(
+    hasher: &mut xxhash_rust::xxh3::Xxh3,
+    option: &TypedConstantBitArraySegmentOption,
+) {
+    match option {
+        ast::BitArrayOption::Bytes { .. } => hasher.update(&[0]),
+        ast::BitArrayOption::Int { .. } => hasher.update(&[1]),
+        ast::BitArrayOption::Float { .. } => hasher.update(&[2]),
+        ast::BitArrayOption::Bits { .. } => hasher.update(&[3]),
+        ast::BitArrayOption::Utf8 { .. } => hasher.update(&[4]),
+        ast::BitArrayOption::Utf16 { .. } => hasher.update(&[5]),
+        ast::BitArrayOption::Utf32 { .. } => hasher.update(&[6]),
+        ast::BitArrayOption::Utf8Codepoint { .. } => hasher.update(&[7]),
+        ast::BitArrayOption::Utf16Codepoint { .. } => hasher.update(&[8]),
+        ast::BitArrayOption::Utf32Codepoint { .. } => hasher.update(&[9]),
+        ast::BitArrayOption::Signed { .. } => hasher.update(&[10]),
+        ast::BitArrayOption::Unsigned { .. } => hasher.update(&[11]),
+        ast::BitArrayOption::Big { .. } => hasher.update(&[12]),
+        ast::BitArrayOption::Little { .. } => hasher.update(&[13]),
+        ast::BitArrayOption::Native { .. } => hasher.update(&[14]),
+        ast::BitArrayOption::Size {
+            value, short_form, ..
+        } => {
+            hasher.update(&[15]);
+            hasher.update(&[if *short_form { 0 } else { 1 }]);
+            hash_constant_value(hasher, value);
+        }
+        ast::BitArrayOption::Unit { value, .. } => {
+            hasher.update(&[16]);
+            hasher.update(&[*value]);
+        }
+    }
+}
+
+fn hash_constructor_variant(
+    hasher: &mut xxhash_rust::xxh3::Xxh3,
+    local_name: &EcoString,
+    variant: &type_::ValueConstructorVariant,
+) {
+    match variant {
+        type_::ValueConstructorVariant::LocalVariable { .. } => {
+            hasher.update(&[CONSTANT_CONSTRUCTOR_LOCAL_VAR_TAG]);
+            hasher.update(local_name.as_bytes());
+        }
+        type_::ValueConstructorVariant::ModuleConstant { literal, .. } => {
+            hash_constant_value(hasher, literal)
+        }
+        type_::ValueConstructorVariant::ModuleFn { name, module, .. } => {
+            hasher.update(&[CONSTANT_CONSTRUCTOR_MODULE_FN_TAG]);
+            hasher.update(name.as_bytes());
+            hasher.update(module.as_bytes());
+        }
+        type_::ValueConstructorVariant::Record { name, module, .. } => {
+            hasher.update(&[CONSTANT_CONSTRUCTOR_RECORD_TAG]);
+            hasher.update(name.as_bytes());
+            hasher.update(module.as_bytes());
+        }
+    }
 }
 
 fn hash_implementations(
