@@ -807,7 +807,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             ReferenceKind::Definition,
         );
 
-        let function = Function {
+        Function {
             documentation: doc,
             location,
             name: Some((name_location, name.clone())),
@@ -825,9 +825,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             external_javascript,
             implementations,
             purity,
-        };
-
-        function
+        }
     }
 
     fn assert_valid_javascript_external(
