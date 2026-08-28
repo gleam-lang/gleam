@@ -109,6 +109,9 @@
   OTP29.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Creation of literal lists has been optimised on the JavaScript target.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler now provides a specific error message directing the user to the
   correct syntax when trying to update a record after providing fields.
   ([0xda157](https://github.com/0xda157))

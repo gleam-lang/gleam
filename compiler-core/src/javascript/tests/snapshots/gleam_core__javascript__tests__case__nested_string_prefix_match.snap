@@ -13,10 +13,17 @@ pub fn main() {
 
 
 ----- COMPILED JAVASCRIPT
-import { Ok, toList, Empty as $Empty } from "../gleam.mjs";
+import {
+  Ok,
+  Empty as $Empty,
+  List$Empty$const as $List$Empty$const,
+  prepend as listPrepend,
+} from "../gleam.mjs";
 
 export function main() {
-  let $ = new Ok(toList(["a", "b c", "d"]));
+  let $ = new Ok(
+    listPrepend("a", listPrepend("b c", listPrepend("d", $List$Empty$const))),
+  );
   let $1 = $[0];
   if ($1 instanceof $Empty) {
     return 1;

@@ -13,11 +13,11 @@ pub fn go(x) {
 
 
 ----- COMPILED JAVASCRIPT
-import { toList, List$Empty$const as $List$Empty$const, prepend as listPrepend } from "../gleam.mjs";
+import { List$Empty$const as $List$Empty$const, prepend as listPrepend } from "../gleam.mjs";
 
 export function go(x) {
   $List$Empty$const;
-  toList([1]);
-  toList([1, 2]);
+  listPrepend(1, $List$Empty$const);
+  listPrepend(1, listPrepend(2, $List$Empty$const));
   return listPrepend(1, listPrepend(2, x));
 }

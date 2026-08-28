@@ -16,10 +16,13 @@ expression: "\n          import hero\n          pub fn main() {\n            let
 
 ----- COMPILED JAVASCRIPT
 import * as $hero from "../../package/hero.mjs";
-import { toList, isEqual } from "../gleam.mjs";
+import { List$Empty$const as $List$Empty$const, prepend as listPrepend, isEqual } from "../gleam.mjs";
 
 export function main() {
-  let names = toList(["Tony Stark", "Bruce Wayne"]);
+  let names = listPrepend(
+    "Tony Stark",
+    listPrepend("Bruce Wayne", $List$Empty$const),
+  );
   let n = names;
   if (isEqual(n, $hero.heroes)) {
     return true;

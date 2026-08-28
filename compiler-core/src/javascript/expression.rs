@@ -421,27 +421,13 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
 
             TypedExpr::List { elements, tail, .. } => {
                 self.not_in_tail_position(Some(Ordering::Strict), |this| match tail {
-                    Some(tail) => {
-                        this.tracker.prepend_used = true;
-                        let tail = this.wrap_expression(arena, tail);
-                        prepend(
-                            arena,
-                            elements
-                                .iter()
-                                .map(|element| this.wrap_expression(arena, element)),
-                            tail,
-                        )
-                    }
+                    Some(tail) => this.prepend(arena, elements.iter(), tail, |this, element| {
+                        this.wrap_expression(arena, element)
+                    }),
                     None if elements.is_empty() => this.empty_list(),
-                    None => {
-                        this.tracker.list_used = true;
-                        list(
-                            arena,
-                            elements
-                                .iter()
-                                .map(|element| this.wrap_expression(arena, element)),
-                        )
-                    }
+                    None => this.list(arena, elements.len(), elements.iter(), |this, element| {
+                        this.wrap_expression(arena, element)
+                    }),
                 })
             }
 
@@ -2707,43 +2693,31 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                     return self.empty_list();
                 }
 
-                self.tracker.list_used = true;
                 let list = match tail {
                     // There's no tail in the list, we join all the elements and
                     // call it a day.
-                    None => list(
-                        arena,
-                        elements
-                            .iter()
-                            .map(|element| self.constant_expression(arena, context, element)),
-                    ),
+                    None => self.list(arena, elements.len(), elements.iter(), |this, element| {
+                        this.constant_expression(arena, context, element)
+                    }),
 
                     Some(tail) => match tail.list_elements() {
                         // There's a tail in the list whose elements are all
                         // known at compile time. In this case we replace the
                         // tail with those elements and create a single flat
                         // list.
-                        Some(tail_elements) => list(
+                        Some(tail_elements) => self.list(
                             arena,
-                            elements
-                                .iter()
-                                .chain(tail_elements)
-                                .map(|element| self.constant_expression(arena, context, element)),
+                            elements.len() + tail_elements.len(),
+                            elements.iter().chain(tail_elements),
+                            |this, element| this.constant_expression(arena, context, element),
                         ),
+
                         // There's a tail in the list but we can't really tell
                         // what its elements are at compile time. This means we
                         // have to prepend to this list.
-                        None => {
-                            self.tracker.prepend_used = true;
-                            let tail = self.constant_expression(arena, context, tail);
-                            prepend(
-                                arena,
-                                elements.iter().map(|element| {
-                                    self.constant_expression(arena, context, element)
-                                }),
-                                tail,
-                            )
-                        }
+                        None => self.prepend(arena, elements.iter(), tail, |this, element| {
+                            this.constant_expression(arena, context, element)
+                        }),
                     },
                 };
                 match context {
@@ -3532,7 +3506,64 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
             ]
         }
     }
+
+    fn list<Element>(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        count: usize,
+        elements: impl DoubleEndedIterator<Item = Element>,
+        to_doc: impl Fn(&mut Self, Element) -> Document<'a, 'doc>,
+    ) -> Document<'a, 'doc> {
+        if count > MAX_PREPEND_LIST_SIZE {
+            self.tracker.to_list_used = true;
+            docvec![
+                arena,
+                TO_LIST_OPEN_PAREN_DOCUMENT,
+                array(
+                    arena,
+                    elements.into_iter().map(|element| to_doc(self, element)),
+                ),
+                CLOSE_PAREN_DOCUMENT
+            ]
+        } else {
+            self.tracker.prepend_used = true;
+            self.tracker.list_empty_const_used = true;
+            elements
+                .into_iter()
+                .map(|element| to_doc(self, element))
+                .rev()
+                .fold(
+                    DOLLAR_LIST_DOLLAR_EMPTY_DOLLAR_CONST_DOCUMENT,
+                    |tail, element| {
+                        let arguments = call_arguments(arena, [element, tail]);
+                        docvec![arena, LIST_PREPEND_DOCUMENT, arguments]
+                    },
+                )
+        }
+    }
+
+    fn prepend<Element>(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        elements: impl DoubleEndedIterator<Item = Element>,
+        tail: Element,
+        to_doc: impl Fn(&mut Self, Element) -> Document<'a, 'doc>,
+    ) -> Document<'a, 'doc> {
+        self.tracker.prepend_used = true;
+
+        let tail = to_doc(self, tail);
+        elements
+            .into_iter()
+            .map(|element| to_doc(self, element))
+            .rev()
+            .fold(tail, |tail, element| {
+                let arguments = call_arguments(arena, [element, tail]);
+                docvec![arena, LIST_PREPEND_DOCUMENT, arguments]
+            })
+    }
 }
+
+const MAX_PREPEND_LIST_SIZE: usize = 10;
 
 #[derive(Clone, Copy)]
 enum AssertExpression {
@@ -3728,36 +3759,6 @@ pub(crate) fn array<'a, 'doc, Elements: IntoIterator<Item = Document<'a, 'doc>>>
         ]
         .group(arena)
     }
-}
-
-pub(crate) fn list<'a, 'doc, I: IntoIterator<Item = Document<'a, 'doc>>>(
-    arena: &'doc DocumentArena<'a, 'doc>,
-    elements: I,
-) -> Document<'a, 'doc>
-where
-    I::IntoIter: DoubleEndedIterator,
-{
-    let array = array(arena, elements);
-    docvec![
-        arena,
-        TO_LIST_OPEN_PAREN_DOCUMENT,
-        array,
-        CLOSE_PAREN_DOCUMENT
-    ]
-}
-
-fn prepend<'a, 'doc, I: IntoIterator<Item = Document<'a, 'doc>>>(
-    arena: &'doc DocumentArena<'a, 'doc>,
-    elements: I,
-    tail: Document<'a, 'doc>,
-) -> Document<'a, 'doc>
-where
-    I::IntoIter: DoubleEndedIterator + ExactSizeIterator,
-{
-    elements.into_iter().rev().fold(tail, |tail, element| {
-        let arguments = call_arguments(arena, [element, tail]);
-        docvec![arena, LIST_PREPEND_DOCUMENT, arguments]
-    })
 }
 
 fn call_arguments<'a, 'doc, Elements: IntoIterator<Item = Document<'a, 'doc>>>(

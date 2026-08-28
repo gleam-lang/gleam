@@ -6,6 +6,9 @@ expression: "pub const a = [1, 2, 3]"
 pub const a = [1, 2, 3]
 
 ----- COMPILED JAVASCRIPT
-import { toList } from "../gleam.mjs";
+import { List$Empty$const as $List$Empty$const, prepend as listPrepend } from "../gleam.mjs";
 
-export const a = /* @__PURE__ */ toList([1, 2, 3]);
+export const a = /* @__PURE__ */ listPrepend(
+  1,
+  listPrepend(2, listPrepend(3, $List$Empty$const)),
+);
