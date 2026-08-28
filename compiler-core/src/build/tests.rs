@@ -156,10 +156,135 @@ fn changing_a_function_body_does_not_change_api_fingerprint() {
 }
 
 #[test]
-fn changin_a_constant_value_does_not_change_api_fingerprint() {
-    assert_eq!(
+fn changing_constant_string_changes_api_fingerprint() {
+    assert_ne!(
         fingerprint(r#"pub const wibble = "hello" "#),
-        fingerprint(r#"pub const wibble = "hello" <> "joe" "#)
+        fingerprint(r#"pub const wibble = "hello, joe" "#)
+    )
+}
+
+#[test]
+fn changing_constant_int_changes_api_fingerprint() {
+    assert_ne!(
+        fingerprint(r#"pub const wibble = 1"#),
+        fingerprint(r#"pub const wibble = 2"#)
+    )
+}
+
+#[test]
+fn changing_constant_float_changes_api_fingerprint() {
+    assert_ne!(
+        fingerprint(r#"pub const wibble = 1.1"#),
+        fingerprint(r#"pub const wibble = 2.2"#)
+    )
+}
+
+#[test]
+fn changing_constant_record_changes_api_fingerprint() {
+    assert_ne!(
+        fingerprint(r#"pub const wibble = Ok(1)"#),
+        fingerprint(r#"pub const wibble = Error(1)"#)
+    )
+}
+
+#[test]
+fn changing_constant_record_changes_api_fingerprint_2() {
+    assert_ne!(
+        fingerprint(r#"pub const wibble = True"#),
+        fingerprint(r#"pub const wibble = False"#)
+    )
+}
+
+#[test]
+fn changing_constant_list_changes_api_fingerprint() {
+    assert_ne!(
+        fingerprint(r#"pub const wibble = []"#),
+        fingerprint(r#"pub const wibble = [1]"#)
+    )
+}
+
+#[test]
+fn changing_constant_tuple_changes_api_fingerprint() {
+    assert_ne!(
+        fingerprint(r#"pub const wibble = #(1, 3)"#),
+        fingerprint(r#"pub const wibble = #(1, 2)"#)
+    )
+}
+
+#[test]
+fn constants_that_have_same_literal_value_have_the_same_api_fingerprint() {
+    assert_eq!(
+        fingerprint(
+            r#"
+            pub const wibble = one
+            const one = two
+            const two = 2
+        "#
+        ),
+        fingerprint(
+            r#"
+            pub const wibble = 2
+        "#
+        )
+    )
+}
+
+#[test]
+fn constants_that_have_same_literal_value_have_the_same_api_fingerprint_3() {
+    assert_eq!(
+        fingerprint(
+            r#"
+            pub type Wibble { Wibble(one: Int, two: Int) }
+            pub const wibble = Wibble(one: 1, two: 2)
+            "#
+        ),
+        fingerprint(
+            r#"
+            pub type Wibble { Wibble(one: Int, two: Int) }
+            pub const wibble = Wibble(one:, two:)
+            const two = 2
+            const one = 1
+            "#
+        )
+    )
+}
+
+#[test]
+fn different_record_updates_have_different_api_fingerprint() {
+    assert_ne!(
+        fingerprint(
+            r#"
+            pub type Wibble { Wibble(one: Int, two: Int) }
+            pub const wibble = Wibble(..base, one: 11)
+            const base = Wibble(1, 2)
+            "#
+        ),
+        fingerprint(
+            r#"
+            pub type Wibble { Wibble(one: Int, two: Int) }
+            pub const wibble = Wibble(..base, one: 11)
+            const base = Wibble(1, 3)
+            "#
+        )
+    )
+}
+
+#[test]
+fn record_updated_to_the_same_value_have_the_same_api_fingerprint() {
+    assert_eq!(
+        fingerprint(
+            r#"
+            pub type Wibble { Wibble(one: Int, two: Int) }
+            pub const wibble = Wibble(1, 2)
+            "#
+        ),
+        fingerprint(
+            r#"
+            pub type Wibble { Wibble(one: Int, two: Int) }
+            pub const wibble = Wibble(..base, two: 2)
+            const base = Wibble(1, 3)
+            "#
+        )
     )
 }
 
