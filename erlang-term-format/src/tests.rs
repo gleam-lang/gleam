@@ -25,7 +25,7 @@
 ////
 //// And write a test like this:
 ////
-//// ```ignore
+//// ```txt
 //// let mut etf = Builder::new();
 //// let list = etf.start_list();
 //// etf.atom("nil");

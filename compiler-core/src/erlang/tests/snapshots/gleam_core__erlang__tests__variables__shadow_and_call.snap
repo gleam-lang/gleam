@@ -16,4 +16,6 @@ pub fn main(x) {
 
 -spec main(K) -> K.
 main(X) ->
-    X.
+    fun(X@1) ->
+        X@1
+    end(X).

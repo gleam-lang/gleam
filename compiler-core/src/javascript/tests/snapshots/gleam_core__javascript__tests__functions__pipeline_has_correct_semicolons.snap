@@ -26,7 +26,7 @@ import {
 export function main() {
   let _pipe = 1;
   echo(_pipe, undefined, "src/module.gleam", 3);
-  (_pipe + 1) * 2;
+  ((x) => { return (x + 1) * 2; })(_pipe);
   return (1 + 2) * 3;
 }
 

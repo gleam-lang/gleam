@@ -543,7 +543,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
     /// When we run into this Gleam assignment we will need to decide how to
     /// call it on the Erlang side. So we would call:
     ///
-    /// ```ignore
+    /// ```txt
     /// let location = todo!("the location of this variable")
     /// new_erlang_variable("wibble", location)
     /// // and later we can tell what name was picked by calling

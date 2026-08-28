@@ -65,7 +65,6 @@ impl RemapIds {
             documentation,
             contains_echo,
             references,
-            inline_functions,
         } = module;
 
         let types = types
@@ -106,7 +105,6 @@ impl RemapIds {
             documentation,
             contains_echo,
             references,
-            inline_functions,
         }
     }
 

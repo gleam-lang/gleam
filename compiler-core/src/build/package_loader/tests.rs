@@ -70,7 +70,6 @@ fn write_cache(
         documentation: vec![],
         contains_echo: false,
         references: References::default(),
-        inline_functions: HashMap::new(),
     };
     let path = Utf8Path::new("/artefact").join(format!("{artefact_name}.cache"));
     fs.write_bytes(&path, &metadata::encode(&cache).unwrap())

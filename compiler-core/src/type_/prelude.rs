@@ -245,7 +245,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         documentation: Vec::new(),
         contains_echo: false,
         references: References::default(),
-        inline_functions: HashMap::new(),
     };
 
     for t in PreludeType::iter() {
