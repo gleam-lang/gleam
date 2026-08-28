@@ -109,11 +109,6 @@
   OTP29.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- When compiling to Erlang, there will be one instance of each public constant
-  rather than one per module that uses it, reducing memory consumption of
-  programs containing large constants.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
 - The compiler now provides a specific error message directing the user to the
   correct syntax when trying to update a record after providing fields.
   ([0xda157](https://github.com/0xda157))

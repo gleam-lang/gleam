@@ -2718,7 +2718,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                             .map(|element| self.constant_expression(arena, context, element)),
                     ),
 
-                    Some(tail) => match tail.list_elements(&self.module_name) {
+                    Some(tail) => match tail.list_elements() {
                         // There's a tail in the list whose elements are all
                         // known at compile time. In this case we replace the
                         // tail with those elements and create a single flat
@@ -3235,7 +3235,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                 ]
             }
 
-            ClauseGuard::LocalVariable { name, .. } => self.local_var(name).to_doc(arena),
+            ClauseGuard::Var { name, .. } => self.local_var(name).to_doc(arena),
 
             ClauseGuard::TupleIndex { tuple, index, .. } => {
                 docvec![
@@ -3261,10 +3261,6 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                 label,
                 ..
             } => docvec![arena, DOLLAR_DOCUMENT, module_alias, DOT_DOCUMENT, label],
-
-            ClauseGuard::UnqualifiedRemoteConstant { name, .. } => {
-                self.local_var(name).to_doc(arena)
-            }
 
             ClauseGuard::Not { expression, .. } => {
                 docvec![
@@ -3328,12 +3324,11 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
             ClauseGuard::Block { .. }
             | ClauseGuard::BinaryOperator { .. }
             | ClauseGuard::Not { .. }
-            | ClauseGuard::LocalVariable { .. }
+            | ClauseGuard::Var { .. }
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::FieldAccess { .. }
             | ClauseGuard::ModuleSelect { .. }
             | ClauseGuard::Constant(_)
-            | ClauseGuard::UnqualifiedRemoteConstant { .. }
             | ClauseGuard::Invalid { .. } => None,
         }
     }
@@ -3345,8 +3340,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
     ) -> Document<'a, 'doc> {
         match guard {
             ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to code generation"),
-            ClauseGuard::LocalVariable { .. }
-            | ClauseGuard::UnqualifiedRemoteConstant { .. }
+            ClauseGuard::Var { .. }
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::Constant(_)
             | ClauseGuard::Not { .. }
@@ -3382,12 +3376,11 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
             ClauseGuard::BinaryOperator { .. }
             | ClauseGuard::Block { .. }
             | ClauseGuard::Not { .. }
-            | ClauseGuard::LocalVariable { .. }
+            | ClauseGuard::Var { .. }
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::FieldAccess { .. }
             | ClauseGuard::ModuleSelect { .. }
             | ClauseGuard::Constant(_)
-            | ClauseGuard::UnqualifiedRemoteConstant { .. }
             | ClauseGuard::Invalid { .. } => self.guard_expression(arena, guard),
         }
     }

@@ -316,7 +316,7 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                     let constructor = constructor.as_ref().expect("variable with no constructor");
                     match &constructor.variant {
                         ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                            self.generator.constant(builder, literal);
+                            self.generator.inlined_constant(builder, literal);
                         }
                         ValueConstructorVariant::LocalVariable { location, .. } => {
                             builder.variable(*location, &self.generator.local_var_name(location));

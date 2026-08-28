@@ -99,32 +99,6 @@ pub enum TypedExpr {
         subjects: Vec<Self>,
         clauses: Vec<Clause<Self, Arc<Type>>>,
         compiled_case: CompiledCase,
-
-        /// These are all the remote constants that are referenced by guards of
-        /// this case.
-        /// Remote constants (constants from other modules) are turned into
-        /// function calls on the Erlang target, and those are not allowed in
-        /// clause guards.
-        /// This will be used by code generation to actually bind those needed
-        /// values to variables that come before the case expression so the
-        /// guards can reference these variables.
-        ///
-        /// For example, in this case:
-        ///
-        /// ```gleam
-        /// import other_module.{some_constant}
-        ///
-        /// case wibble {
-        ///   1 if some_constant -> todo
-        ///   2 if other_module.some_other_constant || wibble -> todo
-        ///   _ -> todo
-        /// }
-        /// ```
-        ///
-        /// We need to keep track of `(other_module, some_constant)` and
-        /// `(other_module.some_other_constant)`.
-        ///
-        remote_constants: HashSet<(EcoString, EcoString)>,
     },
 
     RecordAccess {

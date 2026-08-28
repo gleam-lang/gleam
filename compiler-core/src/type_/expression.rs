@@ -10,7 +10,7 @@ use crate::{
         CAPTURE_VARIABLE, CallArg, Clause, Constant, FunctionLiteralKind, HasLocation,
         ImplicitCallArgOrigin, InvalidExpression, Layer, RECORD_UPDATE_VARIABLE,
         RecordBeingUpdated, Statement, TodoKind, TypeAst, TypedArg, TypedAssert, TypedAssignment,
-        TypedClause, TypedConstant, TypedExpr, TypedMultiPattern, TypedStatement,
+        TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern, TypedStatement,
         USE_ASSIGNMENT_VARIABLE, UntypedArg, UntypedAssert, UntypedAssignment, UntypedClause,
         UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedExprBitArraySegment,
         UntypedMultiPattern, UntypedStatement, UntypedUse, UntypedUseAssignment, Use,
@@ -20,10 +20,7 @@ use crate::{
     exhaustiveness::{self, CompileCaseResult, CompiledCase, Reachability},
     parse::{LiteralFloatValue, PatternPosition},
     reference::{LabelSyntax, ReferenceKind},
-    type_::{
-        constant::{ConstantTyper, InferredConstant},
-        guard::{GuardTyper, InferredGuard},
-    },
+    type_::{constant::ConstantTyper, guard::GuardTyper},
 };
 use ecow::eco_format;
 use hexpm::version::{LowestVersion, Version};
@@ -2298,7 +2295,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     compiled_case: CompiledCase::failure(),
                     subjects: typed_subjects,
                     clauses: Vec::new(),
-                    remote_constants: HashSet::new(),
                 };
             }
         };
@@ -2310,16 +2306,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut all_clauses_panic = !clauses.is_empty();
         let mut patterns_typechecked_successfully = true;
 
-        let mut case_remote_constants = HashSet::new();
         for clause in clauses {
             has_a_guard = has_a_guard || clause.guard.is_some();
-            all_patterns_are_discards = all_patterns_are_discards
-                && clause.pattern.iter().all(|pattern| pattern.is_discard());
+            all_patterns_are_discards =
+                all_patterns_are_discards && clause.pattern.iter().all(|p| p.is_discard());
 
             self.previous_panics = false;
-            let (typed_clause, error_typing_patterns, remote_constants) =
-                self.infer_clause(clause, &typed_subjects);
-            case_remote_constants.extend(remote_constants);
+            let (typed_clause, error_typing_patterns) = self.infer_clause(clause, &typed_subjects);
             if error_typing_patterns {
                 patterns_typechecked_successfully = false;
             }
@@ -2370,7 +2363,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             type_: return_type,
             subjects: typed_subjects,
             clauses: typed_clauses,
-            remote_constants: case_remote_constants,
         }
     }
 
@@ -2381,7 +2373,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         clause: UntypedClause,
         subjects: &[TypedExpr],
-    ) -> (TypedClause, bool, HashSet<(EcoString, EcoString)>) {
+    ) -> (TypedClause, bool) {
         let Clause {
             pattern,
             alternative_patterns,
@@ -2393,14 +2385,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             let (typed_pattern, typed_alternatives, error_encountered) =
                 this.infer_clause_pattern(pattern, alternative_patterns, subjects, &location);
 
-            let (guard, remote_constants) = match this.infer_optional_clause_guard(guard) {
-                Some(InferredGuard {
-                    guard,
-                    remote_constants,
-                }) => (Some(guard), remote_constants),
-                None => (None, HashSet::new()),
-            };
-
+            let guard = this.infer_optional_clause_guard(guard);
             let then = this.infer(then);
             let clause = Clause {
                 location,
@@ -2409,7 +2394,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 guard,
                 then,
             };
-            (clause, error_encountered, remote_constants)
+            (clause, error_encountered)
         })
     }
 
@@ -2454,15 +2439,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_optional_clause_guard(
         &mut self,
         guard: Option<UntypedClauseGuard>,
-    ) -> Option<InferredGuard> {
+    ) -> Option<TypedClauseGuard> {
         // If there is a guard we type check it and assert that it is of type
         // Bool.
-        let inferred = GuardTyper::new(self).infer(guard?);
-        if let Err(error) = unify(bool(), inferred.guard.type_()) {
+        let guard = GuardTyper::new(self).infer(guard?);
+        if let Err(error) = unify(bool(), guard.type_()) {
             self.problems
-                .error(convert_unify_error(error, inferred.guard.location()));
+                .error(convert_unify_error(error, guard.location()));
         }
-        Some(inferred)
+        Some(guard)
     }
 
     pub(crate) fn infer_module_access(
@@ -3464,7 +3449,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         annotation: &Option<TypeAst>,
         value: UntypedConstant,
-    ) -> InferredConstant {
+    ) -> TypedConstant {
         let inferred = ConstantTyper::new(self).infer(value);
 
         match annotation
@@ -3479,17 +3464,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // If there's an annotation we try and unify it with the inferred
             // type.
             Some(Ok(annotated_type)) => {
-                if let Err(error) = unify(annotated_type.clone(), inferred.constant.type_()) {
+                if let Err(error) = unify(annotated_type.clone(), inferred.type_()) {
                     self.problems
-                        .error(convert_unify_error(error, inferred.constant.location()));
-
-                    InferredConstant {
-                        constant: invalid_constant_with_annotated_type(
-                            inferred.constant,
-                            annotated_type,
-                        ),
-                        remote_constants: HashSet::new(),
-                    }
+                        .error(convert_unify_error(error, inferred.location()));
+                    invalid_constant_with_annotated_type(inferred, annotated_type)
                 } else {
                     inferred
                 }

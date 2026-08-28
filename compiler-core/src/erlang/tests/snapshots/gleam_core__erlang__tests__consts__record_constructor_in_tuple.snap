@@ -17,16 +17,10 @@ pub fn main() {
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export([main/0, z/0]).
+-export([main/0]).
 -export_type([x/0]).
 
 -type x() :: {x, integer()}.
-
--spec z() -> {fun((integer()) -> x())}.
-z() ->
-    {fun(_value) ->
-        {x, _value}
-    end}.
 
 -spec main() -> {fun((integer()) -> x())}.
 main() ->

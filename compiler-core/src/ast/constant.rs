@@ -550,13 +550,13 @@ impl TypedConstant {
     ///     - `[1, 2, ..[3, 4]]`
     ///     - `[1, 2, ..a_known_module_constant]`
     ///
-    pub fn list_elements(&self, current_module: &EcoString) -> Option<Vec<&Self>> {
+    pub fn list_elements(&self) -> Option<Vec<&Self>> {
         match self {
             Constant::List { elements, tail, .. } => {
                 if let Some(tail) = tail {
                     // There's a tail, if it cannot be known at compile time,
                     // then this entire list cannot be known at compile time!
-                    let tail_elements = tail.list_elements(current_module)?;
+                    let tail_elements = tail.list_elements()?;
                     Some(elements.iter().chain(tail_elements).collect())
                 } else {
                     // There's no tail, we just return the elements
@@ -567,17 +567,7 @@ impl TypedConstant {
                 constructor: Some(constructor),
                 ..
             } => match &constructor.variant {
-                // We don't want to inline constants across modules, so if this
-                // comes from a different module than the current one we return
-                // none: there's no literal values to inline.
-                ValueConstructorVariant::ModuleConstant {
-                    literal, module, ..
-                } if module != current_module => None,
-
-                ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                    literal.list_elements(current_module)
-                }
-
+                ValueConstructorVariant::ModuleConstant { literal, .. } => literal.list_elements(),
                 ValueConstructorVariant::LocalVariable { .. }
                 | ValueConstructorVariant::ModuleFn { .. }
                 | ValueConstructorVariant::Record { .. } => None,

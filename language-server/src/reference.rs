@@ -388,7 +388,7 @@ pub fn reference_for_ast_node(
             Some(module_name)
         }
 
-        Located::ClauseGuard(ClauseGuard::LocalVariable {
+        Located::ClauseGuard(ClauseGuard::Var {
             location,
             type_: _,
             name,

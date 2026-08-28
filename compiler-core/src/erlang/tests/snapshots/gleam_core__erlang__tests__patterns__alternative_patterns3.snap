@@ -18,11 +18,7 @@ pub fn main(arg) {
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export([main/1, constant/0]).
-
--spec constant() -> {ok, integer()} | {error, any()}.
-constant() ->
-    {ok, 1}.
+-export([main/1]).
 
 -spec main({ok, integer()} | {error, any()}) -> integer().
 main(Arg) ->

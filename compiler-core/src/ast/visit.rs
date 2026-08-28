@@ -44,9 +44,9 @@
 use crate::{
     analyse::Inferred,
     ast::{
-        BitArraySize, DefinitionLocation, RecordBeingUpdated, StringPrefixLeftSideAssignment,
-        TypeAstConstructorName, TypedBitArraySize, TypedConstantBitArraySegment, TypedDefinitions,
-        TypedImport, TypedTailPattern, TypedTypeAlias, typed::InvalidExpression,
+        BitArraySize, RecordBeingUpdated, StringPrefixLeftSideAssignment, TypeAstConstructorName,
+        TypedBitArraySize, TypedConstantBitArraySegment, TypedDefinitions, TypedImport,
+        TypedTailPattern, TypedTypeAlias, typed::InvalidExpression,
     },
     exhaustiveness::CompiledCase,
     parse::LiteralFloatValue,
@@ -401,23 +401,6 @@ pub trait Visit<'ast> {
 
     fn visit_typed_clause_guard(&mut self, guard: &'ast TypedClauseGuard) {
         visit_typed_clause_guard(self, guard);
-    }
-
-    fn visit_clause_guard_unqualified_remote_constant(
-        &mut self,
-        location: &'ast SrcSpan,
-        definition_location: &'ast Option<DefinitionLocation>,
-        module: &'ast EcoString,
-        name: &'ast EcoString,
-        type_: &'ast Arc<Type>,
-    ) {
-        visit_clause_guard_unqualified_remote_constant(
-            location,
-            definition_location,
-            module,
-            name,
-            type_,
-        )
     }
 
     fn visit_typed_clause_guard_bin_op(
@@ -863,16 +846,6 @@ pub trait Visit<'ast> {
     ) {
         visit_typed_constant_invalid(self, location, type_, extra_information);
     }
-}
-
-fn visit_clause_guard_unqualified_remote_constant(
-    _location: &SrcSpan,
-    _definition_location: &Option<DefinitionLocation>,
-    _module: &str,
-    _name: &str,
-    _type_: &Type,
-) {
-    // No further traversal needed
 }
 
 fn visit_typed_constant_invalid<'a, V: Visit<'a> + ?Sized>(
@@ -1394,7 +1367,6 @@ where
             subjects,
             clauses,
             compiled_case,
-            remote_constants: _,
         } => v.visit_typed_expr_case(location, type_, subjects, clauses, compiled_case),
         TypedExpr::RecordAccess {
             location,
@@ -1896,26 +1868,13 @@ where
             location: _,
             expression,
         } => v.visit_typed_clause_guard(expression),
-        super::ClauseGuard::LocalVariable {
+        super::ClauseGuard::Var {
             location,
             type_,
             name,
             definition_location,
             origin,
         } => v.visit_typed_clause_guard_var(location, name, type_, definition_location, origin),
-        super::ClauseGuard::UnqualifiedRemoteConstant {
-            type_,
-            definition_location,
-            location,
-            module,
-            name,
-        } => v.visit_clause_guard_unqualified_remote_constant(
-            location,
-            definition_location,
-            module,
-            name,
-            type_,
-        ),
         super::ClauseGuard::TupleIndex {
             location,
             index,

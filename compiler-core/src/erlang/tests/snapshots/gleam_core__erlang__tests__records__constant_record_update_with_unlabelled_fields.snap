@@ -19,18 +19,10 @@ pub fn main() {
 ----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
--export([main/0, record/0, updated/0]).
+-export([main/0]).
 -export_type([wibble/0]).
 
 -type wibble() :: {wibble, integer(), float(), boolean(), binary()}.
-
--spec record() -> wibble().
-record() ->
-    {wibble, 1, 3.14, true, ~"Hello"}.
-
--spec updated() -> wibble().
-updated() ->
-    {wibble, 1, 3.14, false, ~"Hello"}.
 
 -spec main() -> wibble().
 main() ->

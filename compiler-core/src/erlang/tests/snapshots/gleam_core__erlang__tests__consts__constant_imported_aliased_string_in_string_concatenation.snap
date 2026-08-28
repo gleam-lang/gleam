@@ -21,4 +21,4 @@ pub fn main() {
 
 -spec main() -> binary().
 main() ->
-    _ = <<(some_module:wibble())/binary, "b"/utf8>>.
+    _ = <<"a"/utf8, "b"/utf8>>.
