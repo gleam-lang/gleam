@@ -187,3 +187,11 @@ pub fn match_on_empty_segment_in_middle_test() {
   let assert <<1, "":utf8, 2>> = x
   Nil
 }
+
+// https://github.com/gleam-lang/gleam/issues/6182
+pub fn match_on_empty_string_with_alias_test() {
+  let x = <<1, 2>>
+  let assert <<1, "" as a:utf8, 2>> = x
+  assert a == ""
+  Nil
+}
