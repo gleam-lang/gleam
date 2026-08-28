@@ -107,7 +107,7 @@ impl TermBuilder {
     /// Once you've then pushed all the items, you _must_ complete the list by
     /// calling `end_list` with the number of items that were pushed.
     ///
-    /// ```ignore
+    /// ```txt
     /// // [1, 2, 3]
     /// let list = etf.start_list()
     /// etf.small_integer(1);

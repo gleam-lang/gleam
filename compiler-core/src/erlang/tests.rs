@@ -8,11 +8,11 @@ use erlang_generation::{ErlangBuilder, ErlangSourceBuilder};
 use src_span::LineNumbers;
 
 use crate::analyse::TargetSupport;
+use crate::build;
 use crate::config::PackageConfig;
 use crate::erlang::echo::echo_with_helpers;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::warning::WarningEmitter;
-use crate::{build, inline};
 use crate::{
     build::{Origin, Target},
     erlang::module,
@@ -33,7 +33,6 @@ mod echo;
 mod external_fn;
 mod functions;
 mod guards;
-mod inlining;
 mod let_assert;
 mod lists;
 mod numbers;
@@ -115,8 +114,6 @@ pub fn compile_test_project(
     }
     .infer_module(ast, line_numbers, path.clone())
     .expect("should successfully infer root Erlang");
-
-    let ast = inline::module(ast, &modules);
 
     // After building everything we still need to attach the module comments, to
     // do that we're reusing the `attach_doc_and_module_comments` that's used
