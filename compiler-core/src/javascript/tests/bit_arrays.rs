@@ -2883,11 +2883,11 @@ pub const value = <<0:size(0), 1:size(8)>>
 #[test]
 fn match_on_empty_bit_array_string() {
     assert_js!(
-        "
+        r#"
 pub fn main(x) {
-  let assert <<\"\":utf8>> = x
+  let assert <<"":utf8>> = x
   Nil
 }
-"
+"#
     );
 }
