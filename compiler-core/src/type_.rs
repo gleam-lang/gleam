@@ -733,22 +733,6 @@ pub enum ValueConstructorVariant {
         name: EcoString,
         literal: Constant<Arc<Type>>,
         implementations: Implementations,
-        /// These are all the remote constants referenced by this module
-        /// constant, either directly or indirectly.
-        /// For example if we have:
-        ///
-        /// ```gleam
-        /// import other_module.{another_constant}
-        ///
-        /// pub const wibble = other_module.a_constant
-        ///
-        /// pub const wobble = [another_constant, wibble]
-        /// ```
-        ///
-        /// `wobble` is referencing both `(other_module, another_constant)`
-        /// directly, and `(other_module, a_constant)` indirectly through
-        /// `wibble`.
-        remote_constants: HashSet<(EcoString, EcoString)>,
     },
 
     /// A function belonging to the module

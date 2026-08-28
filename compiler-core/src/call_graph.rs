@@ -445,15 +445,13 @@ impl<'a> CallGraphBuilder<'a> {
 
             ClauseGuard::Not { expression, .. } => self.guard(expression),
 
-            ClauseGuard::LocalVariable { name, .. } => self.referenced(name),
+            ClauseGuard::Var { name, .. } => self.referenced(name),
 
             ClauseGuard::TupleIndex { tuple, .. } => self.guard(tuple),
 
             ClauseGuard::FieldAccess { container, .. } => self.guard(container),
 
             ClauseGuard::ModuleSelect { module_name, .. } => self.referenced(module_name),
-
-            ClauseGuard::UnqualifiedRemoteConstant { name, .. } => self.referenced(name),
 
             ClauseGuard::Constant(constant) => self.constant(constant),
         }

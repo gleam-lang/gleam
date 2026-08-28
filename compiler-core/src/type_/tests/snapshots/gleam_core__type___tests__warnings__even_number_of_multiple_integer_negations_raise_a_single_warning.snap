@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "pub fn main() { let _ = ----7 }"
+---
+----- SOURCE CODE
+pub fn main() { let _ = ----7 }
+
+----- WARNING
+warning: Unnecessary double negation (--) on integer
+  ┌─ /src/warning/wrn.gleam:1:25
+  │
+1 │ pub fn main() { let _ = ----7 }
+  │                         ^^^^ You can safely remove this.

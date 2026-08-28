@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main(x) {\n  let assert <<1, -1, 2, -3>> = x\n}"
+---
+----- SOURCE CODE
+
+pub fn main(x) {
+  let assert <<1, -1, 2, -3>> = x
+}
+
+----- WARNING
+warning: Assertion that will always fail
+  ┌─ /src/warning/wrn.gleam:3:14
+  │
+3 │   let assert <<1, -1, 2, -3>> = x
+  │              ^^^^^^^^^^^^^^^^
+  │                   │      │
+  │                   │      A 1 byte unsigned integer will never match this value
+  │                   A 1 byte unsigned integer will never match this value
+
+We can tell from the code above that the value will never match this
+pattern and that this code will always crash.
+
+Either change the pattern or use `panic` to unconditionally fail.

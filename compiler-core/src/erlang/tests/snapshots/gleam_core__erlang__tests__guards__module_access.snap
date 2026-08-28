@@ -22,9 +22,8 @@ expression: "\n          import hero\n          pub fn main() {\n            let
 -spec main() -> boolean().
 main() ->
     Name = ~"Tony Stark",
-    _value = hero:ironman(),
     case Name of
-        N when N =:= erlang:element(2, _value) ->
+        N when N =:= erlang:element(2, {hero, ~"Tony Stark"}) ->
             true;
 
         _ ->

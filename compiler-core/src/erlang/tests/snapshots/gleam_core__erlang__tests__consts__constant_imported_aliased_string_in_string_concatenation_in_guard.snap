@@ -24,9 +24,8 @@ pub fn go(x) {
 
 -spec go(binary()) -> any().
 go(X) ->
-    _value = some_module:wibble(),
     case X of
-        X@1 when X@1 =:= <<_value/binary, "b"/utf8>> ->
+        X@1 when X@1 =:= <<"a"/utf8, "b"/utf8>> ->
             erlang:error(#{
                 gleam_error => todo,
                 message => ~"`todo` expression evaluated. This code has not yet been implemented.",

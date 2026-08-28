@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub type A {\n  A(Int)\n}\n\nconst a = A()\n"
+---
+----- SOURCE CODE
+
+pub type A {
+  A(Int)
+}
+
+const a = A()
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:6:12
+  │
+6 │ const a = A()
+  │            ^^ I was expecting arguments here
+
+A record must be passed arguments when constructed.

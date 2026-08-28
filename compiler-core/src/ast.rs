@@ -2496,7 +2496,7 @@ pub enum ClauseGuard<Type> {
         expression: Box<Self>,
     },
 
-    LocalVariable {
+    Var {
         location: SrcSpan,
         type_: Type,
         name: EcoString,
@@ -2536,29 +2536,6 @@ pub enum ClauseGuard<Type> {
         location: SrcSpan,
         type_: Type,
     },
-
-    /// This appears after typing the clause guard, for references to
-    /// unqualified constants from other modules. For example:
-    ///
-    /// ```gleam
-    /// import module.{a_constant}
-    ///
-    /// pub fn go(x) {
-    ///   case x {
-    ///     _ if a_constant -> Nil
-    /// //       ^^^^^^^^^^ This one here!
-    ///   }
-    /// }
-    /// ```
-    ///
-    UnqualifiedRemoteConstant {
-        type_: Type,
-        /// The definition location of the constant this is referencing, if any.
-        definition_location: Option<DefinitionLocation>,
-        location: SrcSpan,
-        module: EcoString,
-        name: EcoString,
-    },
 }
 
 impl<A> ClauseGuard<A> {
@@ -2567,11 +2544,10 @@ impl<A> ClauseGuard<A> {
             ClauseGuard::Constant(constant) => constant.location(),
             ClauseGuard::BinaryOperator { location, .. }
             | ClauseGuard::Not { location, .. }
-            | ClauseGuard::LocalVariable { location, .. }
+            | ClauseGuard::Var { location, .. }
             | ClauseGuard::TupleIndex { location, .. }
             | ClauseGuard::ModuleSelect { location, .. }
             | ClauseGuard::Invalid { location, .. }
-            | ClauseGuard::UnqualifiedRemoteConstant { location, .. }
             | ClauseGuard::Block { location, .. } => *location,
             ClauseGuard::FieldAccess {
                 label_location,
@@ -2595,12 +2571,11 @@ impl<A> ClauseGuard<A> {
 
             ClauseGuard::Constant(_)
             | ClauseGuard::Invalid { .. }
-            | ClauseGuard::LocalVariable { .. }
+            | ClauseGuard::Var { .. }
             | ClauseGuard::Not { .. }
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::FieldAccess { .. }
             | ClauseGuard::ModuleSelect { .. }
-            | ClauseGuard::UnqualifiedRemoteConstant { .. }
             | ClauseGuard::Block { .. } => None,
         }
     }
@@ -2609,15 +2584,13 @@ impl<A> ClauseGuard<A> {
 impl TypedClauseGuard {
     pub fn type_(&self) -> Arc<Type> {
         match self {
+            ClauseGuard::Var { type_, .. } => type_.clone(),
+            ClauseGuard::TupleIndex { type_, .. } => type_.clone(),
+            ClauseGuard::FieldAccess { type_, .. } => type_.clone(),
+            ClauseGuard::ModuleSelect { type_, .. } => type_.clone(),
             ClauseGuard::Constant(constant) => constant.type_(),
             ClauseGuard::Block { value, .. } => value.type_(),
-
-            ClauseGuard::LocalVariable { type_, .. }
-            | ClauseGuard::TupleIndex { type_, .. }
-            | ClauseGuard::FieldAccess { type_, .. }
-            | ClauseGuard::ModuleSelect { type_, .. }
-            | ClauseGuard::Invalid { type_, .. }
-            | ClauseGuard::UnqualifiedRemoteConstant { type_, .. } => type_.clone(),
+            ClauseGuard::Invalid { type_, .. } => type_.clone(),
 
             ClauseGuard::Not { .. } => type_::bool(),
 
@@ -2686,28 +2659,23 @@ impl TypedClauseGuard {
                 container: value, ..
             }
             | ClauseGuard::Block { value, .. } => value.find_node(byte_index),
-
             ClauseGuard::Constant(constant) => constant.find_node(byte_index),
-
-            ClauseGuard::LocalVariable { .. }
-            | ClauseGuard::Invalid { .. }
-            | ClauseGuard::UnqualifiedRemoteConstant { .. } => Some(Located::ClauseGuard(self)),
+            ClauseGuard::Var { .. } => Some(Located::ClauseGuard(self)),
+            ClauseGuard::Invalid { .. } => Some(Located::ClauseGuard(self)),
         }
     }
 
     pub(crate) fn referenced_variables(&self) -> im::HashSet<&EcoString> {
         match self {
-            ClauseGuard::LocalVariable { name, .. } => im::hashset![name],
+            ClauseGuard::Var { name, .. } => im::hashset![name],
 
             ClauseGuard::Block { value, .. } => value.referenced_variables(),
             ClauseGuard::Not { expression, .. } => expression.referenced_variables(),
             ClauseGuard::TupleIndex { tuple, .. } => tuple.referenced_variables(),
             ClauseGuard::FieldAccess { container, .. } => container.referenced_variables(),
             ClauseGuard::Constant(constant) => constant.referenced_variables(),
-
-            ClauseGuard::ModuleSelect { .. }
-            | ClauseGuard::Invalid { .. }
-            | ClauseGuard::UnqualifiedRemoteConstant { .. } => im::HashSet::new(),
+            ClauseGuard::ModuleSelect { .. } => im::HashSet::new(),
+            ClauseGuard::Invalid { .. } => im::HashSet::new(),
 
             ClauseGuard::BinaryOperator { left, right, .. } => left
                 .referenced_variables()
@@ -2724,17 +2692,6 @@ impl TypedClauseGuard {
                 },
             ) => value.syntactically_eq(other_value),
             (ClauseGuard::Block { .. }, _) => false,
-
-            (
-                ClauseGuard::UnqualifiedRemoteConstant { name, .. },
-                ClauseGuard::UnqualifiedRemoteConstant {
-                    name: other_name, ..
-                }
-                | ClauseGuard::LocalVariable {
-                    name: other_name, ..
-                },
-            ) => name == other_name,
-            (ClauseGuard::UnqualifiedRemoteConstant { .. }, _) => false,
 
             (
                 ClauseGuard::BinaryOperator { left, right, .. },
@@ -2756,15 +2713,12 @@ impl TypedClauseGuard {
             (ClauseGuard::Not { .. }, _) => false,
 
             (
-                ClauseGuard::LocalVariable { name, .. },
-                ClauseGuard::LocalVariable {
-                    name: other_name, ..
-                }
-                | ClauseGuard::UnqualifiedRemoteConstant {
+                ClauseGuard::Var { name, .. },
+                ClauseGuard::Var {
                     name: other_name, ..
                 },
             ) => name == other_name,
-            (ClauseGuard::LocalVariable { .. }, _) => false,
+            (ClauseGuard::Var { .. }, _) => false,
 
             (
                 ClauseGuard::TupleIndex { index, tuple, .. },
@@ -2820,13 +2774,8 @@ impl TypedClauseGuard {
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::Invalid { .. }
             | ClauseGuard::FieldAccess { .. } => None,
-
-            ClauseGuard::UnqualifiedRemoteConstant {
-                definition_location,
-                ..
-            } => definition_location.clone(),
             ClauseGuard::Constant(constant) => constant.definition_location(),
-            ClauseGuard::LocalVariable {
+            ClauseGuard::Var {
                 definition_location,
                 ..
             } => Some(DefinitionLocation {

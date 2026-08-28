@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 The Gleam contributors
 
-import language/constant.{a_string}
-
 const const_int = 5
 
 const const_float = 1.0
@@ -73,45 +71,5 @@ pub fn constant_aliased_string_in_bit_arrays_test() {
   assert case subject {
     wibble if wibble == message_2 <> "!" -> True
     _ -> False
-  }
-}
-
-pub fn qualified_constant_string_test() {
-  assert constant.a_string == "hello"
-  assert constant.a_string <> ", world" == "hello, world"
-}
-
-pub fn qualified_constant_int_test() {
-  assert constant.a_number == 11
-}
-
-pub fn qualified_constant_constructor_test() {
-  assert constant.a_constructor(11) == constant.a_value
-  assert constant.a_constructor(11) == constant.Wibble(11)
-}
-
-const qualified_message = "message:" <> constant.a_string <> "."
-
-pub fn qualified_string_concat_in_constants_works_the_same_as_in_expressions_test() {
-  assert qualified_message == "message:" <> constant.a_string <> "."
-}
-
-const unqualified_message = "message:" <> a_string <> "."
-
-pub fn unqualified_string_concat_in_constants_works_the_same_as_in_expressions_test() {
-  assert unqualified_message == "message:" <> a_string <> "."
-}
-
-pub fn qualified_string_concat_in_guard_test() {
-  case Nil {
-    _ if "message:" <> constant.a_string <> "." == qualified_message -> Nil
-    _ -> panic
-  }
-}
-
-pub fn unqualified_string_concat_in_guard_test() {
-  case Nil {
-    _ if "message:" <> a_string <> "." == unqualified_message -> Nil
-    _ -> panic
   }
 }

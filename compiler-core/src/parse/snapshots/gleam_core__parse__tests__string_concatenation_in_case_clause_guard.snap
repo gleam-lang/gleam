@@ -86,7 +86,7 @@ expression: "\nlet my_string = \"hello \"\ncase my_string {\n    _ if my_string 
                                     },
                                     operator: Concatenate,
                                     operator_start: 62,
-                                    left: LocalVariable {
+                                    left: Var {
                                         location: SrcSpan {
                                             start: 52,
                                             end: 61,

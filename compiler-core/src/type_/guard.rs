@@ -13,54 +13,18 @@ use crate::{
 };
 use ecow::EcoString;
 use src_span::SrcSpan;
-use std::collections::HashSet;
-
-pub struct InferredGuard {
-    pub guard: TypedClauseGuard,
-    /// These are all the remote constants that are referenced by the guard
-    /// being inferred.
-    /// Remote constants (constants from other modules) are turned into
-    /// function calls on the Erlang target, and those are not allowed in
-    /// clause guards.
-    /// This will be used by code generation to actually bind those needed
-    /// values to variables that come before the case expression so the
-    /// guards can reference these variables.
-    ///
-    /// For example, in this case:
-    ///
-    /// ```gleam
-    /// import other_module.{some_constant}
-    ///
-    /// case wibble {
-    ///   2 if other_module.some_other_constant || some_constant -> todo
-    ///   _ -> todo
-    /// }
-    /// ```
-    ///
-    /// We need to keep track of `(other_module, some_constant)` and
-    /// `(other_module.some_other_constant)`.
-    ///
-    pub remote_constants: HashSet<(EcoString, EcoString)>,
-}
 
 pub struct GuardTyper<'expression_typer, 'env, 'module> {
     typer: &'expression_typer mut ExprTyper<'env, 'module>,
-    remote_constants: HashSet<(EcoString, EcoString)>,
 }
 
 impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'module> {
     pub fn new(typer: &'expression_typer mut ExprTyper<'env, 'module>) -> Self {
-        Self {
-            typer,
-            remote_constants: HashSet::new(),
-        }
+        Self { typer }
     }
 
-    pub fn infer(mut self, guard: UntypedClauseGuard) -> InferredGuard {
-        InferredGuard {
-            guard: self.do_infer(guard),
-            remote_constants: self.remote_constants,
-        }
+    pub fn infer(mut self, guard: UntypedClauseGuard) -> TypedClauseGuard {
+        self.do_infer(guard)
     }
 
     fn do_infer(&mut self, guard: UntypedClauseGuard) -> TypedClauseGuard {
@@ -69,11 +33,7 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
                 unreachable!("untyped guard should never be invalid")
             }
 
-            ClauseGuard::UnqualifiedRemoteConstant { .. } => {
-                unreachable!("unqualified remote constant should never be in untyped ast")
-            }
-
-            ClauseGuard::LocalVariable { location, name, .. } => {
+            ClauseGuard::Var { location, name, .. } => {
                 match self.infer_clause_guard_variable(name, location) {
                     Ok(variable) => variable,
                     Err(error) => {
@@ -141,7 +101,7 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
                 type_: (),
             } => {
                 let container_location = container.location();
-                let result = if let ClauseGuard::LocalVariable { name, location, .. } = *container {
+                let result = if let ClauseGuard::Var { name, location, .. } = *container {
                     // If the container looks like a regular variable, then this
                     // could either be a module select, or a record access.
                     match self.infer_clause_guard_variable(name.clone(), location) {
@@ -190,10 +150,13 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
                 expression,
             } => {
                 let expression = self.do_infer(*expression);
-                if let Err(error) = unify(bool(), expression.type_()) {
-                    self.typer
-                        .problems
-                        .error(convert_unify_error(error, expression.location()));
+                match unify(bool(), expression.type_()) {
+                    Err(error) => {
+                        self.typer
+                            .problems
+                            .error(convert_unify_error(error, expression.location()));
+                    }
+                    _ => (),
                 }
                 ClauseGuard::Not {
                     location,
@@ -202,9 +165,7 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
             }
 
             ClauseGuard::Constant(constant) => {
-                let inferred = self.typer.infer_const(&None, constant);
-                self.remote_constants.extend(inferred.remote_constants);
-                ClauseGuard::Constant(inferred.constant)
+                ClauseGuard::Constant(self.typer.infer_const(&None, constant))
             }
 
             ClauseGuard::Block { value, location } => ClauseGuard::Block {
@@ -352,50 +313,27 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
                 .infer_value_constructor(&None, &name, &location, ValueUsage::Other)?;
 
         // We cannot support all values in guard expressions as the BEAM does not
-        match &constructor.variant {
-            ValueConstructorVariant::LocalVariable {
-                location: definition_location,
-                origin,
-            } => Ok(ClauseGuard::LocalVariable {
-                location,
-                name,
-                origin: origin.clone(),
-                type_: constructor.type_,
-                definition_location: *definition_location,
-            }),
+        let (definition_location, origin) = match &constructor.variant {
+            ValueConstructorVariant::LocalVariable { location, origin } => {
+                (*location, origin.clone())
+            }
 
             ValueConstructorVariant::ModuleFn { .. } | ValueConstructorVariant::Record { .. } => {
-                Err(Error::NonLocalClauseGuardVariable { location, name })
+                return Err(Error::NonLocalClauseGuardVariable { location, name });
             }
 
-            ValueConstructorVariant::ModuleConstant {
-                literal,
-                module,
-                remote_constants,
-                name,
-                ..
-            } => {
-                if *module == self.typer.environment.current_module {
-                    // If we're referencing a constant from the current module,
-                    // then we will referencing the same remote constants it is
-                    // referencing.
-                    self.remote_constants
-                        .extend(remote_constants.iter().cloned());
-                    Ok(ClauseGuard::Constant(literal.clone()))
-                } else {
-                    // If it is a constant from a different module then we need
-                    // to add it to the list of remote constants!
-                    let _ = self.remote_constants.insert((module.clone(), name.clone()));
-                    Ok(ClauseGuard::UnqualifiedRemoteConstant {
-                        type_: literal.type_(),
-                        location,
-                        module: module.clone(),
-                        definition_location: literal.definition_location(),
-                        name: name.clone(),
-                    })
-                }
+            ValueConstructorVariant::ModuleConstant { literal, .. } => {
+                return Ok(ClauseGuard::Constant(literal.clone()));
             }
-        }
+        };
+
+        Ok(ClauseGuard::Var {
+            location,
+            name,
+            origin,
+            type_: constructor.type_,
+            definition_location,
+        })
     }
 
     fn infer_guard_record_access(
@@ -465,12 +403,6 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
                                     module_location,
                                 },
                             );
-
-                            // We have established we are referencing a remote
-                            // constant here!
-                            let _ = self
-                                .remote_constants
-                                .insert((module_name.clone(), label.clone()));
 
                             Ok(ClauseGuard::ModuleSelect {
                                 location,
