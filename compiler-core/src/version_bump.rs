@@ -9,7 +9,7 @@ use crate::{
         ImplementationsInterface, PackageInterface, TypeDefinitionInterface, TypeInterface,
     },
     type_::{
-        ModuleInterface, Opaque, Type, TypeConstructor, TypeVar, TypeVariantConstructors,
+        ModuleInterface, Type, TypeConstructor, TypeVar, TypeVariantConstructors,
         ValueConstructorVariant, expression::Implementations,
     },
 };
@@ -395,9 +395,13 @@ impl<'a> VersionChecker<'a> {
             // compatible with the old type; if it is, the type is "moved", and it is a minor change,
             // since all type annotations still work correctly.
 
-            // If the new type is internal and has constructors, those constructors have been removed
-            // from the public API, which is a breaking change.
-            if type_.publicity.is_internal() && !custom_type.constructors.is_empty() {
+            // If the old type had public constructors, and the new type is either being made internal
+            // or being moved to a different module, that is a major change, since the constructors
+            // are no longer available as the public API of this module (even if they are still
+            // accessible elsewhere in the package).
+            if !custom_type.constructors.is_empty()
+                && (type_.publicity.is_internal() || type_module.name != module.name)
+            {
                 self.record_major_change();
             }
 
@@ -470,13 +474,13 @@ impl<'a> VersionChecker<'a> {
         // If there were previously no constructors (the type was an external type or was opaque)
         // and we have added non-opaque constructors, it's a minor change.
         if custom_type.constructors.is_empty() {
-            if !new_constructors.variants.is_empty() && new_constructors.opaque != Opaque::Opaque {
+            if !new_constructors.variants.is_empty() && !new_constructors.opaque.is_opaque() {
                 self.record_minor_change();
             }
         } else {
             // If there were previously public constructors and we made them opaque, it's a
             // major change.
-            if new_constructors.opaque == Opaque::Opaque {
+            if new_constructors.opaque.is_opaque() {
                 self.record_major_change();
             }
             // Adding a constructor is a major change as well as removing one, as it breaks any
