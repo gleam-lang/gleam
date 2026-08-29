@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Pair = #(Int, String)\n\npub fn main(given: #(Float, String)) {\n  let expected: Pair = given\n}\n"
+---
+----- SOURCE CODE
+
+pub type Pair = #(Int, String)
+
+pub fn main(given: #(Float, String)) {
+  let expected: Pair = given
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:5:24
+  │
+5 │   let expected: Pair = given
+  │                        ^^^^^
+
+Expected type:
+
+    Pair
+
+Found type:
+
+    #(Float, String)
+
+Hint: The expected type expands to:
+
+    #(Int, String)

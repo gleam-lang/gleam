@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 516
+expression: "\npub type UserId = Int\n\npub fn main(\n  expected: Result(UserId, Bool),\n  given: Result(String, Bool),\n) {\n  expected == given\n}\n"
+---
+----- SOURCE CODE
+
+pub type UserId = Int
+
+pub fn main(
+  expected: Result(UserId, Bool),
+  given: Result(String, Bool),
+) {
+  expected == given
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:8:15
+  │
+8 │   expected == given
+  │               ^^^^^
+
+Expected type:
+
+    Result(UserId, Bool)
+
+Found type:
+
+    Result(String, Bool)
+
+Hint: The expected type expands to:
+
+    Result(Int, Bool)

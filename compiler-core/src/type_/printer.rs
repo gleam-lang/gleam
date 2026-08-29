@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2024 The Gleam contributors
 
 use crate::type_::{
-    Type, TypeAliasConstructor, TypeVar, collapse_links, fn_, generalise, tuple, unbound_var, unify,
+    Type, TypeAliasConstructor, TypeVar, collapse_links, fn_, generalise,
+    prelude::is_prelude_module, tuple, unbound_var, unify,
 };
 use bimap::{BiHashMap, BiMap};
 use ecow::{EcoString, eco_format};
@@ -187,8 +188,28 @@ pub struct ResolvedTypeAlias {
     pub arguments: Vec<Arc<Type>>,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum AliasResolutionMode<'a> {
+#[derive(Debug)]
+pub enum TypeAliasExpansion {
+    Normal(EcoString),
+    Expanded(EcoString),
+}
+
+impl TypeAliasExpansion {
+    fn is_expanded(&self) -> bool {
+        matches!(self, Self::Expanded(_))
+    }
+}
+
+impl AsRef<str> for TypeAliasExpansion {
+    fn as_ref(&self) -> &str {
+        match self {
+            Self::Normal(string) | Self::Expanded(string) => string,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum AliasLookupScope<'a> {
     /// Errors and the language server use aliases available in the current
     /// scope, and never discover aliases globally.
     InScope,
@@ -202,13 +223,14 @@ pub enum AliasResolutionMode<'a> {
     },
 }
 
-impl AliasResolutionMode<'_> {
+impl AliasLookupScope<'_> {
     fn excludes(&self, alias: &TypeAlias) -> bool {
-        matches!(
-            self,
-            Self::PublicExcludingModule { package, module }
-                if (*package, *module) == (&alias.alias_package, &alias.alias_module)
-        )
+        match self {
+            Self::PublicExcludingModule { package, module } => {
+                *package == &alias.alias_package && *module == &alias.alias_module
+            }
+            Self::Public | Self::InScope => false,
+        }
     }
 }
 
@@ -479,7 +501,7 @@ impl Names {
                 None => NameContextInformation::Unimported(module, name),
             },
 
-            PrintMode::Normal => {
+            PrintMode::Normal | PrintMode::ExpandCurrentAlias => {
                 let key = (module.clone(), name.clone());
 
                 // There is a local name for this type, use that.
@@ -540,10 +562,10 @@ impl Names {
     pub fn type_alias(
         &self,
         type_: &Type,
-        mode: AliasResolutionMode<'_>,
+        mode: AliasLookupScope<'_>,
     ) -> Option<ResolvedTypeAlias> {
         let scoped_alias = match mode {
-            AliasResolutionMode::InScope => {
+            AliasLookupScope::InScope => {
                 // Errors and the language server first prefer an unqualified
                 // alias, including private aliases in the current module.
                 self.find_matching_type_alias(type_, |alias| {
@@ -556,7 +578,7 @@ impl Names {
                     })
                 })
             }
-            AliasResolutionMode::Public | AliasResolutionMode::PublicExcludingModule { .. } => self
+            AliasLookupScope::Public | AliasLookupScope::PublicExcludingModule { .. } => self
                 .find_matching_type_alias(type_, |alias| {
                     alias.availability == TypeAliasAvailability::Public
                         && self.type_alias_is_in_scope(alias)
@@ -566,7 +588,7 @@ impl Names {
 
         let (alias, arguments) = match scoped_alias {
             Some(alias) => alias,
-            None if matches!(mode, AliasResolutionMode::InScope) => return None,
+            None if mode == AliasLookupScope::InScope => return None,
             None => self.find_unique_global_reexport(type_, mode)?,
         };
 
@@ -589,7 +611,7 @@ impl Names {
     fn find_unique_global_reexport<'a>(
         &'a self,
         type_: &Type,
-        mode: AliasResolutionMode<'_>,
+        mode: AliasLookupScope<'_>,
     ) -> Option<(&'a TypeAlias, Vec<Arc<Type>>)> {
         let aliases = self.type_aliases.get(&TypeAliasKey::new(type_)?)?;
 
@@ -633,6 +655,8 @@ pub enum NameContextInformation<'a> {
 pub enum PrintMode {
     /// Prints the context-specific representation of a type.
     Normal,
+    /// Expands an alias at the current node, preserving aliases in child types.
+    ExpandCurrentAlias,
     /// Prints full detail of the given type, always qualified.
     /// Useful for providing more detail to the user.
     ///
@@ -749,17 +773,23 @@ impl<'a> Printer<'a> {
         // If this type can be represented as an alias,
         // replace the complete type before printing its underlying structure.
         if print_mode == PrintMode::Normal
-            && let Some(type_alias) = self.names.type_alias(type_, AliasResolutionMode::InScope)
+            && let Some(type_alias) = self.names.type_alias(type_, AliasLookupScope::InScope)
         {
-            let name = self
-                .names
-                .named_type(&type_alias.module, &type_alias.name, print_mode);
-            self.print_named_type(name, &type_alias.arguments, buffer, print_mode);
+            let name =
+                self.names
+                    .named_type(&type_alias.module, &type_alias.name, PrintMode::Normal);
+            self.print_named_type(name, &type_alias.arguments, buffer, print_mode, None);
             return;
         }
 
+        let next_print_mode = match print_mode {
+            PrintMode::ExpandCurrentAlias => PrintMode::Normal,
+            print_mode => print_mode,
+        };
+
         match type_ {
             Type::Named {
+                publicity,
                 name,
                 arguments,
                 module,
@@ -767,28 +797,47 @@ impl<'a> Printer<'a> {
             } => {
                 // No alias represented this type, so resolve how the original
                 // named type should be qualified and print it.
-                let name = self.names.named_type(module, name, print_mode);
-                self.print_named_type(name, arguments, buffer, print_mode);
+                let name = self.names.named_type(module, name, next_print_mode);
+                self.print_named_type_name(name, buffer, next_print_mode, Some(publicity));
+                if !arguments.is_empty() {
+                    buffer.push('(');
+                    self.print_arguments(arguments, buffer, next_print_mode);
+                    buffer.push(')');
+                }
             }
 
             Type::Fn { arguments, return_ } => {
                 buffer.push_str("fn(");
-                self.print_arguments(arguments, buffer, print_mode);
+                self.print_arguments(arguments, buffer, next_print_mode);
                 buffer.push_str(") -> ");
-                self.print(return_, buffer, print_mode);
+                self.print(return_, buffer, next_print_mode);
             }
 
-            Type::Var { type_, .. } => match *type_.borrow() {
-                TypeVar::Link { ref type_, .. } => self.print(type_, buffer, print_mode),
+            Type::Var { type_, .. } => match &*type_.borrow() {
+                TypeVar::Link { type_ } => self.print(type_, buffer, print_mode),
                 TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => {
-                    buffer.push_str(&self.type_variable(id));
+                    buffer.push_str(&self.type_variable(*id));
                 }
             },
 
             Type::Tuple { elements, .. } => {
                 buffer.push_str("#(");
-                self.print_arguments(elements, buffer, print_mode);
+                self.print_arguments(elements, buffer, next_print_mode);
                 buffer.push(')');
+            }
+        }
+    }
+
+    fn print_arguments(
+        &mut self,
+        arguments: &[Arc<Type>],
+        buffer: &mut EcoString,
+        print_mode: PrintMode,
+    ) {
+        for (index, argument) in arguments.iter().enumerate() {
+            self.print(argument, buffer, print_mode);
+            if index + 1 < arguments.len() {
+                buffer.push_str(", ");
             }
         }
     }
@@ -799,15 +848,41 @@ impl<'a> Printer<'a> {
         arguments: &[Arc<Type>],
         buffer: &mut EcoString,
         print_mode: PrintMode,
+        publicity: Option<&crate::ast::Publicity>,
+    ) {
+        self.print_named_type_name(name, buffer, print_mode, publicity);
+
+        if !arguments.is_empty() {
+            buffer.push('(');
+            self.print_arguments(arguments, buffer, print_mode);
+            buffer.push(')');
+        }
+    }
+
+    fn print_named_type_name(
+        &mut self,
+        name: NameContextInformation<'_>,
+        buffer: &mut EcoString,
+        print_mode: PrintMode,
+        publicity: Option<&crate::ast::Publicity>,
     ) {
         let (module, name) = match name {
             NameContextInformation::Qualified(module, name) => (Some(module), name),
             NameContextInformation::Unqualified(name) => (None, name),
-            // TODO: indicate that the module is not import and as such
-            // needs to be, as well as how.
-            NameContextInformation::Unimported(module, name) => {
-                (module.split('/').next_back(), name)
+            NameContextInformation::Unimported(_, name)
+                if print_mode == PrintMode::Normal
+                    && publicity.is_some_and(|publicity| !publicity.is_public()) =>
+            {
+                buffer.push_str("@internal ");
+                (None, name)
             }
+            NameContextInformation::Unimported(module, name) => (
+                Some(match print_mode {
+                    PrintMode::Normal | PrintMode::ExpandCurrentAlias => module,
+                    PrintMode::ExpandAliases => module.split('/').next_back().unwrap_or(module),
+                }),
+                name,
+            ),
         };
 
         if let Some(module) = module {
@@ -815,11 +890,270 @@ impl<'a> Printer<'a> {
             buffer.push('.');
         }
         buffer.push_str(name);
+    }
 
-        if !arguments.is_empty() {
-            buffer.push('(');
-            self.print_arguments(arguments, buffer, print_mode);
-            buffer.push(')');
+    /// Print both types, expanding aliases where needed to make their
+    /// difference visible.
+    pub fn print_type_comparison(
+        &mut self,
+        expected: &Type,
+        given: &Type,
+    ) -> (TypeAliasExpansion, TypeAliasExpansion) {
+        self.print_type_comparison_inner(expected, given, true)
+    }
+
+    fn print_type_comparison_inner(
+        &mut self,
+        expected: &Type,
+        given: &Type,
+        top_level: bool,
+    ) -> (TypeAliasExpansion, TypeAliasExpansion) {
+        // same type, no expansion needed
+        if expected.same_as(given) {
+            return (
+                TypeAliasExpansion::Normal(self.print_type(expected)),
+                TypeAliasExpansion::Normal(self.print_type(given)),
+            );
+        }
+
+        // unwrap links
+        if let Type::Var { type_ } = expected
+            && let TypeVar::Link { type_: expected } = &*type_.borrow()
+        {
+            return self.print_type_comparison_inner(expected, given, top_level);
+        }
+        if let Type::Var { type_ } = given
+            && let TypeVar::Link { type_: given } = &*type_.borrow()
+        {
+            return self.print_type_comparison_inner(expected, given, top_level);
+        }
+
+        // for all type parameters of the expected and given types, pair them up
+        // and recursively print their expansion.
+        let children = self.print_type_comparison_children(expected, given);
+
+        // the current-level alias name could also be different, but expand to the same underlying type
+        let expected_alias = self.names.type_alias(expected, AliasLookupScope::InScope);
+        let given_alias = self.names.type_alias(given, AliasLookupScope::InScope);
+
+        let aliases_are_same = match (&expected_alias, &given_alias) {
+            (Some(expected), Some(given)) => {
+                expected.package == given.package
+                    && expected.module == given.module
+                    && expected.name == given.name
+            }
+            (_, _) => false,
+        };
+
+        // If we got an alias on one side that is different, we check if expanding
+        // it would reveal information that would help debug this type mismatch.
+        //
+        // We also specifically expand the expected side at the top level even
+        // when both are the same alias at the top level, so the hint always shows
+        // its underlying structure at least once.
+        let expand_expected_alias = expected_alias.as_ref().is_some_and(|alias| {
+            (top_level || !aliases_are_same)
+                && Self::type_alias_reveals_user_structure(expected, alias)
+        });
+        let expand_given_alias = given_alias.as_ref().is_some_and(|alias| {
+            !aliases_are_same && Self::type_alias_reveals_user_structure(given, alias)
+        });
+
+        let expected_type_hint = self.print_type_comparison_side(
+            expected,
+            expand_expected_alias,
+            children.as_ref().map(|(expected, _)| expected.as_slice()),
+        );
+        let given_type_hint = self.print_type_comparison_side(
+            given,
+            expand_given_alias,
+            children.as_ref().map(|(_, given)| given.as_slice()),
+        );
+
+        (expected_type_hint, given_type_hint)
+    }
+
+    fn print_type_comparison_children(
+        &mut self,
+        expected: &Type,
+        given: &Type,
+    ) -> Option<(Vec<TypeAliasExpansion>, Vec<TypeAliasExpansion>)> {
+        match (expected, given) {
+            (
+                Type::Named {
+                    package: expected_package,
+                    module: expected_module,
+                    name: expected_name,
+                    arguments: expected_arguments,
+                    ..
+                },
+                Type::Named {
+                    package: given_package,
+                    module: given_module,
+                    name: given_name,
+                    arguments: given_arguments,
+                    ..
+                },
+            ) if expected_package == given_package
+                && expected_module == given_module
+                && expected_name == given_name
+                && expected_arguments.len() == given_arguments.len() =>
+            {
+                Some(
+                    expected_arguments
+                        .iter()
+                        .zip(given_arguments)
+                        .map(|(expected, given)| {
+                            self.print_type_comparison_inner(expected, given, false)
+                        })
+                        .unzip(),
+                )
+            }
+            (
+                Type::Fn {
+                    arguments: expected_arguments,
+                    return_: expected_return,
+                },
+                Type::Fn {
+                    arguments: given_arguments,
+                    return_: given_return,
+                    ..
+                },
+            ) if expected_arguments.len() == given_arguments.len() => Some(
+                expected_arguments
+                    .iter()
+                    .zip(given_arguments)
+                    .chain(std::iter::once((expected_return, given_return)))
+                    .map(|(expected, given)| {
+                        self.print_type_comparison_inner(expected, given, false)
+                    })
+                    .unzip(),
+            ),
+            (
+                Type::Tuple {
+                    elements: expected_elements,
+                },
+                Type::Tuple {
+                    elements: given_elements,
+                },
+            ) if expected_elements.len() == given_elements.len() => Some(
+                expected_elements
+                    .iter()
+                    .zip(given_elements)
+                    .map(|(expected, given)| {
+                        self.print_type_comparison_inner(expected, given, false)
+                    })
+                    .unzip(),
+            ),
+            _ => None,
+        }
+    }
+
+    fn print_type_comparison_side(
+        &mut self,
+        type_: &Type,
+        expand_current_alias: bool,
+        children: Option<&[TypeAliasExpansion]>,
+    ) -> TypeAliasExpansion {
+        match children {
+            // if the children are different, this already gives us enough
+            // information to debug this type mismatch, even if this alias
+            // should not be expanded directly.
+            Some(children)
+                if expand_current_alias || children.iter().any(TypeAliasExpansion::is_expanded) =>
+            {
+                TypeAliasExpansion::Expanded(self.print_type_with_children(type_, children))
+            }
+            None if expand_current_alias => {
+                let mut buffer = EcoString::new();
+                self.print(type_, &mut buffer, PrintMode::ExpandCurrentAlias);
+                TypeAliasExpansion::Expanded(buffer)
+            }
+            _ => TypeAliasExpansion::Normal(self.print_type(type_)),
+        }
+    }
+
+    fn print_type_with_children(
+        &mut self,
+        type_: &Type,
+        children: &[TypeAliasExpansion],
+    ) -> EcoString {
+        let mut buffer = EcoString::new();
+        match type_ {
+            Type::Named {
+                publicity,
+                name,
+                module,
+                ..
+            } => {
+                let name = self.names.named_type(module, name, PrintMode::Normal);
+                self.print_named_type_name(name, &mut buffer, PrintMode::Normal, Some(publicity));
+                if !children.is_empty() {
+                    buffer.push('(');
+                    buffer.push_str(&children.iter().map(AsRef::as_ref).join(", "));
+                    buffer.push(')');
+                }
+            }
+            Type::Fn { .. } => {
+                let (return_, arguments) = children
+                    .split_last()
+                    .expect("function type must have a return type");
+                buffer.push_str("fn(");
+                buffer.push_str(&arguments.iter().map(AsRef::as_ref).join(", "));
+                buffer.push_str(") -> ");
+                buffer.push_str(return_.as_ref());
+            }
+            Type::Var { type_ } => match &*type_.borrow() {
+                TypeVar::Link { type_ } => return self.print_type_with_children(type_, children),
+                TypeVar::Unbound { id } | TypeVar::Generic { id } => {
+                    buffer.push_str(&self.type_variable(*id));
+                }
+            },
+            Type::Tuple { .. } => {
+                buffer.push_str("#(");
+                buffer.push_str(&children.iter().map(AsRef::as_ref).join(", "));
+                buffer.push(')');
+            }
+        }
+        buffer
+    }
+
+    fn type_alias_reveals_user_structure(type_: &Type, type_alias: &ResolvedTypeAlias) -> bool {
+        match type_ {
+            Type::Named {
+                publicity,
+                module,
+                arguments,
+                ..
+            } => {
+                // Prelude types communicate a familiar structural category,
+                // such as List or Int, even when they have no type arguments.
+                if is_prelude_module(module) {
+                    return true;
+                }
+
+                // An internal implementation type is not useful debugging
+                // information, even if it could be printed with a marker.
+                if !publicity.is_public() {
+                    return false;
+                }
+
+                // Replacing one visible nominal name with another only helps
+                // when the expansion also reveals type arguments hidden by the
+                // alias.
+                arguments.len() != type_alias.arguments.len()
+                    || arguments
+                        .iter()
+                        .zip(&type_alias.arguments)
+                        .any(|(underlying, argument)| !underlying.same_as(argument))
+            }
+            Type::Fn { .. } | Type::Tuple { .. } => true,
+            Type::Var { type_ } => match &*type_.borrow() {
+                TypeVar::Link { type_ } => {
+                    Self::type_alias_reveals_user_structure(type_, type_alias)
+                }
+                TypeVar::Unbound { .. } | TypeVar::Generic { .. } => false,
+            },
         }
     }
 
@@ -835,20 +1169,6 @@ impl<'a> Printer<'a> {
         match module {
             Some(module) => eco_format!("{module}.{name}"),
             None => name.into(),
-        }
-    }
-
-    fn print_arguments(
-        &mut self,
-        arguments: &[Arc<Type>],
-        type_str: &mut EcoString,
-        print_mode: PrintMode,
-    ) {
-        for (i, argument) in arguments.iter().enumerate() {
-            self.print(argument, type_str, print_mode);
-            if i < arguments.len() - 1 {
-                type_str.push_str(", ");
-            }
         }
     }
 
@@ -950,6 +1270,24 @@ fn test_shadowed_prelude_type() {
     };
 
     assert_eq!(printer.print_type(&type_), "gleam.Int");
+}
+
+#[test]
+fn test_unimported_internal_type_is_marked() {
+    let names = Names::new();
+    let mut printer = Printer::new(&names);
+    let type_ = Type::Named {
+        name: "Connection".into(),
+        arguments: vec![],
+        module: "wisp/internal".into(),
+        publicity: crate::ast::Publicity::Internal {
+            attribute_location: None,
+        },
+        package: "wisp".into(),
+        inferred_variant: None,
+    };
+
+    assert_eq!(printer.print_type(&type_), "@internal Connection");
 }
 
 #[test]
@@ -1156,7 +1494,7 @@ fn nested_module() {
         inferred_variant: None,
     };
 
-    assert_eq!(printer.print_type(&type_), "three.Cat");
+    assert_eq!(printer.print_type(&type_), "one/two/three.Cat");
 }
 
 #[test]
