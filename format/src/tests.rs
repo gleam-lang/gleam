@@ -3673,6 +3673,17 @@ fn function_captures_test() {
 }
 "
     );
+
+    assert_format_rewrite!(
+        "pub fn main() {
+  run()(_)
+}
+",
+        "pub fn main() {
+  run()(_)
+}
+"
+    );
 }
 
 #[test]

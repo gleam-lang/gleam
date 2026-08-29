@@ -2078,6 +2078,13 @@ impl<'a, 'doc> Formatter<'a> {
             panic!("Function capture body found not to be a call in the formatter")
         };
 
+        let flag = match &**fun {
+            UntypedExpr::Fn {arguments, .. } =>
+                arguments.iter().any(|a| a.is_capture_hole()),
+            UntypedExpr::Var { .. } => true,
+            _ => false
+        };
+
         match (position, arguments.as_slice()) {
             // The capture has a single unlabelled hole:
             //
@@ -2092,7 +2099,9 @@ impl<'a, 'doc> Formatter<'a> {
             (
                 FnCapturePosition::RightHandSideOfPipe | FnCapturePosition::EverywhereElse,
                 [argument],
-            ) if argument.is_capture_hole() && argument.label.is_none() => self.expr(arena, fun),
+            ) if argument.is_capture_hole() && argument.label.is_none() &&
+                flag
+                => self.expr(arena, fun),
 
             // The capture is on the right hand side of a pipe and its first
             // argument it an unlabelled capture hole:
