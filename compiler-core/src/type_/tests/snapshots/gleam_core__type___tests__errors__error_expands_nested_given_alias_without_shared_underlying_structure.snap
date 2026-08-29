@@ -1,25 +1,22 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 532
-expression: "\npub type UserId = Int\n\npub fn main(\n  expected: Result(String, Bool),\n  given: Result(UserId, Bool),\n) {\n  expected == given\n}\n"
+expression: "\npub type UserId =\n  Int\n\npub fn main(expected: Result(String, Bool), given: Result(UserId, Bool)) {\n  expected == given\n}\n"
 ---
 ----- SOURCE CODE
 
-pub type UserId = Int
+pub type UserId =
+  Int
 
-pub fn main(
-  expected: Result(String, Bool),
-  given: Result(UserId, Bool),
-) {
+pub fn main(expected: Result(String, Bool), given: Result(UserId, Bool)) {
   expected == given
 }
 
 
 ----- ERROR
 error: Type mismatch
-  ┌─ /src/one/two.gleam:8:15
+  ┌─ /src/one/two.gleam:6:15
   │
-8 │   expected == given
+6 │   expected == given
   │               ^^^^^
 
 Expected type:

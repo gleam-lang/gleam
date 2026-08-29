@@ -13,7 +13,8 @@ pub type Request(a)
 import request
 import some/deep/implementation
 
-pub type Request = request.Request(implementation.Connection)
+pub type Request =
+  request.Request(implementation.Connection)
 
 -- main.gleam
 

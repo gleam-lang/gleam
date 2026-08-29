@@ -5,16 +5,22 @@ expression: output
 ---- SOURCE CODE
 -- thepackage/internal.gleam
 
-@internal pub type Wibble(a)
-@internal pub type Wobble(a)
+@internal
+pub type Wibble(a)
+
+@internal
+pub type Wobble(a)
 
 
 -- thepackage/types.gleam
 
 import thepackage/internal
 
-pub type Wibble(a) = internal.Wibble(a)
-pub type First(a) = internal.Wobble(a)
+pub type Wibble(a) =
+  internal.Wibble(a)
+
+pub type First(a) =
+  internal.Wobble(a)
 
 
 -- thepackage/api.gleam
@@ -34,7 +40,8 @@ pub fn wobble() -> types.First(Int) {
 
 import thepackage/internal
 
-pub type Second(a) = internal.Wobble(a)
+pub type Second(a) =
+  internal.Wobble(a)
 
 
 -- main.gleam
