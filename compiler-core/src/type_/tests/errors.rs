@@ -2653,8 +2653,11 @@ const my_wobble: wibble.Wobble = Nil
 #[test]
 fn error_uses_unqualified_imported_type_alias() {
     assert_module_error!(
-        ("aliases", "pub type Aliased =
-  Result(Int, String)"),
+        (
+            "aliases",
+            "pub type Aliased =
+  Result(Int, String)"
+        ),
         r#"
 import aliases.{type Aliased}
 
