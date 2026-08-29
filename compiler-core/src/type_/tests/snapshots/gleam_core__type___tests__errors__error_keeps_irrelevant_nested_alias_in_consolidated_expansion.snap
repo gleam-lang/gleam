@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Connection = List(Int)\npub type Error = List(String)\npub type Request = Result(Connection, Error)\n\npub fn main(expected: Request, given: Result(List(Float), Error)) {\n  expected == given\n}\n"
+---
+----- SOURCE CODE
+
+pub type Connection = List(Int)
+pub type Error = List(String)
+pub type Request = Result(Connection, Error)
+
+pub fn main(expected: Request, given: Result(List(Float), Error)) {
+  expected == given
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:7:15
+  │
+7 │   expected == given
+  │               ^^^^^
+
+Expected type:
+
+    Request
+
+Found type:
+
+    Result(List(Float), Error)
+
+Hint: The expected type expands to:
+
+    Result(List(Int), Error)

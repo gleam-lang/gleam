@@ -15,7 +15,7 @@ use crate::{
     },
     type_::{
         Deprecation, PRELUDE_MODULE_NAME, PRELUDE_PACKAGE_NAME, Type, TypeVar,
-        printer::{AliasResolutionMode, Names, PrintMode},
+        printer::{AliasLookupScope, Names, PrintMode},
     },
 };
 use pretty_arena::*;
@@ -512,8 +512,8 @@ impl<'a, 'doc> Printer<'a> {
         print_mode: PrintMode,
     ) -> Document<'a, 'doc> {
         let alias_mode = match print_mode {
-            PrintMode::Normal => AliasResolutionMode::Public,
-            PrintMode::ExpandAliases => AliasResolutionMode::PublicExcludingModule {
+            PrintMode::Normal | PrintMode::ExpandCurrentAlias => AliasLookupScope::Public,
+            PrintMode::ExpandAliases => AliasLookupScope::PublicExcludingModule {
                 package: &self.package,
                 module: &self.module,
             },
