@@ -3,38 +3,92 @@
 
 use super::{VersionBump, detect_changes};
 use crate::{
+    analyse::TargetSupport,
+    build::{Origin, Target},
+    config::PackageConfig,
     package_interface::{ModuleInterface, PackageInterface},
-    type_::tests::compile_module,
+    type_::{PRELUDE_MODULE_NAME, build_prelude},
+    uid::UniqueIdGenerator,
+    warning::{TypeWarningEmitter, VectorWarningEmitterIO, WarningEmitter},
+};
+use camino::Utf8PathBuf;
+use ecow::EcoString;
+use src_span::LineNumbers;
+use std::{
+    collections::{HashMap, HashSet},
+    rc::Rc,
 };
 
 fn get_bump(old: &str, new: &str) -> VersionBump {
-    let old_module =
-        compile_module("the_module", old, None, vec![]).expect("Failed to compile old module");
+    get_bumps(vec![("the_module", old)], vec![("the_module", new)])
+}
 
-    let new_module =
-        compile_module("the_module", new, None, vec![]).expect("Failed to compile new module");
+fn get_bumps(old_modules: Vec<(&str, &str)>, new_modules: Vec<(&str, &str)>) -> VersionBump {
+    let old_modules = compile_modules(old_modules)
+        .into_iter()
+        .filter(|(_, module)| !module.is_internal)
+        .map(|(name, module)| (name, ModuleInterface::from_interface(&module)))
+        .collect();
+
+    let new_modules = compile_modules(new_modules);
 
     let package_interface = PackageInterface {
         name: "thepackage".into(),
         version: "1.0.0".into(),
         gleam_version_constraint: None,
-        modules: [(
-            "the_module".into(),
-            ModuleInterface::from_interface(&old_module.type_info),
-        )]
-        .into(),
+        modules: old_modules,
     };
 
-    let modules = im::hashmap! {
-        "the_module".into() => new_module.type_info
-    };
+    detect_changes(package_interface, &new_modules)
+}
 
-    detect_changes(package_interface, &modules)
+fn compile_modules(
+    modules: Vec<(&str, &str)>,
+) -> im::HashMap<EcoString, crate::type_::ModuleInterface> {
+    let ids = UniqueIdGenerator::new();
+    let mut module_interfaces = im::HashMap::new();
+    let emitter = WarningEmitter::new(Rc::new(VectorWarningEmitterIO::default()));
+    let _ = module_interfaces.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
+
+    for (name, src) in modules {
+        let parsed = crate::parse::parse_module(Utf8PathBuf::from("test/path"), src, &emitter)
+            .expect("syntax error");
+        let mut ast = parsed.module;
+        ast.name = name.into();
+
+        let line_numbers = LineNumbers::new(src);
+        let mut config = PackageConfig::default();
+        config.name = "thepackage".into();
+
+        let module = crate::analyse::ModuleAnalyzerConstructor::<()> {
+            target: Target::Erlang,
+            ids: &ids,
+            origin: Origin::Src,
+            importable_modules: &module_interfaces,
+            warnings: &TypeWarningEmitter::null(),
+            direct_dependencies: &HashMap::new(),
+            dev_dependencies: &HashSet::new(),
+            target_support: TargetSupport::Enforced,
+            package_config: &config,
+        }
+        .infer_module(ast, line_numbers, "".into())
+        .expect("should successfully infer");
+
+        _ = module_interfaces.insert(name.into(), module.type_info);
+    }
+
+    _ = module_interfaces.remove(PRELUDE_MODULE_NAME);
+    module_interfaces
 }
 
 macro_rules! assert_bump {
     ($old:literal, $new:literal, $bump:ident) => {
         let bump = get_bump($old, $new);
+        assert_eq!(bump, VersionBump::$bump);
+    };
+
+    ($(($old_name:literal, $old_src:literal)),+; $(($new_name:literal, $new_src:literal)),+; $bump:ident) => {
+        let bump = get_bumps(vec![$(($old_name, $old_src)),*], vec![$(($new_name, $new_src)),*]);
         assert_eq!(bump, VersionBump::$bump);
     };
 }
@@ -1502,5 +1556,144 @@ fn function_parameter_length_change_is_major2() {
         "pub fn x() { fn(a, b, c) { a + b + c } }",
         "pub fn x() { fn(a, b) { a + b } }",
         Major
+    );
+}
+
+#[test]
+fn adding_public_module_is_minor() {
+    assert_bump!(
+        ("wibble", "pub type Wibble");
+        ("wibble", "pub type Wibble"), ("wobble", "pub type Wobble");
+        Minor
+    );
+}
+
+#[test]
+fn removing_public_module_is_major() {
+    assert_bump!(
+        ("wibble", "pub type Wibble"), ("wobble", "pub type Wobble");
+        ("wibble", "pub type Wibble");
+        Major
+    );
+}
+
+#[test]
+fn adding_internal_module_is_patch() {
+    assert_bump!(
+        ("wibble", "pub type Wibble");
+        ("wibble", "pub type Wibble"), ("thepackage/internal", "pub type Wobble");
+        Patch
+    );
+}
+
+#[test]
+fn removing_internal_module_is_patch() {
+    assert_bump!(
+        ("wibble", "pub type Wibble"), ("thepackage/internal", "pub type Wobble");
+        ("wibble", "pub type Wibble");
+        Patch
+    );
+}
+
+#[test]
+fn moving_type_to_internal_is_major() {
+    assert_bump!(
+        "pub type Wibble { Wibble Wobble }",
+        "
+@internal
+pub type Wobble { Wibble Wobble }
+
+pub type Wibble = Wobble
+",
+        Major
+    );
+}
+
+#[test]
+fn moving_opaque_type_to_internal_is_minor() {
+    assert_bump!(
+        "pub opaque type Wibble { Wibble Wobble }",
+        "
+@internal
+pub type Wobble { Wibble Wobble }
+
+pub type Wibble = Wobble
+",
+        Minor
+    );
+}
+
+#[test]
+fn moving_type_with_constructors_across_modules_is_major() {
+    assert_bump!(
+        ("wibble", "pub type Wibble { Wibble Wobble }");
+        ("wobble", "pub type Wibble { Wibble Wobble }"),
+        (
+            "wibble",
+            "
+import wobble
+pub type Wibble = wobble.Wibble"
+        );
+        Major
+    );
+}
+
+#[test]
+fn moving_type_without_constructors_across_modules_is_minor() {
+    assert_bump!(
+        ("wibble", "pub type Wibble");
+        ("wobble", "pub type Wibble"),
+        (
+            "wibble",
+            "
+import wobble
+pub type Wibble = wobble.Wibble"
+        );
+        Minor
+    );
+}
+
+#[test]
+fn moving_opaque_type_across_modules_is_minor() {
+    assert_bump!(
+        ("wibble", "pub opaque type Wibble { Wibble Wobble }");
+        ("wobble", "pub type Wibble { Wibble Wobble }"),
+        (
+            "wibble",
+            "
+import wobble
+pub type Wibble = wobble.Wibble"
+        );
+        Minor
+    );
+}
+
+#[test]
+fn moving_type_without_constructors_to_internal_module_is_minor() {
+    assert_bump!(
+        ("wibble", "pub type Wibble");
+        ("thepackage/internal", "pub type Wibble"),
+        (
+            "wibble",
+            "
+import thepackage/internal
+pub type Wibble = internal.Wibble"
+        );
+        Minor
+    );
+}
+
+#[test]
+fn moving_opaque_type_to_internal_module_is_minor() {
+    assert_bump!(
+        ("wibble", "pub opaque type Wibble { Wibble Wobble }");
+        ("thepackage/internal", "pub type Wibble { Wibble Wobble }"),
+        (
+            "wibble",
+            "
+import thepackage/internal
+pub type Wibble = internal.Wibble"
+        );
+        Minor
     );
 }

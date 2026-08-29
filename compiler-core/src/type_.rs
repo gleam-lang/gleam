@@ -1073,6 +1073,15 @@ pub enum Opaque {
     NotOpaque,
 }
 
+impl Opaque {
+    pub fn is_opaque(&self) -> bool {
+        match self {
+            Self::Opaque => true,
+            Self::NotOpaque => false,
+        }
+    }
+}
+
 /// Information on the constructors of a custom type.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct TypeVariantConstructors {
