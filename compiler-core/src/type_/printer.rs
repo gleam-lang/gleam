@@ -784,7 +784,7 @@ impl<'a> Printer<'a> {
 
         let next_print_mode = match print_mode {
             PrintMode::ExpandCurrentAlias => PrintMode::Normal,
-            print_mode => print_mode,
+            PrintMode::Normal | PrintMode::ExpandAliases => print_mode,
         };
 
         match type_ {
