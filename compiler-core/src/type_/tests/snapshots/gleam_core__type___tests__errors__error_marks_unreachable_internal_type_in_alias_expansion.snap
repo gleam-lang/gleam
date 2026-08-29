@@ -4,7 +4,8 @@ expression: "\nimport request\nimport wisp\n\npub fn main(expected: wisp.Request
 ---
 ----- SOURCE CODE
 -- wisp/internal.gleam
-@internal pub type Connection
+@internal
+pub type Connection
 
 -- request.gleam
 pub type Request(a)
@@ -13,7 +14,8 @@ pub type Request(a)
 import request
 import wisp/internal
 
-pub type Request = request.Request(internal.Connection)
+pub type Request =
+  request.Request(internal.Connection)
 
 -- main.gleam
 

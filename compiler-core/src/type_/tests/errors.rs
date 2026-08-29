@@ -326,7 +326,8 @@ fn error_uses_type_alias_with_internal_generic_argument() {
 @internal
 pub type Connection
 
-pub type Request = List(Connection)
+pub type Request =
+  List(Connection)
 
 pub fn main(request: Request) {
   request == [1]
@@ -340,14 +341,18 @@ fn error_does_not_expand_alias_to_internal_generic_type() {
     assert_module_error!(
         (
             "smol/internal",
-            "@internal pub type ReadableStream(a)
-@internal pub type Uint8Array"
+            "@internal
+pub type ReadableStream(a)
+
+@internal
+pub type Uint8Array"
         ),
         (
             "smol",
             "import smol/internal
 
-pub type ReadableStream = internal.ReadableStream(internal.Uint8Array)"
+pub type ReadableStream =
+  internal.ReadableStream(internal.Uint8Array)"
         ),
         "
 import smol
@@ -362,15 +367,22 @@ pub fn main(stream: smol.ReadableStream) {
 #[test]
 fn error_uses_reachable_alias_for_nested_internal_type() {
     assert_module_error!(
-        ("wisp/internal", "@internal pub type Connection"),
+        (
+            "wisp/internal",
+            "@internal
+pub type Connection"
+        ),
         ("request", "pub type Request(a)"),
         (
             "wisp",
             "import request
 import wisp/internal
 
-pub type Connection = internal.Connection
-pub type Request = request.Request(Connection)"
+pub type Connection =
+  internal.Connection
+
+pub type Request =
+  request.Request(Connection)"
         ),
         "
 import request as req
@@ -386,14 +398,19 @@ pub fn main(expected: wisp.Request, given: req.Request(String)) {
 #[test]
 fn error_marks_unreachable_internal_type_in_alias_expansion() {
     assert_module_error!(
-        ("wisp/internal", "@internal pub type Connection"),
+        (
+            "wisp/internal",
+            "@internal
+pub type Connection"
+        ),
         ("request", "pub type Request(a)"),
         (
             "wisp",
             "import request
 import wisp/internal
 
-pub type Request = request.Request(internal.Connection)"
+pub type Request =
+  request.Request(internal.Connection)"
         ),
         "
 import request
@@ -416,7 +433,8 @@ fn error_fully_qualifies_unreachable_public_type() {
             "import request
 import some/deep/implementation
 
-pub type Request = request.Request(implementation.Connection)"
+pub type Request =
+  request.Request(implementation.Connection)"
         ),
         "
 import request
@@ -434,7 +452,9 @@ fn error_does_not_expand_alias_that_only_renames_nominal_type() {
     assert_module_error!(
         "
 pub type Connection
-pub type ConnectionAlias = Connection
+
+pub type ConnectionAlias =
+  Connection
 
 pub fn main(connection: ConnectionAlias) {
   connection == \"not a connection\"
@@ -447,7 +467,8 @@ pub fn main(connection: ConnectionAlias) {
 fn error_expands_top_level_expected_alias_when_underlying_shapes_differ() {
     assert_module_error!(
         "
-pub type UserId = Int
+pub type UserId =
+  Int
 
 pub fn main(user_id: UserId) {
   user_id == \"not a user ID\"
@@ -460,7 +481,8 @@ pub fn main(user_id: UserId) {
 fn error_does_not_expand_alias_for_non_function_shape_error() {
     assert_module_error!(
         "
-pub type Request = List(Int)
+pub type Request =
+  List(Int)
 
 pub fn main(request: Request) {
   request()
@@ -473,7 +495,8 @@ pub fn main(request: Request) {
 fn error_does_not_expand_alias_when_accessing_field_on_type_with_no_fields() {
     assert_module_error!(
         "
-pub type Request = List(Int)
+pub type Request =
+  List(Int)
 
 pub fn main(request: Request) {
   request.connection
@@ -486,7 +509,8 @@ pub fn main(request: Request) {
 fn error_expands_top_level_expected_alias_with_different_arguments() {
     assert_module_error!(
         "
-pub type Box(a) = List(a)
+pub type Box(a) =
+  List(a)
 
 pub fn main(expected: Box(Int), given: Box(String)) {
   expected == given
@@ -499,12 +523,10 @@ pub fn main(expected: Box(Int), given: Box(String)) {
 fn error_does_not_expand_alias_outside_differing_subtree() {
     assert_module_error!(
         "
-pub type Request = List(Int)
+pub type Request =
+  List(Int)
 
-pub fn main(
-  expected: Result(Request, Int),
-  given: Result(Request, String),
-) {
+pub fn main(expected: Result(Request, Int), given: Result(Request, String)) {
   expected == given
 }
 "
@@ -515,12 +537,10 @@ pub fn main(
 fn error_expands_nested_expected_alias_without_shared_underlying_structure() {
     assert_module_error!(
         "
-pub type UserId = Int
+pub type UserId =
+  Int
 
-pub fn main(
-  expected: Result(UserId, Bool),
-  given: Result(String, Bool),
-) {
+pub fn main(expected: Result(UserId, Bool), given: Result(String, Bool)) {
   expected == given
 }
 "
@@ -531,12 +551,10 @@ pub fn main(
 fn error_expands_nested_given_alias_without_shared_underlying_structure() {
     assert_module_error!(
         "
-pub type UserId = Int
+pub type UserId =
+  Int
 
-pub fn main(
-  expected: Result(String, Bool),
-  given: Result(UserId, Bool),
-) {
+pub fn main(expected: Result(String, Bool), given: Result(UserId, Bool)) {
   expected == given
 }
 "
@@ -547,7 +565,8 @@ pub fn main(
 fn error_expands_alias_inside_differing_subtree() {
     assert_module_error!(
         "
-pub type Request = List(Int)
+pub type Request =
+  List(Int)
 
 pub fn main(
   expected: Result(Request, String),
@@ -563,8 +582,11 @@ pub fn main(
 fn error_expands_nested_alias_at_structurally_differing_child() {
     assert_module_error!(
         "
-pub type Connection = List(Int)
-pub type Request = Result(Connection, String)
+pub type Connection =
+  List(Int)
+
+pub type Request =
+  Result(Connection, String)
 
 pub fn main(expected: Request, given: Result(List(Float), String)) {
   expected == given
@@ -577,9 +599,14 @@ pub fn main(expected: Request, given: Result(List(Float), String)) {
 fn error_keeps_irrelevant_nested_alias_in_consolidated_expansion() {
     assert_module_error!(
         "
-pub type Connection = List(Int)
-pub type Error = List(String)
-pub type Request = Result(Connection, Error)
+pub type Connection =
+  List(Int)
+
+pub type Error =
+  List(String)
+
+pub type Request =
+  Result(Connection, Error)
 
 pub fn main(expected: Request, given: Result(List(Float), Error)) {
   expected == given
@@ -592,8 +619,11 @@ pub fn main(expected: Request, given: Result(List(Float), Error)) {
 fn error_expands_multiple_type_aliases() {
     assert_module_error!(
         "
-pub type Expected = List(Int)
-pub type Given = List(String)
+pub type Expected =
+  List(Int)
+
+pub type Given =
+  List(String)
 
 pub fn main(given: Given) {
   let expected: Expected = given
@@ -606,7 +636,8 @@ pub fn main(given: Given) {
 fn error_expands_function_alias_with_shared_underlying_structure() {
     assert_module_error!(
         "
-pub type Callback = fn(Int) -> Int
+pub type Callback =
+  fn(Int) -> Int
 
 pub fn main(given: fn(String) -> Int) {
   let expected: Callback = given
@@ -619,7 +650,8 @@ pub fn main(given: fn(String) -> Int) {
 fn error_expands_tuple_alias_with_shared_underlying_structure() {
     assert_module_error!(
         "
-pub type Pair = #(Int, String)
+pub type Pair =
+  #(Int, String)
 
 pub fn main(given: #(Float, String)) {
   let expected: Pair = given
@@ -2621,7 +2653,8 @@ const my_wobble: wibble.Wobble = Nil
 #[test]
 fn error_uses_unqualified_imported_type_alias() {
     assert_module_error!(
-        ("aliases", "pub type Aliased = Result(Int, String)"),
+        ("aliases", "pub type Aliased =
+  Result(Int, String)"),
         r#"
 import aliases.{type Aliased}
 

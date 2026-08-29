@@ -544,7 +544,8 @@ fn hover_expression_uses_type_alias_with_internal_generic_argument() {
 @internal
 pub type Connection
 
-pub type Request = List(Connection)
+pub type Request =
+  List(Connection)
 
 pub fn main(request: Request) {
   request
