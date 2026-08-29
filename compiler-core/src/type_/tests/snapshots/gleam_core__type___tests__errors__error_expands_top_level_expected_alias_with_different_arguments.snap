@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Box(a) = List(a)\n\npub fn main(expected: Box(Int), given: Box(String)) {\n  expected == given\n}\n"
+---
+----- SOURCE CODE
+
+pub type Box(a) = List(a)
+
+pub fn main(expected: Box(Int), given: Box(String)) {
+  expected == given
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:5:15
+  │
+5 │   expected == given
+  │               ^^^^^
+
+Expected type:
+
+    Box(Int)
+
+Found type:
+
+    Box(String)
+
+Hint: The expected type expands to:
+
+    List(Int)

@@ -28,3 +28,7 @@ Expected type:
 Found type:
 
     List(Int)
+
+Hint: The expected type expands to:
+
+    List(Connection)
