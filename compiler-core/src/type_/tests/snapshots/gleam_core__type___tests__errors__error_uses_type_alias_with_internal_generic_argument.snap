@@ -1,13 +1,14 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\n@internal\npub type Connection\n\npub type Request = List(Connection)\n\npub fn main(request: Request) {\n  request == [1]\n}\n"
+expression: "\n@internal\npub type Connection\n\npub type Request =\n  List(Connection)\n\npub fn main(request: Request) {\n  request == [1]\n}\n"
 ---
 ----- SOURCE CODE
 
 @internal
 pub type Connection
 
-pub type Request = List(Connection)
+pub type Request =
+  List(Connection)
 
 pub fn main(request: Request) {
   request == [1]
@@ -16,9 +17,9 @@ pub fn main(request: Request) {
 
 ----- ERROR
 error: Type mismatch
-  ┌─ /src/one/two.gleam:8:14
+  ┌─ /src/one/two.gleam:9:14
   │
-8 │   request == [1]
+9 │   request == [1]
   │              ^^^
 
 Expected type:

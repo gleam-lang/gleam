@@ -4,7 +4,8 @@ expression: "\nimport aliases.{type Aliased}\n\npub fn main() {\n  let value: Al
 ---
 ----- SOURCE CODE
 -- aliases.gleam
-pub type Aliased = Result(Int, String)
+pub type Aliased =
+  Result(Int, String)
 
 -- main.gleam
 
