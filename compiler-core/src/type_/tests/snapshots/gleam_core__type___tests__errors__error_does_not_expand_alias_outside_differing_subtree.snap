@@ -1,24 +1,22 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\npub type Request = List(Int)\n\npub fn main(\n  expected: Result(Request, Int),\n  given: Result(Request, String),\n) {\n  expected == given\n}\n"
+expression: "\npub type Request =\n  List(Int)\n\npub fn main(expected: Result(Request, Int), given: Result(Request, String)) {\n  expected == given\n}\n"
 ---
 ----- SOURCE CODE
 
-pub type Request = List(Int)
+pub type Request =
+  List(Int)
 
-pub fn main(
-  expected: Result(Request, Int),
-  given: Result(Request, String),
-) {
+pub fn main(expected: Result(Request, Int), given: Result(Request, String)) {
   expected == given
 }
 
 
 ----- ERROR
 error: Type mismatch
-  ┌─ /src/one/two.gleam:8:15
+  ┌─ /src/one/two.gleam:6:15
   │
-8 │   expected == given
+6 │   expected == given
   │               ^^^^^
 
 Expected type:

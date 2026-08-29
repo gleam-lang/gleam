@@ -1,11 +1,11 @@
 ---
 source: compiler-core/src/docs/tests.rs
-assertion_line: 1216
 expression: output
 ---
 ---- SOURCE CODE
 -- thepackage/aliases.gleam
-pub type Aliased = Result(Int, String)
+pub type Aliased =
+  Result(Int, String)
 
 -- main.gleam
 

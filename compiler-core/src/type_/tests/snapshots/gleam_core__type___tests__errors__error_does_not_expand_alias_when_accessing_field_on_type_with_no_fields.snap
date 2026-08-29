@@ -1,10 +1,11 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\npub type Request = List(Int)\n\npub fn main(request: Request) {\n  request.connection\n}\n"
+expression: "\npub type Request =\n  List(Int)\n\npub fn main(request: Request) {\n  request.connection\n}\n"
 ---
 ----- SOURCE CODE
 
-pub type Request = List(Int)
+pub type Request =
+  List(Int)
 
 pub fn main(request: Request) {
   request.connection
@@ -13,9 +14,9 @@ pub fn main(request: Request) {
 
 ----- ERROR
 error: Unknown record field
-  ┌─ /src/one/two.gleam:5:11
+  ┌─ /src/one/two.gleam:6:11
   │
-5 │   request.connection
+6 │   request.connection
   │           ^^^^^^^^^^ This field does not exist
 
 The value being accessed has this type:

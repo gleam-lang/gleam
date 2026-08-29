@@ -10,7 +10,8 @@ pub type Wibble(a)
 
 import thepackage/internal
 
-pub type Wobble(a) = internal.Wibble(List(a))
+pub type Wobble(a) =
+  internal.Wibble(List(a))
 
 pub fn wobble(value: internal.Wibble(List(Int))) -> Wobble(Int) {
   value

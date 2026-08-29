@@ -1,12 +1,13 @@
 ---
 source: language-server/src/tests/hover.rs
-expression: "\n@internal\npub type Connection\n\npub type Request = List(Connection)\n\npub fn main(request: Request) {\n  request\n}\n"
+expression: "\n@internal\npub type Connection\n\npub type Request =\n  List(Connection)\n\npub fn main(request: Request) {\n  request\n}\n"
 ---
 
 @internal
 pub type Connection
 
-pub type Request = List(Connection)
+pub type Request =
+  List(Connection)
 
 pub fn main(request: Request) {
   request

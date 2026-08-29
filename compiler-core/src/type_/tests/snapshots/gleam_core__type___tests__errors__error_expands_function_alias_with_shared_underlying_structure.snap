@@ -1,10 +1,11 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\npub type Callback = fn(Int) -> Int\n\npub fn main(given: fn(String) -> Int) {\n  let expected: Callback = given\n}\n"
+expression: "\npub type Callback =\n  fn(Int) -> Int\n\npub fn main(given: fn(String) -> Int) {\n  let expected: Callback = given\n}\n"
 ---
 ----- SOURCE CODE
 
-pub type Callback = fn(Int) -> Int
+pub type Callback =
+  fn(Int) -> Int
 
 pub fn main(given: fn(String) -> Int) {
   let expected: Callback = given
@@ -13,9 +14,9 @@ pub fn main(given: fn(String) -> Int) {
 
 ----- ERROR
 error: Type mismatch
-  ┌─ /src/one/two.gleam:5:28
+  ┌─ /src/one/two.gleam:6:28
   │
-5 │   let expected: Callback = given
+6 │   let expected: Callback = given
   │                            ^^^^^
 
 Expected type:

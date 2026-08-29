@@ -1163,7 +1163,8 @@ fn function_uses_generic_reexport_of_internal_type() {
         "
 import thepackage/internal
 
-pub type Wobble(a) = internal.Wibble(List(a))
+pub type Wobble(a) =
+  internal.Wibble(List(a))
 
 pub fn wobble(value: internal.Wibble(List(Int))) -> Wobble(Int) {
   value
@@ -1180,8 +1181,11 @@ fn function_uses_structural_reexports_of_internal_type() {
         "
 import thepackage/internal
 
-pub type Handler(a) = fn(internal.Wibble(a)) -> Nil
-pub type Pair(a) = #(internal.Wibble(a), Int)
+pub type Handler(a) =
+  fn(internal.Wibble(a)) -> Nil
+
+pub type Pair(a) =
+  #(internal.Wibble(a), Int)
 
 pub fn wobble(handler: Handler(String), pair: Pair(Float)) -> Nil {
   todo
@@ -1219,7 +1223,8 @@ fn function_does_not_use_unqualified_imported_non_reexport_alias() {
     assert_documentation!(
         (
             "thepackage/aliases",
-            "pub type Aliased = Result(Int, String)"
+            "pub type Aliased =
+  Result(Int, String)"
         ),
         "
 import thepackage/aliases.{type Aliased}
@@ -1241,7 +1246,8 @@ fn function_uses_generic_reexport_of_internal_type_in_other_module() {
             "
 import thepackage/internal
 
-pub type Wobble(a) = internal.Wibble(List(a))
+pub type Wobble(a) =
+  internal.Wibble(List(a))
 "
         ),
         "
@@ -1261,8 +1267,11 @@ fn function_only_uses_unique_global_reexport_of_internal_type() {
         (
             "thepackage/internal",
             "
-@internal pub type Wibble(a)
-@internal pub type Wobble(a)
+@internal
+pub type Wibble(a)
+
+@internal
+pub type Wobble(a)
 "
         ),
         (
@@ -1270,8 +1279,11 @@ fn function_only_uses_unique_global_reexport_of_internal_type() {
             "
 import thepackage/internal
 
-pub type Wibble(a) = internal.Wibble(a)
-pub type First(a) = internal.Wobble(a)
+pub type Wibble(a) =
+  internal.Wibble(a)
+
+pub type First(a) =
+  internal.Wobble(a)
 "
         ),
         (
@@ -1293,7 +1305,8 @@ pub fn wobble() -> types.First(Int) {
             "
 import thepackage/internal
 
-pub type Second(a) = internal.Wobble(a)
+pub type Second(a) =
+  internal.Wobble(a)
 "
         ),
         "
