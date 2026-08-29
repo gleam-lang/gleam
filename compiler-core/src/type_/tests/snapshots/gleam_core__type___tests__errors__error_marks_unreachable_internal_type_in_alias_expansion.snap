@@ -1,0 +1,45 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport request\nimport wisp\n\npub fn main(expected: wisp.Request, given: request.Request(String)) {\n  expected == given\n}\n"
+---
+----- SOURCE CODE
+-- wisp/internal.gleam
+@internal pub type Connection
+
+-- request.gleam
+pub type Request(a)
+
+-- wisp.gleam
+import request
+import wisp/internal
+
+pub type Request = request.Request(internal.Connection)
+
+-- main.gleam
+
+import request
+import wisp
+
+pub fn main(expected: wisp.Request, given: request.Request(String)) {
+  expected == given
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:6:15
+  │
+6 │   expected == given
+  │               ^^^^^
+
+Expected type:
+
+    wisp.Request
+
+Found type:
+
+    request.Request(String)
+
+Hint: The expected type expands to:
+
+    request.Request(@internal Connection)

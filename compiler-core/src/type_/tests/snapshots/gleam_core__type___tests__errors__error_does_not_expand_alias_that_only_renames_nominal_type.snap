@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Connection\npub type ConnectionAlias = Connection\n\npub fn main(connection: ConnectionAlias) {\n  connection == \"not a connection\"\n}\n"
+---
+----- SOURCE CODE
+
+pub type Connection
+pub type ConnectionAlias = Connection
+
+pub fn main(connection: ConnectionAlias) {
+  connection == "not a connection"
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:6:17
+  │
+6 │   connection == "not a connection"
+  │                 ^^^^^^^^^^^^^^^^^^
+
+Expected type:
+
+    ConnectionAlias
+
+Found type:
+
+    String

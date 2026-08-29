@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 2330
 expression: "\nimport aliases.{type Aliased}\n\npub fn main() {\n  let value: Aliased = #(1, \"one\")\n}\n"
 ---
 ----- SOURCE CODE
@@ -30,3 +29,7 @@ Expected type:
 Found type:
 
     #(Int, String)
+
+Hint: The expected type expands to:
+
+    Result(Int, String)
