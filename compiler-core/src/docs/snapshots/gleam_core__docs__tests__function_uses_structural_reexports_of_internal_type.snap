@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- SOURCE CODE
+-- thepackage/internal.gleam
+pub type Wibble(a)
+
+-- main.gleam
+
+import thepackage/internal
+
+pub type Handler(a) =
+  fn(internal.Wibble(a)) -> Nil
+
+pub type Pair(a) =
+  #(internal.Wibble(a), Int)
+
+pub fn wobble(handler: Handler(String), pair: Pair(Float)) -> Nil {
+  todo
+}
+
+
+---- TYPES
+
+--- Handler
+<pre><code>pub type Handler(a) =
+  fn(@internal Wibble(a)) -> Nil</code></pre>
+
+--- Pair
+<pre><code>pub type Pair(a) =
+  #(@internal Wibble(a), Int)</code></pre>
+
+---- VALUES
+
+--- wobble
+<pre><code>pub fn wobble(handler: <a href="#Handler">Handler</a>(String), pair: <a href="#Pair">Pair</a>(Float)) -> Nil</code></pre>

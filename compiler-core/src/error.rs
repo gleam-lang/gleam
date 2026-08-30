@@ -17,7 +17,7 @@ use crate::type_::error::{
     RecordField, UnexpectedLabelledArgKind, UnknownField, UnknownTypeHint,
     UnsafeRecordUpdateReason,
 };
-use crate::type_::printer::{Names, Printer};
+use crate::type_::printer::{Names, Printer, TypeAliasExpansion};
 use crate::type_::{FieldAccessUsage, error::PatternMatchKind};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{bit_array, diagnostic::Level, type_::UnifyErrorSituation};
@@ -3190,6 +3190,7 @@ to call a method on this value you may want to use the function syntax instead."
             situation: Some(UnifyErrorSituation::Operator(op)),
         } => {
             let mut printer = Printer::new(names);
+            let type_comparison = printer.print_type_comparison(expected, given);
             let text = format!(
                 "The {op} operator expects arguments of this type:
 
@@ -3205,7 +3206,7 @@ But this argument has this type:
             Diagnostic {
                 title: "Type mismatch".into(),
                 text,
-                hint: hint_alternative_operator(op, given),
+                hint: with_type_alias_hints(&type_comparison, hint_alternative_operator(op, given)),
                 level: Level::Error,
                 location: Some(Location {
                     label: Label {
@@ -3237,6 +3238,19 @@ But this argument has this type:
                 .unwrap_or_else(|| given.clone());
 
             let mut printer = Printer::new(names);
+            let (expected, given, alias_expansions) = match expected {
+                Some(expected) => {
+                    let expected_type = printer.print_type(&expected);
+                    let given_type = printer.print_type(&given);
+                    let type_comparison = printer.print_type_comparison(&expected, &given);
+                    (expected_type, given_type, Some(type_comparison))
+                }
+                None => {
+                    let expected = EcoString::from("    No arguments");
+                    let given = printer.print_type(&given);
+                    (expected, given, None)
+                }
+            };
             let text = format!(
                 "The argument is:
 
@@ -3244,17 +3258,15 @@ But this argument has this type:
 
 But function expects:
 
-    {expected}",
-                expected = expected
-                    .map(|v| printer.print_type(&v))
-                    .unwrap_or_else(|| "    No arguments".into()),
-                given = printer.print_type(&given)
+    {expected}"
             );
 
             Diagnostic {
                 title: "Type mismatch".into(),
                 text,
-                hint: None,
+                hint: alias_expansions
+                    .as_ref()
+                    .and_then(|expansion| with_type_alias_hints(expansion, None)),
                 level: Level::Error,
                 location: Some(Location {
                     label: Label {
@@ -3275,6 +3287,7 @@ But function expects:
             situation,
         } => {
             let mut printer = Printer::new(names);
+            let type_comparison = printer.print_type_comparison(expected, given);
             let mut text =
                 if let Some(description) = situation.as_ref().and_then(|s| s.description()) {
                     let mut text = description.to_string();
@@ -3306,7 +3319,7 @@ But function expects:
             Diagnostic {
                 title: "Type mismatch".into(),
                 text,
-                hint: None,
+                hint: with_type_alias_hints(&type_comparison, None),
                 level: Level::Error,
                 location: Some(Location {
                     label: Label {
@@ -3514,6 +3527,8 @@ specify all fields explicitly instead of using the record update syntax."
                 ..
             } => {
                 let mut printer = Printer::new(names);
+                let type_comparison =
+                    printer.print_type_comparison(expected_field_type, record_field_type);
                 let expected_field_type = printer.print_type(expected_field_type);
                 let record_field_type = printer.print_type(record_field_type);
                 let record_variant = printer.print_type(record_variant);
@@ -3540,7 +3555,7 @@ a label or use a record constructor.",
                 Diagnostic {
                     title: "Incomplete record update".into(),
                     text,
-                    hint: None,
+                    hint: with_type_alias_hints(&type_comparison, None),
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
@@ -5239,6 +5254,32 @@ Be sure to finish it before running your program.",
             }),
         },
     })
+}
+
+fn with_type_alias_hints(
+    expansion: &(TypeAliasExpansion, TypeAliasExpansion),
+    hint: Option<String>,
+) -> Option<String> {
+    let alias_hint = match expansion {
+        (TypeAliasExpansion::Normal(_), TypeAliasExpansion::Normal(_)) => None,
+        (TypeAliasExpansion::Expanded(expected), TypeAliasExpansion::Normal(_)) => {
+            Some(format!("The expected type expands to:\n\n    {expected}"))
+        }
+        (TypeAliasExpansion::Normal(_), TypeAliasExpansion::Expanded(given)) => {
+            Some(format!("The found type expands to:\n\n    {given}"))
+        }
+        (TypeAliasExpansion::Expanded(expected), TypeAliasExpansion::Expanded(given)) => {
+            Some(format!(
+                "The expected type expands to:\n\n    {expected}\n\nThe found type expands to:\n\n    {given}"
+            ))
+        }
+    };
+
+    match (alias_hint, hint) {
+        (None, hint) => hint,
+        (alias_hint, None) => alias_hint,
+        (Some(alias_hint), Some(hint)) => Some(format!("{alias_hint}\n\n{hint}")),
+    }
 }
 
 fn std_io_error_kind_text(kind: &std::io::ErrorKind) -> String {

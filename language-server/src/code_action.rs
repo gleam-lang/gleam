@@ -4728,7 +4728,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast, IO> {
             ),
         };
 
-        let decoder_type = self.printer.print_type(&Type::Named {
+        let decoder_type = self.printer.print_type_without_aliases(&Type::Named {
             publicity: Publicity::Public,
             package: STDLIB_PACKAGE_NAME.into(),
             module: DECODE_MODULE.into(),
@@ -5368,7 +5368,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
             return;
         };
 
-        let json_type = self.printer.print_type(&Type::Named {
+        let json_type = self.printer.print_type_without_aliases(&Type::Named {
             publicity: Publicity::Public,
             package: JSON_PACKAGE_NAME.into(),
             module: JSON_MODULE.into(),

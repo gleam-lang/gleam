@@ -120,6 +120,68 @@
   merge conflict indicator
   ([0xda157](https://github.com/0xda157))
 
+- Gleam can now show type aliases using generic types in the docs,
+  the language server, and error messages.
+
+  For example, the following type alias would have been printed in its expanded form previously:
+
+  ```gleam
+  import gleam/http/request
+
+  @internal
+  pub type Connection
+
+  pub type Request =
+    request.Request(Connection) 
+
+  // the `Request` type alias would print as `request.Request(@internal Connection)`
+  // previously and as `Request` in the new version.
+  pub fn require_text(
+    request: Request,
+    next: fn(String) -> Response(String)
+  ) -> Response(String) {
+    todo
+  }
+  ```
+
+  ([rebecca](https://tangled.org/becca.monster))
+
+- Type mismatch errors with type aliases now contain smart hints that expand
+  both types as much as needed to reveal the underlying mismatch to the user.
+
+  The following type mismatch shows the improved error:
+
+  ```gleam
+  import gleam/http/request
+  import wisp
+
+  pub fn get_string_body(request: Request(String)) -> String {
+    request.body
+  }
+
+  pub fn handle(request: wisp.Request) {
+    get_string_body(request)
+  }
+  ```
+
+  ```text
+  error: Type mismatch
+
+  Expected type:
+
+      request.Request(String)
+
+  Found type:
+
+      wisp.Request
+
+  Hint: The found type expands to:
+
+      request.Request(wisp.Connection)
+  ```
+
+  ([rebecca](https://tangled.org/becca.monster))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
@@ -267,6 +329,12 @@
 - Fixed a bug where comparing `0.0` and `-0.0` resulted in a redundant
   comparison warning, which is incorrect on Erlang/OTP 27+.
   ([Jack Programs](https://github.com/jackprogramsjp))
+
+- Fixed a bug where type errors show a misleading local module qualifiers for
+  public or internal types that are not imported locally.
+  Public types now use the `path/to/module.Type` in error messages when the type
+  is not imported, and internal types are shown with an `@internal` marker.
+  ([rebecca](https://tangled.org/becca.monster))
 
 ## v1.18.1 - 2026-08-01
 

@@ -1481,10 +1481,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             hydrator.disallow_new_type_variables();
             let type_ = hydrator.type_from_ast(resolved_type, environment, &mut self.problems)?;
 
-            environment
-                .names
-                .type_in_scope(name.clone(), type_.as_ref(), &parameters);
-
             // Insert the alias so that it can be used by other code.
             environment.insert_type_constructor(
                 name.clone(),
@@ -1510,11 +1506,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 parameters,
             };
 
-            environment.names.maybe_register_reexport_alias(
-                &environment.current_package,
-                name,
-                &alias,
-            );
+            environment
+                .names
+                .type_in_scope(&environment.current_package, name, &alias);
 
             environment.insert_type_alias(name.clone(), alias)?;
 

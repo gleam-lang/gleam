@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/docs/tests.rs
+expression: output
+---
+---- SOURCE CODE
+-- thepackage/aliases.gleam
+pub type Aliased =
+  Result(Int, String)
+
+-- main.gleam
+
+import thepackage/aliases.{type Aliased}
+
+pub fn do_thing(value: Result(Int, String)) -> Result(Int, String) {
+  value
+}
+
+
+---- VALUES
+
+--- do_thing
+<pre><code>pub fn do_thing(
+  value: Result(Int, String),
+) -> Result(Int, String)</code></pre>
