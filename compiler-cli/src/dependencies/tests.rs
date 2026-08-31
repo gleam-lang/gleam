@@ -1302,6 +1302,47 @@ wub = \">= 1.0.0\"
     assert!(unchanged, "fingerprint is outdated, but mtime is not");
 }
 
+#[test]
+fn test_path_dependency_config_updates_with_multiple_dependencies() {
+    let temp_dir = tempfile::tempdir().expect("Failed to create a temp directory");
+    let root_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+        .expect("Path should be valid UTF-8");
+    let paths = ProjectPaths::new(root_path.clone());
+    let build_packages_dir = root_path.join("build").join("packages");
+    std::fs::create_dir_all(&build_packages_dir)
+        .expect("Failed to create build/packages directory");
+
+    let config = "name = \"dep\"
+version = \"1.0.0\"
+
+[dependencies]
+";
+
+    let mut requirements = HashMap::new();
+    for name in ["dep1", "dep2", "dep3"] {
+        let dep_path = root_path.join(name);
+        std::fs::create_dir_all(&dep_path).expect("Failed to create dependency directory");
+        fs::write(&dep_path.join("gleam.toml"), config).expect("Failed to write to manifest file");
+        let _ = requirements.insert(
+            EcoString::from(name),
+            Requirement::Path {
+                path: Utf8PathBuf::from(name),
+            },
+        );
+    }
+
+    let unchanged = path_dependency_configs_unchanged(&requirements, &paths).unwrap();
+    assert!(!unchanged);
+
+    for name in ["dep1", "dep2", "dep3"] {
+        let fingerprint_path = build_packages_dir.join(format!("{name}.config_fingerprint"));
+        assert!(fingerprint_path.exists());
+    }
+
+    let unchanged = path_dependency_configs_unchanged(&requirements, &paths).unwrap();
+    assert!(unchanged);
+}
+
 fn create_testable_unlock_manifest(
     packages: Vec<(EcoString, Version, Vec<EcoString>)>,
     requirements: Vec<(EcoString, EcoString)>,

@@ -268,6 +268,11 @@
   comparison warning, which is incorrect on Erlang/OTP 27+.
   ([Jack Programs](https://github.com/jackprogramsjp))
 
+- Fixed a bug where a project with multiple path dependencies would perform
+  dependency resolution once per path dependency, so commands run after
+  `gleam deps download` would needlessly resolve versions again.
+  ([John Downey](https://github.com/jtdowney))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when
