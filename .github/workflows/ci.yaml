@@ -120,7 +120,7 @@ jobs:
           bun-version: "1.2"
 
       - name: Handle Rust dependencies caching
-        uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: v1-${{ matrix.target }}
 
@@ -414,7 +414,7 @@ jobs:
           components: clippy
 
       - name: Handle Rust dependencies caching
-        uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: v1-linux-gnu
 
