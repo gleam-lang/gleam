@@ -70,7 +70,7 @@ runs:
 
     - name: Build WASM release binary
       if: ${{ inputs.target != 'wasm32-unknown-unknown' }}
-      uses: clechasseur/rs-cargo@8ccb6817fc46c9af3b058a5a7b31932edb82cf13 # v5.0.7
+      uses: clechasseur/rs-cargo@9a5c570d3347f8dee3916c8871f3ffaf38909956 # v5.0.8
       with:
         command: build
         args: --release --target ${{ inputs.target }}
