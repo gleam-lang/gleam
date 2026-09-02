@@ -526,7 +526,7 @@ pub fn generate_json_package_information(path: Utf8PathBuf, config: PackageConfi
     }
 }
 
-fn package_information_as_json(config: PackageConfig) -> String {
+pub fn package_information_as_json(config: PackageConfig) -> String {
     let info = PackageInformation {
         package_config: config,
     };

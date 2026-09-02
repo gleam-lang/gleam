@@ -701,9 +701,10 @@ pub enum ExportTarget {
     },
     /// Package information (gleam.toml) in JSON format
     PackageInformation {
-        /// The path to write the JSON file to
-        #[arg(long = "out", required = true)]
-        output: Utf8PathBuf,
+        /// (optional) The path to write the JSON file to
+        /// If ommited, the command will print to stdout
+        #[arg(long = "out")]
+        output: Option<Utf8PathBuf>,
     },
 }
 

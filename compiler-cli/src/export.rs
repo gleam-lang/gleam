@@ -7,7 +7,7 @@ use gleam_core::{
     Result,
     analyse::TargetSupport,
     build::{Codegen, Compile, ErlangOutput, Mode, Options, Target},
-    docs::package_interface_as_json,
+    docs::{package_information_as_json, package_interface_as_json},
     paths::ProjectPaths,
     type_::ModuleFunction,
 };
@@ -279,9 +279,15 @@ pub fn package_interface(paths: &ProjectPaths, out: Option<Utf8PathBuf>) -> Resu
     Ok(())
 }
 
-pub fn package_information(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
+pub fn package_information(paths: &ProjectPaths, out: Option<Utf8PathBuf>) -> Result<()> {
     let config = crate::config::root_config(paths)?;
-    let out = gleam_core::docs::generate_json_package_information(out, config);
-    fs::write_outputs_under(&[out], paths.root())?;
+    match out {
+        Some(out) => {
+            let out = gleam_core::docs::generate_json_package_information(out, config);
+            fs::write_outputs_under(&[out], paths.root())?;
+        }
+        None => println!("{}", package_information_as_json(config)),
+    }
+
     Ok(())
 }
