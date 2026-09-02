@@ -7,6 +7,7 @@ use gleam_core::{
     Result,
     analyse::TargetSupport,
     build::{Codegen, Compile, ErlangOutput, Mode, Options, Target},
+    docs::package_interface_as_json,
     paths::ProjectPaths,
     type_::ModuleFunction,
 };
@@ -242,7 +243,7 @@ pub fn typescript_prelude() -> Result<()> {
     Ok(())
 }
 
-pub fn package_interface(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
+pub fn package_interface(paths: &ProjectPaths, out: Option<Utf8PathBuf>) -> Result<()> {
     // Build the project
     let mut built = crate::build::main(
         paths,
@@ -260,12 +261,21 @@ pub fn package_interface(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
     )?;
     built.root_package.attach_doc_and_module_comments();
 
-    let out = gleam_core::docs::generate_json_package_interface(
-        out,
-        &built.root_package,
-        &built.module_interfaces,
-    );
-    fs::write_outputs_under(&[out], paths.root())?;
+    match out {
+        Some(out) => {
+            let out = gleam_core::docs::generate_json_package_interface(
+                out,
+                &built.root_package,
+                &built.module_interfaces,
+            );
+            fs::write_outputs_under(&[out], paths.root())?;
+        }
+        None => println!(
+            "{}",
+            package_interface_as_json(&built.root_package, &built.module_interfaces)
+        ),
+    };
+
     Ok(())
 }
 

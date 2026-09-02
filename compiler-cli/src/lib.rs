@@ -694,9 +694,10 @@ pub enum ExportTarget {
     TypescriptPrelude,
     /// Information on the modules, functions, and types in the project in JSON format
     PackageInterface {
-        /// The path to write the JSON file to
-        #[arg(long = "out", required = true)]
-        output: Utf8PathBuf,
+        /// (optional) The path to write the JSON file to
+        /// If ommited, the command will print to stdout
+        #[arg(long = "out")]
+        output: Option<Utf8PathBuf>,
     },
     /// Package information (gleam.toml) in JSON format
     PackageInformation {
