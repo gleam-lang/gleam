@@ -146,6 +146,11 @@
   dependency when it is already a development dependency (or vice-versa).
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- `--out` argument in `export package-information` and `export package-interface`
+  commands is no longer required. Those commands now print to stdout by
+  default.
+  ([Rodrigo Álvarez](https://github.com/Papipo))
+
 ### Language server
 
 - The "Generate dynamic decoder" code action is now only offered when the
