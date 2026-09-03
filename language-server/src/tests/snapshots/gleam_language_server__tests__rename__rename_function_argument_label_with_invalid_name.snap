@@ -1,0 +1,7 @@
+---
+source: language-server/src/tests/rename.rs
+expression: "\npub fn replace(in string: String, each pattern: String) -> String {\n  todo\n}\n\npub fn main() {\n  replace(in: \"hello\", each: \"l\")\n}\n"
+---
+Error response message:
+
+Inside is not a valid name

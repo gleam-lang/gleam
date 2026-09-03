@@ -15,6 +15,7 @@ use crate::{
         UntypedConstant, UntypedConstantBitArraySegment,
     },
     build::Target,
+    reference::LabelOwner,
     type_::{
         Error, ExprTyper, FieldAccessUsage, HasType, Type, ValueConstructorVariant, ValueUsage,
         Warning, assert_no_labelled_arguments, bit_array,
@@ -296,9 +297,12 @@ impl<'expression_typer, 'env, 'module> ConstantTyper<'expression_typer, 'env, 'm
                         return self.new_invalid_constant(location);
                     }
 
-                    if let Some(type_name) = expected_type.named_type_name() {
+                    if let Some((type_module, type_name)) = expected_type.named_type_name() {
                         self.typer.environment.references.register_label_reference(
-                            type_name,
+                            LabelOwner::Record {
+                                module: type_module,
+                                name: type_name,
+                            },
                             label.clone(),
                             label_location,
                             syntax,
@@ -734,13 +738,16 @@ impl<'expression_typer, 'env, 'module> ConstantTyper<'expression_typer, 'env, 'm
         // synthetic placeholders without a real value: their labels are
         // registered using the locations captured before the values were
         // discarded.
-        if let Some(type_name) = expected_return.named_type_name() {
+        if let Some((type_module, type_name)) = expected_return.named_type_name() {
             for argument in &typed_arguments {
                 if let Some(label) = &argument.label
                     && let Some(label_location) = argument.label_location()
                 {
                     self.typer.environment.references.register_label_reference(
-                        type_name.clone(),
+                        LabelOwner::Record {
+                            module: type_module.clone(),
+                            name: type_name.clone(),
+                        },
                         label.clone(),
                         label_location,
                         argument.label_syntax(),
@@ -754,7 +761,10 @@ impl<'expression_typer, 'env, 'module> ConstantTyper<'expression_typer, 'env, 'm
                     && argument.implicit.is_none()
                 {
                     self.typer.environment.references.register_label_reference(
-                        type_name.clone(),
+                        LabelOwner::Record {
+                            module: type_module.clone(),
+                            name: type_name.clone(),
+                        },
                         label.clone(),
                         label_location,
                         argument.syntax,

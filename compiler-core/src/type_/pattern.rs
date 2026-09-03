@@ -19,7 +19,7 @@ use crate::{
         UntypedPatternBitArraySegment,
     },
     parse::PatternPosition,
-    reference::ReferenceKind,
+    reference::{LabelOwner, ReferenceKind},
     type_::expression::FunctionDefinition,
 };
 use std::sync::Arc;
@@ -1256,14 +1256,17 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             constructor_field_map,
                         );
 
-                        if let Some(type_name) = return_.named_type_name() {
+                        if let Some((type_module, type_name)) = return_.named_type_name() {
                             for argument in &pattern_arguments {
                                 if let Some(label) = &argument.label
                                     && let Some(label_location) = argument.label_location()
                                     && !argument.is_implicit()
                                 {
                                     self.environment.references.register_label_reference(
-                                        type_name.clone(),
+                                        LabelOwner::Record {
+                                            module: type_module.clone(),
+                                            name: type_name.clone(),
+                                        },
                                         label.clone(),
                                         label_location,
                                         argument.label_syntax(),

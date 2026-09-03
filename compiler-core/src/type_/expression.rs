@@ -19,7 +19,7 @@ use crate::{
     build::Target,
     exhaustiveness::{self, CompileCaseResult, CompiledCase, Reachability},
     parse::{LiteralFloatValue, PatternPosition},
-    reference::{LabelSyntax, ReferenceKind},
+    reference::{LabelOwner, LabelSyntax, ReferenceKind},
     type_::{constant::ConstantTyper, guard::GuardTyper},
 };
 use ecow::eco_format;
@@ -1425,9 +1425,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 if let TypedExpr::RecordAccess { record, label, .. } = &record_access {
                     // The programmer wrote `record.label`, so register a
                     // reference to the field for the language server.
-                    if let Some(type_name) = record.type_().named_type_name() {
+                    if let Some((type_module, type_name)) = record.type_().named_type_name() {
                         self.environment.references.register_label_reference(
-                            type_name,
+                            LabelOwner::Record {
+                                module: type_module,
+                                name: type_name,
+                            },
                             label.clone(),
                             label_location,
                             LabelSyntax::Longhand,
@@ -2817,9 +2820,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     self.problems.error(convert_unify_error(error, *location));
                 }
 
-                if let Some(type_name) = return_type.named_type_name() {
+                if let Some((type_module, type_name)) = return_type.named_type_name() {
                     self.environment.references.register_label_reference(
-                        type_name,
+                        LabelOwner::Record {
+                            module: type_module,
+                            name: type_name,
+                        },
                         label.clone(),
                         argument.label_location(),
                         argument.label_syntax(),
@@ -3827,21 +3833,31 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             })
             .collect();
 
-        // Register a reference to each labelled field so the language server can
-        // offer go-to-definition, find-references and rename on record fields. We
-        // do this before adding back the ignored arguments below, as those are
-        // synthetic placeholders without a real value: their labels are
-        // registered using the locations captured before the values were
-        // discarded.
-        if fun.is_record_constructor_function()
-            && let Some(type_name) = return_type.named_type_name()
-        {
+        let label_owner = if fun.is_record_constructor_function() {
+            return_type
+                .named_type_name()
+                .map(|(module, name)| LabelOwner::Record { module, name })
+        } else {
+            fun.module_function_name()
+                .map(|(module, name)| LabelOwner::Function {
+                    module: module.clone(),
+                    name: name.clone(),
+                })
+        };
+
+        // Register a reference to each labelled argument so the language server
+        // can offer go-to-definition, find-references and rename on record
+        // fields and function argument labels. We do this before adding back
+        // the ignored arguments below, as those are synthetic placeholders
+        // without a real value: their labels are registered using the locations
+        // captured before the values were discarded.
+        if let Some(label_owner) = label_owner {
             for argument in &typed_arguments {
                 if let Some(label) = &argument.label
                     && let Some(label_location) = argument.label_location()
                 {
                     self.environment.references.register_label_reference(
-                        type_name.clone(),
+                        label_owner.clone(),
                         label.clone(),
                         label_location,
                         argument.label_syntax(),
@@ -3855,7 +3871,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     && argument.implicit.is_none()
                 {
                     self.environment.references.register_label_reference(
-                        type_name.clone(),
+                        label_owner.clone(),
                         label.clone(),
                         label_location,
                         argument.syntax,

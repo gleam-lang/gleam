@@ -22,7 +22,7 @@ use crate::{
     config::PackageConfig,
     dep_tree,
     parse::SpannedString,
-    reference::{EntityKind, ReferenceKind},
+    reference::{EntityKind, LabelOwner, ReferenceKind},
     type_::{
         self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, Opaque, PatternConstructor,
         RecordAccessor, References, Type, TypeAliasConstructor, TypeConstructor,
@@ -1218,10 +1218,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
                 if let Some(label) = label {
                     environment.references.register_label_definition(
-                        (environment.current_module.clone(), name.clone()),
+                        LabelOwner::Record {
+                            module: environment.current_module.clone(),
+                            name: name.clone(),
+                        },
                         label.clone(),
                         label_location,
-                        constructor.name.clone(),
+                        Some(constructor.name.clone()),
                     );
                 }
 
@@ -1603,8 +1606,25 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         {
             check_argument_names(names, &mut self.problems);
 
-            if let Err(error) = builder.add(names.get_label(), *location) {
+            let label = names.get_label();
+
+            if let Err(error) = builder.add(label.map(|(label, _)| label), *location) {
                 self.problems.error(error);
+            }
+
+            // If this argument is labelled then register the label's definition so
+            // the language server can find it when looking up references to
+            // the label, or jumping to its definition
+            if let Some((label, label_location)) = label {
+                environment.references.register_label_definition(
+                    LabelOwner::Function {
+                        module: environment.current_module.clone(),
+                        name: name.clone(),
+                    },
+                    label.clone(),
+                    *label_location,
+                    None,
+                );
             }
         }
         let field_map = builder.finish();

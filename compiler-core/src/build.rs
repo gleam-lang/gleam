@@ -581,6 +581,28 @@ pub enum Located<'a> {
         /// The type of the labelled argument's value (used for hover).
         field_type: Arc<Type>,
     },
+    /// An argument label at its definition in a function.
+    FunctionLabelDefinition {
+        location: SrcSpan,
+        /// The type of the argument (used for hover).
+        field_type: Arc<Type>,
+        label: EcoString,
+        /// The name of the function this label belongs to. The function is
+        /// being defined in the module being analysed, so only its name is
+        /// needed.
+        function_name: EcoString,
+    },
+    /// An argument label used in a call to a module function.
+    FunctionLabelUsage {
+        location: SrcSpan,
+        /// The type of the labelled argument's value (used for hover).
+        field_type: Arc<Type>,
+        label: EcoString,
+        /// The module the function this label belongs to is defined in.
+        function_module: EcoString,
+        /// The name of the function this label belongs to.
+        function_name: EcoString,
+    },
     /// A record field label at its definition in a custom type variant.
     RecordLabelDefinition {
         location: SrcSpan,
@@ -645,33 +667,33 @@ impl<'a> Located<'a> {
         })
     }
 
-    /// Looks up the location at which a record field label was defined, using
-    /// the label definitions gathered during analysis.
+    /// Looks up the location at which a label was defined, using the label
+    /// definitions gathered during analysis.
     fn label_definition_location(
         &self,
         importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
-        record_type: &Arc<Type>,
+        owner: reference::LabelOwner,
         label: &EcoString,
         variant: Option<&EcoString>,
     ) -> Option<DefinitionLocation> {
-        let (module_name, type_name) = record_type.named_type_name()?;
+        let module_name = owner.module().clone();
         let module = importable_modules.get(&module_name)?;
-        let key = reference::RecordLabel {
-            type_module: module_name.clone(),
-            type_name,
+        let key = reference::LabelKey {
+            owner,
             label: label.clone(),
         };
         let definitions = module.references.label_definitions.get(&key)?;
-        // A label can be defined in multiple variants of the same type. If we
-        // know which variant the label was used with we jump to its
-        // definition in that variant. Otherwise the label comes from a
-        // `record.field` access, which works across all the variants defining
-        // it, so we jump to the first definition.
+        // A record field can be defined in multiple variants of the same type.
+        // If we know which variant the label was used with we jump to its
+        // definition in that variant. Otherwise we jump to the first
+        // definition. Either the label comes from a `record.field` access,
+        // which works across all the variants defining it, or a function
+        // which only defines labels once anyway.
         let definition = match variant {
+            None => definitions.first()?,
             Some(variant) => definitions
                 .iter()
-                .find(|definition| &definition.variant == variant)?,
-            None => definitions.first()?,
+                .find(|definition| definition.variant.as_ref() == Some(variant))?,
         };
         Some(DefinitionLocation {
             module: Some(module_name),
@@ -753,20 +775,46 @@ impl<'a> Located<'a> {
                 label,
                 variant,
                 ..
-            } => self.label_definition_location(
-                importable_modules,
-                record_type,
-                label,
-                Some(variant),
-            ),
+            } => {
+                let (module, name) = record_type.named_type_name()?;
+                self.label_definition_location(
+                    importable_modules,
+                    reference::LabelOwner::Record { module, name },
+                    label,
+                    Some(variant),
+                )
+            }
             Self::RecordAccessLabel {
                 record_type, label, ..
-            } => self.label_definition_location(importable_modules, record_type, label, None),
+            } => {
+                let (module, name) = record_type.named_type_name()?;
+                self.label_definition_location(
+                    importable_modules,
+                    reference::LabelOwner::Record { module, name },
+                    label,
+                    None,
+                )
+            }
             // Already at the definition; go-to-definition jumps to itself.
-            Self::RecordLabelDefinition { location, .. } => Some(DefinitionLocation {
+            Self::RecordLabelDefinition { location, .. }
+            | Self::FunctionLabelDefinition { location, .. } => Some(DefinitionLocation {
                 module: None,
                 span: *location,
             }),
+            Self::FunctionLabelUsage {
+                function_module,
+                function_name,
+                label,
+                ..
+            } => self.label_definition_location(
+                importable_modules,
+                reference::LabelOwner::Function {
+                    module: function_module.clone(),
+                    name: function_name.clone(),
+                },
+                label,
+                None,
+            ),
             Self::TypeVariable { .. } => None,
             Self::ModuleName { module_name, .. } => Some(DefinitionLocation {
                 module: Some(module_name.clone()),
@@ -788,7 +836,9 @@ impl<'a> Located<'a> {
             Located::Label { field_type, .. }
             | Located::RecordLabelDefinition { field_type, .. }
             | Located::RecordLabelUsage { field_type, .. }
-            | Located::RecordAccessLabel { field_type, .. } => Some(field_type.clone()),
+            | Located::RecordAccessLabel { field_type, .. }
+            | Located::FunctionLabelDefinition { field_type, .. }
+            | Located::FunctionLabelUsage { field_type, .. } => Some(field_type.clone()),
             Located::Annotation { type_, .. } => Some(type_.clone()),
             Located::Constant(constant) => Some(constant.type_()),
             Located::ClauseGuard(guard) => Some(guard.type_()),
