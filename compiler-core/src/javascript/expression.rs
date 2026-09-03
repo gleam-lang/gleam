@@ -1985,7 +1985,8 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                 matches!(&**fun, TypedExpr::Call { .. })
                 || matches!(&**fun, TypedExpr::TupleIndex { .. })
                 || matches!(&**fun, TypedExpr::RecordAccess{ .. })
-            ) {
+            )
+            && matches!(kind, FunctionLiteralKind::Capture{ .. }) {
             let local_tmp_value= "tmp".into();
             let local_tmp_value = self.next_local_var(&local_tmp_value);
             let local_capture_value = CAPTURE_VARIABLE.into();
