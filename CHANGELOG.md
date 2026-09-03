@@ -151,6 +151,10 @@
   default.
   ([Rodrigo Álvarez](https://github.com/Papipo))
 
+- The `export javascript-prelude` and `export typescript-prelude` commands gain
+  the `--out` parameter.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Language server
 
 - The "Generate dynamic decoder" code action is now only offered when the
