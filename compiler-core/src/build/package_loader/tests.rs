@@ -77,6 +77,15 @@ fn write_cache(
 }
 
 fn run_loader(fs: InMemoryFileSystem, root: &Utf8Path, artefact: &Utf8Path) -> LoaderTestOutput {
+    run_loader_with_mode(fs, root, artefact, Mode::Dev)
+}
+
+fn run_loader_with_mode(
+    fs: InMemoryFileSystem,
+    root: &Utf8Path,
+    artefact: &Utf8Path,
+    mode: Mode,
+) -> LoaderTestOutput {
     let mut defined = im::HashMap::new();
     let ids = UniqueIdGenerator::new();
     let (emitter, warnings) = WarningEmitter::vector();
@@ -84,7 +93,7 @@ fn run_loader(fs: InMemoryFileSystem, root: &Utf8Path, artefact: &Utf8Path) -> L
     let loader = PackageLoader {
         io: fs.clone(),
         ids,
-        mode: Mode::Dev,
+        mode,
         paths: ProjectPaths::new(root.into()),
         warnings: &emitter,
         codegen: CodegenRequired::Yes,
@@ -130,28 +139,40 @@ fn one_src_module() {
 }
 
 #[test]
-fn one_test_module() {
+fn all_folders_are_compiled_in_dev_mode() {
     let fs = InMemoryFileSystem::new();
     let root = Utf8Path::new("/");
     let artefact = Utf8Path::new("/artefact");
 
-    write_src(&fs, "/test/main.gleam", 0, "const x = 1");
+    write_src(&fs, "/src/one.gleam", 0, "const x = 1");
+    write_src(&fs, "/test/two.gleam", 0, "const x = 1");
+    write_src(&fs, "/dev/three.gleam", 0, "const x = 1");
 
-    let loaded = run_loader(fs, root, artefact);
-    assert_eq!(loaded.to_compile, vec![EcoString::from("main")]);
+    let mut loaded = run_loader_with_mode(fs, root, artefact, Mode::Dev);
+    loaded.to_compile.sort();
+    assert_eq!(
+        loaded.to_compile,
+        vec![
+            EcoString::from("one"),
+            EcoString::from("three"),
+            EcoString::from("two"),
+        ]
+    );
     assert!(loaded.cached.is_empty());
 }
 
 #[test]
-fn one_dev_module() {
+fn only_src_modules_are_compiled_in_prod_mode() {
     let fs = InMemoryFileSystem::new();
     let root = Utf8Path::new("/");
     let artefact = Utf8Path::new("/artefact");
 
-    write_src(&fs, "/dev/main.gleam", 0, "const x = 1");
+    write_src(&fs, "/src/one.gleam", 0, "const x = 1");
+    write_src(&fs, "/test/two.gleam", 0, "const x = 1");
+    write_src(&fs, "/dev/three.gleam", 0, "const x = 1");
 
-    let loaded = run_loader(fs, root, artefact);
-    assert_eq!(loaded.to_compile, vec![EcoString::from("main")]);
+    let loaded = run_loader_with_mode(fs, root, artefact, Mode::Prod);
+    assert_eq!(loaded.to_compile, vec![EcoString::from("one")]);
     assert!(loaded.cached.is_empty());
 }
 
