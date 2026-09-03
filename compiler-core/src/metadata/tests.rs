@@ -1941,7 +1941,10 @@ fn module_with_references() {
                     vec![
                         Reference {
                             location: SrcSpan::new(6, 9),
-                            kind: ReferenceKind::Import(SrcSpan::new(9, 9)),
+                            kind: ReferenceKind::Import {
+                                location: SrcSpan::new(6, 9),
+                                alias_start_position: 9,
+                            },
                         },
                         Reference {
                             location: SrcSpan::new(90, 108),

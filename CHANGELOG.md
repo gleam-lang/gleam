@@ -193,6 +193,10 @@
   code action in constants, patterns and bit array "size" options.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The language server will now remove imports of prelude items when renaming
+  them to original name.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Formatter
 
 ### Compiler Wasm API
