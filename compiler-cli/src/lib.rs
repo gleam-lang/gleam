@@ -697,10 +697,10 @@ pub enum ExportTarget {
     HexTarball,
     /// The JavaScript prelude module
     JavascriptPrelude {
-        /// (optional) The path to write the JavaScript  file to.
+        /// (optional) The path to write the JavaScript file to.
         ///
         /// If ommited, the command will print to stdout.
-        #[arg(long = "out")]
+        #[arg(verbatim_doc_comment, long = "out")]
         output: Option<Utf8PathBuf>,
     },
     /// The TypeScript prelude module
@@ -708,7 +708,7 @@ pub enum ExportTarget {
         /// (optional) The path to write the TypeScript file to.
         ///
         /// If ommited, the command will print to stdout.
-        #[arg(long = "out")]
+        #[arg(verbatim_doc_comment, long = "out")]
         output: Option<Utf8PathBuf>,
     },
     /// Information on the modules, functions, and types in the project in JSON format
@@ -716,7 +716,7 @@ pub enum ExportTarget {
         /// (optional) The path to write the JSON file to.
         ///
         /// If ommited, the command will print to stdout.
-        #[arg(long = "out")]
+        #[arg(verbatim_doc_comment, long = "out")]
         output: Option<Utf8PathBuf>,
     },
     /// Package information (gleam.toml) in JSON format
@@ -724,7 +724,7 @@ pub enum ExportTarget {
         /// (optional) The path to write the JSON file to.
         ///
         /// If ommited, the command will print to stdout.
-        #[arg(long = "out")]
+        #[arg(verbatim_doc_comment, long = "out")]
         output: Option<Utf8PathBuf>,
     },
 }
