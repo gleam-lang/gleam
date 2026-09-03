@@ -7,7 +7,10 @@ mod tests;
 
 use crate::build::Target;
 use crate::erlang::pattern::{AliasedLiteral, PatternGenerator};
+use crate::exhaustiveness::CompiledCase;
+use crate::inline::InlinableValueConstructor::LocalVariable;
 use crate::strings::to_snake_case;
+use crate::type_::error::VariableOrigin;
 use crate::type_::{self, is_prelude_module};
 use crate::{
     ast::*,
@@ -918,12 +921,63 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 self.call(builder, constructor, arguments);
             }
 
+            TypedExpr::Fn {
+                location, arguments, body, kind: FunctionLiteralKind::Capture { .. }, ..
+            } => {
+                if let Statement::Expression(TypedExpr::Call { fun , /*arguments: inner_arguments*/ .. }) = body.first()
+                    && body.len() == 1
+                    && (
+                        matches!(&**fun, TypedExpr::Call { .. })
+                        || matches!(&**fun, TypedExpr::TupleIndex { .. })
+                        || matches!(&**fun, TypedExpr::RecordAccess{ .. })
+                    )
+                {
+                    // {
+                    //   let x = <Expr> // evaluate first
+                    //   fn(a) { x(a) }
+                    // }
+
+                    let block = builder.start_block();
+
+                    let tmp_val_name = self.new_erlang_variable("Tmp", location.clone());
+                    builder.match_operator();
+                    builder.variable_pattern(&tmp_val_name);
+
+                    self.expression(builder, fun);
+
+                    let argument_names = self.function_arguments_names(arguments, false).collect::<Vec<_>>();
+                    let function = builder.start_anonymous_function(argument_names.clone());
+                    let call = builder.start_call();
+                    builder.variable(&tmp_val_name);
+                    let call = builder.end_called_expression(call);
+                    for argument in argument_names {
+                        builder.variable(&argument);
+                    }
+                    builder.end_call(call);
+                    builder.end_function(function);
+                    builder.end_block(block);
+                } else {
+                    // ```
+                    // fn(x) { <Expr>(x) }
+                    // ```
+                    let outer_scope = self.taken_names.clone();
+                    let argument_names = self.function_arguments_names(arguments, false);
+                    let function = builder.start_anonymous_function(argument_names);
+                    self.statement_sequence(builder, body);
+                    builder.end_function(function);
+                    self.taken_names = outer_scope;
+                }
+            }
+
             //
             // All kinds of anonymous functions.
             //
             TypedExpr::Fn {
-                arguments, body, ..
+                arguments, body, kind: FunctionLiteralKind::Use { .. } | FunctionLiteralKind::Anonymous { .. }, ..
             } => {
+                // ```
+                // fn(x) { <Expr>(x) }
+                // ```
                 let outer_scope = self.taken_names.clone();
                 let argument_names = self.function_arguments_names(arguments, false);
                 let function = builder.start_anonymous_function(argument_names);
