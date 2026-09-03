@@ -60,6 +60,7 @@ where
             None => {
                 return read_source(name).map(|module| Input::New {
                     module: Box::new(module),
+                    cached_api_fingerprint: None,
                 });
             }
         };
@@ -71,6 +72,7 @@ where
             tracing::debug!(?name, "codegen_required_cache_insufficient");
             return read_source(name).map(|module| Input::New {
                 module: Box::new(module),
+                cached_api_fingerprint: Some(meta.api_fingerprint),
             });
         }
 
@@ -83,6 +85,7 @@ where
                 tracing::debug!(?name, "cache_stale");
                 return Ok(Input::New {
                     module: Box::new(source_module),
+                    cached_api_fingerprint: Some(meta.api_fingerprint),
                 });
             } else if self.mode == Mode::Lsp && self.incomplete_modules.contains(&name) {
                 // Since the lsp can have valid but incorrect intermediate code states between
@@ -90,11 +93,13 @@ where
                 tracing::debug!(?name, "cache_stale for lsp");
                 return Ok(Input::New {
                     module: Box::new(source_module),
+                    cached_api_fingerprint: Some(meta.api_fingerprint),
                 });
             }
         }
 
         Ok(Input::Cached {
+            cached_api_fingerprint: meta.api_fingerprint,
             module: self.cached(file, meta),
         })
     }

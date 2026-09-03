@@ -9,7 +9,7 @@ expression: "./cases/alias_unqualified_import"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<36 byte binary>
+<45 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.abstr
 <568 byte binary>
@@ -18,7 +18,7 @@ expression: "./cases/alias_unqualified_import"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<42 byte binary>
+<51 byte binary>
 
 //// /out/lib/the_package/ebin/importy.app
 {application, importy, [

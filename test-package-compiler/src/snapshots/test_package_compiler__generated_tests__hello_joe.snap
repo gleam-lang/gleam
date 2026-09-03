@@ -9,7 +9,7 @@ expression: "./cases/hello_joe"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/hello_joe.cache_meta
-<31 byte binary>
+<40 byte binary>
 
 //// /out/lib/the_package/ebin/hello_joe.app
 {application, hello_joe, [

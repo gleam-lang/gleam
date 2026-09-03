@@ -9,7 +9,7 @@ expression: "./cases/erlang_nested"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache_meta
-<31 byte binary>
+<40 byte binary>
 
 //// /out/lib/the_package/ebin/importy.app
 {application, importy, [
