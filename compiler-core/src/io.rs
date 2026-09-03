@@ -151,6 +151,15 @@ pub struct OutputFile {
     pub path: Utf8PathBuf,
 }
 
+impl OutputFile {
+    pub fn text(path: Utf8PathBuf, content: String) -> Self {
+        Self {
+            path,
+            content: Content::Text(content),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct ReadDir {
     entries: Vec<io::Result<DirEntry>>,

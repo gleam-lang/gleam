@@ -507,11 +507,11 @@ pub fn generate_json_package_interface(
 ) -> OutputFile {
     OutputFile {
         path,
-        content: Content::Text(package_interface_as_json(package, cached_modules)),
+        content: Content::Text(package_interface(package, cached_modules)),
     }
 }
 
-pub fn package_interface_as_json(
+pub fn package_interface(
     package: &Package,
     cached_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
 ) -> String {
