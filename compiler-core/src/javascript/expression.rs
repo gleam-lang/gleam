@@ -1979,6 +1979,85 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
         body: &'a [TypedStatement],
         kind: &FunctionLiteralKind,
     ) -> Document<'a, 'doc> {
+        if let Some(Statement::Expression(TypedExpr::Call { location, fun , /*arguments: inner_arguments*/ .. })) = body.first()
+            && body.len() == 1
+            && (
+                matches!(&**fun, TypedExpr::Call { .. })
+                || matches!(&**fun, TypedExpr::TupleIndex { .. })
+                || matches!(&**fun, TypedExpr::RecordAccess{ .. })
+            ) {
+            let local_tmp_value= "tmp".into();
+            let local_tmp_value = self.next_local_var(&local_tmp_value);
+            let local_capture_value = CAPTURE_VARIABLE.into();
+            let local_capture_value = self.next_local_var(&local_capture_value);
+
+            let subject = self.expression(arena, fun);
+
+            // let tmp = <expr>;
+            let assignment = docvec![
+                arena,
+                self.source_map_tracker(arena, location.start),
+                LET_SPACE_DOCUMENT,
+                local_tmp_value.clone(),
+                SPACE_EQUAL_SPACE_DOCUMENT,
+                subject,
+                SEMICOLON_DOCUMENT,
+                BREAKABLE_SPACE_DOCUMENT,
+            ];
+
+            // return (x) => { tmp(x) };
+            let return_assignment_contents = docvec![
+                arena,
+                RETURN_SPACE_DOCUMENT,
+                OPEN_PAREN_DOCUMENT,
+                local_capture_value.clone(),
+                CLOSE_PAREN_DOCUMENT,
+                SPACE_EQUAL_ARROW_SPACE_OPEN_CURLY_DOCUMENT,
+                BREAKABLE_SPACE_DOCUMENT,
+                local_tmp_value,
+                OPEN_PAREN_DOCUMENT,
+                local_capture_value,
+                CLOSE_PAREN_DOCUMENT,
+            ];
+            let return_assignment = docvec![
+                arena,
+                return_assignment_contents
+                    .nest(arena, INDENT)
+                    .append(arena, BREAKABLE_SPACE_DOCUMENT)
+                    .group(arena),
+                CLOSE_CURLY_DOCUMENT,
+                SEMICOLON_DOCUMENT,
+            ];
+
+            let block_contents = docvec![
+                arena,
+                OPEN_PAREN_DOCUMENT,
+                OPEN_PAREN_DOCUMENT,
+                CLOSE_PAREN_DOCUMENT,
+                SPACE_EQUAL_ARROW_SPACE_OPEN_CURLY_DOCUMENT,
+                BREAKABLE_SPACE_DOCUMENT,
+                assignment,
+                return_assignment,
+            ];
+
+            // (() => {
+            //   let tmp = <expr>;
+            //   return (x) => tmp(x);
+            // })()
+            let docs = docvec![
+                arena,
+                block_contents
+                    .nest(arena, INDENT)
+                    .append(arena, BREAKABLE_SPACE_DOCUMENT)
+                    .group(arena),
+                CLOSE_CURLY_DOCUMENT,
+                CLOSE_PAREN_DOCUMENT,
+                OPEN_PAREN_DOCUMENT,
+                CLOSE_PAREN_DOCUMENT,
+            ];
+            return docs;
+        }
+
         // New function, this is now the tail position
         let function_position = std::mem::replace(&mut self.function_position, Position::Tail);
         let scope_position = std::mem::replace(&mut self.scope_position, Position::Tail);
