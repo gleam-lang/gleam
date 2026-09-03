@@ -650,11 +650,11 @@ impl Command {
                 let paths = find_project_paths(directory)?;
                 export::hex_tarball(&paths)
             }
-            Self::Export(ExportTarget::JavascriptPrelude { output }) => {
+            Self::Export(ExportTarget::JavaScriptPrelude { output }) => {
                 let paths = find_project_paths(directory)?;
                 export::javascript_prelude(&paths, output)
             }
-            Self::Export(ExportTarget::TypescriptPrelude { output }) => {
+            Self::Export(ExportTarget::TypeScriptPrelude { output }) => {
                 let paths = find_project_paths(directory)?;
                 export::typescript_prelude(&paths, output)
             }
@@ -696,7 +696,7 @@ pub enum ExportTarget {
     /// The package bundled into a tarball, suitable for publishing to Hex
     HexTarball,
     /// The JavaScript prelude module
-    JavascriptPrelude {
+    JavaScriptPrelude {
         /// (optional) The path to write the JavaScript file to.
         ///
         /// If ommited, the command will print to stdout.
@@ -704,7 +704,7 @@ pub enum ExportTarget {
         output: Option<Utf8PathBuf>,
     },
     /// The TypeScript prelude module
-    TypescriptPrelude {
+    TypeScriptPrelude {
         /// (optional) The path to write the TypeScript file to.
         ///
         /// If ommited, the command will print to stdout.

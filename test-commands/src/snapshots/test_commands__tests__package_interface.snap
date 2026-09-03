@@ -1,0 +1,38 @@
+---
+source: test-commands/src/tests.rs
+expression: contents
+---
+{
+  "name": "hello_joe",
+  "version": "1.0.0",
+  "gleam-version-constraint": null,
+  "modules": {
+    "hello_joe": {
+      "documentation": [],
+      "type-aliases": {},
+      "types": {},
+      "constants": {},
+      "functions": {
+        "main": {
+          "documentation": null,
+          "deprecation": null,
+          "implementations": {
+            "gleam": false,
+            "uses-erlang-externals": true,
+            "uses-javascript-externals": false,
+            "can-run-on-erlang": true,
+            "can-run-on-javascript": false
+          },
+          "parameters": [],
+          "return": {
+            "kind": "named",
+            "name": "Nil",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
+          }
+        }
+      }
+    }
+  }
+}

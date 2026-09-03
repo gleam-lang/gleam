@@ -5,9 +5,13 @@ use camino::Utf8PathBuf;
 use gleam_cli::{Command, ExportTarget, fs};
 use std::process;
 
-fn escript_compile(case: &str) -> Result<Utf8PathBuf, gleam_core::Error> {
-    let working_directory = Utf8PathBuf::from(&format!("./cases/{case}"));
-    let escript_path = working_directory.join(case);
+fn package(package: &str) -> Utf8PathBuf {
+    Utf8PathBuf::from(&format!("./packages/{package}"))
+}
+
+fn escript_compile(package: &str) -> Result<Utf8PathBuf, gleam_core::Error> {
+    let working_directory = Utf8PathBuf::from(&format!("./packages/{package}"));
+    let escript_path = working_directory.join(package);
     fs::delete_file(&escript_path)
         .and(fs::delete_file(&escript_path.with_extension("cmd")))
         .expect("must be able to reset test directory");
@@ -28,7 +32,7 @@ fn assert_escript_compile(case: &str) -> Utf8PathBuf {
 
 #[test]
 fn escript_success() {
-    let escript = assert_escript_compile("escript_ok");
+    let escript = assert_escript_compile("hello_joe");
     let status = process::Command::new("escript")
         .arg(&escript)
         .status()
@@ -48,7 +52,7 @@ fn escript_success() {
 
 #[test]
 fn escript_success_with_dependency() {
-    let escript = assert_escript_compile("escript_with_dependency");
+    let escript = assert_escript_compile("with_dependency");
     let status = process::Command::new("escript")
         .arg(escript)
         .status()
@@ -58,7 +62,7 @@ fn escript_success_with_dependency() {
 
 #[test]
 fn escript_without_main_function() {
-    let error = escript_compile("escript_without_main_function")
+    let error = escript_compile("without_main_function")
         .expect_err("escripts require a main function")
         .pretty_string();
     insta::assert_snapshot!(error);
@@ -66,8 +70,60 @@ fn escript_without_main_function() {
 
 #[test]
 fn escript_with_wrong_arity_main_function() {
-    let error = escript_compile("escript_with_wrong_arity_main_function")
+    let error = escript_compile("with_wrong_arity_main_function")
         .expect_err("escripts require a main function")
         .pretty_string();
     insta::assert_snapshot!(error);
+}
+
+#[test]
+fn javascript_prelude() {
+    let out = tempfile::NamedTempFile::new().unwrap();
+    let path = Utf8PathBuf::from(out.path().as_os_str().to_str().unwrap());
+    Command::Export(ExportTarget::JavaScriptPrelude {
+        output: Some(path.clone()),
+    })
+    .run(package("hello_joe"))
+    .unwrap();
+    let contents = std::fs::read_to_string(path).unwrap();
+    assert_eq!(contents, gleam_core::javascript::PRELUDE);
+}
+
+#[test]
+fn typescript_prelude() {
+    let out = tempfile::NamedTempFile::new().unwrap();
+    let path = Utf8PathBuf::from(out.path().as_os_str().to_str().unwrap());
+    Command::Export(ExportTarget::TypeScriptPrelude {
+        output: Some(path.clone()),
+    })
+    .run(package("hello_joe"))
+    .unwrap();
+    let contents = std::fs::read_to_string(path).unwrap();
+    assert_eq!(contents, gleam_core::javascript::PRELUDE_TS_DEF);
+}
+
+#[test]
+fn package_information() {
+    let out = tempfile::NamedTempFile::new().unwrap();
+    let path = Utf8PathBuf::from(out.path().as_os_str().to_str().unwrap());
+    Command::Export(ExportTarget::PackageInformation {
+        output: Some(path.clone()),
+    })
+    .run(package("hello_joe"))
+    .unwrap();
+    let contents = std::fs::read_to_string(path).unwrap();
+    insta::assert_snapshot!(contents);
+}
+
+#[test]
+fn package_interface() {
+    let out = tempfile::NamedTempFile::new().unwrap();
+    let path = Utf8PathBuf::from(out.path().as_os_str().to_str().unwrap());
+    Command::Export(ExportTarget::PackageInterface {
+        output: Some(path.clone()),
+    })
+    .run(package("hello_joe"))
+    .unwrap();
+    let contents = std::fs::read_to_string(path).unwrap();
+    insta::assert_snapshot!(contents);
 }
