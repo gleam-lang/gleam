@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn go(x) {\n  case x {\n    <<\"\">> -> True\n    _ -> False\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    <<"">> -> True
+    _ -> False
+  }
+}
+
+
+----- WARNING
+warning: Empty string segment
+  ┌─ /src/warning/wrn.gleam:4:7
+  │
+4 │     <<"">> -> True
+  │       ^^ Remove this empty string
+
+This empty string segment is ignored in the pattern, so it can be safely
+removed. Empty string segments are deprecated and will become an error in a
+future version.
