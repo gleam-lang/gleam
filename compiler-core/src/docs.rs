@@ -515,7 +515,7 @@ pub fn package_interface(
     package: &Package,
     cached_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
 ) -> String {
-    serde_json::to_string(&PackageInterface::from_package(package, cached_modules))
+    serde_json::to_string_pretty(&PackageInterface::from_package(package, cached_modules))
         .expect("JSON module interface serialisation")
 }
 

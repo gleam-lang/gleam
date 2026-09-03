@@ -91,3 +91,5 @@ unicode-segmentation = "1.13.2"
 xxhash-rust = { version = "0", features = ["xxh3"] }
 # Source spans and line numbers
 src-span = { path = "./src-span" }
+# Creation of temporary directories
+tempfile = "3"

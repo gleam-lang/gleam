@@ -4,8 +4,7 @@ expression: error
 ---
 error: Module does not have a main function
 
-`escript_without_main_function` does not have a main function so the module
-can not be run.
+`without_main_function` does not have a main function so the module can not
+be run.
 
-Hint: Add a public `main` function to
-`src/escript_without_main_function.gleam`.
+Hint: Add a public `main` function to `src/without_main_function.gleam`.
