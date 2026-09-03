@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport wibble\n\npub fn go() {\n  wibble.wobble\n}\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+const wobble = 0
+
+-- main.gleam
+
+import wibble
+
+pub fn go() {
+  wibble.wobble
+}
+
+
+----- ERROR
+error: Use of private module value
+  ┌─ /src/one/two.gleam:5:10
+  │
+5 │   wibble.wobble
+  │          ^^^^^^
+
+`wibble.wobble` is a private value.
