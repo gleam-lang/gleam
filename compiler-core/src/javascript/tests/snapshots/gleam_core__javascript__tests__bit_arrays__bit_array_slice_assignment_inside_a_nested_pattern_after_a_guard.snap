@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn go(b: Bool, flag: Bool, r: Result(BitArray, Nil)) -> BitArray {\n  case b, r {\n    True, _ if flag -> <<1>>\n    _, Ok(<<x:bits>>) -> x\n    _, _ -> <<>>\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(b: Bool, flag: Bool, r: Result(BitArray, Nil)) -> BitArray {
+  case b, r {
+    True, _ if flag -> <<1>>
+    _, Ok(<<x:bits>>) -> x
+    _, _ -> <<>>
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { Ok, toBitArray, bitArraySlice } from "../gleam.mjs";
+
+export function go(b, flag, r) {
+  if (b) {
+    if (flag) {
+      return toBitArray([1]);
+    } else if (r instanceof Ok) {
+      let x = bitArraySlice(r[0], 0);
+      return x;
+    } else {
+      return toBitArray([]);
+    }
+  } else if (r instanceof Ok) {
+    let x = bitArraySlice(r[0], 0);
+    return x;
+  } else {
+    return toBitArray([]);
+  }
+}
