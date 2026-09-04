@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn add(a, b) { a + b }\npub fn main() {\n  add(1, _)(10)\n}\n"
+---
+----- SOURCE CODE
+
+pub fn add(a, b) { a + b }
+pub fn main() {
+  add(1, _)(10)
+}
+
+
+----- WARNING
+warning: Immediately called function capture
+  ┌─ /src/warning/wrn.gleam:4:3
+  │
+4 │   add(1, _)(10)
+  │   ^^^^^^^^^^^^^ This function capture is immediately called
+
+This function capture is immediately called. It can be replaced with a
+direct function call.

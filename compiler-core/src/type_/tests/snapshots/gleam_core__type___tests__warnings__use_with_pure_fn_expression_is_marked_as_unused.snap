@@ -27,3 +27,16 @@ warning: Unused value
 This expression computes a value without any side effects, but then the
 value isn't used at all. You might want to assign it to a variable, or
 delete the expression entirely if it's not needed.
+
+warning: Immediately called anonymous function
+  ┌─ /src/warning/wrn.gleam:4:9
+  │  
+4 │ ╭         use _ <- fn(a) { a }
+5 │ │         1
+  │ ╰─────────^ This anonymous function is immediately called
+
+This anonymous function is immediately called. It can be replaced with a
+block expression.
+
+Hint: Use a block expression with `let` bindings instead, for example: `{
+let a = 1; let b = 2; a + b }`

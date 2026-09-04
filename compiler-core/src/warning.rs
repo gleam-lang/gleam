@@ -1570,6 +1570,48 @@ not be used.",
                         extra_labels: vec![],
                     }),
                 },
+
+                type_::Warning::ImmediatelyCalledAnonymousFunction { location } => Diagnostic {
+                    title: "Immediately called anonymous function".into(),
+                    text: wrap(
+                        "This anonymous function is immediately called. \
+It can be replaced with a block expression.",
+                    ),
+                    hint: Some(
+                        "Use a block expression with `let` bindings instead, \
+for example: `{ let a = 1; let b = 2; a + b }`"
+                            .into(),
+                    ),
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        label: diagnostic::Label {
+                            text: Some("This anonymous function is immediately called".into()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
+
+                type_::Warning::ImmediatelyCalledFunctionCapture { location } => Diagnostic {
+                    title: "Immediately called function capture".into(),
+                    text: wrap(
+                        "This function capture is immediately called. \
+It can be replaced with a direct function call.",
+                    ),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        label: diagnostic::Label {
+                            text: Some("This function capture is immediately called".into()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
             },
 
             Warning::EmptyModule { path: _, name } => Diagnostic {

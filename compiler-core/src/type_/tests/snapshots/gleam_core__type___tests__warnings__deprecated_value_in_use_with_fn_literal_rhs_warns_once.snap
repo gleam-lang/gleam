@@ -16,6 +16,19 @@ pub fn main() {
 
 
 ----- WARNING
+warning: Immediately called anonymous function
+  ┌─ /src/warning/wrn.gleam:8:3
+  │  
+8 │ ╭   use <- fn(f) { f() }
+9 │ │   wibble()
+  │ ╰──────────^ This anonymous function is immediately called
+
+This anonymous function is immediately called. It can be replaced with a
+block expression.
+
+Hint: Use a block expression with `let` bindings instead, for example: `{
+let a = 1; let b = 2; a + b }`
+
 warning: Deprecated value used
   ┌─ /src/warning/wrn.gleam:9:3
   │
