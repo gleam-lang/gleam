@@ -3173,7 +3173,7 @@ pub fn main() {
 
 #[test]
 fn impure_fn_function_call_not_mark_as_unused() {
-    assert_no_warnings!(
+    assert_warning!(
         r#"
 pub fn main() {
     fn(_) { panic }(1)
@@ -5253,5 +5253,42 @@ pub fn thingy(wibble) {
   }
 }
     "#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6259
+#[test]
+fn immediately_called_anonymous_function() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  fn(a, b) { a + b }(1, 2)
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6259
+#[test]
+fn immediately_called_anonymous_function_with_single_arg() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  fn(x) { x + 1 }(5)
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6258
+#[test]
+fn immediately_called_function_capture() {
+    assert_warning!(
+        r#"
+pub fn add(a, b) { a + b }
+pub fn main() {
+  add(1, _)(10)
+}
+"#
     );
 }

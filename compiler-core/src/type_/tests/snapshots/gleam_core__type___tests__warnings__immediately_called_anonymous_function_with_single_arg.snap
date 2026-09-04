@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main() {\n  fn(x) { x + 1 }(5)\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  fn(x) { x + 1 }(5)
+}
+
+
+----- WARNING
+warning: Immediately called anonymous function
+  ┌─ /src/warning/wrn.gleam:3:3
+  │
+3 │   fn(x) { x + 1 }(5)
+  │   ^^^^^^^^^^^^^^^^^^ This anonymous function is immediately called
+
+This anonymous function is immediately called. It can be replaced with a
+block expression.
+
+Hint: Use a block expression with `let` bindings instead, for example: `{
+let a = 1; let b = 2; a + b }`

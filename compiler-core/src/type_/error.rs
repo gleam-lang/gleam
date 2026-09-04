@@ -1234,6 +1234,28 @@ pub enum Warning {
     PipeIntoCallWhichReturnsFunction {
         location: SrcSpan,
     },
+
+    /// When an anonymous function is immediately called, which can be replaced
+    /// with a block expression or direct let bindings:
+    ///
+    /// ```gleam
+    /// fn(a, b) { a + b }(1, 2)
+    /// ```
+    ///
+    ImmediatelyCalledAnonymousFunction {
+        location: SrcSpan,
+    },
+
+    /// When a function capture is immediately called, which can be replaced
+    /// with a direct function call:
+    ///
+    /// ```gleam
+    /// add(1, _)(10)
+    /// ```
+    ///
+    ImmediatelyCalledFunctionCapture {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
@@ -1507,7 +1529,9 @@ impl Warning {
             | Warning::RedundantComparison { location, .. }
             | Warning::JavaScriptBitArrayUnsafeInt { location, .. }
             | Warning::UnusedRecursiveArgument { location, .. }
-            | Warning::PipeIntoCallWhichReturnsFunction { location } => *location,
+            | Warning::PipeIntoCallWhichReturnsFunction { location }
+            | Warning::ImmediatelyCalledAnonymousFunction { location, .. }
+            | Warning::ImmediatelyCalledFunctionCapture { location, .. } => *location,
         }
     }
 

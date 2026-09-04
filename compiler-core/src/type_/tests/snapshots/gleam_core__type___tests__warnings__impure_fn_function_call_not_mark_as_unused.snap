@@ -1,11 +1,11 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-expression: "\npub fn main() {\n    fn(a) { a + 1 }(1)\n    Nil\n}\n"
+expression: "\npub fn main() {\n    fn(_) { panic }(1)\n    Nil\n}\n"
 ---
 ----- SOURCE CODE
 
 pub fn main() {
-    fn(a) { a + 1 }(1)
+    fn(_) { panic }(1)
     Nil
 }
 
@@ -14,7 +14,7 @@ pub fn main() {
 warning: Immediately called anonymous function
   ┌─ /src/warning/wrn.gleam:3:5
   │
-3 │     fn(a) { a + 1 }(1)
+3 │     fn(_) { panic }(1)
   │     ^^^^^^^^^^^^^^^^^^ This anonymous function is immediately called
 
 This anonymous function is immediately called. It can be replaced with a
@@ -22,13 +22,3 @@ block expression.
 
 Hint: Use a block expression with `let` bindings instead, for example: `{
 let a = 1; let b = 2; a + b }`
-
-warning: Unused value
-  ┌─ /src/warning/wrn.gleam:3:5
-  │
-3 │     fn(a) { a + 1 }(1)
-  │     ^^^^^^^^^^^^^^^^^^ This value is never used
-
-This expression computes a value without any side effects, but then the
-value isn't used at all. You might want to assign it to a variable, or
-delete the expression entirely if it's not needed.

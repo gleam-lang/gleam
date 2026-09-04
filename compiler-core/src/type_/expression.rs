@@ -1230,6 +1230,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             });
         }
 
+        // When an anonymous function or a function capture is immediately called
+        // we want to warn the user because they could use a simpler form.
+        // e.g. `fn(a) { a + 1 }(1)` could be `{ let a = 1; a + 1 }`
+        // e.g. `add(1, _)(10)` could be `add(1, 10)`
+        if let TypedExpr::Fn { kind, .. } = &fun {
+            if kind.is_anonymous() {
+                self.problems
+                    .warning(Warning::ImmediatelyCalledAnonymousFunction { location });
+            } else if kind.is_capture() {
+                self.problems
+                    .warning(Warning::ImmediatelyCalledFunctionCapture { location });
+            }
+        }
+
         self.purity = self.purity.merge(fun.called_function_purity());
 
         TypedExpr::Call {
