@@ -15,6 +15,8 @@ error: Incorrect number of patterns
 This case expression has 1 subject, but this pattern matches 2.
 Each clause must have a pattern for every subject value.
 
+Hint: Did you mean to match on alternative patterns using `|`?
+
 error: Incorrect number of patterns
   ┌─ /src/one/two.gleam:1:21
   │
@@ -23,3 +25,5 @@ error: Incorrect number of patterns
 
 This case expression has 1 subject, but this pattern matches 3.
 Each clause must have a pattern for every subject value.
+
+Hint: Did you mean to match on alternative patterns using `|`?

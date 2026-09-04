@@ -3875,10 +3875,15 @@ to variables, pass them to functions, or anything else that you would do with a 
 but this pattern matches {given}.
 Each clause must have a pattern for every subject value.",
             );
+            let hint = if *expected == 1 {
+                Some("Did you mean to match on alternative patterns using `|`?".into())
+            } else {
+                None
+            };
             Diagnostic {
                 title: "Incorrect number of patterns".into(),
                 text,
-                hint: None,
+                hint,
                 level: Level::Error,
                 location: Some(Location {
                     label: Label {

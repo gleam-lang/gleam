@@ -120,6 +120,9 @@
   merge conflict indicator
   ([0xda157](https://github.com/0xda157))
 
+- The compiler now provides hint about `|' in pattern matching
+  ([n0kk23](https://github.com/n0kk23))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
