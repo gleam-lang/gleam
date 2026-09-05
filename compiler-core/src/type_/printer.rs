@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2024 The Gleam contributors
 
-use crate::type_::{Type, TypeAliasConstructor, TypeVar};
+use crate::{
+    strings::number_to_letters,
+    type_::{Type, TypeAliasConstructor, TypeVar},
+};
 use bimap::{BiHashMap, BiMap};
 use ecow::{EcoString, eco_format};
 use im::HashMap;
@@ -576,25 +579,9 @@ impl<'a> Printer<'a> {
     }
 
     fn next_letter(&mut self) -> EcoString {
-        let alphabet_length = 26;
-        let char_offset = 97;
-        let mut chars = vec![];
-        let mut n;
-        let mut rest = self.uid;
-
-        loop {
-            n = rest % alphabet_length;
-            rest /= alphabet_length;
-            chars.push((n as u8 + char_offset) as char);
-
-            if rest == 0 {
-                break;
-            }
-            rest -= 1;
-        }
-
+        let result = number_to_letters(self.uid);
         self.uid += 1;
-        chars.into_iter().rev().collect()
+        result
     }
 }
 

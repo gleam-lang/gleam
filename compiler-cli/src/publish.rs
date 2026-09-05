@@ -20,7 +20,7 @@ use gleam_core::{
     paths::{self, ProjectPaths},
     requirement::Requirement,
     type_::ModuleInterface,
-    version_bump::{VersionBump, detect_changes},
+    version_bump::{VersionBump, VersionChanges, detect_changes, show_diffs},
 };
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
@@ -63,10 +63,6 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
     check_for_name_squatting(&compile_result)?;
     check_for_multiple_top_level_modules(&compile_result, i_am_sure)?;
     check_for_default_main(&compile_result)?;
-    if !check_version_changes(&config, &cached_modules, &runtime, &hex_config, &http)? {
-        println!("Not publishing.");
-        return Ok(());
-    }
 
     // Build HTML documentation
     let docs_tarball = fs::create_tar_archive(docs::build_documentation(
@@ -77,6 +73,11 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         DocContext::HexPublish,
         &cached_modules,
     )?)?;
+
+    if !check_version_changes(&config, cached_modules, &runtime, &hex_config, &http)? {
+        println!("Not publishing.");
+        return Ok(());
+    }
 
     // Ask user if this is correct
     if !generated_files_added.is_empty() {
@@ -385,7 +386,7 @@ be published.
 /// number (major, minor, or patch)
 fn check_version_changes(
     config: &PackageConfig,
-    modules: &im::HashMap<EcoString, ModuleInterface>,
+    modules: im::HashMap<EcoString, ModuleInterface>,
     runtime: &tokio::runtime::Runtime,
     hex_config: &hexpm::Config,
     http: &HttpClient,
@@ -469,28 +470,42 @@ fn check_version_changes(
             error: error.to_string(),
         })?;
 
-    let suggested_bump = detect_changes(parsed, modules);
+    // Only pass in modules which are part of the public API of the current package.
+    let modules = modules
+        .into_iter()
+        .filter(|(_, module)| module.package == config.name && !module.is_internal)
+        .collect();
 
-    let bump_is_sufficient = match (version_bump, suggested_bump) {
+    let suggested_bump = detect_changes(&parsed, &modules);
+
+    let bump_is_sufficient = match (version_bump, &suggested_bump) {
         (VersionBump::Major, _) => true,
-        (VersionBump::Minor, VersionBump::Major) => false,
+        (VersionBump::Minor, VersionChanges::Major(_)) => false,
         (VersionBump::Minor, _) => true,
-        (VersionBump::Patch, VersionBump::Major | VersionBump::Minor) => false,
-        (VersionBump::Patch, _) => true,
+        (VersionBump::Patch, VersionChanges::Major(_) | VersionChanges::Minor(_)) => false,
+        (VersionBump::Patch, VersionChanges::Patch) => true,
     };
 
     if bump_is_sufficient {
         return Ok(true);
     }
 
-    let suggested_version = match suggested_bump {
-        VersionBump::Major => Version::new(previous_version.major + 1, 0, 0),
-        VersionBump::Minor => Version::new(previous_version.major, previous_version.minor + 1, 0),
-        VersionBump::Patch => Version::new(
+    let suggested_version = match &suggested_bump {
+        VersionChanges::Major(_) => Version::new(previous_version.major + 1, 0, 0),
+        VersionChanges::Minor(_) => {
+            Version::new(previous_version.major, previous_version.minor + 1, 0)
+        }
+        VersionChanges::Patch => Version::new(
             previous_version.major,
             previous_version.minor,
             previous_version.patch + 1,
         ),
+    };
+
+    let (suggested_bump_name, diffs) = match suggested_bump {
+        VersionChanges::Major(changed) => ("major", show_diffs(changed, &parsed, &modules)),
+        VersionChanges::Minor(changed) => ("minor", show_diffs(changed, &parsed, &modules)),
+        VersionChanges::Patch => ("patch", EcoString::new()),
     };
 
     println!(
@@ -501,12 +516,13 @@ should be a {} version bump instead, meaning the next version should be v{}.
 Unless you have a very good reason, you should follow semantic versioning
 in your package versioning.
 
-Hint: Run `gleam bump` to update the package version automatically
-\n",
+Changes:\n\n{}",
         version_bump.to_string(),
-        suggested_bump.to_string(),
-        suggested_version
+        suggested_bump_name,
+        suggested_version,
+        diffs,
     );
+
     let should_publish =
         cli::confirm_with_text("I have a good reason to not use semantic versioning")?;
     println!();

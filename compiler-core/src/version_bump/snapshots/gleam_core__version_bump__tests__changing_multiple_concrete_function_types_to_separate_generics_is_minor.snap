@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- MINOR
+
+== the_module ==
+- pub fn pair(Int, Float) -> #(Int, Float)
++ pub fn pair(a, b) -> #(a, b)

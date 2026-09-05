@@ -69,7 +69,7 @@ pub struct TypeDefinitionInterface {
     documentation: Option<EcoString>,
     /// If the definition has a deprecation annotation `@deprecated("...")`
     /// this field will hold the reason of the deprecation.
-    deprecation: Option<DeprecationInterface>,
+    pub deprecation: Option<DeprecationInterface>,
     /// The number of type variables in the type definition.
     /// ```gleam
     /// /// This type has 2 type variables.
@@ -119,7 +119,7 @@ pub struct TypeAliasInterface {
     documentation: Option<EcoString>,
     /// If the alias has a deprecation annotation `@deprecated("...")`
     /// this field will hold the reason of the deprecation.
-    deprecation: Option<DeprecationInterface>,
+    pub deprecation: Option<DeprecationInterface>,
     /// The number of type variables in the type alias definition.
     /// ```gleam
     /// /// This type alias has 2 type variables.
@@ -142,7 +142,7 @@ pub struct ConstantInterface {
     documentation: Option<EcoString>,
     /// If the constant has a deprecation annotation `@deprecated("...")`
     /// this field will hold the reason of the deprecation.
-    deprecation: Option<DeprecationInterface>,
+    pub deprecation: Option<DeprecationInterface>,
     pub implementations: ImplementationsInterface,
     /// The constant's type.
     #[serde(rename = "type")]
@@ -159,7 +159,7 @@ pub struct FunctionInterface {
     documentation: Option<EcoString>,
     /// If the constant has a deprecation annotation `@deprecated("...")`
     /// this field will hold the reason of the deprecation.
-    deprecation: Option<DeprecationInterface>,
+    pub deprecation: Option<DeprecationInterface>,
     pub implementations: ImplementationsInterface,
     pub parameters: Vec<ParameterInterface>,
     #[serde(rename = "return")]
@@ -633,10 +633,13 @@ impl TypeInterface {
                         .zip(other_parameters)
                         .all(|(one, other)| one.same_as(other))
             }
-            (TypeInterface::Tuple { .. }, _)
-            | (TypeInterface::Fn { .. }, _)
-            | (TypeInterface::Variable { .. }, _)
-            | (TypeInterface::Named { .. }, _) => false,
+            (
+                TypeInterface::Tuple { .. }
+                | TypeInterface::Fn { .. }
+                | TypeInterface::Variable { .. }
+                | TypeInterface::Named { .. },
+                _,
+            ) => false,
         }
     }
 }

@@ -1375,7 +1375,9 @@ impl UnqualifiedImport {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Default, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Hash, Copy, Default, serde::Serialize, serde::Deserialize,
+)]
 pub enum Layer {
     #[default]
     Value,
