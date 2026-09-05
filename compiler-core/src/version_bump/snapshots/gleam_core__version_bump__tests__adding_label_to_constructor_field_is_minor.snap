@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- MINOR
+
+== the_module ==
+- pub type Wibble {
+-   Wibble(Int, String)
+- }
++ pub type Wibble {
++   Wibble(int: Int, string: String)
++ }

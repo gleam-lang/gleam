@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- PATCH

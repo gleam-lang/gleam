@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- MINOR
+
+== the_module ==
+- pub const list: List(Int)
++ pub const list: List(a)

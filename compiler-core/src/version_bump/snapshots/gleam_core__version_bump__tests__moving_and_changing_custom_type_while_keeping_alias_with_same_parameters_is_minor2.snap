@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- MINOR
+
+== the_module ==
++ pub type NewType
+
+- pub type OldType(a, b) {
+-   Wibble(a)
+-   Wobble(b)
+-   Wubble(Int)
+- }
++ pub type OldType(a, b) = NewType(a, b, Int)

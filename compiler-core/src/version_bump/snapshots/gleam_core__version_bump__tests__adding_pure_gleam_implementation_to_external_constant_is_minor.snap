@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- MINOR
+
+== the_module ==
+The target support for wobble has changed:
+- Erlang
++ Erlang, JavaScript
