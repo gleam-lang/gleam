@@ -13,6 +13,7 @@ use crate::{
         ArgNames, CustomType, Function, Publicity, RecordConstructorArg, TypeAlias, TypedArg,
         TypedDefinitions, TypedModuleConstant, TypedRecordConstructor,
     },
+    strings::number_to_letters,
     type_::{
         Deprecation, PRELUDE_MODULE_NAME, PRELUDE_PACKAGE_NAME, Type, TypeVar,
         printer::{Names, PrintMode},
@@ -614,25 +615,9 @@ impl<'a, 'doc> Printer<'a> {
 
     // Copied from the `next_letter` method of the `type_::printer`.
     fn next_letter(&mut self) -> EcoString {
-        let alphabet_length = 26;
-        let char_offset = b'a';
-        let mut chars = vec![];
-        let mut n;
-        let mut rest = self.next_type_variable_id;
-
-        loop {
-            n = rest % alphabet_length;
-            rest = rest / alphabet_length;
-            chars.push((n as u8 + char_offset) as char);
-
-            if rest == 0 {
-                break;
-            }
-            rest -= 1;
-        }
-
+        let result = number_to_letters(self.next_type_variable_id);
         self.next_type_variable_id += 1;
-        chars.into_iter().rev().collect()
+        result
     }
 
     fn named_type_name(
