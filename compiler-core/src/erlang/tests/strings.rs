@@ -495,3 +495,14 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn concat_with_block_with_single_string_expr() {
+    assert_erl!(
+        r#"
+pub fn concat(name) {
+  name <> { "/" } <> name
+}
+"#,
+    );
+}

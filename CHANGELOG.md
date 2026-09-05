@@ -282,6 +282,10 @@
   `gleam deps download` would needlessly resolve versions again.
   ([John Downey](https://github.com/jtdowney))
 
+- Fixed a bug where concatenating a string to a string in a block would
+  produce an invalid bitstring on the Erlang target.
+  ([Lillian Rose](https://github.com/lillianrubyrose) with [Mar Bloeiman](https://github.com/strawmelonjuice))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when
