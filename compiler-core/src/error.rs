@@ -5,10 +5,10 @@
 use crate::ast::{self};
 use crate::bit_array::UnsupportedOption;
 use crate::build::{Origin, Outcome, Runtime, Target};
-use crate::dependency::{PackageFetcher, ResolutionError};
+use crate::dependency::{PackageFetcher, ResolutionError, ResolutionFailure};
+use crate::derivation_tree::DerivationTreePrinter;
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
 
-use crate::derivation_tree::DerivationTreePrinter;
 use crate::parse::error::ParseErrorDetails;
 use crate::strings::{to_snake_case, to_upper_camel_case};
 use crate::type_::collapse_links;
@@ -197,6 +197,12 @@ pub enum Error {
     #[error("{error}")]
     GitInitialization { error: String },
 
+    #[error("Failed to send LSP message: {error}")]
+    LspMessageSendFailed { error: String },
+
+    #[error("Failed to receive LSP message: {error}")]
+    LspMessageReceiveFailed { error: String },
+
     #[error("io operation failed")]
     StandardIo {
         action: StandardIoAction,
@@ -313,8 +319,7 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Could not find versions that satisfy dependency requirements")]
     DependencyResolutionNoSolution {
         root_package_name: EcoString,
-        derivation_tree:
-            Box<NeverEqual<pubgrub::DerivationTree<String, pubgrub::Ranges<Version>, String>>>,
+        derivation_tree: Box<NeverEqual<ResolutionFailure>>,
     },
 
     #[error("Dependency resolution failed: {0}")]
@@ -436,6 +441,18 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("could not create temp file: {error}")]
     CouldNotCreateTempFile { error: String },
+
+    /// This happens when we try adding some packages as regular dependencies
+    /// (gleam add wibble wobble ...) but those are already listed in the dev
+    /// dependencies of the project!
+    #[error("these packages are already dev dependencies: {packages:?}")]
+    AddedDependenciesAreAlreadyDevDependencies { packages: Vec<EcoString> },
+
+    /// This happens when we try adding some packages as dev dependencies
+    /// (gleam add wibble wobble ... --dev) but those are already listed in the
+    /// dependencies of the project!
+    #[error("these packages are already dependencies: {packages:?}")]
+    AddedDevDependenciesAreAlreadyDependencies { packages: Vec<EcoString> },
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
@@ -584,7 +601,7 @@ impl Error {
         match error {
             ResolutionError::NoSolution(derivation_tree) => Self::DependencyResolutionNoSolution {
                 root_package_name,
-                derivation_tree: Box::new(NeverEqual(derivation_tree)),
+                derivation_tree: Box::new(NeverEqual(ResolutionFailure(derivation_tree))),
             },
 
             ResolutionError::ErrorRetrievingDependencies {
@@ -1957,6 +1974,42 @@ with `gleam hex authenticate`."
                 }]
             }
 
+            Error::LspMessageSendFailed { error } => {
+                let text = wrap_format!(
+                    "An error occurred when the Gleam language server \
+attempted to send a message to the client:
+
+    {error}
+
+Is your editor still running and connected to the language server?"
+                );
+                vec![Diagnostic {
+                    title: "Failed to send LSP message".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: None,
+                }]
+            }
+
+            Error::LspMessageReceiveFailed { error } => {
+                let text = wrap_format!(
+                    "An error occurred when the Gleam language server \
+attempted to receive a message from the client:
+
+    {error}
+
+Is your editor still running and connected to the language server?"
+                );
+                vec![Diagnostic {
+                    title: "Failed to send LSP message".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: None,
+                }]
+            }
+
             Error::Type {
                 skipped_modules: _,
                 failed_modules,
@@ -2523,6 +2576,88 @@ add `gleam add {name}` in this project."
                 location: None,
                 hint: None,
             }],
+
+            Error::AddedDependenciesAreAlreadyDevDependencies { packages } => {
+                match packages.as_slice() {
+                    [package] => vec![Diagnostic {
+                        title: "Package is already a dev dependency".into(),
+                        text: wrap_format!(
+                            "{package} is already a development dependency of this project."
+                        ),
+                        level: Level::Error,
+                        location: None,
+                        hint: Some(
+                            "If you want to use this package as a regular \
+dependency, you can move it to the `dependencies` section of this project's \
+`gleam.toml`."
+                                .into(),
+                        ),
+                    }],
+                    packages => vec![Diagnostic {
+                        title: "Packages are already dev dependencies".into(),
+                        text: wrap_format!(
+                            "{} are already development dependencies of this project.",
+                            comma_separated_list(packages)
+                        ),
+                        level: Level::Error,
+                        location: None,
+                        hint: Some(
+                            "If you want to use these packages as regular \
+dependencies, you can move them to the `dependencies` section of this project's \
+`gleam.toml`."
+                                .into(),
+                        ),
+                    }],
+                }
+            }
+
+            Error::AddedDevDependenciesAreAlreadyDependencies { packages } => {
+                match packages.as_slice() {
+                    [package] => vec![Diagnostic {
+                        title: "Package is already a dependency".into(),
+                        text: wrap_format!("{package} is already a dependency of this project."),
+                        level: Level::Error,
+                        location: None,
+                        hint: Some(
+                            "If you want to use this package as a development \
+dependency only, you can move it to the `dev_dependencies` section of this \
+project's `gleam.toml`."
+                                .into(),
+                        ),
+                    }],
+                    packages => vec![Diagnostic {
+                        title: "Packages are already dependencies".into(),
+                        text: wrap_format!(
+                            "{} are already dependencies of this project.",
+                            comma_separated_list(packages)
+                        ),
+                        level: Level::Error,
+                        location: None,
+                        hint: Some(
+                            "If you want to use these packages as development \
+dependencies only, you can move them to the `dev_dependencies` section of this \
+project's `gleam.toml`."
+                                .into(),
+                        ),
+                    }],
+                }
+            }
+        }
+    }
+}
+
+/// Turns a list of strings into a comma separated list of items with a final
+/// "and":
+/// - "wibble"
+/// - "wibble and wobble"
+/// - "wibble, wobble, and woo"
+fn comma_separated_list(items: &[EcoString]) -> String {
+    match items {
+        [] => String::new(),
+        [first, second] => format!("{first} and {second}"),
+        [first, ..] => {
+            let (last, items) = items.split_last().unwrap_or((first, &[]));
+            format!("{}, and {last}", items.iter().join(", "))
         }
     }
 }

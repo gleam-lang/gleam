@@ -18,4 +18,6 @@ pub fn main(x) {
 -spec main(K) -> K.
 main(X) ->
     _pipe = X,
-    _pipe.
+    fun(X@1) ->
+        X@1
+    end(_pipe).

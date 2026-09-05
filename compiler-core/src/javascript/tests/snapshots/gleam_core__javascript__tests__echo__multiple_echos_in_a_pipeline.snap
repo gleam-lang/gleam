@@ -19,9 +19,10 @@ pub fn wibble(n) { n }
 ----- COMPILED JAVASCRIPT
 import * as $stdlib$dict from "../../gleam_stdlib/gleam/dict.mjs";
 import {
-  toList,
   Empty as $Empty,
+  List$Empty$const as $List$Empty$const,
   NonEmpty as $NonEmpty,
+  prepend as listPrepend,
   CustomType as $CustomType,
   bitArraySlice,
   bitArraySliceToInt,
@@ -35,7 +36,7 @@ export function wibble(n) {
 }
 
 export function main() {
-  let _pipe = toList([1, 2, 3]);
+  let _pipe = listPrepend(1, listPrepend(2, listPrepend(3, $List$Empty$const)));
   echo(_pipe, undefined, "src/module.gleam", 4);
   let _pipe$1 = wibble(_pipe);
   echo(_pipe$1, undefined, "src/module.gleam", 6);

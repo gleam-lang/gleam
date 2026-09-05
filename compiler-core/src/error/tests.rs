@@ -240,3 +240,39 @@ fn wrap_with_multibyte_char_at_width_boundary() {
     let wrapped = wrap(&input);
     assert_eq!(wrapped.replace('\n', ""), input);
 }
+
+#[test]
+fn lsp_message_send_failed() {
+    let error = Error::LspMessageSendFailed {
+        error: "sending on a disconnected channel".into(),
+    }
+    .pretty_string();
+    assert_snapshot!(error);
+}
+
+#[test]
+fn lsp_message_receive_failed() {
+    let error = Error::LspMessageReceiveFailed {
+        error: "disconnected channel".into(),
+    }
+    .pretty_string();
+    assert_snapshot!(error);
+}
+
+#[test]
+fn added_dependencies_are_already_dev_dependencies() {
+    let error = Error::AddedDependenciesAreAlreadyDevDependencies {
+        packages: vec!["wibble".into(), "wobble".into(), "woo".into()],
+    }
+    .pretty_string();
+    assert_snapshot!(error);
+}
+
+#[test]
+fn added_dev_dependencies_are_already_dependencies() {
+    let error = Error::AddedDevDependenciesAreAlreadyDependencies {
+        packages: vec!["wibble".into(), "wobble".into(), "woo".into()],
+    }
+    .pretty_string();
+    assert_snapshot!(error);
+}

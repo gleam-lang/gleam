@@ -2803,3 +2803,17 @@ pub fn main() {
 fn pipeline_in_constant_does_not_panic() {
     assert_module_error!("pub const wibble = 1 |> wobble");
 }
+
+#[test]
+fn module_constant_called_as_record_constructor() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(Int)
+}
+
+pub const wibble = Wibble
+pub const invalid = wibble(1)
+"
+    );
+}

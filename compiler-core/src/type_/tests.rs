@@ -928,7 +928,6 @@ fn infer_module_type_retention_test() {
             documentation: Vec::new(),
             contains_echo: false,
             references: References::default(),
-            inline_functions: HashMap::new(),
         }
     );
 }
@@ -3483,11 +3482,6 @@ pub fn main() {
   use _n48 <- decode.field("n48", decode.string)
   use _n49 <- decode.field("n49", decode.string)
   use _n50 <- decode.field("n50", decode.string)
-  use _n51 <- decode.field("n51", decode.string)
-  use _n52 <- decode.field("n52", decode.string)
-  use _n53 <- decode.field("n53", decode.string)
-  use _n54 <- decode.field("n54", decode.string)
-  use _n55 <- decode.field("n55", decode.string)
   Nil
 }
 "#,

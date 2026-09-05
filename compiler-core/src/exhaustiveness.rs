@@ -317,6 +317,14 @@ impl Branch {
                                 });
                             }
 
+                            // An empty string always matches so there is no test to perform.
+                            BitArrayTest::Match(MatchTest {
+                                value: BitArrayMatchedValue::LiteralString { value, .. },
+                                ..
+                            }) if value.is_empty() => {
+                                let _ = tests.pop_front();
+                            }
+
                             // Discards are removed directly without even binding them
                             // in the branch's body.
                             _ if test.is_discard() => {

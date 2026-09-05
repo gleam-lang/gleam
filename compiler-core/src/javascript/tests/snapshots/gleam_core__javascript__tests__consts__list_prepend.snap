@@ -9,8 +9,17 @@ pub const wobble = [0, 1, ..wibble]
 
 
 ----- COMPILED JAVASCRIPT
-import { toList } from "../gleam.mjs";
+import { List$Empty$const as $List$Empty$const, prepend as listPrepend } from "../gleam.mjs";
 
-const wibble = /* @__PURE__ */ toList([2, 3, 4]);
+const wibble = /* @__PURE__ */ listPrepend(
+  2,
+  listPrepend(3, listPrepend(4, $List$Empty$const)),
+);
 
-export const wobble = /* @__PURE__ */ toList([0, 1, 2, 3, 4]);
+export const wobble = /* @__PURE__ */ listPrepend(
+  0,
+  listPrepend(
+    1,
+    listPrepend(2, listPrepend(3, listPrepend(4, $List$Empty$const))),
+  ),
+);

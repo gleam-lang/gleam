@@ -109,6 +109,9 @@
   OTP29.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Creation of literal lists has been optimised on the JavaScript target.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler now provides a specific error message directing the user to the
   correct syntax when trying to update a record after providing fields.
   ([0xda157](https://github.com/0xda157))
@@ -128,10 +131,29 @@
   has no impact unless the user is using a very old version of git or has
   enabled this protocol in their configuration.
   ([Amr Kadry](https://github.com/Amrkadry) and
-  ([Louis Pilfold](https://github.com/lpil))
+  [Louis Pilfold](https://github.com/lpil))
+
+- The ordering of import statements in generated JavaScript code is now stable.
+  Previously the same code compiled twice could produce different output, as
+  the singleton constants imported for a type's fieldless variants were emitted
+  in a different order on each run.
+  ([John Downey](https://github.com/jtdowney))
 
 - Make links to Tangled repositories use their new domain & URL format.
   ([Naomi Roberts](https://github.com/naomieow))
+
+- The build tool now shows a better error when trying to add a package as a
+  dependency when it is already a development dependency (or vice-versa).
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- `--out` argument in `export package-information` and `export package-interface`
+  commands is no longer required. Those commands now print to stdout by
+  default.
+  ([Rodrigo Álvarez](https://github.com/Papipo))
+
+- The `export javascript-prelude` and `export typescript-prelude` commands gain
+  the `--out` parameter.
+  ([Louis Pilfold](https://github.com/lpil))
 
 ### Language server
 
@@ -150,6 +172,26 @@
 - The "pattern match on argument" code action now has higher precedence over the
   "discard unused argument" code action.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The language server will now surround value completions right after dot in
+  imports with braces. For example, consider following code:
+
+  ```gleam
+  import wibble.|
+  ```
+
+  where cursor is denoted with `|`. Completing value `Wibble` will result in
+  following code:
+
+  ```gleam
+  import wibble.{Wibble}
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+- The language server now supports triggering "Convert int to different base"
+  code action in constants, patterns and bit array "size" options.
+  ([Andrey Kozhev](https://github.com/ankddev))
 
 ### Formatter
 
@@ -181,6 +223,14 @@
   types with a same-named import alias.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Fixed a bug where the language server would crash if the client disconnected
+  unexpectedly.
+  ([Senthilnathan](https://github.com/ssenthilnathan3))
+
+- Fixed a bug where a bit array segment pattern of an empty string would
+  generate invalid code on JavaScript.
+  ([Louis Pilfold](https://github.com/lpil))
+
 - Fixed a bug where comments after the last item in a tuple, or after the last
   argument in a function call wouldn't be formatted properly.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
@@ -205,6 +255,32 @@
 - Fixed a bug where the language server would not suggest prefix pattern
   prefix alias.
   ([Andrey Kozhev](https://github.com/ankddev))
+
+- Fixed a bug where on the JavaScript target a name shadowed inside a case
+  clause that always matched would be used in place of the outer binding by the
+  code that followed the case expression. This could produce a wrong value, or a
+  runtime crash when the shadowed name was a module function or constant.
+  ([John Downey](https://github.com/jtdowney))
+
+- Fixed a bug where on the JavaScript target the variables a clause guard
+  needed would be declared in the enclosing scope of a case that always
+  matched, so a later `let` binding one of those names produced a duplicate
+  declaration and the whole module failed to parse.
+  ([John Downey](https://github.com/jtdowney))
+
+- Fixed a bug where a package's optional dependency requirements could be
+  ignored, or could pull a package into the dependency tree that nothing
+  actually required.
+  ([John Downey](https://github.com/jtdowney))
+
+- Fixed a bug where comparing `0.0` and `-0.0` resulted in a redundant
+  comparison warning, which is incorrect on Erlang/OTP 27+.
+  ([Jack Programs](https://github.com/jackprogramsjp))
+
+- Fixed a bug where a project with multiple path dependencies would perform
+  dependency resolution once per path dependency, so commands run after
+  `gleam deps download` would needlessly resolve versions again.
+  ([John Downey](https://github.com/jtdowney))
 
 - Fixed a bug where concatenating a string to a string in a block would
   produce an invalid bitstring on the Erlang target.

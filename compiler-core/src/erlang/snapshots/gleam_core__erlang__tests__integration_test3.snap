@@ -16,4 +16,8 @@ pub fn y() { fn() { Point }()(4, 6) }
 
 -spec y() -> point().
 y() ->
-    {point, 4, 6}.
+    (fun() ->
+        fun(_value, _value@1) ->
+            {point, _value, _value@1}
+        end
+    end())(4, 6).

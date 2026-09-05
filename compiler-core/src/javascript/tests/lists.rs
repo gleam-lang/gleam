@@ -164,3 +164,14 @@ pub fn go(x) {
 "
     );
 }
+
+#[test]
+fn long_list_is_generated_using_to_list_function() {
+    assert_js!(
+        "
+pub fn list() {
+  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+}
+"
+    );
+}

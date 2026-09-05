@@ -5,7 +5,6 @@ use crate::{
     analyse::TargetSupport,
     build::{Origin, Target},
     config::PackageConfig,
-    inline,
     javascript::*,
     uid::UniqueIdGenerator,
     warning::{TypeWarningEmitter, WarningEmitter},
@@ -26,7 +25,6 @@ mod echo;
 mod externals;
 mod functions;
 mod generics;
-mod inlining;
 mod lists;
 mod modules;
 mod numbers;
@@ -204,7 +202,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
 
-    let module = crate::analyse::ModuleAnalyzerConstructor::<()> {
+    crate::analyse::ModuleAnalyzerConstructor::<()> {
         target: Target::JavaScript,
         ids: &ids,
         origin: Origin::Src,
@@ -216,9 +214,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
         package_config: &config,
     }
     .infer_module(ast, line_numbers, "src/module.gleam".into())
-    .expect("should successfully infer");
-
-    inline::module(module, &modules)
+    .expect("should successfully infer")
 }
 
 pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> String {

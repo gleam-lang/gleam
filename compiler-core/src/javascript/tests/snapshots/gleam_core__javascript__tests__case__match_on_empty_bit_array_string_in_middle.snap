@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn main(x) {\n  case x {\n    <<\"x\":utf8, \"\":utf8, \"z\":utf8, >> -> \"a\"\n    _ -> \"b\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(x) {
+  case x {
+    <<"x":utf8, "":utf8, "z":utf8, >> -> "a"
+    _ -> "b"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function main(x) {
+  if (
+    x.bitSize >= 8 &&
+    x.byteAt(0) === 120 &&
+    x.bitSize === 16 &&
+    x.byteAt(1) === 122
+  ) {
+    return "a";
+  } else {
+    return "b";
+  }
+}

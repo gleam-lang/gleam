@@ -1175,3 +1175,161 @@ pub fn go(x) {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/6213
+#[test]
+fn shadowing_in_directly_matching_case_does_not_leak_out() {
+    assert_js!(
+        r#"
+pub fn go() {
+  let m = 1
+  let _ = case 0 + 0 {
+    _ -> {
+      let m = 99
+      m
+    }
+  }
+  m
+}"#
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/6212
+#[test]
+fn pattern_shadowing_module_function_in_directly_matching_case() {
+    assert_js!(
+        r#"
+fn wibble(_: Int) -> Float {
+  0.0
+}
+
+pub fn go() {
+  case 0 + 0 {
+    wibble -> {
+      echo wibble
+    }
+  }
+  |> wibble
+}"#
+    )
+}
+
+#[test]
+fn guard_binding_in_directly_matching_case_is_not_redeclared() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    #(_, b) if b == 2 -> b
+    #(_, b) -> b
+  }
+  let b = 5
+  b
+}"#
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/6182
+#[test]
+fn match_on_empty_bit_array_string() {
+    assert_js!(
+        "
+pub fn main(x) {
+  case x {
+    <<\"\":utf8>> -> \"a\"
+    _ -> \"b\"
+  }
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6182
+#[test]
+fn match_on_empty_bit_array_string_in_middle() {
+    assert_js!(
+        "
+pub fn main(x) {
+  case x {
+    <<\"x\":utf8, \"\":utf8, \"z\":utf8, >> -> \"a\"
+    _ -> \"b\"
+  }
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6182
+#[test]
+fn utf16_match_on_empty_bit_array_string() {
+    assert_js!(
+        "
+pub fn main(x) {
+  case x {
+    <<\"\":utf16>> -> \"a\"
+    _ -> \"b\"
+  }
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6182
+#[test]
+fn utf16_match_on_empty_bit_array_string_in_middle() {
+    assert_js!(
+        r#"
+pub fn main(x) {
+  case x {
+    <<"x":utf16, "":utf16, "z":utf16, >> -> "a"
+    _ -> "b"
+  }
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6182
+#[test]
+fn utf32_match_on_empty_bit_array_string() {
+    assert_js!(
+        r#"
+pub fn main(x) {
+  case x {
+    <<"":utf32>> -> "a"
+    _ -> "b"
+  }
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6182
+#[test]
+fn utf32_match_on_empty_bit_array_string_in_middle() {
+    assert_js!(
+        r#"
+pub fn main(x) {
+  case x {
+    <<"x":utf32, "":utf32, "z":utf32, >> -> "a"
+    _ -> "b"
+  }
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6182
+#[test]
+fn empty_string_with_alias() {
+    assert_js!(
+        r#"
+pub fn main(x) {
+  case x {
+    <<"" as a:utf8>> -> a
+    _ -> "b"
+  }
+}
+"#
+    );
+}

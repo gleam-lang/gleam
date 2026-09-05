@@ -1,0 +1,8 @@
+*.beam
+*.ez
+/build
+erl_crash.dump
+escript_with_dependency
+escript_with_dependency.cmd
+with_dependency
+with_dependency.cmd

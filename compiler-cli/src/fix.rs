@@ -60,7 +60,7 @@ fn fix_minimum_required_version(paths: &ProjectPaths, warnings: Vec<Warning>) ->
             err: Some(error.to_string()),
         })?;
 
-    #[allow(clippy::indexing_slicing)]
+    #[expect(clippy::indexing_slicing)]
     {
         toml["gleam"] = toml_edit::value(format!(">= {minimum_required_version}"));
     }

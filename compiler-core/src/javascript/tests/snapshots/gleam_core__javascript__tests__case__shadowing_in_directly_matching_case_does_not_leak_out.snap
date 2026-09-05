@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn go() {\n  let m = 1\n  let _ = case 0 + 0 {\n    _ -> {\n      let m = 99\n      m\n    }\n  }\n  m\n}"
+---
+----- SOURCE CODE
+
+pub fn go() {
+  let m = 1
+  let _ = case 0 + 0 {
+    _ -> {
+      let m = 99
+      m
+    }
+  }
+  m
+}
+
+----- COMPILED JAVASCRIPT
+export function go() {
+  let m = 1;
+  let _block;
+  let $1 = 0 + 0;
+  let m$1 = 99;
+  _block = m$1;
+  let $ = _block;
+  
+  return m;
+}

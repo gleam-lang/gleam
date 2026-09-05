@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\npub fn go(x) {\n  case x {\n    #(_, b) if b == 2 -> b\n    #(_, b) -> b\n  }\n  let b = 5\n  b\n}"
+---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    #(_, b) if b == 2 -> b
+    #(_, b) -> b
+  }
+  let b = 5
+  b
+}
+
+----- COMPILED JAVASCRIPT
+export function go(x) {
+  let b = x[1];
+  if (b === 2) {
+    b;
+  } else {
+    let b$1 = x[1];
+    b$1;
+  }
+  let b$1 = 5;
+  return b$1;
+}

@@ -1,0 +1,45 @@
+---
+source: test-commands/src/tests.rs
+expression: contents
+---
+{
+  "gleam.toml": {
+    "name": "hello_joe",
+    "version": "1.0.0",
+    "gleam": null,
+    "licences": [],
+    "description": "",
+    "documentation": {
+      "pages": []
+    },
+    "dependencies": {},
+    "dev_dependencies": {},
+    "repository": null,
+    "links": [],
+    "erlang": {
+      "application_start_module": null,
+      "application_start_argument": null,
+      "extra_applications": []
+    },
+    "javascript": {
+      "typescript_declarations": false,
+      "source_maps": false,
+      "runtime": "nodejs",
+      "deno": {
+        "allow_env": [],
+        "allow_sys": false,
+        "allow_hrtime": false,
+        "allow_net": [],
+        "allow_ffi": false,
+        "allow_read": [],
+        "allow_run": [],
+        "allow_write": [],
+        "allow_all": false,
+        "unstable": false,
+        "location": null
+      }
+    },
+    "target": "erlang",
+    "internal_modules": null
+  }
+}

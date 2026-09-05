@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/lists.rs
+expression: "\npub fn list() {\n  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]\n}\n"
+---
+----- SOURCE CODE
+
+pub fn list() {
+  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+}
+
+
+----- COMPILED JAVASCRIPT
+import { toList } from "../gleam.mjs";
+
+export function list() {
+  return toList([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+}

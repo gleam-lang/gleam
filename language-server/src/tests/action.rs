@@ -16107,3 +16107,34 @@ fn wobble(wibble: Wibble) -> Int {
         find_position_of("a:").nth_occurrence(3).to_selection()
     );
 }
+
+#[test]
+fn convert_int_between_bases_in_constants() {
+    assert_code_action!(
+        "Convert to `0b1101111`",
+        "const wibble = 111",
+        find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_between_bases_in_patterns() {
+    assert_code_action!(
+        "Convert to `0b1101111`",
+        "pub fn go(x) {
+  let assert <<111>> = x
+}",
+        find_position_of("111").to_selection()
+    );
+}
+
+#[test]
+fn convert_int_between_bases_in_size_options() {
+    assert_code_action!(
+        "Convert to `0b1101111`",
+        "pub fn go(x) {
+  let assert <<2:size(111)>> = x
+}",
+        find_position_of("111").to_selection()
+    );
+}

@@ -214,6 +214,12 @@ pub struct Arg<T> {
     pub type_: T,
 }
 
+impl HasType for Arg<Arc<Type>> {
+    fn type_(&self) -> Arc<Type> {
+        self.type_.clone()
+    }
+}
+
 impl<A> Arg<A> {
     pub fn set_type<B>(self, t: B) -> Arg<B> {
         Arg {

@@ -14,8 +14,8 @@ pub const y = X(1, [])
 
 ----- COMPILED JAVASCRIPT
 import {
-  toList,
   List$Empty$const as $List$Empty$const,
+  prepend as listPrepend,
   CustomType as $CustomType,
 } from "../gleam.mjs";
 
@@ -31,6 +31,9 @@ export const X$isX = (value) => value instanceof X;
 export const X$X$0 = (value) => value[0];
 export const X$X$1 = (value) => value[1];
 
-export const x = /* @__PURE__ */ new X(1, /* @__PURE__ */ toList(["1"]));
+export const x = /* @__PURE__ */ new X(
+  1,
+  /* @__PURE__ */ listPrepend("1", $List$Empty$const),
+);
 
 export const y = /* @__PURE__ */ new X(1, $List$Empty$const);

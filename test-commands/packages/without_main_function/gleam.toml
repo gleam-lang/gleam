@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2024 The Gleam contributors
+
+name = "without_main_function"
+version = "1.0.0"
+
+[dependencies]
+[dev_dependencies]

@@ -1,0 +1,38 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\nimport colour.{Blue, Green, Orange, Red, Violet, Yellow}\n\npub fn main() {\n  #(Red, Orange, Yellow, Green, Blue, Violet)\n}\n"
+---
+----- SOURCE CODE
+-- colour.gleam
+pub type Colour { Red Orange Yellow Green Blue Violet }
+
+-- main.gleam
+
+import colour.{Blue, Green, Orange, Red, Violet, Yellow}
+
+pub fn main() {
+  #(Red, Orange, Yellow, Green, Blue, Violet)
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $colour from "../colour.mjs";
+import {
+  Colour$Blue$const,
+  Colour$Green$const,
+  Colour$Orange$const,
+  Colour$Red$const,
+  Colour$Violet$const,
+  Colour$Yellow$const,
+} from "../colour.mjs";
+
+export function main() {
+  return [
+    Colour$Red$const,
+    Colour$Orange$const,
+    Colour$Yellow$const,
+    Colour$Green$const,
+    Colour$Blue$const,
+    Colour$Violet$const,
+  ];
+}

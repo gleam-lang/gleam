@@ -74,7 +74,7 @@ impl<'a, IO> PackageLoader<'a, IO>
 where
     IO: FileSystemWriter + FileSystemReader + CommandExecutor + Clone,
 {
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     pub(crate) fn new(
         io: IO,
         ids: UniqueIdGenerator,
@@ -153,7 +153,7 @@ where
 
             match input {
                 // A new uncached module is to be compiled
-                Input::New(module) => {
+                Input::New { module } => {
                     tracing::debug!(module = %module.name, "new_module_to_be_compiled");
                     self.stale_modules.add(module.name.clone());
                     loaded.to_compile.push(*module);
@@ -162,18 +162,20 @@ where
                 // A cached module with dependencies that are stale must be
                 // recompiled as the changes in the dependencies may have affect
                 // the output, making the cache invalid.
-                Input::Cached(info) if self.stale_modules.includes_any(&info.dependencies) => {
-                    tracing::debug!(module = %info.name, "stale_module_to_be_compiled");
-                    self.stale_modules.add(info.name.clone());
-                    let module = self.load_stale_module(info)?;
+                Input::Cached { module }
+                    if self.stale_modules.includes_any(&module.dependencies) =>
+                {
+                    tracing::debug!(module = %module.name, "stale_module_to_be_compiled");
+                    self.stale_modules.add(module.name.clone());
+                    let module = self.load_stale_module(&module)?;
                     loaded.to_compile.push(module);
                 }
 
                 // A cached module with no stale dependencies can be used as-is
                 // and does not need to be recompiled.
-                Input::Cached(info) => {
-                    tracing::debug!(module = %info.name, "module_to_load_from_cache");
-                    let module = self.load_cached_module(info)?;
+                Input::Cached { module } => {
+                    tracing::debug!(module = %module.name, "module_to_load_from_cache");
+                    let module = self.load_cached_module(module)?;
                     loaded.cached.push(module);
                 }
             }
@@ -187,12 +189,12 @@ where
         let bytes = self.io.read_bytes(&cache_files.cache_path)?;
         let mut module = match metadata::decode(bytes.as_slice(), self.ids.clone()) {
             Ok(module) => module,
-            Err(e) => {
+            Err(error) => {
                 return Err(Error::FileIo {
                     kind: FileKind::File,
                     action: FileIoAction::Parse,
                     path: cache_files.cache_path,
-                    err: Some(e.to_string()),
+                    err: Some(error.to_string()),
                 });
             }
         };
@@ -282,7 +284,7 @@ where
         Ok(inputs.collection)
     }
 
-    fn load_stale_module(&self, cached: CachedModule) -> Result<UncompiledModule> {
+    fn load_stale_module(&self, cached: &CachedModule) -> Result<UncompiledModule> {
         let mtime = self.io.modification_time(&cached.source_path)?;
 
         // We need to delete any existing cache files for this module.
@@ -290,14 +292,15 @@ where
         // next time the dependencies might no longer be stale, but we still need to be able to tell
         // that this module needs to be recompiled until it successfully compiles at least once.
         // This can happen if the stale dependency includes breaking changes.
-        CacheFiles::new(self.artefact_directory, &cached.name).delete(&self.io)?;
+        let cache_files = CacheFiles::new(self.artefact_directory, &cached.name);
+        cache_files.delete(&self.io)?;
 
         read_source(
             self.io.clone(),
             self.target,
             cached.origin,
-            cached.source_path,
-            cached.name,
+            cached.source_path.clone(),
+            cached.name.clone(),
             self.package_name.clone(),
             mtime,
             self.warnings.clone(),
@@ -322,11 +325,11 @@ where
                             .expect("importing module must exist");
                         let input = dep_location_map.get(module).expect("dependency must exist");
                         let location = match input {
-                            Input::New(module) => {
+                            Input::New { module } => {
                                 let (_, location) = module
                                     .dependencies
                                     .iter()
-                                    .find(|d| &d.0 == imported_module)
+                                    .find(|(name, _)| name == imported_module)
                                     .expect("import must exist for there to be a cycle");
                                 ImportCycleLocationDetails {
                                     location: *location,
@@ -334,11 +337,13 @@ where
                                     src: module.code.clone(),
                                 }
                             }
-                            Input::Cached(cached_module) => {
+                            Input::Cached {
+                                module: cached_module,
+                            } => {
                                 let (_, location) = cached_module
                                     .dependencies
                                     .iter()
-                                    .find(|d| &d.0 == imported_module)
+                                    .find(|(name, _)| name == imported_module)
                                     .expect("import must exist for there to be a cycle");
                                 let src = self
                                     .io
@@ -367,7 +372,7 @@ where
 fn ensure_gleam_module_does_not_overwrite_standard_erlang_module(input: &Input) -> Result<()> {
     // We only need to check uncached modules as it's not possible for these
     // to have compiled successfully.
-    let Input::New(input) = input else {
+    let Input::New { module } = input else {
         return Ok(());
     };
 
@@ -377,7 +382,7 @@ fn ensure_gleam_module_does_not_overwrite_standard_erlang_module(input: &Input) 
     // file:write_file("names.txt", lists:join("\n",lists:map(fun(T) -> erlang:element(1, T) end, code:all_available()))).
     // ```
     //
-    match input.name.as_str() {
+    match module.name.as_str() {
         "alarm_handler"
         | "application"
         | "application_controller"
@@ -1641,8 +1646,8 @@ fn ensure_gleam_module_does_not_overwrite_standard_erlang_module(input: &Input) 
     }
 
     Err(Error::GleamModuleWouldOverwriteStandardErlangModule {
-        name: input.name.clone(),
-        path: input.path.to_owned(),
+        name: module.name.clone(),
+        path: module.path.to_owned(),
     })
 }
 #[derive(Debug, Default)]
@@ -1654,7 +1659,7 @@ impl StaleTracker {
     }
 
     fn includes_any(&self, names: &[(EcoString, SrcSpan)]) -> bool {
-        names.iter().any(|n| self.0.contains(n.0.as_str()))
+        names.iter().any(|(name, _)| self.0.contains(name.as_str()))
     }
 
     pub fn empty(&mut self) {

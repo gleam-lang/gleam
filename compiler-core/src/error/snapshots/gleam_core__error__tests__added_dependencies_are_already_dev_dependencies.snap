@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/error/tests.rs
+expression: error
+---
+error: Packages are already dev dependencies
+
+wibble, wobble, and woo are already development dependencies of this
+project.
+
+Hint: If you want to use these packages as regular dependencies, you can
+move them to the `dependencies` section of this project's `gleam.toml`.

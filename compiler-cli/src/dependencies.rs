@@ -816,6 +816,12 @@ fn path_dependency_configs_unchanged(
     requirements: &HashMap<EcoString, Requirement>,
     paths: &ProjectPaths,
 ) -> Result<bool> {
+    // Every path dependency is fingerprinted, even once one is known to have
+    // changed. Returning early would leave the rest unfingerprinted, forcing
+    // another resolution (and another round of Hex API requests) on the next
+    // run, one per remaining path dependency.
+    let mut unchanged = true;
+
     for (name, requirement) in requirements {
         let Requirement::Path { path } = requirement else {
             continue;
@@ -840,7 +846,8 @@ fn path_dependency_configs_unchanged(
         if !fingerprint_path.exists() {
             // Save the current hash for future comparisons
             fs::write(&fingerprint_path, &current_fingerprint)?;
-            return Ok(false);
+            unchanged = false;
+            continue;
         }
 
         let previous_fingerprint = fs::read(&fingerprint_path)?;
@@ -848,11 +855,11 @@ fn path_dependency_configs_unchanged(
         if previous_fingerprint != current_fingerprint {
             tracing::debug!("path_dependency_config_changed_forcing_rebuild");
             fs::write(&fingerprint_path, &current_fingerprint)?;
-            return Ok(false);
+            unchanged = false;
         }
     }
 
-    Ok(true)
+    Ok(unchanged)
 }
 
 fn same_requirements(

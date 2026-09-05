@@ -228,7 +228,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// builder.export_attribute(vec![("wibble", 1), ("wobble", 2)]);
     /// ```
     ///
@@ -247,7 +247,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// builder.export_attribute(vec![("wibble", 1), ("wobble", 2)]);
     /// ```
     ///
@@ -265,7 +265,7 @@ pub trait ErlangBuilder<Output> {
     /// Creates a `-doc` attribute with the given content.
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// todo!()
     /// ```
     ///
@@ -280,7 +280,7 @@ pub trait ErlangBuilder<Output> {
     /// Creates a `-moduledoc` attribute with the given content.
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// todo!()
     /// ```
     ///
@@ -298,7 +298,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// builder.compile_attribute(vec!["no_warn", "inline"]);
     /// ```
     ///
@@ -314,7 +314,7 @@ pub trait ErlangBuilder<Output> {
     /// to set the proper file for the entire module.
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// builder.module_file_attribute("wibble.gleam");
     /// ```
     ///
@@ -332,7 +332,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let record = builder.start_record_attribute("wobble");
     /// builder.record_field();
     /// builder.atom("wibble");
@@ -371,7 +371,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let spec = builder.start_function_spec("wibble", 1)
     /// let function_type = builder.start_function_type();
     /// builder.int_type();
@@ -400,7 +400,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let spec = builder.start_type_spec(false, "wibble", ["A"]);
     ///
     /// let union = builder.start_union_type();
@@ -437,7 +437,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let function_type = builder.start_function_type();
     /// builder.int_type();
     /// builder.variable_type("A");
@@ -478,7 +478,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let type_ = builder.start_named_type("wibble");
     /// builder.end_named_type(type_);
     /// ```
@@ -502,7 +502,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let type_ = builder.start_remote_named_type("wibble", "wobble");
     /// builder.end_named_type(type_);
     /// ```
@@ -529,7 +529,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let tuple = builder.start_tuple_type();
     /// builder.literal_atom_type("nil");
     /// builder.literal_atom_type("ok");
@@ -555,7 +555,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let ok_or_error = builder.start_union_type();
     /// builder.literal_atom_type("ok");
     /// builder.literal_atom_type("error");
@@ -580,7 +580,7 @@ pub trait ErlangBuilder<Output> {
     /// For example, if we were to define the type of the identity function we
     /// could do it like this:
     ///
-    /// ```ignore
+    /// ```text
     /// let function = builder.start_function_type();
     /// builder.type_variable("A");
     /// let function = builder.end_function_type_arguments();
@@ -602,7 +602,7 @@ pub trait ErlangBuilder<Output> {
     /// For example, the annotation of a function returning the atom `nil`
     /// is be defined like this:
     ///
-    /// ```ignore
+    /// ```text
     /// let function = builder.start_function_type();
     /// let function = builder.end_function_type_arguments();
     /// builder.literal_atom_type("nil");
@@ -624,7 +624,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let function = builder.start_function("first_name", 0, vec![]);
     /// builder.string("Giacomo");
     /// builder.end_function(function);
@@ -650,7 +650,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let function = builder.start_anonymous_function([]);
     /// builder.string("Erlang rocks");
     /// builder.end_anonymous_function(function);
@@ -679,7 +679,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let block = builder.start_block();
     /// builder.string("Giacomo");
     /// builder.int(1);
@@ -708,7 +708,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let call = builder.start_remote_call("io", "format");
     /// builder.string("Giacomo");
     /// builder.end_call(call);
@@ -734,7 +734,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let call = builder.start_call();
     /// builder.atom("wibble")
     /// let call = builder.end_called_expression(call);
@@ -766,7 +766,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let tuple = builder.start_tuple();
     /// builder.string("Hello");
     /// builder.int(1);
@@ -792,7 +792,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let map = builder.start_map();
     ///
     /// builder.map_field();
@@ -831,7 +831,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let bit_array = builder.start_bit_array();
     ///
     /// builder.bit_array_segment();
@@ -905,7 +905,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// builder.cons_list();
     /// builder.variable("Hello");
     /// builder.cons_list();
@@ -942,7 +942,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let case = builder.start_case();
     /// builder.variable("wibble");
     /// let case = builder.end_case_subject();
@@ -993,7 +993,7 @@ pub trait ErlangBuilder<Output> {
     /// You must call this before generating the guard of a case clause.
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let case = builder.start_case();
     /// builder.variable("wibble");
     /// let case = builder.end_case_subject();
@@ -1045,7 +1045,7 @@ pub trait ErlangBuilder<Output> {
     /// to the expression that is going to be generated next.
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// builder.unary_operator("-");
     /// builder.variable("X");
     /// ```
@@ -1062,7 +1062,7 @@ pub trait ErlangBuilder<Output> {
     /// to the two expressions generated after it.
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// builder.binary_operator("+");
     /// builder.variable("X");
     /// builder.int(1);
@@ -1079,7 +1079,7 @@ pub trait ErlangBuilder<Output> {
     /// This generates the code for a function reference.
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// builder.function_reference(None, "wibble", 1);
     /// builder.function_reference(Some("io"), "format", 2);
     /// ```
@@ -1106,7 +1106,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// builder.match_operator();
     /// builder.variable_pattern("X");
     /// builder.int(1);
@@ -1127,7 +1127,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// builder.match_pattern();
     /// builder.int_pattern(1);
     /// builder.variable_pattern("X");
@@ -1217,7 +1217,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let tuple = builder.start_tuple_pattern();
     /// builder.int_pattern(1);
     /// builder.discard_pattern();
@@ -1241,7 +1241,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// let bit_array = builder.start_bit_array_pattern();
     ///
     /// builder.bit_array_pattern_segment();
@@ -1276,7 +1276,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// builder.cons_list_pattern();
     /// builder.discard_pattern();
     /// builder.cons_list_pattern();
@@ -1311,7 +1311,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// builder.string("ksiąskę");
     /// ```
     ///
@@ -1334,7 +1334,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// builder.int(BigInt::from(2))
     /// ```
     ///
@@ -1350,7 +1350,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// builder.float(1.2)
     /// ```
     ///
@@ -1366,7 +1366,7 @@ pub trait ErlangBuilder<Output> {
     ///
     /// For example:
     ///
-    /// ```ignore
+    /// ```text
     /// builder.atom("wibble")
     /// ```
     ///
@@ -1788,7 +1788,7 @@ enum ExpectedListItem {
 ///   For example, if I call `self.match_operator` I know that it will be over
 ///   after the next pattern and expression are generated:
 ///
-///   ```ignore
+///   ```text
 ///   // X = 1
 ///   builder.match_operator()
 ///   builder.variable_pattern("X")

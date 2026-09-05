@@ -1129,7 +1129,6 @@ impl<'a, 'doc> Formatter<'a> {
         docvec![arena, attributes, function]
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn expr_fn(
         &mut self,
         arena: &'doc DocumentArena<'a, 'doc>,
@@ -1519,7 +1518,6 @@ impl<'a, 'doc> Formatter<'a> {
         new_value.chars().rev().collect::<EcoString>().to_doc(arena)
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn pattern_constructor(
         &mut self,
         arena: &'doc DocumentArena<'a, 'doc>,
@@ -1671,7 +1669,6 @@ impl<'a, 'doc> Formatter<'a> {
     // resulting document will try to first split that before splitting all the
     // other arguments.
     // This is used for function calls and tuples.
-    #[allow(clippy::too_many_arguments)]
     fn append_inlinable_wrapped_arguments<'b, T, Predicate, ToDoc>(
         &mut self,
         arena: &'doc DocumentArena<'a, 'doc>,
@@ -1814,7 +1811,6 @@ impl<'a, 'doc> Formatter<'a> {
         )
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn const_record_update(
         &mut self,
         arena: &'doc DocumentArena<'a, 'doc>,
@@ -4090,7 +4086,7 @@ fn binop<'a, 'doc>(binop: BinOp) -> Document<'a, 'doc> {
     }
 }
 
-#[allow(clippy::enum_variant_names)]
+#[expect(clippy::enum_variant_names)]
 #[derive(Debug)]
 /// This is used to determine how to fit the items of a list, or the segments of
 /// a bit array in a line.

@@ -75,7 +75,7 @@ fn pretty_hover_contents(contents: Contents) -> String {
 fn pretty_marked_string(marked_string: MarkedString) -> String {
     match marked_string {
         MarkedString::String(string) => string,
-        #[allow(deprecated)]
+        #[expect(deprecated)]
         MarkedString::MarkedStringWithLanguage(lsp_types::MarkedStringWithLanguage {
             language,
             value,

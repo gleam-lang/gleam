@@ -19,7 +19,7 @@ pub fn b() {
 
 ----- COMPILED JAVASCRIPT
 export function b() {
-  1;
-  2;
+  ((cb) => { return cb(1); })((a) => { return a; });
+  ((cb) => { return cb(2); })((b) => { return b; });
   return 3;
 }

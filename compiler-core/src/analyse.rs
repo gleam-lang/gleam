@@ -21,7 +21,6 @@ use crate::{
     call_graph::{CallGraphNode, into_dependency_order},
     config::PackageConfig,
     dep_tree,
-    inline::{self, InlinableFunction},
     parse::SpannedString,
     reference::{EntityKind, ReferenceKind},
     type_::{
@@ -185,7 +184,6 @@ impl<A> ModuleAnalyzerConstructor<'_, A> {
             value_names: HashMap::with_capacity(module.definitions.len()),
             hydrators: HashMap::with_capacity(module.definitions.len()),
             module_name: module.name.clone(),
-            inline_functions: HashMap::new(),
             minimum_required_version: Version::new(0, 1, 0),
         }
         .infer_module(module)
@@ -208,8 +206,6 @@ struct ModuleAnalyzer<'a, A> {
     value_names: HashMap<EcoString, SrcSpan>,
     hydrators: HashMap<EcoString, Hydrator>,
     module_name: EcoString,
-
-    inline_functions: HashMap<EcoString, InlinableFunction>,
 
     /// The minimum Gleam version required to compile the analysed module.
     minimum_required_version: Version,
@@ -314,11 +310,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
             // Now that the entire group has been inferred, generalise their types.
             for inferred_constant in working_constants.drain(..) {
-                typed_constants.push(generalise_module_constant(
-                    inferred_constant,
-                    &mut env,
-                    &self.module_name,
-                ));
+                typed_constants.push(generalise_module_constant(inferred_constant, &mut env));
             }
             for inferred_function in working_functions.drain(..) {
                 typed_functions.push(generalise_function(
@@ -416,7 +408,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     label_references: env.references.label_references,
                     label_definitions: env.references.label_definitions,
                 },
-                inline_functions: self.inline_functions,
             },
         };
 
@@ -814,7 +805,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             ReferenceKind::Definition,
         );
 
-        let function = Function {
+        Function {
             documentation: doc,
             location,
             name: Some((name_location, name.clone())),
@@ -832,17 +823,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             external_javascript,
             implementations,
             purity,
-        };
-
-        if let Some(inline_function) = inline::function_to_inlinable(
-            &environment.current_package,
-            &environment.current_module,
-            &function,
-        ) {
-            _ = self.inline_functions.insert(name, inline_function);
         }
-
-        function
     }
 
     fn assert_valid_javascript_external(
@@ -1865,10 +1846,9 @@ where
 fn generalise_module_constant(
     constant: ModuleConstant<Arc<Type>>,
     environment: &mut Environment<'_>,
-    module_name: &EcoString,
 ) -> TypedModuleConstant {
     let ModuleConstant {
-        documentation: doc,
+        documentation,
         location,
         name,
         name_location,
@@ -1880,17 +1860,15 @@ fn generalise_module_constant(
         implementations,
     } = constant;
     let type_ = type_::generalise(type_);
-    let variant = ValueConstructorVariant::ModuleConstant {
-        documentation: doc.as_ref().map(|(_, doc)| doc.clone()),
-        location,
-        literal: *value.clone(),
-        module: module_name.clone(),
-        implementations,
-        name: name.clone(),
-    };
+
+    let constructor = environment
+        .get_variable(&name)
+        .expect("module constant not bound in the environment before being generalised")
+        .clone();
+
     environment.insert_variable(
         name.clone(),
-        variant.clone(),
+        constructor.variant.clone(),
         type_.clone(),
         publicity,
         deprecation.clone(),
@@ -1900,14 +1878,14 @@ fn generalise_module_constant(
         name.clone(),
         ValueConstructor {
             publicity,
-            variant,
+            variant: constructor.variant,
             deprecation: deprecation.clone(),
             type_: type_.clone(),
         },
     );
 
     ModuleConstant {
-        documentation: doc,
+        documentation,
         location,
         name,
         name_location,

@@ -9,8 +9,11 @@ pub const b = [1, 2, 3]
 
 
 ----- COMPILED JAVASCRIPT
-import { toList, List$Empty$const as $List$Empty$const } from "../gleam.mjs";
+import { List$Empty$const as $List$Empty$const, prepend as listPrepend } from "../gleam.mjs";
 
 export const a = $List$Empty$const;
 
-export const b = /* @__PURE__ */ toList([1, 2, 3]);
+export const b = /* @__PURE__ */ listPrepend(
+  1,
+  listPrepend(2, listPrepend(3, $List$Empty$const)),
+);

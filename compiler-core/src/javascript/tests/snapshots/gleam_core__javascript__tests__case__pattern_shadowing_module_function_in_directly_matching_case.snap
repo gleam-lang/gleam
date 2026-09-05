@@ -1,0 +1,46 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\nfn wibble(_: Int) -> Float {\n  0.0\n}\n\npub fn go() {\n  case 0 + 0 {\n    wibble -> {\n      echo wibble\n    }\n  }\n  |> wibble\n}"
+---
+----- SOURCE CODE
+
+fn wibble(_: Int) -> Float {
+  0.0
+}
+
+pub fn go() {
+  case 0 + 0 {
+    wibble -> {
+      echo wibble
+    }
+  }
+  |> wibble
+}
+
+----- COMPILED JAVASCRIPT
+import * as $stdlib$dict from "../../gleam_stdlib/gleam/dict.mjs";
+import {
+  Empty as $Empty,
+  NonEmpty as $NonEmpty,
+  CustomType as $CustomType,
+  bitArraySlice,
+  bitArraySliceToInt,
+  BitArray as $BitArray,
+  List as $List,
+  UtfCodepoint as $UtfCodepoint,
+} from "../gleam.mjs";
+
+function wibble(_) {
+  return 0.0;
+}
+
+export function go() {
+  let _block;
+  let $ = 0 + 0;
+  let wibble$1 = $;
+  _block = echo(wibble$1, undefined, "src/module.gleam", 9);
+  let _pipe = _block;
+  return wibble(_pipe);
+}
+
+// ...omitted code from `templates/echo.mjs`...

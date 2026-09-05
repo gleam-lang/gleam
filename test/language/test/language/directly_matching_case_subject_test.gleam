@@ -13,6 +13,10 @@ fn add_two(x: Int) -> Int {
   x + 2
 }
 
+fn wibble(_: Int) -> Float {
+  0.0
+}
+
 // github.com/gleam-lang/gleam/issues/5265
 pub fn directly_matching_case_subject_test() {
   let result = {
@@ -89,4 +93,31 @@ pub fn no_duplicate_let_when_rebinding_variable_after_directly_matching_case_tes
     n
   }
   assert result == 6
+}
+
+// https://github.com/gleam-lang/gleam/issues/6213
+pub fn shadowing_in_directly_matching_case_does_not_leak_out_test() {
+  let result = {
+    let m = 1
+    let _ = case 0 + 0 {
+      _ -> {
+        let m = 99
+        m
+      }
+    }
+    m
+  }
+
+  assert result == 1
+}
+
+// https://github.com/gleam-lang/gleam/issues/6212
+pub fn pattern_shadowing_module_function_in_directly_matching_case_test() {
+  let result =
+    case 0 + 0 {
+      wibble -> wibble
+    }
+    |> wibble
+
+  assert result == 0.0
 }

@@ -4451,7 +4451,7 @@ fn float_literals_redundant_comparison_infinity() {
 
 #[test]
 fn float_literals_redundant_comparison_signed_zero() {
-    assert_warning!("pub fn main() { 0.0 == -0.0 }");
+    assert_no_warnings!("pub fn main() { 0.0 == -0.0 }");
 }
 
 #[test]
@@ -5237,5 +5237,21 @@ pub fn main() {
   wibble()
 }
 "
+    );
+}
+
+#[test]
+fn unreachable_empty_bit_array() {
+    // <<>> and <<"">> are equivalent.
+    assert_warning!(
+        r#"
+pub fn thingy(wibble) {
+  case wibble {
+    <<>> -> 1
+    <<"">> -> 2
+    _ -> 3
+  }
+}
+    "#
     );
 }

@@ -22,7 +22,7 @@ pub fn main() {
 
 
 ----- COMPILED JAVASCRIPT
-import { toList, isEqual } from "../gleam.mjs";
+import { List$Empty$const as $List$Empty$const, prepend as listPrepend, isEqual } from "../gleam.mjs";
 
 export const function$ = 5;
 
@@ -34,7 +34,12 @@ export function main() {
   let var$ = 7;
   if (class$ === while$) {
     return true;
-  } else if (isEqual(toList([class$]), toList([5]))) {
+  } else if (
+    isEqual(
+      listPrepend(class$, $List$Empty$const),
+      listPrepend(5, $List$Empty$const)
+    )
+  ) {
     return true;
   } else {
     let function$1 = var$;

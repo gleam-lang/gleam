@@ -7,6 +7,7 @@ use gleam_core::{
     Result,
     analyse::TargetSupport,
     build::{Codegen, Compile, ErlangOutput, Mode, Options, Target},
+    docs, io,
     paths::ProjectPaths,
     type_::ModuleFunction,
 };
@@ -232,17 +233,30 @@ Your hex tarball has been generated in {}.
     Ok(())
 }
 
-pub fn javascript_prelude() -> Result<()> {
-    print!("{}", gleam_core::javascript::PRELUDE);
+fn write_path_or_stdout(
+    paths: &ProjectPaths,
+    out: Option<Utf8PathBuf>,
+    content: String,
+) -> Result<()> {
+    match out {
+        Some(out) => {
+            let out = io::OutputFile::text(out, content);
+            fs::write_outputs_under(&[out], paths.root())?;
+        }
+        None => print!("{}", content),
+    }
     Ok(())
 }
 
-pub fn typescript_prelude() -> Result<()> {
-    print!("{}", gleam_core::javascript::PRELUDE_TS_DEF);
-    Ok(())
+pub fn javascript_prelude(paths: &ProjectPaths, out: Option<Utf8PathBuf>) -> Result<()> {
+    write_path_or_stdout(paths, out, gleam_core::javascript::PRELUDE.into())
 }
 
-pub fn package_interface(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
+pub fn typescript_prelude(paths: &ProjectPaths, out: Option<Utf8PathBuf>) -> Result<()> {
+    write_path_or_stdout(paths, out, gleam_core::javascript::PRELUDE_TS_DEF.into())
+}
+
+pub fn package_interface(paths: &ProjectPaths, out: Option<Utf8PathBuf>) -> Result<()> {
     // Build the project
     let mut built = crate::build::main(
         paths,
@@ -259,19 +273,12 @@ pub fn package_interface(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
         crate::build::download_dependencies(paths, crate::cli::Reporter::new())?,
     )?;
     built.root_package.attach_doc_and_module_comments();
-
-    let out = gleam_core::docs::generate_json_package_interface(
-        out,
-        &built.root_package,
-        &built.module_interfaces,
-    );
-    fs::write_outputs_under(&[out], paths.root())?;
-    Ok(())
+    let interface = docs::package_interface(&built.root_package, &built.module_interfaces);
+    write_path_or_stdout(paths, out, interface)
 }
 
-pub fn package_information(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
+pub fn package_information(paths: &ProjectPaths, out: Option<Utf8PathBuf>) -> Result<()> {
     let config = crate::config::root_config(paths)?;
-    let out = gleam_core::docs::generate_json_package_information(out, config);
-    fs::write_outputs_under(&[out], paths.root())?;
-    Ok(())
+    let information = docs::package_information_as_json(config);
+    write_path_or_stdout(paths, out, information)
 }

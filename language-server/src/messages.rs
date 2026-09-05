@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2024 The Gleam contributors
 
 use camino::Utf8PathBuf;
+use gleam_core::{Error, Result};
 use lsp::{DefinitionRequest, DidChangeWatchedFilesNotification, DidOpenTextDocumentNotification};
 use lsp_types::{
     self as lsp, CodeActionRequest, CompletionRequest, DidChangeTextDocumentNotification,
@@ -191,38 +192,53 @@ impl MessageBuffer {
         }
     }
 
-    pub fn receive(&mut self, conn: &lsp_server::Connection) -> Next {
+    pub fn receive(&mut self, conn: &lsp_server::Connection) -> Result<Next> {
         let pause = Duration::from_millis(100);
 
         // If the buffer is empty, wait indefinitely for the first message.
         // If the buffer is not empty, wait for a short time to see if more messages are
         // coming before processing the ones we have.
         let message = if self.messages.is_empty() {
-            Some(conn.receiver.recv().expect("Receiving LSP message"))
+            Some(
+                conn.receiver
+                    .recv()
+                    .map_err(|error| Error::LspMessageReceiveFailed {
+                        error: error.to_string(),
+                    })?,
+            )
         } else {
-            conn.receiver.recv_timeout(pause).ok()
+            match conn.receiver.recv_timeout(pause) {
+                Ok(message) => Some(message),
+                Err(error) if error.is_timeout() => None,
+                Err(error) => {
+                    return Err(Error::LspMessageReceiveFailed {
+                        error: error.to_string(),
+                    });
+                }
+            }
         };
 
-        // If have have not received a message then it means there is a pause in the
+        // If we have not received a message then it means there is a pause in the
         // messages from the client, implying the programmer has stopped typing. Process
         // the currently enqueued messages.
         let message = match message {
             Some(message) => message,
             None => {
-                // A compile please message it added in the instance of this
+                // A compile please message is added in the instance of this
                 // pause of activity so that the client gets feedback on the
                 // state of the code as it is now.
                 self.push_compile_please_message();
-                return Next::Handle(self.take_messages());
+                return Ok(Next::Handle(self.take_messages()));
             }
         };
 
-        match message {
-            lsp_server::Message::Request(r) if self.shutdown(conn, &r) => Next::Stop,
+        let next = match message {
+            lsp_server::Message::Request(r) if self.shutdown(conn, &r)? => Next::Stop,
             lsp_server::Message::Request(r) => self.request(r),
             lsp_server::Message::Response(r) => self.response(r),
             lsp_server::Message::Notification(n) => self.notification(n),
-        }
+        };
+        Ok(next)
     }
 
     fn request(&mut self, r: lsp_server::Request) -> Next {
@@ -269,8 +285,12 @@ impl MessageBuffer {
         &mut self,
         connection: &lsp_server::Connection,
         request: &lsp_server::Request,
-    ) -> bool {
-        connection.handle_shutdown(request).expect("LSP shutdown")
+    ) -> Result<bool> {
+        connection
+            .handle_shutdown(request)
+            .map_err(|error| Error::LspMessageReceiveFailed {
+                error: error.to_string(),
+            })
     }
 }
 

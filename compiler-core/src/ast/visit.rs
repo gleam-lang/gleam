@@ -238,7 +238,7 @@ pub trait Visit<'ast> {
         visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn visit_typed_expr_record_access(
         &mut self,
         location: &'ast SrcSpan,
@@ -261,7 +261,7 @@ pub trait Visit<'ast> {
         );
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn visit_typed_expr_module_select(
         &mut self,
         location: &'ast SrcSpan,
@@ -331,7 +331,7 @@ pub trait Visit<'ast> {
         visit_typed_expr_bit_array(self, location, type_, segments);
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn visit_typed_expr_record_update(
         &mut self,
         location: &'ast SrcSpan,
@@ -446,7 +446,7 @@ pub trait Visit<'ast> {
         visit_typed_clause_guard_field_access(self, label_location, index, label, type_, container);
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn visit_typed_clause_guard_module_select(
         &mut self,
         location: &'ast SrcSpan,
@@ -483,8 +483,13 @@ pub trait Visit<'ast> {
         visit_typed_pattern(self, pattern);
     }
 
-    fn visit_typed_pattern_int(&mut self, location: &'ast SrcSpan, value: &'ast EcoString) {
-        visit_typed_pattern_int(self, location, value);
+    fn visit_typed_pattern_int(
+        &mut self,
+        location: &'ast SrcSpan,
+        string_value: &'ast EcoString,
+        int_value: &'ast BigInt,
+    ) {
+        visit_typed_pattern_int(self, location, string_value, int_value);
     }
 
     fn visit_typed_pattern_float(&mut self, location: &'ast SrcSpan, value: &'ast EcoString) {
@@ -509,8 +514,13 @@ pub trait Visit<'ast> {
         visit_typed_pattern_bit_array_size(self, size);
     }
 
-    fn visit_typed_bit_array_size_int(&mut self, location: &'ast SrcSpan, value: &'ast EcoString) {
-        visit_typed_bit_array_size_int(self, location, value);
+    fn visit_typed_bit_array_size_int(
+        &mut self,
+        location: &'ast SrcSpan,
+        string_value: &'ast EcoString,
+        int_value: &'ast BigInt,
+    ) {
+        visit_typed_bit_array_size_int(self, location, string_value, int_value);
     }
 
     fn visit_typed_bit_array_size_variable(
@@ -551,7 +561,7 @@ pub trait Visit<'ast> {
         visit_typed_pattern_list(self, location, elements, tail, type_);
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn visit_typed_pattern_constructor(
         &mut self,
         location: &'ast SrcSpan,
@@ -701,10 +711,10 @@ pub trait Visit<'ast> {
     fn visit_typed_constant_int(
         &mut self,
         location: &'ast SrcSpan,
-        value: &'ast EcoString,
+        string_value: &'ast EcoString,
         int_value: &'ast BigInt,
     ) {
-        visit_typed_constant_int(self, location, value, int_value);
+        visit_typed_constant_int(self, location, string_value, int_value);
     }
 
     fn visit_typed_constant_float(
@@ -739,7 +749,7 @@ pub trait Visit<'ast> {
         visit_typed_constant_list(self, location, elements, type_, tail);
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn visit_typed_constant_record(
         &mut self,
         location: &'ast SrcSpan,
@@ -764,7 +774,7 @@ pub trait Visit<'ast> {
         );
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments)]
     fn visit_typed_constant_record_update(
         &mut self,
         location: &'ast SrcSpan,
@@ -879,7 +889,7 @@ fn visit_typed_constant_bit_array<'a, V: Visit<'a> + ?Sized>(
     // TODO
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn visit_typed_constant_record<'a, V: Visit<'a> + ?Sized>(
     v: &mut V,
     _location: &'a SrcSpan,
@@ -896,7 +906,7 @@ pub fn visit_typed_constant_record<'a, V: Visit<'a> + ?Sized>(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn visit_typed_constant_record_update<'a, V: Visit<'a> + ?Sized>(
     v: &mut V,
     _location: &'a SrcSpan,
@@ -960,7 +970,7 @@ fn visit_typed_constant_float<'a, V: Visit<'a> + ?Sized>(
 fn visit_typed_constant_int<'a, V: Visit<'a> + ?Sized>(
     _v: &mut V,
     _location: &'a SrcSpan,
-    _value: &'a EcoString,
+    _string_value: &'a EcoString,
     _int_value: &'a BigInt,
 ) {
     // No further traversal needed for constant ints
@@ -1627,7 +1637,7 @@ pub fn visit_typed_expr_case<'a, V>(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn visit_typed_expr_record_access<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
@@ -1643,7 +1653,7 @@ pub fn visit_typed_expr_record_access<'a, V>(
     v.visit_typed_expr(record);
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn visit_typed_expr_module_select<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
@@ -1741,7 +1751,7 @@ pub fn visit_typed_expr_bit_array<'a, V>(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn visit_typed_expr_record_update<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
@@ -1955,7 +1965,7 @@ pub fn visit_typed_clause_guard_field_access<'a, V>(
     v.visit_typed_clause_guard(container);
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn visit_typed_clause_guard_module_select<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
@@ -2022,9 +2032,9 @@ where
     match pattern {
         Pattern::Int {
             location,
-            value,
-            int_value: _,
-        } => v.visit_typed_pattern_int(location, value),
+            value: string_value,
+            int_value,
+        } => v.visit_typed_pattern_int(location, string_value, int_value),
         Pattern::Float {
             location,
             value,
@@ -2096,8 +2106,12 @@ where
     }
 }
 
-fn visit_typed_pattern_int<'a, V>(_v: &mut V, _location: &'a SrcSpan, _value: &'a EcoString)
-where
+fn visit_typed_pattern_int<'a, V>(
+    _v: &mut V,
+    _location: &'a SrcSpan,
+    _string_value: &'a EcoString,
+    _int_value: &'a BigInt,
+) where
     V: Visit<'a> + ?Sized,
 {
 }
@@ -2132,9 +2146,9 @@ where
     match size {
         BitArraySize::Int {
             location,
-            value,
-            int_value: _,
-        } => v.visit_typed_bit_array_size_int(location, value),
+            value: string_value,
+            int_value,
+        } => v.visit_typed_bit_array_size_int(location, string_value, int_value),
         BitArraySize::Variable {
             location,
             name,
@@ -2152,7 +2166,8 @@ where
 pub fn visit_typed_bit_array_size_int<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
-    _value: &'a EcoString,
+    _string_value: &'a EcoString,
+    _int_value: &'a BigInt,
 ) where
     V: Visit<'a> + ?Sized,
 {
@@ -2207,7 +2222,7 @@ pub fn visit_typed_pattern_list<'a, V>(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments)]
 pub fn visit_typed_pattern_constructor<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,

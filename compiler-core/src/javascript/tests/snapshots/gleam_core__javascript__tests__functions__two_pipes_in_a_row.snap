@@ -14,7 +14,11 @@ pub fn main() {
 
 
 ----- COMPILED JAVASCRIPT
-import { toList, CustomType as $CustomType } from "../gleam.mjs";
+import {
+  List$Empty$const as $List$Empty$const,
+  prepend as listPrepend,
+  CustomType as $CustomType,
+} from "../gleam.mjs";
 
 export class Function extends $CustomType {
   constructor($0) {
@@ -27,14 +31,17 @@ export const Function$isFunction = (value) => value instanceof Function;
 export const Function$Function$0 = (value) => value[0];
 
 export function main() {
-  return toList([
+  return listPrepend(
     (() => {
       let _pipe = () => { return 1; };
       return new Function(_pipe);
     })(),
-    (() => {
-      let _pipe = () => { return 2; };
-      return new Function(_pipe);
-    })(),
-  ]);
+    listPrepend(
+      (() => {
+        let _pipe = () => { return 2; };
+        return new Function(_pipe);
+      })(),
+      $List$Empty$const,
+    ),
+  );
 }

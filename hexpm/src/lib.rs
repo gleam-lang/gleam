@@ -325,17 +325,17 @@ pub fn repository_v2_get_versions_body(
     let versions = Versions::decode(payload.as_slice())?
         .packages
         .into_iter()
-        .map(|n| {
-            let parse_version = |v: &str| {
-                let err = |_| ApiError::InvalidVersionFormat(v.to_string());
-                Version::parse(v).map_err(err)
+        .map(|package| {
+            let parse_version = |version: &str| {
+                let error = |_| ApiError::InvalidVersionFormat(version.to_string());
+                Version::parse(version).map_err(error)
             };
-            let versions = n
+            let versions = package
                 .versions
                 .iter()
-                .map(|v| parse_version(v.as_str()))
+                .map(|version| parse_version(version.as_str()))
                 .collect::<Result<Vec<Version>, ApiError>>()?;
-            Ok((n.name, versions))
+            Ok((package.name, versions))
         })
         .collect::<Result<HashMap<_, _>, ApiError>>()?;
 
@@ -864,16 +864,23 @@ fn proto_to_retirement_reason(reason: proto::package::RetirementReason) -> Retir
     }
 }
 
-fn proto_to_dep(dep: proto::package::Dependency) -> Result<(String, Dependency), ApiError> {
-    let app = dep.app;
-    let repository = dep.repository;
-    let requirement = Range::new(dep.requirement.clone())
-        .map_err(|_| ApiError::InvalidVersionFormat(dep.requirement))?;
+fn proto_to_dependency(
+    dependency: proto::package::Dependency,
+) -> Result<(String, Dependency), ApiError> {
+    let proto::package::Dependency {
+        app,
+        package,
+        requirement,
+        optional,
+        repository,
+    } = dependency;
+    let requirement =
+        Range::new(requirement.clone()).map_err(|_| ApiError::InvalidVersionFormat(requirement))?;
     Ok((
-        dep.package,
+        package,
         Dependency {
             requirement,
-            optional: dep.optional.is_some(),
+            optional: optional.is_some(),
             app,
             repository,
         },
@@ -886,12 +893,11 @@ fn proto_to_release(
 ) -> Result<Release<()>, ApiError> {
     let dependencies = release
         .dependencies
-        .clone()
         .into_iter()
-        .map(proto_to_dep)
+        .map(proto_to_dependency)
         .collect::<Result<HashMap<_, _>, _>>()?;
-    let version = Version::try_from(release.version.as_str())
-        .expect("Failed to parse version format from Hex");
+    let version =
+        Version::try_from(release.version.as_str()).expect("valid version format from Hex");
     let security_advisories = release
         .advisory_indexes
         .iter()

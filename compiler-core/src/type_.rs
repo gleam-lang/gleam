@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2018 The Gleam contributors
 
+pub(crate) mod constant;
 pub(crate) mod environment;
 pub mod error;
 pub(crate) mod expression;
 pub(crate) mod fields;
+pub(crate) mod guard;
 pub(crate) mod hydrator;
 pub(crate) mod pattern;
 pub(crate) mod pipe;
@@ -33,7 +35,6 @@ use crate::{
     },
     bit_array,
     build::{Origin, Target},
-    inline::InlinableFunction,
     reference::{LabelDefinition, LabelReference, ModuleNameReference, RecordLabel, ReferenceMap},
     type_::expression::Implementations,
 };
@@ -1037,8 +1038,6 @@ pub struct ModuleInterface {
     /// Wether there's any echo in the module.
     pub contains_echo: bool,
     pub references: References,
-    /// Functions which can be inlined
-    pub inline_functions: HashMap<EcoString, InlinableFunction>,
 }
 
 impl ModuleInterface {

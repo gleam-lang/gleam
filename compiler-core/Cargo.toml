@@ -38,7 +38,7 @@ id-arena = "2"
 # Bijective (bi-directional) hashmap
 bimap = { version = "0.6.3", features = ["serde"] }
 # Encryption
-age = { version = "0.11", features = ["armor"] }
+age = { version = "0.12", features = ["armor"] }
 radix_trie = "0.3"
 # Ensuring recursive type-checking doesn't stack overflow
 stacker = "0.1.21"

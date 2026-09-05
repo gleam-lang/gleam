@@ -103,8 +103,9 @@ use gleam_core::{
 
 #[derive(Args, Debug, Clone)]
 pub struct UpdateOptions {
-    /// (optional) Names of the packages to update
-    /// If omitted, all dependencies will be updated
+    /// (optional) Names of the packages to update.
+    ///
+    /// If omitted, all dependencies will be updated.
     #[arg(verbatim_doc_comment)]
     packages: Vec<String>,
 }
@@ -649,8 +650,14 @@ impl Command {
                 let paths = find_project_paths(directory)?;
                 export::hex_tarball(&paths)
             }
-            Self::Export(ExportTarget::JavascriptPrelude) => export::javascript_prelude(),
-            Self::Export(ExportTarget::TypescriptPrelude) => export::typescript_prelude(),
+            Self::Export(ExportTarget::JavaScriptPrelude { output }) => {
+                let paths = find_project_paths(directory)?;
+                export::javascript_prelude(&paths, output)
+            }
+            Self::Export(ExportTarget::TypeScriptPrelude { output }) => {
+                let paths = find_project_paths(directory)?;
+                export::typescript_prelude(&paths, output)
+            }
             Self::Export(ExportTarget::PackageInterface { output }) => {
                 let paths = find_project_paths(directory)?;
                 export::package_interface(&paths, output)
@@ -689,20 +696,36 @@ pub enum ExportTarget {
     /// The package bundled into a tarball, suitable for publishing to Hex
     HexTarball,
     /// The JavaScript prelude module
-    JavascriptPrelude,
+    JavaScriptPrelude {
+        /// (optional) The path to write the JavaScript file to.
+        ///
+        /// If ommited, the command will print to stdout.
+        #[arg(verbatim_doc_comment, long = "out")]
+        output: Option<Utf8PathBuf>,
+    },
     /// The TypeScript prelude module
-    TypescriptPrelude,
+    TypeScriptPrelude {
+        /// (optional) The path to write the TypeScript file to.
+        ///
+        /// If ommited, the command will print to stdout.
+        #[arg(verbatim_doc_comment, long = "out")]
+        output: Option<Utf8PathBuf>,
+    },
     /// Information on the modules, functions, and types in the project in JSON format
     PackageInterface {
-        /// The path to write the JSON file to
-        #[arg(long = "out", required = true)]
-        output: Utf8PathBuf,
+        /// (optional) The path to write the JSON file to.
+        ///
+        /// If ommited, the command will print to stdout.
+        #[arg(verbatim_doc_comment, long = "out")]
+        output: Option<Utf8PathBuf>,
     },
     /// Package information (gleam.toml) in JSON format
     PackageInformation {
-        /// The path to write the JSON file to
-        #[arg(long = "out", required = true)]
-        output: Utf8PathBuf,
+        /// (optional) The path to write the JSON file to.
+        ///
+        /// If ommited, the command will print to stdout.
+        #[arg(verbatim_doc_comment, long = "out")]
+        output: Option<Utf8PathBuf>,
     },
 }
 
