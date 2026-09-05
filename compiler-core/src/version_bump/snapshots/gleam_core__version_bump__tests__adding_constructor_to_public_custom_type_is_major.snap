@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- MAJOR
+
+== the_module ==
+- pub type Wibble {
+-   Wibble
+- }
++ pub type Wibble {
++   Wibble
++   Wobble
++ }

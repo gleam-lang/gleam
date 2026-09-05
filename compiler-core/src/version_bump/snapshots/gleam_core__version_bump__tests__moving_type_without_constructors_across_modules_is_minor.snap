@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- MINOR
+
++ wobble
+
+== wibble ==
+- pub type Wibble
++ pub type Wibble = Wibble
