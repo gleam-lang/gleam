@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- MAJOR
+
+== the_module ==
+- pub const max_size: Int
++ pub const max_size: Float

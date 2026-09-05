@@ -168,3 +168,25 @@ pub fn length_utf16(string: &str) -> usize {
 pub fn length_utf32(string: &str) -> usize {
     string.chars().count()
 }
+
+/// Converts a number to a unique letters, starting with `a = 0`, `b = 1`, etc.
+pub fn number_to_letters(number: u64) -> EcoString {
+    let alphabet_length = 26;
+    let char_offset = 97;
+    let mut chars = vec![];
+    let mut n;
+    let mut rest = number;
+
+    loop {
+        n = rest % alphabet_length;
+        rest /= alphabet_length;
+        chars.push((n as u8 + char_offset) as char);
+
+        if rest == 0 {
+            break;
+        }
+        rest -= 1;
+    }
+
+    chars.into_iter().rev().collect()
+}

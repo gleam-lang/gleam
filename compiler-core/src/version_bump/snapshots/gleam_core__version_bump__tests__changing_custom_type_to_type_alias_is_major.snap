@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- MAJOR
+
+== the_module ==
+- pub type MyBool {
+-   True
+-   False
+- }
++ pub type MyBool = Bool
