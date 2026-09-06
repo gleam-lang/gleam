@@ -506,3 +506,17 @@ pub fn concat(name) {
 "#,
     );
 }
+
+#[test]
+fn concat_with_block_with_multiple_expr() {
+    assert_erl!(
+        r#"
+pub fn concat(name) {
+  name <> {
+    let x = "/"
+    x
+  } <> name
+}
+"#,
+    );
+}

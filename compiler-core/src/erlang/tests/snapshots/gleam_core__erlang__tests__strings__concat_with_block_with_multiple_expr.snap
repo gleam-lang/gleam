@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/erlang/tests/strings.rs
+expression: "\npub fn concat(name) {\n  name <> {\n    let x = \"/\"\n    x\n  } <> name\n}\n"
+---
+----- SOURCE CODE
+
+pub fn concat(name) {
+  name <> {
+    let x = "/"
+    x
+  } <> name
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([concat/1]).
+
+-spec concat(binary()) -> binary().
+concat(Name) ->
+    <<<<Name/binary, (begin
+        X = ~"/",
+        X
+    end)/binary>>/binary, Name/binary>>.
