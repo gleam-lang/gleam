@@ -14,13 +14,14 @@ pub fn main() {
 }
 
 ----- ERROR
-error: Use of private module value
+error: Use of private value
   ┌─ /src/one/two.gleam:1:13
   │
 1 │ import one.{two}
   │             ^^^
 
-`one.two` is a private value.
+`one` does define `two`, but it is private and cannot be accessed by other
+modules.
 
 error: Unknown variable
   ┌─ /src/one/two.gleam:4:3

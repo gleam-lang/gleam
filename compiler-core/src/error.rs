@@ -5243,13 +5243,16 @@ Be sure to finish it before running your program.",
                 extra_labels: vec![],
             }),
         },
-        TypeError::UseOfPrivateModuleValue {
+        TypeError::PrivateValueUse {
             location,
             name,
             module_name,
         } => Diagnostic {
-            title: "Use of private module value".into(),
-            text: wrap_format!("`{module_name}.{name}` is a private value."),
+            title: "Use of private value".into(),
+            text: wrap_format!(
+                "`{module_name}` does define `{name}`, but it is private \
+and cannot be accessed by other modules."
+            ),
             hint: None,
             level: Level::Error,
             location: Some(Location {
@@ -5262,13 +5265,16 @@ Be sure to finish it before running your program.",
                 extra_labels: vec![],
             }),
         },
-        TypeError::UseOfPrivateModuleType {
+        TypeError::PrivateTypeUse {
             location,
             name,
             module_name,
         } => Diagnostic {
-            title: "Use of private module type".into(),
-            text: wrap_format!("`{module_name}.{name}` is a private type."),
+            title: "Use of private type".into(),
+            text: wrap_format!(
+                "`{module_name}` does define `{name}`, but it is private \
+and cannot be accessed by other modules."
+            ),
             hint: None,
             level: Level::Error,
             location: Some(Location {

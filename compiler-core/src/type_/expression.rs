@@ -2479,7 +2479,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // If the value belongs to current package, but isn't importable,
                 // then we produce error message about usage of private value.
                 Some(_) if self.environment.current_package == module.package => {
-                    return Err(Error::UseOfPrivateModuleValue {
+                    return Err(Error::PrivateValueUse {
                         location: select_location,
                         name: label.clone(),
                         module_name: module.name.clone(),
