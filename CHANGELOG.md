@@ -123,6 +123,40 @@
 - The compiler now provides hint about `|' in pattern matching
   ([n0kk23](https://github.com/n0kk23))
 
+- The compiler now recognises more unreachable clauses in a `case` where an
+  earlier clause matches an overlapping string.
+
+  ```gleam
+  pub fn go(input: String, x: Int) {
+    case input, x {
+      "ab", 1 -> 7
+      "a" <> _, _ -> 2
+      "ab", _ -> 3
+      _, _ -> 4
+    }
+  }
+  ```
+
+  The compiler will emit the following warning:
+
+  ```txt
+  warning: Unreachable pattern
+    ┌─ /main.gleam:5:5
+    │
+  5 │     "ab", _ -> 3
+    │     ^^^^^^^
+
+  This pattern cannot be reached as a previous pattern matches the same
+  values.
+
+  Hint: It can be safely removed.
+  ```
+
+  Anything reaching the third clause starts with `"a"`, so the second clause has
+  already matched it. Code that previously compiled cleanly may now emit this
+  warning.
+  ([John Downey](https://github.com/jtdowney))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
@@ -289,6 +323,15 @@
   produce an invalid bitstring on the Erlang target.
   ([Lillian Rose](https://github.com/lillianrubyrose) with
   [Mar Bloeiman](https://github.com/strawmelonjuice))
+
+- Fixed a bug where on the JavaScript target a string prefix pattern could be
+  skipped when an earlier clause matched an overlapping string, but then failed
+  for another reason.
+  ([John Downey](https://github.com/jtdowney))
+
+- Fixed a bug where on the JavaScript target a name given to a string prefix or
+  bit array in a pattern would not be bound in every branch it was used in.
+  ([John Downey](https://github.com/jtdowney))
 
 ## v1.18.1 - 2026-08-01
 

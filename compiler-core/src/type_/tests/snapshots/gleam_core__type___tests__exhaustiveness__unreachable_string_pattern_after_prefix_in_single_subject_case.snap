@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+expression: "pub fn main() {\n  let string = \"\"\n  case string {\n    \"abcd\" if True -> \"a\"\n    \"abc\" <> _ -> \"b\"\n    \"abcd\" -> \"c\"\n    _ -> \"d\"\n  }\n}"
+---
+----- SOURCE CODE
+pub fn main() {
+  let string = ""
+  case string {
+    "abcd" if True -> "a"
+    "abc" <> _ -> "b"
+    "abcd" -> "c"
+    _ -> "d"
+  }
+}
+
+----- WARNING
+warning: Unreachable pattern
+  ┌─ /src/warning/wrn.gleam:6:5
+  │
+6 │     "abcd" -> "c"
+  │     ^^^^^^
+
+This pattern cannot be reached as a previous pattern matches the same
+values.
+
+Hint: It can be safely removed.

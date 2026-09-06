@@ -195,3 +195,33 @@ pub fn match_on_empty_string_with_alias_test() {
   assert a == ""
   Nil
 }
+
+pub fn bit_array_slice_assignment_inside_a_nested_pattern_after_a_guard_test() {
+  let go = fn(b: Bool, flag: Bool, r: Result(BitArray, Nil)) -> BitArray {
+    case b, r {
+      True, _ if flag -> <<1>>
+      _, Ok(<<x:bits>>) -> x
+      _, _ -> <<>>
+    }
+  }
+
+  assert go(True, True, Ok(<<2>>)) == <<1>>
+  assert go(True, False, Ok(<<2>>)) == <<2>>
+  assert go(False, True, Ok(<<2>>)) == <<2>>
+  assert go(False, True, Error(Nil)) == <<>>
+}
+
+pub fn bit_array_segment_assignment_proved_by_a_guarded_clause_test() {
+  let go = fn(bits: BitArray, flag: Bool) -> Int {
+    case bits {
+      <<_:8, 2>> if flag -> 0
+      <<1, 2 as y>> -> y
+      _ -> -1
+    }
+  }
+
+  assert go(<<1, 2>>, True) == 0
+  assert go(<<1, 2>>, False) == 2
+  assert go(<<3, 2>>, False) == -1
+  assert go(<<1, 3>>, False) == -1
+}

@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\npub fn go(b: Bool, r: Result(String, Nil)) -> String {\n  case b, r {\n    True, _ if True -> \"x\"\n    _, Ok(\"ab\" as p <> _) -> p\n    _, _ -> \"no\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(b: Bool, r: Result(String, Nil)) -> String {
+  case b, r {
+    True, _ if True -> "x"
+    _, Ok("ab" as p <> _) -> p
+    _, _ -> "no"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { Ok } from "../gleam.mjs";
+
+export function go(b, r) {
+  if (b) {
+    if (true) {
+      return "x";
+    } else if (r instanceof Ok && r[0].startsWith("ab")) {
+      let p = "ab";
+      return p;
+    } else {
+      return "no";
+    }
+  } else if (r instanceof Ok && r[0].startsWith("ab")) {
+    let p = "ab";
+    return p;
+  } else {
+    return "no";
+  }
+}

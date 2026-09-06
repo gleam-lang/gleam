@@ -1492,6 +1492,55 @@ fn unreachable_string_pattern_after_prefix() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/6168
+#[test]
+fn unreachable_string_pattern_after_prefix_in_multi_subject_case() {
+    assert_warning!(
+        r#"pub fn main() {
+  let string = ""
+  let number = 1
+  case string, number {
+    "ab", 1 -> "a"
+    "a" <> _, _ -> "b"
+    "ab", _ -> "c"
+    _, _ -> "d"
+  }
+}"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6168
+#[test]
+fn unreachable_string_pattern_after_prefix_in_single_subject_case() {
+    assert_warning!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "abcd" if True -> "a"
+    "abc" <> _ -> "b"
+    "abcd" -> "c"
+    _ -> "d"
+  }
+}"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6168
+#[test]
+fn unreachable_patterns_after_a_prefix_covering_a_longer_literal() {
+    assert_warning!(
+        r#"pub fn main(string: String, result: Result(Int, Nil), flag: Bool) -> String {
+  case string, result {
+    "abcd", _ if flag -> "0"
+    "abc" <> _, _ -> "2"
+    "abcd", Ok(_) -> "3"
+    "abcd" <> rest, _ if flag -> rest
+    _, _ -> "X"
+  }
+}"#
+    );
+}
+
 #[test]
 fn reachable_string_pattern_after_prefix() {
     assert_no_warnings!(
@@ -1515,6 +1564,21 @@ fn reachable_string_pattern_after_prefix_1() {
     "wibble" <> rest -> rest
     "wib" -> "a"
     _ -> "b"
+  }
+}"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6168
+#[test]
+fn reachable_string_prefix_after_longer_literal() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "abcd" -> "a"
+    "ab" <> _ -> "b"
+    _ -> "c"
   }
 }"#
     );
