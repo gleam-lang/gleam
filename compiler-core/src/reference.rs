@@ -74,13 +74,27 @@ pub enum ReferenceKind {
     /// import gleam/dynamic/decode.{type Dynamic}
     /// //                                ^^^^^^^ Import
     /// ```
-    /// The contained span is the location of `as ...` part, if it exists,
-    /// otherwise it will just be empty. For example:
-    /// ```gleam
-    /// import gleam/option.{None as Nothing}
-    /// //                       ^^^^^^^^^^^ Alias span
-    /// ```
-    Import(SrcSpan),
+    Import {
+        /// Full location of the import:
+        ///
+        /// ```gleam
+        /// import gleam/option.{type Option as Wibble}
+        /// //                   ^^^^^^^^^^^^^^^^^^^^^
+        /// import gleam/option.{Some as Wibble}
+        /// //                   ^^^^^^^^^^^^^^
+        /// ```
+        location: SrcSpan,
+        /// Start position of the alias, if it exists, otherwise it will be at
+        /// the end of the import location:
+        ///
+        /// ```gleam
+        /// import gleam/option.{type Option as Wibble}
+        /// //                              ^
+        /// import gleam/option.{type Option}
+        /// //                             ^
+        /// ```
+        alias_start_position: u32,
+    },
     /// The original definition location of a type or value. This also counts as
     /// a reference for renaming and "find references" purposes. For example:
     ///
@@ -617,7 +631,7 @@ impl ReferenceTracker {
                 };
                 self.register_module_name_reference(module.clone(), reference);
             }
-            ReferenceKind::Import(_) | ReferenceKind::Definition => {}
+            ReferenceKind::Import { .. } | ReferenceKind::Definition => {}
             ReferenceKind::Alias | ReferenceKind::Unqualified => {
                 self.add_reference_edge(referenced_name.clone(), EntityLayer::Value);
             }
@@ -650,7 +664,7 @@ impl ReferenceTracker {
                 };
                 self.register_module_name_reference(module.clone(), reference);
             }
-            ReferenceKind::Import(_) | ReferenceKind::Definition => {}
+            ReferenceKind::Import { .. } | ReferenceKind::Definition => {}
             ReferenceKind::Alias | ReferenceKind::Unqualified => {
                 self.register_type_reference_in_call_graph(referenced_name.clone());
             }

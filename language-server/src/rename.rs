@@ -4,6 +4,7 @@
 use std::collections::HashMap;
 
 use ecow::EcoString;
+use itertools::Itertools;
 use lsp_server::ResponseError;
 use lsp_types::{Range, RenameParams, TextEdit, Uri as Url, WorkspaceEdit};
 
@@ -226,7 +227,7 @@ fn rename_references_in_module(
             ReferenceKind::Alias => {}
             ReferenceKind::Qualified { .. }
             | ReferenceKind::Unqualified
-            | ReferenceKind::Import(_)
+            | ReferenceKind::Import { .. }
             | ReferenceKind::Definition => edits.replace(reference.location, new_name.clone()),
         }
     }
@@ -367,11 +368,21 @@ fn alias_references_in_module(
             ReferenceKind::Unqualified | ReferenceKind::Alias => {
                 edits.replace(reference.location, params.new_name.clone());
             }
-            ReferenceKind::Import(alias_location) => {
-                // If old name is equal to original name, we can just remove
-                // alias part.
+            ReferenceKind::Import {
+                location,
+                alias_start_position,
+            } => {
+                let alias_location = SrcSpan::new(alias_start_position, location.end);
                 if name == &params.new_name {
-                    edits.delete(alias_location);
+                    if module_name == "gleam" {
+                        // If new name is same as old name and item is from prelude,
+                        // we can delete the entire import.
+                        rename_same_named_prelude_import_reference(&mut edits, module, location);
+                    } else {
+                        // If new name is same as old name, we can delete
+                        // the `as ..` part.
+                        edits.delete(alias_location);
+                    }
                 } else {
                     edits.replace(alias_location, format!(" as {}", params.new_name));
                 }
@@ -416,6 +427,100 @@ fn alias_references_in_module(
                 .clone(),
             edits.edits,
         ),
+    }
+}
+
+/// Rename import of prelude item to original name. For example:
+///
+/// ```gleam
+/// import gleam.{True as Yes, type Bool}
+/// //            ^^^^^^^^^^^ Renaming this to `True`
+/// ```
+fn rename_same_named_prelude_import_reference(
+    edits: &mut TextEdits<'_>,
+    module: &Module,
+    location: SrcSpan,
+) {
+    let import = module
+        .ast
+        .definitions
+        .imports
+        .iter()
+        .find(|import| import.module == "gleam")
+        // This function only gets called when there's import of prelude.
+        .expect("import exists");
+
+    let imported_type_locations = import.unqualified_types.iter().map(|type_| type_.location);
+    let imported_value_locations = import.unqualified_values.iter().map(|value| value.location);
+    let imported_locations = imported_type_locations
+        .chain(imported_value_locations)
+        .sorted_by_key(|location| location.start)
+        .collect_vec();
+
+    let renamed_index = imported_locations.binary_search(&location).ok();
+    let next_value_location =
+        renamed_index.and_then(|value_index| imported_locations.get(value_index + 1));
+    let previous_value_location = renamed_index.and_then(|value_index| {
+        value_index
+            .checked_sub(1)
+            .and_then(|previous_index| imported_locations.get(previous_index))
+    });
+
+    match (previous_value_location, next_value_location) {
+        // If there's an import following the renamed import, we need to delete everything before its start.
+        //
+        // ```gleam
+        // import gleam.{True,    False}
+        // //            ^^^^^^^^^
+        // ```
+        (_, Some(next_value_location)) => edits.delete(SrcSpan {
+            start: location.start,
+            end: next_value_location.start,
+        }),
+
+        // If this import is the last one and is preceded by another import, we
+        // need to delete everything from that import's end.
+        //
+        // ```gleam
+        // import gleam.{True, False}
+        // //                ^^^^^^^
+        // ```
+        (Some(previous_value_location), _) => {
+            edits.delete(SrcSpan {
+                start: previous_value_location.end,
+                end: location.end,
+            });
+        }
+
+        // If it's the only import inside import statement, and the latter
+        // doesn't have alias, we can remove the entire item statement.
+        //
+        // ```gleam
+        // import gleam.{True}
+        // // ^ The entire statement above should be deleted
+        // ```
+        (_, _) if import.as_name.is_none() => {
+            // If import statement spans the entire line, we delete it
+            // along with newline character, otherwise only delete import
+            // statement itself.
+            if edits.line_numbers.spans_entire_line(&import.location) {
+                edits.delete(SrcSpan {
+                    start: import.location.start,
+                    end: import.location.end + 1,
+                });
+            } else {
+                edits.delete(import.location);
+            }
+        }
+
+        // Otherwise, it's the only import in import statement, but the latter
+        // has alias, so we delete only imported item.
+        //
+        // ```gleam
+        // import gleam.{True} as prelude
+        // //            ^^^^
+        // ```
+        (_, _) => edits.delete(location),
     }
 }
 
