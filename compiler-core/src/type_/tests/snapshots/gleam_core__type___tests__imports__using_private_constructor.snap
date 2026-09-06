@@ -14,10 +14,11 @@ pub fn main() {
 }
 
 ----- ERROR
-error: Use of private module value
+error: Use of private value
   ┌─ /src/one/two.gleam:4:7
   │
 4 │   one.Two
   │       ^^^
 
-`one.Two` is a private value.
+`one` does define `Two`, but it is private and cannot be accessed by other
+modules.

@@ -97,7 +97,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             // If the type belongs to current package, but isn't importable,
             // then we produce error message about usage of private type.
             Some(_) if self.environment.current_package == module.package => {
-                self.problems.error(Error::UseOfPrivateModuleType {
+                self.problems.error(Error::PrivateTypeUse {
                     location: import.location,
                     name: import.name.clone(),
                     module_name: module.name.clone(),
@@ -108,7 +108,6 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             // module, where we do not want to expose information, we produce
             // error message about usage of unknown type.
             Some(_) | None => {
-                // TODO: refine to a type specific error
                 self.problems.error(Error::UnknownModuleType {
                     location: import.location,
                     name: import.name.clone(),
@@ -205,7 +204,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             // If the value belongs to current package, but isn't importable,
             // then we produce error message about usage of private value.
             Some(_) if self.environment.current_package == module.package => {
-                self.problems.error(Error::UseOfPrivateModuleValue {
+                self.problems.error(Error::PrivateValueUse {
                     location,
                     name: import_name.clone(),
                     module_name: module.name.clone(),

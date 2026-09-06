@@ -16,10 +16,11 @@ pub fn go() {
 
 
 ----- ERROR
-error: Use of private module value
+error: Use of private value
   ┌─ /src/one/two.gleam:5:10
   │
 5 │   wibble.wobble
   │          ^^^^^^
 
-`wibble.wobble` is a private value.
+`wibble` does define `wobble`, but it is private and cannot be accessed by
+other modules.

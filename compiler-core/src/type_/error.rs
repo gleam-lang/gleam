@@ -728,15 +728,21 @@ pub enum Error {
         operator: BinOp,
     },
 
-    /// This happens when we try to use a private value from another module.
-    UseOfPrivateModuleValue {
+    /// This happens when we try to use a private value from another module
+    /// from the same package. From another package an "unknown value"
+    /// error is unsed instead, to avoid sharing information about the
+    /// internals of the other package.
+    PrivateValueUse {
         location: SrcSpan,
         name: EcoString,
         module_name: EcoString,
     },
 
-    /// This happens when we try to use a private type from another module.
-    UseOfPrivateModuleType {
+    /// This happens when we try to use a private type from another module
+    /// from the same package. From another package an "unknown type"
+    /// error is unsed instead, to avoid sharing information about the
+    /// internals of the other package.
+    PrivateTypeUse {
         location: SrcSpan,
         name: EcoString,
         module_name: EcoString,
@@ -1456,8 +1462,8 @@ impl Error {
             | Error::QualifiedTypeMissingName { location }
             | Error::TodoConstant { location }
             | Error::LowercaseBoolPattern { location }
-            | Error::UseOfPrivateModuleValue { location, .. }
-            | Error::UseOfPrivateModuleType { location, .. } => location.start,
+            | Error::PrivateValueUse { location, .. }
+            | Error::PrivateTypeUse { location, .. } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }
@@ -1685,7 +1691,7 @@ pub fn convert_get_type_constructor_error(
         },
 
         UnknownTypeConstructorError::PrivateModuleType { name, module_name } => {
-            Error::UseOfPrivateModuleType {
+            Error::PrivateTypeUse {
                 location: *location,
                 name,
                 module_name,

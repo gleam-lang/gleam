@@ -16,10 +16,11 @@ import wibble.{type Wibble}
 
 
 ----- ERROR
-error: Use of private module type
+error: Use of private type
   ┌─ /src/one/two.gleam:2:16
   │
 2 │ import wibble.{type Wibble}
   │                ^^^^^^^^^^^
 
-`wibble.Wibble` is a private type.
+`wibble` does define `Wibble`, but it is private and cannot be accessed by
+other modules.
