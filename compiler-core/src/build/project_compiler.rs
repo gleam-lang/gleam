@@ -614,7 +614,6 @@ where
         compiler.write_metadata = true;
         compiler.write_entrypoint = is_root;
         compiler.perform_codegen = self.options.codegen.should_codegen(is_root);
-        compiler.compile_beam_bytecode = self.options.codegen.should_codegen(is_root);
         compiler.compile_modules = !(self.options.compile == Compile::DepsOnly && is_root);
         compiler.subprocess_stdio = self.subprocess_stdio;
         compiler.target_support = if is_root {

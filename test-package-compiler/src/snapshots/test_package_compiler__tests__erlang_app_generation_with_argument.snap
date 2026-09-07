@@ -11,6 +11,9 @@ expression: "./cases/erlang_app_generation_with_argument"
 //// erlang_app_generation_with_argument/_gleam_artefacts/main.cache_meta
 <29 byte binary>
 
+//// erlang_app_generation_with_argument/ebin/main.beam
+<0 byte binary>
+
 //// erlang_app_generation_with_argument/ebin/my_erlang_application.app
 {application, my_erlang_application, [
     {mod, {'my_erlang_application_sup', [1, two]}},

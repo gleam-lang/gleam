@@ -76,7 +76,6 @@ pub struct PackageCompiler<'a, IO> {
     pub compile_modules: bool,
     pub write_entrypoint: bool,
     pub copy_native_files: bool,
-    pub compile_beam_bytecode: bool,
     pub subprocess_stdio: Stdio,
     pub target_support: TargetSupport,
     pub cached_warnings: CachedWarnings,
@@ -112,7 +111,6 @@ where
             compile_modules: true,
             write_entrypoint: false,
             copy_native_files: true,
-            compile_beam_bytecode: true,
             subprocess_stdio: Stdio::Inherit,
             target_support: TargetSupport::NotEnforced,
             cached_warnings: CachedWarnings::Ignore,
@@ -395,7 +393,7 @@ where
             tracing::debug!("skipping_native_file_copying");
         }
 
-        if self.compile_beam_bytecode && self.write_entrypoint {
+        if app_file_config.is_some() && self.write_entrypoint {
             self.render_erlang_entrypoint_module(&build_dir, &mut written)?;
         } else {
             tracing::debug!("skipping_entrypoint_generation");
@@ -407,33 +405,21 @@ where
         // version and not the newly compiled version.
         Erlang::new(&build_dir, &include_dir).render(output, io.clone(), modules, self.root)?;
 
-        if self.compile_beam_bytecode {
+        if let Some(config) = app_file_config {
             written.extend(modules.iter().map(match output {
                 ErlangOutput::Binary => Module::compiled_erlang_path,
                 ErlangOutput::Textual => Module::compiled_textual_erlang_path,
             }));
             self.compile_erlang_to_beam(&written)?;
-        } else {
-            tracing::debug!("skipping_erlang_bytecode_compilation");
-        }
 
-        if let Some(config) = app_file_config {
-            // `app_file_config` can be `Some` even when `compile_beam_bytecode`
-            // is false, in which case nothing is ever written to `ebin` (and
-            // anything already there from an earlier build is stale). So we
-            // only trust the `ebin` scan when bytecode compilation actually
-            // ran this build; otherwise we fall back to the modules compiled
-            // in memory this run.
-            let compiled_modules = if self.compile_beam_bytecode {
-                self.modules_in_ebin()?
-            } else {
-                modules.iter().map(Module::erlang_name).collect()
-            };
+            let compiled_modules = self.modules_in_ebin()?;
             ErlangApp::new(&self.out.join("ebin"), config).render(
                 io,
                 self.config,
                 compiled_modules,
             )?;
+        } else {
+            tracing::debug!("skipping_erlang_bytecode_compilation");
         }
         Ok(())
     }

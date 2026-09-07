@@ -52,7 +52,7 @@ fn compile_modules(
         output: ErlangOutput::Binary,
     };
 
-    let mut compiler = PackageCompiler::new(
+    let compiler = PackageCompiler::new(
         &config,
         build::Mode::Dev,
         Utf8Path::new("/"),
@@ -62,8 +62,6 @@ fn compile_modules(
         UniqueIdGenerator::new(),
         fs.clone(),
     );
-
-    compiler.compile_beam_bytecode = true;
 
     let mut already_defined_modules = existing_modules
         .into_iter()

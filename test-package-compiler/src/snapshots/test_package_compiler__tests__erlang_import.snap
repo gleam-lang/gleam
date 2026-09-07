@@ -29,3 +29,10 @@ expression: "./cases/erlang_import"
                two]},
     {registered, []}
 ]}.
+
+
+//// erlang_import/ebin/one.beam
+<0 byte binary>
+
+//// erlang_import/ebin/two.beam
+<0 byte binary>

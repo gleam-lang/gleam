@@ -31,6 +31,12 @@ expression: "./cases/erlang_bug_752"
 ]}.
 
 
+//// erlang_bug_752/ebin/one.beam
+<0 byte binary>
+
+//// erlang_bug_752/ebin/two.beam
+<0 byte binary>
+
 //// erlang_bug_752/include/two_Two.hrl
 -record(two, {
     thing :: one:one(integer())

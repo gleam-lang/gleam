@@ -41,6 +41,15 @@ expression: "./cases/imported_record_constructors"
 ]}.
 
 
+//// imported_record_constructors/ebin/one@one.beam
+<0 byte binary>
+
+//// imported_record_constructors/ebin/one@two.beam
+<0 byte binary>
+
+//// imported_record_constructors/ebin/two.beam
+<0 byte binary>
+
 //// imported_record_constructors/include/one@one_User.hrl
 -record(user, {
     name :: binary(),
