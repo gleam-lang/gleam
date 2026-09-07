@@ -13,13 +13,12 @@ pub fn main(x) {
 
 
 ----- COMPILED JAVASCRIPT
-export function main(loop$x) {
+export function main(x) {
   while (true) {
-    let x = loop$x;
     if (x === 0) {
       return undefined;
     } else {
-      loop$x = x - 1;
+      x = x - 1;
     }
   }
 }

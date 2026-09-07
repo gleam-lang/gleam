@@ -16,14 +16,13 @@ pub fn main(x) {
 
 
 ----- COMPILED JAVASCRIPT
-export function main(loop$x) {
+export function main(x) {
   while (true) {
-    let x = loop$x;
     if (x === 0) {
       return undefined;
     } else {
       let y = x;
-      loop$x = y - 1;
+      x = y - 1;
     }
   }
 }
