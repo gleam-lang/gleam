@@ -179,7 +179,7 @@ where
         _lib: &Utf8Path,
         _modules: &HashSet<Utf8PathBuf>,
         _stdio: Stdio,
-    ) -> Result<Vec<String>, Error> {
+    ) -> Result<(), Error> {
         panic!("The language server is not permitted to create subprocesses")
     }
 }

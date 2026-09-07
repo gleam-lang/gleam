@@ -236,20 +236,15 @@ where
         })
     }
 
-    fn compile_erlang_to_beam(
-        &mut self,
-        modules: &HashSet<Utf8PathBuf>,
-    ) -> Result<Vec<EcoString>, Error> {
+    fn compile_erlang_to_beam(&mut self, modules: &HashSet<Utf8PathBuf>) -> Result<(), Error> {
         if modules.is_empty() {
             tracing::debug!("no_erlang_to_compile");
-            return Ok(Vec::new());
+            Ok(())
+        } else {
+            tracing::debug!("compiling_erlang");
+            self.io
+                .compile_beam(self.out, self.lib, modules, self.subprocess_stdio)
         }
-
-        tracing::debug!("compiling_erlang");
-
-        self.io
-            .compile_beam(self.out, self.lib, modules, self.subprocess_stdio)
-            .map(|modules| modules.iter().map(EcoString::from).collect())
     }
 
     fn copy_project_native_files(
@@ -417,7 +412,7 @@ where
                 ErlangOutput::Binary => Module::compiled_erlang_path,
                 ErlangOutput::Textual => Module::compiled_textual_erlang_path,
             }));
-            let _ = self.compile_erlang_to_beam(&written)?;
+            self.compile_erlang_to_beam(&written)?;
         } else {
             tracing::debug!("skipping_erlang_bytecode_compilation");
         }
