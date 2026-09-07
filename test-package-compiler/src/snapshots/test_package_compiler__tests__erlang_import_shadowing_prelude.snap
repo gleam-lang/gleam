@@ -29,3 +29,10 @@ expression: "./cases/erlang_import_shadowing_prelude"
                two]},
     {registered, []}
 ]}.
+
+
+//// erlang_import_shadowing_prelude/ebin/one.beam
+<0 byte binary>
+
+//// erlang_import_shadowing_prelude/ebin/two.beam
+<0 byte binary>

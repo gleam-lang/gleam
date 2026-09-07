@@ -80,7 +80,6 @@ impl TestHarness {
         );
         compiler.write_entrypoint = false;
         compiler.write_metadata = true;
-        compiler.compile_beam_bytecode = false;
         compiler.copy_native_files = false;
         let result = compiler.compile(
             &warning_emitter,

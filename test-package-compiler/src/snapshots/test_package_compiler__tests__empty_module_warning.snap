@@ -38,6 +38,9 @@ expression: "./cases/empty_module_warning"
 //// empty_module_warning/_gleam_artefacts/public.cache_meta
 <31 byte binary>
 
+//// empty_module_warning/ebin/empty.beam
+<0 byte binary>
+
 //// empty_module_warning/ebin/empty_module_warning.app
 {application, empty_module_warning, [
     {vsn, "1.0.0"},
@@ -50,6 +53,15 @@ expression: "./cases/empty_module_warning"
     {registered, []}
 ]}.
 
+
+//// empty_module_warning/ebin/internal.beam
+<0 byte binary>
+
+//// empty_module_warning/ebin/private.beam
+<0 byte binary>
+
+//// empty_module_warning/ebin/public.beam
+<0 byte binary>
 
 //// Warning
 warning: Empty module

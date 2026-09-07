@@ -39,3 +39,13 @@ expression: "./cases/imported_external_fns"
                two]},
     {registered, []}
 ]}.
+
+
+//// imported_external_fns/ebin/one.beam
+<0 byte binary>
+
+//// imported_external_fns/ebin/three.beam
+<0 byte binary>
+
+//// imported_external_fns/ebin/two.beam
+<0 byte binary>
