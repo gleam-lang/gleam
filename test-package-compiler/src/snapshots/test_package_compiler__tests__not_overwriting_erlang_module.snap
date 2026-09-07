@@ -11,6 +11,9 @@ expression: "./cases/not_overwriting_erlang_module"
 //// not_overwriting_erlang_module/_gleam_artefacts/app@code.cache_meta
 <42 byte binary>
 
+//// not_overwriting_erlang_module/ebin/app@code.beam
+<0 byte binary>
+
 //// not_overwriting_erlang_module/ebin/importy.app
 {application, importy, [
     {vsn, "0.1.0"},

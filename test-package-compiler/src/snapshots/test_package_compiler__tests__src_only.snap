@@ -19,3 +19,7 @@ expression: "./cases/src_only"
     {modules, [src_only]},
     {registered, []}
 ]}.
+
+
+//// src_only/ebin/src_only.beam
+<0 byte binary>

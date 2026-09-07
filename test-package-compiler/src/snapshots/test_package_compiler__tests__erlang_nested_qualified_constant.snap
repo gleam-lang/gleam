@@ -29,3 +29,10 @@ expression: "./cases/erlang_nested_qualified_constant"
                two]},
     {registered, []}
 ]}.
+
+
+//// erlang_nested_qualified_constant/ebin/one@two.beam
+<0 byte binary>
+
+//// erlang_nested_qualified_constant/ebin/two.beam
+<0 byte binary>

@@ -29,3 +29,10 @@ expression: "./cases/alias_unqualified_import"
                two]},
     {registered, []}
 ]}.
+
+
+//// alias_unqualified_import/ebin/one.beam
+<0 byte binary>
+
+//// alias_unqualified_import/ebin/two.beam
+<0 byte binary>
