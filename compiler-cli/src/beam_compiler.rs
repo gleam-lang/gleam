@@ -35,7 +35,7 @@ impl BeamCompilerInstance {
         lib: &Utf8Path,
         modules: &HashSet<Utf8PathBuf>,
         stdio: Stdio,
-    ) -> Result<Vec<String>, Error> {
+    ) -> Result<(), Error> {
         // Check that the BEAM instance is still alive before attempting to use it.
         let exit_status = self
             .process
@@ -71,7 +71,7 @@ impl BeamCompilerInstance {
             match buf.trim() {
                 "gleam-compile-result-ok" => {
                     // Return Ok with the accumulated modules
-                    return Ok(accumulated_modules);
+                    return Ok(());
                 }
                 "gleam-compile-result-error" => {
                     return Err(Error::ShellCommand {

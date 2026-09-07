@@ -459,7 +459,7 @@ impl BeamCompilerIO for InMemoryFileSystem {
         _lib: &Utf8Path,
         modules: &HashSet<Utf8PathBuf>,
         _stdio: Stdio,
-    ) -> Result<Vec<String>, Error> {
+    ) -> Result<(), Error> {
         // Always succeed, pretending to have compiled every given module and
         // reporting back the name it would be compiled to, the same way the
         // real BEAM compiler reports back the name of each module it
@@ -485,7 +485,7 @@ impl BeamCompilerIO for InMemoryFileSystem {
             compiled.push(name);
         }
         compiled.sort();
-        Ok(compiled)
+        Ok(())
     }
 }
 

@@ -35,8 +35,8 @@ impl BeamCompilerIO for WasmFileSystem {
         _lib: &Utf8Path,
         _modules: &HashSet<Utf8PathBuf>,
         _stdio: Stdio,
-    ) -> Result<Vec<String>, Error> {
-        Ok(Vec::new()) // Always succeed.
+    ) -> Result<(), Error> {
+        Ok(()) // Always succeed.
     }
 }
 
