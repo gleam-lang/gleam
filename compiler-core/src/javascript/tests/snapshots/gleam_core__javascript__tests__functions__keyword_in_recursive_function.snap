@@ -9,9 +9,8 @@ pub fn main(with: Int) -> Nil {
 
 
 ----- COMPILED JAVASCRIPT
-export function main(loop$with) {
+export function main(with$) {
   while (true) {
-    let with$ = loop$with;
-    loop$with = with$ - 1;
+    with$ = with$ - 1;
   }
 }
