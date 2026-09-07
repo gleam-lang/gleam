@@ -128,7 +128,7 @@ type UnknownType =
 // Superceded by:   https://github.com/gleam-lang/gleam/issues/6072
 #[test]
 fn invalid_alias_error_shows_root_cause_without_cascading() {
-    // The alias has an error which gets reported, but using that alias 
+    // The alias has an error which gets reported, but using that alias
     // should not generate a further UnknownType error
     assert_module_error!(
         r#"
