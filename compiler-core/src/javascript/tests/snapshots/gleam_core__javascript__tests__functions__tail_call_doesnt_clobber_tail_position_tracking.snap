@@ -13,12 +13,11 @@ pub fn loop(indentation) {
 
 
 ----- COMPILED JAVASCRIPT
-export function loop(loop$indentation) {
+export function loop(indentation) {
   while (true) {
-    let indentation = loop$indentation;
     let $ = indentation > 0;
     if ($) {
-      loop$indentation = indentation - 1;
+      indentation = indentation - 1;
     } else {
       return undefined;
     }

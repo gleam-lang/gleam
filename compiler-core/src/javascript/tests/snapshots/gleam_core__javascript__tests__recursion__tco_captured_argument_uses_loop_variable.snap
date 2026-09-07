@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/recursion.rs
+expression: "\npub fn main(x, read) {\n  case x {\n    0 -> read()\n    _ -> main(x - 1, fn() { x })\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(x, read) {
+  case x {
+    0 -> read()
+    _ -> main(x - 1, fn() { x })
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function main(loop$x, read) {
+  while (true) {
+    let x = loop$x;
+    if (x === 0) {
+      return read();
+    } else {
+      loop$x = x - 1;
+      read = () => { return x; };
+    }
+  }
+}

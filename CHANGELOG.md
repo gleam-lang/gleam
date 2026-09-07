@@ -149,6 +149,10 @@
 
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The compiler now generates slightly smaller code for tail-recursive functions
+  JavaScript target.
+  ([rebecca](https://tangled.org/becca.monster))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,

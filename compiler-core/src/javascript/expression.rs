@@ -6,13 +6,15 @@ use vec1::Vec1;
 
 use super::{decision::ASSIGNMENT_VAR, *};
 use crate::{
-    ast::*,
+    ast::{visit, *},
     exhaustiveness::StringEncoding,
     type_::{
         ModuleValueConstructor, Type, TypedCallArg, ValueConstructor, ValueConstructorVariant,
+        error::{VariableDeclaration, VariableOrigin},
     },
 };
 use pretty_arena::*;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -118,6 +120,157 @@ enum CurrentFunction {
     /// }
     /// ```
     Anonymous,
+}
+
+/// A visitor collecting all variables needing a loop assignment
+/// inside a tail-recursive function.
+struct FunctionParameterReferences<'a> {
+    /// The function we are currently analysing
+    function_name: &'a EcoString,
+    /// `true` if we are inside a nested anonymous function
+    inside_function_expression: bool,
+    /// `true` if we are inside a call to the function being analysed
+    inside_call_arguments: bool,
+    /// During a call, keeps track of all parameters that have been reassigned already
+    reassigned_parameters: HashSet<usize>,
+    /// The final collection of all parameters that are unsafe to mutate directly
+    loop_variable_arguments: HashSet<usize>,
+}
+
+impl FunctionParameterReferences<'_> {
+    pub fn collect(function_name: &EcoString, body: &[TypedStatement]) -> HashSet<usize> {
+        let mut visitor = FunctionParameterReferences {
+            function_name,
+            inside_function_expression: false,
+            inside_call_arguments: false,
+            reassigned_parameters: HashSet::new(),
+            loop_variable_arguments: HashSet::new(),
+        };
+
+        for statement in body {
+            visit::Visit::visit_typed_statement(&mut visitor, statement);
+        }
+
+        visitor.loop_variable_arguments
+    }
+
+    fn record_parameter_access(&mut self, index: usize) {
+        // A parameter becomes unsafe to mutate if we either capture it within
+        // the body of an anonymous function, or if during a call we already
+        // would've reassigned it.
+        if self.inside_function_expression || self.reassigned_parameters.contains(&index) {
+            let _ = self.loop_variable_arguments.insert(index);
+        }
+    }
+}
+
+impl<'ast> visit::Visit<'ast> for FunctionParameterReferences<'_> {
+    fn visit_typed_expr(&mut self, expression: &'ast TypedExpr) {
+        let previously_inside_function_expression = self.inside_function_expression;
+
+        // If we are inside a function expression, we have to assume that any argument
+        // captured might escape the current scope or loop iteration.
+        self.inside_function_expression |= matches!(expression, TypedExpr::Fn { .. });
+
+        // If the expression we're visiting is a reference to one of our
+        // parameters, record it as visited.
+        if let Some(index) = expression_parameter_index(self.function_name, expression) {
+            self.record_parameter_access(index);
+        }
+
+        // If we are looking at a call to this function, assume it might be
+        // a tail call and mark parameters we use out-of-order as unsafe
+        // to mutate.
+        //
+        // This is not as accurate as it could be, we could instead scan at
+        // every tail-call site (where we also know it is in fact a tail call),
+        // checking which variables are actually reassigned in an unsafe way.
+        // This turned out to not justify its added complexity as its potential
+        // gains are offset by needing a separate variable for each tail call.
+        if !self.inside_function_expression
+            && !self.inside_call_arguments
+            && let TypedExpr::Call { fun, arguments, .. } = expression
+            && let Some((constructor, referenced_name)) = fun.var_constructor()
+            && let ValueConstructorVariant::ModuleFn { .. } = &constructor.variant
+            && referenced_name == self.function_name
+        {
+            // Only top-level calls can be tail-calls.
+            self.inside_call_arguments = true;
+            for (index, argument) in arguments.iter().enumerate() {
+                self.visit_typed_expr(&argument.value);
+
+                // If a parameter is just passed through unchanged, we don't need
+                // to track it as "reassigned" or mutated
+                if !is_unchanged_argument(self.function_name, &argument.value, index) {
+                    // For all others, we collect them here so that when we visit
+                    // the next argument expression up above and encounter it
+                    // again, we can mark it as needing a loop binding.
+                    let _ = self.reassigned_parameters.insert(index);
+                }
+            }
+            self.reassigned_parameters.clear();
+            self.inside_call_arguments = false;
+        } else {
+            visit::visit_typed_expr(self, expression);
+        }
+
+        self.inside_function_expression = previously_inside_function_expression;
+    }
+
+    fn visit_typed_clause_guard(&mut self, guard: &'ast TypedClauseGuard) {
+        if let ClauseGuard::Var { origin, .. } = guard
+            && let Some(index) = function_parameter_index(self.function_name, origin)
+        {
+            self.record_parameter_access(index);
+        }
+
+        visit::visit_typed_clause_guard(self, guard);
+    }
+
+    fn visit_typed_pattern_bit_array_size(&mut self, size: &'ast TypedBitArraySize) {
+        if let BitArraySize::Variable {
+            constructor: Some(constructor),
+            ..
+        } = size
+            && let ValueConstructorVariant::LocalVariable { origin, .. } = &constructor.variant
+            && let Some(index) = function_parameter_index(self.function_name, origin)
+        {
+            self.record_parameter_access(index);
+        }
+
+        visit::visit_typed_pattern_bit_array_size(self, size);
+    }
+}
+
+fn function_parameter_index(function_name: &EcoString, origin: &VariableOrigin) -> Option<usize> {
+    match &origin.declaration {
+        VariableDeclaration::FunctionParameter {
+            function_name: Some(declaring_function),
+            index,
+        } if declaring_function == function_name => Some(*index),
+
+        VariableDeclaration::LetPattern
+        | VariableDeclaration::UsePattern
+        | VariableDeclaration::ClausePattern
+        | VariableDeclaration::FunctionParameter { .. }
+        | VariableDeclaration::Generated => None,
+    }
+}
+
+fn expression_parameter_index(function_name: &EcoString, expression: &TypedExpr) -> Option<usize> {
+    let (constructor, _) = expression.var_constructor()?;
+    match &constructor.variant {
+        ValueConstructorVariant::LocalVariable { origin, .. } => {
+            function_parameter_index(function_name, origin)
+        }
+        ValueConstructorVariant::ModuleConstant { .. }
+        | ValueConstructorVariant::ModuleFn { .. }
+        | ValueConstructorVariant::Record { .. } => None,
+    }
+}
+
+fn is_unchanged_argument(function_name: &EcoString, argument: &TypedExpr, index: usize) -> bool {
+    expression_parameter_index(function_name, argument) == Some(index)
 }
 
 impl CurrentFunction {
@@ -244,6 +397,9 @@ pub(crate) struct Generator<'module, 'ast, 'doc> {
     // at the top level of the function to use in place of pushing new stack
     // frames.
     pub tail_recursion_used: bool,
+    /// Parameters whose current values must survive updates for the next iteration
+    /// and are unsafe to mutate directly.
+    pub loop_variable_arguments: HashSet<usize>,
     /// Statements to be compiled when lifting blocks into statement scope.
     /// For example, when compiling the following code:
     /// ```gleam
@@ -309,6 +465,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
             function_name,
             function_arguments,
             tail_recursion_used: false,
+            loop_variable_arguments: HashSet::new(),
             current_scope,
             current_function,
             function_position: Position::Tail,
@@ -342,6 +499,8 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
         body: &'a [TypedStatement],
         arguments: &'a [TypedArg],
     ) -> Document<'a, 'doc> {
+        self.loop_variable_arguments =
+            FunctionParameterReferences::collect(&self.function_name, body);
         let body = self.statements(arena, body);
         if self.tail_recursion_used {
             self.tail_call_loop(arena, body, arguments)
@@ -356,21 +515,25 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
         body: Document<'a, 'doc>,
         arguments: &'a [TypedArg],
     ) -> Document<'a, 'doc> {
-        let loop_assignments = arena.concat(arguments.iter().flat_map(|arg| {
-            arg.get_variable_name().map(|name| {
-                let var = maybe_escape_identifier(name);
-                docvec![
+        let loop_assignments =
+            arena.concat(arguments.iter().enumerate().filter_map(|(index, arg)| {
+                // only introduce a loop variable if we proved earlier that we need one.
+                if !self.loop_variable_arguments.contains(&index) {
+                    return None;
+                }
+                let name = arg.get_variable_name()?;
+                Some(docvec![
                     arena,
                     self.source_map_tracker(arena, arg.location.start),
                     LET_SPACE_DOCUMENT,
-                    var,
+                    maybe_escape_identifier(name),
                     SPACE_EQUAL_LOOP_DOLLAR_DOCUMENT,
                     name,
                     SEMICOLON_DOCUMENT,
                     LINE_DOCUMENT
-                ]
-            })
-        }));
+                ])
+            }));
+
         docvec![
             arena,
             WHILE_TRUE_OPEN_PAREN_DOCUMENT,
@@ -1827,6 +1990,15 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
         fun: &'a TypedExpr,
         arguments: &'a [TypedCallArg],
     ) -> Document<'a, 'doc> {
+        if let TypedExpr::Var { name, .. } = fun
+            && self.function_name == *name
+            && self.current_function.can_recurse()
+            && self.function_position.is_tail()
+            && self.current_scope.counter(name) == Some(0)
+        {
+            return self.tail_call(arena, arguments);
+        }
+
         let arguments = arguments
             .iter()
             .map(|element| {
@@ -1837,6 +2009,47 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
             .collect_vec();
 
         self.call_with_doc_arguments(arena, fun, arguments)
+    }
+
+    fn tail_call(
+        &mut self,
+        arena: &'doc DocumentArena<'a, 'doc>,
+        arguments: &'a [TypedCallArg],
+    ) -> Document<'a, 'doc> {
+        // Record that tail recursion is happening so that we know to
+        // render the loop at the top level of the function.
+        self.tail_recursion_used = true;
+
+        let mut assignments = Vec::with_capacity(arguments.len());
+
+        for (index, argument) in arguments.iter().enumerate() {
+            // If an argument is not changed, we don't need to re-assign it.
+            if is_unchanged_argument(&self.function_name, &argument.value, index) {
+                continue;
+            }
+
+            // Create an assignment for each variable created by the function arguments
+            let mut assignment = self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                this.wrap_expression(arena, &argument.value)
+            });
+
+            // We either assign to the special loop variable or to the normal
+            // identifier directly, depending on if we needed to introduce the
+            // extra local binding earlier.
+            if let Some(&Some(name)) = self.function_arguments.get(index) {
+                let target = if self.loop_variable_arguments.contains(&index) {
+                    docvec![arena, LOOP_DOLLAR_DOCUMENT, name]
+                } else {
+                    maybe_escape_identifier(name).to_doc(arena)
+                };
+                assignment = docvec![arena, target, SPACE_EQUAL_SPACE_DOCUMENT, assignment];
+            }
+
+            // Render discarded values too as they may have side effects.
+            assignments.push(docvec![arena, assignment, SEMICOLON_DOCUMENT]);
+        }
+
+        arena.join(assignments, LINE_DOCUMENT)
     }
 
     fn call_with_doc_arguments(
@@ -1875,47 +2088,6 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                     }
                 }
                 self.wrap_return(arena, construct_record(arena, None, name, arguments))
-            }
-
-            // Tail call optimisation. If we are calling the current function
-            // and we are in tail position we can avoid creating a new stack
-            // frame, enabling recursion with constant memory usage.
-            TypedExpr::Var { name, .. }
-                if self.function_name == *name
-                    && self.current_function.can_recurse()
-                    && self.function_position.is_tail()
-                    && self.current_scope.counter(name) == Some(0) =>
-            {
-                // Record that tail recursion is happening so that we know to
-                // render the loop at the top level of the function.
-                self.tail_recursion_used = true;
-                arena.concat(
-                    arguments
-                        .into_iter()
-                        .zip(&self.function_arguments)
-                        .enumerate()
-                        .map(|(i, (element, argument))| {
-                            let mut doc = EMPTY_DOCUMENT;
-
-                            if i != 0 {
-                                doc = doc.append(arena, LINE_DOCUMENT);
-                            }
-                            // Create an assignment for each variable created by the function arguments
-                            if let Some(name) = argument {
-                                doc = docvec![
-                                    arena,
-                                    doc,
-                                    LOOP_DOLLAR_DOCUMENT,
-                                    name.to_doc(arena),
-                                    SPACE_EQUAL_SPACE_DOCUMENT
-                                ];
-                            }
-                            // Render the value given to the function. Even if it is not
-                            // assigned we still render it because the expression may
-                            // have some side effects.
-                            docvec![arena, doc, element, SEMICOLON_DOCUMENT]
-                        }),
-                )
             }
 
             TypedExpr::Int { .. }
@@ -1995,7 +2167,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
         if let FunctionLiteralKind::Use { location } = kind {
             docs = docs.append(arena, self.source_map_tracker(arena, location.start));
         }
-        docs = docs.append(arena, fun_arguments(arena, arguments, false));
+        docs = docs.append(arena, fun_arguments(arena, arguments, None));
         docs = docs.append(arena, SPACE_EQUAL_ARROW_SPACE_OPEN_CURLY_DOCUMENT);
         docs = docs.append(arena, BREAKABLE_SPACE_DOCUMENT);
         docs = docs.append(arena, result);

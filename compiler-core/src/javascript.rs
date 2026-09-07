@@ -1235,7 +1235,9 @@ impl<'a, 'doc> Generator<'a> {
             fun_arguments(
                 arena,
                 function.arguments.as_slice(),
-                generator.tail_recursion_used
+                generator
+                    .tail_recursion_used
+                    .then_some(&generator.loop_variable_arguments),
             ),
             SPACE_OPEN_CURLY_DOCUMENT,
             docvec![arena, LINE_DOCUMENT, body]
@@ -1394,14 +1396,15 @@ fn create_cursor_position_observer<'a, 'doc>(
 fn fun_arguments<'a, 'doc>(
     arena: &'doc DocumentArena<'a, 'doc>,
     arguments: &'a [TypedArg],
-    tail_recursion_used: bool,
+    loop_variable_arguments: Option<&HashSet<usize>>,
 ) -> Document<'a, 'doc> {
     let mut discards = 0;
     wrap_arguments(
         arena,
         arguments
             .iter()
-            .map(|argument| match argument.get_variable_name() {
+            .enumerate()
+            .map(|(index, argument)| match argument.get_variable_name() {
                 None => {
                     let doc = if discards == 0 {
                         UNDERSCORE_DOCUMENT
@@ -1411,7 +1414,12 @@ fn fun_arguments<'a, 'doc>(
                     discards += 1;
                     doc
                 }
-                Some(name) if tail_recursion_used => eco_format!("loop${name}").to_doc(arena),
+                Some(name)
+                    if loop_variable_arguments
+                        .is_some_and(|arguments| arguments.contains(&index)) =>
+                {
+                    eco_format!("loop${name}").to_doc(arena)
+                }
                 Some(name) => maybe_escape_identifier(name).to_doc(arena),
             }),
     )

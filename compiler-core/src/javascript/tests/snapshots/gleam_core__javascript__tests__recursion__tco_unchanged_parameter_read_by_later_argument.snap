@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/javascript/tests/recursion.rs
+expression: "\npub fn main(x, y, remaining) {\n  case remaining {\n    0 -> y\n    _ -> main(x, x, remaining - 1)\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(x, y, remaining) {
+  case remaining {
+    0 -> y
+    _ -> main(x, x, remaining - 1)
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function main(x, y, remaining) {
+  while (true) {
+    if (remaining === 0) {
+      return y;
+    } else {
+      y = x;
+      remaining = remaining - 1;
+    }
+  }
+}
