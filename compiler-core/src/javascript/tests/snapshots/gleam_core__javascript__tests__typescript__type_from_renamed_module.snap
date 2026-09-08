@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/typescript.rs
+assertion_line: 48
+expression: "\nimport x as y\npub fn foo() -> y.Obj { }\n"
+---
+----- SOURCE CODE
+
+import x as y
+pub fn foo() -> y.Obj { }
+
+
+----- TYPESCRIPT DEFINITIONS
+import type * as $y from "../x.d.mts";
+
+export function foo(): $y.Obj$;

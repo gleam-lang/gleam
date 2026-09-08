@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2022 The Gleam contributors
 
 use crate::assert_ts_def;
+use crate::javascript::tests::CURRENT_PACKAGE;
 
 // https://github.com/gleam-lang/gleam/issues/5715
 #[test]
@@ -39,5 +40,16 @@ pub type Twin {
     Tom
 }
 "
+    );
+}
+
+#[test]
+fn type_from_renamed_module() {
+    assert_ts_def!(
+        (CURRENT_PACKAGE, "x", r#"pub type Obj"#),
+        r#"
+import x as y
+pub fn foo() -> y.Obj { }
+"#,
     );
 }
