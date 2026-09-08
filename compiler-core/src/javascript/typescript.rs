@@ -238,6 +238,17 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
     fn collect_imports(&mut self) -> Imports<'a, 'doc> {
         let mut imports = Imports::new();
 
+        // Collect imports first, so we can look up module aliases in subsequent
+        // definitions and resolve the real module when emitting those type decls.
+        for import in &self.module.definitions.imports {
+            match &import.as_name {
+                Some((AssignName::Variable(name), _)) => {
+                    let _ = self.aliased_module_names.insert(&import.module, name);
+                }
+                Some((AssignName::Discard(_), _)) | None => (),
+            }
+        }
+
         for function in &self.module.definitions.functions {
             for argument in &function.arguments {
                 self.collect_imports_for_type(&argument.type_, &mut imports);
@@ -263,15 +274,6 @@ impl<'a, 'doc> TypeScriptGenerator<'a> {
 
         for constant in &self.module.definitions.constants {
             self.collect_imports_for_type(&constant.type_, &mut imports);
-        }
-
-        for import in &self.module.definitions.imports {
-            match &import.as_name {
-                Some((AssignName::Variable(name), _)) => {
-                    let _ = self.aliased_module_names.insert(&import.module, name);
-                }
-                Some((AssignName::Discard(_), _)) | None => (),
-            }
         }
 
         imports

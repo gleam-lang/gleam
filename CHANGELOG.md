@@ -333,6 +333,10 @@
   inside the project.
   ([John Downey](https://github.com/jtdowney))
 
+- Fixed a bug in generating TypeScript annotations for function signatures
+  that use types from aliased modules.
+  ([Ian Chamberlain](https://github.com/ian-h-chamberlain))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when
