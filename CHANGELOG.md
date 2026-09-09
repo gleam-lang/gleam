@@ -401,6 +401,11 @@
   source ended with a multi-byte character.
   ([John Downey](https://github.com/jtdowney))
 
+- Fixed a bug where the build tool would exit with an error when the gleam.toml
+  licence array contained a licence starting with `LicenseRef-`, which are used
+  by hex.pm to support non-SPDX licences.
+  ([Vivid](https://github.com/absolutely-vivid))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when
