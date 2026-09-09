@@ -66,6 +66,12 @@ impl<'de> serde::de::Visitor<'de> for SpdxLicenseVisitor {
     where
         E: serde::de::Error,
     {
+        if value.starts_with("LicenseRef-") {
+            return Ok(SpdxLicense {
+                licence: value.to_string(),
+            });
+        }
+
         match spdx::license_id(value) {
             None => Err(serde::de::Error::custom(format!(
                 "{value} is not a known SPDX License identifier"
