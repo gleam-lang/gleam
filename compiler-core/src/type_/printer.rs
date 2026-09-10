@@ -222,6 +222,10 @@ impl Names {
             .map(|(_, location)| location)
     }
 
+    pub fn is_module_imported(&self, module_name: &str) -> bool {
+        self.imported_modules.contains_key(module_name)
+    }
+
     /// Check whether a particular type alias is reexporting an internal type,
     /// and if so register it so we can print it correctly.
     pub fn maybe_register_reexport_alias(
