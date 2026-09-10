@@ -18,6 +18,10 @@
 - When compiling to Erlang the Gleam compiler is roughly 8% faster.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- If a module is changed, but had no changes to its public api, modules that
+  depend on it will no longer be recompiled.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The compiler now emits a warning when trying to use the pattern of a spread
   and a variable when pattern matching inside a 'case' clause.
   This syntax may be removed in a future (major) release.

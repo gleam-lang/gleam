@@ -9,7 +9,7 @@ expression: "./cases/erlang_nested_qualified_constant"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache_meta
-<31 byte binary>
+<40 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.abstr
 <285 byte binary>
@@ -18,7 +18,7 @@ expression: "./cases/erlang_nested_qualified_constant"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<62 byte binary>
+<71 byte binary>
 
 //// /out/lib/the_package/ebin/importy.app
 {application, importy, [
