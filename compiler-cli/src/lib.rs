@@ -786,6 +786,15 @@ pub struct CompilePackage {
     /// Only compile modules in the `src` directory, excluding `test` and `dev`
     #[arg(long = "src-only")]
     src_only: bool,
+
+    /// Overrides for a dependency's OTP application name, in the form
+    /// `package=otp_app`.
+    ///
+    /// Required for any dependency whose OTP application name differs from
+    /// its Gleam package name. May be supplied multiple times.
+    ///
+    #[arg(verbatim_doc_comment, long = "otp-app-override")]
+    otp_app_overrides: Vec<String>,
 }
 
 #[derive(Subcommand, Debug)]
