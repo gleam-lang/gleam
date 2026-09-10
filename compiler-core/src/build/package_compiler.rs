@@ -7,7 +7,7 @@ mod tests;
 use crate::analyse::TargetSupport;
 use crate::ast::TypedModule;
 use crate::build::package_loader::{CacheFiles, load_cached_module};
-use crate::build::{ApiFingerprint, ErlangOutput, module_erlang_name};
+use crate::build::{ApiFingerprint, ErlangOutput, Target, module_erlang_name};
 
 use crate::error::{DefinedModuleOrigin, FailedModule, SkipReason, SkippedModule};
 
@@ -199,8 +199,9 @@ where
 
         // Type check the modules that are new or have changed
         tracing::info!(count=%loaded.to_compile.len(), "analysing_modules");
+        let compilation_context = CompilationContext::new(&self);
         let outcome = PackageModulesAnalyser::new(
-            &self,
+            compilation_context,
             artefact_directory,
             warnings,
             existing_modules,
@@ -570,21 +571,14 @@ pub enum StdlibPackage {
 
 /// A structure we use to hold data about used to analyse the packages of a
 /// module.
-struct PackageModulesAnalyser<'a, 'package_compiler, IO> {
-    package_compiler: &'a PackageCompiler<'package_compiler, IO>,
+struct PackageModulesAnalyser<'a, IO> {
+    compilation_context: CompilationContext<'a, IO>,
+
     artefact_directory: Utf8PathBuf,
     warnings: &'a WarningEmitter,
 
     module_interfaces: &'a mut im::HashMap<EcoString, type_::ModuleInterface>,
     incomplete_modules: &'a mut HashSet<EcoString>,
-
-    /// The direct dependencies of this package, as needed by the
-    /// `ModuleAnalyzerConstructor`.
-    direct_dependencies: HashMap<EcoString, Requirement>,
-
-    /// The dev dependencies of this package, as needed by the
-    /// `ModuleAnalyzerConstructor`.
-    dev_dependencies: HashSet<EcoString>,
 
     /// Keeps track of the modules whose analysis had to be skipped because
     /// other modules they depend on failed to compile.
@@ -600,37 +594,58 @@ struct PackageModulesAnalyser<'a, 'package_compiler, IO> {
     modules_with_new_public_api: HashSet<EcoString>,
 }
 
-impl<'a, 'package_compiler, IO: FileSystemReader>
-    PackageModulesAnalyser<'a, 'package_compiler, IO>
-{
+struct CompilationContext<'a, IO> {
+    ids: &'a UniqueIdGenerator,
+    target: Target,
+    target_support: TargetSupport,
+    should_use_cached_warnings: bool,
+    package_config: &'a PackageConfig,
+    io: &'a IO,
+    /// The direct dependencies of the package being compiled, as needed by the
+    /// `ModuleAnalyzerConstructor`.
+    direct_dependencies: HashMap<EcoString, Requirement>,
+    /// The dev dependencies of the package being compiled, as needed by the
+    /// `ModuleAnalyzerConstructor`.
+    dev_dependencies: HashSet<EcoString>,
+}
+
+impl<'a, IO> CompilationContext<'a, IO> {
+    pub fn new(package_compiler: &'a PackageCompiler<'a, IO>) -> Self {
+        Self {
+            ids: &package_compiler.ids,
+            io: &package_compiler.io,
+            target: package_compiler.target.target(),
+            target_support: package_compiler.target_support,
+            should_use_cached_warnings: package_compiler.cached_warnings.should_use(),
+            package_config: package_compiler.config,
+            direct_dependencies: package_compiler
+                .config
+                .dependencies_for(package_compiler.mode)
+                .expect("Package deps"),
+            dev_dependencies: package_compiler
+                .config
+                .dev_dependencies
+                .keys()
+                .cloned()
+                .collect(),
+        }
+    }
+}
+
+impl<'a, IO: FileSystemReader> PackageModulesAnalyser<'a, IO> {
     pub fn new(
-        package_compiler: &'a PackageCompiler<'package_compiler, IO>,
+        compilation_context: CompilationContext<'a, IO>,
         artefact_directory: Utf8PathBuf,
         warnings: &'a WarningEmitter,
         module_interfaces: &'a mut im::HashMap<EcoString, type_::ModuleInterface>,
         incomplete_modules: &'a mut HashSet<EcoString>,
     ) -> Self {
-        let direct_dependencies = package_compiler
-            .config
-            .dependencies_for(package_compiler.mode)
-            .expect("Package deps");
-
-        let dev_dependencies = package_compiler
-            .config
-            .dev_dependencies
-            .keys()
-            .cloned()
-            .collect();
-
         Self {
-            package_compiler,
+            compilation_context,
             artefact_directory,
             warnings,
             module_interfaces,
             incomplete_modules,
-
-            direct_dependencies,
-            dev_dependencies,
 
             skipped_modules: HashMap::new(),
             failed_modules: HashMap::new(),
@@ -650,7 +665,7 @@ impl<'a, 'package_compiler, IO: FileSystemReader>
         // place.
         let _ = self.module_interfaces.insert(
             PRELUDE_MODULE_NAME.into(),
-            type_::build_prelude(&self.package_compiler.ids),
+            type_::build_prelude(self.compilation_context.ids),
         );
 
         for (reason, uncompiled_module) in uncompiled_modules {
@@ -849,15 +864,15 @@ impl<'a, 'package_compiler, IO: FileSystemReader>
     ) -> Outcome<TypedModule, vec1::Vec1<type_::Error>> {
         let line_numbers = LineNumbers::new(&code);
         crate::analyse::ModuleAnalyzerConstructor {
-            target: self.package_compiler.target.target(),
-            ids: &self.package_compiler.ids,
+            target: self.compilation_context.target,
+            ids: self.compilation_context.ids,
             origin,
             importable_modules: self.module_interfaces,
             warnings: &TypeWarningEmitter::new(path.clone(), code, self.warnings.clone()),
-            direct_dependencies: &self.direct_dependencies,
-            dev_dependencies: &self.dev_dependencies,
-            target_support: self.package_compiler.target_support,
-            package_config: self.package_compiler.config,
+            direct_dependencies: &self.compilation_context.direct_dependencies,
+            dev_dependencies: &self.compilation_context.dev_dependencies,
+            target_support: self.compilation_context.target_support,
+            package_config: self.compilation_context.package_config,
         }
         .infer_module(module_ast, line_numbers, path)
     }
@@ -991,10 +1006,10 @@ impl<'a, 'package_compiler, IO: FileSystemReader>
     fn register_cached_module(&mut self, name: &EcoString) -> Result<(), Error> {
         let interface = load_cached_module(
             name,
-            &self.package_compiler.io,
+            self.compilation_context.io,
             &self.artefact_directory,
-            self.package_compiler.ids.clone(),
-            self.package_compiler.cached_warnings.should_use(),
+            self.compilation_context.ids.clone(),
+            self.compilation_context.should_use_cached_warnings,
         )?;
 
         let _ = self.module_interfaces.insert(name.clone(), interface);
