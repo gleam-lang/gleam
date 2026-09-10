@@ -14,7 +14,7 @@ use gleam_core::{
         StaleTracker, Target, TargetCodegenConfiguration,
     },
     error::{FileIoAction, FileKind},
-    manifest, metadata,
+    metadata,
     paths::{self, ProjectPaths},
     type_::ModuleInterface,
     uid::UniqueIdGenerator,
@@ -42,12 +42,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
     let app_file = match options.skip_beam_compilation {
         true => None,
         false => {
-            let package_name_overrides = if paths.manifest().exists() {
-                let package_manifest = crate::dependencies::read_manifest_from_disc(&paths)?;
-                manifest::package_name_overrides(&package_manifest.packages)
-            } else {
-                HashMap::new()
-            };
+            let package_name_overrides = HashMap::new();
             Some(ErlangAppCodegenConfiguration {
                 include_dev_deps: false,
                 package_name_overrides,
