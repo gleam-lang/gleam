@@ -328,6 +328,11 @@
   `Ok()` even when doing so would not fix the type unification error.
   ([Hari Mohan](https://github.com/seafoamteal))
 
+- Fixed a bug where `gleam export hex-tarball` and `gleam publish` could fail on
+  Windows with a "path is outside this Gleam project" error for files that were
+  inside the project.
+  ([John Downey](https://github.com/jtdowney))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when

@@ -774,14 +774,15 @@ where
     tracing::info!(file=?&path, "Adding file system file to tarball");
 
     let path = fs::canonicalise(path)?;
+    let root = fs::canonicalise(paths.root())?;
 
-    let Ok(path) = path.strip_prefix(paths.root()) else {
+    let Ok(relative_path) = path.strip_prefix(&root) else {
         return Err(Error::TarPathOutsideOfProjectRoot { path });
     };
 
     tarball
-        .append_path(path)
-        .map_err(|error| Error::add_tar(path, error))
+        .append_path_with_name(&path, relative_path)
+        .map_err(|error| Error::add_tar(relative_path, error))
 }
 
 #[test]
@@ -789,7 +790,9 @@ fn add_to_tar_symlink_rejection_test() {
     let tmp_dir = tempfile::tempdir().unwrap();
     let path = std::fs::canonicalize(tmp_dir.path()).unwrap();
     let path = Utf8Path::from_path(&path).expect("Non Utf-8 Path");
-    let paths = ProjectPaths::new(path.join("package"));
+    let root = path.join("package");
+    fs::mkdir(&root).expect("Create directory");
+    let paths = ProjectPaths::new(root);
     let mut contents_tar_gz = Vec::new();
     let mut tarball = tar::Builder::new(&mut contents_tar_gz);
 
@@ -801,6 +804,45 @@ fn add_to_tar_symlink_rejection_test() {
         Error::TarPathOutsideOfProjectRoot { path } => assert_eq!(path, outside_path),
         other => panic!("Unexpected error {other:?}"),
     }
+}
+
+#[test]
+fn add_to_tar_accepts_file_inside_project_test() {
+    let tmp_dir = tempfile::tempdir().unwrap();
+    let root = Utf8Path::from_path(tmp_dir.path())
+        .expect("Non Utf-8 Path")
+        .join("package");
+    let paths = ProjectPaths::new(root.clone());
+
+    let source_path = root.join("src").join("package.gleam");
+    fs::write(&source_path, "pub fn main() { 1 }").expect("Write file");
+
+    let mut contents_tar = Vec::new();
+    let mut tarball = tar::Builder::new(&mut contents_tar);
+    add_to_tar_from_file_system(&mut tarball, &paths, &source_path).unwrap();
+    tarball.finish().unwrap();
+    drop(tarball);
+
+    let mut archive = tar::Archive::new(contents_tar.as_slice());
+    let entries = archive
+        .entries()
+        .unwrap()
+        .map(|entry| {
+            let entry = entry.unwrap();
+            let path = Utf8PathBuf::from_path_buf(entry.path().unwrap().into_owned())
+                .expect("Non UTF-8 Path");
+            let contents = std::io::read_to_string(entry).unwrap();
+            (path, contents)
+        })
+        .collect_vec();
+
+    assert_eq!(
+        entries,
+        vec![(
+            Utf8PathBuf::from("src/package.gleam"),
+            "pub fn main() { 1 }".into()
+        )]
+    );
 }
 
 #[derive(Debug, Clone)]
