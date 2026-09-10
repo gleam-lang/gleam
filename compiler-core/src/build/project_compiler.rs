@@ -582,8 +582,14 @@ where
         let mode = if is_root { self.mode() } else { Mode::Prod };
         let target = match self.target() {
             Target::Erlang => {
-                let package_name_overrides =
-                    crate::manifest::package_name_overrides(self.packages.values());
+                let package_name_overrides = self
+                    .packages
+                    .values()
+                    .flat_map(|p| {
+                        let overriden = p.otp_app.as_ref()?;
+                        Some((p.name.clone(), overriden.clone()))
+                    })
+                    .collect();
                 super::TargetCodegenConfiguration::Erlang {
                     output: self.options.erlang_output,
                     app_file: Some(ErlangAppCodegenConfiguration {
