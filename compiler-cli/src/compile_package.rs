@@ -42,7 +42,20 @@ pub fn command(options: CompilePackage) -> Result<()> {
     let app_file = match options.skip_beam_compilation {
         true => None,
         false => {
-            let package_name_overrides = HashMap::new();
+            let package_name_overrides = options
+                .otp_app_overrides
+                .iter()
+                .map(|entry| {
+                    entry
+                        .split_once('=')
+                        .map(|(package, otp_app)| {
+                            (EcoString::from(package), EcoString::from(otp_app))
+                        })
+                        .ok_or_else(|| Error::InvalidOtpAppOverride {
+                            input: entry.clone().into(),
+                        })
+                })
+                .collect::<Result<HashMap<_, _>>>()?;
             Some(ErlangAppCodegenConfiguration {
                 include_dev_deps: false,
                 package_name_overrides,

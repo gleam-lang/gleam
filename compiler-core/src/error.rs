@@ -380,6 +380,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("The --javascript-prelude flag must be given when compiling to JavaScript")]
     JavaScriptPreludeRequired,
 
+    #[error("Invalid --otp-app-override value `{input}`")]
+    InvalidOtpAppOverride { input: EcoString },
+
     #[error("The modules {unfinished:?} contain todo expressions and so cannot be published")]
     CannotPublishTodo { unfinished: Vec<EcoString> },
 
@@ -2512,6 +2515,15 @@ satisfying {required_version} but you are using v{gleam_version}.",
                 level: Level::Error,
                 location: None,
                 hint: None,
+            }],
+            Error::InvalidOtpAppOverride { input } => vec![Diagnostic {
+                title: "Invalid --otp-app-override value".into(),
+                text: format!("`{input}` is not a valid --otp-app-override value."),
+                level: Level::Error,
+                location: None,
+                hint: Some(
+                    "Expected the format `package=otp_app`, e.g. `my_package=my_app`.".into(),
+                ),
             }],
             Error::CorruptManifest => vec![Diagnostic {
                 title: "Corrupt manifest.toml".into(),
