@@ -362,9 +362,7 @@ where
     }
 }
 
-pub(crate) fn load_cached_module<
-    IO: FileSystemWriter + FileSystemReader + CommandExecutor + Clone,
->(
+pub(crate) fn load_cached_module<IO: FileSystemReader>(
     module_name: &EcoString,
     io: &IO,
     artefact_directory: &Utf8Path,
