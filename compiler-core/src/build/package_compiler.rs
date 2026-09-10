@@ -600,7 +600,7 @@ struct PackageModulesAnalyser<'a, 'package_compiler, IO> {
     modules_with_new_public_api: HashSet<EcoString>,
 }
 
-impl<'a, 'package_compiler, IO: FileSystemWriter + FileSystemReader + CommandExecutor + Clone>
+impl<'a, 'package_compiler, IO: FileSystemReader>
     PackageModulesAnalyser<'a, 'package_compiler, IO>
 {
     pub fn new(
