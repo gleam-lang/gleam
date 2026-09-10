@@ -230,6 +230,26 @@
   renaming for function argument labels.
   ([Alistair Smith](https://github.com/alii))
 
+- Accepting an autocomplete inside the brackets of an import previously
+  removed spaces following the previous import. For example:
+
+  ```gleam
+  import my_package/my_file.{MyFirstImport, MySecondImp|}
+  //                                                   ^ cursor
+
+  // Accepting the autocompletion produced:
+  import my_package/my_file.{MyFirstImport,MySecondImport}
+  ```
+
+  That has been fixed to produce:
+
+  ```gleam
+  import my_package/my_file.{MyFirstImport, MySecondImport}
+
+  ```
+
+  ([Bruno Parga](https://github.com/brunoparga))
+
 ### Formatter
 
 ### Compiler Wasm API
