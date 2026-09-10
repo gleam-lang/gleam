@@ -10,8 +10,8 @@ use ecow::EcoString;
 use gleam_core::{
     Error, Result,
     build::{
-        ErlangOutput, Mode, NullTelemetry, PackageCompiler, StaleTracker, Target,
-        TargetCodegenConfiguration,
+        ErlangAppCodegenConfiguration, ErlangOutput, Mode, NullTelemetry, PackageCompiler,
+        StaleTracker, Target, TargetCodegenConfiguration,
     },
     error::{FileIoAction, FileKind},
     metadata,
@@ -20,7 +20,10 @@ use gleam_core::{
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
 };
-use std::{collections::HashSet, rc::Rc};
+use std::{
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 pub fn command(options: CompilePackage) -> Result<()> {
     let ids = UniqueIdGenerator::new();
@@ -36,10 +39,32 @@ pub fn command(options: CompilePackage) -> Result<()> {
     if options.target.is_erlang() && !options.skip_beam_compilation {
         io.initialise_beam_compiler()?;
     }
-
+    let app_file = match options.skip_beam_compilation {
+        true => None,
+        false => {
+            let package_name_overrides = options
+                .otp_app_overrides
+                .iter()
+                .map(|entry| {
+                    entry
+                        .split_once('=')
+                        .map(|(package, otp_app)| {
+                            (EcoString::from(package), EcoString::from(otp_app))
+                        })
+                        .ok_or_else(|| Error::InvalidOtpAppOverride {
+                            input: entry.clone().into(),
+                        })
+                })
+                .collect::<Result<HashMap<_, _>>>()?;
+            Some(ErlangAppCodegenConfiguration {
+                include_dev_deps: false,
+                package_name_overrides,
+            })
+        }
+    };
     let target = match options.target {
         Target::Erlang => TargetCodegenConfiguration::Erlang {
-            app_file: None,
+            app_file,
             output: ErlangOutput::Binary,
         },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
@@ -65,7 +90,6 @@ pub fn command(options: CompilePackage) -> Result<()> {
     );
     compiler.write_entrypoint = false;
     compiler.write_metadata = true;
-    compiler.compile_beam_bytecode = !options.skip_beam_compilation;
     compiler
         .compile(
             &warnings,

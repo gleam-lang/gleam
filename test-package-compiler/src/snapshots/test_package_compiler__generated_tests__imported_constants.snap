@@ -31,6 +31,12 @@ expression: "./cases/imported_constants"
 ]}.
 
 
+//// /out/lib/the_package/ebin/one.beam
+<0 byte binary>
+
+//// /out/lib/the_package/ebin/two.beam
+<0 byte binary>
+
 //// /out/lib/the_package/include/one_User.hrl
 -record(user, {
     name :: binary(),

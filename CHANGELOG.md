@@ -188,6 +188,15 @@
   the `--out` parameter.
   ([Louis Pilfold](https://github.com/lpil))
 
+- `gleam compile-package` now generates a .app file in the ebin folder, listing
+  all .beam modules (this includes Erlang and Elixir ones).
+  ([Rodrigo Álvarez](https://github.com/Papipo))
+
+- `gleam compile-package` gains a new `--otp-app-override` flag, letting the
+  caller specify a dependency's OTP application name when it differs
+  from its Gleam package name. It may be passed multiple times.
+  ([Rodrigo Álvarez](https://github.com/Papipo))
+
 ### Language server
 
 - The "Generate dynamic decoder" code action is now only offered when the
@@ -239,6 +248,11 @@
   ([John Downey](https://github.com/jtdowney))
 
 ### Bug fixes
+
+- Fixed a bug where the generated Erlang `.app` file's module list could be
+  missing Erlang or Elixir native modules that hadn't been recompiled since
+  a previous build.
+  ([Rodrigo Álvarez](https://github.com/Papipo))
 
 - Fixed a bug where on the JavaScript target a case clause whose guard's top
   level operator was `||` could run for a subject its pattern did not match.

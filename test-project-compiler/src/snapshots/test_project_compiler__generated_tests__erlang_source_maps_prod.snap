@@ -15,5 +15,8 @@ expression: "./cases/erlang_source_maps"
 ]}.
 
 
+//// erlang_source_maps/build/prod/erlang/example/ebin/example@@main.beam
+<0 byte binary>
+
 //// erlang_source_maps/build/prod/erlang/fingerprint
 <gleam compiler version string> 0
