@@ -782,6 +782,10 @@ pub struct CompilePackage {
     /// Skip Erlang to BEAM bytecode compilation
     #[arg(long = "no-beam")]
     skip_beam_compilation: bool,
+
+    /// Compile in production mode, excluding the `test` and `dev` directories
+    #[arg(long = "prod")]
+    prod: bool,
 }
 
 #[derive(Subcommand, Debug)]
