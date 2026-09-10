@@ -275,11 +275,45 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
             } => {
                 let bit_array = builder.start_bit_array_pattern(*location);
                 for segment in segments {
+                    // When a bits segment has both size and unit as literal
+                    // ints, multiply them so the unit specifier can be
+                    // dropped. The BEAM rejects unit with bitstring.
+                    let (bits_unit_value, size_value) = collect_bit_array_options(&segment.options);
+                    let int_value = size_value.and_then(|v| match v {
+                        Pattern::BitArraySize(BitArraySize::Int { int_value, .. }) => {
+                            Some(int_value)
+                        }
+                        Pattern::Int { .. }
+                        | Pattern::Float { .. }
+                        | Pattern::String { .. }
+                        | Pattern::Variable { .. }
+                        | Pattern::BitArraySize(_)
+                        | Pattern::Assign { .. }
+                        | Pattern::Discard { .. }
+                        | Pattern::List { .. }
+                        | Pattern::Constructor { .. }
+                        | Pattern::Tuple { .. }
+                        | Pattern::BitArray { .. }
+                        | Pattern::StringPrefix { .. }
+                        | Pattern::Invalid { .. } => None,
+                    });
+                    let bits_unit_value = match (bits_unit_value, int_value) {
+                        (Some(unit), Some(_)) => Some(unit),
+                        _ => None,
+                    };
+
                     builder.bit_array_segment(segment.location);
                     self.bit_array_pattern_segment_value(builder, segment);
-                    self.bit_array_pattern_segment_size(builder, segment);
-                    self.generator
-                        .bit_array_segment_specifiers(builder, segment);
+                    if let (Some(int_value), Some(unit)) = (int_value, bits_unit_value) {
+                        builder.int_expression(segment.location, int_value * unit);
+                    } else {
+                        self.bit_array_pattern_segment_size(builder, segment);
+                    }
+                    self.generator.bit_array_segment_specifiers(
+                        builder,
+                        segment,
+                        bits_unit_value.is_some(),
+                    );
                 }
                 builder.end_bit_array_pattern(bit_array);
             }
