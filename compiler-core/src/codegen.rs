@@ -138,11 +138,6 @@ impl<'a> ErlangApp<'a> {
             }
         };
 
-        // `compiled_modules` is resolved by the caller: either an `ebin` scan
-        // (which already includes modules left over from a previous build
-        // that weren't recompiled this time, so a warm rebuild doesn't shrink
-        // the `modules` list, see #5834) or the in-memory module list when no
-        // bytecode compilation happened this run.
         let modules = compiled_modules
             .into_iter()
             .sorted()
