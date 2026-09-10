@@ -3426,13 +3426,13 @@ being used as a type constructor."
             }
         }
 
-        TypeError::UnnecessarySpreadOperator { location, arity } => {
+        TypeError::RecordUpdateWithoutChanges { location, arity } => {
             let text = wrap_format!(
                 "This record has {arity} fields and you have already \
 assigned variables to all of them."
             );
             Diagnostic {
-                title: "Unnecessary spread operator".into(),
+                title: "Record update without changes".into(),
                 text,
                 hint: None,
                 level: Level::Error,
@@ -5287,6 +5287,35 @@ and cannot be accessed by other modules."
                 extra_labels: vec![],
             }),
         },
+        TypeError::ListPrependWithoutElements {
+            location,
+            tail_location,
+        } => {
+            let list_text = src
+                .get(location.start as usize..location.end as usize)
+                .expect("list location must be valid");
+            let tail_text = src
+                .get(tail_location.start as usize..tail_location.end as usize)
+                .expect("list tail location must be valid");
+
+            Diagnostic {
+                title: "Redundant list prepend".to_string(),
+                text: "See: https://tour.gleam.run/basics/lists/".to_string(),
+                hint: Some(format!(
+                    "`{tail_text}` can be used directly instead of `{list_text}`"
+                )),
+                level: Level::Error,
+                location: Some(Location {
+                    label: Label {
+                        text: Some("This prepend does nothing".into()),
+                        span: *location,
+                    },
+                    path: path.clone(),
+                    src: src.clone(),
+                    extra_labels: vec![],
+                }),
+            }
+        }
     })
 }
 
