@@ -7,7 +7,7 @@ mod tests;
 use crate::analyse::TargetSupport;
 use crate::ast::TypedModule;
 use crate::build::package_loader::{CacheFiles, load_cached_module};
-use crate::build::{ApiFingerprint, ErlangOutput, module_erlang_name};
+use crate::build::{ApiFingerprint, ErlangOutput, Target, module_erlang_name};
 
 use crate::error::{DefinedModuleOrigin, FailedModule, SkipReason, SkippedModule};
 
@@ -570,8 +570,14 @@ pub enum StdlibPackage {
 
 /// A structure we use to hold data about used to analyse the packages of a
 /// module.
-struct PackageModulesAnalyser<'a, 'package_compiler, IO> {
-    package_compiler: &'a PackageCompiler<'package_compiler, IO>,
+struct PackageModulesAnalyser<'a, IO> {
+    ids: &'a UniqueIdGenerator,
+    target: Target,
+    target_support: TargetSupport,
+    should_use_cached_warnings: bool,
+    package_config: &'a PackageConfig,
+    io: &'a IO,
+
     artefact_directory: Utf8PathBuf,
     warnings: &'a WarningEmitter,
 
@@ -600,10 +606,8 @@ struct PackageModulesAnalyser<'a, 'package_compiler, IO> {
     modules_with_new_public_api: HashSet<EcoString>,
 }
 
-impl<'a, 'package_compiler, IO: FileSystemReader>
-    PackageModulesAnalyser<'a, 'package_compiler, IO>
-{
-    pub fn new(
+impl<'a, IO: FileSystemReader> PackageModulesAnalyser<'a, IO> {
+    pub fn new<'package_compiler>(
         package_compiler: &'a PackageCompiler<'package_compiler, IO>,
         artefact_directory: Utf8PathBuf,
         warnings: &'a WarningEmitter,
@@ -623,7 +627,13 @@ impl<'a, 'package_compiler, IO: FileSystemReader>
             .collect();
 
         Self {
-            package_compiler,
+            ids: &package_compiler.ids,
+            io: &package_compiler.io,
+            target: package_compiler.target.target(),
+            target_support: package_compiler.target_support,
+            should_use_cached_warnings: package_compiler.cached_warnings.should_use(),
+            package_config: package_compiler.config,
+
             artefact_directory,
             warnings,
             module_interfaces,
@@ -648,10 +658,9 @@ impl<'a, 'package_compiler, IO: FileSystemReader>
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = self.module_interfaces.insert(
-            PRELUDE_MODULE_NAME.into(),
-            type_::build_prelude(&self.package_compiler.ids),
-        );
+        let _ = self
+            .module_interfaces
+            .insert(PRELUDE_MODULE_NAME.into(), type_::build_prelude(self.ids));
 
         for (reason, uncompiled_module) in uncompiled_modules {
             let UncompiledModule {
@@ -849,15 +858,15 @@ impl<'a, 'package_compiler, IO: FileSystemReader>
     ) -> Outcome<TypedModule, vec1::Vec1<type_::Error>> {
         let line_numbers = LineNumbers::new(&code);
         crate::analyse::ModuleAnalyzerConstructor {
-            target: self.package_compiler.target.target(),
-            ids: &self.package_compiler.ids,
+            target: self.target,
+            ids: self.ids,
             origin,
             importable_modules: self.module_interfaces,
             warnings: &TypeWarningEmitter::new(path.clone(), code, self.warnings.clone()),
             direct_dependencies: &self.direct_dependencies,
             dev_dependencies: &self.dev_dependencies,
-            target_support: self.package_compiler.target_support,
-            package_config: self.package_compiler.config,
+            target_support: self.target_support,
+            package_config: self.package_config,
         }
         .infer_module(module_ast, line_numbers, path)
     }
@@ -991,10 +1000,10 @@ impl<'a, 'package_compiler, IO: FileSystemReader>
     fn register_cached_module(&mut self, name: &EcoString) -> Result<(), Error> {
         let interface = load_cached_module(
             name,
-            &self.package_compiler.io,
+            self.io,
             &self.artefact_directory,
-            self.package_compiler.ids.clone(),
-            self.package_compiler.cached_warnings.should_use(),
+            self.ids.clone(),
+            self.should_use_cached_warnings,
         )?;
 
         let _ = self.module_interfaces.insert(name.clone(), interface);
