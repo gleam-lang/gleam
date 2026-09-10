@@ -70,7 +70,6 @@ impl BeamCompilerInstance {
         while let (Ok(_), Ok(None)) = (self.stdout.read_line(&mut buf), self.process.try_wait()) {
             match buf.trim() {
                 "gleam-compile-result-ok" => {
-                    // Return Ok with the accumulated modules
                     return Ok(());
                 }
                 "gleam-compile-result-error" => {
