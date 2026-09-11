@@ -38,6 +38,12 @@
   owner only (0600 on Unix), preventing other users from reading it.
   ([bala-bhargav](https://github.com/bala-bhargav))
 
+- When running `gleam publish`, the build tool will compare the published version
+  with the previous version of the library and print a warning if the change in
+  package version (major, minor, or patch) does not reflect the change in the
+  package's API.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Language server
 
 - The language server will now offer "Discard unused variable" on each of
