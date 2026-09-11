@@ -1569,3 +1569,37 @@ pub fn add(a, b) { a + b }"#,
         "pub fn add(a, b) { a + b }"
     );
 }
+
+#[test]
+fn deprecating_constructor_is_minor() {
+    assert_bump!(
+        "
+pub type Wibble {
+  Wibble
+  Wobble
+}",
+        r#"
+pub type Wibble {
+  @deprecated("Use `Wobble` instead")
+  Wibble
+  Wobble
+}"#
+    );
+}
+
+#[test]
+fn removing_constructor_deprecation_is_minor() {
+    assert_bump!(
+        r#"
+pub type Wibble {
+  @deprecated("Use `Wobble` instead")
+  Wibble
+  Wobble
+}"#,
+        "
+pub type Wibble {
+  Wibble
+  Wobble
+}"
+    );
+}
