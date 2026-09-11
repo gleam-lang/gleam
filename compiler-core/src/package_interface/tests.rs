@@ -350,3 +350,16 @@ pub fn type_alias_with_two_parameters() {
 pub fn type_alias_with_two_parameters_in_reverse() {
     assert_package_interface!("pub type Wibble(a, b) = Result(b, a)");
 }
+
+#[test]
+pub fn deprecated_constructor() {
+    assert_package_interface!(
+        r#"
+pub type Wibble {
+  @deprecated("Use `Wobble` instead")
+  Wibble
+  Wobble
+}
+"#
+    );
+}

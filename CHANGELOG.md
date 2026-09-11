@@ -337,6 +337,10 @@
   that use types from aliased modules.
   ([Ian Chamberlain](https://github.com/ian-h-chamberlain))
 
+- Fixed a bug where the generated `package-interface.json` would not include
+  deprecation messages for constructors.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when
