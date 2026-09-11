@@ -4,7 +4,7 @@
 use std::{collections::HashMap, ops::Deref};
 
 use ecow::EcoString;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 mod tests;
@@ -20,19 +20,19 @@ use crate::{
 use crate::build::Package;
 
 /// The public interface of a package that gets serialised as a json object.
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct PackageInterface {
-    name: EcoString,
-    version: EcoString,
+    pub name: EcoString,
+    pub version: EcoString,
     /// The Gleam version constraint that the package specifies in its `gleam.toml`.
-    gleam_version_constraint: Option<EcoString>,
+    pub gleam_version_constraint: Option<EcoString>,
     /// A map from module name to its interface.
     #[serde(serialize_with = "ordered_map")]
-    modules: HashMap<EcoString, ModuleInterface>,
+    pub modules: HashMap<EcoString, ModuleInterface>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct ModuleInterface {
     /// A vector with the lines composing the module's documentation (that is
@@ -40,19 +40,28 @@ pub struct ModuleInterface {
     documentation: Vec<EcoString>,
     /// A map from type alias name to its interface.
     #[serde(serialize_with = "ordered_map")]
-    type_aliases: HashMap<EcoString, TypeAliasInterface>,
+    pub type_aliases: HashMap<EcoString, TypeAliasInterface>,
     /// A map from type name to its interface.
     #[serde(serialize_with = "ordered_map")]
-    types: HashMap<EcoString, TypeDefinitionInterface>,
+    pub types: HashMap<EcoString, TypeDefinitionInterface>,
     /// A map from constant name to its interface.
     #[serde(serialize_with = "ordered_map")]
-    constants: HashMap<EcoString, ConstantInterface>,
+    pub constants: HashMap<EcoString, ConstantInterface>,
     /// A map from function name to its interface.
     #[serde(serialize_with = "ordered_map")]
-    functions: HashMap<EcoString, FunctionInterface>,
+    pub functions: HashMap<EcoString, FunctionInterface>,
 }
 
-#[derive(Serialize, Debug)]
+impl ModuleInterface {
+    pub fn is_empty(&self) -> bool {
+        self.type_aliases.is_empty()
+            && self.types.is_empty()
+            && self.constants.is_empty()
+            && self.functions.is_empty()
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct TypeDefinitionInterface {
     /// The definition's documentation comment (that is every line preceded by
@@ -60,7 +69,7 @@ pub struct TypeDefinitionInterface {
     documentation: Option<EcoString>,
     /// If the definition has a deprecation annotation `@deprecated("...")`
     /// this field will hold the reason of the deprecation.
-    deprecation: Option<DeprecationInterface>,
+    pub deprecation: Option<DeprecationInterface>,
     /// The number of type variables in the type definition.
     /// ```gleam
     /// /// This type has 2 type variables.
@@ -69,13 +78,13 @@ pub struct TypeDefinitionInterface {
     ///   Error(b)
     /// }
     /// ```
-    parameters: usize,
+    pub parameters: usize,
     /// A list of the type constructors. If the type is marked as opaque it
     /// won't have any visible constructors.
-    constructors: Vec<TypeConstructorInterface>,
+    pub constructors: Vec<TypeConstructorInterface>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct TypeConstructorInterface {
     /// The constructor's documentation comment (that is every line preceded by
@@ -88,7 +97,7 @@ pub struct TypeConstructorInterface {
     /// //^^^^^ This is the constructor's name
     /// }
     /// ```
-    name: EcoString,
+    pub name: EcoString,
     /// A list of the parameters needed by the constructor.
     /// ```gleam
     /// pub type Box(a) {
@@ -96,10 +105,13 @@ pub struct TypeConstructorInterface {
     /// //      ^^^^^^^^ This is the constructor's parameter.
     /// }
     /// ```
-    parameters: Vec<ParameterInterface>,
+    pub parameters: Vec<ParameterInterface>,
+    /// If the constructor has a deprecation annotation `@deprecated("...")`
+    /// this field will hold the reason of the deprecation.
+    pub deprecation: Option<DeprecationInterface>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct TypeAliasInterface {
     /// The constructor's documentation comment (that is every line preceded by
@@ -107,22 +119,22 @@ pub struct TypeAliasInterface {
     documentation: Option<EcoString>,
     /// If the alias has a deprecation annotation `@deprecated("...")`
     /// this field will hold the reason of the deprecation.
-    deprecation: Option<DeprecationInterface>,
+    pub deprecation: Option<DeprecationInterface>,
     /// The number of type variables in the type alias definition.
     /// ```gleam
     /// /// This type alias has 2 type variables.
     /// type Results(a, b) = List(Restul(a, b))
     /// ```
-    parameters: usize,
+    pub parameters: usize,
     /// The aliased type.
     /// ```gleam
     /// type Ints = List(Int)
     /// //          ^^^^^^^^^ This is the aliased type in a type alias.
     /// ```
-    alias: TypeInterface,
+    pub alias: TypeInterface,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct ConstantInterface {
     /// The constant's documentation comment (that is every line preceded by
@@ -130,16 +142,16 @@ pub struct ConstantInterface {
     documentation: Option<EcoString>,
     /// If the constant has a deprecation annotation `@deprecated("...")`
     /// this field will hold the reason of the deprecation.
-    deprecation: Option<DeprecationInterface>,
-    implementations: ImplementationsInterface,
+    pub deprecation: Option<DeprecationInterface>,
+    pub implementations: ImplementationsInterface,
     /// The constant's type.
     #[serde(rename = "type")]
-    type_: TypeInterface,
+    pub type_: TypeInterface,
 }
 
 /// A module's function. This differs from a simple `Fn` type as its arguments
 /// can be labelled.
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct FunctionInterface {
     /// The function's documentation comment (that is every line preceded by
@@ -147,15 +159,15 @@ pub struct FunctionInterface {
     documentation: Option<EcoString>,
     /// If the constant has a deprecation annotation `@deprecated("...")`
     /// this field will hold the reason of the deprecation.
-    deprecation: Option<DeprecationInterface>,
-    implementations: ImplementationsInterface,
-    parameters: Vec<ParameterInterface>,
+    pub deprecation: Option<DeprecationInterface>,
+    pub implementations: ImplementationsInterface,
+    pub parameters: Vec<ParameterInterface>,
     #[serde(rename = "return")]
-    return_: TypeInterface,
+    pub return_: TypeInterface,
 }
 
 /// Informations about how a value is implemented.
-#[derive(Debug, Serialize, Copy, Clone)]
+#[derive(Debug, Serialize, Deserialize, Copy, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct ImplementationsInterface {
     /// Set to `true` if the const/function has a pure Gleam implementation
@@ -240,11 +252,11 @@ pub struct ImplementationsInterface {
     /// Whether the function can be called on the Erlang target, either due to a
     /// pure Gleam implementation or an implementation that uses some Erlang
     /// externals.
-    can_run_on_erlang: bool,
+    pub can_run_on_erlang: bool,
     /// Whether the function can be called on the JavaScript target, either due
     /// to a pure Gleam implementation or an implementation that uses some
     /// JavaScript externals.
-    can_run_on_javascript: bool,
+    pub can_run_on_javascript: bool,
 }
 
 impl ImplementationsInterface {
@@ -277,7 +289,7 @@ impl ImplementationsInterface {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct DeprecationInterface {
     /// The reason for the deprecation.
@@ -295,7 +307,7 @@ impl DeprecationInterface {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "kind")]
 #[serde(rename_all = "kebab-case")]
 pub enum TypeInterface {
@@ -343,7 +355,7 @@ pub enum TypeInterface {
     },
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct ParameterInterface {
     /// If the parameter is labelled this will hold the label's name.
@@ -351,14 +363,14 @@ pub struct ParameterInterface {
     /// pub fn repeat(times n: Int) -> List(Int)
     /// //            ^^^^^ This is the parameter's label.
     /// ```
-    label: Option<EcoString>,
+    pub label: Option<EcoString>,
     /// The parameter's type.
     /// ```gleam
     /// pub fn repeat(times n: Int) -> List(Int)
     /// //                     ^^^ This is the parameter's type.
     /// ```
     #[serde(rename = "type")]
-    type_: TypeInterface,
+    pub type_: TypeInterface,
 }
 
 impl PackageInterface {
@@ -392,7 +404,7 @@ impl PackageInterface {
 }
 
 impl ModuleInterface {
-    fn from_interface(interface: &type_::ModuleInterface) -> ModuleInterface {
+    pub fn from_interface(interface: &type_::ModuleInterface) -> ModuleInterface {
         let mut types = HashMap::new();
         let mut type_aliases = HashMap::new();
         let mut constants = HashMap::new();
@@ -433,6 +445,9 @@ impl ModuleInterface {
                             .map(|constructor| TypeConstructorInterface {
                                 documentation: constructor.documentation.clone(),
                                 name: constructor.name.clone(),
+                                deprecation: DeprecationInterface::from_deprecation(
+                                    &constructor.deprecation,
+                                ),
                                 parameters: constructor
                                     .parameters
                                     .iter()
@@ -559,6 +574,73 @@ impl ModuleInterface {
 impl TypeInterface {
     fn from_type(type_: &Type) -> TypeInterface {
         from_type_with_ids(type_, &mut IdMap::new())
+    }
+
+    pub fn same_as(&self, other: &TypeInterface) -> bool {
+        match (self, other) {
+            (
+                TypeInterface::Tuple { elements },
+                TypeInterface::Tuple {
+                    elements: other_elements,
+                },
+            ) => {
+                elements.len() == other_elements.len()
+                    && elements
+                        .iter()
+                        .zip(other_elements)
+                        .all(|(one, other)| one.same_as(other))
+            }
+            (
+                TypeInterface::Fn {
+                    parameters,
+                    return_,
+                },
+                TypeInterface::Fn {
+                    parameters: other_parameters,
+                    return_: other_return,
+                },
+            ) => {
+                parameters.len() == other_parameters.len()
+                    && return_.same_as(other_return)
+                    && parameters
+                        .iter()
+                        .zip(other_parameters)
+                        .all(|(one, other)| one.same_as(other))
+            }
+            (TypeInterface::Variable { id }, TypeInterface::Variable { id: other_id }) => {
+                id == other_id
+            }
+            (
+                TypeInterface::Named {
+                    name,
+                    package,
+                    module,
+                    parameters,
+                },
+                TypeInterface::Named {
+                    name: other_name,
+                    package: other_package,
+                    module: other_module,
+                    parameters: other_parameters,
+                },
+            ) => {
+                name == other_name
+                    && package == other_package
+                    && module == other_module
+                    && parameters.len() == other_parameters.len()
+                    && parameters
+                        .iter()
+                        .zip(other_parameters)
+                        .all(|(one, other)| one.same_as(other))
+            }
+            (
+                TypeInterface::Tuple { .. }
+                | TypeInterface::Fn { .. }
+                | TypeInterface::Variable { .. }
+                | TypeInterface::Named { .. },
+                _,
+            ) => false,
+        }
     }
 }
 

@@ -183,6 +183,13 @@ impl Type {
         }
     }
 
+    pub fn variable_id(&self) -> Option<u64> {
+        match self {
+            Self::Var { type_ } => type_.borrow().variable_id(),
+            Self::Named { .. } | Self::Fn { .. } | Self::Tuple { .. } => None,
+        }
+    }
+
     pub fn return_type(&self) -> Option<Arc<Self>> {
         match self {
             Self::Fn { return_, .. } => Some(return_.clone()),
@@ -1066,6 +1073,15 @@ pub enum Opaque {
     NotOpaque,
 }
 
+impl Opaque {
+    pub fn is_opaque(&self) -> bool {
+        match self {
+            Self::Opaque => true,
+            Self::NotOpaque => false,
+        }
+    }
+}
+
 /// Information on the constructors of a custom type.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct TypeVariantConstructors {
@@ -1126,6 +1142,7 @@ pub struct TypeValueConstructor {
     pub name: EcoString,
     pub parameters: Vec<TypeValueConstructorField>,
     pub documentation: Option<EcoString>,
+    pub deprecation: Deprecation,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -1301,6 +1318,13 @@ impl TypeVar {
         match self {
             Self::Unbound { .. } | Self::Generic { .. } => true,
             Self::Link { type_ } => type_.is_variable(),
+        }
+    }
+
+    pub fn variable_id(&self) -> Option<u64> {
+        match self {
+            Self::Unbound { id, .. } | Self::Generic { id, .. } => Some(*id),
+            Self::Link { type_ } => type_.variable_id(),
         }
     }
 

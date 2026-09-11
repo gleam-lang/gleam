@@ -1,0 +1,40 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+expression: "\npub type Wibble {\n  @deprecated(\"Use `Wobble` instead\")\n  Wibble\n  Wobble\n}\n"
+---
+{
+  "name": "my_package",
+  "version": "11.10.9-1.wibble+build",
+  "gleam-version-constraint": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [],
+      "type-aliases": {},
+      "types": {
+        "Wibble": {
+          "documentation": null,
+          "deprecation": null,
+          "parameters": 0,
+          "constructors": [
+            {
+              "documentation": null,
+              "name": "Wibble",
+              "parameters": [],
+              "deprecation": {
+                "message": "Use `Wobble` instead"
+              }
+            },
+            {
+              "documentation": null,
+              "name": "Wobble",
+              "parameters": [],
+              "deprecation": null
+            }
+          ]
+        }
+      },
+      "constants": {},
+      "functions": {}
+    }
+  }
+}

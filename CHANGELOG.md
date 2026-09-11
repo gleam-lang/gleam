@@ -188,6 +188,12 @@
   the `--out` parameter.
   ([Louis Pilfold](https://github.com/lpil))
 
+- When running `gleam publish`, the build tool will compare the published version
+  with the previous version of the library and print a warning if the change in
+  package version (major, minor, or patch) does not reflect the change in the
+  package's API.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Language server
 
 - The "Generate dynamic decoder" code action is now only offered when the
@@ -336,6 +342,10 @@
 - Fixed a bug in generating TypeScript annotations for function signatures
   that use types from aliased modules.
   ([Ian Chamberlain](https://github.com/ian-h-chamberlain))
+
+- Fixed a bug where the generated `package-interface.json` would not include
+  deprecation messages for constructors.
+  ([Surya Rose](https://github.com/GearsDatapacks))
 
 ## v1.18.1 - 2026-08-01
 

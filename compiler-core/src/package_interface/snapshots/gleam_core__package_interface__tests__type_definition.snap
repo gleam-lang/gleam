@@ -19,12 +19,14 @@ expression: "\n/// Wibble's documentation\npub type Wibble(a, b) {\n  Wibble\n  
             {
               "documentation": null,
               "name": "Wibble",
-              "parameters": []
+              "parameters": [],
+              "deprecation": null
             },
             {
               "documentation": null,
               "name": "Wobble",
-              "parameters": []
+              "parameters": [],
+              "deprecation": null
             }
           ]
         }
