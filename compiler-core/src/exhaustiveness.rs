@@ -3400,6 +3400,7 @@ impl ConstructorSpecialiser {
             name,
             parameters,
             documentation,
+            deprecation,
         } = v;
         let parameters = parameters
             .iter()
@@ -3413,6 +3414,7 @@ impl ConstructorSpecialiser {
             name: name.clone(),
             parameters,
             documentation: documentation.clone(),
+            deprecation: deprecation.clone(),
         }
     }
 

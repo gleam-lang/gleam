@@ -861,11 +861,13 @@ fn infer_module_type_retention_test() {
                                 name: "True".into(),
                                 parameters: vec![],
                                 documentation: None,
+                                deprecation: Deprecation::NotDeprecated,
                             },
                             TypeValueConstructor {
                                 name: "False".into(),
                                 parameters: vec![],
                                 documentation: None,
+                                deprecation: Deprecation::NotDeprecated,
                             }
                         ],
                         opaque: Opaque::NotOpaque,
@@ -892,6 +894,7 @@ fn infer_module_type_retention_test() {
                                     documentation: None,
                                 }],
                                 documentation: None,
+                                deprecation: Deprecation::NotDeprecated,
                             },
                             TypeValueConstructor {
                                 name: "Error".into(),
@@ -901,6 +904,7 @@ fn infer_module_type_retention_test() {
                                     documentation: None,
                                 }],
                                 documentation: None,
+                                deprecation: Deprecation::NotDeprecated,
                             }
                         ],
                         opaque: Opaque::NotOpaque,
@@ -914,6 +918,7 @@ fn infer_module_type_retention_test() {
                             name: "Nil".into(),
                             parameters: vec![],
                             documentation: None,
+                            deprecation: Deprecation::NotDeprecated,
                         }],
                         opaque: Opaque::NotOpaque,
                     }
