@@ -168,6 +168,7 @@ impl RemapIds {
             name,
             parameters,
             documentation,
+            deprecation,
         } = variant;
 
         let parameters = parameters
@@ -189,6 +190,7 @@ impl RemapIds {
             name,
             parameters,
             documentation,
+            deprecation,
         }
     }
 

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/package_interface/tests.rs
-expression: "\n/// Wibble's documentation\npub type Wibble(a, b) {\n  Wibble\n  Wobble\n}\n"
+expression: "\npub type Wibble {\n  @deprecated(\"Use `Wobble` instead\")\n  Wibble\n  Wobble\n}\n"
 ---
 {
   "name": "my_package",
@@ -12,15 +12,17 @@ expression: "\n/// Wibble's documentation\npub type Wibble(a, b) {\n  Wibble\n  
       "type-aliases": {},
       "types": {
         "Wibble": {
-          "documentation": " Wibble's documentation\n",
+          "documentation": null,
           "deprecation": null,
-          "parameters": 2,
+          "parameters": 0,
           "constructors": [
             {
               "documentation": null,
               "name": "Wibble",
               "parameters": [],
-              "deprecation": null
+              "deprecation": {
+                "message": "Use `Wobble` instead"
+              }
             },
             {
               "documentation": null,

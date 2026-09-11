@@ -1126,6 +1126,7 @@ pub struct TypeValueConstructor {
     pub name: EcoString,
     pub parameters: Vec<TypeValueConstructorField>,
     pub documentation: Option<EcoString>,
+    pub deprecation: Deprecation,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

@@ -37,7 +37,8 @@ expression: "\npub type Box(a, b) {\n  Box(b, Int)\n  OtherBox(message: String, 
                     "parameters": []
                   }
                 }
-              ]
+              ],
+              "deprecation": null
             },
             {
               "documentation": null,
@@ -60,7 +61,8 @@ expression: "\npub type Box(a, b) {\n  Box(b, Int)\n  OtherBox(message: String, 
                     "id": 0
                   }
                 }
-              ]
+              ],
+              "deprecation": null
             }
           ]
         }

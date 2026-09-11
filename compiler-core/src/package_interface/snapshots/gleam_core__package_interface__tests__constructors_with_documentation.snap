@@ -30,7 +30,8 @@ expression: "\npub type Wibble {\n  /// This is the Wibble variant. It contains 
                     "parameters": []
                   }
                 }
-              ]
+              ],
+              "deprecation": null
             },
             {
               "documentation": " This is the Wobble variant. It is a recursive type.\n",
@@ -46,7 +47,8 @@ expression: "\npub type Wibble {\n  /// This is the Wibble variant. It contains 
                     "parameters": []
                   }
                 }
-              ]
+              ],
+              "deprecation": null
             }
           ]
         }

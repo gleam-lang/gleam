@@ -1289,6 +1289,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     .documentation
                     .as_ref()
                     .map(|(_, documentation)| documentation.clone()),
+                deprecation: constructor.deprecation.clone(),
             });
             environment.insert_variable(
                 constructor.name.clone(),

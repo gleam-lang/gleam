@@ -19,7 +19,8 @@ expression: "\npub type Wob(a) { Wob }\n@deprecated(\"deprecation message\")\npu
             {
               "documentation": null,
               "name": "Wob",
-              "parameters": []
+              "parameters": [],
+              "deprecation": null
             }
           ]
         }

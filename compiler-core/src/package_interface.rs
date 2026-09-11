@@ -97,6 +97,9 @@ pub struct TypeConstructorInterface {
     /// }
     /// ```
     parameters: Vec<ParameterInterface>,
+    /// If the constructor has a deprecation annotation `@deprecated("...")`
+    /// this field will hold the reason of the deprecation.
+    deprecation: Option<DeprecationInterface>,
 }
 
 #[derive(Serialize, Debug)]
@@ -433,6 +436,9 @@ impl ModuleInterface {
                             .map(|constructor| TypeConstructorInterface {
                                 documentation: constructor.documentation.clone(),
                                 name: constructor.name.clone(),
+                                deprecation: DeprecationInterface::from_deprecation(
+                                    &constructor.deprecation,
+                                ),
                                 parameters: constructor
                                     .parameters
                                     .iter()
