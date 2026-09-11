@@ -768,19 +768,28 @@ impl<'a> VersionChecker<'a> {
             let old_constructors: HashMap<_, _> = custom_type
                 .constructors
                 .iter()
-                .map(|constructor| (&constructor.name, &constructor.parameters))
+                .map(|constructor| (&constructor.name, constructor))
                 .collect();
 
             let mut context = TypeComparisonContext::Constructor(remapped_ids);
 
             for new_constructor in new_constructors.variants.iter() {
                 // If a constructor has been added or renamed, it's a major change.
-                let Some(old_parameters) = old_constructors.get(&new_constructor.name) else {
+                let Some(old_constructor) = old_constructors.get(&new_constructor.name) else {
                     return CustomTypeChanges::MajorBody;
                 };
 
+                let old_parameters = &old_constructor.parameters;
+
                 if old_parameters.len() != new_constructor.parameters.len() {
                     return CustomTypeChanges::MajorBody;
+                }
+
+                match (&old_constructor.deprecation, &new_constructor.deprecation) {
+                    (None, Deprecation::Deprecated { .. })
+                    | (Some(_), Deprecation::NotDeprecated) => bump = CustomTypeChanges::MinorBody,
+                    (None, Deprecation::NotDeprecated)
+                    | (Some(_), Deprecation::Deprecated { .. }) => {}
                 }
 
                 for (old, new) in old_parameters.iter().zip(new_constructor.parameters.iter()) {
@@ -1303,6 +1312,9 @@ fn diff_type(
         if changes.type_body && !custom_type.constructors.is_empty() {
             out.push_str(" {");
             for constructor in custom_type.constructors.iter() {
+                if constructor.deprecation.is_some() {
+                    out.push_str("\n-   @deprecated(...)");
+                }
                 out.push_str("\n-   ");
                 out.push_str(&constructor.name);
                 if !constructor.parameters.is_empty() {
@@ -1359,6 +1371,9 @@ fn diff_type(
             if !constructors.variants.is_empty() && !constructors.opaque.is_opaque() {
                 out.push_str(" {");
                 for constructor in constructors.variants.iter() {
+                    if constructor.deprecation.is_deprecated() {
+                        out.push_str("\n+   @deprecated(...)");
+                    }
                     out.push_str("\n+   ");
                     out.push_str(&constructor.name);
                     if !constructor.parameters.is_empty() {
