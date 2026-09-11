@@ -108,7 +108,7 @@ pub struct TypeConstructorInterface {
     pub parameters: Vec<ParameterInterface>,
     /// If the constructor has a deprecation annotation `@deprecated("...")`
     /// this field will hold the reason of the deprecation.
-    deprecation: Option<DeprecationInterface>,
+    pub deprecation: Option<DeprecationInterface>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
