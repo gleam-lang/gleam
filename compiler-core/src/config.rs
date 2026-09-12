@@ -66,16 +66,18 @@ impl<'de> serde::de::Visitor<'de> for SpdxLicenseVisitor {
     where
         E: serde::de::Error,
     {
-        if value.starts_with("LicenseRef-") {
-            return Ok(SpdxLicense {
-                licence: value.to_string(),
-            });
-        }
-
         match spdx::license_id(value) {
-            None => Err(serde::de::Error::custom(format!(
-                "{value} is not a known SPDX License identifier"
-            ))),
+            None => {
+                if is_valid_license_ref(value) {
+                    Ok(SpdxLicense {
+                        licence: value.to_string(),
+                    })
+                } else {
+                    Err(serde::de::Error::custom(format!(
+                        "{value} is not a known SPDX License identifier"
+                    )))
+                }
+            }
             Some(_) => Ok(SpdxLicense {
                 licence: value.to_string(),
             }),
@@ -1243,6 +1245,16 @@ fn is_valid_package_name(name: &str) -> bool {
     PACKAGE_NAME_PATTERN
         .get_or_init(|| Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex"))
         .is_match(name)
+}
+
+static LICENSE_REF_PATTERN: OnceLock<Regex> = OnceLock::new();
+
+// Check that a license string is a valid SPDX LicenseRef, according to:
+// https://spdx.github.io/spdx-spec/v2.3/SPDX-license-expressions/
+fn is_valid_license_ref(licence: &str) -> bool {
+    LICENSE_REF_PATTERN
+        .get_or_init(|| Regex::new(r"^LicenseRef-[A-Za-z0-9\.-]+$").expect("LicenseRef regex"))
+        .is_match(licence)
 }
 
 #[test]
