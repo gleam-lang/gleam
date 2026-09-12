@@ -3623,6 +3623,35 @@ pub const wobble = Wibble(..wobble)
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/6289
+#[test]
+fn const_record_update_of_record_with_incorrect_arity() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub const a = Wibble(wibble: 0)
+pub const b = Wibble(..a, wobble: 8)
+"
+    );
+}
+
+#[test]
+fn const_record_update_of_record_constructor_function() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub const a = Wibble
+pub const b = Wibble(..a, wobble: 8)
+"
+    );
+}
+
 #[test]
 fn qualified_type_with_no_name_results_in_an_error() {
     assert_module_error!("pub fn main() -> wibble. { todo }");
