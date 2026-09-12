@@ -337,6 +337,10 @@
   that use types from aliased modules.
   ([Ian Chamberlain](https://github.com/ian-h-chamberlain))
 
+- Fixed a bug where the compiler would crash when a constant record update
+  spread a constant that was constructed with the wrong number of arguments.
+  ([Vladimir Babin](https://github.com/chiliec))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when
