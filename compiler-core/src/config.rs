@@ -1526,3 +1526,33 @@ wibble = ">= 1.0.0 and < 2.0.0"
     let canonical = deserialise_config("gleam.toml", toml.into()).expect("valid config");
     assert_eq!(canonical, hyphen_alternative)
 }
+
+#[test]
+fn valid_license_ref() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
+licences = ["LicenseRef-my.valid-licence4"]
+"#;
+
+    let config = toml::from_str::<PackageConfig>(input).unwrap();
+    assert_eq!(
+        config.licences,
+        vec![SpdxLicense {
+            licence: "LicenseRef-my.valid-licence4".to_string()
+        }]
+    );
+}
+
+#[test]
+fn invalid_license_ref() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
+licences = ["LicenseRef-my_invalid_licence"]
+"#;
+    let output = toml::from_str::<PackageConfig>(input)
+        .unwrap_err()
+        .to_string();
+    insta::assert_snapshot!(output);
+}
