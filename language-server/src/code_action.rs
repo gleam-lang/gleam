@@ -9451,7 +9451,8 @@ impl<'a> RemoveUnusedImports<'a> {
                 | type_::Warning::RedundantComparison { .. }
                 | type_::Warning::UnusedRecursiveArgument { .. }
                 | type_::Warning::JavaScriptBitArrayUnsafeInt { .. }
-                | type_::Warning::PipeIntoCallWhichReturnsFunction { .. } => None,
+                | type_::Warning::PipeIntoCallWhichReturnsFunction { .. }
+                | type_::Warning::EmptyStringBitArraySegment { .. } => None,
             })
             .sorted_by_key(|import| import.location())
             .collect_vec();
