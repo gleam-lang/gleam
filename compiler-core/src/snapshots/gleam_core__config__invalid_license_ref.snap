@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/config.rs
+assertion_line: 1560
+expression: output
+---
+TOML parse error at line 4, column 13
+  |
+4 | licences = ["LicenseRef-my_invalid_licence"]
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+LicenseRef-my_invalid_licence is not a known SPDX License identifier
