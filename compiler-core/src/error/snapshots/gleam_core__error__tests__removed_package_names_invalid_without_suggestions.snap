@@ -4,7 +4,7 @@ expression: err.pretty_string()
 ---
 error: Invalid package name
 
-This package name is invalid so it could not be removed.
+This is not a valid package:
 
   - Wibble
 

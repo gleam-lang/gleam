@@ -4,7 +4,7 @@ expression: err.pretty_string()
 ---
 error: Invalid package names
 
-These package names are invalid so they could not be removed.
+These are not valid package names:
 
   - gleam_otp@1
   - lustre@4
