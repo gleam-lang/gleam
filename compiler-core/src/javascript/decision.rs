@@ -1060,7 +1060,7 @@ fn derived_variables(
         .iter()
         .map(|(check, _decision)| check)
         .chain(match fallback_check {
-            FallbackCheck::RuntimeCheck { check } => Some(check),
+            FallbackCheck::RuntimeCheck { check } => Some(check.as_ref()),
             FallbackCheck::InfiniteCatchAll | FallbackCheck::CatchAll { .. } => None,
         });
 

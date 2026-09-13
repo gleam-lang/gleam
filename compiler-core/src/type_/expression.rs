@@ -588,7 +588,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             kind,
             location: warning_location,
             type_: type_.clone(),
-            names: self.environment.names.clone(),
+            names: Box::new(self.environment.names.clone()),
         });
 
         self.purity = Purity::Impure;

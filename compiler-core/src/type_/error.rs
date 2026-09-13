@@ -947,7 +947,7 @@ pub enum Warning {
         kind: TodoKind,
         location: SrcSpan,
         type_: Arc<Type>,
-        names: Names,
+        names: Box<Names>,
     },
 
     ImplicitlyDiscardedResult {
