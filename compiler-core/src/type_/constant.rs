@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use ecow::EcoString;
-use im::{HashSet, hashmap};
+use imbl::{HashSet, hashmap};
 use itertools::Itertools;
 use src_span::SrcSpan;
 

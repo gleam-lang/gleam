@@ -142,11 +142,11 @@ impl CurrentFunction {
 /// redeclare one of them.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Scope {
-    user_variables: im::HashMap<EcoString, usize>,
+    user_variables: imbl::HashMap<EcoString, usize>,
     /// The highest suffix handed out for each user variable still declared in
     /// the current JS scope, kept across a directly matching `case` branch so a
     /// variable that leaked out of it is not redeclared by a later `let`.
-    high_water: im::HashMap<EcoString, usize>,
+    high_water: imbl::HashMap<EcoString, usize>,
     assignment: Option<usize>,
     pipe: Option<usize>,
     block: Option<usize>,
@@ -158,7 +158,7 @@ pub(crate) struct Scope {
 }
 
 impl Scope {
-    fn new(user_variables: im::HashMap<EcoString, usize>) -> Self {
+    fn new(user_variables: imbl::HashMap<EcoString, usize>) -> Self {
         Self {
             user_variables,
             ..Self::default()
@@ -213,7 +213,7 @@ impl Scope {
     }
 
     /// The user variables currently in scope.
-    pub(crate) fn user_variables(&self) -> &im::HashMap<EcoString, usize> {
+    pub(crate) fn user_variables(&self) -> &imbl::HashMap<EcoString, usize> {
         &self.user_variables
     }
 
@@ -221,7 +221,7 @@ impl Scope {
     /// during the branch to their earlier values. Variables introduced in the
     /// branch with no earlier binding are kept, and the synthesised counters are
     /// left untouched.
-    pub(crate) fn restore_user_variables(&mut self, previous: &im::HashMap<EcoString, usize>) {
+    pub(crate) fn restore_user_variables(&mut self, previous: &imbl::HashMap<EcoString, usize>) {
         self.user_variables.extend(previous.clone());
     }
 }
@@ -286,7 +286,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
         function_name: EcoString,
         function_arguments: Vec<Option<&'module EcoString>>,
         tracker: &'module mut UsageTracker,
-        initial_scope_vars: im::HashMap<EcoString, usize>,
+        initial_scope_vars: imbl::HashMap<EcoString, usize>,
         source_map_builder: Option<Rc<RefCell<DebugIgnore<sourcemap::SourceMapBuilder>>>>,
     ) -> Self {
         let mut current_scope = Scope::new(initial_scope_vars);

@@ -658,7 +658,7 @@ impl<'a> Located<'a> {
     // Looks up the type constructor for the given type and then create the location.
     fn type_location(
         &self,
-        importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
+        importable_modules: &'a imbl::HashMap<EcoString, type_::ModuleInterface>,
         type_: Arc<Type>,
     ) -> Option<DefinitionLocation> {
         type_constructor_from_modules(importable_modules, type_).map(|t| DefinitionLocation {
@@ -671,7 +671,7 @@ impl<'a> Located<'a> {
     /// definitions gathered during analysis.
     fn label_definition_location(
         &self,
-        importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
+        importable_modules: &'a imbl::HashMap<EcoString, type_::ModuleInterface>,
         owner: reference::LabelOwner,
         label: &EcoString,
         variant: Option<&EcoString>,
@@ -703,7 +703,7 @@ impl<'a> Located<'a> {
 
     pub fn definition_location(
         &self,
-        importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
+        importable_modules: &'a imbl::HashMap<EcoString, type_::ModuleInterface>,
     ) -> Option<DefinitionLocation> {
         match self {
             Self::PatternSpread { .. } => None,
@@ -859,7 +859,7 @@ impl<'a> Located<'a> {
 
     pub fn type_definition_locations(
         &self,
-        importable_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
+        importable_modules: &imbl::HashMap<EcoString, type_::ModuleInterface>,
     ) -> Option<Vec<DefinitionLocation>> {
         let type_ = self.type_()?;
         Some(type_to_definition_locations(type_, importable_modules))
@@ -878,7 +878,7 @@ impl<'a> Located<'a> {
 ///
 fn type_to_definition_locations(
     type_: Arc<Type>,
-    importable_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
+    importable_modules: &imbl::HashMap<EcoString, type_::ModuleInterface>,
 ) -> Vec<DefinitionLocation> {
     match type_.as_ref() {
         // For named types we start with the location of the named type itself
@@ -948,7 +948,7 @@ fn type_to_definition_locations(
 
 // Looks up the type constructor for the given type
 pub fn type_constructor_from_modules(
-    importable_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
+    importable_modules: &imbl::HashMap<EcoString, type_::ModuleInterface>,
     type_: Arc<Type>,
 ) -> Option<&type_::TypeConstructor> {
     let type_ = type_::collapse_links(type_);

@@ -18,10 +18,10 @@ const INDENT: isize = 2;
 
 #[derive(Debug, Default)]
 pub struct Printer {
-    names: im::HashMap<u64, EcoString>,
+    names: imbl::HashMap<u64, EcoString>,
     uid: u64,
     // A mapping of printd type names to the module that they are defined in.
-    printed_types: im::HashMap<EcoString, EcoString>,
+    printed_types: imbl::HashMap<EcoString, EcoString>,
 }
 
 impl<'a, 'doc> Printer {
@@ -29,7 +29,7 @@ impl<'a, 'doc> Printer {
         Self::default()
     }
 
-    pub fn with_names(&mut self, names: im::HashMap<u64, EcoString>) {
+    pub fn with_names(&mut self, names: imbl::HashMap<u64, EcoString>) {
         self.names = names;
     }
 

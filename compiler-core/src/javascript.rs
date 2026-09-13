@@ -97,7 +97,7 @@ pub struct Generator<'a> {
     line_numbers: &'a LineNumbers,
     module: &'a TypedModule,
     tracker: UsageTracker,
-    module_scope: im::HashMap<EcoString, usize>,
+    module_scope: imbl::HashMap<EcoString, usize>,
     current_module_name_segments_count: usize,
     typescript: TypeScriptDeclarations,
     // Debug ignored since SourceMapBuilder doesn't implement debug
@@ -134,7 +134,7 @@ impl<'a, 'doc> Generator<'a> {
             module,
             src_path,
             tracker: UsageTracker::default(),
-            module_scope: im::HashMap::new(),
+            module_scope: imbl::HashMap::new(),
             typescript,
             source_map_builder: if source_map {
                 let module_name = module.name.clone();

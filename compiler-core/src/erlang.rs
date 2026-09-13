@@ -153,7 +153,7 @@ struct FunctionGenerator<'a, 'generator> {
     /// the name that was given to the variable that comes from this location?"
     /// Only then we'll know what's the correct name to use for it.
     ///
-    variable_names: im::HashMap<SrcSpan, EcoString>,
+    variable_names: imbl::HashMap<SrcSpan, EcoString>,
 
     /// This keeps track of the number of generated variables that have already
     /// been generated in the current function.
@@ -188,7 +188,7 @@ struct FunctionGenerator<'a, 'generator> {
     /// This is handy whenever we run into a new variable assignment and have to
     /// generate a new name for it in Erlang.
     ///
-    taken_names: im::HashMap<String, usize>,
+    taken_names: imbl::HashMap<String, usize>,
 }
 
 impl<'a> Generator<'a> {
@@ -498,8 +498,8 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
         Self {
             function_name,
             module_generator,
-            taken_names: im::HashMap::new(),
-            variable_names: im::HashMap::new(),
+            taken_names: imbl::HashMap::new(),
+            variable_names: imbl::HashMap::new(),
             generated_variables: 0,
         }
     }
@@ -3609,7 +3609,7 @@ pub fn module<'a, Output>(
 /// we can export `wibble/2`.
 fn function_export<'a>(
     function: &'a TypedFunction,
-    overridden_publicity: &im::HashSet<EcoString>,
+    overridden_publicity: &imbl::HashSet<EcoString>,
 ) -> Option<(&'a str, usize)> {
     let (_, name) = function
         .name
@@ -4374,8 +4374,8 @@ impl<'a> TypeGenerator<'a> {
 
 fn find_private_functions_referenced_in_importable_constants(
     module: &TypedModule,
-) -> im::HashSet<EcoString> {
-    let mut overridden_publicity = im::HashSet::new();
+) -> imbl::HashSet<EcoString> {
+    let mut overridden_publicity = imbl::HashSet::new();
 
     for constant in &module.definitions.constants {
         if constant.publicity.is_importable() {
@@ -4387,7 +4387,7 @@ fn find_private_functions_referenced_in_importable_constants(
 
 fn find_referenced_private_functions(
     constant: &TypedConstant,
-    already_found: &mut im::HashSet<EcoString>,
+    already_found: &mut imbl::HashSet<EcoString>,
 ) {
     match constant {
         Constant::Todo { .. } => panic!("todo constants should not reach code generation"),

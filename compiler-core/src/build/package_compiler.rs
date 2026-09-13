@@ -124,8 +124,8 @@ where
     pub fn compile(
         mut self,
         warnings: &WarningEmitter,
-        existing_modules: &mut im::HashMap<EcoString, type_::ModuleInterface>,
-        already_defined_modules: &mut im::HashMap<EcoString, DefinedModuleOrigin>,
+        existing_modules: &mut imbl::HashMap<EcoString, type_::ModuleInterface>,
+        already_defined_modules: &mut imbl::HashMap<EcoString, DefinedModuleOrigin>,
         stale_modules: &mut StaleTracker,
         incomplete_modules: &mut HashSet<EcoString>,
         telemetry: &dyn Telemetry,
@@ -569,7 +569,7 @@ struct PackageModulesAnalyser<'a> {
     ids: &'a UniqueIdGenerator,
     warnings: &'a WarningEmitter,
 
-    module_interfaces: &'a mut im::HashMap<EcoString, type_::ModuleInterface>,
+    module_interfaces: &'a mut imbl::HashMap<EcoString, type_::ModuleInterface>,
     incomplete_modules: &'a mut HashSet<EcoString>,
 
     /// The direct dependencies of this package, as needed by the
@@ -594,7 +594,7 @@ impl<'a> PackageModulesAnalyser<'a> {
     pub fn new<'package_compiler, IO>(
         package_compiler: &'a PackageCompiler<'package_compiler, IO>,
         warnings: &'a WarningEmitter,
-        module_interfaces: &'a mut im::HashMap<EcoString, type_::ModuleInterface>,
+        module_interfaces: &'a mut imbl::HashMap<EcoString, type_::ModuleInterface>,
         incomplete_modules: &'a mut HashSet<EcoString>,
     ) -> Self {
         let direct_dependencies = package_compiler

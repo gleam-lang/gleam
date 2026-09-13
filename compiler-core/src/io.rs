@@ -223,7 +223,7 @@ impl DirEntry {
 #[derive(Debug, Clone)]
 pub struct DirWalker {
     walk_queue: VecDeque<Utf8PathBuf>,
-    dirs_walked: im::HashSet<Utf8PathBuf>,
+    dirs_walked: imbl::HashSet<Utf8PathBuf>,
 }
 
 impl DirWalker {
@@ -231,7 +231,7 @@ impl DirWalker {
     pub fn new(dir: Utf8PathBuf) -> Self {
         Self {
             walk_queue: VecDeque::from([dir]),
-            dirs_walked: im::HashSet::new(),
+            dirs_walked: imbl::HashSet::new(),
         }
     }
 

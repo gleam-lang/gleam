@@ -132,7 +132,7 @@ pub struct Renamed<'a> {
 pub fn rename_module_entity(
     params: &RenameParams,
     current_module: &Module,
-    modules: &im::HashMap<EcoString, ModuleInterface>,
+    modules: &imbl::HashMap<EcoString, ModuleInterface>,
     sources: &HashMap<EcoString, ModuleSourceInformation>,
     renamed: Renamed<'_>,
 ) -> RenameOutcome {
@@ -251,7 +251,7 @@ pub fn rename_label(
     params: &RenameParams,
     owner: LabelOwner,
     label: &EcoString,
-    modules: &im::HashMap<EcoString, ModuleInterface>,
+    modules: &imbl::HashMap<EcoString, ModuleInterface>,
     sources: &HashMap<EcoString, ModuleSourceInformation>,
 ) -> RenameOutcome {
     let new_name = EcoString::from(&params.new_name);
@@ -543,7 +543,7 @@ pub fn rename_type_variable(
 pub fn rename_module_occurrences(
     old_name: EcoString,
     new_name: EcoString,
-    modules: &im::HashMap<EcoString, ModuleInterface>,
+    modules: &imbl::HashMap<EcoString, ModuleInterface>,
     sources: &HashMap<EcoString, ModuleSourceInformation>,
     changes: &mut HashMap<Url, Vec<TextEdit>>,
 ) {

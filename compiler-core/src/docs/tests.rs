@@ -64,8 +64,8 @@ fn compile_with_markdown_pages(
     }
 
     let ids = UniqueIdGenerator::new();
-    let mut type_manifests = im::HashMap::new();
-    let mut defined_modules = im::HashMap::new();
+    let mut type_manifests = imbl::HashMap::new();
+    let mut defined_modules = imbl::HashMap::new();
     let warnings = WarningEmitter::null();
     let target = TargetCodegenConfiguration::Erlang {
         app_file: None,

@@ -30,7 +30,7 @@ use gleam_core::{
         printer::Printer,
     },
 };
-use im::HashMap;
+use imbl::HashMap;
 use itertools::Itertools;
 use lsp_types::{
     CodeAction, CodeActionKind, CodeActionParams, CreateFile, CreateFileOptions, DocumentChange,
@@ -7531,13 +7531,13 @@ fn labels_are_correct<A>(arguments: &[CallArg<A>]) -> bool {
 
 #[derive(Clone)]
 struct NameGenerator {
-    used_names: im::HashSet<EcoString>,
+    used_names: imbl::HashSet<EcoString>,
 }
 
 impl NameGenerator {
     pub fn new() -> Self {
         NameGenerator {
-            used_names: im::HashSet::new(),
+            used_names: imbl::HashSet::new(),
         }
     }
 

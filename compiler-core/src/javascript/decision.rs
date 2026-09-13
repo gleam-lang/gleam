@@ -841,7 +841,7 @@ impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
                 .current_scope
                 .user_variables()
                 .clone(),
-            DecisionKind::LetAssert { .. } => im::HashMap::new(),
+            DecisionKind::LetAssert { .. } => imbl::HashMap::new(),
         };
         let old_names = self.variables.scoped_variable_names.clone();
         let old_segments = self.variables.segment_values.clone();

@@ -36,7 +36,7 @@ fn compile_module(src: &str) -> TypedModule {
     let ids = UniqueIdGenerator::new();
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
-    let mut modules = im::HashMap::new();
+    let mut modules = imbl::HashMap::new();
     // DUPE: preludeinsertion
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
@@ -84,7 +84,7 @@ fn cat_type() -> Arc<Type> {
 fn compile_expression(src: &str) -> TypedStatement {
     let ast = crate::parse::parse_statement_sequence(src).expect("syntax error");
 
-    let mut modules = im::HashMap::new();
+    let mut modules = imbl::HashMap::new();
     let ids = UniqueIdGenerator::new();
     // DUPE: preludeinsertion
     // TODO: Currently we do this here and also in the tests. It would be better

@@ -27,7 +27,7 @@ members = [
 # Command line interface
 clap = { version = "4", features = ["derive"] }
 # Immutable data structures
-im = { version = "15", features = ["serde"] }
+imbl = { version = "7", features = ["serde"] }
 # Extra iter methods
 itertools = "0"
 # Parsing

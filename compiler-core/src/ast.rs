@@ -2702,17 +2702,17 @@ impl TypedClauseGuard {
         }
     }
 
-    pub(crate) fn referenced_variables(&self) -> im::HashSet<&EcoString> {
+    pub(crate) fn referenced_variables(&self) -> imbl::HashSet<&EcoString> {
         match self {
-            ClauseGuard::Var { name, .. } => im::hashset![name],
+            ClauseGuard::Var { name, .. } => imbl::hashset![name],
 
             ClauseGuard::Block { value, .. } => value.referenced_variables(),
             ClauseGuard::Not { expression, .. } => expression.referenced_variables(),
             ClauseGuard::TupleIndex { tuple, .. } => tuple.referenced_variables(),
             ClauseGuard::FieldAccess { container, .. } => container.referenced_variables(),
             ClauseGuard::Constant(constant) => constant.referenced_variables(),
-            ClauseGuard::ModuleSelect { .. } => im::HashSet::new(),
-            ClauseGuard::Invalid { .. } => im::HashSet::new(),
+            ClauseGuard::ModuleSelect { .. } => imbl::HashSet::new(),
+            ClauseGuard::Invalid { .. } => imbl::HashSet::new(),
 
             ClauseGuard::BinaryOperator { left, right, .. } => left
                 .referenced_variables()
@@ -4338,7 +4338,7 @@ impl<A> BitArrayOption<A> {
 }
 
 impl BitArrayOption<TypedConstant> {
-    fn referenced_variables(&self) -> im::HashSet<&EcoString> {
+    fn referenced_variables(&self) -> imbl::HashSet<&EcoString> {
         match self {
             BitArrayOption::Bytes { .. }
             | BitArrayOption::Int { .. }
@@ -4355,7 +4355,7 @@ impl BitArrayOption<TypedConstant> {
             | BitArrayOption::Big { .. }
             | BitArrayOption::Little { .. }
             | BitArrayOption::Unit { .. }
-            | BitArrayOption::Native { .. } => im::hashset![],
+            | BitArrayOption::Native { .. } => imbl::hashset![],
 
             BitArrayOption::Size { value, .. } => value.referenced_variables(),
         }

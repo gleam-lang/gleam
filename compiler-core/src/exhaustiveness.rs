@@ -1749,11 +1749,19 @@ impl Confidence {
 /// is referenced once, in a segment with unit `1`; `calculations` would contain
 /// `b - 1`.
 ///
-#[derive(Clone, Eq, PartialEq, Debug, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Offset {
     pub constant: BigInt,
-    pub variables: im::HashMap<VariableUsage, usize>,
-    pub calculations: im::Vector<OffsetCalculation>,
+    pub variables: imbl::HashMap<VariableUsage, usize>,
+    pub calculations: imbl::Vector<OffsetCalculation>,
+}
+
+impl Hash for Offset {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.constant.hash(state);
+        self.variables.iter().for_each(|kv| kv.hash(state));
+        self.calculations.hash(state);
+    }
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash, serde::Serialize, serde::Deserialize)]
@@ -1767,8 +1775,8 @@ impl Offset {
     pub fn constant(value: impl Into<BigInt>) -> Self {
         Self {
             constant: value.into(),
-            variables: im::HashMap::new(),
-            calculations: im::Vector::new(),
+            variables: imbl::HashMap::new(),
+            calculations: imbl::Vector::new(),
         }
     }
 
@@ -4091,8 +4099,8 @@ fn bit_array_size(
 ///
 #[must_use]
 fn superset(
-    one: &im::HashMap<VariableUsage, usize>,
-    other: &im::HashMap<VariableUsage, usize>,
+    one: &imbl::HashMap<VariableUsage, usize>,
+    other: &imbl::HashMap<VariableUsage, usize>,
 ) -> bool {
     other
         .iter()

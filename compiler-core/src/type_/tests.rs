@@ -398,7 +398,7 @@ fn compile_statement_sequence(
     src: &str,
 ) -> Result<Vec1<TypedStatement>, (Vec1<crate::type_::Error>, Names)> {
     let ast = crate::parse::parse_statement_sequence(src).expect("syntax error");
-    let mut modules = im::HashMap::new();
+    let mut modules = imbl::HashMap::new();
     let ids = UniqueIdGenerator::new();
     // DUPE: preludeinsertion
     // TODO: Currently we do this here and also in the tests. It would be better
@@ -515,7 +515,7 @@ pub fn compile_module_with_opts(
     gleam_version: Option<Range<Version>>,
 ) -> Outcome<TypedModule, Vec1<super::Error>> {
     let ids = UniqueIdGenerator::new();
-    let mut modules = im::HashMap::new();
+    let mut modules = imbl::HashMap::new();
 
     let emitter =
         WarningEmitter::new(warnings.unwrap_or_else(|| Rc::new(VectorWarningEmitterIO::default())));
@@ -819,7 +819,7 @@ fn infer_module_type_retention_test() {
     };
     let direct_dependencies = HashMap::from_iter(vec![]);
     let ids = UniqueIdGenerator::new();
-    let mut modules = im::HashMap::new();
+    let mut modules = imbl::HashMap::new();
     // DUPE: preludeinsertion
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
