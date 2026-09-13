@@ -1335,15 +1335,9 @@ If you want to overwrite {text_files}, delete {text_pronoun} and run the command
 
             Error::RemovedPackageNamesInvalid { packages } => {
                 let (plural, introduction) = if packages.len() == 1 {
-                    (
-                        "",
-                        "This package name is invalid so it could not be removed.",
-                    )
+                    ("", "This is not a valid package:")
                 } else {
-                    (
-                        "s",
-                        "These package names are invalid so they could not be removed.",
-                    )
+                    ("s", "These are not valid package names:")
                 };
 
                 let suggestions: Vec<_> = packages
