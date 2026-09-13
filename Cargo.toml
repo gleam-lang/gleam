@@ -28,7 +28,6 @@ members = [
 clap = { version = "4", features = ["derive"] }
 # Immutable data structures
 imbl = { version = "7", features = ["serde"] }
-im = { version = "15", features = ["serde"] }
 # Extra iter methods
 itertools = "0"
 # Parsing
