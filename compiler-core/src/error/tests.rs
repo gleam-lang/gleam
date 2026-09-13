@@ -72,6 +72,29 @@ fn test_output_files_already_exist() {
     }
 }
 
+#[test]
+fn test_removed_package_names_invalid() {
+    let packages = vec![
+        ("with_suggestion", vec!["gleam_otp@1".to_string()]),
+        (
+            "with_some_suggestions",
+            vec![
+                "gleam_otp@1".to_string(),
+                "lustre@4".to_string(),
+                "Wibble".to_string(),
+            ],
+        ),
+        ("without_suggestions", vec!["Wibble".to_string()]),
+    ];
+    for (group, packages) in packages {
+        let err = Error::RemovedPackageNamesInvalid { packages };
+        assert_snapshot!(
+            format!("removed_package_names_invalid_{group}"),
+            err.pretty_string(),
+        );
+    }
+}
+
 // There are 2 separate tests for Windows and for Unix, because on Windows note
 // about inability to create symlinks without Developer Mode is shown, so
 // snapshots differ.
