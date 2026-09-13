@@ -5,7 +5,6 @@
 use crate::ast::{self};
 use crate::bit_array::UnsupportedOption;
 use crate::build::{Origin, Outcome, Runtime, Target};
-use crate::config::is_valid_package_name;
 use crate::dependency::{PackageFetcher, ResolutionError, ResolutionFailure};
 use crate::derivation_tree::DerivationTreePrinter;
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
@@ -284,7 +283,10 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     OutputFilesAlreadyExist { file_names: Vec<Utf8PathBuf> },
 
     #[error("Invalid package names: {}", packages.iter().join(", "))]
-    RemovedPackageNamesInvalid { packages: Vec<String> },
+    RemovedPackageNamesInvalid {
+        packages: Vec<String>,
+        dependencies: Vec<EcoString>,
+    },
 
     #[error("Packages not exist: {}", packages.iter().join(", "))]
     RemovedPackagesNotExist { packages: Vec<String> },
@@ -1333,44 +1335,31 @@ If you want to overwrite {text_files}, delete {text_pronoun} and run the command
                 }]
             }
 
-            Error::RemovedPackageNamesInvalid { packages } => {
+            Error::RemovedPackageNamesInvalid {
+                packages,
+                dependencies,
+            } => {
                 let (plural, introduction) = if packages.len() == 1 {
                     ("", "This is not a valid package:")
                 } else {
                     ("s", "These are not valid package names:")
                 };
 
-                let suggestions: Vec<_> = packages
+                let list = packages
                     .iter()
-                    .filter_map(|package| {
-                        let (name, _version) = package.split_once('@')?;
-                        is_valid_package_name(name).then_some(name)
+                    .map(|package| match did_you_mean(package, dependencies) {
+                        Some(suggestion) => format!("  - {package} ({suggestion})"),
+                        None => format!("  - {package}"),
                     })
-                    .collect();
+                    .join("\n");
 
-                let mut text = format!(
+                let text = format!(
                     "{introduction}
 
-{}
-",
-                    packages.iter().map(|p| format!("  - {p}")).join("\n")
-                );
+{list}
 
-                if !suggestions.is_empty() {
-                    text.push_str(if suggestions.len() == 1 {
-                        "\nDid you mean:\n\n"
-                    } else {
-                        "\nDid you mean one of these:\n\n"
-                    });
-
-                    text.push_str(&suggestions.iter().map(|s| format!("  - {s}")).join("\n"));
-                    text.push('\n');
-                }
-
-                text.push_str(
-                    "
 Package names must start with a lowercase letter and may only contain
-lowercase letters, numbers and underscores.",
+lowercase letters, numbers and underscores."
                 );
 
                 vec![Diagnostic {

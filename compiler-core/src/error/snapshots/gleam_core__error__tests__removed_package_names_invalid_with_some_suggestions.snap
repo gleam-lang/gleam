@@ -6,14 +6,9 @@ error: Invalid package names
 
 These are not valid package names:
 
-  - gleam_otp@1
-  - lustre@4
+  - gleam_otp@1 (Did you mean `gleam_otp`?)
+  - lustre@4 (Did you mean `lustre`?)
   - Wibble
-
-Did you mean one of these:
-
-  - gleam_otp
-  - lustre
 
 Package names must start with a lowercase letter and may only contain
 lowercase letters, numbers and underscores.

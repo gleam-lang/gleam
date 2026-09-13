@@ -74,6 +74,8 @@ fn test_output_files_already_exist() {
 
 #[test]
 fn test_removed_package_names_invalid() {
+    let dependencies: Vec<EcoString> =
+        vec!["gleam_stdlib".into(), "gleam_otp".into(), "lustre".into()];
     let packages = vec![
         ("with_suggestion", vec!["gleam_otp@1".to_string()]),
         (
@@ -87,7 +89,10 @@ fn test_removed_package_names_invalid() {
         ("without_suggestions", vec!["Wibble".to_string()]),
     ];
     for (group, packages) in packages {
-        let err = Error::RemovedPackageNamesInvalid { packages };
+        let err = Error::RemovedPackageNamesInvalid {
+            packages,
+            dependencies: dependencies.clone(),
+        };
         assert_snapshot!(
             format!("removed_package_names_invalid_{group}"),
             err.pretty_string(),
