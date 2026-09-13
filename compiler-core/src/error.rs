@@ -5,6 +5,7 @@
 use crate::ast::{self};
 use crate::bit_array::UnsupportedOption;
 use crate::build::{Origin, Outcome, Runtime, Target};
+use crate::config::is_valid_package_name;
 use crate::dependency::{PackageFetcher, ResolutionError, ResolutionFailure};
 use crate::derivation_tree::DerivationTreePrinter;
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
@@ -281,6 +282,9 @@ pub enum Error {
     #[error("File(s) already exist in {}",
 file_names.iter().map(|x| x.as_str()).join(", "))]
     OutputFilesAlreadyExist { file_names: Vec<Utf8PathBuf> },
+
+    #[error("Invalid package names: {}", packages.iter().join(", "))]
+    RemovedPackageNamesInvalid { packages: Vec<String> },
 
     #[error("Packages not exist: {}", packages.iter().join(", "))]
     RemovedPackagesNotExist { packages: Vec<String> },
@@ -1323,6 +1327,61 @@ target, so it cannot be run.",
 If you want to overwrite {text_files}, delete {text_pronoun} and run the command again.
 "
                     ),
+                    level: Level::Error,
+                    hint: None,
+                    location: None,
+                }]
+            }
+
+            Error::RemovedPackageNamesInvalid { packages } => {
+                let (plural, introduction) = if packages.len() == 1 {
+                    (
+                        "",
+                        "This package name is invalid so it could not be removed.",
+                    )
+                } else {
+                    (
+                        "s",
+                        "These package names are invalid so they could not be removed.",
+                    )
+                };
+
+                let suggestions: Vec<_> = packages
+                    .iter()
+                    .filter_map(|package| {
+                        let (name, _version) = package.split_once('@')?;
+                        is_valid_package_name(name).then_some(name)
+                    })
+                    .collect();
+
+                let mut text = format!(
+                    "{introduction}
+
+{}
+",
+                    packages.iter().map(|p| format!("  - {p}")).join("\n")
+                );
+
+                if !suggestions.is_empty() {
+                    text.push_str(if suggestions.len() == 1 {
+                        "\nDid you mean:\n\n"
+                    } else {
+                        "\nDid you mean one of these:\n\n"
+                    });
+
+                    text.push_str(&suggestions.iter().map(|s| format!("  - {s}")).join("\n"));
+                    text.push('\n');
+                }
+
+                text.push_str(
+                    "
+Package names must start with a lowercase letter and may only contain
+lowercase letters, numbers and underscores.",
+                );
+
+                vec![Diagnostic {
+                    title: format!("Invalid package name{plural}"),
+                    text,
                     level: Level::Error,
                     hint: None,
                     location: None,
