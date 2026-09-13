@@ -3,6 +3,7 @@
 
 use gleam_core::{
     Error, Result,
+    config::is_valid_package_name,
     error::{FileIoAction, FileKind},
     paths::ProjectPaths,
 };
@@ -10,6 +11,18 @@ use gleam_core::{
 use crate::{cli, fs};
 
 pub fn command(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
+    let invalid_package_names: Vec<String> = packages
+        .iter()
+        .filter(|package| !is_valid_package_name(package))
+        .cloned()
+        .collect();
+
+    if !invalid_package_names.is_empty() {
+        return Err(Error::RemovedPackageNamesInvalid {
+            packages: invalid_package_names,
+        });
+    }
+
     // Read gleam.toml so we can remove deps from it
     let root_config = paths.root_config();
     let mut toml = fs::read(&root_config)?

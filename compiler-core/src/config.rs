@@ -1233,7 +1233,9 @@ pub mod map_with_package_name_keys {
 
 static PACKAGE_NAME_PATTERN: OnceLock<Regex> = OnceLock::new();
 
-fn is_valid_package_name(name: &str) -> bool {
+/// Package names must start with a lowercase letter and may only contain
+/// lowercase letters, numbers and underscores.
+pub fn is_valid_package_name(name: &str) -> bool {
     PACKAGE_NAME_PATTERN
         .get_or_init(|| Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex"))
         .is_match(name)
