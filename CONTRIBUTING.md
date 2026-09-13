@@ -68,10 +68,6 @@ that in your message, so that we understand.
 To run the compiler tests. This will require a recent stable version of Rust,
 Erlang, Elixir, NodeJS, Deno, and Bun to be installed.
 
-If you are using the Nix package manager, there's a [gleam-nix flake](https://github.com/vic/gleam-nix)
-you can use for running any Gleam version or quickly obtaining a development
-environment for Gleam.
-
 ```sh
 cargo test
 
