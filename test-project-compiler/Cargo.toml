@@ -12,7 +12,7 @@ license = "Apache-2.0"
 gleam-core = { path = "../compiler-core" }
 test-helpers-rs = { path = "../test-helpers-rs" }
 toml.workspace = true
-im.workspace = true
+imbl.workspace = true
 itertools.workspace = true
 regex.workspace = true
 camino.workspace = true
