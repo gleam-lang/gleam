@@ -63,7 +63,6 @@ hexpm = { path = "../hexpm" }
 pretty-arena = { path = "../pretty-arena" }
 erlang-generation = { path = "../erlang-generation" }
 http.workspace = true
-im.workspace = true
 imbl.workspace = true
 itertools.workspace = true
 lsp-server.workspace = true
