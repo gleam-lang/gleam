@@ -12,7 +12,7 @@ use crate::{
 };
 use std::sync::Arc;
 
-use im::hashmap;
+use imbl::hashmap;
 
 /// The Hydrator takes an AST representing a type (i.e. a type annotation
 /// for a function argument) and returns a Type for that annotation.
@@ -28,20 +28,20 @@ use im::hashmap;
 ///
 #[derive(Debug)]
 pub struct Hydrator {
-    created_type_variables: im::HashMap<EcoString, CreatedTypeVariable>,
+    created_type_variables: imbl::HashMap<EcoString, CreatedTypeVariable>,
     /// A rigid type is a generic type that was specified as being generic in
     /// an annotation. As such it should never be instantiated into an unbound
     /// variable. This type_id => name map is used for reporting the original
     /// annotated name on error.
-    rigid_type_names: im::HashMap<u64, EcoString>,
+    rigid_type_names: imbl::HashMap<u64, EcoString>,
     permit_new_type_variables: bool,
     permit_holes: bool,
 }
 
 #[derive(Debug)]
 pub struct ScopeResetData {
-    created_type_variables: im::HashMap<EcoString, CreatedTypeVariable>,
-    rigid_type_names: im::HashMap<u64, EcoString>,
+    created_type_variables: imbl::HashMap<EcoString, CreatedTypeVariable>,
+    rigid_type_names: imbl::HashMap<u64, EcoString>,
 }
 
 impl Default for Hydrator {
@@ -60,7 +60,7 @@ impl Hydrator {
         }
     }
 
-    pub fn named_type_variables(&self) -> im::HashMap<EcoString, CreatedTypeVariable> {
+    pub fn named_type_variables(&self) -> imbl::HashMap<EcoString, CreatedTypeVariable> {
         self.created_type_variables.clone()
     }
 
@@ -93,7 +93,7 @@ impl Hydrator {
         self.rigid_type_names.contains_key(id)
     }
 
-    pub fn rigid_names(&self) -> im::HashMap<u64, EcoString> {
+    pub fn rigid_names(&self) -> imbl::HashMap<u64, EcoString> {
         self.rigid_type_names.clone()
     }
 

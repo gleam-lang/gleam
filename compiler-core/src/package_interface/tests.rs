@@ -60,7 +60,7 @@ pub fn compile_package(
     src: &str,
     dep: Option<(&str, &str, &str)>,
 ) -> String {
-    let mut modules = im::HashMap::new();
+    let mut modules = imbl::HashMap::new();
     let ids = UniqueIdGenerator::new();
     // DUPE: preludeinsertion
     // TODO: Currently we do this here and also in the tests. It would be better
@@ -142,7 +142,7 @@ pub fn compile_package(
     let package: Package = package_from_module(module);
     serde_json::to_string_pretty(&PackageInterface::from_package(
         &package,
-        &im::HashMap::new(),
+        &imbl::HashMap::new(),
     ))
     .expect("to json")
 }

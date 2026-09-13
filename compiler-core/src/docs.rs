@@ -503,7 +503,7 @@ fn search_item_for_module(module: &Module) -> SearchItem {
 pub fn generate_json_package_interface(
     path: Utf8PathBuf,
     package: &Package,
-    cached_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
+    cached_modules: &imbl::HashMap<EcoString, type_::ModuleInterface>,
 ) -> OutputFile {
     OutputFile {
         path,
@@ -513,7 +513,7 @@ pub fn generate_json_package_interface(
 
 pub fn package_interface(
     package: &Package,
-    cached_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
+    cached_modules: &imbl::HashMap<EcoString, type_::ModuleInterface>,
 ) -> String {
     serde_json::to_string_pretty(&PackageInterface::from_package(package, cached_modules))
         .expect("JSON module interface serialisation")

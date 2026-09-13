@@ -22,7 +22,7 @@ use src_span::SrcSpan;
 
 #[derive(Debug, Default)]
 struct CallGraphBuilder<'a> {
-    names: im::HashMap<&'a str, Option<(NodeIndex, SrcSpan)>>,
+    names: imbl::HashMap<&'a str, Option<(NodeIndex, SrcSpan)>>,
     graph: StableGraph<(), (), Directed>,
     current_function: NodeIndex,
 }

@@ -63,7 +63,7 @@ pub struct Options {
 #[derive(Debug)]
 pub struct Built {
     pub root_package: Package,
-    pub module_interfaces: im::HashMap<EcoString, type_::ModuleInterface>,
+    pub module_interfaces: imbl::HashMap<EcoString, type_::ModuleInterface>,
 }
 
 impl Built {
@@ -96,8 +96,8 @@ pub struct ProjectCompiler<IO> {
     // The gleam.toml config for the root package of the project
     pub config: PackageConfig,
     pub packages: HashMap<String, ManifestPackage>,
-    importable_modules: im::HashMap<EcoString, type_::ModuleInterface>,
-    pub(crate) defined_modules: im::HashMap<EcoString, DefinedModuleOrigin>,
+    importable_modules: imbl::HashMap<EcoString, type_::ModuleInterface>,
+    pub(crate) defined_modules: imbl::HashMap<EcoString, DefinedModuleOrigin>,
     stale_modules: StaleTracker,
     /// The set of modules that have had partial compilation done since the last
     /// successful compilation.
@@ -135,8 +135,8 @@ where
             .collect();
 
         Self {
-            importable_modules: im::HashMap::new(),
-            defined_modules: im::HashMap::new(),
+            importable_modules: imbl::HashMap::new(),
+            defined_modules: imbl::HashMap::new(),
             stale_modules: StaleTracker::default(),
             incomplete_modules: HashSet::new(),
             ids: UniqueIdGenerator::new(),
@@ -661,7 +661,7 @@ where
 }
 
 impl<IO> ProjectCompiler<IO> {
-    pub fn get_importable_modules(&self) -> &im::HashMap<EcoString, type_::ModuleInterface> {
+    pub fn get_importable_modules(&self) -> &imbl::HashMap<EcoString, type_::ModuleInterface> {
         &self.importable_modules
     }
 }

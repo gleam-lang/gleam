@@ -3,7 +3,7 @@
 
 use ecow::eco_format;
 use hexpm::version::{LowestVersion, Version};
-use im::hashmap;
+use imbl::hashmap;
 use itertools::Itertools;
 use num_bigint::BigInt;
 

@@ -65,7 +65,7 @@ pub struct PackageLoader<'a, IO> {
     package_name: &'a EcoString,
     target: Target,
     stale_modules: &'a mut StaleTracker,
-    already_defined_modules: &'a mut im::HashMap<EcoString, DefinedModuleOrigin>,
+    already_defined_modules: &'a mut imbl::HashMap<EcoString, DefinedModuleOrigin>,
     incomplete_modules: &'a HashSet<EcoString>,
     cached_warnings: CachedWarnings,
 }
@@ -87,7 +87,7 @@ where
         target: Target,
         package_name: &'a EcoString,
         stale_modules: &'a mut StaleTracker,
-        already_defined_modules: &'a mut im::HashMap<EcoString, DefinedModuleOrigin>,
+        already_defined_modules: &'a mut imbl::HashMap<EcoString, DefinedModuleOrigin>,
         incomplete_modules: &'a HashSet<EcoString>,
     ) -> Self {
         Self {
@@ -1676,13 +1676,13 @@ pub struct Inputs<'a> {
     /// The name of the package for which we're loading the inputs.
     package: EcoString,
     collection: HashMap<EcoString, (DefinedModuleOrigin, Input)>,
-    already_defined_modules: &'a mut im::HashMap<EcoString, DefinedModuleOrigin>,
+    already_defined_modules: &'a mut imbl::HashMap<EcoString, DefinedModuleOrigin>,
 }
 
 impl<'a> Inputs<'a> {
     fn new(
         package: EcoString,
-        already_defined_modules: &'a mut im::HashMap<EcoString, DefinedModuleOrigin>,
+        already_defined_modules: &'a mut imbl::HashMap<EcoString, DefinedModuleOrigin>,
     ) -> Self {
         Self {
             package,

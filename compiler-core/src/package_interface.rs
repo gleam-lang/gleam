@@ -364,7 +364,7 @@ pub struct ParameterInterface {
 impl PackageInterface {
     pub fn from_package(
         package: &Package,
-        cached_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
+        cached_modules: &imbl::HashMap<EcoString, type_::ModuleInterface>,
     ) -> PackageInterface {
         PackageInterface {
             name: package.config.name.clone(),

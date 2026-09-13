@@ -151,7 +151,7 @@ macro_rules! assert_ts_def {
 }
 
 pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
-    let mut modules = im::HashMap::new();
+    let mut modules = imbl::HashMap::new();
     let ids = UniqueIdGenerator::new();
     // DUPE: preludeinsertion
     // TODO: Currently we do this here and also in the tests. It would be better

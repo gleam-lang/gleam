@@ -24,7 +24,7 @@ use crate::{
 };
 use ecow::eco_format;
 use hexpm::version::{LowestVersion, Version};
-use im::hashmap;
+use imbl::hashmap;
 use itertools::Itertools;
 use num_bigint::BigInt;
 use vec1::Vec1;
@@ -401,7 +401,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     pub(crate) fn instantiate(
         &mut self,
         t: Arc<Type>,
-        ids: &mut im::HashMap<u64, Arc<Type>>,
+        ids: &mut imbl::HashMap<u64, Arc<Type>>,
     ) -> Arc<Type> {
         self.environment.instantiate(t, ids, &self.hydrator)
     }
@@ -2994,7 +2994,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     continue;
                 };
 
-                let mut type_vars = im::HashMap::new();
+                let mut type_vars = imbl::HashMap::new();
                 let accessor_type = self.instantiate(accessor_type, &mut type_vars);
                 let type_ = self.instantiate(type_, &mut type_vars);
                 unify(accessor_type, record_type.clone()).map_err(|error| {

@@ -77,7 +77,7 @@ fn write_cache(
 }
 
 fn run_loader(fs: InMemoryFileSystem, root: &Utf8Path, artefact: &Utf8Path) -> LoaderTestOutput {
-    let mut defined = im::HashMap::new();
+    let mut defined = imbl::HashMap::new();
     let ids = UniqueIdGenerator::new();
     let (emitter, warnings) = WarningEmitter::vector();
 

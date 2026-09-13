@@ -53,7 +53,7 @@ pub fn compile_test_project(
     src_path: &str,
     dependencies: Vec<(&str, &str, &str)>,
 ) -> String {
-    let mut modules = im::HashMap::new();
+    let mut modules = imbl::HashMap::new();
     let ids = UniqueIdGenerator::new();
     // DUPE: preludeinsertion
     // TODO: Currently we do this here and also in the tests. It would be better

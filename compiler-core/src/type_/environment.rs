@@ -22,7 +22,7 @@ pub struct EnvironmentArguments<'a> {
     pub gleam_version: Option<Range<Version>>,
     pub current_module: EcoString,
     pub target: Target,
-    pub importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
+    pub importable_modules: &'a imbl::HashMap<EcoString, ModuleInterface>,
     pub target_support: TargetSupport,
     pub current_origin: Origin,
     pub dev_dependencies: &'a HashSet<EcoString>,
@@ -64,18 +64,18 @@ pub struct Environment<'a> {
     /// name and to check if an item has an import alias.
     pub unqualified_imported_names: HashMap<EcoString, UnqualifiedImport>,
     pub unqualified_imported_types: HashMap<EcoString, UnqualifiedImport>,
-    pub importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
+    pub importable_modules: &'a imbl::HashMap<EcoString, ModuleInterface>,
 
     /// Modules that have been imported by the current module, along with the
     /// location of the import statement where they were imported.
     pub imported_modules: HashMap<EcoString, (SrcSpan, &'a ModuleInterface)>,
 
     /// Values defined in the current function (or the prelude)
-    pub scope: im::HashMap<EcoString, ValueConstructor>,
+    pub scope: imbl::HashMap<EcoString, ValueConstructor>,
 
     // The names of all the ignored variables and arguments in scope:
     // `let _var = 10` `pub fn main(_var) { todo }`.
-    pub discarded_names: im::HashMap<EcoString, SrcSpan>,
+    pub discarded_names: imbl::HashMap<EcoString, SrcSpan>,
 
     /// Types defined in the current module (or the prelude)
     pub module_types: HashMap<EcoString, TypeConstructor>,
@@ -160,7 +160,7 @@ impl<'a> Environment<'a> {
             unqualified_imported_types: HashMap::new(),
             accessors: prelude.accessors.clone(),
             scope: prelude.values.clone().into(),
-            discarded_names: im::HashMap::new(),
+            discarded_names: imbl::HashMap::new(),
             importable_modules,
             current_module,
             local_variable_usages: vec![HashMap::new()],
@@ -176,7 +176,7 @@ impl<'a> Environment<'a> {
 
     fn build_names(
         prelude: &ModuleInterface,
-        importable_modules: &im::HashMap<EcoString, ModuleInterface>,
+        importable_modules: &imbl::HashMap<EcoString, ModuleInterface>,
     ) -> Names {
         let mut names = Names::new();
 
@@ -213,8 +213,8 @@ impl<'a> Environment<'a> {
 
 #[derive(Debug)]
 pub struct ScopeResetData {
-    local_values: im::HashMap<EcoString, ValueConstructor>,
-    discarded_names: im::HashMap<EcoString, SrcSpan>,
+    local_values: imbl::HashMap<EcoString, ValueConstructor>,
+    discarded_names: imbl::HashMap<EcoString, SrcSpan>,
 }
 
 impl Environment<'_> {
@@ -676,7 +676,7 @@ impl Environment<'_> {
     pub fn instantiate(
         &mut self,
         t: Arc<Type>,
-        ids: &mut im::HashMap<u64, Arc<Type>>,
+        ids: &mut imbl::HashMap<u64, Arc<Type>>,
         hydrator: &Hydrator,
     ) -> Arc<Type> {
         match t.deref() {

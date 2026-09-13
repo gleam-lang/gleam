@@ -303,36 +303,36 @@ impl TypedConstant {
         }
     }
 
-    pub(crate) fn referenced_variables(&self) -> im::HashSet<&EcoString> {
+    pub(crate) fn referenced_variables(&self) -> imbl::HashSet<&EcoString> {
         match self {
-            Constant::Var { name, .. } => im::hashset![name],
+            Constant::Var { name, .. } => imbl::hashset![name],
 
             Constant::Invalid { .. }
             | Constant::Int { .. }
             | Constant::Float { .. }
-            | Constant::String { .. } => im::hashset![],
+            | Constant::String { .. } => imbl::hashset![],
 
             Constant::Todo { message, .. } => message
                 .as_ref()
                 .map(|message| message.referenced_variables())
-                .unwrap_or(im::hashset![]),
+                .unwrap_or(imbl::hashset![]),
 
             Constant::Tuple { elements, .. } => elements
                 .iter()
                 .map(|element| element.referenced_variables())
-                .fold(im::hashset![], im::HashSet::union),
+                .fold(imbl::hashset![], imbl::HashSet::union),
 
             Constant::List { elements, tail, .. } => elements
                 .iter()
                 .map(|element| element.referenced_variables())
                 .chain(tail.iter().map(|tail| tail.referenced_variables()))
-                .fold(im::hashset![], im::HashSet::union),
+                .fold(imbl::hashset![], imbl::HashSet::union),
 
             Constant::Record { arguments, .. } => arguments
                 .iter()
                 .flatten()
                 .map(|argument| argument.value.referenced_variables())
-                .fold(im::hashset![], im::HashSet::union),
+                .fold(imbl::hashset![], imbl::HashSet::union),
 
             Constant::RecordUpdate {
                 record, arguments, ..
@@ -340,7 +340,7 @@ impl TypedConstant {
                 arguments
                     .iter()
                     .map(|arg| arg.value.referenced_variables())
-                    .fold(im::hashset![], im::HashSet::union),
+                    .fold(imbl::hashset![], imbl::HashSet::union),
             ),
 
             Constant::BitArray { segments, .. } => segments
@@ -350,9 +350,9 @@ impl TypedConstant {
                         .options
                         .iter()
                         .map(|option| option.referenced_variables())
-                        .fold(segment.value.referenced_variables(), im::HashSet::union)
+                        .fold(segment.value.referenced_variables(), imbl::HashSet::union)
                 })
-                .fold(im::hashset![], im::HashSet::union),
+                .fold(imbl::hashset![], imbl::HashSet::union),
 
             Constant::BinaryOperator { left, right, .. } => left
                 .referenced_variables()
