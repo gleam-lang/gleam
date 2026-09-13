@@ -12,7 +12,7 @@ gleam-core = { path = "../compiler-core" }
 walkdir = "2"
 
 toml.workspace = true
-im.workspace = true
+imbl.workspace = true
 itertools.workspace = true
 regex.workspace = true
 camino.workspace = true
