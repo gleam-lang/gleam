@@ -238,6 +238,11 @@
   the `--out` parameter.
   ([Louis Pilfold](https://github.com/lpil))
 
+- `gleam remove` now rejects invalid package names with an error explaining
+  naming rules, instead of stating that the package is not a dependency.
+  Trying to remove `gleam_otp@1` now suggests `gleam_otp`.
+  ([Tom Voet](https://github.com/tomvoet))
+
 ### Language server
 
 - The "Generate dynamic decoder" code action is now only offered when the
