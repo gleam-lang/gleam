@@ -15,4 +15,4 @@ typed-arena = "2"
 unicode-segmentation.workspace = true
 ecow.workspace = true
 num-bigint.workspace = true
-im.workspace = true
+imbl.workspace = true

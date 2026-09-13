@@ -379,7 +379,7 @@ impl<'string, 'doc> Document<'string, 'doc> {
     /// Prints a document into `writer`, attempting to limit lines to `limit`
     /// characters in length.
     pub fn pretty_print(self, limit: isize, writer: &mut impl std::fmt::Write) -> std::fmt::Result {
-        let docs = im::vector![(0, Mode::Unbroken, self)];
+        let docs = imbl::vector![(0, Mode::Unbroken, self)];
         format(writer, limit, docs)?;
         Ok(())
     }
@@ -1184,7 +1184,7 @@ impl<'string, 'doc> DocumentArena<'string, 'doc> {
 fn format<'string, 'doc>(
     writer: &mut impl std::fmt::Write,
     limit: isize,
-    mut docs: im::Vector<(isize, Mode, Document<'string, 'doc>)>,
+    mut docs: imbl::Vector<(isize, Mode, Document<'string, 'doc>)>,
 ) -> std::fmt::Result {
     let mut line: isize = 0;
     let mut width: isize = 0;
@@ -1343,7 +1343,7 @@ fn format<'string, 'doc>(
                 // single line without breaking any break; that is why we use
                 // the `Unbroken` mode here: we want to try to fit everything on
                 // a single line.
-                let group_docs = im::vector![(indent, Mode::Unbroken, *doc)];
+                let group_docs = imbl::vector![(indent, Mode::Unbroken, *doc)];
                 if fits(limit, width, group_docs) {
                     // If everything can stay on a single line we print the
                     // wrapped document with the `Unbroken` mode, leaving all
@@ -1381,7 +1381,7 @@ fn format<'string, 'doc>(
 fn fits<'string, 'doc>(
     limit: isize,
     mut current_width: isize,
-    mut docs: im::Vector<(isize, Mode, Document<'string, 'doc>)>,
+    mut docs: imbl::Vector<(isize, Mode, Document<'string, 'doc>)>,
 ) -> bool {
     // The `fits` function is going to take each document from the `docs` queue
     // and check if those can fit on a single line. In order to do so documents
