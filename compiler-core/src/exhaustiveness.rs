@@ -1749,11 +1749,19 @@ impl Confidence {
 /// is referenced once, in a segment with unit `1`; `calculations` would contain
 /// `b - 1`.
 ///
-#[derive(Clone, Eq, PartialEq, Debug, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Offset {
     pub constant: BigInt,
     pub variables: im::HashMap<VariableUsage, usize>,
     pub calculations: im::Vector<OffsetCalculation>,
+}
+
+impl Hash for Offset {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.constant.hash(state);
+        self.variables.iter().for_each(|kv| kv.hash(state));
+        self.calculations.hash(state);
+    }
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash, serde::Serialize, serde::Deserialize)]
