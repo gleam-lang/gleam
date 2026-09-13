@@ -151,7 +151,7 @@ pub(crate) fn build_documentation(
     dependencies: HashMap<EcoString, Dependency>,
     compiled: &mut Package,
     is_hex_publish: DocContext,
-    cached_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
+    cached_modules: &imbl::HashMap<EcoString, type_::ModuleInterface>,
 ) -> Result<Vec<gleam_core::io::OutputFile>, Error> {
     compiled.attach_doc_and_module_comments();
     cli::print_generating_documentation();

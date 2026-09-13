@@ -53,7 +53,7 @@ hexpm = { path = "../hexpm" }
 http-serde.workspace = true
 http.workspace = true
 ignore.workspace = true
-im.workspace = true
+imbl.workspace = true
 itertools.workspace = true
 lsp-server.workspace = true
 lsp-types.workspace = true

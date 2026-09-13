@@ -392,7 +392,7 @@ the maintainers listed on https://hex.pm/.
 
 struct Tarball {
     compile_result: Package,
-    cached_modules: im::HashMap<EcoString, type_::ModuleInterface>,
+    cached_modules: imbl::HashMap<EcoString, type_::ModuleInterface>,
     data: Vec<u8>,
     src_files_added: Vec<Utf8PathBuf>,
     generated_files_added: Vec<(Utf8PathBuf, String)>,
