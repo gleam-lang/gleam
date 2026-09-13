@@ -240,7 +240,8 @@
 
 - `gleam remove` now rejects invalid package names with an error explaining
   naming rules, instead of stating that the package is not a dependency.
-  Trying to remove `gleam_otp@1` now suggests `gleam_otp`.
+  Trying to remove `gleam_otp@1` now suggests the matching dependency
+  `gleam_otp`, if there is one.
   ([Tom Voet](https://github.com/tomvoet))
 
 ### Language server
