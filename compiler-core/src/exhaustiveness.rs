@@ -2148,7 +2148,7 @@ pub enum FallbackCheck {
     /// no matter what, if none of the other checks matches. We still keep the
     /// corresponding runtime check around because it's useful for code generation!
     ///
-    RuntimeCheck { check: RuntimeCheck },
+    RuntimeCheck { check: Box<RuntimeCheck> },
 
     /// This is a special case for a catch all! It happens when we're matching
     /// on a variant and use a catch all pattern:
@@ -2593,7 +2593,9 @@ impl<'a> Compiler<'a> {
                 // Otherwise we just use the last check as the final one that
                 // can be outright skipped.
                 let (last_check, last_choice) = choices.pop().expect("at least one choice");
-                let fallback_check = FallbackCheck::RuntimeCheck { check: last_check };
+                let fallback_check = FallbackCheck::RuntimeCheck {
+                    check: Box::new(last_check),
+                };
                 (choices, last_choice, fallback_check)
             };
 
