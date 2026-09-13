@@ -1154,7 +1154,7 @@ impl<'a, IO> Completer<'a, IO> {
     // Looks up the type accessors for the given type
     fn type_accessors_from_modules(
         &'a self,
-        importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
+        importable_modules: &'a imbl::HashMap<EcoString, ModuleInterface>,
         type_: Arc<Type>,
     ) -> Option<&'a HashMap<EcoString, RecordAccessor>> {
         let type_ = collapse_links(type_);
@@ -1210,7 +1210,7 @@ impl<'a, IO> Completer<'a, IO> {
     fn callable_field_map(
         &'a self,
         expr: &'a TypedExpr,
-        importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
+        importable_modules: &'a imbl::HashMap<EcoString, ModuleInterface>,
     ) -> Option<&'a FieldMap> {
         match expr {
             TypedExpr::Var { constructor, .. } => constructor.field_map(),

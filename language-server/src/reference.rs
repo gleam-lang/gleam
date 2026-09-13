@@ -524,7 +524,7 @@ pub fn reference_for_ast_node(
 pub fn find_module_references(
     module_name: EcoString,
     name: EcoString,
-    modules: &im::HashMap<EcoString, ModuleInterface>,
+    modules: &imbl::HashMap<EcoString, ModuleInterface>,
     sources: &HashMap<EcoString, ModuleSourceInformation>,
     layer: ast::Layer,
 ) -> Vec<Location> {
@@ -574,7 +574,7 @@ pub fn find_module_references_in_module(
 pub fn find_label_references(
     owner: LabelOwner,
     label: EcoString,
-    modules: &im::HashMap<EcoString, ModuleInterface>,
+    modules: &imbl::HashMap<EcoString, ModuleInterface>,
     sources: &HashMap<EcoString, ModuleSourceInformation>,
 ) -> Vec<Location> {
     let mut reference_locations = Vec::new();
