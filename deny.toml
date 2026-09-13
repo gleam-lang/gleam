@@ -6,65 +6,6 @@
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
 
-# The `FIX-DEADLINE` lines are used by the test suite, and once the date
-# they specify has passed they will cause a deadline check test to fail. This
-# is to ensure that we do not forget to fix these.
-#
-[[advisories.ignore]]
-id = "RUSTSEC-2026-0255"
-reason = """
-sized-chunks (used by im):
-
-Panic-safety unsoundness in Chunk, RingBuffer, and InlineArray
-(use-after-free / double-free)
-
-https://github.com/gleam-lang/gleam/issues/6161
-
-FIX-DEADLINE: 2026-12-11
-"""
-
-[[advisories.ignore]]
-id = "RUSTSEC-2026-0248"
-reason = """
-The im crate is unmaintained.
-
-https://github.com/gleam-lang/gleam/issues/6160
-
-FIX-DEADLINE: 2026-12-11
-"""
-
-[[advisories.ignore]]
-id = "RUSTSEC-2026-0247"
-reason = """
-The bitmaps crate is unmaintained.
-
-Used by im, which is also unmaintained currently. See other advisory.
-
-https://github.com/gleam-lang/gleam/issues/6162
-
-FIX-DEADLINE: 2026-12-11
-"""
-
-[[advisories.ignore]]
-id = "RUSTSEC-2026-0251"
-reason = """
-The sized-chunks crate is unmaintained.
-
-Used by im, which is also unmaintained currently. See other advisory.
-
-https://github.com/gleam-lang/gleam/issues/6161
-
-FIX-DEADLINE: 2026-12-11
-"""
-
-[[advisories.ignore]]
-id = "RUSTSEC-2023-0126"
-reason = """
-im's OrdSet in unsound. We do not use it.
-
-FIX-DEADLINE: 2027-04-11
-"""
-
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
 allow = [
