@@ -41,7 +41,7 @@ pub fn prepare(path: &str) -> String {
     };
 
     let ids = gleam_core::uid::UniqueIdGenerator::new();
-    let mut modules = im::HashMap::new();
+    let mut modules = imbl::HashMap::new();
     let warnings = VectorWarningEmitterIO::default();
     let warning_emitter = WarningEmitter::new(Rc::new(warnings.clone()));
     let filesystem = test_helpers_rs::to_in_memory_filesystem(&root);
@@ -66,7 +66,7 @@ pub fn prepare(path: &str) -> String {
     let result = compiler.compile(
         &warning_emitter,
         &mut modules,
-        &mut im::HashMap::new(),
+        &mut imbl::HashMap::new(),
         &mut StaleTracker::default(),
         &mut HashSet::new(),
         &NullTelemetry,
