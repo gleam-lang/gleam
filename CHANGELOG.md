@@ -191,6 +191,11 @@
 
 ### Bug fixes
 
+- Fixed a bug where function captures on a function call, field access, or
+  tuple index would lazily evaluate the target expression instead of eagerly
+  evaluating it.
+  ([Tomonari Muranaka](https://github.com/Tom-game-project))
+
 - Fixed a bug where on the JavaScript target a case clause whose guard's top
   level operator was `||` could run for a subject its pattern did not match.
   ([John Downey](https://github.com/jtdowney))
