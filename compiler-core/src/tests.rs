@@ -16,6 +16,7 @@ struct CargoDenyLicensesConfig {
 
 #[derive(Deserialize)]
 struct CargoDenyAdvisoriesConfig {
+    #[serde(default)]
     ignore: Vec<CargoDenyIgnoreConfig>,
 }
 
