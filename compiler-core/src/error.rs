@@ -282,6 +282,12 @@ pub enum Error {
 file_names.iter().map(|x| x.as_str()).join(", "))]
     OutputFilesAlreadyExist { file_names: Vec<Utf8PathBuf> },
 
+    #[error("Invalid package names: {}", packages.iter().join(", "))]
+    RemovedPackageNamesInvalid {
+        packages: Vec<String>,
+        dependencies: Vec<EcoString>,
+    },
+
     #[error("Packages not exist: {}", packages.iter().join(", "))]
     RemovedPackagesNotExist { packages: Vec<String> },
 
@@ -1321,6 +1327,42 @@ target, so it cannot be run.",
 If you want to overwrite {text_files}, delete {text_pronoun} and run the command again.
 "
                     ),
+                    level: Level::Error,
+                    hint: None,
+                    location: None,
+                }]
+            }
+
+            Error::RemovedPackageNamesInvalid {
+                packages,
+                dependencies,
+            } => {
+                let (plural, introduction) = if packages.len() == 1 {
+                    ("", "This is not a valid package:")
+                } else {
+                    ("s", "These are not valid package names:")
+                };
+
+                let list = packages
+                    .iter()
+                    .map(|package| match did_you_mean(package, dependencies) {
+                        Some(suggestion) => format!("  - {package} ({suggestion})"),
+                        None => format!("  - {package}"),
+                    })
+                    .join("\n");
+
+                let text = format!(
+                    "{introduction}
+
+{list}
+
+Package names must start with a lowercase letter and may only contain
+lowercase letters, numbers and underscores."
+                );
+
+                vec![Diagnostic {
+                    title: format!("Invalid package name{plural}"),
+                    text,
                     level: Level::Error,
                     hint: None,
                     location: None,
