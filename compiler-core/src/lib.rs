@@ -91,6 +91,7 @@ pub mod strings;
 pub mod type_;
 pub mod uid;
 pub mod version;
+pub mod version_bump;
 pub mod warning;
 
 pub(crate) mod ast_folder;
