@@ -2515,6 +2515,10 @@ fn unit_with_bits_option_constant() {
         "
 pub const bits = <<1, 2, 3>>
 pub const more_bits = <<bits:bits-size(3)-unit(8)>>
+
+pub fn main() {
+  more_bits
+}
 "
     );
 }
