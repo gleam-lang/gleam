@@ -1,0 +1,43 @@
+---
+source: test-output/src/tests/output.rs
+expression: output
+---
+--- main.gleam ----------------------
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Gleam contributors
+
+pub type A(a) {
+  A(f: fn(a) -> a)
+}
+
+pub fn main() {
+  let func = fn() {
+    echo "hello"
+    fn(x) { x }
+  }
+  // UntypedExpr::Call
+  let _v = func()(_)
+
+  let func = fn() {
+    echo "hello"
+    A(fn(x) { x })
+  }
+  // UntypedExpr::FieldAccess
+  let _v = func().f(_)
+
+  let func = fn() {
+    echo "hello"
+    #(Nil, fn(x) { x })
+  }
+  // UntypedExpr::TupleIndex
+  let _v = func().1(_)
+}
+
+
+--- gleam run output ----------------
+[90msrc/main.gleam:10[39m
+"hello"
+[90msrc/main.gleam:17[39m
+"hello"
+[90msrc/main.gleam:24[39m
+"hello"
