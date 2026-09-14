@@ -182,3 +182,8 @@
 - Fixed a bug where the `export javascript-prelude` and `export
   typescript-prelude` commands would not run.
   ([Louis Pilfold](https://github.com/lpil))
+
+- Fixed a bug where function captures on a function call, field access, or
+  tuple index would lazily evaluate the target expression instead of eagerly
+  evaluating it.
+  ([Tomonari Muranaka](https://github.com/Tom-game-project))
