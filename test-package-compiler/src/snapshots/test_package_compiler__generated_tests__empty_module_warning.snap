@@ -9,7 +9,7 @@ expression: "./cases/empty_module_warning"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/empty.cache_meta
-<28 byte binary>
+<37 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/internal.abstr
 <541 byte binary>
@@ -18,7 +18,7 @@ expression: "./cases/empty_module_warning"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/internal.cache_meta
-<32 byte binary>
+<41 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/private.abstr
 <297 byte binary>
@@ -27,7 +27,7 @@ expression: "./cases/empty_module_warning"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/private.cache_meta
-<31 byte binary>
+<40 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/public.abstr
 <605 byte binary>
@@ -36,7 +36,7 @@ expression: "./cases/empty_module_warning"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/public.cache_meta
-<31 byte binary>
+<40 byte binary>
 
 //// /out/lib/the_package/ebin/empty_module_warning.app
 {application, empty_module_warning, [

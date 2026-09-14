@@ -9,7 +9,7 @@ expression: "./cases/not_overwriting_erlang_module"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/app@code.cache_meta
-<42 byte binary>
+<51 byte binary>
 
 //// /out/lib/the_package/ebin/importy.app
 {application, importy, [
