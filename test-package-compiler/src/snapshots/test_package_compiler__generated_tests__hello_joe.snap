@@ -19,3 +19,7 @@ expression: "./cases/hello_joe"
     {modules, [hello_joe]},
     {registered, []}
 ]}.
+
+
+//// /out/lib/the_package/ebin/hello_joe.beam
+<0 byte binary>

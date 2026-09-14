@@ -26,7 +26,10 @@ use crate::{
     },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
-    io::{BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
+    io::{
+        BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio,
+        files_with_extension,
+    },
     parse::extra::ModuleExtra,
     paths, type_,
     uid::UniqueIdGenerator,
@@ -73,7 +76,6 @@ pub struct PackageCompiler<'a, IO> {
     pub compile_modules: bool,
     pub write_entrypoint: bool,
     pub copy_native_files: bool,
-    pub compile_beam_bytecode: bool,
     pub subprocess_stdio: Stdio,
     pub target_support: TargetSupport,
     pub cached_warnings: CachedWarnings,
@@ -109,7 +111,6 @@ where
             compile_modules: true,
             write_entrypoint: false,
             copy_native_files: true,
-            compile_beam_bytecode: true,
             subprocess_stdio: Stdio::Inherit,
             target_support: TargetSupport::NotEnforced,
             cached_warnings: CachedWarnings::Ignore,
@@ -233,20 +234,15 @@ where
         })
     }
 
-    fn compile_erlang_to_beam(
-        &mut self,
-        modules: &HashSet<Utf8PathBuf>,
-    ) -> Result<Vec<EcoString>, Error> {
+    fn compile_erlang_to_beam(&mut self, modules: &HashSet<Utf8PathBuf>) -> Result<(), Error> {
         if modules.is_empty() {
             tracing::debug!("no_erlang_to_compile");
-            return Ok(Vec::new());
+            Ok(())
+        } else {
+            tracing::debug!("compiling_erlang");
+            self.io
+                .compile_beam(self.out, self.lib, modules, self.subprocess_stdio)
         }
-
-        tracing::debug!("compiling_erlang");
-
-        self.io
-            .compile_beam(self.out, self.lib, modules, self.subprocess_stdio)
-            .map(|modules| modules.iter().map(EcoString::from).collect())
     }
 
     fn copy_project_native_files(
@@ -397,7 +393,7 @@ where
             tracing::debug!("skipping_native_file_copying");
         }
 
-        if self.compile_beam_bytecode && self.write_entrypoint {
+        if app_file_config.is_some() && self.write_entrypoint {
             self.render_erlang_entrypoint_module(&build_dir, &mut written)?;
         } else {
             tracing::debug!("skipping_entrypoint_generation");
@@ -409,27 +405,43 @@ where
         // version and not the newly compiled version.
         Erlang::new(&build_dir, &include_dir).render(output, io.clone(), modules, self.root)?;
 
-        let native_modules: Vec<EcoString> = if self.compile_beam_bytecode {
+        if let Some(config) = app_file_config {
             written.extend(modules.iter().map(match output {
                 ErlangOutput::Binary => Module::compiled_erlang_path,
                 ErlangOutput::Textual => Module::compiled_textual_erlang_path,
             }));
-            self.compile_erlang_to_beam(&written)?
-        } else {
-            tracing::debug!("skipping_erlang_bytecode_compilation");
-            Vec::new()
-        };
+            self.compile_erlang_to_beam(&written)?;
 
-        if let Some(config) = app_file_config {
+            let compiled_modules = self.modules_in_ebin()?;
             ErlangApp::new(&self.out.join("ebin"), config).render(
                 io,
                 self.config,
-                modules,
-                cached_module_names,
-                native_modules,
+                compiled_modules,
             )?;
+        } else {
+            tracing::debug!("skipping_erlang_bytecode_compilation");
         }
         Ok(())
+    }
+
+    /// Every module (Gleam or native) that currently has a compiled `.beam`
+    /// file in the `ebin` directory. We can't rely on
+    /// `compile_erlang_to_beam`'s return value alone for this, as it only
+    /// reports modules that were *just* compiled: a source file that is
+    /// unchanged since the previous build is skipped by `NativeFileCopier`
+    /// (or the cache, for Gleam modules) and so wouldn't be recompiled, even
+    /// though its `.beam` file (and thus the need for it to appear in the
+    /// `.app` file's `modules` list) is still there from that previous
+    /// build.
+    fn modules_in_ebin(&self) -> Result<Vec<EcoString>, Error> {
+        let entrypoint_name: EcoString = format!("{}@@main", self.config.name).into();
+
+        Ok(
+            files_with_extension(&self.io, &self.out.join("ebin"), "beam")
+                .filter_map(|path| path.file_stem().map(EcoString::from))
+                .filter(|name| *name != entrypoint_name)
+                .collect(),
+        )
     }
 
     fn perform_javascript_codegen(

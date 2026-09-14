@@ -19,3 +19,7 @@ expression: "./cases/erlang_nested"
     {modules, [one@two]},
     {registered, []}
 ]}.
+
+
+//// /out/lib/the_package/ebin/one@two.beam
+<0 byte binary>

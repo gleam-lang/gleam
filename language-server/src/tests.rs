@@ -263,7 +263,7 @@ impl BeamCompilerIO for LanguageServerTestIO {
         lib: &Utf8Path,
         modules: &HashSet<Utf8PathBuf>,
         stdio: gleam_core::io::Stdio,
-    ) -> Result<Vec<String>> {
+    ) -> Result<()> {
         panic!("compile_beam({out:?}, {lib:?}, {modules:?}, {stdio:?}) is not implemented")
     }
 }

@@ -782,6 +782,15 @@ pub struct CompilePackage {
     /// Skip Erlang to BEAM bytecode compilation
     #[arg(long = "no-beam")]
     skip_beam_compilation: bool,
+
+    /// Overrides for a dependency's OTP application name, in the form
+    /// `package=otp_app`.
+    ///
+    /// Required for any dependency whose OTP application name differs from
+    /// its Gleam package name. May be given multiple times.
+    ///
+    #[arg(verbatim_doc_comment, long = "otp-app-override")]
+    otp_app_overrides: Vec<String>,
 }
 
 #[derive(Subcommand, Debug)]
