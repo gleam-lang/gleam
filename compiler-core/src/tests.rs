@@ -16,7 +16,7 @@ struct CargoDenyLicensesConfig {
 
 #[derive(Deserialize)]
 struct CargoDenyAdvisoriesConfig {
-    ignore: Vec<CargoDenyIgnoreConfig>,
+    ignore: Option<Vec<CargoDenyIgnoreConfig>>,
 }
 
 #[derive(Deserialize)]
@@ -61,12 +61,13 @@ fn rust_advisories_ignore_deadlines() {
     let today = time::OffsetDateTime::now_utc().date();
     let regex = regex::Regex::new(r"(?m)FIX-DEADLINE: (\d{4})-(\d{2})-(\d{2})").unwrap();
 
-    for ignored in load_cargo_deny_config().advisories.ignore {
-        let id = ignored.id;
-        let reason = ignored.reason;
-        let Some(captures) = regex.captures(&reason) else {
-            panic!(
-                "
+    if let Some(ignores) = load_cargo_deny_config().advisories.ignore {
+        for ignored in ignores {
+            let id = ignored.id;
+            let reason = ignored.reason;
+            let Some(captures) = regex.captures(&reason) else {
+                panic!(
+                    "
 deny.toml advisory missing deadline!
 Add a line to the `reason` property for {id} with this format:
 
@@ -74,22 +75,24 @@ Add a line to the `reason` property for {id} with this format:
 
 {reason:?}
 "
-            )
-        };
+                )
+            };
 
-        let year = captures[1].parse::<i32>().expect("parse year");
-        let month = captures[2].parse::<u8>().expect("parse month int");
-        let month = month.try_into().expect("parse month");
-        let day = captures[3].parse::<u8>().expect("parse day");
-        let deadline = time::Date::from_calendar_date(year, month, day).expect("construct date");
+            let year = captures[1].parse::<i32>().expect("parse year");
+            let month = captures[2].parse::<u8>().expect("parse month int");
+            let month = month.try_into().expect("parse month");
+            let day = captures[3].parse::<u8>().expect("parse day");
+            let deadline =
+                time::Date::from_calendar_date(year, month, day).expect("construct date");
 
-        assert!(
-            today <= deadline,
-            "
+            assert!(
+                today <= deadline,
+                "
 The deadline for fixing advisory {id} has passed.
 Fix it now, or bump the deadline in deny.toml.
 "
-        )
+            )
+        }
     }
 }
 
