@@ -388,6 +388,10 @@
   bit array in a pattern would not be bound in every branch it was used in.
   ([John Downey](https://github.com/jtdowney))
 
+- Fixed a bug where the compiler would crash when a constant record update
+  spread a constant that was constructed with the wrong number of arguments.
+  ([Vladimir Babin](https://github.com/chiliec))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when
