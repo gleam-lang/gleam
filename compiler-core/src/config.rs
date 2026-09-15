@@ -1568,3 +1568,16 @@ licences = ["LicenseRef-my_invalid_licence"]
         .to_string();
     insta::assert_snapshot!(output);
 }
+
+#[test]
+fn licence_typo() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
+licences = ["MIIT"]
+"#;
+    let output = toml::from_str::<PackageConfig>(input)
+        .unwrap_err()
+        .to_string();
+    insta::assert_snapshot!(output);
+}
