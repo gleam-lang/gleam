@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
 mod stale_package_remover;
-use crate::error::{FileIoAction, FileKind};
+use crate::error::{FileIoAction, FileKind, did_you_mean};
 use crate::io::FileSystemReader;
 use crate::io::ordered_map;
 use crate::manifest::Manifest;
@@ -73,8 +73,20 @@ impl<'de> serde::de::Visitor<'de> for SpdxLicenseVisitor {
                         licence: value.to_string(),
                     })
                 } else {
+                    let suggestion = {
+                        let licence_names: Vec<EcoString> = spdx::identifiers::LICENSES
+                            .iter()
+                            .map(|licence| EcoString::from(licence.name))
+                            .collect();
+                        did_you_mean(value, &licence_names)
+                            .map_or_default(|suggestion| format!("\n{suggestion}"))
+                    };
+
                     Err(serde::de::Error::custom(format!(
-                        "{value} is not a known SPDX License identifier"
+                        "This is not a valid SPDX licence identifier or custom licence reference.\
+                        {suggestion}\n\n\
+                        Custom licence references must start with `LicenseRef-` and contain only \
+                        alphabetical characters, numbers, dashes, and dots."
                     )))
                 }
             }
