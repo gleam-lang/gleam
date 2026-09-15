@@ -1,0 +1,41 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport smol\n\npub fn main(stream: smol.ReadableStream) {\n  stream == \"not a stream\"\n}\n"
+---
+----- SOURCE CODE
+-- smol/internal.gleam
+@internal
+pub type ReadableStream(a)
+
+@internal
+pub type Uint8Array
+
+-- smol.gleam
+import smol/internal
+
+pub type ReadableStream =
+  internal.ReadableStream(internal.Uint8Array)
+
+-- main.gleam
+
+import smol
+
+pub fn main(stream: smol.ReadableStream) {
+  stream == "not a stream"
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:5:13
+  │
+5 │   stream == "not a stream"
+  │             ^^^^^^^^^^^^^^
+
+Expected type:
+
+    smol.ReadableStream
+
+Found type:
+
+    String
