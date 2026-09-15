@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/config.rs
+assertion_line: 1569
+expression: output
+---
+TOML parse error at line 4, column 13
+  |
+4 | licences = ["LicenseRef-my_invalid_licence"]
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This is not a valid SPDX licence identifier or custom licence reference.
+
+Custom licence references must start with `LicenseRef-` and contain only alphabetical characters, numbers, dashes, and dots.
