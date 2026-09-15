@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/config.rs
+assertion_line: 1582
+expression: output
+---
+TOML parse error at line 4, column 13
+  |
+4 | licences = ["MIIT"]
+  |             ^^^^^^
+This is not a valid SPDX licence identifier or custom licence reference.
+Did you mean `MIT`?
+
+Custom licence references must start with `LicenseRef-` and contain only alphabetical characters, numbers, dashes, and dots.
