@@ -10,34 +10,44 @@ pub type A(a) {
   A(f: fn(a) -> a)
 }
 
+/// This test ensures that for a function capture like `<expr>(_)`, `<expr>` is evaluated eagerly.
+/// For example, having the compiler naively rewrite it to `fn(x) { <expr>(x) }` is incorrect.
+/// Related issue https://github.com/gleam-lang/gleam/issues/6242
 pub fn main() {
+  echo "`<expr>` should be evaluated eagerly"
   let func = fn() {
-    echo "hello"
+    echo "eagerly 0"
     fn(x) { x }
   }
-  // UntypedExpr::Call
-  let _v = func()(_)
+  let f0 = func()(_)
 
   let func = fn() {
-    echo "hello"
+    echo "eagerly 1"
     A(fn(x) { x })
   }
-  // UntypedExpr::FieldAccess
-  let _v = func().f(_)
+  let f1 = func().f(_)
 
   let func = fn() {
-    echo "hello"
+    echo "eagerly 2"
     #(Nil, fn(x) { x })
   }
-  // UntypedExpr::TupleIndex
-  let _v = func().1(_)
+  let f2 = func().1(_)
+
+  echo "The function call below should not run echo."
+  f0(0)
+  f1(0)
+  f2(0)
 }
 
 
 --- gleam run output ----------------
-[90msrc/main.gleam:10[39m
-"hello"
-[90msrc/main.gleam:17[39m
-"hello"
-[90msrc/main.gleam:24[39m
-"hello"
+[90msrc/main.gleam:12[39m
+"`<expr>` should be evaluated eagerly"
+[90msrc/main.gleam:14[39m
+"eagerly 0"
+[90msrc/main.gleam:20[39m
+"eagerly 1"
+[90msrc/main.gleam:26[39m
+"eagerly 2"
+[90msrc/main.gleam:31[39m
+"The function call below should not run echo."
