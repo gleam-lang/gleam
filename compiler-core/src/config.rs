@@ -1528,7 +1528,7 @@ wibble = ">= 1.0.0 and < 2.0.0"
 }
 
 #[test]
-fn valid_license_ref() {
+fn valid_licence_ref() {
     let input = r#"
 name = "my_project"
 version = "1.0.0"
@@ -1545,7 +1545,7 @@ licences = ["LicenseRef-my.valid-licence4"]
 }
 
 #[test]
-fn invalid_license_ref() {
+fn invalid_licence_ref() {
     let input = r#"
 name = "my_project"
 version = "1.0.0"
