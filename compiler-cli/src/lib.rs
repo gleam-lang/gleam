@@ -791,8 +791,7 @@ pub struct CompilePackage {
     /// `package=otp_app`.
     ///
     /// Required for any dependency whose OTP application name differs from
-    /// its Gleam package name. May be supplied multiple times.
-    ///
+    /// its package name. May be supplied multiple times.
     #[arg(verbatim_doc_comment, long = "otp-app-override")]
     otp_app_overrides: Vec<String>,
 }
