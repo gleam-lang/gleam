@@ -44,18 +44,9 @@ pub fn command(options: CompilePackage) -> Result<()> {
         false => {
             let package_name_overrides = options
                 .otp_app_overrides
-                .iter()
-                .map(|entry| {
-                    entry
-                        .split_once('=')
-                        .map(|(package, otp_app)| {
-                            (EcoString::from(package), EcoString::from(otp_app))
-                        })
-                        .ok_or_else(|| Error::InvalidOtpAppOverride {
-                            input: entry.clone().into(),
-                        })
-                })
-                .collect::<Result<HashMap<_, _>>>()?;
+                .into_iter()
+                .map(|(package, otp_app)| (EcoString::from(package), EcoString::from(otp_app)))
+                .collect::<HashMap<_, _>>();
             Some(ErlangAppCodegenConfiguration {
                 include_dev_deps: false,
                 package_name_overrides,
