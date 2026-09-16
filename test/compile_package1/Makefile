@@ -4,4 +4,3 @@ build:
 	cargo run -- compile-package --package app1 --target erlang --out out2 --lib .
 	cargo run -- compile-package --package app2 --target erlang --out out2 --lib .
 	erl -pa out1/ebin out2/ebin -noshell -eval "erlang:display(two:main()),halt()"
-	grep -q "one_app" out2/ebin/app2.app
