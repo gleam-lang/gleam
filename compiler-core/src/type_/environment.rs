@@ -200,10 +200,7 @@ impl<'a> Environment<'a> {
                 continue;
             }
             for (alias_name, alias) in module.type_aliases.iter() {
-                // An alias can only be a public reexport if it is public.
-                if alias.publicity.is_public() {
-                    names.maybe_register_reexport_alias(&module.package, alias_name, alias);
-                }
+                names.maybe_register_reexport_alias(&module.package, alias_name, alias);
             }
         }
 
@@ -290,7 +287,7 @@ impl Environment<'_> {
     pub fn resolve_deferred_type_variable_aliases(&mut self) {
         for (source_id, type_) in self.deferred_type_variable_aliases.drain(..) {
             if let Some(alias) = self.names.get_type_variable(source_id) {
-                let final_id = Self::resolve_type_var_id(&type_);
+                let final_id = type_.type_variable_id();
                 if let Some(id) = final_id {
                     // Only register if the target doesn't already have a name.
                     // This avoids overwriting user-provided names (e.g. from
@@ -300,17 +297,6 @@ impl Environment<'_> {
                     }
                 }
             }
-        }
-    }
-
-    /// Follow link chains in a type to find the final unbound or generic var ID.
-    fn resolve_type_var_id(type_: &Type) -> Option<u64> {
-        match type_ {
-            Type::Var { type_ } => match type_.borrow().deref() {
-                TypeVar::Unbound { id } | TypeVar::Generic { id } => Some(*id),
-                TypeVar::Link { type_ } => Self::resolve_type_var_id(type_),
-            },
-            Type::Named { .. } | Type::Fn { .. } | Type::Tuple { .. } => None,
         }
     }
 
