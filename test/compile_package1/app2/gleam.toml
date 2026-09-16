@@ -3,6 +3,3 @@
 
 name = "app2"
 version = "1.0.0"
-
-[dependencies]
-app1 = { path = "../app1" }
