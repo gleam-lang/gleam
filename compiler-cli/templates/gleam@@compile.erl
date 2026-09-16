@@ -18,10 +18,6 @@ compile_package_loop() ->
             {ok, {Lib, Out, Modules}} = erl_parse:parse_term(Tokens),
             case compile_package(Lib, Out, Modules) of
                 {ok, ModuleNames} ->
-                    PrintModuleName = fun(ModuleName) ->
-                        io:put_chars("gleam-compile-module:" ++ atom_to_list(ModuleName) ++ "\n")
-                    end,
-                    lists:map(PrintModuleName, ModuleNames),
                     io:put_chars("gleam-compile-result-ok\n");
                 err ->
                     io:put_chars("gleam-compile-result-error\n")
