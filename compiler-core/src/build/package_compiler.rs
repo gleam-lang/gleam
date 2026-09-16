@@ -26,10 +26,7 @@ use crate::{
     },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
-    io::{
-        BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio,
-        files_with_extension,
-    },
+    io::{BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     parse::extra::ModuleExtra,
     paths, type_,
     uid::UniqueIdGenerator,
@@ -437,7 +434,7 @@ where
         let entrypoint_name: EcoString = format!("{}@@main", self.config.name).into();
 
         Ok(
-            files_with_extension(&self.io, &self.out.join("ebin"), "beam")
+            crate::io::files_with_extension(&self.io, &self.out.join("ebin"), "beam")
                 .filter_map(|path| path.file_stem().map(EcoString::from))
                 .filter(|name| *name != entrypoint_name)
                 .collect(),
