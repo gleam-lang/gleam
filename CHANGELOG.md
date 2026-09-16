@@ -191,6 +191,10 @@
   warning.
   ([John Downey](https://github.com/jtdowney))
 
+- The compiler is now fault tolerant when providing an error for a redundant list
+  prepend like `[..wobble]`.
+  ([0xda157](https://github.com/0xda157))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
@@ -267,6 +271,24 @@
 - The language server now supports go-to-definition, find-references and
   renaming for function argument labels.
   ([Alistair Smith](https://github.com/alii))
+
+- The language server can now offer a "Remove redundant list prepend" code
+  action, for example:
+
+  ```gleam
+  const wibble = [1, 2]
+  const wobble = [..wibble]
+               // ^^^^^^^^ Trigger code action here
+  ```
+
+  becomes
+
+  ```gleam
+  const wibble = [1, 2]
+  const wobble = wibble
+  ```
+
+  ([0xda157](https://github.com/0xda157))
 
 ### Formatter
 
