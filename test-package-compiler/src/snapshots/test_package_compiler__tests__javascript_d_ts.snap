@@ -1,0 +1,43 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/javascript_d_ts"
+---
+//// javascript_d_ts/_gleam_artefacts/hello.cache
+<.cache binary>
+
+//// javascript_d_ts/_gleam_artefacts/hello.cache_meta
+<35 byte binary>
+
+//// javascript_d_ts/gleam.d.mts
+export * from "../prelude.mjs";
+export type * from "../prelude.d.mts";
+
+
+//// javascript_d_ts/gleam.mjs
+export * from "../prelude.mjs";
+
+
+//// javascript_d_ts/hello.d.mts
+import type * as _ from "./gleam.d.mts";
+
+export class Woo extends _.CustomType {}
+export function Wibble$Woo(): Wibble$;
+export function Wibble$isWoo(value: any): value is Wibble$;
+
+export type Wibble$ = Woo;
+
+export function wobble(): Wibble$;
+
+
+//// javascript_d_ts/hello.mjs
+/// <reference types="./hello.d.mts" />
+import { CustomType as $CustomType } from "./gleam.mjs";
+
+export class Woo extends $CustomType {}
+export const Wibble$Woo$const = new Woo();
+export const Wibble$Woo = () => Wibble$Woo$const;
+export const Wibble$isWoo = (value) => value instanceof Woo;
+
+export function wobble() {
+  return Wibble$Woo$const;
+}

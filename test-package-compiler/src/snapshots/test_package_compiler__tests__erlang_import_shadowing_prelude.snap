@@ -1,0 +1,31 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/erlang_import_shadowing_prelude"
+---
+//// erlang_import_shadowing_prelude/_gleam_artefacts/one.abstr
+<349 byte binary>
+
+//// erlang_import_shadowing_prelude/_gleam_artefacts/one.cache
+<.cache binary>
+
+//// erlang_import_shadowing_prelude/_gleam_artefacts/one.cache_meta
+<32 byte binary>
+
+//// erlang_import_shadowing_prelude/_gleam_artefacts/two.abstr
+<511 byte binary>
+
+//// erlang_import_shadowing_prelude/_gleam_artefacts/two.cache
+<.cache binary>
+
+//// erlang_import_shadowing_prelude/_gleam_artefacts/two.cache_meta
+<42 byte binary>
+
+//// erlang_import_shadowing_prelude/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [one,
+               two]},
+    {registered, []}
+]}.

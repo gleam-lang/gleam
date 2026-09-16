@@ -1,0 +1,24 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/javascript_empty"
+---
+//// javascript_empty/_gleam_artefacts/empty.cache
+<.cache binary>
+
+//// javascript_empty/_gleam_artefacts/empty.cache_meta
+<29 byte binary>
+
+//// javascript_empty/empty.mjs
+export {}
+
+
+//// javascript_empty/gleam.mjs
+export * from "../prelude.mjs";
+
+
+//// Warning
+warning: Empty module
+
+Module 'empty' contains no public definitions.
+
+Hint: You can safely remove this module.

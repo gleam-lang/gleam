@@ -1,0 +1,56 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/javascript_import"
+---
+//// javascript_import/_gleam_artefacts/one@two.cache
+<.cache binary>
+
+//// javascript_import/_gleam_artefacts/one@two.cache_meta
+<31 byte binary>
+
+//// javascript_import/_gleam_artefacts/two.cache
+<.cache binary>
+
+//// javascript_import/_gleam_artefacts/two.cache_meta
+<43 byte binary>
+
+//// javascript_import/gleam.d.mts
+export * from "../prelude.mjs";
+export type * from "../prelude.d.mts";
+
+
+//// javascript_import/gleam.mjs
+export * from "../prelude.mjs";
+
+
+//// javascript_import/one/two.d.mts
+import type * as _ from "../gleam.d.mts";
+
+export class A extends _.CustomType {}
+export function A$A(): A$;
+export function A$isA(value: any): value is A$;
+
+export type A$ = A;
+
+
+//// javascript_import/one/two.mjs
+/// <reference types="./two.d.mts" />
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class A extends $CustomType {}
+export const A$A$const = new A();
+export const A$A = () => A$A$const;
+export const A$isA = (value) => value instanceof A;
+
+
+//// javascript_import/two.d.mts
+import type * as $two from "./one/two.d.mts";
+
+export const x: $two.A$;
+
+
+//// javascript_import/two.mjs
+/// <reference types="./two.d.mts" />
+import * as $two from "./one/two.mjs";
+
+export const x = $two.A$A$const;

@@ -1,0 +1,11 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/unknown_module_field_in_expression"
+---
+error: Unknown module value
+  ┌─ unknown_module_field_in_expression/src/two.gleam:7:7
+  │
+7 │   one.B
+  │       ^ Did you mean `A`?
+
+The module `one` does not have a `B` value.

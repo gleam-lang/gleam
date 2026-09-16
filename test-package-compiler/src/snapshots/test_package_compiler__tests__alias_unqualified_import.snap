@@ -1,0 +1,31 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/alias_unqualified_import"
+---
+//// alias_unqualified_import/_gleam_artefacts/one.abstr
+<539 byte binary>
+
+//// alias_unqualified_import/_gleam_artefacts/one.cache
+<.cache binary>
+
+//// alias_unqualified_import/_gleam_artefacts/one.cache_meta
+<36 byte binary>
+
+//// alias_unqualified_import/_gleam_artefacts/two.abstr
+<568 byte binary>
+
+//// alias_unqualified_import/_gleam_artefacts/two.cache
+<.cache binary>
+
+//// alias_unqualified_import/_gleam_artefacts/two.cache_meta
+<42 byte binary>
+
+//// alias_unqualified_import/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [one,
+               two]},
+    {registered, []}
+]}.

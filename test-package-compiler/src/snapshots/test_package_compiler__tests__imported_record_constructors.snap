@@ -1,0 +1,55 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/imported_record_constructors"
+---
+//// imported_record_constructors/_gleam_artefacts/one@one.abstr
+<595 byte binary>
+
+//// imported_record_constructors/_gleam_artefacts/one@one.cache
+<.cache binary>
+
+//// imported_record_constructors/_gleam_artefacts/one@one.cache_meta
+<39 byte binary>
+
+//// imported_record_constructors/_gleam_artefacts/one@two.abstr
+<595 byte binary>
+
+//// imported_record_constructors/_gleam_artefacts/one@two.cache
+<.cache binary>
+
+//// imported_record_constructors/_gleam_artefacts/one@two.cache_meta
+<39 byte binary>
+
+//// imported_record_constructors/_gleam_artefacts/two.abstr
+<7530 byte binary>
+
+//// imported_record_constructors/_gleam_artefacts/two.cache
+<.cache binary>
+
+//// imported_record_constructors/_gleam_artefacts/two.cache_meta
+<254 byte binary>
+
+//// imported_record_constructors/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [one@one,
+               one@two,
+               two]},
+    {registered, []}
+]}.
+
+
+//// imported_record_constructors/include/one@one_User.hrl
+-record(user, {
+    name :: binary(),
+    score :: integer()
+}).
+
+
+//// imported_record_constructors/include/one@two_User.hrl
+-record(user, {
+    name :: binary(),
+    score :: integer()
+}).

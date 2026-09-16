@@ -1,0 +1,21 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/hello_joe"
+---
+//// hello_joe/_gleam_artefacts/hello_joe.abstr
+<568 byte binary>
+
+//// hello_joe/_gleam_artefacts/hello_joe.cache
+<.cache binary>
+
+//// hello_joe/_gleam_artefacts/hello_joe.cache_meta
+<31 byte binary>
+
+//// hello_joe/ebin/hello_joe.app
+{application, hello_joe, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [hello_joe]},
+    {registered, []}
+]}.

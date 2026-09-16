@@ -1,0 +1,14 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/overwriting_erlang_module"
+---
+error: Erlang module name collision
+
+The module `overwriting_erlang_module/src/code.gleam` compiles to an Erlang
+module named `code`.
+
+By default Erlang includes a module with the same name so if we were to
+compile and load your module it would overwrite the Erlang one, potentially
+causing confusing errors and crashes.
+
+Hint: Rename this module and try again.
