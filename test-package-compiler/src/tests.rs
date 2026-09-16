@@ -339,3 +339,20 @@ fn src_only() {
     let output = compiler.into_snapshot();
     insta::assert_snapshot!("src_only", output, "./cases/src_only");
 }
+
+#[test]
+fn otp_app_override() {
+    use ecow::EcoString;
+    use std::collections::HashMap;
+
+    let overrides = HashMap::from([
+        (
+            EcoString::from("gleam_otp"),
+            EcoString::from("my_gleam_otp_app"),
+        ),
+        (EcoString::from("midas"), EcoString::from("my_midas_app")),
+    ]);
+    let path = "./cases/erlang_app_generation";
+    let output = crate::prepare_with_otp_app_overrides(path, overrides);
+    insta::assert_snapshot!("otp_app_override", output, path);
+}

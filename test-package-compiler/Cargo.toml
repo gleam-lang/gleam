@@ -16,6 +16,7 @@ imbl.workspace = true
 itertools.workspace = true
 regex.workspace = true
 camino.workspace = true
+ecow.workspace = true
 
 [dev-dependencies]
 insta.workspace = true

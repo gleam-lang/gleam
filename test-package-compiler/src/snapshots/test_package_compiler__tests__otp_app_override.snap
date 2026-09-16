@@ -1,0 +1,38 @@
+---
+source: test-package-compiler/src/lib.rs
+expression: "./cases/erlang_app_generation"
+---
+//// /out/lib/the_package/_gleam_artefacts/main.abstr
+<288 byte binary>
+
+//// /out/lib/the_package/_gleam_artefacts/main.cache
+<.cache binary>
+
+//// /out/lib/the_package/_gleam_artefacts/main.cache_meta
+<29 byte binary>
+
+//// /out/lib/the_package/ebin/main.beam
+<0 byte binary>
+
+//// /out/lib/the_package/ebin/my_erlang_application.app
+{application, my_erlang_application, [
+    {mod, {'my_erlang_application_sup', []}},
+    {vsn, "0.1.0"},
+    {applications, [gleam_stdlib,
+                    inets,
+                    my_gleam_otp_app,
+                    my_midas_app,
+                    simple_json,
+                    ssl]},
+    {description, "It's very cool"},
+    {modules, [main]},
+    {registered, []}
+]}.
+
+
+//// Warning
+warning: Empty module
+
+Module 'main' contains no public definitions.
+
+Hint: You can safely remove this module.
