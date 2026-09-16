@@ -234,12 +234,13 @@ where
     fn compile_erlang_to_beam(&mut self, modules: &HashSet<Utf8PathBuf>) -> Result<(), Error> {
         if modules.is_empty() {
             tracing::debug!("no_erlang_to_compile");
-            Ok(())
-        } else {
-            tracing::debug!("compiling_erlang");
-            self.io
-                .compile_beam(self.out, self.lib, modules, self.subprocess_stdio)
+            return Ok(());
         }
+
+        tracing::debug!("compiling_erlang");
+
+        self.io
+            .compile_beam(self.out, self.lib, modules, self.subprocess_stdio)
     }
 
     fn copy_project_native_files(
