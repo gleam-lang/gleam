@@ -783,9 +783,9 @@ pub struct CompilePackage {
     #[arg(long = "no-beam")]
     skip_beam_compilation: bool,
 
-    /// Compile in production mode, excluding the `test` and `dev` directories
-    #[arg(long = "prod")]
-    prod: bool,
+    /// Only compile modules in the `src` directory, excluding `test` and `dev`
+    #[arg(long = "src-only")]
+    src_only: bool,
 }
 
 #[derive(Subcommand, Debug)]

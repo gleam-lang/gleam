@@ -1,0 +1,10 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/duplicate_module_dev"
+---
+error: Duplicate module
+
+The module `main` is defined multiple times.
+
+It is first defined at duplicate_module_dev/src/main.gleam
+It is defined a second time at duplicate_module_dev/dev/main.gleam

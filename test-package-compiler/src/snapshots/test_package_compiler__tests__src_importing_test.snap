@@ -1,0 +1,14 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/src_importing_test"
+---
+error: App importing test module
+  ┌─ src_importing_test/src/one.gleam:6:1
+  │
+6 │ import two
+  │ ^ Imported here
+
+The application module `one` is importing the test module `two`.
+
+Test modules are not included in production builds so application modules
+cannot import them. Perhaps move the `two` module to the src directory.

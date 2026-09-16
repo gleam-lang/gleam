@@ -1,0 +1,11 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/opaque_type_destructure"
+---
+error: Unknown module value
+   ┌─ opaque_type_destructure/src/two.gleam:10:7
+   │
+10 │   let one.User(name: name, score: score) = user
+   │       ^
+
+The module `one` does not have a `User` value.

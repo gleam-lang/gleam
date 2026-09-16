@@ -1,0 +1,37 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/erlang_bug_752"
+---
+//// erlang_bug_752/_gleam_artefacts/one.abstr
+<390 byte binary>
+
+//// erlang_bug_752/_gleam_artefacts/one.cache
+<.cache binary>
+
+//// erlang_bug_752/_gleam_artefacts/one.cache_meta
+<31 byte binary>
+
+//// erlang_bug_752/_gleam_artefacts/two.abstr
+<545 byte binary>
+
+//// erlang_bug_752/_gleam_artefacts/two.cache
+<.cache binary>
+
+//// erlang_bug_752/_gleam_artefacts/two.cache_meta
+<41 byte binary>
+
+//// erlang_bug_752/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [one,
+               two]},
+    {registered, []}
+]}.
+
+
+//// erlang_bug_752/include/two_Two.hrl
+-record(two, {
+    thing :: one:one(integer())
+}).

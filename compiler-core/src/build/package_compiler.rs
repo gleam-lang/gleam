@@ -1012,6 +1012,7 @@ pub enum CheckModuleConflicts {
     Check,
     DoNotCheck,
 }
+
 impl CheckModuleConflicts {
     pub(crate) fn should_check(&self) -> bool {
         match self {

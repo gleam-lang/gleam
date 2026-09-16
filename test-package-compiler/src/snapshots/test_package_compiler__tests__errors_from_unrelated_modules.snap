@@ -1,0 +1,17 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/errors_from_unrelated_modules"
+---
+error: Type mismatch
+  ┌─ errors_from_unrelated_modules/src/one.gleam:5:7
+  │
+5 │   1 + True
+  │       ^
+
+The + operator expects arguments of this type:
+
+    Int
+
+But this argument has this type:
+
+    Bool

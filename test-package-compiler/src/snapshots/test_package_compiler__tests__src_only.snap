@@ -1,0 +1,21 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/src_only"
+---
+//// src_only/_gleam_artefacts/src_only.abstr
+<555 byte binary>
+
+//// src_only/_gleam_artefacts/src_only.cache
+<.cache binary>
+
+//// src_only/_gleam_artefacts/src_only.cache_meta
+<31 byte binary>
+
+//// src_only/ebin/src_only.app
+{application, src_only, [
+    {vsn, "1.0.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [src_only]},
+    {registered, []}
+]}.

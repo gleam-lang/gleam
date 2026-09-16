@@ -1,0 +1,52 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/import_shadowed_name_warning"
+---
+//// import_shadowed_name_warning/_gleam_artefacts/one.abstr
+<353 byte binary>
+
+//// import_shadowed_name_warning/_gleam_artefacts/one.cache
+<.cache binary>
+
+//// import_shadowed_name_warning/_gleam_artefacts/one.cache_meta
+<31 byte binary>
+
+//// import_shadowed_name_warning/_gleam_artefacts/two.abstr
+<759 byte binary>
+
+//// import_shadowed_name_warning/_gleam_artefacts/two.cache
+<.cache binary>
+
+//// import_shadowed_name_warning/_gleam_artefacts/two.cache_meta
+<70 byte binary>
+
+//// import_shadowed_name_warning/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [one,
+               two]},
+    {registered, []}
+]}.
+
+
+//// Warning
+warning: Unused private constructor
+   ┌─ import_shadowed_name_warning/src/two.gleam:12:3
+   │
+12 │   Port
+   │   ^ This private constructor is never used
+
+Hint: You can safely remove it.
+
+
+
+//// Warning
+warning: Unused private type
+   ┌─ import_shadowed_name_warning/src/two.gleam:10:1
+   │
+10 │ type Shadowing {
+   │ ^ This private type is never used
+
+Hint: You can safely remove it.

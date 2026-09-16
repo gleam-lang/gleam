@@ -1,0 +1,11 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/unknown_module_field_in_constant"
+---
+error: Unknown module value
+  ┌─ unknown_module_field_in_constant/src/two.gleam:6:16
+  │
+6 │ pub const it = one.B
+  │                ^ Did you mean `A`?
+
+The module `one` does not have a `B` value.

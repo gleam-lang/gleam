@@ -1,0 +1,43 @@
+---
+source: test-package-compiler/src/tests.rs
+expression: "./cases/javascript_sourcemaps"
+---
+//// javascript_sourcemaps/_gleam_artefacts/hello.cache
+<.cache binary>
+
+//// javascript_sourcemaps/_gleam_artefacts/hello.cache_meta
+<35 byte binary>
+
+//// javascript_sourcemaps/gleam.mjs
+export * from "../prelude.mjs";
+
+
+//// javascript_sourcemaps/hello.gleam
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2022 The Gleam contributors
+
+pub type Wibble {
+  Woo
+}
+
+pub fn wobble() -> Wibble {
+  Woo
+}
+
+
+//// javascript_sourcemaps/hello.mjs
+//# sourceMappingURL=hello.mjs.map
+import { CustomType as $CustomType } from "./gleam.mjs";
+
+export class Woo extends $CustomType {}
+export const Wibble$Woo$const = new Woo();
+export const Wibble$Woo = () => Wibble$Woo$const;
+export const Wibble$isWoo = (value) => value instanceof Woo;
+
+export function wobble() {
+  return Wibble$Woo$const;
+}
+
+
+//// javascript_sourcemaps/hello.mjs.map
+{"version":3,"file":"hello.mjs","sources":["hello.gleam"],"names":[],"mappings":";;;AAGA,AACE;AAAA;;AAAA,4DACD;;AAED;EACE;CACD"}
