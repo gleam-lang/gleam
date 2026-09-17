@@ -33,7 +33,7 @@ echo@inspect(Value) ->
             erlang:integer_to_list(Int);
 
         Float when erlang:is_float(Float) ->
-            io_lib_format:fwrite_g(Float);
+            erlang:float_to_binary(Float, [short]);
 
         Binary when erlang:is_binary(Binary) ->
             inspect@binary(Binary);
