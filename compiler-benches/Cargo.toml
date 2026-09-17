@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 The Gleam contributors
+
+[package]
+name = "gleam-benches"
+version = "1.18.0"
+authors = ["Louis Pilfold <louis@lpil.uk>"]
+edition = "2024"
+license = "Apache-2.0"
+autobenches = false
+
+[dependencies]
+gleam-cli = { path = "../compiler-cli" }
+gleam-core = { path = "../compiler-core" }
+camino.workspace = true
+
+[dev-dependencies]
+criterion = "0.8"
+dhat = "0.3"
+
+[[bench]]
+name = "lexer_alloc"
+harness = false
+
+[[bench]]
+name = "lexer_speed"
+harness = false

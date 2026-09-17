@@ -5,6 +5,7 @@
 resolver = "2"
 members = [
   "gleam-bin",
+  "compiler-benches",
   "compiler-cli",
   "compiler-core",
   "compiler-wasm",
