@@ -213,7 +213,7 @@
 - Make links to Tangled repositories use their new domain & URL format.
   ([Naomi Roberts](https://github.com/naomieow))
 
-- `compile-package` now supports a `--prod` flag to compile only the `/src`
+- `compile-package` now supports a `--src-only` flag to compile only the `/src`
   folder.
   ([Rodrigo Álvarez](https://github.com/Papipo))
 
