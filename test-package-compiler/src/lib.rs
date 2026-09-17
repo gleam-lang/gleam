@@ -73,7 +73,7 @@ impl TestHarness {
             mode,
             &root,
             &root,
-            &Utf8Path::new(""),
+            Utf8Path::new(""),
             &target,
             self.ids.clone(),
             self.file_system.clone(),
@@ -107,6 +107,12 @@ impl TestHarness {
         let files = self.file_system.into_contents();
         let warnings = self.warnings.take();
         TestCompileOutput { files, warnings }.as_overview_text()
+    }
+}
+
+impl Default for TestHarness {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
