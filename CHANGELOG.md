@@ -196,6 +196,9 @@
   allocations.
   ([John Downey](https://github.com/jtdowney))
 
+- The performance of `echo` for floats has been improved on the Erlang target.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
