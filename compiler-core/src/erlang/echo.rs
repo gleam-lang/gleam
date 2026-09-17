@@ -181,11 +181,14 @@ fn echo_inspect<Output>(builder: &mut impl ErlangBuilder<Output>) {
         builder.end_call(call);
         builder.end_clause_body(clause);
 
-        // Float when erlang:is_float(Float) -> io_lib_format:fwrite_g(Float);
+        // Float when erlang:is_float(Float) -> erlang:float_to_binary(Float, [short]);
         let clause = clause_with_erlang_type_check(builder, "Float", "float");
         let call =
-            builder.start_remote_call(location, ErlangModuleName::io_lib_format(), "fwrite_g");
+            builder.start_remote_call(location, ErlangModuleName::erlang(), "float_to_binary");
         builder.variable(location, "Float");
+        builder.cons_list(location);
+        builder.atom_expression(location, "short");
+        builder.empty_list(location);
         builder.end_call(call);
         builder.end_clause_body(clause);
 
