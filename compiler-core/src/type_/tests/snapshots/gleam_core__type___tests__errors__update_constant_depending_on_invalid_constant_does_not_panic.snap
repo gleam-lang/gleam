@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\ntype Wibble {\n    Wibble(wibble: Int, wobble: Int)\n}\n\nconst a = Wibble(wibble: 0)\nconst b = Wibble(..a, wobble: 8)\n"
+---
+----- SOURCE CODE
+
+type Wibble {
+    Wibble(wibble: Int, wobble: Int)
+}
+
+const a = Wibble(wibble: 0)
+const b = Wibble(..a, wobble: 8)
+
+
+----- ERROR
+error: Incorrect arity
+  ┌─ /src/one/two.gleam:6:11
+  │
+6 │ const a = Wibble(wibble: 0)
+  │           ^^^^^^^^^^^^^^^^^ Expected 2 arguments, got 1
+
+This call accepts these additional labelled arguments:
+
+  - wobble
