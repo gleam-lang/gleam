@@ -369,7 +369,7 @@ pub(crate) fn load_cached_module<IO: FileSystemReader>(
     ids: UniqueIdGenerator,
     should_use_warnings: bool,
 ) -> Result<type_::ModuleInterface, Error> {
-    let cache_files = CacheFiles::new(artefact_directory, &module_name);
+    let cache_files = CacheFiles::new(artefact_directory, module_name);
     let bytes = io.read_bytes(&cache_files.cache_path)?;
     let mut module = match metadata::decode(bytes.as_slice(), ids) {
         Some(module) => module,
