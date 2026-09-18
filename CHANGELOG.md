@@ -331,6 +331,10 @@
   constant.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler would crash when writing a constant record
+  update depending on another invalid constant.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a bug where the "Discard unused variable" language server code action
   would produce invalid code when discarding left side assignment of string
   prefix patterns.
