@@ -1,0 +1,8 @@
+*.beam
+*.ez
+/build
+erl_crash.dump
+escript_ok
+escript_ok.cmd
+hello_joe
+hello_joe.cmd
