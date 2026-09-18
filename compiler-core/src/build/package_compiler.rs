@@ -332,9 +332,7 @@ where
                 codegen_performed: self.perform_codegen,
                 dependencies: module.dependencies.clone(),
                 fingerprint: SourceFingerprint::new(&module.code),
-                // TODO) this is computed in another place too, should we maybe
-                // add it as a field of the module?
-                api_fingerprint: ApiFingerprint::new(&module.ast),
+                api_fingerprint: module.ast.api_fingerprint,
                 line_numbers: module.ast.type_info.line_numbers.clone(),
             };
             self.io
@@ -822,8 +820,7 @@ impl<'a, IO: FileSystemReader> PackageModulesAnalyser<'a, IO> {
             | WhyModuleNeedsCompiling::DependsOnStaleModule {
                 cached_api_fingerprint,
             } => {
-                let new_api_fingerprint = ApiFingerprint::new(&module.ast);
-                if new_api_fingerprint != cached_api_fingerprint {
+                if module.ast.api_fingerprint != cached_api_fingerprint {
                     let _ = self.modules_with_new_public_api.insert(module.name.clone());
                 }
             }
