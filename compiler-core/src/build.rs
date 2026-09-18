@@ -1054,8 +1054,8 @@ impl SourceFingerprint {
 pub struct ApiFingerprint(u64);
 
 impl ApiFingerprint {
-    pub fn new(module: &TypedModule) -> Self {
-        ApiFingerprint(hash_module_public_api(module))
+    pub fn new(typed_definitions: &TypedDefinitions) -> Self {
+        ApiFingerprint(hash_module_public_api(typed_definitions))
     }
 }
 
@@ -1083,8 +1083,9 @@ const CONSTANT_CONSTRUCTOR_LOCAL_VAR_TAG: u8 = 20;
 const CONSTANT_CONSTRUCTOR_MODULE_FN_TAG: u8 = 21;
 const CONSTANT_CONSTRUCTOR_RECORD_TAG: u8 = 22;
 const CONSTANT_BIT_ARRAY_SEGMENT_TAG: u8 = 23;
+const CONSTANT_INVALID_TAG: u8 = 24;
 
-fn hash_module_public_api(module: &TypedModule) -> u64 {
+fn hash_module_public_api(definitions: &TypedDefinitions) -> u64 {
     let mut hasher = xxhash_rust::xxh3::Xxh3Builder::new().build();
 
     let TypedDefinitions {
@@ -1093,7 +1094,7 @@ fn hash_module_public_api(module: &TypedModule) -> u64 {
         custom_types,
         type_aliases,
         functions,
-    } = &module.definitions;
+    } = definitions;
 
     // When computing the hash of a module we want to go over all the
     // definitions in a fixed order. We go over each definition in alphabetical
@@ -1370,9 +1371,14 @@ fn hash_constant_value(hasher: &mut xxhash_rust::xxh3::Xxh3, value: &TypedConsta
             hash_constant_value(hasher, right);
         }
 
+        // TODOs and invalid constants should result in compilation errors,
+        // so the code of these modules should always be recompiled, no matter
+        // the hash. We still need to be able to hash those with some
+        // placeholder value in case we're asked to produce
+        ast::Constant::Todo { .. } => hasher.update(&[CONSTANT_TODO_TAG]),
+        ast::Constant::Invalid { .. } => hasher.update(&[CONSTANT_INVALID_TAG]),
+
         ast::Constant::RecordUpdate { .. } => panic!("record update should never be in typed ast"),
-        ast::Constant::Invalid { .. } => panic!("tried hashing invalid constant"),
-        ast::Constant::Todo { .. } => panic!("tried hashing todo constant"),
     }
 }
 
