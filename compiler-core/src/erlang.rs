@@ -1012,54 +1012,6 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 self.call(builder, *location, constructor, arguments);
             }
 
-            TypedExpr::Fn {
-                location, arguments, body, kind: FunctionLiteralKind::Capture { .. }, ..
-            } => {
-                if let Statement::Expression(TypedExpr::Call { fun , .. }) = body.first()
-                    && body.len() == 1
-                    && (
-                        matches!(&**fun, TypedExpr::Call { .. })
-                        || matches!(&**fun, TypedExpr::TupleIndex { .. })
-                        || matches!(&**fun, TypedExpr::RecordAccess{ .. })
-                    )
-                {
-                    // {
-                    //   let x = <Expr> // evaluate first
-                    //   fn(a) { x(a) }
-                    // }
-
-                    let block = builder.start_block(*location);
-
-                    let tmp_val_name = self.new_erlang_variable("Tmp", location.clone());
-                    builder.match_operator(*location);
-                    builder.variable_pattern(*location, &tmp_val_name);
-
-                    self.expression(builder, fun);
-
-                    let argument_names = self.function_arguments_names(arguments, false).collect::<Vec<_>>();
-                    let function = builder.start_anonymous_function(*location, argument_names.clone());
-                    let call = builder.start_call(*location);
-                    builder.variable(*location, &tmp_val_name);
-                    let call = builder.end_called_expression(call);
-                    for (arg_location, argument) in argument_names {
-                        builder.variable(arg_location, &argument);
-                    }
-                    builder.end_call(call);
-                    builder.end_function(function);
-                    builder.end_block(block);
-                } else {
-                    // ```
-                    // fn(x) { <Expr>(x) }
-                    // ```
-                    let outer_scope = self.taken_names.clone();
-                    let argument_names = self.function_arguments_names(arguments, false);
-                    let function = builder.start_anonymous_function(*location, argument_names);
-                    self.statement_sequence(builder, body);
-                    builder.end_function(function);
-                    self.taken_names = outer_scope;
-                }
-            }
-
             //
             // All kinds of anonymous functions.
             //
@@ -1067,7 +1019,6 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 arguments,
                 body,
                 location,
-                kind: FunctionLiteralKind::Use { .. } | FunctionLiteralKind::Anonymous { .. },
                 ..
             } => {
                 let outer_scope = self.taken_names.clone();
