@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2024 The Gleam contributors
+
+name = "compile_package"
+version = "1.0.0"
+
+[dependencies]
+[dev_dependencies]
