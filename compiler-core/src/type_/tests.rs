@@ -816,6 +816,7 @@ fn infer_module_type_retention_test() {
         type_info: (),
         names: Names::new(),
         unused_definition_positions: HashSet::new(),
+        api_fingerprint: (),
     };
     let direct_dependencies = HashMap::from_iter(vec![]);
     let ids = UniqueIdGenerator::new();

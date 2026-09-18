@@ -1054,8 +1054,8 @@ impl SourceFingerprint {
 pub struct ApiFingerprint(u64);
 
 impl ApiFingerprint {
-    pub fn new(module: &TypedModule) -> Self {
-        ApiFingerprint(hash_module_public_api(module))
+    pub fn new(typed_definitions: &TypedDefinitions) -> Self {
+        ApiFingerprint(hash_module_public_api(typed_definitions))
     }
 }
 
@@ -1084,7 +1084,7 @@ const CONSTANT_CONSTRUCTOR_MODULE_FN_TAG: u8 = 21;
 const CONSTANT_CONSTRUCTOR_RECORD_TAG: u8 = 22;
 const CONSTANT_BIT_ARRAY_SEGMENT_TAG: u8 = 23;
 
-fn hash_module_public_api(module: &TypedModule) -> u64 {
+fn hash_module_public_api(definitions: &TypedDefinitions) -> u64 {
     let mut hasher = xxhash_rust::xxh3::Xxh3Builder::new().build();
 
     let TypedDefinitions {
@@ -1093,7 +1093,7 @@ fn hash_module_public_api(module: &TypedModule) -> u64 {
         custom_types,
         type_aliases,
         functions,
-    } = &module.definitions;
+    } = definitions;
 
     // When computing the hash of a module we want to go over all the
     // definitions in a fixed order. We go over each definition in alphabetical

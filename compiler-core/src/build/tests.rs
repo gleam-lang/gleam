@@ -77,7 +77,7 @@ fn fingerprint(src: &str) -> ApiFingerprint {
     )
     .expect("should successfully infer");
 
-    ApiFingerprint::new(&ast)
+    ApiFingerprint::new(&ast.definitions)
 }
 
 #[test]
