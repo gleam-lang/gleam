@@ -17,7 +17,7 @@ pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 use crate::analyse::Inferred;
 use crate::ast::typed::pairwise_all;
 use crate::bit_array;
-use crate::build::{ExpressionPosition, Located, Target, module_erlang_name};
+use crate::build::{ApiFingerprint, ExpressionPosition, Located, Target, module_erlang_name};
 use crate::exhaustiveness::CompiledCase;
 use crate::parse::{LiteralFloatValue, SpannedString};
 use crate::reference::LabelSyntax;
@@ -53,22 +53,23 @@ pub trait HasLocation {
     fn location(&self) -> SrcSpan;
 }
 
-pub type UntypedModule = Module<(), Vec<TargetedDefinition>>;
-pub type TypedModule = Module<type_::ModuleInterface, TypedDefinitions>;
+pub type UntypedModule = Module<(), (), Vec<TargetedDefinition>>;
+pub type TypedModule = Module<type_::ModuleInterface, ApiFingerprint, TypedDefinitions>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Module<Info, Definitions> {
+pub struct Module<Info, ApiFingerprint, Definitions> {
     pub name: EcoString,
     pub documentation: Vec<EcoString>,
     pub type_info: Info,
     pub definitions: Definitions,
+    pub api_fingerprint: ApiFingerprint,
     pub names: Names,
     /// The source byte locations of definition that are unused.
     /// This is used in code generation to know when definitions can be safely omitted.
     pub unused_definition_positions: HashSet<u32>,
 }
 
-impl<Info, Definitions> Module<Info, Definitions> {
+impl<Info, ApiFingerprint, Definitions> Module<Info, ApiFingerprint, Definitions> {
     pub fn erlang_name(&self) -> EcoString {
         module_erlang_name(&self.name)
     }
