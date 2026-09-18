@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Wibble { Wibble(a: Int, b: Int) }\n\npub const wibble = Wibble\n\npub const wobble = Wibble(..wibble)\n"
+---
+----- SOURCE CODE
+
+pub type Wibble { Wibble(a: Int, b: Int) }
+
+pub const wibble = Wibble
+
+pub const wobble = Wibble(..wibble)
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:6:29
+  │
+6 │ pub const wobble = Wibble(..wibble)
+  │                             ^^^^^^
+
+Expected type:
+
+    Wibble
+
+Found type:
+
+    fn(Int, Int) -> Wibble
