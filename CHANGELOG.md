@@ -191,6 +191,11 @@
   warning.
   ([John Downey](https://github.com/jtdowney))
 
+- The compiler's lexer now uses byte indexing with an ASCII fast path instead
+  of iterating over characters, and builds tokens from source slices to reduce
+  allocations.
+  ([John Downey](https://github.com/jtdowney))
+
 ### Build tool
 
 - The build tool now stores its build cache in a more compact binary format,
@@ -386,6 +391,10 @@
 
 - Fixed a bug where on the JavaScript target a name given to a string prefix or
   bit array in a pattern would not be bound in every branch it was used in.
+  ([John Downey](https://github.com/jtdowney))
+
+- Fixed a bug where the end position of the final token was incorrect when the
+  source ended with a multi-byte character.
   ([John Downey](https://github.com/jtdowney))
 
 ## v1.18.1 - 2026-08-01

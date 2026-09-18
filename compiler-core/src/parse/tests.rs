@@ -1630,6 +1630,148 @@ fn newline_tokens() {
     );
 }
 
+#[test]
+fn crlf_source_exact_tokens() {
+    let src = "pub fn add(_x) {\r\n  Wibble\r\n}\r\n";
+    assert_eq!(
+        make_tokenizer(src).collect_vec(),
+        [
+            Ok((0, Token::Pub, 3)),
+            Ok((4, Token::Fn, 6)),
+            Ok((7, Token::Name { name: "add".into() }, 10)),
+            Ok((10, Token::LeftParen, 11)),
+            Ok((11, Token::DiscardName { name: "_x".into() }, 13)),
+            Ok((13, Token::RightParen, 14)),
+            Ok((15, Token::LeftBrace, 16)),
+            Ok((16, Token::NewLine, 18)),
+            Ok((
+                20,
+                Token::UpName {
+                    name: "Wibble".into()
+                },
+                26
+            )),
+            Ok((26, Token::NewLine, 28)),
+            Ok((28, Token::RightBrace, 29)),
+            Ok((29, Token::NewLine, 31)),
+        ]
+    );
+}
+
+#[test]
+fn lone_carriage_return_exact_tokens() {
+    assert_eq!(
+        make_tokenizer("a\rb").collect_vec(),
+        [
+            Ok((0, Token::Name { name: "a".into() }, 1)),
+            Ok((1, Token::NewLine, 2)),
+            Ok((2, Token::Name { name: "b".into() }, 3)),
+        ]
+    );
+    assert_eq!(
+        make_tokenizer("a\r").collect_vec(),
+        [
+            Ok((0, Token::Name { name: "a".into() }, 1)),
+            Ok((1, Token::NewLine, 2)),
+        ]
+    );
+}
+
+#[test]
+fn unrecognized_non_ascii_char_error() {
+    let src = "let é = 1";
+    assert_eq!(
+        make_tokenizer(src).take(2).collect_vec(),
+        [
+            Ok((0, Token::Let, 3)),
+            Err(LexicalError {
+                error: LexicalErrorType::UnrecognizedToken { token: 'é' },
+                location: SrcSpan { start: 4, end: 4 },
+            }),
+        ]
+    );
+}
+
+#[test]
+fn doc_comment_with_multibyte_char_at_eof() {
+    let src = "/// café";
+    assert_eq!(
+        make_tokenizer(src).collect_vec(),
+        [Ok((
+            3,
+            Token::CommentDoc {
+                content: " café".into()
+            },
+            9
+        ))]
+    );
+}
+
+#[test]
+fn string_containing_crlf_collapses_to_newline() {
+    let src = "\"a\r\nb\"";
+    assert_eq!(
+        make_tokenizer(src).collect_vec(),
+        [Ok((
+            0,
+            Token::String {
+                value: "a\nb".into()
+            },
+            6
+        ))]
+    );
+}
+
+#[test]
+fn string_containing_lone_carriage_return_collapses_to_newline() {
+    let src = "\"a\rb\"";
+    assert_eq!(
+        make_tokenizer(src).collect_vec(),
+        [Ok((
+            0,
+            Token::String {
+                value: "a\nb".into()
+            },
+            5
+        ))]
+    );
+}
+
+#[test]
+fn string_starting_with_crlf_collapses_to_newline() {
+    let src = "\"\r\nfoo\"";
+    assert_eq!(
+        make_tokenizer(src).collect_vec(),
+        [Ok((
+            0,
+            Token::String {
+                value: "\nfoo".into()
+            },
+            7
+        ))]
+    );
+}
+
+#[test]
+fn non_ascii_source_exact_tokens() {
+    let src = "let x = \"héllo\"";
+    assert_eq!(
+        make_tokenizer(src).collect_vec(),
+        [
+            Ok((0, Token::Let, 3)),
+            Ok((4, Token::Name { name: "x".into() }, 5)),
+            Ok((6, Token::Equal, 7)),
+            Ok((
+                8,
+                Token::String {
+                    value: "héllo".into()
+                },
+                16
+            )),
+        ]
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/1756
 #[test]
 fn arithmetic_in_guards() {
