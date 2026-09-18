@@ -326,6 +326,11 @@
   the Erlang target.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the compiler would not produce a type error when using a
+  record constructor as the updated record in a record update expression in a
+  constant.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a bug where the "Discard unused variable" language server code action
   would produce invalid code when discarding left side assignment of string
   prefix patterns.

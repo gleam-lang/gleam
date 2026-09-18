@@ -211,14 +211,14 @@ impl<'expression_typer, 'env, 'module> ConstantTyper<'expression_typer, 'env, 'm
 
                 // Get the field arguments from the record that we'll use as the base.
                 let (base_arguments, updated_record_tag) = if let Constant::Record {
-                    arguments,
+                    arguments: Some(arguments),
                     record_constructor: Some(resolved_record_constructor),
                     ..
                 } = resolved_record
                     && let ValueConstructorVariant::Record { name, .. } =
                         resolved_record_constructor.variant
                 {
-                    (arguments.unwrap_or(vec![]), name)
+                    (arguments, name)
                 } else {
                     self.typer.problems.error(convert_unify_error(
                         UnifyError::CouldNotUnify {
