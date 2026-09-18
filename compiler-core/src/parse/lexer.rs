@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
-use ecow::EcoString;
-
 use crate::parse::LiteralFloatValue;
 use crate::parse::error::{LexicalError, LexicalErrorType};
 use crate::parse::token::Token;
@@ -13,13 +11,15 @@ use std::ops::Neg;
 use super::error::InvalidUnicodeEscapeError;
 
 #[derive(Debug)]
-pub struct Lexer<T: Iterator<Item = (u32, char)>> {
-    chars: T,
+pub struct Lexer<'a> {
+    source: &'a str,
+    cursor: usize,
     pending: Vec<Spanned>,
     char0: Option<char>,
     char1: Option<char>,
     location0: u32,
     location1: u32,
+    has_carriage_return: bool,
 }
 pub type Spanned = (u32, Token, u32);
 pub type LexResult = Result<Spanned, LexicalError>;
@@ -53,92 +53,58 @@ pub fn string_to_keyword(word: &str) -> Option<Token> {
     }
 }
 
-pub fn make_tokenizer(source: &str) -> impl Iterator<Item = LexResult> + '_ {
-    let chars = source
-        .char_indices()
-        .map(|(index, char)| (index as u32, char));
-    let new_line_handler = NewlineHandler::new(chars);
-    Lexer::new(new_line_handler)
-}
+pub fn make_tokenizer(source: &str) -> Lexer<'_> {
+    let mut lexer = Lexer {
+        source,
+        cursor: 0,
+        pending: Vec::new(),
+        char0: None,
+        char1: None,
+        location0: 0,
+        location1: 0,
+        has_carriage_return: false,
+    };
+    let _ = lexer.next_char();
+    let _ = lexer.next_char();
 
-// The newline handler is an iterator which collapses different newline
-// types into \n always.
-#[derive(Debug)]
-pub struct NewlineHandler<T: Iterator<Item = (u32, char)>> {
-    source: T,
-    char0: Option<(u32, char)>,
-    char1: Option<(u32, char)>,
-}
-
-impl<T> NewlineHandler<T>
-where
-    T: Iterator<Item = (u32, char)>,
-{
-    pub fn new(source: T) -> Self {
-        let mut new_line_handler = NewlineHandler {
-            source,
-            char0: None,
-            char1: None,
-        };
-        let _ = new_line_handler.shift();
-        let _ = new_line_handler.shift();
-        new_line_handler
+    // Check whether the first character is a UTF-8 byte order mark, and if so, consume it.
+    if lexer.char0 == Some('\u{feff}') {
+        let _ = lexer.next_char();
     }
 
-    fn shift(&mut self) -> Option<(u32, char)> {
-        let result = self.char0;
-        self.char0 = self.char1;
-        self.char1 = self.source.next();
-        result
-    }
+    lexer
 }
 
-impl<T> Iterator for NewlineHandler<T>
-where
-    T: Iterator<Item = (u32, char)>,
-{
-    type Item = (u32, char);
+impl<'a> Lexer<'a> {
+    // Read the next character and its byte index, like `char_indices`.
+    // `\r\n` and lone `\r` become `\n`, reported at the `\r`'s index.
+    fn next_source_char(&mut self) -> Option<(usize, char)> {
+        let bytes = self.source.as_bytes();
+        let byte = *bytes.get(self.cursor)?;
+        let start = self.cursor;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        // Collapse \r\n into \n
-        if let Some((index, '\r')) = self.char0 {
-            if let Some((_, '\n')) = self.char1 {
-                // Transform windows EOL into \n
-                let _ = self.shift();
-                // using the position from the \r
-                self.char0 = Some((index, '\n'));
+        let character = if byte == b'\r' {
+            self.has_carriage_return = true;
+            if bytes.get(self.cursor + 1) == Some(&b'\n') {
+                self.cursor += 2;
             } else {
-                // Transform MAC EOL into \n
-                self.char0 = Some((index, '\n'));
+                self.cursor += 1;
             }
-        }
 
-        self.shift()
-    }
-}
-
-impl<T> Lexer<T>
-where
-    T: Iterator<Item = (u32, char)>,
-{
-    pub fn new(input: T) -> Self {
-        let mut lexer = Lexer {
-            chars: input,
-            pending: Vec::new(),
-            char0: None,
-            char1: None,
-            location0: 0,
-            location1: 0,
+            '\n'
+        } else if byte.is_ascii() {
+            self.cursor += 1;
+            byte as char
+        } else {
+            let character = self.source[self.cursor..]
+                .chars()
+                .next()
+                .expect("lexer cursor is always on a char boundary");
+            self.cursor += character.len_utf8();
+            character
         };
-        let _ = lexer.next_char();
-        let _ = lexer.next_char();
 
-        // Check whether the first character is a UTF-8 byte order mark, and if so, consume it.
-        if lexer.char0 == Some('\u{feff}') {
-            let _ = lexer.next_char();
-        }
-
-        lexer
+        Some((start, character))
     }
 
     // This is the main entry point. Call this function to retrieve the next token.
@@ -1020,16 +986,16 @@ where
     // Lexer helper functions:
     // this can be either a reserved word, or a name
     fn lex_name(&mut self) -> LexResult {
-        let mut name = String::new();
         let start_position = self.get_position();
 
         while self.is_name_continuation() {
-            name.push(self.next_char().expect("lex_name continue"));
+            let _ = self.next_char().expect("lex_name continue");
         }
 
         let end_position = self.get_position();
+        let name = &self.source[start_position as usize..end_position as usize];
 
-        match string_to_keyword(&name) {
+        match string_to_keyword(name) {
             Some(token) => Ok((start_position, token, end_position)),
             _ => {
                 if name.starts_with('_') {
@@ -1050,16 +1016,16 @@ where
     }
     // A type name or constructor
     fn lex_upname(&mut self) -> LexResult {
-        let mut name = String::new();
         let start_position = self.get_position();
 
         while self.is_name_continuation() {
-            name.push(self.next_char().expect("lex_upname upname"));
+            let _ = self.next_char().expect("lex_upname upname");
         }
 
         let end_position = self.get_position();
+        let name = &self.source[start_position as usize..end_position as usize];
 
-        match string_to_keyword(&name) {
+        match string_to_keyword(name) {
             Some(token) => Ok((start_position, token, end_position)),
             _ => Ok((
                 start_position,
@@ -1140,7 +1106,7 @@ where
                     end: location,
                 },
             })
-        } else if radix < 16 && Lexer::<T>::is_digit_of_radix(self.char0, 16) {
+        } else if radix < 16 && Lexer::is_digit_of_radix(self.char0, 16) {
             let location = self.get_position();
             Err(LexicalError {
                 error: LexicalErrorType::DigitOutOfRadix,
@@ -1187,39 +1153,38 @@ where
         is_negative: bool,
         can_lex_decimal: bool,
     ) -> LexResult {
-        let mut value = String::new();
-        if is_negative {
-            value.push('-')
+        let value_start = if is_negative {
+            start_pos
+        } else {
+            self.get_position()
         };
         // consume first run of digits
-        value.push_str(&self.radix_run(10));
+        let _ = self.radix_run(10);
 
         // If float:
         if can_lex_decimal && self.char0 == Some('.') {
-            value.push(self.next_char().expect("lex_normal_number float"));
-            value.push_str(&self.radix_run(10));
+            let _ = self.next_char().expect("lex_normal_number float");
+            let _ = self.radix_run(10);
 
             // If scientific:
             if self.char0 == Some('e') {
-                value.push(self.next_char().expect("lex_normal_number scientific"));
+                let _ = self.next_char().expect("lex_normal_number scientific");
                 if self.char0 == Some('-') {
-                    value.push(
-                        self.next_char()
-                            .expect("lex_normal_number scientific negative"),
-                    );
+                    let _ = self
+                        .next_char()
+                        .expect("lex_normal_number scientific negative");
                 }
-                let exponent_run = self.radix_run(10);
-                if exponent_run.is_empty() {
+                if self.radix_run(10).is_empty() {
                     return Err(LexicalError {
                         error: LexicalErrorType::MissingExponent,
                         location: SrcSpan::new(start_pos, self.get_position()),
                     });
                 }
-                value.push_str(&exponent_run);
             }
             let end_pos = self.get_position();
+            let value = &self.source[value_start as usize..end_pos as usize];
             let float_value =
-                LiteralFloatValue::parse(&value).expect("float value to parse as non-NaN f64");
+                LiteralFloatValue::parse(value).expect("float value to parse as non-NaN f64");
             Ok((
                 start_pos,
                 Token::Float {
@@ -1229,8 +1194,9 @@ where
                 end_pos,
             ))
         } else {
-            let int_value = super::parse_int_value(&value).expect("int value to parse as bigint");
             let end_pos = self.get_position();
+            let value = &self.source[value_start as usize..end_pos as usize];
+            let int_value = super::parse_int_value(value).expect("int value to parse as bigint");
             Ok((
                 start_pos,
                 Token::Int {
@@ -1259,31 +1225,20 @@ where
     // Consume a sequence of numbers with the given radix,
     // the digits can be decorated with underscores
     // like this: '1_2_3_4' == '1234'
-    fn radix_run(&mut self, radix: u32) -> String {
-        let mut value_text = String::new();
+    fn radix_run(&mut self, radix: u32) -> &'a str {
+        let start = self.get_position() as usize;
 
         loop {
-            if let Some(character) = self.take_number(radix) {
-                value_text.push(character);
-            } else if self.char0 == Some('_') && Lexer::<T>::is_digit_of_radix(self.char1, radix) {
-                value_text.push('_');
+            if Lexer::is_digit_of_radix(self.char0, radix) {
+                let _ = self.next_char().expect("radix_run digit");
+            } else if self.char0 == Some('_') && Lexer::is_digit_of_radix(self.char1, radix) {
                 let _ = self.next_char();
             } else {
                 break;
             }
         }
-        value_text
-    }
 
-    // Consume a single character with the given radix.
-    fn take_number(&mut self, radix: u32) -> Option<char> {
-        let take_char = Lexer::<T>::is_digit_of_radix(self.char0, radix);
-
-        if take_char {
-            Some(self.next_char().expect("take_number next char"))
-        } else {
-            None
-        }
+        &self.source[start..self.get_position() as usize]
     }
 
     // Test if a digit is of a certain radix.
@@ -1317,19 +1272,23 @@ where
             }
             _ => Kind::Comment,
         };
-        let mut content = EcoString::new();
         let start_position = self.get_position();
+        let content_start = self.consumed_byte_pos();
         while Some('\n') != self.char0 {
-            match self.char0 {
-                Some(character) => content.push(character),
-                None => break,
+            if self.char0.is_none() {
+                break;
             }
             let _ = self.next_char();
         }
         let end_position = self.get_position();
         let token = match kind {
             Kind::Comment => Token::CommentNormal,
-            Kind::Doc => Token::CommentDoc { content },
+            Kind::Doc => {
+                let content_end = self.consumed_byte_pos();
+                Token::CommentDoc {
+                    content: self.source[content_start..content_end].into(),
+                }
+            }
             Kind::ModuleDoc => Token::CommentModule,
         };
         (start_position, token, end_position)
@@ -1339,9 +1298,10 @@ where
         let start_position = self.get_position();
         // advance past the first quote
         let _ = self.next_char();
-        let mut string_content = String::new();
+        let content_start = self.consumed_byte_pos();
 
-        loop {
+        let content_end = loop {
+            let char_byte = self.consumed_byte_pos();
             match self.next_char() {
                 Some('\\') => {
                     let slash_position = self.get_position() - 1;
@@ -1349,8 +1309,6 @@ where
                         match character {
                             'f' | 'n' | 'r' | 't' | '"' | '\\' => {
                                 let _ = self.next_char();
-                                string_content.push('\\');
-                                string_content.push(character);
                             }
                             'u' => {
                                 let _ = self.next_char();
@@ -1441,10 +1399,6 @@ where
                                         },
                                     });
                                 }
-
-                                string_content.push_str("\\u{");
-                                string_content.push_str(&hex_digits);
-                                string_content.push('}');
                             }
                             _ => {
                                 return Err(LexicalError {
@@ -1466,8 +1420,8 @@ where
                         });
                     }
                 }
-                Some('"') => break,
-                Some(c) => string_content.push(c),
+                Some('"') => break char_byte,
+                Some(_) => {}
                 None => {
                     return Err(LexicalError {
                         error: LexicalErrorType::UnexpectedStringEnd,
@@ -1478,14 +1432,19 @@ where
                     });
                 }
             }
-        }
+        };
         let end_position = self.get_position();
 
-        let token = Token::String {
-            value: string_content.into(),
+        // The lexer reports `\r\n` and lone `\r` as `\n`, but this value is a
+        // slice of the source, where they are still carriage returns.
+        let content = &self.source[content_start..content_end];
+        let value = if self.has_carriage_return && content.contains('\r') {
+            content.replace("\r\n", "\n").replace('\r', "\n").into()
+        } else {
+            content.into()
         };
 
-        Ok((start_position, token, end_position))
+        Ok((start_position, Token::String { value }, end_position))
     }
 
     fn is_name_start(&self, character: char) -> bool {
@@ -1519,16 +1478,20 @@ where
     // Helper function to go to the next character coming up.
     fn next_char(&mut self) -> Option<char> {
         let character = self.char0;
-        let next = match self.chars.next() {
-            Some((location, character)) => {
+        let next = match self.next_source_char() {
+            Some((position, character)) => {
                 self.location0 = self.location1;
-                self.location1 = location;
+                self.location1 = position as u32;
                 Some(character)
             }
             None => {
-                // EOF needs a single advance
+                // No more characters to read, but the final ones may still be
+                // in char0/char1. The first time we get here location1 is the start
+                // of the final character, so stepping past it means jumping
+                // to the end of the source, more than one byte away if that
+                // character is multi-byte. After that we step one at a time.
                 self.location0 = self.location1;
-                self.location1 += 1;
+                self.location1 = u32::max(self.location1 + 1, self.cursor as u32);
                 None
             }
         };
@@ -1542,16 +1505,21 @@ where
         self.location0
     }
 
+    // The byte index just past everything consumed so far.
+    fn consumed_byte_pos(&self) -> usize {
+        match self.char0 {
+            Some(_) => self.location0 as usize,
+            None => self.source.len(),
+        }
+    }
+
     // Helper function to emit a lexed token to the queue of tokens.
     fn emit(&mut self, spanned: Spanned) {
         self.pending.push(spanned);
     }
 }
 
-impl<T> Iterator for Lexer<T>
-where
-    T: Iterator<Item = (u32, char)>,
-{
+impl Iterator for Lexer<'_> {
     type Item = LexResult;
 
     fn next(&mut self) -> Option<Self::Item> {
