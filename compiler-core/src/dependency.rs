@@ -344,7 +344,7 @@ impl PackageFetchError {
 
             hexpm::ApiError::Json(_)
             | hexpm::ApiError::IncorrectOneTimePassword
-            | hexpm::ApiError::OAuthRefreshTokenRejected
+            | hexpm::ApiError::OAuthRefreshTokenRejected { .. }
             | hexpm::ApiError::OAuthAccessDenied
             | hexpm::ApiError::OAuthTimeout
             | hexpm::ApiError::ExpiredToken
