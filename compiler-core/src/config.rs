@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
 mod stale_package_remover;
-use crate::error::{FileIoAction, FileKind, did_you_mean};
+use crate::error::{self, FileIoAction, FileKind, did_you_mean};
 use crate::io::FileSystemReader;
 use crate::io::ordered_map;
 use crate::manifest::Manifest;
@@ -79,14 +79,14 @@ impl<'de> serde::de::Visitor<'de> for SpdxLicenseVisitor {
                             .map(|licence| EcoString::from(licence.name))
                             .collect();
                         did_you_mean(value, &licence_names)
-                            .map_or_default(|suggestion| format!("\n{suggestion}"))
+                            .map_or_default(|suggestion| format!("\n\nHint: {suggestion}"))
                     };
 
-                    Err(serde::de::Error::custom(format!(
-                        "This is not a valid SPDX licence identifier or custom licence reference.\
-                        {suggestion}\n\n\
-                        Custom licence references must start with `LicenseRef-` and contain only \
-                        alphabetical characters, numbers, dashes, and dots."
+                    Err(serde::de::Error::custom(error::wrap_format!(
+                        "This is not a valid SPDX licence identifier or custom licence reference.
+
+Custom licence references must start with `LicenseRef-` and contain only \
+alphabetical characters, numbers, dashes, and dots.{suggestion}"
                     )))
                 }
             }

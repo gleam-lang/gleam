@@ -46,7 +46,7 @@ pub mod tests;
 
 macro_rules! wrap_format {
     ($($tts:tt)*) => {
-        wrap(&format!($($tts)*))
+        crate::error::wrap(&format!($($tts)*))
     }
 }
 pub(crate) use wrap_format;
