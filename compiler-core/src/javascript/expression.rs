@@ -217,10 +217,7 @@ impl Scope {
         &self.user_variables
     }
 
-    /// Restore previously saved user variables, reverting any counters advanced
-    /// during the branch to their earlier values. Variables introduced in the
-    /// branch with no earlier binding are kept, and the synthesised counters are
-    /// left untouched.
+    /// Restore previously saved user variables, returning to a previous scope.
     pub(crate) fn restore_user_variables(&mut self, previous: imbl::HashMap<EcoString, usize>) {
         self.user_variables = previous;
     }
