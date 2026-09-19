@@ -4,9 +4,11 @@ expression: err.pretty_string()
 ---
 error: Invalid package name
 
-This is not a valid package:
+This is not a valid package name, so it could not be removed.
 
-  - gleam_otp@1 (Did you mean `gleam_otp`?)
+  - gleam_otp@1
 
 Package names must start with a lowercase letter and may only contain
 lowercase letters, numbers and underscores.
+
+Hint: Did you mean `gleam_otp`?
