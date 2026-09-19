@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/error/tests.rs
+expression: err.pretty_string()
+---
+error: Invalid package name
+
+This is not a valid package:
+
+  - gleam_otp@1 (Did you mean `gleam_otp`?)
+
+Package names must start with a lowercase letter and may only contain
+lowercase letters, numbers and underscores.
