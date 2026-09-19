@@ -49,7 +49,10 @@ fn hex_session_revoked() {
 #[test]
 fn hex_error_conversion() {
     assert_eq!(
-        Error::hex(hexpm::ApiError::OAuthRefreshTokenRejected),
+        Error::hex(hexpm::ApiError::OAuthRefreshTokenRejected {
+            code: "invalid_grant".into(),
+            description: "Refresh token has expired".into(),
+        }),
         Error::HexSessionRevoked
     );
 }

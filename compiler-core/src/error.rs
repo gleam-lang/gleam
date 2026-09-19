@@ -570,7 +570,7 @@ impl Error {
             | hexpm::ApiError::OAuthAccessDenied
             | hexpm::ApiError::ExpiredToken => Self::Hex(error.to_string()),
 
-            hexpm::ApiError::OAuthRefreshTokenRejected => Self::HexSessionRevoked,
+            hexpm::ApiError::OAuthRefreshTokenRejected { .. } => Self::HexSessionRevoked,
 
             hexpm::ApiError::IncorrectOneTimePassword => Self::IncorrectHexOneTimePassword,
         }

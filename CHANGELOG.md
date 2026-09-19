@@ -238,6 +238,10 @@
   the `--out` parameter.
   ([Louis Pilfold](https://github.com/lpil))
 
+- The package manager now logs the Hex OAuth error code and description at
+  trace level when a stored session is rejected while refreshing credentials.
+  ([John Downey](https://github.com/jtdowney))
+
 ### Language server
 
 - The "Generate dynamic decoder" code action is now only offered when the

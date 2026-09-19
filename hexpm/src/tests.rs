@@ -1187,3 +1187,20 @@ fn poll_token_response_unexpected_status() {
         ))
     );
 }
+
+#[test]
+fn refresh_token_response_preserves_oauth_error_details() {
+    let response = make_json_response(
+        400,
+        json!({
+            "error": "invalid_grant",
+            "error_description": "Refresh token has expired"
+        }),
+    );
+
+    assert_matches!(
+        crate::oauth_refresh_token_response(response),
+        Err(ApiError::OAuthRefreshTokenRejected { code, description })
+            if code == "invalid_grant" && description == "Refresh token has expired"
+    );
+}
