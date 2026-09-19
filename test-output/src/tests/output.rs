@@ -47,8 +47,7 @@ fn run_and_produce_pretty_snapshot(
 
 --- gleam run output ----------------
 {output}
-"
-    )
+")
 }
 
 fn run_and_capture_output(
@@ -238,6 +237,11 @@ fn echo_singleton() {
 #[test]
 fn echo_with_message() {
     assert_output!("echo_with_message");
+}
+
+#[test]
+fn function_capture_side_effect() {
+    assert_output!("function_capture_side_effect");
 }
 
 #[test]
