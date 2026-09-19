@@ -130,8 +130,9 @@ fn package_interface() {
 
 #[test]
 fn compile_package_produces_textual_erlang_files() {
-    let output_directory = tempfile::TempDir::new().unwrap();
-    let output_directory = Utf8PathBuf::from(output_directory.path().as_os_str().to_str().unwrap());
+    let temporary_directory = tempfile::TempDir::new().unwrap();
+    let output_directory =
+        Utf8PathBuf::from(temporary_directory.path().as_os_str().to_str().unwrap());
 
     let package_directory = package("compile_package");
 
@@ -147,8 +148,10 @@ fn compile_package_produces_textual_erlang_files() {
     .run(package_directory)
     .unwrap();
 
-    let mut output_file = output_directory.clone();
-    output_file.push("_gleam_artefacts");
-    output_file.push("wibble.erl");
-    assert!(output_file.exists());
+    assert!(
+        output_directory
+            .join("_gleam_artefacts")
+            .join("wibble.erl")
+            .exists()
+    );
 }
