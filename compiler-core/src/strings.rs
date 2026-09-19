@@ -102,18 +102,30 @@ pub fn to_snake_case(string: &str) -> EcoString {
 
 pub fn to_upper_camel_case(string: &str) -> EcoString {
     let mut pascal_case = EcoString::with_capacity(string.len());
-    let mut chars = string.chars();
+    let mut is_word_boundary = true;
 
-    while let Some(char) = chars.next() {
+    for char in string.chars() {
         if char == '_' {
-            let Some(next) = chars.next() else { break };
-            pascal_case.push(next.to_ascii_uppercase());
+            is_word_boundary = true;
+        } else if is_word_boundary {
+            pascal_case.push(char.to_ascii_uppercase());
+            is_word_boundary = false;
         } else {
             pascal_case.push(char);
         }
     }
 
     pascal_case
+}
+
+#[test]
+fn to_upper_camel_case_test() {
+    assert_eq!(to_upper_camel_case("login_user"), "LoginUser");
+    assert_eq!(to_upper_camel_case("Int_Value"), "IntValue");
+    assert_eq!(to_upper_camel_case("wibble"), "Wibble");
+    assert_eq!(to_upper_camel_case("Wibble"), "Wibble");
+    assert_eq!(to_upper_camel_case("wibble__wobble_"), "WibbleWobble");
+    assert_eq!(to_upper_camel_case(""), "");
 }
 
 /// Converts a string into its UTF-16 representation in bytes
