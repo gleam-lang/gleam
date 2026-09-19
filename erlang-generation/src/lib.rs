@@ -70,11 +70,6 @@ impl ErlangModuleName {
         Self("io".into())
     }
 
-    /// The Erlang/OTP `io_lib_format` module.
-    pub fn io_lib_format() -> Self {
-        Self("io_lib_format".into())
-    }
-
     /// The Erlang/OTP `io_lib` module.
     pub fn io_lib() -> Self {
         Self("io_lib".into())
