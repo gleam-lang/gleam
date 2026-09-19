@@ -21,7 +21,7 @@ use crate::type_::printer::{Names, Printer};
 use crate::type_::{FieldAccessUsage, error::PatternMatchKind};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{bit_array, diagnostic::Level, type_::UnifyErrorSituation};
-use ecow::EcoString;
+use ecow::{EcoString, eco_format};
 use hexpm::version::Version;
 use itertools::Itertools;
 use src_span::SrcSpan;
@@ -281,6 +281,12 @@ pub enum Error {
     #[error("File(s) already exist in {}",
 file_names.iter().map(|x| x.as_str()).join(", "))]
     OutputFilesAlreadyExist { file_names: Vec<Utf8PathBuf> },
+
+    #[error("Invalid package names: {}", packages.iter().join(", "))]
+    RemovedPackageNamesInvalid {
+        packages: Vec<String>,
+        dependencies: Vec<EcoString>,
+    },
 
     #[error("Packages not exist: {}", packages.iter().join(", "))]
     RemovedPackagesNotExist { packages: Vec<String> },
@@ -948,13 +954,15 @@ fn edit_distance_with_substrings(a: &str, b: &str, limit: usize) -> Option<usize
 
 /// Returns a "Did you mean ...?" suggestion using the string from `options` that's most similar to
 /// `name`.
-pub fn did_you_mean(name: &str, options: &[EcoString]) -> Option<String> {
+pub fn did_you_mean(target: &str, options: &[EcoString]) -> Option<String> {
+    select_suggestion(target, options).map(|selected| format!("Did you mean `{selected}`?"))
+}
+
+pub fn select_suggestion<'a>(target: &str, options: &'a [EcoString]) -> Option<&'a EcoString> {
     // If only one option is given, return that option.
     // This seems to solve the `unknown_variable_3` test.
     if options.len() == 1 {
-        return options
-            .first()
-            .map(|option| format!("Did you mean `{option}`?"));
+        return options.first();
     }
 
     // Check for case-insensitive matches.
@@ -962,13 +970,13 @@ pub fn did_you_mean(name: &str, options: &[EcoString]) -> Option<String> {
     // such as the test on `type_vars_must_be_declared`.
     if let Some(exact_match) = options
         .iter()
-        .find(|&option| option.eq_ignore_ascii_case(name))
+        .find(|&option| option.eq_ignore_ascii_case(target))
     {
-        return Some(format!("Did you mean `{exact_match}`?"));
+        return Some(exact_match);
     }
 
     // Calculate the threshold as one third of the name's length, with a minimum of 1.
-    let threshold = std::cmp::max(name.chars().count() / 3, 1);
+    let threshold = std::cmp::max(target.chars().count() / 3, 1);
 
     // Filter and sort options based on edit distance.
     options
@@ -976,11 +984,11 @@ pub fn did_you_mean(name: &str, options: &[EcoString]) -> Option<String> {
         .filter(|&option| option != ast::CAPTURE_VARIABLE)
         .sorted()
         .filter_map(|option| {
-            edit_distance_with_substrings(option, name, threshold)
+            edit_distance_with_substrings(option, target, threshold)
                 .map(|distance| (option, distance))
         })
         .min_by_key(|&(_, distance)| distance)
-        .map(|(option, _)| format!("Did you mean `{option}`?"))
+        .map(|(option, _)| option)
 }
 
 fn to_ordinal(value: u32) -> String {
@@ -1325,6 +1333,56 @@ If you want to overwrite {text_files}, delete {text_pronoun} and run the command
                     ),
                     level: Level::Error,
                     hint: None,
+                    location: None,
+                }]
+            }
+
+            Error::RemovedPackageNamesInvalid {
+                packages,
+                dependencies,
+            } => {
+                let (plural, introduction) = if packages.len() == 1 {
+                    (
+                        "",
+                        "This is not a valid package name, so it could not be removed.",
+                    )
+                } else {
+                    (
+                        "s",
+                        "These are not valid package names, so they could not be removed.",
+                    )
+                };
+
+                let suggestions = packages
+                    .iter()
+                    .filter_map(|package| select_suggestion(package, dependencies))
+                    .map(|suggestion| eco_format!("`{suggestion}`"))
+                    .collect_vec();
+                let hint = if suggestions.is_empty() {
+                    None
+                } else {
+                    let list = comma_separated_list(suggestions.as_slice());
+                    Some(format!("Did you mean {list}?"))
+                };
+                let list = packages
+                    .iter()
+                    .map(|package| format!("  - {package}"))
+                    .join("\n");
+
+                let text = format!(
+                    "{introduction}
+
+{list}
+
+Package names must start with a lowercase letter and may only contain
+lowercase letters, numbers and underscores."
+                );
+
+                vec![Diagnostic {
+                    title: format!("Invalid package name{plural}"),
+                    text,
+                    level: Level::Error,
+                    hint,
                     location: None,
                 }]
             }
@@ -2656,6 +2714,7 @@ project's `gleam.toml`."
 fn comma_separated_list(items: &[EcoString]) -> String {
     match items {
         [] => String::new(),
+        [sole] => sole.to_string(),
         [first, second] => format!("{first} and {second}"),
         [first, ..] => {
             let (last, items) = items.split_last().unwrap_or((first, &[]));
