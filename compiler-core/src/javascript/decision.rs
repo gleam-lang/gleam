@@ -854,7 +854,7 @@ impl<'a, 'doc> CasePrinter<'_, '_, 'a, '_, 'doc> {
                 .variables
                 .expression_generator
                 .current_scope
-                .restore_user_variables(&old_user_variables),
+                .restore_user_variables(old_user_variables),
             DecisionKind::LetAssert { .. } => {}
         }
 
