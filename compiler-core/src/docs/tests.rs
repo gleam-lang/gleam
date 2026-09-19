@@ -80,7 +80,6 @@ fn compile_with_markdown_pages(
         PackageCompiler::new(&config, Mode::Dev, &root, &build, &lib, &target, ids, fs);
     compiler.write_entrypoint = false;
     compiler.write_metadata = false;
-    compiler.compile_beam_bytecode = true;
     let mut modules = compiler
         .compile(
             &warnings,

@@ -35,7 +35,7 @@ impl BeamCompilerInstance {
         lib: &Utf8Path,
         modules: &HashSet<Utf8PathBuf>,
         stdio: Stdio,
-    ) -> Result<Vec<String>, Error> {
+    ) -> Result<(), Error> {
         // Check that the BEAM instance is still alive before attempting to use it.
         let exit_status = self
             .process
@@ -66,23 +66,16 @@ impl BeamCompilerInstance {
         })?;
 
         let mut buf = String::new();
-        let mut accumulated_modules: Vec<String> = Vec::new();
         while let (Ok(_), Ok(None)) = (self.stdout.read_line(&mut buf), self.process.try_wait()) {
             match buf.trim() {
                 "gleam-compile-result-ok" => {
-                    // Return Ok with the accumulated modules
-                    return Ok(accumulated_modules);
+                    return Ok(());
                 }
                 "gleam-compile-result-error" => {
                     return Err(Error::ShellCommand {
                         program: "escript".into(),
                         reason: ShellCommandFailureReason::Unknown,
                     });
-                }
-                s if s.starts_with("gleam-compile-module:") => {
-                    if let Some(module_content) = s.strip_prefix("gleam-compile-module:") {
-                        accumulated_modules.push(module_content.to_string());
-                    }
                 }
                 _ => match stdio {
                     Stdio::Inherit => print!("{buf}"),

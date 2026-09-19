@@ -31,6 +31,12 @@ expression: "./cases/variable_or_module"
 ]}.
 
 
+//// variable_or_module/ebin/main.beam
+<0 byte binary>
+
+//// variable_or_module/ebin/power.beam
+<0 byte binary>
+
 //// variable_or_module/include/power_Power.hrl
 -record(power, {
     value :: integer()

@@ -29,3 +29,10 @@ expression: "./cases/erlang_escape_names"
                two]},
     {registered, []}
 ]}.
+
+
+//// erlang_escape_names/ebin/one.beam
+<0 byte binary>
+
+//// erlang_escape_names/ebin/two.beam
+<0 byte binary>

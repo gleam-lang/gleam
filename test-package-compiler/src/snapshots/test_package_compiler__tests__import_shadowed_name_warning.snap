@@ -31,6 +31,12 @@ expression: "./cases/import_shadowed_name_warning"
 ]}.
 
 
+//// import_shadowed_name_warning/ebin/one.beam
+<0 byte binary>
+
+//// import_shadowed_name_warning/ebin/two.beam
+<0 byte binary>
+
 //// Warning
 warning: Unused private constructor
    ┌─ import_shadowed_name_warning/src/two.gleam:12:3

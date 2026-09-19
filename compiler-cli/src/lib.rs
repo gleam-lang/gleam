@@ -786,6 +786,25 @@ pub struct CompilePackage {
     /// Only compile modules in the `src` directory, excluding `test` and `dev`
     #[arg(long = "src-only")]
     src_only: bool,
+
+    /// Overrides for a dependency's OTP application name, in the form
+    /// `package=otp_app`.
+    ///
+    /// Required for any dependency whose OTP application name differs from
+    /// its package name. May be supplied multiple times.
+    #[arg(
+        verbatim_doc_comment,
+        long = "otp-app-override",
+        value_parser = parse_otp_app_override
+    )]
+    otp_app_overrides: Vec<(String, String)>,
+}
+
+fn parse_otp_app_override(input: &str) -> Result<(String, String), String> {
+    input
+        .split_once('=')
+        .map(|(package, otp_app)| (package.to_string(), otp_app.to_string()))
+        .ok_or_else(|| "expected the format `package=otp_app`".into())
 }
 
 #[derive(Subcommand, Debug)]

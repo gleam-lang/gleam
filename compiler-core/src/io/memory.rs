@@ -455,12 +455,32 @@ impl CommandExecutor for InMemoryFileSystem {
 impl BeamCompilerIO for InMemoryFileSystem {
     fn compile_beam(
         &self,
-        _out: &Utf8Path,
+        out: &Utf8Path,
         _lib: &Utf8Path,
-        _modules: &HashSet<Utf8PathBuf>,
+        modules: &HashSet<Utf8PathBuf>,
         _stdio: Stdio,
-    ) -> Result<Vec<String>, Error> {
-        Ok(Vec::new()) // Always succeed.
+    ) -> Result<(), Error> {
+        // Always succeed, pretending to have compiled every given module. We
+        // write out an (empty) `.beam` file per module, mirroring the real
+        // compiler, since callers may look for these in `ebin` afterwards.
+        let ebin = out.join("ebin");
+        for path in modules {
+            let name = if path.extension() == Some("ex") {
+                // Real Elixir names the module after its `defmodule`, which
+                // we don't parse, so we follow the path convention instead:
+                // `app/login/user.ex` is `Elixir.App.Login.User`.
+                let segments = path
+                    .with_extension("")
+                    .components()
+                    .map(|component| crate::strings::to_upper_camel_case(component.as_str()))
+                    .collect::<Vec<_>>();
+                format!("Elixir.{}", segments.join("."))
+            } else {
+                path.file_stem().unwrap_or_default().to_string()
+            };
+            self.write_bytes(&ebin.join(format!("{name}.beam")), &[])?;
+        }
+        Ok(())
     }
 }
 
@@ -469,6 +489,28 @@ fn test_empty_in_memory_fs_has_root() {
     let imfs = InMemoryFileSystem::new();
 
     assert!(imfs.exists(Utf8Path::new("/")));
+}
+
+#[test]
+fn test_compile_beam_names_modules() -> Result<(), Error> {
+    let imfs = InMemoryFileSystem::new();
+    let modules = HashSet::from([
+        Utf8PathBuf::from("app/login/user.ex"),
+        Utf8PathBuf::from("wibble.ex"),
+        Utf8PathBuf::from("nested/thing.erl"),
+    ]);
+    imfs.compile_beam(
+        Utf8Path::new("/out"),
+        Utf8Path::new("/lib"),
+        &modules,
+        Stdio::Null,
+    )?;
+
+    assert!(imfs.exists(Utf8Path::new("/out/ebin/Elixir.App.Login.User.beam")));
+    assert!(imfs.exists(Utf8Path::new("/out/ebin/Elixir.Wibble.beam")));
+    assert!(imfs.exists(Utf8Path::new("/out/ebin/thing.beam")));
+
+    Ok(())
 }
 
 #[test]

@@ -11,6 +11,9 @@ expression: "./cases/erlang_empty"
 //// erlang_empty/_gleam_artefacts/empty.cache_meta
 <29 byte binary>
 
+//// erlang_empty/ebin/empty.beam
+<0 byte binary>
+
 //// erlang_empty/ebin/hello_joe.app
 {application, hello_joe, [
     {vsn, "0.1.0"},
