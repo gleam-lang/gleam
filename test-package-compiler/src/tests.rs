@@ -342,17 +342,14 @@ fn src_only() {
 
 #[test]
 fn otp_app_override() {
-    use ecow::EcoString;
-    use std::collections::HashMap;
-
-    let overrides = HashMap::from([
-        (
-            EcoString::from("gleam_otp"),
-            EcoString::from("my_gleam_otp_app"),
-        ),
-        (EcoString::from("midas"), EcoString::from("my_midas_app")),
-    ]);
-    let path = "./cases/erlang_app_generation";
-    let output = crate::prepare_with_otp_app_overrides(path, overrides);
-    insta::assert_snapshot!("otp_app_override", output, path);
+    let mut compiler = TestHarness::new();
+    compiler
+        .compile(
+            Compilation::for_package("erlang_app_generation")
+                .otp_app_override("hpack_erl", "hpack")
+                .otp_app_override("uuid_erl", "uuid"),
+        )
+        .unwrap();
+    let output = compiler.into_snapshot();
+    insta::assert_snapshot!("otp_app_override", output, "./cases/erlang_app_generation");
 }

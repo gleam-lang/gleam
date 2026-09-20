@@ -52,7 +52,7 @@ impl TestHarness {
             Target::Erlang => TargetCodegenConfiguration::Erlang {
                 app_file: Some(ErlangAppCodegenConfiguration {
                     include_dev_deps: true,
-                    package_name_overrides: HashMap::new(),
+                    package_name_overrides: arguments.otp_app_overrides,
                 }),
                 output: ErlangOutput::Binary,
             },
@@ -120,6 +120,7 @@ pub struct Compilation {
     package: &'static str,
     target: Option<Target>,
     src_only: bool,
+    otp_app_overrides: HashMap<EcoString, EcoString>,
 }
 
 impl Compilation {
@@ -128,11 +129,19 @@ impl Compilation {
             package,
             target: None,
             src_only: false,
+            otp_app_overrides: HashMap::new(),
         }
     }
 
     pub fn src_only(mut self) -> Self {
         self.src_only = true;
+        self
+    }
+
+    pub fn otp_app_override(mut self, package: &str, otp_app: &str) -> Self {
+        let _ = self
+            .otp_app_overrides
+            .insert(package.into(), otp_app.into());
         self
     }
 }
@@ -142,76 +151,5 @@ pub fn run_package_compiler(package: &'static str) -> String {
     match harness.compile(Compilation::for_package(package)) {
         Ok(_) => harness.into_snapshot(),
         Err(error) => error,
-    }
-}
-
-pub fn prepare_with_otp_app_overrides(
-    path: &str,
-    package_name_overrides: HashMap<EcoString, EcoString>,
-) -> String {
-    let root = Utf8PathBuf::from(path).canonicalize_utf8().unwrap();
-
-    let toml = std::fs::read_to_string(root.join("gleam.toml")).unwrap();
-    let config: PackageConfig = toml::from_str(&toml).unwrap();
-
-    let target = match config.target {
-        Target::Erlang => TargetCodegenConfiguration::Erlang {
-            app_file: Some(ErlangAppCodegenConfiguration {
-                include_dev_deps: true,
-                package_name_overrides,
-            }),
-            output: ErlangOutput::Binary,
-        },
-        Target::JavaScript => TargetCodegenConfiguration::JavaScript {
-            emit_typescript_definitions: config.javascript.typescript_declarations,
-            emit_source_maps: config.javascript.source_maps,
-            prelude_location: Utf8PathBuf::from("../prelude.mjs"),
-        },
-    };
-
-    let ids = UniqueIdGenerator::new();
-    let mut modules = imbl::HashMap::new();
-    let warnings = VectorWarningEmitterIO::default();
-    let warning_emitter = WarningEmitter::new(Rc::new(warnings.clone()));
-    let filesystem = test_helpers_rs::to_in_memory_filesystem(&root);
-    let initial_files = filesystem.files();
-    let root = Utf8PathBuf::from("");
-    let out = Utf8PathBuf::from("/out/lib/the_package");
-    let lib = Utf8PathBuf::from("/out/lib");
-    let mut compiler = gleam_core::build::PackageCompiler::new(
-        &config,
-        Mode::Dev,
-        &root,
-        &out,
-        &lib,
-        &target,
-        ids,
-        filesystem.clone(),
-    );
-    compiler.write_entrypoint = false;
-    compiler.write_metadata = true;
-    compiler.copy_native_files = false;
-    let result = compiler.compile(
-        &warning_emitter,
-        &mut modules,
-        &mut imbl::HashMap::new(),
-        &mut StaleTracker::default(),
-        &mut HashSet::new(),
-        &NullTelemetry,
-    );
-    match result {
-        Outcome::Ok(_) => {
-            for path in initial_files {
-                if filesystem.is_file(&path) {
-                    filesystem.delete_file(&path).unwrap();
-                }
-            }
-            let files = filesystem.into_contents();
-            let warnings = warnings.take();
-            TestCompileOutput { files, warnings }.as_overview_text()
-        }
-        Outcome::TotalFailure(error) | Outcome::PartialFailure(_, error) => {
-            test_helpers_rs::normalise_diagnostic(&error.pretty_string())
-        }
     }
 }

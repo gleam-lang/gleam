@@ -20,10 +20,12 @@ expression: "./cases/erlang_app_generation"
     {vsn, "0.1.0"},
     {applications, [gleam_otp,
                     gleam_stdlib,
+                    hpack_erl,
                     inets,
                     midas,
                     simple_json,
-                    ssl]},
+                    ssl,
+                    uuid_erl]},
     {description, "It's very cool"},
     {modules, [main]},
     {registered, []}
