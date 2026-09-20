@@ -144,6 +144,7 @@ fn compile_package_produces_textual_erlang_files() {
         javascript_prelude: None,
         skip_beam_compilation: true,
         src_only: false,
+        otp_app_overrides: Vec::new(),
     })
     .run(package_directory)
     .unwrap();

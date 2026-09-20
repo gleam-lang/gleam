@@ -798,7 +798,7 @@ pub struct CompilePackage {
         long = "otp-app-override",
         value_parser = parse_otp_app_override
     )]
-    otp_app_overrides: Vec<(EcoString, EcoString)>,
+    pub otp_app_overrides: Vec<(EcoString, EcoString)>,
 }
 
 fn parse_otp_app_override(input: &str) -> Result<(EcoString, EcoString), String> {
