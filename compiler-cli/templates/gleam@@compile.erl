@@ -17,9 +17,9 @@ compile_package_loop() ->
             {ok, Tokens, _} = erl_scan:string(Chars),
             {ok, {Lib, Out, Modules}} = erl_parse:parse_term(Tokens),
             case compile_package(Lib, Out, Modules) of
-                {ok, ModuleNames} ->
+                true ->
                     io:put_chars("gleam-compile-result-ok\n");
-                err ->
+                false ->
                     io:put_chars("gleam-compile-result-error\n")
             end,
             compile_package_loop()
@@ -32,30 +32,24 @@ compile_package(Lib, Out, Modules) ->
     {ElixirModules, ErlangModules} = lists:partition(IsElixirModule, Modules),
     ok = filelib:ensure_dir([Out, $/]),
     ok = add_lib_to_erlang_path(Lib),
-    {ErlangOk, ErlangBeams} = compile_erlang(ErlangModules, Out),
-    {ElixirOk, ElixirBeams} = case ErlangOk of
+    ErlangOk = compile_erlang(ErlangModules, Out),
+    ElixirOk = case ErlangOk of
         true -> compile_elixir(ElixirModules, Out);
-        false -> {false, []}
+        false -> false
     end,
     ok = del_lib_from_erlang_path(Lib),
-    case ErlangOk andalso ElixirOk of
-        true ->
-            ModuleNames = proplists:get_keys(ErlangBeams ++ ElixirBeams),
-            {ok, ModuleNames};
-        false ->
-            err
-    end.
+    ErlangOk andalso ElixirOk.
 
 compile_erlang(Modules, Out) ->
     Workers = start_compiler_workers(Out),
     ok = producer_loop(Modules, Workers),
-    collect_results({true, []}).
+    collect_results(true).
 
-collect_results(Acc = {Result, Beams}) ->
+collect_results(Result) ->
     receive
-        {compiled, ModuleName, Beam} -> collect_results({Result, [{ModuleName, Beam} | Beams]});
-        failed -> collect_results({false, Beams})
-        after 0 -> Acc
+        compiled -> collect_results(Result);
+        failed -> collect_results(false)
+        after 0 -> Result
     end.
 
 producer_loop([], 0) ->
@@ -88,15 +82,14 @@ worker_loop(Parent, Out) ->
             log({compiling, Module}),
             Outcome =
                 case filename:extension(Module) of
-                    ".erl" -> compile_erlang_file(Options, Module, Out);
+                    ".erl" -> compile_erlang_file(Options, Module);
                     ".abstr" -> compile_abstr_file(Options, Module, Out);
                     _ -> {error, unknown_extension}
                 end,
             case Outcome of
-                {ok, ModuleName, Beam} ->
-                    Message = {compiled, ModuleName, Beam},
-                    log(Message),
-                    erlang:send(Parent, Message);
+                ok ->
+                    log({compiled, Module}),
+                    erlang:send(Parent, compiled);
                 {error, Reason} ->
                     log({failed, Module, Reason}),
                     erlang:send(Parent, failed)
@@ -113,19 +106,17 @@ compile_abstr_file(Options, Module, Out) ->
             end,
         {ok, ModuleName, CompiledBinary} ?= compile:forms(AbstrForms, Options),
         Beam = filename:join(Out, ModuleName) ++ ".beam",
-        ok ?= file:write_file(Beam, CompiledBinary),
-        {ok, ModuleName, Beam}
+        ok ?= file:write_file(Beam, CompiledBinary)
     else
         {error, Reason} -> {error, Reason};
         error -> {error, nil};
         Reason -> {error, Reason}
     end.
 
-compile_erlang_file(Options, Module, Out) ->
+compile_erlang_file(Options, Module) ->
     case compile:file(Module, Options) of
-        {ok, ModuleName} ->
-            Beam = filename:join(Out, ModuleName) ++ ".beam",
-            {ok, ModuleName, Beam};
+        {ok, _ModuleName} ->
+            ok;
         error ->
             {error, nil}
     end.
@@ -139,14 +130,14 @@ compile_elixir(Modules, Out) ->
         "https://elixir-lang.org/install.html"
     ],
     case Modules of
-        [] -> {true, []};
+        [] -> true;
         _ ->
             log({starting, "compiler.app,elixir.app"}),
             case application:ensure_all_started([compiler, elixir]) of
                 {ok, _} -> do_compile_elixir(Modules, Out);
                 _ ->
                     io:put_chars(standard_error, [Error, $\n]),
-                    {false, []}
+                    false
             end
     end.
 
@@ -164,12 +155,11 @@ do_compile_elixir(Modules, Out) ->
     'Elixir.Code':compiler_options([{ignore_module_conflict, true}]),
     case 'Elixir.Kernel.ParallelCompiler':compile_to_path(ModuleBins, OutBin, Options) of
         {ok, ModuleAtoms, _} ->
-            ToBeam = fun(ModuleAtom) ->
-                Beam = filename:join(Out, atom_to_list(ModuleAtom)) ++ ".beam",
-                log({compiled, Beam}),
-                {ModuleAtom, Beam}
+            Log = fun(ModuleAtom) ->
+                log({compiled, filename:join(Out, atom_to_list(ModuleAtom)) ++ ".beam"})
             end,
-            {true, lists:map(ToBeam, ModuleAtoms)};
+            lists:foreach(Log, ModuleAtoms),
+            true;
         {error, Errors, _} ->
             % Log all filenames associated with modules that failed to compile.
             % Note: The compiler prints compilation errors upon encountering them.
@@ -178,8 +168,8 @@ do_compile_elixir(Modules, Out) ->
                 log({failed, binary_to_list(File)})
             end,
             lists:foreach(Log, ErrorFiles),
-            {false, []};
-        _ -> {false, []}
+            false;
+        _ -> false
     end.
 
 add_lib_to_erlang_path(Lib) ->
