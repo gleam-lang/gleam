@@ -93,6 +93,7 @@ use clap::{
     Args, Parser, Subcommand,
     builder::{Styles, styling},
 };
+use ecow::EcoString;
 use gleam_core::{
     analyse::TargetSupport,
     build::{Codegen, Compile, ErlangOutput, Mode, NullTelemetry, Options, Runtime, Target},
@@ -797,13 +798,13 @@ pub struct CompilePackage {
         long = "otp-app-override",
         value_parser = parse_otp_app_override
     )]
-    otp_app_overrides: Vec<(String, String)>,
+    otp_app_overrides: Vec<(EcoString, EcoString)>,
 }
 
-fn parse_otp_app_override(input: &str) -> Result<(String, String), String> {
+fn parse_otp_app_override(input: &str) -> Result<(EcoString, EcoString), String> {
     input
         .split_once('=')
-        .map(|(package, otp_app)| (package.to_string(), otp_app.to_string()))
+        .map(|(package, otp_app)| (EcoString::from(package), EcoString::from(otp_app)))
         .ok_or_else(|| "expected the format `package=otp_app`".into())
 }
 

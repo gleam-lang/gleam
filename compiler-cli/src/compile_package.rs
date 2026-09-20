@@ -21,7 +21,7 @@ use gleam_core::{
     warning::WarningEmitter,
 };
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     rc::Rc,
 };
 
@@ -41,17 +41,10 @@ pub fn command(options: CompilePackage) -> Result<()> {
     }
     let app_file = match options.skip_beam_compilation {
         true => None,
-        false => {
-            let package_name_overrides = options
-                .otp_app_overrides
-                .into_iter()
-                .map(|(package, otp_app)| (EcoString::from(package), EcoString::from(otp_app)))
-                .collect::<HashMap<_, _>>();
-            Some(ErlangAppCodegenConfiguration {
-                include_dev_deps: false,
-                package_name_overrides,
-            })
-        }
+        false => Some(ErlangAppCodegenConfiguration {
+            include_dev_deps: false,
+            package_name_overrides: options.otp_app_overrides.into_iter().collect(),
+        }),
     };
     let target = match options.target {
         Target::Erlang => TargetCodegenConfiguration::Erlang {
