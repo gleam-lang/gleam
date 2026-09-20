@@ -20,10 +20,7 @@ use gleam_core::{
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
 };
-use std::{
-    collections::HashSet,
-    rc::Rc,
-};
+use std::{collections::HashSet, rc::Rc};
 
 pub fn command(options: CompilePackage) -> Result<()> {
     let ids = UniqueIdGenerator::new();
