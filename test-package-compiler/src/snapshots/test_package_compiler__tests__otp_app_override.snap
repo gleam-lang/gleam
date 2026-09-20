@@ -1,29 +1,31 @@
 ---
-source: test-package-compiler/src/lib.rs
+source: test-package-compiler/src/tests.rs
 expression: "./cases/erlang_app_generation"
 ---
-//// /out/lib/the_package/_gleam_artefacts/main.abstr
+//// erlang_app_generation/_gleam_artefacts/main.abstr
 <288 byte binary>
 
-//// /out/lib/the_package/_gleam_artefacts/main.cache
+//// erlang_app_generation/_gleam_artefacts/main.cache
 <.cache binary>
 
-//// /out/lib/the_package/_gleam_artefacts/main.cache_meta
+//// erlang_app_generation/_gleam_artefacts/main.cache_meta
 <29 byte binary>
 
-//// /out/lib/the_package/ebin/main.beam
+//// erlang_app_generation/ebin/main.beam
 <0 byte binary>
 
-//// /out/lib/the_package/ebin/my_erlang_application.app
+//// erlang_app_generation/ebin/my_erlang_application.app
 {application, my_erlang_application, [
     {mod, {'my_erlang_application_sup', []}},
     {vsn, "0.1.0"},
-    {applications, [gleam_stdlib,
+    {applications, [gleam_otp,
+                    gleam_stdlib,
+                    hpack,
                     inets,
-                    my_gleam_otp_app,
-                    my_midas_app,
+                    midas,
                     simple_json,
-                    ssl]},
+                    ssl,
+                    uuid]},
     {description, "It's very cool"},
     {modules, [main]},
     {registered, []}
