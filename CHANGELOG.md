@@ -432,6 +432,11 @@
   by hex.pm to support non-SPDX licences.
   ([Vivid](https://github.com/absolutely-vivid))
 
+- Fixed a bug where packages published from Windows would record their file
+  paths in `metadata.config` using `\` separators, which Erlang reads as
+  escape characters, corrupting the paths or making the metadata unparseable.
+  ([John Downey](https://github.com/jtdowney))
+
 ## v1.18.1 - 2026-08-01
 
 - Fixed a bug where the Erlang code generator would generate wrong code when
