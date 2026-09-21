@@ -5149,8 +5149,8 @@ fn do_reduce_clause_guard(operator: Spanned, estack: &mut Vec<UntypedClauseGuard
 /// Simple-Precedence-Parser, perform reduction for clause guard
 fn do_reduce_constant(operator: Spanned, estack: &mut Vec<UntypedConstant>) {
     match (estack.pop(), estack.pop()) {
-        (Some(left), Some(right)) => {
-            let new_expression = constant_binop_reduction(operator, right, left);
+        (Some(right), Some(left)) => {
+            let new_expression = constant_binop_reduction(operator, left, right);
             estack.push(new_expression);
         }
         _ => panic!("Tried to reduce without 2 guards"),
