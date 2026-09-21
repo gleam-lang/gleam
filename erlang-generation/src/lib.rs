@@ -3461,16 +3461,21 @@ impl ErlangSourceBuilder {
             // Otherwise we have to properly start a new list: push the `[` and
             // wait for the first item to be generated.
             Some(_) | None => {
-                match list_kind {
-                    ListKind::Pattern => self.new_pattern(),
-                    ListKind::Expression => self.new_expression(),
-                }
+                self.new_of_kind(&list_kind);
                 self.code.push('[');
                 self.position.push(ErlangSourceBuilderPosition::List {
                     kind: list_kind,
                     expected: ExpectedListItem::First,
                 });
             }
+        }
+    }
+
+    /// Starts a new pattern or expression, depending on the kind of list.
+    fn new_of_kind(&mut self, list_kind: &ListKind) {
+        match list_kind {
+            ListKind::Pattern => self.new_pattern(),
+            ListKind::Expression => self.new_expression(),
         }
     }
 
@@ -3491,10 +3496,7 @@ impl ErlangSourceBuilder {
                 self.position.pop();
             }
             Some(_) | None => {
-                match list_kind {
-                    ListKind::Pattern => self.new_pattern(),
-                    ListKind::Expression => self.new_expression(),
-                }
+                self.new_of_kind(&list_kind);
                 self.code.push_str("[]");
             }
         }
@@ -4046,10 +4048,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         //   becomes
         // {attribute,ANNO,doc,Content}
         self.attribute_tuple("doc");
-        match content {
-            DocContent::String(content) => self.etf.binary(content.len() as u32, content.bytes()),
-            DocContent::False => self.etf.atom("false"),
-        }
+        self.doc_content(content);
     }
 
     fn moduledoc_attribute(&mut self, content: DocContent<'_>) {
@@ -4059,10 +4058,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         //   becomes
         // {attribute,ANNO,moduledoc,Content}
         self.attribute_tuple("moduledoc");
-        match content {
-            DocContent::String(content) => self.etf.binary(content.len() as u32, content.bytes()),
-            DocContent::False => self.etf.atom("false"),
-        }
+        self.doc_content(content);
     }
 
     fn compile_attribute<'a>(&mut self, arguments: impl IntoIterator<Item = &'a str>) {
@@ -5351,6 +5347,13 @@ impl<'line_numbers> ErlangBinaryBuilder<'line_numbers> {
             BinaryBuilderPosition::CaseClause {
                 expected: expected @ ExpectedBinaryCaseClauseItem::Pattern,
             } => *expected = ExpectedBinaryCaseClauseItem::Guards { guard: false },
+        }
+    }
+
+    fn doc_content(&mut self, content: DocContent<'_>) {
+        match content {
+            DocContent::String(content) => self.etf.binary(content.len() as u32, content.bytes()),
+            DocContent::False => self.etf.atom("false"),
         }
     }
 
