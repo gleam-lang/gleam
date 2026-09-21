@@ -12213,14 +12213,18 @@ pub struct AddMissingTypeParameter<'a> {
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
     /// The source location where the parameters should be defined.
-    /// This might be a zero-length span if there are no parameters yet,
-    /// or it might cover the already existing type parameter definitions.
-    parameters_location: Option<SrcSpan>,
-    /// If the type definition already had existing parameters before.
-    has_existing_parameters: bool,
+    parameters_location: Option<TypeParametersLocation>,
     /// The set of all type parameter names in the different variants of the type
     /// that are not already part of the type parameter definition on the type.
     missing_parameters: HashSet<EcoString>,
+}
+
+enum TypeParametersLocation {
+    /// The type has no parameters yet, so this is a zero-length span where
+    /// they would go.
+    Missing(SrcSpan),
+    /// The type already has parameters, and this span covers them.
+    Existing(SrcSpan),
 }
 
 impl<'a> AddMissingTypeParameter<'a> {
@@ -12234,7 +12238,6 @@ impl<'a> AddMissingTypeParameter<'a> {
             params,
             edits: TextEdits::new(line_numbers),
             parameters_location: None,
-            has_existing_parameters: false,
             missing_parameters: HashSet::new(),
         }
     }
@@ -12242,7 +12245,7 @@ impl<'a> AddMissingTypeParameter<'a> {
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        let Some(type_parameters_location) = self.parameters_location else {
+        let Some(parameters_location) = &self.parameters_location else {
             return vec![];
         };
 
@@ -12251,23 +12254,25 @@ impl<'a> AddMissingTypeParameter<'a> {
         }
 
         let mut new_parameters = self.missing_parameters.iter().sorted().join(", ");
-        if self.has_existing_parameters {
-            let has_trailing_comma = self
-                .module
-                .extra
-                .trailing_commas
-                .iter()
-                .any(|&trailing_comma| type_parameters_location.contains(trailing_comma));
+        match parameters_location {
+            TypeParametersLocation::Existing(location) => {
+                let has_trailing_comma = self
+                    .module
+                    .extra
+                    .trailing_commas
+                    .iter()
+                    .any(|&trailing_comma| location.contains(trailing_comma));
 
-            if !has_trailing_comma {
-                new_parameters.insert_str(0, ", ");
+                if !has_trailing_comma {
+                    new_parameters.insert_str(0, ", ");
+                }
+
+                self.edits.insert(location.end - 1, new_parameters);
             }
-
-            self.edits
-                .insert(type_parameters_location.end - 1, new_parameters);
-        } else {
-            self.edits
-                .insert(type_parameters_location.end, format!("({new_parameters})"));
+            TypeParametersLocation::Missing(location) => {
+                self.edits
+                    .insert(location.end, format!("({new_parameters})"));
+            }
         }
 
         let mut action = Vec::with_capacity(1);
@@ -12291,12 +12296,12 @@ impl<'ast> ast::visit::Visit<'ast> for AddMissingTypeParameter<'ast> {
             return;
         }
 
-        self.parameters_location = Some(SrcSpan::new(
-            custom_type.name_location.end,
-            custom_type.location.end,
-        ));
-
-        self.has_existing_parameters = !custom_type.typed_parameters.is_empty();
+        let location = SrcSpan::new(custom_type.name_location.end, custom_type.location.end);
+        self.parameters_location = Some(if custom_type.typed_parameters.is_empty() {
+            TypeParametersLocation::Missing(location)
+        } else {
+            TypeParametersLocation::Existing(location)
+        });
 
         let existing_names: HashSet<_> = custom_type
             .parameters
