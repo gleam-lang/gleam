@@ -14,7 +14,7 @@ use crate::{
         TypedDefinitions, TypedModuleConstant, TypedRecordConstructor,
     },
     type_::{
-        Deprecation, PRELUDE_MODULE_NAME, PRELUDE_PACKAGE_NAME, Type, TypeVar,
+        PRELUDE_MODULE_NAME, PRELUDE_PACKAGE_NAME, Type, TypeVar,
         printer::{Names, PrintMode},
     },
 };
@@ -124,10 +124,7 @@ impl<'a, 'doc> Printer<'a> {
                     .raw(|this| this.custom_type(&arena, name, parameters, constructors, *opaque)),
                 documentation: markdown_documentation(documentation),
                 text_documentation: text_documentation(documentation),
-                deprecation_message: match deprecation {
-                    Deprecation::NotDeprecated => "".to_string(),
-                    Deprecation::Deprecated { message } => message.to_string(),
-                },
+                deprecation_message: deprecation.message().to_string(),
                 constructors: if *opaque {
                     Vec::new()
                 } else {
@@ -186,10 +183,7 @@ impl<'a, 'doc> Printer<'a> {
                 text_documentation: text_documentation(documentation),
                 constructors: vec![],
                 source_url: source_links.url(*location),
-                deprecation_message: match deprecation {
-                    Deprecation::NotDeprecated => "".to_string(),
-                    Deprecation::Deprecated { message } => message.to_string(),
-                },
+                deprecation_message: deprecation.message().to_string(),
                 opaque: false,
             });
         }
@@ -253,10 +247,7 @@ impl<'a, 'doc> Printer<'a> {
                 documentation: markdown_documentation(documentation),
                 text_documentation: text_documentation(documentation),
                 source_url: source_links.url(*location),
-                deprecation_message: match deprecation {
-                    Deprecation::NotDeprecated => "".to_string(),
-                    Deprecation::Deprecated { message } => message.to_string(),
-                },
+                deprecation_message: deprecation.message().to_string(),
             });
         }
 
@@ -281,10 +272,7 @@ impl<'a, 'doc> Printer<'a> {
                 documentation: markdown_documentation(documentation),
                 text_documentation: text_documentation(documentation),
                 source_url: source_links.url(*location),
-                deprecation_message: match deprecation {
-                    Deprecation::NotDeprecated => "".to_string(),
-                    Deprecation::Deprecated { message } => message.to_string(),
-                },
+                deprecation_message: deprecation.message().to_string(),
             });
         }
 
