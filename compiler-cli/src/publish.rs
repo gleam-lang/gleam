@@ -870,7 +870,13 @@ impl ReleaseMetadata<'_> {
             )
         }
         fn file(name: impl AsRef<Utf8Path>) -> String {
-            format!("\n  <<\"{name}\"/utf8>>", name = name.as_ref())
+            // Package paths must use `/` separators regardless of the platform
+            // the package was built on. Erlang treats `\` as an escape
+            // character inside a string literal, so native Windows separators
+            // would either silently corrupt the paths or stop other tools from
+            // parsing the metadata at all.
+            let name = name.as_ref().components().map(|c| c.as_str()).join("/");
+            format!("\n  <<\"{name}\"/utf8>>")
         }
 
         format!(
@@ -949,19 +955,20 @@ fn release_metadata_as_erlang() {
     let github = "https://github.com/lpil/myapp".parse().unwrap();
     let req1 = Range::new("~> 1.2.3 or >= 5.0.0".into()).unwrap();
     let req2 = Range::new("~> 1.2".into()).unwrap();
+    let src = Utf8Path::new("src");
     let meta = ReleaseMetadata {
         name: "myapp",
         version: &version,
         description: "description goes here 🌈",
         source_files: &[
             Utf8PathBuf::from("gleam.toml"),
-            Utf8PathBuf::from("src/thingy.gleam"),
-            Utf8PathBuf::from("src/whatever.gleam"),
+            src.join("thingy.gleam"),
+            src.join("whatever.gleam"),
         ],
         generated_files: &[
-            (Utf8PathBuf::from("src/myapp.app"), "".into()),
-            (Utf8PathBuf::from("src/thingy.erl"), "".into()),
-            (Utf8PathBuf::from("src/whatever.erl"), "".into()),
+            (src.join("myapp.app"), "".into()),
+            (src.join("thingy.erl"), "".into()),
+            (src.join("whatever.erl"), "".into()),
         ],
         licenses: &licences,
         links: vec![("homepage", homepage), ("github", github)],
