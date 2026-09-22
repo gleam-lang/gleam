@@ -242,9 +242,9 @@
   all .beam modules (this includes Erlang and Elixir ones).
   ([Rodrigo Álvarez](https://github.com/Papipo))
 
-- `gleam compile-package` gains a new `--otp-app-override` flag, letting the
-  caller specify a dependency's OTP application name when it differs
-  from its Gleam package name. It may be passed multiple times.
+- `gleam compile-package` gains a new `--otp-app-names` flag, letting the
+  caller specify dependencies' OTP application names when they differ
+  from their Gleam package names, as comma separated `package=otp_app` pairs.
   ([Rodrigo Álvarez](https://github.com/Papipo))
 
 ### Language server
