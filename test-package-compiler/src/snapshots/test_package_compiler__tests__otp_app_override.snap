@@ -1,32 +1,26 @@
 ---
 source: test-package-compiler/src/tests.rs
-expression: "./cases/erlang_app_generation"
+expression: "./cases/otp_app_override"
 ---
-//// erlang_app_generation/_gleam_artefacts/main.abstr
+//// otp_app_override/_gleam_artefacts/main.abstr
 <288 byte binary>
 
-//// erlang_app_generation/_gleam_artefacts/main.cache
+//// otp_app_override/_gleam_artefacts/main.cache
 <.cache binary>
 
-//// erlang_app_generation/_gleam_artefacts/main.cache_meta
-<29 byte binary>
+//// otp_app_override/_gleam_artefacts/main.cache_meta
+<28 byte binary>
 
-//// erlang_app_generation/ebin/main.beam
+//// otp_app_override/ebin/main.beam
 <0 byte binary>
 
-//// erlang_app_generation/ebin/my_erlang_application.app
+//// otp_app_override/ebin/my_erlang_application.app
 {application, my_erlang_application, [
-    {mod, {'my_erlang_application_sup', []}},
     {vsn, "0.1.0"},
-    {applications, [gleam_otp,
-                    gleam_stdlib,
+    {applications, [gleam_stdlib,
                     hpack,
-                    inets,
-                    midas,
-                    simple_json,
-                    ssl,
                     uuid]},
-    {description, "It's very cool"},
+    {description, ""},
     {modules, [main]},
     {registered, []}
 ]}.
