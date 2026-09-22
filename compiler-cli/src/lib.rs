@@ -101,6 +101,7 @@ use gleam_core::{
     paths::ProjectPaths,
     version::COMPILER_VERSION,
 };
+use std::collections::HashMap;
 
 #[derive(Args, Debug, Clone)]
 pub struct UpdateOptions {
@@ -788,24 +789,30 @@ pub struct CompilePackage {
     #[arg(long = "src-only")]
     pub src_only: bool,
 
-    /// Overrides for a dependency's OTP application name, in the form
-    /// `package=otp_app`.
+    /// OTP application names for dependencies, in the form
+    /// `package=otp_app`, separated by commas.
     ///
     /// Required for any dependency whose OTP application name differs from
-    /// its package name. May be supplied multiple times.
+    /// its package name. For example:
+    /// `--otp-app-names package1=some_app,package2=another_app`
     #[arg(
         verbatim_doc_comment,
-        long = "otp-app-override",
-        value_parser = parse_otp_app_override
+        long = "otp-app-names",
+        value_parser = parse_otp_app_names
     )]
-    pub otp_app_overrides: Vec<(EcoString, EcoString)>,
+    pub otp_app_names: Option<HashMap<EcoString, EcoString>>,
 }
 
-fn parse_otp_app_override(input: &str) -> Result<(EcoString, EcoString), String> {
+fn parse_otp_app_names(input: &str) -> Result<HashMap<EcoString, EcoString>, String> {
     input
-        .split_once('=')
-        .map(|(package, otp_app)| (EcoString::from(package), EcoString::from(otp_app)))
-        .ok_or_else(|| "expected the format `package=otp_app`".into())
+        .split(',')
+        .map(|pair| match pair.split_once('=') {
+            Some((package, otp_app)) if !package.is_empty() && !otp_app.is_empty() => {
+                Ok((EcoString::from(package), EcoString::from(otp_app)))
+            }
+            _ => Err("expected the format `package=otp_app[,package=otp_app]`".into()),
+        })
+        .collect()
 }
 
 #[derive(Subcommand, Debug)]
