@@ -1579,6 +1579,25 @@ pub type Wibble = String
 }
 
 #[test]
+fn unqualified_import_completion_preserves_space_after_comma() {
+    let code = "
+import dep.{wibble, wo}
+
+pub fn main() {
+  0
+}";
+    let dep = "pub const wibble = \"wibble\"
+pub const wobble = \"wobble\"
+";
+
+    assert_apply_completion!(
+        TestProject::for_source(code).add_module("dep", dep),
+        "wobble",
+        Position::new(1, 22)
+    );
+}
+
+#[test]
 fn completions_for_a_function_arg_annotation() {
     let code = "
 pub fn wibble(
