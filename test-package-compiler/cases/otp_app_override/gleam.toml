@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 The Gleam contributors
+
+# These dependencies have an OTP application name that differs from their
+# package name, so the names in the .app file must be overridden.
+
+name = "my_erlang_application"
+version = "0.1.0"
+target = "erlang"
+
+[dependencies]
+gleam_stdlib = "~> 1337.0"
+hpack_erl = "~> 1337.0"
+
+[dev_dependencies]
+uuid_erl = "~> 1337.0"

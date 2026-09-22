@@ -345,11 +345,11 @@ fn otp_app_override() {
     let mut compiler = TestHarness::new();
     compiler
         .compile(
-            Compilation::for_package("erlang_app_generation")
+            Compilation::for_package("otp_app_override")
                 .otp_app_override("hpack_erl", "hpack")
                 .otp_app_override("uuid_erl", "uuid"),
         )
         .unwrap();
     let output = compiler.into_snapshot();
-    insta::assert_snapshot!("otp_app_override", output, "./cases/erlang_app_generation");
+    insta::assert_snapshot!("otp_app_override", output, "./cases/otp_app_override");
 }
