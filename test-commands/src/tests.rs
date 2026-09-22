@@ -3,7 +3,7 @@
 
 use camino::Utf8PathBuf;
 use gleam_cli::{Command, CompilePackage, ExportTarget, fs};
-use std::process;
+use std::{collections::HashMap, process};
 
 fn package(package: &str) -> Utf8PathBuf {
     Utf8PathBuf::from(&format!("./packages/{package}"))
@@ -144,7 +144,7 @@ fn compile_package_produces_textual_erlang_files() {
         javascript_prelude: None,
         skip_beam_compilation: true,
         src_only: false,
-        otp_app_names: None,
+        otp_app_names: HashMap::new(),
     })
     .run(package_directory)
     .unwrap();
