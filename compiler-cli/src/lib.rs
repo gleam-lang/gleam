@@ -796,11 +796,12 @@ pub struct CompilePackage {
     /// its package name. For example:
     /// `--otp-app-names package1=some_app,package2=another_app`
     #[arg(
+        default_value = "",
         verbatim_doc_comment,
         long = "otp-app-names",
         value_parser = parse_otp_app_names
     )]
-    pub otp_app_names: Option<HashMap<EcoString, EcoString>>,
+    pub otp_app_names: HashMap<EcoString, EcoString>,
 }
 
 fn parse_otp_app_names(input: &str) -> Result<HashMap<EcoString, EcoString>, String> {

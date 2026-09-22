@@ -40,7 +40,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
         true => None,
         false => Some(ErlangAppCodegenConfiguration {
             include_dev_deps: false,
-            package_name_overrides: options.otp_app_names.unwrap_or_default(),
+            package_name_overrides: options.otp_app_names,
         }),
     };
     let target = match options.target {
