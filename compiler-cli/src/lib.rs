@@ -807,6 +807,7 @@ pub struct CompilePackage {
 fn parse_otp_app_names(input: &str) -> Result<HashMap<EcoString, EcoString>, String> {
     input
         .split(',')
+        .filter(|pair| !pair.is_empty())
         .map(|pair| match pair.split_once('=') {
             Some((package, otp_app)) if !package.is_empty() && !otp_app.is_empty() => {
                 Ok((EcoString::from(package), EcoString::from(otp_app)))
@@ -814,6 +815,22 @@ fn parse_otp_app_names(input: &str) -> Result<HashMap<EcoString, EcoString>, Str
             _ => Err("expected the format `package=otp_app[,package=otp_app]`".into()),
         })
         .collect()
+}
+
+#[test]
+fn parse_otp_app_names_test() {
+    assert_eq!(parse_otp_app_names("").unwrap(), HashMap::new());
+    assert_eq!(
+        parse_otp_app_names("one=two").unwrap(),
+        HashMap::from([("one".into(), "two".into())])
+    );
+    assert_eq!(
+        parse_otp_app_names("one=two,three=four").unwrap(),
+        HashMap::from([
+            ("one".into(), "two".into()),
+            ("three".into(), "four".into()),
+        ])
+    );
 }
 
 #[derive(Subcommand, Debug)]
