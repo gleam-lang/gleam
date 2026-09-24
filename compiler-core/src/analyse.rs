@@ -17,7 +17,7 @@ use crate::{
         TypedModuleConstant, TypedTypeAlias, UntypedArg, UntypedCustomType, UntypedFunction,
         UntypedImport, UntypedModule, UntypedModuleConstant, UntypedStatement, UntypedTypeAlias,
     },
-    build::{Origin, Outcome, Target},
+    build::{ApiFingerprint, Origin, Outcome, Target},
     call_graph::{CallGraphNode, into_dependency_order},
     config::PackageConfig,
     dep_tree,
@@ -377,6 +377,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let module = ast::Module {
             documentation: documentation.clone(),
             name: self.module_name.clone(),
+            api_fingerprint: ApiFingerprint::new(&typed_definitions),
             definitions: typed_definitions,
             names: type_names,
             unused_definition_positions,

@@ -265,6 +265,7 @@ where
             definitions,
             names: Names::new(),
             unused_definition_positions: HashSet::new(),
+            api_fingerprint: (),
         };
         Ok(Parsed {
             module,
