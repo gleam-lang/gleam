@@ -143,7 +143,7 @@ fn compile_package_produces_textual_erlang_files() {
         libraries_directory: package_directory.clone(),
         javascript_prelude: None,
         skip_beam_compilation: true,
-        src_only: false,
+        no_dev: false,
         otp_app_names: HashMap::new(),
     })
     .run(package_directory)

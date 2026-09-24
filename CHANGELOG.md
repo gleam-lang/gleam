@@ -5,6 +5,10 @@
 
 # Changelog
 
+## Unreleased
+
+- The `--src-only` flag has been renamed to `--no-dev`.
+
 ## 1.19.0-rc1 - 2026-09-22
 
 ### Compiler

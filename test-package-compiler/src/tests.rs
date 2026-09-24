@@ -334,7 +334,7 @@ fn src_only() {
         .unwrap_err();
     // This one should succeed
     compiler
-        .compile(Compilation::for_package("src_only").src_only())
+        .compile(Compilation::for_package("src_only").no_dev())
         .unwrap();
     let output = compiler.into_snapshot();
     insta::assert_snapshot!("src_only", output, "./cases/src_only");

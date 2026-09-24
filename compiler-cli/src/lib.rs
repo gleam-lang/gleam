@@ -785,9 +785,10 @@ pub struct CompilePackage {
     #[arg(long = "no-beam")]
     pub skip_beam_compilation: bool,
 
-    /// Only compile modules in the `src` directory, excluding `test` and `dev`
-    #[arg(long = "src-only")]
-    pub src_only: bool,
+    /// Skip development code such as the `dev/` and `test/` directories, and the
+    /// `dev_dependencies` packages.
+    #[arg(long = "no-dev")]
+    pub no_dev: bool,
 
     /// OTP application names for dependencies, in the form
     /// `package=otp_app`, separated by commas.
