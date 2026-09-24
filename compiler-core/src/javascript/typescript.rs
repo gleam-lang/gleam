@@ -176,7 +176,7 @@ fn ts_safe_type_name(mut name: String) -> EcoString {
         name.push('_');
         EcoString::from(name)
     } else {
-        super::maybe_escape_identifier_string(&name)
+        super::maybe_escape_identifier(&name)
     }
 }
 

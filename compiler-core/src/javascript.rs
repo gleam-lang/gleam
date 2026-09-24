@@ -1073,7 +1073,7 @@ impl<'a, 'doc> Generator<'a> {
             },
         };
         if publicity.is_importable() {
-            imports.register_export(maybe_escape_identifier_string(name));
+            imports.register_export(maybe_escape_identifier(name));
         }
         imports.register_module(EcoString::from(module), [], [member]);
     }
@@ -1532,14 +1532,6 @@ fn is_usable_js_property(label: &str) -> bool {
         // prototype chain.
         | "prototype" | "__proto__" => false,
         _ => true
-    }
-}
-
-fn maybe_escape_identifier_string(word: &str) -> EcoString {
-    if is_usable_js_identifier(word) {
-        EcoString::from(word)
-    } else {
-        escape_identifier(word)
     }
 }
 
