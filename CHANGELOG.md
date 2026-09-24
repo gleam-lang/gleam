@@ -41,7 +41,11 @@
     ┌─ /main.gleam:6:9
     │
   6 │         [..x] -> x
-    │         ^^^^^ This can be replaced with the variable itself
+    │         ^^^^^ Replace this with `x`.
+
+      This syntax for pattern matching on lists is deprecated.
+      This spread matches the entire list, so the variable x can be used as the
+      pattern directly instead.
   ```
 
   ([Khalid Belkassmi E.H.](https://github.com/khalidbelk))
