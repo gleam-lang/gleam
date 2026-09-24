@@ -64,7 +64,7 @@ impl TestHarness {
         };
         let mut modules = imbl::HashMap::new();
         let warning_emitter = WarningEmitter::new(Rc::new(self.warnings.clone()));
-        let mode = if arguments.src_only {
+        let mode = if arguments.no_dev {
             Mode::Prod
         } else {
             Mode::Dev
@@ -119,7 +119,7 @@ impl Default for TestHarness {
 pub struct Compilation {
     package: &'static str,
     target: Option<Target>,
-    src_only: bool,
+    no_dev: bool,
     otp_app_overrides: HashMap<EcoString, EcoString>,
 }
 
@@ -128,13 +128,13 @@ impl Compilation {
         Self {
             package,
             target: None,
-            src_only: false,
+            no_dev: false,
             otp_app_overrides: HashMap::new(),
         }
     }
 
-    pub fn src_only(mut self) -> Self {
-        self.src_only = true;
+    pub fn no_dev(mut self) -> Self {
+        self.no_dev = true;
         self
     }
 

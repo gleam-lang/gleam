@@ -59,7 +59,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
 
     tracing::info!("Compiling package");
 
-    let mode = if options.src_only {
+    let mode = if options.no_dev {
         Mode::Prod
     } else {
         Mode::Dev
