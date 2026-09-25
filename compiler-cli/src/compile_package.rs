@@ -36,16 +36,10 @@ pub fn command(options: CompilePackage) -> Result<()> {
     if options.target.is_erlang() && !options.skip_beam_compilation {
         io.initialise_beam_compiler()?;
     }
-    let app_file = match options.skip_beam_compilation {
-        true => None,
-        false => Some(ErlangAppCodegenConfiguration {
-            include_dev_deps: false,
-            package_name_overrides: options.otp_app_names,
-        }),
-    };
+    let mode = compilation_mode(&options);
     let target = match options.target {
         Target::Erlang => TargetCodegenConfiguration::Erlang {
-            app_file,
+            app_file: app_file_configuration(&options, mode),
             output: ErlangOutput::Textual,
         },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
@@ -58,12 +52,6 @@ pub fn command(options: CompilePackage) -> Result<()> {
     };
 
     tracing::info!("Compiling package");
-
-    let mode = if options.no_dev {
-        Mode::Prod
-    } else {
-        Mode::Dev
-    };
 
     let mut compiler = PackageCompiler::new(
         &config,
@@ -88,6 +76,27 @@ pub fn command(options: CompilePackage) -> Result<()> {
         )
         .into_result()
         .map(|_| ())
+}
+
+fn compilation_mode(options: &CompilePackage) -> Mode {
+    if options.no_dev {
+        Mode::Prod
+    } else {
+        Mode::Dev
+    }
+}
+
+fn app_file_configuration(
+    options: &CompilePackage,
+    mode: Mode,
+) -> Option<ErlangAppCodegenConfiguration> {
+    if options.skip_beam_compilation {
+        return None;
+    }
+    Some(ErlangAppCodegenConfiguration {
+        include_dev_deps: mode.includes_dev_dependencies(),
+        package_name_overrides: options.otp_app_names.clone(),
+    })
 }
 
 fn load_libraries(
@@ -119,4 +128,53 @@ fn load_libraries(
     }
 
     Ok(manifests)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+
+    #[derive(Parser)]
+    struct Cli {
+        #[command(flatten)]
+        options: CompilePackage,
+    }
+
+    fn parse(extra_arguments: &[&str]) -> CompilePackage {
+        let arguments = [
+            "gleam",
+            "--target",
+            "erlang",
+            "--package",
+            ".",
+            "--out",
+            "out",
+        ];
+        let arguments = arguments.iter().chain(["--lib", "lib"].iter());
+        Cli::parse_from(arguments.chain(extra_arguments)).options
+    }
+
+    fn includes_dev_deps(options: &CompilePackage) -> bool {
+        app_file_configuration(options, compilation_mode(options))
+            .expect("app file configuration")
+            .include_dev_deps
+    }
+
+    #[test]
+    fn app_file_includes_dev_dependencies() {
+        // https://github.com/gleam-lang/gleam/issues/6339
+        assert!(includes_dev_deps(&parse(&[])));
+    }
+
+    #[test]
+    fn app_file_excludes_dev_dependencies_with_no_dev() {
+        assert!(!includes_dev_deps(&parse(&["--no-dev"])));
+    }
+
+    #[test]
+    fn no_app_file_with_no_beam() {
+        let options = parse(&["--no-beam"]);
+        assert!(app_file_configuration(&options, compilation_mode(&options)).is_none());
+    }
 }
