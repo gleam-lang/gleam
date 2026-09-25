@@ -47,7 +47,8 @@ fn run_and_produce_pretty_snapshot(
 
 --- gleam run output ----------------
 {output}
-")
+"
+    )
 }
 
 fn run_and_capture_output(
