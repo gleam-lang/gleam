@@ -16,6 +16,16 @@
   been improved.
   ([Louis Pilfold](https://github.com/lpil))
 
+## Bug fixes
+
+- Fixed a bug with `gleam compile-package` where `dev_dependencies` would not
+  be included in the `.app` file regardless of whether `--no-dev` was provided.
+  ([Rodrigo Álvarez](https://github.com/Papipo))
+
+- Fixed a bug where `gleam compile-package` would not use Erlang abstract forms
+  for compilation to BEAM.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ## 1.19.0-rc1 - 2026-09-22
 
 ### Compiler

@@ -5,4 +5,7 @@ name = "compile_package"
 version = "1.0.0"
 
 [dependencies]
+regular_dependency = ">= 1.0.0 and < 2.0.0"
+
 [dev_dependencies]
+dev_dependency = ">= 1.0.0 and < 2.0.0"
