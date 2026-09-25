@@ -83,7 +83,7 @@ fn io_link_file_error_windows() {
         kind: FileKind::File,
         action: FileIoAction::Link("/dest".into()),
         path: "/src".into(),
-        err: Some("Critical error!".to_owned()),
+        cause: FileIoCause::Other("Critical error!".to_owned()),
     }
     .pretty_string();
     assert_snapshot!(error);
