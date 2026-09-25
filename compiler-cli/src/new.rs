@@ -4,8 +4,8 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::ValueEnum;
 use gleam_core::{
-    Result, erlang, error,
-    error::{Error, FileIoAction, FileKind, InvalidProjectNameReason},
+    Result, erlang,
+    error::{self, Error, FileIoAction, FileIoCause, FileKind, InvalidProjectNameReason},
     parse,
 };
 use serde::{Deserialize, Serialize};
@@ -297,19 +297,19 @@ The project can be compiled and tested by running these commands:
 }
 
 fn write(path: Utf8PathBuf, contents: &str) -> Result<()> {
-    let mut f = File::create(&path).map_err(|err| Error::FileIo {
+    let mut f = File::create(&path).map_err(|error| Error::FileIo {
         kind: FileKind::File,
         path: path.clone(),
         action: FileIoAction::Create,
-        err: Some(err.to_string()),
+        cause: FileIoCause::std_io(error),
     })?;
 
     f.write_all(contents.as_bytes())
-        .map_err(|err| Error::FileIo {
+        .map_err(|error| Error::FileIo {
             kind: FileKind::File,
             path,
             action: FileIoAction::WriteTo,
-            err: Some(err.to_string()),
+            cause: FileIoCause::std_io(error),
         })?;
     Ok(())
 }

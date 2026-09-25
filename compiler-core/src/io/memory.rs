@@ -105,7 +105,7 @@ impl InMemoryFileSystem {
                 kind: FileKind::File,
                 action: FileIoAction::Open,
                 path: path.to_path_buf(),
-                err: None,
+                cause: FileIoCause::Other("file not found".into()),
             })?
             .modification_time = time;
         Ok(())
@@ -121,7 +121,7 @@ impl FileSystemWriter for InMemoryFileSystem {
                 kind: FileKind::Directory,
                 action: FileIoAction::Delete,
                 path: path.to_path_buf(),
-                err: None,
+                cause: FileIoCause::Other("directory not found".into()),
             });
         }
 
@@ -168,7 +168,7 @@ impl FileSystemWriter for InMemoryFileSystem {
                     kind: FileKind::Directory,
                     action: FileIoAction::Create,
                     path: ancestor.to_path_buf(),
-                    err: None,
+                    cause: FileIoCause::Other("directory not found".into()),
                 });
             }
             let dir = InMemoryFile::directory();
@@ -185,7 +185,7 @@ impl FileSystemWriter for InMemoryFileSystem {
                 kind: FileKind::File,
                 action: FileIoAction::ReadMetadata,
                 path: left.to_path_buf(),
-                err: None,
+                cause: FileIoCause::Other("file not found".into()),
             });
         };
         let _ = files.insert(right.into(), file);
@@ -203,7 +203,7 @@ impl FileSystemWriter for InMemoryFileSystem {
                 kind: FileKind::File,
                 action: FileIoAction::Delete,
                 path: path.to_path_buf(),
-                err: None,
+                cause: FileIoCause::Other("directory not found".into()),
             });
         }
         let _ = files.remove(path);
@@ -250,14 +250,14 @@ impl FileSystemReader for InMemoryFileSystem {
                 kind: FileKind::File,
                 action: FileIoAction::Open,
                 path: path.clone(),
-                err: None,
+                cause: FileIoCause::Other("file not found".into()),
             })?;
         let bytes = buffer.borrow();
-        let unicode = String::from_utf8(bytes.clone()).map_err(|err| Error::FileIo {
+        let unicode = String::from_utf8(bytes.clone()).map_err(|error| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Read,
             path: path.clone(),
-            err: Some(err.to_string()),
+            cause: FileIoCause::Other(format!("invalid path, {error}")),
         })?;
         Ok(unicode)
     }
@@ -272,7 +272,7 @@ impl FileSystemReader for InMemoryFileSystem {
                 kind: FileKind::File,
                 action: FileIoAction::Open,
                 path: path.clone(),
-                err: None,
+                cause: FileIoCause::Other("file not found".into()),
             })?;
         let bytes = buffer.borrow().clone();
         Ok(bytes)
@@ -319,7 +319,7 @@ impl FileSystemReader for InMemoryFileSystem {
             kind: FileKind::File,
             action: FileIoAction::ReadMetadata,
             path: path.to_path_buf(),
-            err: None,
+            cause: FileIoCause::Other("file not found".into()),
         })?;
         Ok(file.modification_time)
     }

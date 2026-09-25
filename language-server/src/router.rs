@@ -4,7 +4,7 @@
 use gleam_core::{
     Error, Result,
     build::SourceFingerprint,
-    error::{FileIoAction, FileKind},
+    error::{FileIoAction, FileIoCause, FileKind},
     io::{BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter},
     paths::ProjectPaths,
 };
@@ -140,7 +140,7 @@ where
             action: FileIoAction::Parse,
             kind: FileKind::File,
             path: config_path,
-            err: Some(error.to_string()),
+            cause: FileIoCause::Other(error.to_string()),
         })?;
         let engine = LanguageServerEngine::new(config, progress_reporter, io, paths)?;
         let project = Project {

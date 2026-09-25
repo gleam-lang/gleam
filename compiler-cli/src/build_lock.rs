@@ -5,7 +5,7 @@ use camino::Utf8PathBuf;
 use gleam_core::{
     Error, Result,
     build::{Mode, Target, Telemetry},
-    error::{FileIoAction, FileKind},
+    error::{FileIoAction, FileIoCause, FileKind},
     paths::ProjectPaths,
 };
 use strum::IntoEnumIterator;
@@ -58,14 +58,14 @@ impl BuildLock {
                 kind: FileKind::File,
                 path: lock_path.clone(),
                 action: FileIoAction::Create,
-                err: Some(error.to_string()),
+                cause: FileIoCause::std_io(error),
             })?;
 
         let lock_error = |error: fslock::Error| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Lock,
             path: lock_path.clone(),
-            err: Some(error.to_string()),
+            cause: FileIoCause::std_io(error),
         };
 
         if !file.try_lock_with_pid().map_err(lock_error)? {

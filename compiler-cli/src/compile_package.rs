@@ -13,7 +13,7 @@ use gleam_core::{
         ErlangAppCodegenConfiguration, ErlangOutput, Mode, NullTelemetry, PackageCompiler,
         StaleTracker, Target, TargetCodegenConfiguration,
     },
-    error::{FileIoAction, FileKind},
+    error::{FileIoAction, FileIoCause, FileKind},
     metadata,
     paths::{self, ProjectPaths},
     type_::ModuleInterface,
@@ -104,13 +104,13 @@ fn load_libraries(
         for module in fs::module_caches_paths(path)? {
             let bytes = fs::read_bytes(module.clone())?;
             let module = match metadata::decode(&bytes, ids.clone()) {
-                Ok(module) => module,
-                Err(e) => {
+                Some(module) => module,
+                None => {
                     return Err(Error::FileIo {
                         kind: FileKind::File,
                         action: FileIoAction::Parse,
                         path: module,
-                        err: Some(e.to_string()),
+                        cause: FileIoCause::CacheMetadataFormatIncorrect,
                     });
                 }
             };

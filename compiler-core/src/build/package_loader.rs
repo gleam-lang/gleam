@@ -17,7 +17,7 @@ use crate::{
     Error, Result,
     build::{Origin, module_loader::ModuleLoader},
     dep_tree,
-    error::{DefinedModuleOrigin, FileIoAction, FileKind, ImportCycleLocationDetails},
+    error::{DefinedModuleOrigin, FileIoAction, FileIoCause, FileKind, ImportCycleLocationDetails},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter, files_with_extension},
     metadata,
     paths::ProjectPaths,
@@ -188,13 +188,13 @@ where
         let cache_files = CacheFiles::new(self.artefact_directory, &info.name);
         let bytes = self.io.read_bytes(&cache_files.cache_path)?;
         let mut module = match metadata::decode(bytes.as_slice(), self.ids.clone()) {
-            Ok(module) => module,
-            Err(error) => {
+            Some(module) => module,
+            None => {
                 return Err(Error::FileIo {
                     kind: FileKind::File,
                     action: FileIoAction::Parse,
                     path: cache_files.cache_path,
-                    err: Some(error.to_string()),
+                    cause: FileIoCause::CacheMetadataFormatIncorrect,
                 });
             }
         };

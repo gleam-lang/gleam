@@ -7,7 +7,14 @@
 
 ## Unreleased
 
+## Compiler
+
 - The `--src-only` flag has been renamed to `--no-dev`.
+  ([Louis Pilfold](https://github.com/lpil))
+
+- The error message for failing to load data about already compiled modules has
+  been improved.
+  ([Louis Pilfold](https://github.com/lpil))
 
 ## 1.19.0-rc1 - 2026-09-22
 

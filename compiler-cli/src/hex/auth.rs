@@ -5,7 +5,7 @@ use crate::{cli, http::HttpClient};
 use ecow::EcoString;
 use gleam_core::{
     Error, Result, encryption,
-    error::{FileIoAction, FileKind},
+    error::{FileIoAction, FileIoCause, FileKind},
     io::HttpClient as _,
     paths,
 };
@@ -254,7 +254,7 @@ It will be used to locally encrypt your Hex API tokens.
                 action: FileIoAction::Parse,
                 kind: FileKind::File,
                 path,
-                err: Some(error.to_string()),
+                cause: FileIoCause::Other(error.to_string()),
             })?;
         Ok(Some(credentials.hexpm))
     }

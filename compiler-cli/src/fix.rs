@@ -7,7 +7,7 @@ use gleam_core::{
     Error, Result, Warning,
     analyse::TargetSupport,
     build::{Codegen, Compile, ErlangOutput, Mode, Options},
-    error::{FileIoAction, FileKind},
+    error::{FileIoAction, FileIoCause, FileKind},
     paths::ProjectPaths,
     type_,
     warning::VectorWarningEmitterIO,
@@ -57,7 +57,7 @@ fn fix_minimum_required_version(paths: &ProjectPaths, warnings: Vec<Warning>) ->
             kind: FileKind::File,
             action: FileIoAction::Parse,
             path: root_config.to_path_buf(),
-            err: Some(error.to_string()),
+            cause: FileIoCause::Other(error.to_string()),
         })?;
 
     #[expect(clippy::indexing_slicing)]

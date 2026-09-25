@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use camino::Utf8PathBuf;
 use gleam_core::{
     Error, Result,
-    error::{FileIoAction, FileKind},
+    error::{FileIoAction, FileIoCause, FileKind},
 };
 use http::{Request, Response};
 use reqwest::{Certificate, Client};
@@ -107,7 +107,7 @@ fn read_certificate(path: &str) -> Result<Certificate, Error> {
         kind: FileKind::File,
         action: FileIoAction::Parse,
         path: Utf8PathBuf::from(path),
-        err: Some(error.to_string()),
+        cause: FileIoCause::Other(error.to_string()),
     })
 }
 

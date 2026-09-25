@@ -10,7 +10,7 @@ use crate::{
     },
     config::PackageConfig,
     dep_tree,
-    error::{DefinedModuleOrigin, FileIoAction, FileKind, ShellCommandFailureReason},
+    error::{DefinedModuleOrigin, ShellCommandFailureReason},
     io::{BeamCompilerIO, Command, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     manifest::{ManifestPackage, ManifestPackageSource},
     paths::{self, ProjectPaths},
@@ -276,14 +276,7 @@ where
 
         // Recreate build directory with new updated version file
         self.io.mkdir(&build_path)?;
-        self.io
-            .write(&path, &fingerprint)
-            .map_err(|error| Error::FileIo {
-                action: FileIoAction::WriteTo,
-                kind: FileKind::File,
-                path,
-                err: Some(error.to_string()),
-            })
+        self.io.write(&path, &fingerprint)
     }
 
     pub fn compile_dependencies(&mut self) -> Result<Vec<Module>, Error> {
