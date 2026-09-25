@@ -1065,7 +1065,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         return_annotation: Option<TypeAst>,
         location: SrcSpan,
     ) -> TypedExpr {
-
         // ```
         // <fun>(_)
         // ```
@@ -1078,14 +1077,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         //     let tmp = <fun>
         //     fn (_capture) { tmp(_capture) }
         // }
-        if let Statement::Expression(UntypedExpr::Call { location, fun, arguments, open_parenthesis }) = body.first()
-            && (
-                matches!(&**fun, UntypedExpr::Call { .. }) ||
-                matches!(&**fun, UntypedExpr::TupleIndex { .. }) ||
-                matches!(&**fun, UntypedExpr::FieldAccess { .. })
-            ) && matches!(kind, FunctionLiteralKind::Capture { .. })
+        if let Statement::Expression(UntypedExpr::Call {
+            location,
+            fun,
+            arguments,
+            open_parenthesis: _,
+        }) = body.first()
+            && (matches!(&**fun, UntypedExpr::Call { .. })
+                || matches!(&**fun, UntypedExpr::TupleIndex { .. })
+                || matches!(&**fun, UntypedExpr::FieldAccess { .. }))
+            && matches!(kind, FunctionLiteralKind::Capture { .. })
         {
-
             let capture_location = arguments
                 .iter()
                 .find(|i| i.is_capture_hole())
@@ -1095,54 +1097,58 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             let tmp_str: EcoString = "tmp".into();
             let capture_val_str: EcoString = CAPTURE_VARIABLE.into();
 
-            let tmp = Pattern::Variable{
-                location: location.clone(),
+            let tmp = Pattern::Variable {
+                location: *location,
                 name: tmp_str.clone(),
                 type_: (),
                 origin: VariableOrigin {
                     syntax: VariableSyntax::Generated,
-                    declaration: VariableDeclaration::LetPattern
-                }
+                    declaration: VariableDeclaration::LetPattern,
+                },
             };
 
             let call = UntypedExpr::Call {
-                location: location.clone(),
-                fun: Box::new(UntypedExpr::Var { location: location.clone(), name: tmp_str }),
+                location: *location,
+                fun: Box::new(UntypedExpr::Var {
+                    location: *location,
+                    name: tmp_str,
+                }),
                 arguments: arguments.clone(),
-                open_parenthesis: 0 // TODO
+                open_parenthesis: 0, // TODO
             };
 
             let fn_ = UntypedExpr::Fn {
-                location: location.clone(),
-                kind: FunctionLiteralKind::Anonymous { head: location.clone() },
+                location: *location,
+                kind: FunctionLiteralKind::Anonymous { head: *location },
                 end_of_head_byte_index: 0, // TODO
-                arguments: vec![
-                    Arg {
-                        names: ArgNames::Named { name: capture_val_str, location: capture_location },
-                        type_: (),
-                        location: location.clone(),
-                        annotation: None
-                    }
-                ],
-                body: vec1![
-                    Statement::Expression(call)
-                ],
-                return_annotation: None
+                arguments: vec![Arg {
+                    names: ArgNames::Named {
+                        name: capture_val_str,
+                        location: capture_location,
+                    },
+                    type_: (),
+                    location: *location,
+                    annotation: None,
+                }],
+                body: vec1![Statement::Expression(call)],
+                return_annotation: None,
             };
 
-            let typed_block =  self.infer_block(vec1![
-                Statement::Assignment(Box::new(Assignment {
-                    location: location.clone(),
-                    value: *fun.clone(),
-                    pattern: tmp,
-                    kind: AssignmentKind::Let,
-                    compiled_case: CompiledCase::failure(),
-                    annotation: None
-                })),
-                Statement::Expression(fn_)
-            ], location.clone());
-            println!("{:#?}", typed_block);
-            return typed_block
+            let typed_block = self.infer_block(
+                vec1![
+                    Statement::Assignment(Box::new(Assignment {
+                        location: *location,
+                        value: *fun.clone(),
+                        pattern: tmp,
+                        kind: AssignmentKind::Let,
+                        compiled_case: CompiledCase::failure(),
+                        annotation: None
+                    })),
+                    Statement::Expression(fn_)
+                ],
+                *location,
+            );
+            return typed_block;
         }
 
         for Arg { names, .. } in arguments.iter() {
