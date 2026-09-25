@@ -41,22 +41,22 @@ jobs:
           - x86_64-apple-darwin
           - x86_64-pc-windows-msvc
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-26.04
             target: x86_64-unknown-linux-gnu
             binary: x86-64
             cargo-tool: cargo
             run-integration-tests: true
-          - os: ubuntu-latest
+          - os: ubuntu-26.04
             target: x86_64-unknown-linux-musl
             binary: x86-64
             cargo-tool: cross
             run-integration-tests: true
-          - os: ubuntu-latest
+          - os: ubuntu-26.04
             target: aarch64-unknown-linux-gnu
             binary: aarch64
             cargo-tool: cross
             run-integration-tests: false # Cannot run aarch64 binaries on x86_64
-          - os: ubuntu-latest
+          - os: ubuntu-26.04
             target: aarch64-unknown-linux-musl
             binary: aarch64
             cargo-tool: cross
@@ -323,7 +323,7 @@ jobs:
         if: ${{ matrix.run-integration-tests }}
 
   test-wasm:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
       - name: Checkout repository
@@ -350,7 +350,7 @@ jobs:
 
   rustfmt:
     name: rustfmt
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - name: Checkout repository
@@ -368,7 +368,7 @@ jobs:
 
   validate:
     name: validate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - name: Checkout repository
@@ -399,7 +399,7 @@ jobs:
 
   lint-build:
     name: lint-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - name: Checkout repository
@@ -432,7 +432,7 @@ jobs:
   test-projects:
     name: test-projects
     needs: lint-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - name: Checkout repository
