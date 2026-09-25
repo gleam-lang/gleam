@@ -16,7 +16,6 @@ The error message from the file IO library was:
 
     Critical error!
 
-
 Windows does not support symbolic links without developer mode
 or admin privileges. Please enable developer mode and try again.
 
