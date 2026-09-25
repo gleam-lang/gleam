@@ -1095,7 +1095,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             location,
             fun,
             arguments,
-            open_parenthesis: _,
+            open_parenthesis,
         }) = body.first()
             && (matches!(&**fun, UntypedExpr::Call { .. })
                 || matches!(&**fun, UntypedExpr::TupleIndex { .. })
@@ -1128,13 +1128,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     name: tmp_str,
                 }),
                 arguments: arguments.clone(),
-                open_parenthesis: 0, // TODO
+                open_parenthesis: *open_parenthesis,
             };
 
             let fn_ = UntypedExpr::Fn {
                 location: *location,
                 kind: FunctionLiteralKind::Anonymous { head: *location },
-                end_of_head_byte_index: 0, // TODO
+                end_of_head_byte_index: location.end,
                 arguments: vec![Arg {
                     names: ArgNames::Named {
                         name: capture_val_str,
