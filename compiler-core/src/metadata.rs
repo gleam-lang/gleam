@@ -26,8 +26,11 @@ pub fn encode(module: &ModuleInterface) -> Result<Vec<u8>, bitcode::Error> {
     bitcode::serialize(module)
 }
 
-pub fn decode(bytes: &[u8], ids: UniqueIdGenerator) -> Result<ModuleInterface, bitcode::Error> {
-    bitcode::deserialize(bytes).map(|module| remap_type_variable_ids(module, ids))
+pub fn decode(bytes: &[u8], ids: UniqueIdGenerator) -> Option<ModuleInterface> {
+    match bitcode::deserialize(bytes) {
+        Ok(module) => Some(remap_type_variable_ids(module, ids)),
+        Err(_) => None,
+    }
 }
 
 fn remap_type_variable_ids(module: ModuleInterface, ids: UniqueIdGenerator) -> ModuleInterface {

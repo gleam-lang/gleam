@@ -961,10 +961,10 @@ impl CacheMetadata {
         bitcode::serialize(self).expect("Serializing cache info")
     }
 
-    pub fn from_binary(bytes: &[u8]) -> Result<Self, String> {
+    pub fn from_binary(bytes: &[u8]) -> Result<Self, ()> {
         match bitcode::deserialize(bytes) {
             Ok(data) => Ok(data),
-            Err(e) => Err(e.to_string()),
+            Err(_) => Err(()),
         }
     }
 }

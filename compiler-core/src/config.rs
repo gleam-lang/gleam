@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
 mod stale_package_remover;
-use crate::error::{self, FileIoAction, FileKind, did_you_mean};
+use crate::error::{self, FileIoAction, FileIoCause, FileKind, did_you_mean};
 use crate::io::FileSystemReader;
 use crate::io::ordered_map;
 use crate::manifest::Manifest;
@@ -367,7 +367,7 @@ fn deserialise_config<P: AsRef<Utf8Path>>(
         action: FileIoAction::Parse,
         kind: FileKind::File,
         path: path.as_ref().to_path_buf(),
-        err: Some(error.to_string()),
+        cause: FileIoCause::Other(error.to_string()),
     })?;
     Ok(config)
 }

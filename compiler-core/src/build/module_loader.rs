@@ -17,7 +17,7 @@ use super::{
 };
 use crate::{
     Error, Result,
-    error::{FileIoAction, FileKind},
+    error::{FileIoAction, FileIoCause, FileKind},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     warning::WarningEmitter,
 };
@@ -109,13 +109,12 @@ where
         }
 
         let binary = self.io.read_bytes(&meta_path)?;
-        let cache_metadata =
-            CacheMetadata::from_binary(&binary).map_err(|error| Error::FileIo {
-                action: FileIoAction::Parse,
-                kind: FileKind::File,
-                path: meta_path,
-                err: Some(error),
-            })?;
+        let cache_metadata = CacheMetadata::from_binary(&binary).map_err(|()| Error::FileIo {
+            action: FileIoAction::Parse,
+            kind: FileKind::File,
+            path: meta_path,
+            cause: FileIoCause::CacheMetadataFormatIncorrect,
+        })?;
         Ok(Some(cache_metadata))
     }
 

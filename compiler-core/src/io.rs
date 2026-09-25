@@ -3,7 +3,7 @@
 
 pub mod memory;
 
-use crate::error::{Error, FileIoAction, FileKind, Result};
+use crate::error::{Error, FileIoAction, FileIoCause, FileKind, Result};
 use async_trait::async_trait;
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
@@ -85,7 +85,7 @@ impl Utf8Writer for String {
             action: FileIoAction::WriteTo,
             kind: FileKind::File,
             path: Utf8PathBuf::from("<in memory>"),
-            err: Some(error.to_string()),
+            cause: FileIoCause::Other(error.to_string()),
         }
     }
 }
@@ -273,16 +273,17 @@ impl DirWalker {
             }
 
             for entry in io.read_dir(&next_path)? {
-                let Ok(entry) = entry else {
-                    return Err(Error::FileIo {
-                        kind: FileKind::Directory,
-                        action: FileIoAction::Read,
-                        path: next_path,
-                        err: None,
-                    });
-                };
-
-                self.walk_queue.push_back(entry.into_path());
+                match entry {
+                    Ok(entry) => self.walk_queue.push_back(entry.into_path()),
+                    Err(error) => {
+                        return Err(Error::FileIo {
+                            kind: FileKind::Directory,
+                            action: FileIoAction::Read,
+                            path: next_path,
+                            cause: FileIoCause::std_io(error),
+                        });
+                    }
+                }
             }
         }
 
@@ -402,12 +403,12 @@ impl io::Read for WrappedReader {
 }
 
 impl Reader for WrappedReader {
-    fn convert_err<E: std::error::Error>(&self, err: E) -> Error {
+    fn convert_err<E: std::error::Error>(&self, error: E) -> Error {
         Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Read,
             path: self.path.clone(),
-            err: Some(err.to_string()),
+            cause: FileIoCause::Other(error.to_string()),
         }
     }
 }
@@ -454,7 +455,7 @@ pub trait TarUnpacker {
                 action: FileIoAction::WriteTo,
                 kind: FileKind::Directory,
                 path: path.to_path_buf(),
-                err: Some(error.to_string()),
+                cause: FileIoCause::std_io(error),
             })
     }
 }

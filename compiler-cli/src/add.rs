@@ -6,7 +6,7 @@ use std::fmt::Write as _;
 
 use gleam_core::{
     Error, Result,
-    error::{FileIoAction, FileKind},
+    error::{FileIoAction, FileIoCause, FileKind},
     paths::ProjectPaths,
 };
 use hexpm::version::{Identifier, Version};
@@ -107,8 +107,8 @@ fn read_toml_edit(name: &Utf8Path) -> Result<toml_edit::DocumentMut, Error> {
         .map_err(|error| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Parse,
-            path: Utf8PathBuf::from("gleam.toml"),
-            err: Some(error.to_string()),
+            path: Utf8PathBuf::from(name),
+            cause: FileIoCause::Other(error.to_string()),
         })
 }
 

@@ -766,7 +766,7 @@ pub struct CompilePackage {
     #[arg(long = "out")]
     pub output_directory: Utf8PathBuf,
 
-    /// A directories of precompiled Gleam projects
+    /// A directories of packages already compiled with the same version of Gleam
     #[arg(long = "lib")]
     pub libraries_directory: Utf8PathBuf,
 

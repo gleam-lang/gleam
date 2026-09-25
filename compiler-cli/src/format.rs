@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
-use gleam_core::{
-    error::{Error, FileIoAction, FileKind, Result, StandardIoAction, Unformatted},
-    io::Content,
-    io::OutputFile,
-};
-use std::{io::Read, str::FromStr};
-
 use camino::{Utf8Path, Utf8PathBuf};
+use gleam_core::{
+    error::{Error, Result, StandardIoAction, Unformatted},
+    io::{Content, OutputFile},
+};
+use std::io::Read;
 
 pub fn run(stdin: bool, check: bool, files: Vec<String>) -> Result<()> {
     if stdin {
@@ -74,13 +72,7 @@ pub fn unformatted_files(files: Vec<String>) -> Result<Vec<Unformatted>> {
     let mut problem_files = Vec::with_capacity(files.len());
 
     for file_path in files {
-        let path = Utf8PathBuf::from_str(&file_path).map_err(|error| Error::FileIo {
-            action: FileIoAction::Open,
-            kind: FileKind::File,
-            path: Utf8PathBuf::from(file_path),
-            err: Some(error.to_string()),
-        })?;
-
+        let path = Utf8PathBuf::from(&file_path);
         if path.is_dir() {
             for path in crate::fs::gleam_files(&path) {
                 format_file(&mut problem_files, path)?;

@@ -183,12 +183,12 @@ pub enum Error {
     #[error("cyclical package dependencies")]
     PackageCycle { packages: Vec<EcoString> },
 
-    #[error("{action:?} {path:?} failed: {err:?}")]
+    #[error("{action:?} {path:?} failed: {cause:?}")]
     FileIo {
         kind: FileKind,
         action: FileIoAction,
         path: Utf8PathBuf,
-        err: Option<String>,
+        cause: FileIoCause,
     },
 
     #[error("Non Utf-8 Path: {path}")]
@@ -791,6 +791,18 @@ impl FileIoAction {
             | FileIoAction::ReadMetadata
             | FileIoAction::Copy(None) => None,
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FileIoCause {
+    Other(String),
+    CacheMetadataFormatIncorrect,
+}
+
+impl FileIoCause {
+    pub fn std_io(error: std::io::Error) -> Self {
+        Self::Other(error.to_string())
     }
 }
 
@@ -1867,34 +1879,37 @@ Erlang modules must have unique names regardless of the subfolders where their
                 kind,
                 action,
                 path,
-                err,
+                cause,
             } => {
-                let err = match err {
-                    Some(e) => {
-                        format!("\nThe error message from the file IO library was:\n\n    {e}\n")
-                    }
-                    None => "".into(),
-                };
-                let destination = if let Some(destination) = action.destination() {
-                    format!(
-                        "\n\nTo:
-
-    {destination}"
-                    )
-                } else {
-                    "".into()
-                };
                 let mut text = format!(
                     "An error occurred while trying to {} this {}:
 
-    {}{}
-{}",
+    {}",
                     action.text(),
                     kind.text(),
-                    path,
-                    destination,
-                    err,
+                    path
                 );
+                if let Some(destination) = action.destination() {
+                    text.push_str("\n\nTo:\n\n    ");
+                    text.push_str(destination.as_str());
+                }
+                match cause {
+                    FileIoCause::Other(error) => {
+                        text.push_str(
+                            "\n\nThe error message from the file IO library was:\n\n    ",
+                        );
+                        text.push_str(error.as_str());
+                    }
+                    FileIoCause::CacheMetadataFormatIncorrect => text.push_str(
+                        "
+
+The data in this file was not in the expected format, so it could
+not be understood by the compiler.
+
+This can happen if the data file was created with a different
+version of Gleam, or if the files have been corrupted in some way.",
+                    ),
+                };
                 if cfg!(target_family = "windows") && action.is_link() {
                     text.push_str("
 
