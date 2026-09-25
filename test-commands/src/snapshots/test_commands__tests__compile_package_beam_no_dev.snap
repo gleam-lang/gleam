@@ -1,0 +1,11 @@
+---
+source: test-commands/src/tests.rs
+expression: app
+---
+{application, compile_package, [
+    {vsn, "1.0.0"},
+    {applications, [regular_dependency]},
+    {description, ""},
+    {modules, [compile_package]},
+    {registered, []}
+]}.

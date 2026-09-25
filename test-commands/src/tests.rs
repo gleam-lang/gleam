@@ -129,7 +129,7 @@ fn package_interface() {
 }
 
 #[test]
-fn compile_package_produces_textual_erlang_files() {
+fn compile_package_no_beam() {
     let temporary_directory = tempfile::TempDir::new().unwrap();
     let output_directory =
         Utf8PathBuf::from(temporary_directory.path().as_os_str().to_str().unwrap());
@@ -152,7 +152,105 @@ fn compile_package_produces_textual_erlang_files() {
     assert!(
         output_directory
             .join("_gleam_artefacts")
-            .join("wibble.erl")
-            .exists()
+            .join("compile_package.erl")
+            .exists(),
+        "When --no-beam is given then .erl files should be produced"
     );
+    assert!(
+        !output_directory
+            .join("_gleam_artefacts")
+            .join("compile_package.abstr")
+            .exists(),
+        "When --no-beam is given then .abstr files should not be produced"
+    );
+    assert!(
+        !output_directory.join("ebin").exists(),
+        "When --no-beam is given then the ebin directory should not be produced"
+    );
+}
+
+#[test]
+fn compile_package_beam() {
+    let temporary_directory = tempfile::TempDir::new().unwrap();
+    let output_directory =
+        Utf8PathBuf::from(temporary_directory.path().as_os_str().to_str().unwrap());
+
+    let package_directory = package("compile_package");
+
+    Command::CompilePackage(CompilePackage {
+        target: gleam_core::build::Target::Erlang,
+        package_directory: package_directory.clone(),
+        output_directory: output_directory.clone(),
+        libraries_directory: package_directory.clone(),
+        javascript_prelude: None,
+        skip_beam_compilation: false,
+        no_dev: false,
+        otp_app_names: HashMap::new(),
+    })
+    .run(package_directory)
+    .unwrap();
+
+    let ebin = output_directory.join("ebin");
+    // BEAM files should be created for all modules
+    assert!(ebin.join("compile_package.beam").exists(),);
+    assert!(ebin.join("compile_package_dev.beam").exists(),);
+    assert!(ebin.join("compile_package_test.beam").exists(),);
+    // .erl should not be created when compiling to BEAM
+    assert!(
+        !output_directory
+            .join("_gleam_artefacts")
+            .join("compile_package.erl")
+            .exists(),
+    );
+
+    let path = output_directory.join("ebin").join("compile_package.app");
+    let app = std::fs::read_to_string(path).expect("reading out/ebin/compile_package.app");
+    assert!(app.contains("regular_dependency"));
+    assert!(app.contains("dev_dependency"));
+    insta::assert_snapshot!(app);
+}
+
+#[test]
+fn compile_package_beam_no_dev() {
+    let temporary_directory = tempfile::TempDir::new().unwrap();
+    let output_directory =
+        Utf8PathBuf::from(temporary_directory.path().as_os_str().to_str().unwrap());
+
+    let package_directory = package("compile_package");
+
+    Command::CompilePackage(CompilePackage {
+        target: gleam_core::build::Target::Erlang,
+        package_directory: package_directory.clone(),
+        output_directory: output_directory.clone(),
+        libraries_directory: package_directory.clone(),
+        javascript_prelude: None,
+        skip_beam_compilation: false,
+        no_dev: true,
+        otp_app_names: HashMap::new(),
+    })
+    .run(package_directory)
+    .unwrap();
+
+    let ebin = output_directory.join("ebin");
+    assert!(
+        ebin.join("compile_package.beam").exists(),
+        "src .beam should be created"
+    );
+    // Dev and test files should not be created
+    assert!(!ebin.join("compile_package_dev.beam").exists(),);
+    assert!(!ebin.join("compile_package_test.beam").exists(),);
+    // .erl should not be created when compiling to BEAM
+    assert!(
+        !output_directory
+            .join("_gleam_artefacts")
+            .join("compile_package.erl")
+            .exists(),
+    );
+
+    let path = output_directory.join("ebin").join("compile_package.app");
+    let app = std::fs::read_to_string(path).expect("reading out/ebin/compile_package.app");
+    // dependencies included but dev_dependencies are not
+    assert!(app.contains("regular_dependency"));
+    assert!(!app.contains("dev_dependency"));
+    insta::assert_snapshot!(app);
 }
