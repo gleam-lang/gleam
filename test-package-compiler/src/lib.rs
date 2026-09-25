@@ -48,10 +48,15 @@ impl TestHarness {
         let root = Utf8PathBuf::default().join(arguments.package);
         let toml = self.file_system.read(&root.join("gleam.toml")).unwrap();
         let config: PackageConfig = toml::from_str(&toml).unwrap();
+        let mode = if arguments.no_dev {
+            Mode::Prod
+        } else {
+            Mode::Dev
+        };
         let target = match arguments.target.unwrap_or(config.target) {
             Target::Erlang => TargetCodegenConfiguration::Erlang {
                 app_file: Some(ErlangAppCodegenConfiguration {
-                    include_dev_deps: true,
+                    include_dev_deps: mode.includes_dev_dependencies(),
                     package_name_overrides: arguments.otp_app_overrides,
                 }),
                 output: ErlangOutput::Binary,
@@ -64,11 +69,6 @@ impl TestHarness {
         };
         let mut modules = imbl::HashMap::new();
         let warning_emitter = WarningEmitter::new(Rc::new(self.warnings.clone()));
-        let mode = if arguments.no_dev {
-            Mode::Prod
-        } else {
-            Mode::Dev
-        };
         let mut compiler = gleam_core::build::PackageCompiler::new(
             &config,
             mode,

@@ -3,3 +3,9 @@
 
 name = "src_only"
 version = "1.0.0"
+
+[dependencies]
+gleam_stdlib = "~> 1337.0"
+
+[dev_dependencies]
+gleeunit = "~> 1337.0"

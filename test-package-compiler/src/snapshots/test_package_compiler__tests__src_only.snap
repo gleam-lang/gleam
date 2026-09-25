@@ -14,7 +14,7 @@ expression: "./cases/src_only"
 //// src_only/ebin/src_only.app
 {application, src_only, [
     {vsn, "1.0.0"},
-    {applications, []},
+    {applications, [gleam_stdlib]},
     {description, ""},
     {modules, [src_only]},
     {registered, []}
