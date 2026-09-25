@@ -13,7 +13,8 @@ pub fn add(x, y) {
 pub fn main() {
     let add_one = add(_, 1)
     let one = add_one(0)
-}"#,);
+}"#,
+    );
 }
 
 #[test]
@@ -27,7 +28,8 @@ pub fn main() {
   let f = func()(_)
 
   f(0)
-}"#,);
+}"#,
+    );
 }
 
 #[test]
@@ -41,7 +43,8 @@ pub fn main() {
   let f = func().1(1, _, 2)
 
   f(0)
-}"#,);
+}"#,
+    );
 }
 
 #[test]
@@ -58,5 +61,6 @@ pub fn main() {
   let f = func().f(_)
 
   f(0)
-}"#,);
+}"#,
+    );
 }
