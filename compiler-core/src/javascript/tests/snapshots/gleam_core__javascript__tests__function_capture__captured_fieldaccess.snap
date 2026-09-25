@@ -1,0 +1,42 @@
+---
+source: compiler-core/src/javascript/tests/function_capture.rs
+expression: "\npub type A(a) {\n  A(f: fn(a) -> a)\n}\npub fn main() {\n  let func = fn() {\n    A(fn(x) { x })\n  }\n  let f = func().f(_)\n\n  f(0)\n}"
+---
+----- SOURCE CODE
+
+pub type A(a) {
+  A(f: fn(a) -> a)
+}
+pub fn main() {
+  let func = fn() {
+    A(fn(x) { x })
+  }
+  let f = func().f(_)
+
+  f(0)
+}
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class A extends $CustomType {
+  constructor(f) {
+    super();
+    this.f = f;
+  }
+}
+export const A$A = (f) => new A(f);
+export const A$isA = (value) => value instanceof A;
+export const A$A$f = (value) => value.f;
+export const A$A$0 = (value) => value.f;
+
+export function main() {
+  let func = () => { return new A((x) => { return x; }); };
+  let _block;
+  {
+    let tmp = func().f;
+    _block = (_capture) => { return tmp(_capture); };
+  }
+  let f = _block;
+  return f(0);
+}
