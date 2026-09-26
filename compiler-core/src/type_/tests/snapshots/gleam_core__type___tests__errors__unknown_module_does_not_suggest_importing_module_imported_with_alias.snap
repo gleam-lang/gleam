@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport gleam/io as gleam_io\npub fn main() {\n  io.println(\"Hello, world!\")\n}\n"
+---
+----- SOURCE CODE
+-- gleam/io.gleam
+pub fn println(message: String) {}
+
+-- main.gleam
+
+import gleam/io as gleam_io
+pub fn main() {
+  io.println("Hello, world!")
+}
+
+
+----- ERROR
+error: Unknown module
+  ┌─ /src/one/two.gleam:4:3
+  │
+4 │   io.println("Hello, world!")
+  │   ^^
+
+No module has been found with the name `io`.
