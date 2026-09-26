@@ -1492,7 +1492,7 @@ checksum = "c426daf70099baff33fac0ba85151c42424861c56828cef9ba02dacb78eb6b26"
 
 [[package]]
 name = "gleam"
-version = "1.19.0-rc1"
+version = "1.19.0-rc2"
 dependencies = [
  "gleam-cli",
  "static_vcruntime",
@@ -1500,7 +1500,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-benches"
-version = "1.19.0-rc1"
+version = "1.19.0-rc2"
 dependencies = [
  "camino",
  "criterion",
@@ -1511,7 +1511,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-cli"
-version = "1.19.0-rc1"
+version = "1.19.0-rc2"
 dependencies = [
  "async-trait",
  "base16",
@@ -1564,7 +1564,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-core"
-version = "1.19.0-rc1"
+version = "1.19.0-rc2"
 dependencies = [
  "age",
  "askama",
@@ -1625,7 +1625,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-format"
-version = "1.19.0-rc1"
+version = "1.19.0-rc2"
 dependencies = [
  "camino",
  "ecow",
@@ -1639,7 +1639,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-language-server"
-version = "1.19.0-rc1"
+version = "1.19.0-rc2"
 dependencies = [
  "camino",
  "debug-ignore",
@@ -1664,7 +1664,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-wasm"
-version = "1.19.0-rc1"
+version = "1.19.0-rc2"
 dependencies = [
  "camino",
  "console_error_panic_hook",
@@ -1748,7 +1748,7 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "hexpm"
-version = "1.19.0-rc1"
+version = "1.19.0-rc2"
 dependencies = [
  "base16",
  "bytes",
@@ -4047,7 +4047,7 @@ dependencies = [
 
 [[package]]
 name = "test-commands"
-version = "1.19.0-rc1"
+version = "1.19.0-rc2"
 dependencies = [
  "camino",
  "gleam-cli",
@@ -4073,7 +4073,7 @@ dependencies = [
 
 [[package]]
 name = "test-output"
-version = "1.19.0-rc1"
+version = "1.19.0-rc2"
 dependencies = [
  "camino",
  "gleam-cli",
@@ -4084,7 +4084,7 @@ dependencies = [
 
 [[package]]
 name = "test-package-compiler"
-version = "1.19.0-rc1"
+version = "1.19.0-rc2"
 dependencies = [
  "camino",
  "ecow",
@@ -4099,7 +4099,7 @@ dependencies = [
 
 [[package]]
 name = "test-project-compiler"
-version = "1.19.0-rc1"
+version = "1.19.0-rc2"
 dependencies = [
  "camino",
  "gleam-core",
