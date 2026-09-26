@@ -26,6 +26,12 @@
   for compilation to BEAM.
   ([Louis Pilfold](https://github.com/lpil))
 
+### Language server
+
+- The language server will now remove imports of prelude items when renaming
+  them to original name.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## 1.19.0-rc1 - 2026-09-22
 
 ### Compiler

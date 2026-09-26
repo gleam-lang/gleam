@@ -4229,3 +4229,42 @@ pub fn main() {
         find_position_of("in string").under_char('i')
     );
 }
+
+#[test]
+fn rename_prelude_type_to_original_name_remove_item_import() {
+    assert_rename!(
+        "import gleam.{Nil as Null, type Nil as Wibble}
+
+pub fn go() -> Wibble {
+  Null
+}",
+        "Nil",
+        find_position_of("Wibble").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_prelude_type_to_original_name_remove_full_import_with_module_alias() {
+    assert_rename!(
+        "import gleam.{type Nil as Null} as g
+
+pub fn go() -> Null {
+  Nil
+}",
+        "Nil",
+        find_position_of("Null").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_prelude_value_to_original_name_remove_full_import_with_module_alias() {
+    assert_rename!(
+        "import gleam.{Nil as Null} as g
+
+pub fn go() -> Nil {
+  Null
+}",
+        "Nil",
+        find_position_of("Null").nth_occurrence(2)
+    );
+}

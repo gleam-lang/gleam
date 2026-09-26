@@ -7,15 +7,15 @@ expression: "import gleam.{Nil as Null, type Nil as Wibble}\n\npub fn go() -> Wi
 import gleam.{Nil as Null, type Nil as Wibble}
 
 pub fn go() -> Wibble {
+               ↑▔▔▔▔▔  
   Null
-  ↑▔▔▔
 }
 
 
 ----- AFTER RENAME
 -- app.gleam
-import gleam.{type Nil as Wibble}
+import gleam.{Nil as Null}
 
-pub fn go() -> Wibble {
-  Nil
+pub fn go() -> Nil {
+  Null
 }
