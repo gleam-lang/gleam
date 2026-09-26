@@ -324,6 +324,11 @@
 
 ### Bug fixes
 
+- Fixed a bug where function captures on a function call, field access, or
+  tuple index would lazily evaluate the target expression instead of eagerly
+  evaluating it.
+  ([Tomonari Muranaka](https://github.com/Tom-game-project))
+
 - Fixed a bug where the generated Erlang `.app` file's module list could be
   missing Erlang or Elixir native modules that hadn't been recompiled since
   a previous build.
