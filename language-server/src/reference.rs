@@ -76,6 +76,9 @@ pub enum Referenced {
         label: EcoString,
         location: SrcSpan,
     },
+    Echo {
+        location: SrcSpan,
+    },
 }
 
 pub fn reference_for_ast_node(
@@ -508,6 +511,16 @@ pub fn reference_for_ast_node(
             label,
             location,
         }),
+
+        Located::Expression {
+            expression: TypedExpr::Echo { location, .. },
+            ..
+        } => Some(Referenced::Echo {
+            // We use full location and not only keyword location, so find
+            // references can be triggered on e.g. `as` keyword too.
+            location: *location,
+        }),
+
         Located::Pattern(_)
         | Located::ClauseGuard(_)
         | Located::PatternSpread { .. }
@@ -627,6 +640,52 @@ pub fn find_label_references_in_module(
         );
 
     for location in locations {
+        reference_locations.push(Location {
+            uri: uri.clone(),
+            range: src_span_to_lsp_range(location, &source_information.line_numbers),
+        });
+    }
+
+    reference_locations
+}
+
+pub fn find_echo_references(
+    current_package: EcoString,
+    modules: &imbl::HashMap<EcoString, ModuleInterface>,
+    sources: &HashMap<EcoString, ModuleSourceInformation>,
+) -> Vec<Location> {
+    let mut reference_locations = Vec::new();
+
+    for module in modules.values() {
+        // We don't want to show references from other packages
+        if module.package != current_package {
+            continue;
+        }
+
+        let Some(source_information) = sources.get(&module.name) else {
+            continue;
+        };
+        reference_locations.extend(find_echo_references_in_module(module, source_information));
+    }
+
+    reference_locations
+}
+
+pub fn find_echo_references_in_module(
+    module: &ModuleInterface,
+    source_information: &ModuleSourceInformation,
+) -> Vec<Location> {
+    let mut reference_locations = Vec::new();
+
+    let Some(uri) = url_from_path(source_information.path.as_str()) else {
+        return reference_locations;
+    };
+
+    let locations = &module.references.echo_usages;
+
+    for location in locations.iter() {
+        // We only want to cover the keyword an not the entire expression
+        let location = SrcSpan::new(location.start, location.start + 4);
         reference_locations.push(Location {
             uri: uri.clone(),
             range: src_span_to_lsp_range(location, &source_information.line_numbers),

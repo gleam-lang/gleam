@@ -109,9 +109,6 @@ pub struct Environment<'a> {
     /// IDs and register the original names for them.
     pub deferred_type_variable_aliases: Vec<(u64, Arc<Type>)>,
 
-    /// Wether we ran into an `echo` or not while analysing the current module.
-    pub echo_found: bool,
-
     pub references: ReferenceTracker,
 
     pub dev_dependencies: &'a HashSet<EcoString>,
@@ -176,7 +173,6 @@ impl<'a> Environment<'a> {
             names,
             deferred_type_variable_aliases: Vec::new(),
             module_type_aliases: HashMap::new(),
-            echo_found: false,
             references: ReferenceTracker::new(),
             dev_dependencies,
         }

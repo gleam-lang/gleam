@@ -622,8 +622,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         expression: Option<Box<UntypedExpr>>,
         message: Option<Box<UntypedExpr>>,
     ) -> TypedExpr {
-        self.environment.echo_found = true;
         self.purity = Purity::Impure;
+        self.environment.references.echo_usages.push(location);
 
         let expression = if let Some(expression) = expression {
             let expression = self.infer(*expression);

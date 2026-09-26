@@ -355,7 +355,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             accessors,
             names: type_names,
             module_type_aliases: type_aliases,
-            echo_found,
             ..
         } = env;
 
@@ -395,7 +394,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 minimum_required_version: self.minimum_required_version,
                 type_aliases,
                 documentation,
-                contains_echo: echo_found,
                 references: References {
                     imported_modules: env
                         .imported_modules
@@ -407,6 +405,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     module_references: env.references.module_references,
                     label_references: env.references.label_references,
                     label_definitions: env.references.label_definitions,
+                    echo_usages: env.references.echo_usages,
                 },
             },
         };

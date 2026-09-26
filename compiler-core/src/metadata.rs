@@ -66,7 +66,6 @@ impl RemapIds {
             minimum_required_version,
             type_aliases,
             documentation,
-            contains_echo,
             references,
         } = module;
 
@@ -106,7 +105,6 @@ impl RemapIds {
             minimum_required_version,
             type_aliases,
             documentation,
-            contains_echo,
             references,
         }
     }

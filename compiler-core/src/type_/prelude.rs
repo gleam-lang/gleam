@@ -243,7 +243,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         minimum_required_version: Version::new(0, 1, 0),
         type_aliases: HashMap::new(),
         documentation: Vec::new(),
-        contains_echo: false,
         references: References::default(),
     };
 
