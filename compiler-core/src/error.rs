@@ -28,7 +28,8 @@ use src_span::SrcSpan;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::io::Write;
+use std::fmt::Write as FmtWrite;
+use std::io::Write as IoWrite;
 use std::path::PathBuf;
 use std::sync::Arc;
 use termcolor::Buffer;
@@ -806,12 +807,17 @@ impl FileIoAction {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FileIoCause {
     Other(String),
+    NotFound,
     CacheMetadataFormatIncorrect,
 }
 
 impl FileIoCause {
     pub fn std_io(error: std::io::Error) -> Self {
-        Self::Other(error.to_string())
+        if let std::io::ErrorKind::NotFound = error.kind() {
+            Self::NotFound
+        } else {
+            Self::Other(error.to_string())
+        }
     }
 }
 
@@ -1960,6 +1966,10 @@ Erlang modules must have unique names regardless of the subfolders where their
                             "\n\nThe error message from the file IO library was:\n\n    ",
                         );
                         text.push_str(error.as_str());
+                    }
+                    FileIoCause::NotFound => {
+                        write!(text, "\n\nThis {} does not exist.", kind.text())
+                            .expect("successfully write to the buffer");
                     }
                     FileIoCause::CacheMetadataFormatIncorrect => text.push_str(
                         "

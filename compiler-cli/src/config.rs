@@ -78,7 +78,7 @@ pub fn ensure_config_exists(paths: &ProjectPaths) -> Result<(), Error> {
             action: FileIoAction::Read,
             kind: FileKind::File,
             path,
-            cause: FileIoCause::Other("File not found".into()),
+            cause: FileIoCause::NotFound,
         });
     }
     Ok(())
