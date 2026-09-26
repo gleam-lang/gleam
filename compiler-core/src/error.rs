@@ -4623,10 +4623,7 @@ The missing patterns are:\n",
             let text = wrap_format!(
                 "This value is not available as it is defined using externals, \
 and there is no implementation for the {} target.",
-                match current_target {
-                    Target::Erlang => "Erlang",
-                    Target::JavaScript => "JavaScript",
-                }
+                current_target.as_presentable_str()
             );
             let hint = wrap("Did you mean to build for a different target?");
             Diagnostic {
@@ -4651,10 +4648,7 @@ and there is no implementation for the {} target.",
             name,
             target,
         } => {
-            let target = match target {
-                Target::Erlang => "Erlang",
-                Target::JavaScript => "JavaScript",
-            };
+            let target = target.as_presentable_str();
             let text = wrap_format!(
                 "The `{name}` function is public but doesn't have an \
 implementation for the {target} target. All public functions of a package \

@@ -4956,6 +4956,32 @@ enum StaticComparison {
     CantTell,
 }
 
+/// Compares each pair of expressions: the result is only `CertainlyEqual` if
+/// every pair is.
+fn static_compare_pairwise<'a>(
+    pairs: impl IntoIterator<Item = (&'a TypedExpr, &'a TypedExpr)>,
+) -> StaticComparison {
+    let mut comparison = StaticComparison::CertainlyEqual;
+    for (one, other) in pairs {
+        match static_compare(one, other) {
+            StaticComparison::CertainlyEqual => (),
+            // If we can tell any of the arguments are never going to
+            // be the same then we can short circuit and be sure
+            // that the two variants are not the same as well!
+            StaticComparison::CertainlyDifferent => {
+                return StaticComparison::CertainlyDifferent;
+            }
+            // If we can't compare two of the arguments then there's
+            // nothing we can tell at compile time. Notice how we
+            // don't short circuit here: we still want to go over all
+            // the other arguments because we might find two that are
+            // certainly going to be different!
+            StaticComparison::CantTell => comparison = StaticComparison::CantTell,
+        }
+    }
+    comparison
+}
+
 fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
     if one.is_record_constructor_function() && other.is_record_constructor_function() {
         return StaticComparison::CantTell;
@@ -5079,17 +5105,7 @@ fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
                 return StaticComparison::CertainlyDifferent;
             }
 
-            let mut comparison = StaticComparison::CertainlyEqual;
-            for (one, other) in elements_one.iter().zip(elements_other.iter()) {
-                match static_compare(one, other) {
-                    StaticComparison::CertainlyEqual => (),
-                    StaticComparison::CertainlyDifferent => {
-                        return StaticComparison::CertainlyDifferent;
-                    }
-                    StaticComparison::CantTell => comparison = StaticComparison::CantTell,
-                }
-            }
-            comparison
+            static_compare_pairwise(elements_one.iter().zip(elements_other))
         }
 
         (
@@ -5101,19 +5117,7 @@ fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
                 elements: elements_other,
                 ..
             },
-        ) => {
-            let mut comparison = StaticComparison::CertainlyEqual;
-            for (one, other) in elements_one.iter().zip(elements_other.iter()) {
-                match static_compare(one, other) {
-                    StaticComparison::CertainlyEqual => (),
-                    StaticComparison::CertainlyDifferent => {
-                        return StaticComparison::CertainlyDifferent;
-                    }
-                    StaticComparison::CantTell => comparison = StaticComparison::CantTell,
-                }
-            }
-            comparison
-        }
+        ) => static_compare_pairwise(elements_one.iter().zip(elements_other)),
 
         (
             TypedExpr::ModuleSelect {
@@ -5157,27 +5161,12 @@ fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
             }
 
             // Otherwise we need to check their arguments pairwise:
-            (Some(_), Some(_)) => {
-                let mut comparison = StaticComparison::CertainlyEqual;
-                for (one, other) in arguments_one.iter().zip(arguments_other.iter()) {
-                    match static_compare(&one.value, &other.value) {
-                        StaticComparison::CertainlyEqual => (),
-                        // If we can tell any of the arguments are never going to
-                        // be the same then we can short circuit and be sure
-                        // that the two variants are not the same as well!
-                        StaticComparison::CertainlyDifferent => {
-                            return StaticComparison::CertainlyDifferent;
-                        }
-                        // If we can't compare two of the arguments then there's
-                        // nothing we can tell at compile time. Notice how we
-                        // don't short circuit here: we still want to go over all
-                        // the other arguments because we might find two that are
-                        // certainly going to be different!
-                        StaticComparison::CantTell => comparison = StaticComparison::CantTell,
-                    }
-                }
-                comparison
-            }
+            (Some(_), Some(_)) => static_compare_pairwise(
+                arguments_one
+                    .iter()
+                    .zip(arguments_other)
+                    .map(|(one, other)| (&one.value, &other.value)),
+            ),
         },
 
         // If we're building two variants with a different index then we can
