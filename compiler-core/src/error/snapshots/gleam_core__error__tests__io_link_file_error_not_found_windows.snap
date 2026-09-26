@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/error/tests.rs
+expression: error
+---
+error: File IO failure
+
+An error occurred while trying to link this file:
+
+    /src
+
+To:
+
+    /dest
+
+The error message from the file IO library was:
+
+    File Not Found
+
+
+Windows does not support symbolic links without developer mode
+or admin privileges. Please enable developer mode and try again.
+
+https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development#activate-developer-mode
+

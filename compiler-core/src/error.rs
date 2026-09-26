@@ -797,12 +797,17 @@ impl FileIoAction {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FileIoCause {
     Other(String),
+    NotFound,
     CacheMetadataFormatIncorrect,
 }
 
 impl FileIoCause {
     pub fn std_io(error: std::io::Error) -> Self {
-        Self::Other(error.to_string())
+        if let std::io::ErrorKind::NotFound = error.kind() {
+            Self::NotFound
+        } else {
+            Self::Other(error.to_string())
+        }
     }
 }
 
@@ -1899,6 +1904,11 @@ Erlang modules must have unique names regardless of the subfolders where their
                             "\n\nThe error message from the file IO library was:\n\n    ",
                         );
                         text.push_str(error.as_str());
+                    }
+                    FileIoCause::NotFound => {
+                        text.push_str(
+                            "\n\nThe error message from the file IO library was:\n\n    File Not Found",
+                        );
                     }
                     FileIoCause::CacheMetadataFormatIncorrect => text.push_str(
                         "

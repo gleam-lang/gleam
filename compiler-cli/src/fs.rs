@@ -694,7 +694,11 @@ pub fn copy_dir(path: impl AsRef<Utf8Path>, to: impl AsRef<Utf8Path>) -> Result<
             action: FileIoAction::Copy(Some(to.to_path_buf())),
             kind: FileKind::Directory,
             path: Utf8PathBuf::from(path),
-            cause: FileIoCause::Other(error.to_string()),
+            cause: if let fs_extra::error::ErrorKind::NotFound = error.kind {
+                FileIoCause::NotFound
+            } else {
+                FileIoCause::Other(error.to_string())
+            },
         }),
     }
 }
