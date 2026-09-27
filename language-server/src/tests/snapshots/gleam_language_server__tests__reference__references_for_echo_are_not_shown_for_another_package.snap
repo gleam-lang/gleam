@@ -1,0 +1,10 @@
+---
+source: language-server/src/tests/reference.rs
+expression: "\npub fn wibble() {\n  echo \"wibble\"\n}\n        "
+---
+-- app.gleam
+
+pub fn wibble() {
+  echo "wibble"
+  ↑▔▔▔         
+}
