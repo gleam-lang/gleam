@@ -1971,6 +1971,7 @@ fn module_with_references() {
             label_references: HashMap::new(),
             label_definitions: HashMap::new(),
             echo_usages: Vec::new(),
+            todo_usages: Vec::new(),
         },
     };
 

@@ -591,6 +591,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             names: Box::new(self.environment.names.clone()),
         });
 
+        // For keywords we want to register `todo` usage.
+        if let TodoKind::Keyword = kind {
+            self.environment.references.todo_usages.push(location);
+        }
+
         self.purity = Purity::Impure;
 
         let message = message.map(|message| Box::new(self.infer_and_unify(*message, string())));
