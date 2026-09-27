@@ -1998,6 +1998,7 @@ fn module_with_references() {
             label_definitions: HashMap::new(),
             echo_usages: Vec::new(),
             todo_usages: Vec::new(),
+            panic_usages: Vec::new(),
         },
     };
 
