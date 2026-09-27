@@ -1,0 +1,10 @@
+---
+source: language-server/src/tests/reference.rs
+expression: "\npub fn webble() {\n  todo as \"webble\"\n}\n        "
+---
+-- app.gleam
+
+pub fn webble() {
+  todo as "webble"
+  ↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+}
