@@ -1927,3 +1927,122 @@ fn webble(a, b) {
         find_position_of("echo")
     );
 }
+
+#[test]
+fn references_for_todo_in_current_module() {
+    assert_references!(
+        r#"
+const wibble = todo
+pub const wobble = todo as "wobble"
+
+fn wubble() {
+  todo
+}
+
+pub fn webble() {
+  todo as "webble"
+}
+
+pub fn empty() {}
+
+pub fn woo() {
+ {}
+}
+        "#,
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn references_for_todo_in_same_package() {
+    assert_references!(
+        (
+            "woo",
+            r#"
+const wibble = todo
+pub const wobble = todo as "wobble"
+
+fn wubble() {
+  todo
+}
+
+pub fn webble() {
+  todo as "webble"
+}
+
+pub fn empty() {}
+
+pub fn woo() {
+ {}
+}
+            "#
+        ),
+        r#"
+pub fn webble() {
+  todo as "webble"
+}
+        "#,
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn references_for_todo_are_not_shown_for_another_package() {
+    let source = r#"
+pub fn webble() {
+  todo as "webble"
+}
+        "#;
+    assert_references!(
+        &TestProject::for_source(source).add_package_module(
+            "another",
+            "another_woo",
+            r#"
+fn wubble() {
+  todo
+}
+
+pub fn webble() {
+  todo as "webble"
+}
+
+pub fn empty() {}
+
+pub fn woo() {
+ {}
+}
+            "#
+        ),
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn references_for_todo_are_not_shown_for_dependency() {
+    let source = r#"
+pub fn webble() {
+  todo as "webble"
+}
+        "#;
+    assert_references!(
+        &TestProject::for_source(source).add_dep_module(
+            "dep",
+            r#"
+fn wubble() {
+  todo
+}
+
+pub fn webble() {
+  todo as "webble"
+}
+
+pub fn empty() {}
+
+pub fn woo() {
+ {}
+}
+            "#
+        ),
+        find_position_of("todo")
+    );
+}
