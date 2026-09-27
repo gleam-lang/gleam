@@ -2046,3 +2046,104 @@ pub fn woo() {
         find_position_of("todo")
     );
 }
+
+#[test]
+fn references_for_panic_in_current_module() {
+    assert_references!(
+        r#"
+pub fn wibble() {
+  panic
+}
+
+fn wobble() {
+  panic as "wobble"
+}
+        "#,
+        find_position_of("panic")
+    );
+}
+
+#[test]
+fn references_for_panic_in_same_package() {
+    assert_references!(
+        (
+            "woo",
+            r#"
+pub fn wibble() {
+  panic
+}
+
+fn wobble() {
+  panic as "wobble"
+}
+            "#
+        ),
+        r#"
+pub fn wibble() {
+  panic
+}
+
+fn wobble() {
+  panic as "wobble"
+}
+        "#,
+        find_position_of("panic")
+    );
+}
+
+#[test]
+fn references_for_panic_are_not_shown_for_another_package() {
+    let source = r#"
+pub fn wibble() {
+  panic
+}
+
+fn wobble() {
+  panic as "wobble"
+}
+        "#;
+    assert_references!(
+        &TestProject::for_source(source).add_package_module(
+            "another",
+            "another_woo",
+            r#"
+pub fn wibble() {
+  panic
+}
+
+fn wobble() {
+  panic as "wobble"
+}
+            "#
+        ),
+        find_position_of("panic")
+    );
+}
+
+#[test]
+fn references_for_panic_are_not_shown_for_dependency() {
+    let source = r#"
+pub fn wibble() {
+  panic
+}
+
+fn wobble() {
+  panic as "wobble"
+}
+        "#;
+    assert_references!(
+        &TestProject::for_source(source).add_dep_module(
+            "dep",
+            r#"
+pub fn wibble() {
+  panic
+}
+
+fn wobble() {
+  panic as "wobble"
+}
+            "#
+        ),
+        find_position_of("panic")
+    );
+}
