@@ -45,6 +45,7 @@ use crate::{
     },
     reference::{
         find_echo_references, find_echo_references_in_module, find_module_references_in_module,
+        find_todo_references, find_todo_references_in_module,
     },
     rename::{rename_module_alias, rename_module_occurrences, rename_type_variable},
 };
@@ -1076,7 +1077,9 @@ where
                 )
                 .into_result(),
 
-                Some(Referenced::Echo { .. }) | None => RenameOutcome::NoRenames.into_result(),
+                Some(Referenced::Echo { .. } | Referenced::Todo { .. }) | None => {
+                    RenameOutcome::NoRenames.into_result()
+                }
             })
         })
     }
@@ -1211,13 +1214,31 @@ where
                     }
                 }
             }
+            Some(Referenced::Todo { location }) if location.contains(byte_index) => {
+                let source_module = self.compiler.get_module_interface(&source_module.name)?;
+                match search_scope {
+                    FindReferencesSearchScope::AllModules => Some(find_todo_references(
+                        source_module.package.clone(),
+                        self.compiler.project_compiler.get_importable_modules(),
+                        &self.compiler.sources,
+                    )),
+                    FindReferencesSearchScope::CurrentModule => {
+                        let source_information = self.compiler.get_source(&source_module.name)?;
+                        Some(find_todo_references_in_module(
+                            source_module,
+                            source_information,
+                        ))
+                    }
+                }
+            }
 
             Some(
                 Referenced::LocalVariable { .. }
                 | Referenced::ModuleName { .. }
                 | Referenced::ModuleValue { .. }
                 | Referenced::TypeVariable { .. }
-                | Referenced::Echo { .. },
+                | Referenced::Echo { .. }
+                | Referenced::Todo { .. },
             )
             | None => None,
         }

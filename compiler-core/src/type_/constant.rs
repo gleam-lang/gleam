@@ -543,6 +543,8 @@ impl<'expression_typer, 'env, 'module> ConstantTyper<'expression_typer, 'env, 'm
                 // running their code!
                 self.typer.problems.error(Error::TodoConstant { location });
 
+                self.typer.environment.references.todo_usages.push(location);
+
                 Constant::Todo {
                     location,
                     type_,

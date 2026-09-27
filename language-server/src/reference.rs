@@ -79,6 +79,9 @@ pub enum Referenced {
     Echo {
         location: SrcSpan,
     },
+    Todo {
+        location: SrcSpan,
+    },
 }
 
 pub fn reference_for_ast_node(
@@ -521,6 +524,14 @@ pub fn reference_for_ast_node(
             location: *location,
         }),
 
+        Located::Expression {
+            expression: TypedExpr::Todo { location, .. },
+            ..
+        }
+        | Located::Constant(ast::Constant::Todo { location, .. }) => Some(Referenced::Todo {
+            location: *location,
+        }),
+
         Located::Pattern(_)
         | Located::ClauseGuard(_)
         | Located::PatternSpread { .. }
@@ -689,6 +700,50 @@ pub fn find_echo_references_in_module(
         reference_locations.push(Location {
             uri: uri.clone(),
             range: src_span_to_lsp_range(location, &source_information.line_numbers),
+        });
+    }
+
+    reference_locations
+}
+
+pub fn find_todo_references(
+    current_package: EcoString,
+    modules: &imbl::HashMap<EcoString, ModuleInterface>,
+    sources: &HashMap<EcoString, ModuleSourceInformation>,
+) -> Vec<Location> {
+    let mut reference_locations = Vec::new();
+
+    for module in modules.values() {
+        // We don't want to show references from other packages
+        if module.package != current_package {
+            continue;
+        }
+
+        let Some(source_information) = sources.get(&module.name) else {
+            continue;
+        };
+        reference_locations.extend(find_todo_references_in_module(module, source_information));
+    }
+
+    reference_locations
+}
+
+pub fn find_todo_references_in_module(
+    module: &ModuleInterface,
+    source_information: &ModuleSourceInformation,
+) -> Vec<Location> {
+    let mut reference_locations = Vec::new();
+
+    let Some(uri) = url_from_path(source_information.path.as_str()) else {
+        return reference_locations;
+    };
+
+    let locations = &module.references.todo_usages;
+
+    for location in locations.iter() {
+        reference_locations.push(Location {
+            uri: uri.clone(),
+            range: src_span_to_lsp_range(*location, &source_information.line_numbers),
         });
     }
 
