@@ -617,6 +617,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_panic(&mut self, location: SrcSpan, message: Option<Box<UntypedExpr>>) -> TypedExpr {
         let type_ = self.new_unbound_var();
+        self.environment.references.panic_usages.push(location);
         self.purity = Purity::Impure;
 
         let message = message.map(|message| Box::new(self.infer_and_unify(*message, string())));
