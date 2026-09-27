@@ -1,0 +1,15 @@
+---
+source: language-server/src/tests/reference.rs
+expression: "\npub fn wibble() {\n  panic\n}\n\nfn wobble() {\n  panic as \"wobble\"\n}\n        "
+---
+-- app.gleam
+
+pub fn wibble() {
+  panic
+  ↑▔▔▔▔
+}
+
+fn wobble() {
+  panic as "wobble"
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+}

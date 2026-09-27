@@ -1548,6 +1548,32 @@ fn module_containing_todo() {
 }
 
 #[test]
+fn module_containing_panic() {
+    let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a/b/c".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        accessors: HashMap::new(),
+        values: [].into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
+        references: References {
+            panic_usages: vec![SrcSpan::new(16, 32)],
+            ..References::default()
+        },
+    };
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
 fn internal_module_fn() {
     let module = ModuleInterface {
         warnings: vec![],
