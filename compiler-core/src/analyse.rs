@@ -406,6 +406,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     label_references: env.references.label_references,
                     label_definitions: env.references.label_definitions,
                     echo_usages: env.references.echo_usages,
+                    todo_usages: env.references.todo_usages,
                 },
             },
         };

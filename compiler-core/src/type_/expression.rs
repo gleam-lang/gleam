@@ -591,6 +591,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             names: Box::new(self.environment.names.clone()),
         });
 
+        let reference_location = if let TodoKind::EmptyFunction { function_location } = kind {
+            // For empty functions with implicit `todo` we want to cover
+            // function head.
+            function_location
+        } else {
+            // Otherwise just push `todo` location.
+            location
+        };
+        self.environment
+            .references
+            .todo_usages
+            .push(reference_location);
+
         self.purity = Purity::Impure;
 
         let message = message.map(|message| Box::new(self.infer_and_unify(*message, string())));

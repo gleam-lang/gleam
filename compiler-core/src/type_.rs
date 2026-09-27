@@ -1057,6 +1057,9 @@ pub struct References {
     pub label_references: HashMap<LabelKey, Vec<LabelReference>>,
     pub label_definitions: HashMap<LabelKey, Vec<LabelDefinition>>,
     pub echo_usages: Vec<SrcSpan>,
+    /// Usages of `todo`. It is different from going through warnings about
+    /// `todo`, because this field also covers `todo`s in constants.
+    pub todo_usages: Vec<SrcSpan>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
