@@ -1199,3 +1199,22 @@ fn wobble(a) {
         find_position_of("echo")
     );
 }
+
+#[test]
+fn highlights_for_todo() {
+    assert_highlights!(
+        r#"
+const wibble = todo
+pub const wobble = todo as "wobble"
+
+fn wubble() {
+  todo
+}
+
+pub fn webble() {
+  todo as "webble"
+}
+        "#,
+        find_position_of("todo")
+    );
+}

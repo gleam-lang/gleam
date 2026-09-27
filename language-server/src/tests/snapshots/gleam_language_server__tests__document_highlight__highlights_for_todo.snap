@@ -1,0 +1,20 @@
+---
+source: language-server/src/tests/document_highlight.rs
+expression: "\nconst wibble = todo\npub const wobble = todo as \"wobble\"\n\nfn wubble() {\n  todo\n}\n\npub fn webble() {\n  todo as \"webble\"\n}\n        "
+---
+-- app.gleam
+
+const wibble = todo
+               ↑▔▔▔
+pub const wobble = todo as "wobble"
+                   ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+
+fn wubble() {
+  todo
+  ▔▔▔▔
+}
+
+pub fn webble() {
+  todo as "webble"
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+}

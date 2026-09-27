@@ -1,0 +1,29 @@
+---
+source: language-server/src/tests/reference.rs
+expression: "\npub fn webble() {\n  todo as \"webble\"\n}\n        "
+---
+-- woo.gleam
+
+const wibble = todo
+               ▔▔▔▔
+pub const wobble = todo as "wobble"
+                   ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+
+fn wubble() {
+  todo
+  ▔▔▔▔
+}
+
+pub fn webble() {
+  todo as "webble"
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+}
+            
+
+
+-- app.gleam
+
+pub fn webble() {
+  todo as "webble"
+  ↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+}
