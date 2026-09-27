@@ -1218,3 +1218,19 @@ pub fn webble() {
         find_position_of("todo")
     );
 }
+
+#[test]
+fn highlights_for_panic() {
+    assert_highlights!(
+        r#"
+fn wibble() {
+  panic
+}
+
+pub fn wobble() {
+  panic as "wobble"
+}
+        "#,
+        find_position_of("panic")
+    );
+}
