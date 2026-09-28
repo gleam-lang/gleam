@@ -48,6 +48,37 @@
   highlight all of them.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The language server now allows to find references of `todo`. For example,
+
+  ```gleam
+  pub const wubble = todo
+  //                 ^^^^
+
+  pub fn wibble() {
+    todo as "unimplemented yet"
+  //^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  }
+  ```
+
+  When triggering on any of denoted places, it will show all usages.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+- The language server now allows to highlight all `todo` in file. For example,
+
+  ```gleam
+  pub const wubble = todo
+  //                 ^^^^
+
+  pub fn wibble() {
+    todo as "unimplemented yet"
+  //^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  }
+  ```
+
+  If this feature is enabled in your editor, hovering any of denoted places will
+  highlight all of them.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## 1.19.0-rc2 - 2026-09-26
 
 ## Compiler
