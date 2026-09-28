@@ -113,6 +113,41 @@
   highlight all of them.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The language server now allows to find references of `panic`. For example,
+
+  ```gleam
+  pub fn wibble() {
+    panic
+  //^^^^^
+  }
+
+  pub fn wobble() {
+    panic as "unimplemented"
+  //^^^^^^^^^^^^^^^^^^^^^^^^
+  }
+  ```
+
+  When triggering on any of denoted places, it will show all usages.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+- The language server now allows to highlight all `panic` in file. For example,
+
+  ```gleam
+  pub fn wibble() {
+    panic
+  //^^^^^
+  }
+
+  pub fn wobble() {
+    panic as "unimplemented"
+  //^^^^^^^^^^^^^^^^^^^^^^^^
+  }
+  ```
+
+  If this feature is enabled in your editor, hovering any of denoted places will
+  highlight all of them.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Bug fixes
 
 - Fixed a bug where the language server "Generate variant" code action would
