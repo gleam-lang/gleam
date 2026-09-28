@@ -66,6 +66,53 @@
   highlight all of them.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The language server now allows to find references of `todo`. For example,
+
+  ```gleam
+  pub const wubble = todo
+  //                 ^^^^
+
+  pub fn wibble() {
+    todo as "unimplemented yet"
+  //^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  }
+
+  pub fn empty() {}
+  //^^^^^^^^^^^^ Empty functions are shown too!
+
+  pub fn block() {
+    {}
+  //^^ And empty blocks too!
+  }
+  ```
+
+  When triggering on any of denoted places, it will show all usages.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+- The language server now allows to highlight all `todo` in file. For example,
+
+  ```gleam
+  pub const wubble = todo
+  //                 ^^^^
+
+  pub fn wibble() {
+    todo as "unimplemented yet"
+  //^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  }
+
+  pub fn empty() {}
+  //^^^^^^^^^^^^ Empty functions are highlighted too!
+
+  pub fn block() {
+    {}
+  //^^ And empty blocks too!
+  }
+  ```
+
+  If this feature is enabled in your editor, hovering any of denoted places will
+  highlight all of them.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Bug fixes
 
 - Fixed a bug where the language server "Generate variant" code action would
