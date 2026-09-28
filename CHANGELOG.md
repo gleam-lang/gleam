@@ -5,6 +5,49 @@
 
 # Changelog
 
+## Unreleased
+
+### Language server
+
+- The language server now allows to find references of `echo`. For example,
+
+  ```gleam
+  pub fn wibble(woo) {
+    echo woo
+  //^^^^
+    echo wobble(woo)
+  //^^^^
+  }
+
+  pub fn wobble(woo) {
+    echo woo
+  //^^^^
+  }
+  ```
+
+  When triggering on any of denoted places, it will show all usages.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+- The language server now allows to highlight all `echo` in file. For example,
+
+  ```gleam
+  pub fn wibble(woo) {
+    echo woo
+  //^^^^
+    echo wobble(woo)
+  //^^^^
+  }
+
+  pub fn wobble(woo) {
+    echo woo
+  //^^^^
+  }
+  ```
+
+  If this feature is enabled in your editor, hovering any of denoted places will
+  highlight all of them.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## 1.19.0-rc2 - 2026-09-26
 
 ## Compiler
