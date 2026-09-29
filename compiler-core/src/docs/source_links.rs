@@ -81,9 +81,23 @@ impl SourceLinker {
                         "-L".into(),
                     ))
                 }
-                Repository::Custom { .. } => None,
+                Repository::Custom { .. } => Some((
+                    format!(
+                        "https://hex.pm/packages/{}/{}/files/{path_in_repo}#L",
+                        project_config.name, project_config.version,
+                    ),
+                    "-L".into(),
+                )),
             })
-            .unwrap_or_default();
+            .unwrap_or_else(|| {
+                Some((
+                    format!(
+                        "https://hex.pm/packages/{}/{}/files/{path_in_repo}#L",
+                        project_config.name, project_config.version,
+                    ),
+                    "-L".into(),
+                ))
+            });
 
         SourceLinker {
             line_numbers: LineNumbers::new(&module.code),
