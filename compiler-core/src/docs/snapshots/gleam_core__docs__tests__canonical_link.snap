@@ -596,6 +596,10 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
         </a>
       </h2>
       
+      <a class="member-source" alt="View Source" title="View Source" href="https://hex.pm/packages/test_project_name/0.1.0/files/src/app.gleam#L3">
+        &lt;/&gt;
+      </a>
+      
     </div>
 
     <pre><code class="hljs hljs-ignore"><span class="hljs-keyword">pub fn </span><span class="hljs-title">one</span>() -> <span class="hljs-title">Int</span></code></pre>
@@ -962,6 +966,10 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
           one
         </a>
       </h2>
+      
+      <a class="member-source" alt="View Source" title="View Source" href="https://hex.pm/packages/test_project_name/0.1.0/files/src/gleam/otp/actor.gleam#L3">
+        &lt;/&gt;
+      </a>
       
     </div>
 

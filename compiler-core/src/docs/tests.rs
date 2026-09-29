@@ -640,6 +640,38 @@ fn source_link_for_github_repository_with_path_and_tag_prefix() {
         "https://github.com/wibble/wobble/blob/subdir-v0.1.0/path/to/package/src/app.gleam#L1"
     ));
 }
+// tests for building URL with custom repository.
+// https://github.com/gleam-lang/gleam/issues/6359
+#[test]
+fn source_link_for_custom_repository_uses_hex_files() {
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
+    config.version = Version::parse("1.2.3").unwrap();
+    config.repository = Some(Repository::Custom {
+        url: "https://example.com/not-a-known-forge".into(),
+        tag_prefix: Some("release-".into()),
+    });
+
+    let modules = vec![("gleam/otp/actor.gleam", "pub type Wibble = Int")];
+    assert!(compile(config, modules).contains(
+        "https://hex.pm/packages/test_project_name/1.2.3/files/src/gleam/otp/actor.gleam#L1"
+    ));
+}
+
+// test for if repository is unset.
+// https://github.com/gleam-lang/gleam/issues/6359
+#[test]
+fn source_link_for_no_repository_uses_hex_files() {
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
+    config.version = Version::parse("1.2.3").unwrap();
+    config.repository = None;
+
+    let modules = vec![("app.gleam", "pub type Wibble = Int")];
+    assert!(compile(config, modules).contains(
+        "https://hex.pm/packages/test_project_name/1.2.3/files/src/app.gleam#L1"
+    ));
+}
 
 #[test]
 fn canonical_link() {
