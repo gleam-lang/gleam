@@ -262,6 +262,10 @@ expression: "compile(config, modules)"
         </a>
       </h2>
       
+      <a class="member-source" alt="View Source" title="View Source" href="https://hex.pm/packages/test_project_name/0.1.0/files/src/app.gleam#L8">
+        &lt;/&gt;
+      </a>
+      
     </div>
 
     <pre><code class="hljs hljs-ignore"><span class="hljs-keyword">pub fn </span><span class="hljs-title">indentation_test</span>() -> <span class="hljs-variable">a</span></code></pre>
