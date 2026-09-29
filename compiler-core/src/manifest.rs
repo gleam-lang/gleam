@@ -623,6 +623,8 @@ pub struct Changed {
     pub name: EcoString,
     pub old: Version,
     pub new: Version,
+    /// Hex packages can be diffed on hex.pm, git and path dependencies cannot.
+    pub from_hex: bool,
 }
 
 #[derive(Debug, PartialEq)]
@@ -727,6 +729,7 @@ impl PackageChanges {
                         name: new.name.clone(),
                         old: old.version.clone(),
                         new: new.version.clone(),
+                        from_hex: matches!(new.source, ManifestPackageSource::Hex { .. }),
                     });
                 }
                 None => {
@@ -814,12 +817,14 @@ mod manifest_update_tests {
                 Changed {
                     name: "changed1".into(),
                     old: Version::new(3, 0, 0),
-                    new: Version::new(5, 0, 0)
+                    new: Version::new(5, 0, 0),
+                    from_hex: true
                 },
                 Changed {
                     name: "changed2".into(),
                     old: Version::new(0, 1, 0),
-                    new: Version::new(3, 0, 0)
+                    new: Version::new(3, 0, 0),
+                    from_hex: true
                 },
             ]
         );
@@ -861,6 +866,40 @@ mod manifest_update_tests {
         assert!(changes.changed.is_empty());
         assert_eq!(changes.removed, vec![name.clone()]);
         assert_eq!(changes.added, vec![(name.clone(), version.clone())]);
+    }
+
+    #[test]
+    fn resolved_with_local_version_change_is_not_from_hex() {
+        let package = |version| ManifestPackage {
+            name: "wibble".into(),
+            version,
+            build_tools: vec![],
+            otp_app: None,
+            requirements: vec![],
+            source: ManifestPackageSource::Local {
+                path: "wibble".into(),
+            },
+        };
+
+        let old = Manifest {
+            requirements: HashMap::new(),
+            packages: vec![package(Version::new(1, 0, 0))],
+        };
+        let new = Manifest {
+            requirements: HashMap::new(),
+            packages: vec![package(Version::new(2, 0, 0))],
+        };
+
+        let changes = PackageChanges::between_manifests(&old, &new);
+        assert_eq!(
+            changes.changed,
+            vec![Changed {
+                name: "wibble".into(),
+                old: Version::new(1, 0, 0),
+                new: Version::new(2, 0, 0),
+                from_hex: false
+            }]
+        );
     }
 
     #[test]
