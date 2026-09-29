@@ -5,6 +5,14 @@
 
 # Changelog
 
+## Unreleased
+
+### Build tool
+
+- When Hex dependencies change version the build tool now prints a link to the
+  diff on Hex, making it easier to review and audit dependency updates.
+  ([Manas Ganesh Dasari](https://github.com/ManasDasri))
+
 ## 1.19.0-rc2 - 2026-09-26
 
 ## Compiler
