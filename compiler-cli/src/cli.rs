@@ -13,7 +13,7 @@ use std::{
     io::{IsTerminal, Write},
     time::{Duration, Instant},
 };
-use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
+use termcolor::{Buffer, BufferWriter, Color, ColorChoice, ColorSpec, HyperlinkSpec, WriteColor};
 
 #[derive(Debug, Default, Clone)]
 pub struct Reporter;
@@ -162,8 +162,19 @@ pub(crate) fn print_package_changes(changes: &PackageChanges) {
     for (name, version) in changes.added.iter().sorted() {
         print_added(&format!("{name} v{version}"));
     }
-    for Changed { name, old, new } in changes.changed.iter().sorted_by_key(|p| &p.name) {
-        print_changed(&format!("{name} v{old} -> v{new}"));
+    for Changed {
+        name,
+        old,
+        new,
+        from_hex,
+    } in changes.changed.iter().sorted_by_key(|p| &p.name)
+    {
+        let text = format!("{name} v{old} -> v{new}");
+        if *from_hex {
+            print_changed_with_link(&text, &format!("https://hex.pm/diff/{name}/{old}..{new}"));
+        } else {
+            print_changed(&text);
+        }
     }
     for ChangedGit {
         name,
@@ -184,6 +195,34 @@ fn print_added(text: &str) {
 
 fn print_changed(text: &str) {
     print_colourful_prefix("Changed", text);
+}
+
+fn print_changed_with_link(text: &str, url: &str) {
+    let buffer_writer = stderr_buffer_writer();
+    let mut buffer = buffer_writer.buffer();
+    write_colourful_prefix(&mut buffer, "Changed", text);
+    buffer
+        .set_color(
+            ColorSpec::new()
+                .set_intense(true)
+                .set_fg(Some(Color::Black)),
+        )
+        .expect("print_changed_with_link");
+    write!(buffer, " (").expect("print_changed_with_link");
+    // Hyperlinks are only emitted when colours are enabled for the terminal
+    buffer
+        .set_hyperlink(&HyperlinkSpec::open(url.as_bytes()))
+        .expect("print_changed_with_link");
+    write!(buffer, "{url}").expect("print_changed_with_link");
+    buffer
+        .set_hyperlink(&HyperlinkSpec::close())
+        .expect("print_changed_with_link");
+    write!(buffer, ")").expect("print_changed_with_link");
+    buffer.reset().expect("print_changed_with_link");
+    writeln!(buffer).expect("print_changed_with_link");
+    buffer_writer
+        .print(&buffer)
+        .expect("print_changed_with_link");
 }
 
 fn print_removed(text: &str) {
@@ -226,6 +265,12 @@ pub fn seconds(duration: Duration) -> String {
 pub fn print_colourful_prefix(prefix: &str, text: &str) {
     let buffer_writer = stderr_buffer_writer();
     let mut buffer = buffer_writer.buffer();
+    write_colourful_prefix(&mut buffer, prefix, text);
+    writeln!(buffer).expect("print_green_prefix");
+    buffer_writer.print(&buffer).expect("print_green_prefix");
+}
+
+fn write_colourful_prefix(buffer: &mut Buffer, prefix: &str, text: &str) {
     buffer
         .set_color(
             ColorSpec::new()
@@ -237,8 +282,7 @@ pub fn print_colourful_prefix(prefix: &str, text: &str) {
     buffer
         .set_color(&ColorSpec::new())
         .expect("print_green_prefix");
-    writeln!(buffer, " {text}").expect("print_green_prefix");
-    buffer_writer.print(&buffer).expect("print_green_prefix");
+    write!(buffer, " {text}").expect("print_green_prefix");
 }
 
 pub fn stderr_buffer_writer() -> BufferWriter {
