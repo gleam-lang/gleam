@@ -9,7 +9,7 @@
 
 ### Build tool
 
-- If the source repo when building HexDocs is unset or an unknown forge, fall. 
+- If the source repo when building HexDocs is unset or an unknown forge, fall 
   back to using Hex links for the source.
   ([Alex Hinde](https://github.com/apex-hinde))
 
