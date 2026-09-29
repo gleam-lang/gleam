@@ -558,17 +558,6 @@ pub enum NestMode {
     Set,
 }
 
-impl NestMode {
-    /// The indentation to use when nesting a document by `amount`, when the
-    /// current indentation is `indent`.
-    fn apply(self, indent: isize, amount: isize) -> isize {
-        match self {
-            NestMode::Increase => indent + amount,
-            NestMode::Set => amount,
-        }
-    }
-}
-
 macro_rules! const_str {
     ($name:ident, $string:expr, $graphemes:expr) => {
         pub const $name: $crate::Document<'static, 'static> = {
@@ -1338,7 +1327,10 @@ fn format<'string, 'doc>(
                 // - or the condition is `IfBroken` and the group was actually
                 //   broken (that is, the current mode is `Broken`).
                 (NestCondition::Always, _) | (NestCondition::IfBroken, Mode::Broken) => {
-                    let new_indent = nest_mode.apply(indent, *i);
+                    let new_indent = match nest_mode {
+                        NestMode::Increase => indent + i,
+                        NestMode::Set => *i,
+                    };
                     docs.push_front((new_indent, mode, *doc))
                 }
                 // If none of the above conditions is met, then the nesting is
@@ -1446,7 +1438,10 @@ fn fits<'string, 'doc>(
             PrintableDocument::Nest(i, nest_mode, condition, doc) => match condition {
                 NestCondition::IfBroken => docs.push_front((indent, mode, *doc)),
                 NestCondition::Always => {
-                    let new_indent = nest_mode.apply(indent, *i);
+                    let new_indent = match nest_mode {
+                        NestMode::Increase => indent + i,
+                        NestMode::Set => *i,
+                    };
                     docs.push_front((new_indent, mode, *doc))
                 }
             },
