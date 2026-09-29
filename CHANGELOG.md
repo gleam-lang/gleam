@@ -5,6 +5,15 @@
 
 # Changelog
 
+## Unreleased
+
+### Hex Changes
+
+- If the source repo when building hexdocs is unset or an unknown forge fall back to using Hex links for the source. 
+  ([Alex Hinde](https://github.com/apex-hinde))
+  
+  
+  
 ## 1.19.0-rc2 - 2026-09-26
 
 ## Compiler
