@@ -36,7 +36,8 @@
   corresponding line in the original Gleam source file.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- When compiling to Erlang the Gleam compiler is roughly 8% faster.
+- When compiling to Erlang compile times have been reduced for a typical Gleam
+  package.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - The compiler now emits a warning when trying to use the pattern of a spread
@@ -83,7 +84,52 @@
   nested `if` statements collapsed into a single condition and fewer
   intermediate variables. This makes little difference to the size of a bundled
   application, but the resulting code has fewer branches for JavaScript engines
-  to optimise.
+  to optimise. For example, this code:
+
+  ```gleam
+  pub fn go(x) {
+    case x {
+      Wibble(1, 2) -> 1
+      _ -> 2
+    }
+  }
+  ```
+
+  Previously would generate this JavaScript:
+
+
+  ```js
+  export function go(x) {
+    if (x instanceof Wibble) {
+      let $ = x[0];
+      if ($ === 1) {
+        let $1 = x[1];
+        if ($1 === 2) {
+          return 1;
+        } else {
+          return 2;
+        }
+      } else {
+        return 2;
+      }
+    } else {
+      return 2;
+    }
+  }
+  ```
+
+  But now it generates this:
+
+  ```js
+  export function go(x) {
+    if (x instanceof Wibble && x[0] === 1 && x[1] === 2) {
+      return 1;
+    } else {
+      return 2;
+    }
+  }
+  ```
+
   ([John Downey](https://github.com/jtdowney))
 
 - When producing TypeScript annotations, the compiler now produces overloads to
@@ -145,7 +191,7 @@
   merge conflict indicator
   ([0xda157](https://github.com/0xda157))
 
-- The compiler now provides hint about `|' in pattern matching
+- The compiler now provides hint about `|` in pattern matching
   ([n0kk23](https://github.com/n0kk23))
 
 - The compiler now provides better error message when trying to import or use
