@@ -21,6 +21,10 @@
   `gleam_otp`, if there is one.
   ([Tom Voet](https://github.com/tomvoet))
 
+- When Hex dependencies change version the build tool now prints a link to the
+  diff on Hex, making it easier to review and audit dependency updates.
+  ([Manas Ganesh Dasari](https://github.com/ManasDasri))
+
 ### Language server
 
 - The language server will now offer "Discard unused variable" on each of
