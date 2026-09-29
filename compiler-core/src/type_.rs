@@ -1522,11 +1522,11 @@ impl Deprecation {
         matches!(self, Self::Deprecated { .. })
     }
 
-    /// The deprecation message, or an empty string if it's not deprecated.
-    pub fn message(&self) -> &str {
+    /// The deprecation message, if it's deprecated.
+    pub fn message(&self) -> Option<&str> {
         match self {
-            Deprecation::NotDeprecated => "",
-            Deprecation::Deprecated { message } => message,
+            Deprecation::NotDeprecated => None,
+            Deprecation::Deprecated { message } => Some(message),
         }
     }
 }

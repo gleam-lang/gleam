@@ -3461,21 +3461,16 @@ impl ErlangSourceBuilder {
             // Otherwise we have to properly start a new list: push the `[` and
             // wait for the first item to be generated.
             Some(_) | None => {
-                self.new_of_kind(&list_kind);
+                match list_kind {
+                    ListKind::Pattern => self.new_pattern(),
+                    ListKind::Expression => self.new_expression(),
+                }
                 self.code.push('[');
                 self.position.push(ErlangSourceBuilderPosition::List {
                     kind: list_kind,
                     expected: ExpectedListItem::First,
                 });
             }
-        }
-    }
-
-    /// Starts a new pattern or expression, depending on the kind of list.
-    fn new_of_kind(&mut self, list_kind: &ListKind) {
-        match list_kind {
-            ListKind::Pattern => self.new_pattern(),
-            ListKind::Expression => self.new_expression(),
         }
     }
 
@@ -3496,7 +3491,10 @@ impl ErlangSourceBuilder {
                 self.position.pop();
             }
             Some(_) | None => {
-                self.new_of_kind(&list_kind);
+                match list_kind {
+                    ListKind::Pattern => self.new_pattern(),
+                    ListKind::Expression => self.new_expression(),
+                }
                 self.code.push_str("[]");
             }
         }

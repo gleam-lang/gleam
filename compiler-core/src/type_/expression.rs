@@ -4958,7 +4958,7 @@ enum StaticComparison {
 
 /// Compares each pair of expressions: the result is only `CertainlyEqual` if
 /// every pair is.
-fn static_compare_pairwise<'a>(
+fn static_compare_all<'a>(
     pairs: impl IntoIterator<Item = (&'a TypedExpr, &'a TypedExpr)>,
 ) -> StaticComparison {
     let mut comparison = StaticComparison::CertainlyEqual;
@@ -5105,7 +5105,7 @@ fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
                 return StaticComparison::CertainlyDifferent;
             }
 
-            static_compare_pairwise(elements_one.iter().zip(elements_other))
+            static_compare_all(elements_one.iter().zip(elements_other))
         }
 
         (
@@ -5117,7 +5117,7 @@ fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
                 elements: elements_other,
                 ..
             },
-        ) => static_compare_pairwise(elements_one.iter().zip(elements_other)),
+        ) => static_compare_all(elements_one.iter().zip(elements_other)),
 
         (
             TypedExpr::ModuleSelect {
@@ -5161,7 +5161,7 @@ fn static_compare(one: &TypedExpr, other: &TypedExpr) -> StaticComparison {
             }
 
             // Otherwise we need to check their arguments pairwise:
-            (Some(_), Some(_)) => static_compare_pairwise(
+            (Some(_), Some(_)) => static_compare_all(
                 arguments_one
                     .iter()
                     .zip(arguments_other)
