@@ -1035,8 +1035,6 @@ pub struct ModuleInterface {
     pub minimum_required_version: Version,
     pub type_aliases: HashMap<EcoString, TypeAliasConstructor>,
     pub documentation: Vec<EcoString>,
-    /// Wether there's any echo in the module.
-    pub contains_echo: bool,
     pub references: References,
 }
 
@@ -1058,6 +1056,11 @@ pub struct References {
     pub module_references: HashMap<EcoString, Vec<ModuleNameReference>>,
     pub label_references: HashMap<LabelKey, Vec<LabelReference>>,
     pub label_definitions: HashMap<LabelKey, Vec<LabelDefinition>>,
+    pub echo_usages: Vec<SrcSpan>,
+    /// Usages of `todo`. It is different from going through warnings about
+    /// `todo`, because this field also covers `todo`s in constants.
+    pub todo_usages: Vec<SrcSpan>,
+    pub panic_usages: Vec<SrcSpan>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

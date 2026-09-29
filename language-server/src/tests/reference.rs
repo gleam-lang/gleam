@@ -1830,3 +1830,296 @@ pub fn main() {
         find_position_of("in string").under_char('i')
     );
 }
+
+#[test]
+fn references_for_echo_in_current_module() {
+    assert_references!(
+        r#"
+pub fn wibble() {
+  echo "wibble" as "wobble"
+}
+
+fn wobble(a) {
+  a |> echo as "wibble" |> echo
+
+  echo a
+}
+        "#,
+        find_position_of("echo")
+    );
+}
+
+#[test]
+fn references_for_echo_in_same_package() {
+    assert_references!(
+        (
+            "woo",
+            r#"
+pub fn wubble(a, b) {
+  echo a as "wibble"
+  echo b
+}
+
+fn webble(a, b) {
+  echo a as "wibble"
+  echo b
+}
+            "#
+        ),
+        r#"
+pub fn wibble() {
+  echo "wibble"
+}
+        "#,
+        find_position_of("echo")
+    );
+}
+
+#[test]
+fn references_for_echo_are_not_shown_for_another_package() {
+    let source = r#"
+pub fn wibble() {
+  echo "wibble"
+}
+        "#;
+    assert_references!(
+        &TestProject::for_source(source).add_package_module(
+            "another",
+            "another_woo",
+            r#"
+pub fn wubble(a, b) {
+  echo a as "wibble"
+  echo b
+}
+
+fn webble(a, b) {
+  echo a as "wibble"
+  echo b
+}
+            "#
+        ),
+        find_position_of("echo")
+    );
+}
+
+#[test]
+fn references_for_echo_are_not_shown_for_dependency() {
+    let source = r#"
+pub fn wibble() {
+  echo "wibble"
+}
+        "#;
+    assert_references!(
+        &TestProject::for_source(source).add_dep_module(
+            "dep",
+            r#"
+pub fn wubble(a, b) {
+  echo a as "wibble"
+  echo b
+}
+
+fn webble(a, b) {
+  echo a as "wibble"
+  echo b
+}
+            "#
+        ),
+        find_position_of("echo")
+    );
+}
+
+#[test]
+fn references_for_todo_in_current_module() {
+    assert_references!(
+        r#"
+const wibble = todo
+pub const wobble = todo as "wobble"
+
+fn wubble() {
+  todo
+}
+
+pub fn webble() {
+  todo as "webble"
+}
+        "#,
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn references_for_todo_in_same_package() {
+    assert_references!(
+        (
+            "woo",
+            r#"
+const wibble = todo
+pub const wobble = todo as "wobble"
+
+fn wubble() {
+  todo
+}
+
+pub fn webble() {
+  todo as "webble"
+}
+            "#
+        ),
+        r#"
+pub fn webble() {
+  todo as "webble"
+}
+        "#,
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn references_for_todo_are_not_shown_for_another_package() {
+    let source = r#"
+pub fn webble() {
+  todo as "webble"
+}
+        "#;
+    assert_references!(
+        &TestProject::for_source(source).add_package_module(
+            "another",
+            "another_woo",
+            r#"
+fn wubble() {
+  todo
+}
+
+pub fn webble() {
+  todo as "webble"
+}
+            "#
+        ),
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn references_for_todo_are_not_shown_for_dependency() {
+    let source = r#"
+pub fn webble() {
+  todo as "webble"
+}
+        "#;
+    assert_references!(
+        &TestProject::for_source(source).add_dep_module(
+            "dep",
+            r#"
+fn wubble() {
+  todo
+}
+
+pub fn webble() {
+  todo as "webble"
+}
+            "#
+        ),
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn references_for_panic_in_current_module() {
+    assert_references!(
+        r#"
+pub fn wibble() {
+  panic
+}
+
+fn wobble() {
+  panic as "wobble"
+}
+        "#,
+        find_position_of("panic")
+    );
+}
+
+#[test]
+fn references_for_panic_in_same_package() {
+    assert_references!(
+        (
+            "woo",
+            r#"
+pub fn wibble() {
+  panic
+}
+
+fn wobble() {
+  panic as "wobble"
+}
+            "#
+        ),
+        r#"
+pub fn wibble() {
+  panic
+}
+
+fn wobble() {
+  panic as "wobble"
+}
+        "#,
+        find_position_of("panic")
+    );
+}
+
+#[test]
+fn references_for_panic_are_not_shown_for_another_package() {
+    let source = r#"
+pub fn wibble() {
+  panic
+}
+
+fn wobble() {
+  panic as "wobble"
+}
+        "#;
+    assert_references!(
+        &TestProject::for_source(source).add_package_module(
+            "another",
+            "another_woo",
+            r#"
+pub fn wibble() {
+  panic
+}
+
+fn wobble() {
+  panic as "wobble"
+}
+            "#
+        ),
+        find_position_of("panic")
+    );
+}
+
+#[test]
+fn references_for_panic_are_not_shown_for_dependency() {
+    let source = r#"
+pub fn wibble() {
+  panic
+}
+
+fn wobble() {
+  panic as "wobble"
+}
+        "#;
+    assert_references!(
+        &TestProject::for_source(source).add_dep_module(
+            "dep",
+            r#"
+pub fn wibble() {
+  panic
+}
+
+fn wobble() {
+  panic as "wobble"
+}
+            "#
+        ),
+        find_position_of("panic")
+    );
+}

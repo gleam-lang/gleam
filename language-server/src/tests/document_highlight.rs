@@ -1181,3 +1181,56 @@ pub fn main() {
         find_position_of("in: \"hello\"").under_char('i')
     );
 }
+
+#[test]
+fn highlights_for_echo() {
+    assert_highlights!(
+        r#"
+pub fn wibble() {
+  echo "wibble" as "wobble"
+}
+
+fn wobble(a) {
+  a |> echo as "wibble" |> echo
+
+  echo a
+}
+        "#,
+        find_position_of("echo")
+    );
+}
+
+#[test]
+fn highlights_for_todo() {
+    assert_highlights!(
+        r#"
+const wibble = todo
+pub const wobble = todo as "wobble"
+
+fn wubble() {
+  todo
+}
+
+pub fn webble() {
+  todo as "webble"
+}
+        "#,
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn highlights_for_panic() {
+    assert_highlights!(
+        r#"
+fn wibble() {
+  panic
+}
+
+pub fn wobble() {
+  panic as "wobble"
+}
+        "#,
+        find_position_of("panic")
+    );
+}

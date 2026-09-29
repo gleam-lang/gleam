@@ -591,6 +591,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             names: Box::new(self.environment.names.clone()),
         });
 
+        // For keywords we want to register `todo` usage.
+        if let TodoKind::Keyword = kind {
+            self.environment.references.todo_usages.push(location);
+        }
+
         self.purity = Purity::Impure;
 
         let message = message.map(|message| Box::new(self.infer_and_unify(*message, string())));
@@ -604,6 +609,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_panic(&mut self, location: SrcSpan, message: Option<Box<UntypedExpr>>) -> TypedExpr {
         let type_ = self.new_unbound_var();
+        self.environment.references.panic_usages.push(location);
         self.purity = Purity::Impure;
 
         let message = message.map(|message| Box::new(self.infer_and_unify(*message, string())));
@@ -622,8 +628,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         expression: Option<Box<UntypedExpr>>,
         message: Option<Box<UntypedExpr>>,
     ) -> TypedExpr {
-        self.environment.echo_found = true;
         self.purity = Purity::Impure;
+        self.environment.references.echo_usages.push(location);
 
         let expression = if let Some(expression) = expression {
             let expression = self.infer(*expression);
