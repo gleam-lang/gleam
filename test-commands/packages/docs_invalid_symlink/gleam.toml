@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2024 The Gleam contributors
+
+name = "hello_joe"
+version = "1.0.0"
+
+[documentation]
+pages = [
+  {
+    title = "Completely trustworthy page",
+    path = "page.html",
+    source = "invalid_symlink",
+  }
+]
+
+[dependencies]
+[dev_dependencies]

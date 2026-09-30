@@ -47,7 +47,7 @@ fn compile_with_markdown_pages(
 ) -> EcoString {
     let fs = InMemoryFileSystem::new();
     for (name, src) in modules {
-        fs.write(&Utf8PathBuf::from(format!("/src/{name}")), src)
+        fs.write(&Utf8PathBuf::from(format!("src/{name}")), src)
             .unwrap();
     }
 
@@ -72,7 +72,7 @@ fn compile_with_markdown_pages(
         output: ErlangOutput::Binary,
     };
 
-    let root = Utf8PathBuf::from("/");
+    let root = Utf8PathBuf::from("");
     let build = root.join("build");
     let lib = root.join("lib");
     let paths = ProjectPaths::new(root.clone());
@@ -121,6 +121,7 @@ fn compile_with_markdown_pages(
         },
         pages_fs,
     )
+    .unwrap()
     .into_iter()
     .filter(|file| file.path.extension() == Some("html"))
     .sorted_by(|a, b| a.path.cmp(&b.path))

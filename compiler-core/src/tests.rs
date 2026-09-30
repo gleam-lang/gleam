@@ -119,7 +119,11 @@ fn all_files_have_copyright_notice() {
                 // Test files.
                 "new" => return None,
                 "snap" => return None,
-                "txt" if path.starts_with("../test/") || path.starts_with("../licences/") => {
+                "txt"
+                    if path.starts_with("../test/")
+                        || path.starts_with("../licences/")
+                        || path.ends_with("secrets.txt") =>
+                {
                     return None;
                 }
 

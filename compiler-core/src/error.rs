@@ -453,6 +453,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     /// dependencies of the project!
     #[error("these packages are already dependencies: {packages:?}")]
     AddedDevDependenciesAreAlreadyDependencies { packages: Vec<EcoString> },
+
+    #[error("the documentation page {path} is outside the package directory")]
+    DocumentationPageOutsidePackage { path: Utf8PathBuf },
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
@@ -2658,6 +2661,24 @@ project's `gleam.toml`."
                         ),
                     }],
                 }
+            }
+
+            Error::DocumentationPageOutsidePackage { path } => {
+                let text = wrap_format!(
+                    "This documentation page source path falls outside \
+the package directory, so it could not be read.
+
+    {path}
+
+All documentation pages files must be inside the package itself."
+                );
+                vec![Diagnostic {
+                    title: "Documentation page outside package directory".into(),
+                    text,
+                    level: Level::Error,
+                    location: None,
+                    hint: None,
+                }]
             }
         }
     }
