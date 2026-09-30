@@ -158,7 +158,7 @@ pub(crate) fn build_documentation(
     let mut pages = vec![DocsPage {
         title: "README".into(),
         path: "index.html".into(),
-        source: paths.readme(), // TODO: support non markdown READMEs. Or a default if there is none.
+        source: paths.readme(),
     }];
     pages.extend(config.documentation.pages.iter().cloned());
     let mut outputs = gleam_core::docs::generate_html(
@@ -172,7 +172,7 @@ pub(crate) fn build_documentation(
             context: is_hex_publish,
         },
         ProjectIO::new(),
-    );
+    )?;
 
     outputs.push(gleam_core::docs::generate_json_package_interface(
         Utf8PathBuf::from("package-interface.json"),

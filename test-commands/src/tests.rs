@@ -2,11 +2,15 @@
 // SPDX-FileCopyrightText: 2026 The Gleam contributors
 
 use camino::Utf8PathBuf;
-use gleam_cli::{Command, CompilePackage, ExportTarget, fs};
+use gleam_cli::{Command, CompilePackage, Docs, ExportTarget, fs};
 use std::{collections::HashMap, process};
 
 fn package(package: &str) -> Utf8PathBuf {
-    Utf8PathBuf::from(&format!("./packages/{package}"))
+    let path = std::env::current_dir()
+        .unwrap()
+        .join("packages")
+        .join(package);
+    Utf8PathBuf::from_path_buf(path).unwrap()
 }
 
 fn escript_compile(package: &str) -> Result<Utf8PathBuf, gleam_core::Error> {
@@ -253,4 +257,22 @@ fn compile_package_beam_no_dev() {
     assert!(app.contains("regular_dependency"));
     assert!(!app.contains("dev_dependency"));
     insta::assert_snapshot!(app);
+}
+
+#[test]
+fn docs_build_with_invalid_symlink() {
+    let package_directory = package("docs_invalid_symlink");
+
+    let error = Command::Docs(Docs::Build {
+        open: false,
+        target: None,
+    })
+    .run(package_directory)
+    .expect_err("This should fail due to invalid symlink")
+    .pretty_string();
+    assert!(error.contains(
+        "This documentation page source path falls outside the package directory, so
+it could not be read."
+    ));
+    assert!(error.contains("All documentation pages files must be inside the package itself."));
 }

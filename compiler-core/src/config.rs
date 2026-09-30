@@ -1032,9 +1032,9 @@ pub struct Docs {
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct DocsPage {
     pub title: String,
-    #[serde(default, deserialize_with = "package_scoped_path::deserialize")]
+    #[serde(deserialize_with = "package_scoped_path::deserialize")]
     pub path: Utf8PathBuf,
-    #[serde(default, deserialize_with = "package_scoped_path::deserialize")]
+    #[serde(deserialize_with = "package_scoped_path::deserialize")]
     pub source: Utf8PathBuf,
 }
 

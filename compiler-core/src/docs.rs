@@ -16,6 +16,7 @@ use crate::{
     build::{Module, Package},
     config::{DocsPage, PackageConfig},
     docs::source_links::SourceLinker,
+    error::Error,
     io::{Content, FileSystemReader, OutputFile},
     package_interface::PackageInterface,
     paths::ProjectPaths,
@@ -69,7 +70,7 @@ pub fn generate_html<IO: FileSystemReader>(
     paths: &ProjectPaths,
     config: DocumentationConfig<'_>,
     fs: IO,
-) -> Vec<OutputFile> {
+) -> Result<Vec<OutputFile>, Error> {
     let DocumentationConfig {
         package_config: config,
         dependencies,
@@ -147,9 +148,24 @@ pub fn generate_html<IO: FileSystemReader>(
         .sorted()
         .collect();
 
+    let root = fs.canonicalise(paths.root())?;
+
     // Generate user-supplied (or README) pages
     for page in docs_pages {
-        let content = fs.read(&page.source).unwrap_or_default();
+        let path = paths.root().join(&page.source);
+        // Files are not permitted to be read from outside the project root.
+        let content = match fs.canonicalise(path.as_path()) {
+            Ok(path) => {
+                if path.starts_with(root.as_path()) {
+                    fs.read(&path)?
+                } else {
+                    return Err(Error::DocumentationPageOutsidePackage {
+                        path: path.to_path_buf(),
+                    });
+                }
+            }
+            Err(_) => "".into(),
+        };
         let rendered_content = render_markdown(&content, MarkdownSource::Standalone);
         let unnest = page_unnest(page.path.as_str());
 
@@ -429,7 +445,7 @@ pub fn generate_html<IO: FileSystemReader>(
         ),
     });
 
-    files
+    Ok(files)
 }
 
 fn search_item_for_page(package: &str, path: &str, content: String) -> SearchItem {

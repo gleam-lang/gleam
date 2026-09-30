@@ -5,6 +5,18 @@
 
 # Changelog
 
+## Unreleased
+
+## Bug fixes
+
+- Fixed a bug where documentation pages configuration could be missing fields
+  in `gleam.toml`.
+  ([Louis Pilfold](https://github.com/lpil))
+
+- Fixed a bug where documentation pages could be read from outside the package
+  directory.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ## 1.19.0-rc2 - 2026-09-26
 
 ## Compiler
