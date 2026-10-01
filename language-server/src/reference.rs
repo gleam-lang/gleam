@@ -644,10 +644,7 @@ fn find_references_in_module(
     reference_locations: &mut Vec<Location>,
     layer: ast::Layer,
 ) {
-    let reference_map = match layer {
-        ast::Layer::Value => &module.references.value_references,
-        ast::Layer::Type => &module.references.type_references,
-    };
+    let reference_map = module.references.in_layer(layer);
 
     let Some(references) = reference_map.get(&(module_name.clone(), name.clone())) else {
         return;
