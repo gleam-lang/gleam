@@ -241,6 +241,11 @@ fn echo_with_message() {
 }
 
 #[test]
+fn function_capture_side_effect() {
+    assert_output!("function_capture_side_effect");
+}
+
+#[test]
 fn linked_process_exit() {
     assert_output!(Target::Erlang, "linked_process_exit");
 }

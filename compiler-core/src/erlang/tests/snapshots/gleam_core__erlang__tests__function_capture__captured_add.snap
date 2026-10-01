@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/erlang/tests/function_capture.rs
+expression: "\npub fn add(x, y) {\n    x + y\n}\npub fn main() {\n    let add_one = add(_, 1)\n    let one = add_one(0)\n}"
+---
+----- SOURCE CODE
+
+pub fn add(x, y) {
+    x + y
+}
+pub fn main() {
+    let add_one = add(_, 1)
+    let one = add_one(0)
+}
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_ignored, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch, inline]).
+-export([add/2, main/0]).
+
+-spec add(integer(), integer()) -> integer().
+add(X, Y) ->
+    X + Y.
+
+-spec main() -> integer().
+main() ->
+    Add_one = fun(_capture) ->
+        add(_capture, 1)
+    end,
+    One = Add_one(0).

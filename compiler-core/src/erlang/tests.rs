@@ -31,6 +31,7 @@ mod custom_types;
 mod documentation;
 mod echo;
 mod external_fn;
+mod function_capture;
 mod functions;
 mod guards;
 mod let_assert;
