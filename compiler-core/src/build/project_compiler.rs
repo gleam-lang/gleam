@@ -579,8 +579,8 @@ where
                     .packages
                     .values()
                     .flat_map(|p| {
-                        let overriden = p.otp_app.as_ref()?;
-                        Some((p.name.clone(), overriden.clone()))
+                        let overridden = p.otp_app.as_ref()?;
+                        Some((p.name.clone(), overridden.clone()))
                     })
                     .collect();
                 super::TargetCodegenConfiguration::Erlang {

@@ -9813,7 +9813,7 @@ struct Collapsed<'a> {
     ///
     outer_clause_span: SrcSpan,
 
-    /// The (optional) guard of the outer branch. In this exmaple it's this one:
+    /// The (optional) guard of the outer branch. In this example it's this one:
     ///
     /// ```gleam
     /// case something {
