@@ -3862,7 +3862,7 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
 /// call `assert wibble(wobble)`), or because it is being matched against
 /// directly (like `assert wibble`).
 struct AssertionExpression<'a> {
-    /// This tells us the kind of expression we're dealing with: wether that's a
+    /// This tells us the kind of expression we're dealing with: whether that's a
     /// literal, an expression that can't be known at compile time, or if it
     /// hasn't been evaluated at all!
     kind: AssertedExpressionKind,
@@ -3960,7 +3960,7 @@ enum AssertedExpressionKind {
 #[derive(Debug)]
 enum AssertedExpressionRuntimeValue<'a> {
     /// We can tell that the asserted value must be a known bool.
-    /// That's because we know wether the assertion failed (it must be false),
+    /// That's because we know whether the assertion failed (it must be false),
     /// or not (it must be true).
     KnownBool(bool),
     /// The asserted value was bound to a generated variable with the given

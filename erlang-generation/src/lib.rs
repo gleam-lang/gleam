@@ -3414,7 +3414,7 @@ impl ErlangSourceBuilder {
         }
     }
 
-    /// This can be used to output the content of a string wether that is a
+    /// This can be used to output the content of a string whether that is a
     /// pattern or an expression!
     fn do_print_string_content(&mut self, content: &str) {
         let content = self.escape_string_content(content);

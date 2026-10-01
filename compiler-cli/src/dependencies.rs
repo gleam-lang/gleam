@@ -300,7 +300,7 @@ pub fn cleanup<Telem: Telemetry>(paths: &ProjectPaths, telemetry: Telem) -> Resu
     telemetry.resolved_package_versions(&changes);
 
     // Cleanup build cache of the root package if there are some changes.
-    // Without this, if a removed dependency is still used, teh build will
+    // Without this, if a removed dependency is still used, the build will
     // succeed, resulting in runtime crash due to missing files.
     if changes.any_changes() {
         tracing::debug!("cleaning_root_package_build_cache");
