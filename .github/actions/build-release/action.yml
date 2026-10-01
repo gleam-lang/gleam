@@ -121,7 +121,7 @@ runs:
     # * https://azure.microsoft.com/en-us/products/trusted-signing
     - name: Log in to Azure
       if: ${{ contains(inputs.target, '-windows-') && inputs.azure-tenant-id && inputs.azure-subscription-id && inputs.azure-client-id && inputs.azure-trusted-signing-account-name && inputs.azure-certificate-profile-name }}
-      uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3.0.1
+      uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
       with:
         client-id: ${{ inputs.azure-client-id }}
         tenant-id: ${{ inputs.azure-tenant-id }}
