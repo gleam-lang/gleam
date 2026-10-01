@@ -59,7 +59,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd290633c2482479f70f6d1d96ae0e9f52c6a26cd5859edd47ee1fe33fc89f26"
 dependencies = [
  "age-core",
- "base64",
+ "base64 0.22.1",
  "bech32",
  "chacha20poly1305",
  "cipher",
@@ -90,7 +90,7 @@ version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "01d4375964d1501e5f1b32aef2ead573913893ff238448d4e9fdf1522d828656"
 dependencies = [
- "base64",
+ "base64 0.22.1",
  "bech32",
  "chacha20poly1305",
  "cookie-factory",
@@ -383,6 +383,12 @@ name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
+
+[[package]]
+name = "base64"
+version = "0.23.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
 
 [[package]]
 name = "base64-simd"
@@ -1536,7 +1542,7 @@ dependencies = [
  "ignore",
  "imbl",
  "insta",
- "itertools 0.13.0",
+ "itertools 0.15.0",
  "lsp-server",
  "opener",
  "pretty_assertions",
@@ -1548,7 +1554,7 @@ dependencies = [
  "same-file",
  "serde",
  "serde_json",
- "sha2 0.10.9",
+ "sha2 0.11.0",
  "strum",
  "tar",
  "tempfile",
@@ -1591,7 +1597,7 @@ dependencies = [
  "imbl",
  "indexmap",
  "insta",
- "itertools 0.13.0",
+ "itertools 0.15.0",
  "lsp-server",
  "num-bigint 0.5.1",
  "num-traits",
@@ -1630,7 +1636,7 @@ dependencies = [
  "camino",
  "ecow",
  "gleam-core",
- "itertools 0.13.0",
+ "itertools 0.15.0",
  "pretty-arena",
  "pretty_assertions",
  "src-span",
@@ -1650,7 +1656,7 @@ dependencies = [
  "hexpm",
  "imbl",
  "insta",
- "itertools 0.13.0",
+ "itertools 0.15.0",
  "lsp-server",
  "num-bigint 0.5.1",
  "serde",
@@ -1673,7 +1679,7 @@ dependencies = [
  "gleam-format",
  "hexpm",
  "imbl",
- "itertools 0.13.0",
+ "itertools 0.15.0",
  "serde",
  "serde-wasm-bindgen",
  "termcolor",
@@ -1835,7 +1841,7 @@ version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e92637d714ad90b81c91bce86e8c1f98fb32ca79bddf8d69e9d83fee3966946"
 dependencies = [
- "base64",
+ "base64 0.22.1",
 ]
 
 [[package]]
@@ -1936,7 +1942,7 @@ version = "0.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96547c2556ec9d12fb1578c4eaf448b04993e7fb79cbaad930a656880a6bdfa0"
 dependencies = [
- "base64",
+ "base64 0.22.1",
  "bytes",
  "futures-channel",
  "futures-util",
@@ -3367,11 +3373,11 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "reqwest"
-version = "0.13.4"
+version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "219c5811de6525e5416c7d5d53bb656d3afdbc6c5af816e0802bcfa42dbdc1c3"
+checksum = "16a1cfa75cc186dd73d5818e510e042e40927bccc9c236b061cea97e1eb08029"
 dependencies = [
- "base64",
+ "base64 0.23.1",
  "bytes",
  "futures-core",
  "http",
@@ -4091,7 +4097,7 @@ dependencies = [
  "gleam-core",
  "imbl",
  "insta",
- "itertools 0.13.0",
+ "itertools 0.15.0",
  "regex",
  "test-helpers-rs",
  "toml 1.1.4+spec-1.1.0",
@@ -4105,7 +4111,7 @@ dependencies = [
  "gleam-core",
  "imbl",
  "insta",
- "itertools 0.13.0",
+ "itertools 0.15.0",
  "regex",
  "test-helpers-rs",
  "toml 1.1.4+spec-1.1.0",
