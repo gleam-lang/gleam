@@ -83,7 +83,7 @@ unicode-segmentation.workspace = true
 pretty_assertions.workspace = true
 insta.workspace = true
 # Random value generation
-rand = "0.9"
+rand = "0.10"
 # Time types
 time = "0.3"
 ignore.workspace = true
