@@ -1,0 +1,19 @@
+---
+source: language-server/src/tests/action.rs
+expression: "pub const wibble = \"Hello, world!\"\n\npub fn main() {\n  echo wibble\n}"
+---
+----- BEFORE ACTION
+pub const wibble = "Hello, world!"
+
+pub fn main() {
+  echo wibble
+       ↑     
+}
+
+
+----- AFTER ACTION
+pub const wibble = "Hello, world!"
+
+pub fn main() {
+  echo "Hello, world!"
+}

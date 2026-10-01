@@ -3241,7 +3241,9 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                 ]
             }
 
-            ClauseGuard::Constant(constant) => self.guard_constant_expression(arena, constant),
+            ClauseGuard::Constant {
+                literal: constant, ..
+            } => self.guard_constant_expression(arena, constant),
         }
     }
 
@@ -3253,12 +3255,16 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
         should_be_equal: bool,
     ) -> Option<Document<'a, 'doc>> {
         match right {
-            ClauseGuard::Constant(Constant::Record {
-                record_constructor: Some(constructor),
-                module,
-                name,
+            ClauseGuard::Constant {
+                literal:
+                    Constant::Record {
+                        record_constructor: Some(constructor),
+                        module,
+                        name,
+                        ..
+                    },
                 ..
-            }) if let ValueConstructorVariant::Record {
+            } if let ValueConstructorVariant::Record {
                 arity: 0,
                 name: variant_name,
                 ..
@@ -3275,11 +3281,15 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                     right.type_(),
                 ))
             }
-            ClauseGuard::Constant(Constant::List {
-                elements,
-                tail: None,
+            ClauseGuard::Constant {
+                literal:
+                    Constant::List {
+                        elements,
+                        tail: None,
+                        ..
+                    },
                 ..
-            }) if elements.is_empty() => {
+            } if elements.is_empty() => {
                 let left_doc = self.guard_expression(arena, left);
                 self.tracker.list_empty_class_used = true;
                 Some(self.singleton_equal(
@@ -3299,7 +3309,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::FieldAccess { .. }
             | ClauseGuard::ModuleSelect { .. }
-            | ClauseGuard::Constant(_)
+            | ClauseGuard::Constant { .. }
             | ClauseGuard::Invalid { .. } => None,
         }
     }
@@ -3313,7 +3323,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
             ClauseGuard::Invalid { .. } => unreachable!("invalid guard made it to code generation"),
             ClauseGuard::Var { .. }
             | ClauseGuard::TupleIndex { .. }
-            | ClauseGuard::Constant(_)
+            | ClauseGuard::Constant { .. }
             | ClauseGuard::Not { .. }
             | ClauseGuard::FieldAccess { .. }
             | ClauseGuard::Block { .. } => self.guard_expression(arena, guard),
@@ -3351,7 +3361,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::FieldAccess { .. }
             | ClauseGuard::ModuleSelect { .. }
-            | ClauseGuard::Constant(_)
+            | ClauseGuard::Constant { .. }
             | ClauseGuard::Invalid { .. } => self.guard_expression(arena, guard),
         }
     }
