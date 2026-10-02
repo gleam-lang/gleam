@@ -245,6 +245,23 @@
 
   ([0xda157](https://github.com/0xda157))
 
+- The language server "Pattern match on variable" will now replace pattern with
+  its expansion when triggered on discard in `use` assignment.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+- The language server "Pattern match on variable" code action has been renamed
+  to "Pattern match on value" on discards in `use` assignments, so it's now
+  consistent with discards in `let` assignments.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+- The language server will no longer show "Pattern match on value" code action
+  on discards with multiple expansions in `use` assignments.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+- The language server will now show "Pattern match on value" code action for
+  assignments inside patterns in `use` assignments.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Formatter
 
 - The formatter now inserts `todo`s after comments in an empty function body,
@@ -280,6 +297,10 @@
 - Fixed a bug where the "Generate type" code action would put the generated type
   in between a function and its documentation.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the language server would incorrectly show "Pattern match
+  on argument" code action for patterns in `use` assignments.
+  ([Andrey Kozhev](https://github.com/ankddev))
 
 ## v1.19.2 - 2026-10-12
 
