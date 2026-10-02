@@ -1,0 +1,25 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub type Wibble {\n  Wibble(String, Int)\n}\n\npub fn main(x: fn(fn(Wibble) -> Wibble) -> Wibble) {\n  use _ <- x\n}"
+---
+----- BEFORE ACTION
+
+pub type Wibble {
+  Wibble(String, Int)
+}
+
+pub fn main(x: fn(fn(Wibble) -> Wibble) -> Wibble) {
+  use _ <- x
+      ↑     
+}
+
+
+----- AFTER ACTION
+
+pub type Wibble {
+  Wibble(String, Int)
+}
+
+pub fn main(x: fn(fn(Wibble) -> Wibble) -> Wibble) {
+  use Wibble(string, int) <- x
+}
