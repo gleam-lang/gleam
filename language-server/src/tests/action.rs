@@ -16511,3 +16511,51 @@ pub fn main(_x, y) {
         find_position_of("-> x").under_last_char().to_selection()
     );
 }
+
+#[test]
+fn pattern_match_on_value_use_discard() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VALUE,
+        "
+pub type Wibble {
+  Wibble(String, Int)
+}
+
+pub fn main(x: fn(fn(Wibble) -> Wibble) -> Wibble) {
+  use _ <- x
+}",
+        find_position_of("_").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_value_use_discard_two_assignments() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VALUE,
+        "
+pub type Wibble {
+  Wibble(String, Int)
+}
+
+pub fn main(x: fn(fn(Wibble, Wibble) -> Wibble) -> Wibble) {
+  use _, _ <- x
+}",
+        find_position_of("_").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_value_use_discard_with_annotation() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VALUE,
+        "
+pub type Wibble {
+  Wibble(String, Int)
+}
+
+pub fn main(x) {
+  use _: Wibble <- x
+}",
+        find_position_of("_").to_selection()
+    );
+}
