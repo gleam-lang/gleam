@@ -16340,3 +16340,35 @@ pub fn main(x) {
         find_position_of("_").to_selection()
     );
 }
+
+#[test]
+fn pattern_match_on_value_use_discard_complex_pattern() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VALUE,
+        "
+pub type Wibble {
+  Wibble(Wibble, Int)
+}
+
+pub fn main(x: fn(fn(Wibble, Wibble) -> Wibble) -> Wibble) {
+  use Wibble(_, _), _ <- x
+}",
+        find_position_of("_").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_value_use_named_complex_pattern() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub type Wibble {
+  Wibble(Wibble, Int)
+}
+
+pub fn main(x: fn(fn(Wibble, Wibble) -> Wibble) -> Wibble) {
+  use Wibble(woo, _), _ <- x
+}",
+        find_position_of("woo").to_selection()
+    );
+}
