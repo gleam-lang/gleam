@@ -16372,3 +16372,37 @@ pub fn main(x: fn(fn(Wibble, Wibble) -> Wibble) -> Wibble) {
         find_position_of("woo").to_selection()
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/6381
+#[test]
+fn no_pattern_match_on_argument_use_on_pattern_assignment() {
+    assert_no_code_actions!(
+        PATTERN_MATCH_ON_ARGUMENT,
+        "
+pub type Wibble {
+  Wibble(Wibble, Int)
+}
+
+pub fn main(x: fn(fn(Wibble, Wibble) -> Wibble) -> Wibble) {
+  use Wibble(_, _), _ <- x
+}",
+        find_position_of("_").to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6381
+#[test]
+fn no_pattern_match_on_argument_use_on_pattern() {
+    assert_no_code_actions!(
+        PATTERN_MATCH_ON_ARGUMENT,
+        "
+pub type Wibble {
+  Wibble(Int)
+}
+
+pub fn main(x: fn(fn(Wibble) -> Wibble) -> Wibble) {
+  use Wibble(_) <- x
+}",
+        find_position_of("Wibble").nth_occurrence(6).to_selection()
+    );
+}
