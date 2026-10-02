@@ -7,7 +7,26 @@
 
 ## Unreleased
 
-## Bug fixes
+### Language server
+
+- The language server "Pattern match on variable" will now replace pattern with
+  its expansion when triggered on discard in `use` assignment.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+- The language server "Pattern match on variable" code action has been renamed
+  to "Pattern match on value" on discards in `use` assignments, so it's now
+  consistent with discards in `let` assignments.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+- The language server will no longer show "Pattern match on value" code action
+  on discards with multiple expansions in `use` assignments.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+- The language server will now show "Pattern match on value" code action for
+  assignments inside patterns in `use` assignments.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+### Bug fixes
 
 - Fixed a bug where documentation pages configuration could be missing fields
   in `gleam.toml`.
@@ -16,6 +35,10 @@
 - Fixed a bug where documentation pages could be read from outside the package
   directory.
   ([Louis Pilfold](https://github.com/lpil))
+
+- Fixed a bug where the language server would incorrectly show "Pattern match
+  on argument" code action for patterns in `use` assignments.
+  ([Andrey Kozhev](https://github.com/ankddev))
 
 ## 1.19.0-rc2 - 2026-09-26
 

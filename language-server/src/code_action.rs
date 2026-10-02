@@ -5665,6 +5665,7 @@ pub enum PatternMatchedValue<'a> {
         /// so that we can add the pattern matching _after_ it.
         ///
         assignment_location: SrcSpan,
+        pattern_location: PatternLocation,
     },
     /// A variable that is bound in a case branch's pattern. For example:
     /// ```gleam
@@ -5702,6 +5703,7 @@ pub enum PatternMatchedValue<'a> {
         /// so that we can add the pattern matching _after_ it.
         ///
         use_location: SrcSpan,
+        pattern_location: PatternLocation,
     },
 }
 
@@ -5773,12 +5775,37 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
                 PatternMatchedValue::LetVariable {
                     variable_name,
                     variable_type,
+                    pattern_location:
+                        PatternLocation::Discard {
+                            location: pattern_location,
+                        },
+                    ..
+                }
+                | PatternMatchedValue::UseVariable {
+                    variable_name,
+                    variable_type,
+                    pattern_location:
+                        PatternLocation::Discard {
+                            location: pattern_location,
+                        },
+                    ..
+                },
+            ) => {
+                self.match_on_let_variable_discard(variable_name, variable_type, pattern_location);
+                "Pattern match on value"
+            }
+            Some(
+                PatternMatchedValue::LetVariable {
+                    variable_name,
+                    variable_type,
                     assignment_location: location,
+                    ..
                 }
                 | PatternMatchedValue::UseVariable {
                     variable_name,
                     variable_type,
                     use_location: location,
+                    ..
                 },
             ) => {
                 self.match_on_let_variable(variable_name, variable_type, location);
@@ -5952,6 +5979,36 @@ impl<'a, IO> PatternMatchOnValue<'a, IO> {
             self.edits.insert(
                 statement_location.end,
                 format!(" {{\n{patterns}\n{nesting}}}"),
+            );
+        }
+    }
+
+    fn match_on_let_variable_discard(
+        &mut self,
+        variable_name: &str,
+        variable_type: Arc<Type>,
+        pattern_location: SrcSpan,
+    ) {
+        let Some(patterns) =
+            self.type_to_destructure_patterns(variable_type.as_ref(), &mut NameGenerator::new())
+        else {
+            return;
+        };
+
+        if patterns.len() == 1 {
+            let pattern = patterns.first();
+            // We do not want to remove type annotation if it exists:
+            //
+            // ```gleam
+            // use _: Wibble <- wibble
+            // //  ^ Replace only this part
+            // ```
+            self.edits.replace(
+                SrcSpan::new(
+                    pattern_location.start,
+                    pattern_location.start + variable_name.len() as u32,
+                ),
+                pattern.to_string(),
             );
         }
     }
@@ -6274,7 +6331,14 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
             // If the cursor is placed on one of the arguments, then we can try
             // and generate code for that one.
             let arg_range = self.edits.src_span_to_lsp_range(argument.location);
-            if within(self.params.range, arg_range) {
+            if within(self.params.range, arg_range)
+                // We do not want to show this code action for pattern arguments
+                // from `use` statements. The former could appear here because
+                // the latter are desugared to function calls.
+                && argument
+                    .get_variable_name()
+                    .is_none_or(|name| !name.starts_with("_use"))
+            {
                 self.selected_value = Some(PatternMatchedValue::FunctionArgument {
                     arg: argument,
                     first_statement: body.first(),
@@ -6307,7 +6371,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
         }
 
         ast::visit::visit_typed_assignment(self, assignment);
-        if let Some((name, _, ref type_)) = self.pattern_variable_under_cursor
+        if let Some((name, ref pattern_location, ref type_)) = self.pattern_variable_under_cursor
             // We must make sure that no other value was selected while visiting
             // this. If it were `Some` that means that we have found _another_
             // variable to match on inside the assignmemt itself. For example:
@@ -6323,6 +6387,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
                 variable_name: name,
                 variable_type: type_.clone(),
                 assignment_location: assignment.location,
+                pattern_location: pattern_location.clone(),
             });
         }
     }
@@ -6357,24 +6422,72 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
     }
 
     fn visit_typed_use(&mut self, use_: &'ast TypedUse) {
+        // Handle assignments from complex patterns, like this:
+        //
+        // ```gleam
+        // use Box(x) <- wibble
+        // //      ^ This assignment
+        // ```
+        for argument in use_.assignments.iter() {
+            if within(
+                self.params.range,
+                self.edits.src_span_to_lsp_range(argument.location),
+            ) {
+                self.visit_typed_pattern(&argument.pattern);
+                if let Some((name, variable_location, type_)) =
+                    self.pattern_variable_under_cursor.take()
+                {
+                    self.selected_value = Some(PatternMatchedValue::UseVariable {
+                        variable_name: name,
+                        variable_type: type_,
+                        use_location: use_.location,
+                        pattern_location: variable_location,
+                    });
+                    // If we've found the variable to pattern match on, there's no
+                    // point in keeping traversing the AST.
+                    return;
+                }
+            }
+        }
+
+        // Handle simple assignments:
+        //
+        // ```gleam
+        // use x <- wibble
+        // //  ^ This assignment
+        // use _ <- wibble
+        // //  ^ This assignment
+        // ```
         if let Some(assignments) = use_.callback_arguments() {
             for variable in assignments {
                 let ast::Arg {
-                    names: ArgNames::Named { name, .. },
+                    names,
                     location: variable_location,
                     type_,
                     ..
-                } = variable
-                else {
-                    continue;
-                };
+                } = variable;
 
-                // If we use a pattern in a use assignment, that will end up
-                // being called `_use` something. We don't want to offer the
-                // action when hovering a pattern so we ignore those.
-                if name.starts_with("_use") {
-                    continue;
-                }
+                let (name, pattern_location) = match names {
+                    ArgNames::LabelledDiscard { .. } | ArgNames::NamedLabelled { .. } => continue,
+                    // If we use a pattern in a use assignment, that will end up
+                    // being called `_use` something. While assignments in
+                    // patterns were handled before, we don't want to offer the
+                    // action when hovering a pattern itself so we ignore those.
+                    ArgNames::Named { name, .. } if name.starts_with("_use") => continue,
+
+                    ArgNames::Named { name, location } => (
+                        name,
+                        PatternLocation::Regular {
+                            location: *location,
+                        },
+                    ),
+                    ArgNames::Discard { name, location } => (
+                        name,
+                        PatternLocation::Discard {
+                            location: *location,
+                        },
+                    ),
+                };
 
                 let variable_range = self.edits.src_span_to_lsp_range(*variable_location);
                 if within(self.params.range, variable_range) {
@@ -6382,6 +6495,7 @@ impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO> {
                         variable_name: name,
                         variable_type: type_.clone(),
                         use_location: use_.location,
+                        pattern_location,
                     });
                     // If we've found the variable to pattern match on, there's no
                     // point in keeping traversing the AST.
