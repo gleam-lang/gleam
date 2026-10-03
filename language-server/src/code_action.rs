@@ -7422,7 +7422,13 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
     ) {
         let invalid_range = src_span_to_lsp_range(*location, self.line_numbers);
         if within(self.params.range, invalid_range) {
-            self.try_save_variant_to_generate(false, *location, type_, None);
+            let is_qualified =
+                if let Some(InvalidExpression::ModuleSelect { .. }) = extra_information {
+                    true
+                } else {
+                    false
+                };
+            self.try_save_variant_to_generate(is_qualified, *location, type_, None);
         }
         ast::visit::visit_typed_expr_invalid(self, location, type_, extra_information);
     }
@@ -7440,8 +7446,18 @@ impl<'ast, IO> ast::visit::Visit<'ast> for GenerateVariant<'ast, IO> {
         let fun_range = src_span_to_lsp_range(fun.location(), self.line_numbers);
         if within(self.params.range, fun_range) && fun.is_invalid() {
             if labels_are_correct(arguments) {
+                let is_qualified = if let TypedExpr::Invalid {
+                    extra_information: Some(InvalidExpression::ModuleSelect { .. }),
+                    ..
+                } = fun
+                {
+                    true
+                } else {
+                    fun.is_module_select()
+                };
+
                 self.try_save_variant_to_generate(
-                    fun.is_module_select(),
+                    is_qualified,
                     fun.location(),
                     &fun.type_(),
                     Some(Arguments::Expressions(arguments)),
