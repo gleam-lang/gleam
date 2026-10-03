@@ -1,0 +1,19 @@
+---
+source: language-server/src/tests/action.rs
+expression: "import woo\n\npub fn wibble() -> woo.Wibble {\n  woo.Wobble(0)\n}"
+---
+----- BEFORE ACTION
+import woo
+
+pub fn wibble() -> woo.Wibble {
+  woo.Wobble(0)
+      ↑        
+}
+
+
+----- AFTER ACTION
+// --- Edits applied to module 'woo'
+pub type Wibble {
+  Wibble
+  Wobble(Int)
+}
