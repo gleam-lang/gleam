@@ -16138,3 +16138,22 @@ fn convert_int_between_bases_in_size_options() {
         find_position_of("111").to_selection()
     );
 }
+
+#[test]
+fn generate_qualified_variant_in_other_module_with_exisiting_variant() {
+    let source = "import woo
+
+pub fn wibble() -> woo.Wibble {
+  woo.Wobble(0)
+}";
+    assert_code_action!(
+        &generate_variant_message("woo.Wibble"),
+        TestProject::for_source(source).add_module(
+            "woo",
+            "pub type Wibble {
+  Wibble
+}"
+        ),
+        find_position_of("Wobble").to_selection()
+    );
+}
