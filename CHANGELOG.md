@@ -17,6 +17,10 @@
   directory.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Fixed a bug where the language server "Generate variant" code action would
+  duplicate module name when triggered on qualified values.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## 1.19.0-rc2 - 2026-09-26
 
 ## Compiler
