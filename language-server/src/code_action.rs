@@ -13410,3 +13410,212 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
         self.insert_int(string_value, int_value, location);
     }
 }
+
+/// Code action to fix `Unknown variable` and `Unknown type` errors when there
+/// are items with same name from imported modules:
+///
+/// ```gleam
+/// import gleam/io
+///
+/// pub fn main() {
+///   println("Hello!")
+/// //^^^^^^^ Triggering here would result in this:
+///   io.println("Hello!")
+/// }
+/// ```
+pub struct UseItem<'a> {
+    module: &'a Module,
+    lines: &'a LineNumbers,
+    params: &'a CodeActionParams,
+    error: &'a Option<Error>,
+    edits: TextEdits<'a>,
+}
+
+impl<'a> UseItem<'a> {
+    pub fn new(
+        module: &'a Module,
+        lines: &'a LineNumbers,
+        params: &'a CodeActionParams,
+        error: &'a Option<Error>,
+    ) -> Self {
+        Self {
+            module,
+            lines,
+            params,
+            error,
+            edits: TextEdits::new(lines),
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        let mut actions = vec![];
+
+        let Some(Error::Type { failed_modules, .. }) = self.error else {
+            return actions;
+        };
+        let Some(failed_module) = failed_modules.get(&self.module.name) else {
+            return actions;
+        };
+
+        for error in &failed_module.errors {
+            match error {
+                TypeError::UnknownVariable {
+                    location,
+                    name,
+                    possible_modules,
+                    ..
+                } => self.maybe_use_value(*location, name, possible_modules, &mut actions),
+                TypeError::UnknownType {
+                    location,
+                    name,
+                    hint,
+                    ..
+                } => self.maybe_use_type(*location, name, hint, &mut actions),
+                TypeError::InvalidImport { .. }
+                | TypeError::BitArraySegmentError { .. }
+                | TypeError::UnknownLabels { .. }
+                | TypeError::QualifiedTypeMissingName { .. }
+                | TypeError::UnknownModule { .. }
+                | TypeError::UnknownModuleType { .. }
+                | TypeError::UnknownModuleValue { .. }
+                | TypeError::ModuleAliasUsedAsName { .. }
+                | TypeError::NotFn { .. }
+                | TypeError::UnknownRecordField { .. }
+                | TypeError::IncorrectArity { .. }
+                | TypeError::UnsafeRecordUpdate { .. }
+                | TypeError::UnnecessarySpreadOperator { .. }
+                | TypeError::IncorrectTypeArity { .. }
+                | TypeError::CouldNotUnify { .. }
+                | TypeError::RecursiveType { .. }
+                | TypeError::DuplicateName { .. }
+                | TypeError::DuplicateImport { .. }
+                | TypeError::DuplicateTypeName { .. }
+                | TypeError::DuplicateArgument { .. }
+                | TypeError::DuplicateField { .. }
+                | TypeError::PrivateTypeLeak { .. }
+                | TypeError::UnexpectedLabelledArg { .. }
+                | TypeError::PositionalArgumentAfterLabelled { .. }
+                | TypeError::IncorrectNumClausePatterns { .. }
+                | TypeError::NonLocalClauseGuardVariable { .. }
+                | TypeError::ExtraVarInAlternativePattern { .. }
+                | TypeError::MissingVarInAlternativePattern { .. }
+                | TypeError::DuplicateVarInPattern { .. }
+                | TypeError::OutOfBoundsTupleIndex { .. }
+                | TypeError::NotATuple { .. }
+                | TypeError::NotATupleUnbound { .. }
+                | TypeError::RecordAccessUnknownType { .. }
+                | TypeError::RecordUpdateInvalidConstructor { .. }
+                | TypeError::UnexpectedTypeHole { .. }
+                | TypeError::ReservedModuleName { .. }
+                | TypeError::KeywordInModuleName { .. }
+                | TypeError::NotExhaustivePatternMatch { .. }
+                | TypeError::ArgumentNameAlreadyUsed { .. }
+                | TypeError::UnlabelledAfterlabelled { .. }
+                | TypeError::RecursiveTypeAlias { .. }
+                | TypeError::ExternalMissingAnnotation { .. }
+                | TypeError::NoImplementation { .. }
+                | TypeError::UnsupportedExpressionTarget { .. }
+                | TypeError::InvalidExternalJavascriptModule { .. }
+                | TypeError::InvalidExternalJavascriptFunction { .. }
+                | TypeError::InexhaustiveCaseExpression { .. }
+                | TypeError::MissingCaseBody { .. }
+                | TypeError::InexhaustiveLetAssignment { .. }
+                | TypeError::UnusedTypeAliasParameter { .. }
+                | TypeError::DuplicateTypeParameter { .. }
+                | TypeError::UnsupportedPublicFunctionTarget { .. }
+                | TypeError::NotFnInUse { .. }
+                | TypeError::UseFnIncorrectArity { .. }
+                | TypeError::UseCallbackIncorrectArity { .. }
+                | TypeError::UseFnDoesntTakeCallback { .. }
+                | TypeError::BadName { .. }
+                | TypeError::AllVariantsDeprecated { .. }
+                | TypeError::DeprecatedVariantOnDeprecatedType { .. }
+                | TypeError::LiteralFloatOutOfRange { .. }
+                | TypeError::EchoWithNoFollowingExpression { .. }
+                | TypeError::StringConcatenationWithAddInt { .. }
+                | TypeError::FloatOperatorOnInts { .. }
+                | TypeError::IntOperatorOnFloats { .. }
+                | TypeError::DoubleVariableAssignmentInBitArray { .. }
+                | TypeError::NonUtf8StringAssignmentInBitArray { .. }
+                | TypeError::PrivateOpaqueType { .. }
+                | TypeError::SrcImportingDevDependency { .. }
+                | TypeError::TypeUsedAsAConstructor { .. }
+                | TypeError::ExternalTypeWithConstructors { .. }
+                | TypeError::LowercaseBoolPattern { .. }
+                | TypeError::RecordUpdateVariantWithNoFields { .. }
+                | TypeError::TodoConstant { .. }
+                | TypeError::InvalidConstantBinaryOperator { .. }
+                | TypeError::PrivateValueUse { .. }
+                | TypeError::PrivateTypeUse { .. } => (),
+            }
+        }
+
+        actions
+    }
+
+    fn maybe_use_value(
+        &mut self,
+        location: SrcSpan,
+        name: &str,
+        possible_modules: &[EcoString],
+        actions: &mut Vec<CodeAction>,
+    ) {
+        if possible_modules.is_empty() {
+            return;
+        }
+
+        let error_range = src_span_to_lsp_range(location, self.lines);
+        if !within(self.params.range, error_range) {
+            return;
+        }
+
+        for module in possible_modules {
+            // We only need to prefix value with the module name, because
+            // module list includes only imported modules.
+            self.edits.insert(location.start, format!("{module}."));
+
+            CodeActionBuilder::new(&format!("Use `{}.{}`", module, name))
+                .kind(CodeActionKind::QuickFix)
+                .preferred(true)
+                .changes(
+                    self.params.text_document.uri.clone(),
+                    std::mem::take(&mut self.edits.edits),
+                )
+                .push_to(actions);
+        }
+    }
+
+    fn maybe_use_type(
+        &mut self,
+        location: SrcSpan,
+        name: &str,
+        hint: &type_::error::UnknownTypeHint,
+        actions: &mut Vec<CodeAction>,
+    ) {
+        let type_::error::UnknownTypeHint::TypesWithSameNameFromImportedModules(possible_modules) =
+            hint
+        else {
+            return;
+        };
+
+        let error_range = src_span_to_lsp_range(location, self.lines);
+        if !within(self.params.range, error_range) {
+            return;
+        }
+
+        for module in possible_modules {
+            // We only need to prefix value with the module name, because
+            // module list includes only imported modules.
+            self.edits.insert(location.start, format!("{module}."));
+
+            CodeActionBuilder::new(&format!("Use `{}.{}`", module, name))
+                .kind(CodeActionKind::QuickFix)
+                .preferred(true)
+                .changes(
+                    self.params.text_document.uri.clone(),
+                    std::mem::take(&mut self.edits.edits),
+                )
+                .push_to(actions);
+        }
+    }
+}
