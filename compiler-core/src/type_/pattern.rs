@@ -182,6 +182,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             }
                         }
                         unify_constructor_variants(Arc::make_mut(&mut initial.type_), &type_);
+
+                        // Register alternative pattern, so that we can mark all
+                        // alternatives as unused.
+                        self.environment.push_alternative(name, origin, location);
                     }
 
                     // This variable was not defined in the Initial multi-pattern
