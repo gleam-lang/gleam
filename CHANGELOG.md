@@ -156,6 +156,33 @@
   highlight all of them.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The language server will now offer a code action to use an item from imported
+  module with same name as unknown type or value. For example,
+
+  ```gleam
+  import gleam/io
+  import gleam/option
+
+  pub fn main() -> Option {
+  //               ^^^^^^ Trigger "Use `option.Option`"
+    println("Hello!")
+  //^^^^^^^ Trigger "Use `io.println`"
+  }
+  ```
+
+  Triggering denoted code actions would result in this code:
+
+  ```gleam
+  import gleam/io
+  import gleam/option
+
+  pub fn main() -> option.Option {
+    io.println("Hello!")
+  }
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Bug fixes
 
 - Fixed a bug where the language server "Generate variant" code action would
