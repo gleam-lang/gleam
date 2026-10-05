@@ -5,9 +5,11 @@
 
 # Changelog
 
-## Unreleased
+## 1.19.0 - 2026-10-05
 
-## Bug fixes
+## 1.19.0-rc3 - 2026-10-01
+
+### Bug fixes
 
 - Fixed a bug where documentation pages configuration could be missing fields
   in `gleam.toml`.
@@ -19,7 +21,7 @@
 
 ## 1.19.0-rc2 - 2026-09-26
 
-## Compiler
+### Compiler
 
 - The `--src-only` flag has been renamed to `--no-dev`.
   ([Louis Pilfold](https://github.com/lpil))
@@ -28,7 +30,7 @@
   been improved.
   ([Louis Pilfold](https://github.com/lpil))
 
-## Bug fixes
+### Bug fixes
 
 - Fixed a bug with `gleam compile-package` where `dev_dependencies` would not
   be included in the `.app` file regardless of whether `--no-dev` was provided.
