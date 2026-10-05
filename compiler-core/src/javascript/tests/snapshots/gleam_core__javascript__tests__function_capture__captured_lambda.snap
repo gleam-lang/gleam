@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/function_capture.rs
+expression: "\npub fn main() {\n  let func = fn() {\n    fn(x) { x }\n  }\n  let f = func()(_)\n\n  f(0)\n}"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let func = fn() {
+    fn(x) { x }
+  }
+  let f = func()(_)
+
+  f(0)
+}
+
+----- COMPILED JAVASCRIPT
+export function main() {
+  let func = () => { return (x) => { return x; }; };
+  let _block;
+  {
+    let tmp = func();
+    _block = (_capture) => { return tmp(_capture); };
+  }
+  let f = _block;
+  return f(0);
+}
