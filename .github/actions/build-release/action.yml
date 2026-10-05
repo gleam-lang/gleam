@@ -56,7 +56,7 @@ runs:
   using: "composite"
   steps:
     - name: Install Rust toolchain
-      uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+      uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
       with:
         toolchain: ${{ inputs.toolchain }}
         target: ${{ inputs.target }}
@@ -70,7 +70,7 @@ runs:
 
     - name: Build WASM release binary
       if: ${{ inputs.target != 'wasm32-unknown-unknown' }}
-      uses: clechasseur/rs-cargo@9a5c570d3347f8dee3916c8871f3ffaf38909956 # v5.0.8
+      uses: clechasseur/rs-cargo@a12d4742fa9b832ccb29dc394a68ab577b0c9fb8 # v5.1.0
       with:
         command: build
         args: --release --target ${{ inputs.target }}
@@ -121,7 +121,7 @@ runs:
     # * https://azure.microsoft.com/en-us/products/trusted-signing
     - name: Log in to Azure
       if: ${{ contains(inputs.target, '-windows-') && inputs.azure-tenant-id && inputs.azure-subscription-id && inputs.azure-client-id && inputs.azure-trusted-signing-account-name && inputs.azure-certificate-profile-name }}
-      uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca # v3.0.1
+      uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
       with:
         client-id: ${{ inputs.azure-client-id }}
         tenant-id: ${{ inputs.azure-tenant-id }}
