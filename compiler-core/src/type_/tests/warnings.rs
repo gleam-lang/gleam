@@ -5269,3 +5269,17 @@ pub fn go(x) {
 "#
     );
 }
+
+#[test]
+fn unused_variable_with_alternative_patterns() {
+    assert_warning!(
+        "
+pub fn go(a) {
+  case a {
+    [x, y] | [0, x, y] | [1, 1 as x, 2 as y] -> y
+    _ -> todo
+  }
+}
+"
+    );
+}

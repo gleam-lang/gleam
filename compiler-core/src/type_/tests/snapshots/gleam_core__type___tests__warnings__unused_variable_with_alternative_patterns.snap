@@ -1,0 +1,49 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn go(a) {\n  case a {\n    [x, y] | [0, x, y] | [1, 1 as x, 2 as y] -> y\n    _ -> todo\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(a) {
+  case a {
+    [x, y] | [0, x, y] | [1, 1 as x, 2 as y] -> y
+    _ -> todo
+  }
+}
+
+
+----- WARNING
+warning: Unused variable
+  ┌─ /src/warning/wrn.gleam:4:6
+  │
+4 │     [x, y] | [0, x, y] | [1, 1 as x, 2 as y] -> y
+  │      ^ This variable is never used
+
+Hint: You can ignore it with an underscore: `_x`.
+
+warning: Unused variable
+  ┌─ /src/warning/wrn.gleam:4:18
+  │
+4 │     [x, y] | [0, x, y] | [1, 1 as x, 2 as y] -> y
+  │                  ^ This variable is never used
+
+Hint: You can ignore it with an underscore: `_x`.
+
+warning: Unused variable
+  ┌─ /src/warning/wrn.gleam:4:35
+  │
+4 │     [x, y] | [0, x, y] | [1, 1 as x, 2 as y] -> y
+  │                                   ^ This variable is never used
+
+Hint: You can safely remove it.
+
+warning: Todo found
+  ┌─ /src/warning/wrn.gleam:5:10
+  │
+5 │     _ -> todo
+  │          ^^^^ This code is incomplete
+
+This code will crash if it is run. Be sure to finish it before
+running your program.
+
+Hint: I think its type is `Int`.
