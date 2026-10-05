@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/error/tests.rs
-expression: err.pretty_string()
+expression: error
 ---
 error: Invalid package name
 

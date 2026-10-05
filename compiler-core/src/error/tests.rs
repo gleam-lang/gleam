@@ -73,31 +73,37 @@ fn test_output_files_already_exist() {
 }
 
 #[test]
-fn test_removed_package_names_invalid() {
-    let dependencies: Vec<EcoString> =
-        vec!["gleam_stdlib".into(), "gleam_otp".into(), "lustre".into()];
-    let packages = vec![
-        ("with_suggestion", vec!["gleam_otp@1".to_string()]),
-        (
-            "with_some_suggestions",
-            vec![
-                "gleam_otp@1".to_string(),
-                "lustre@4".to_string(),
-                "Wibble".to_string(),
-            ],
-        ),
-        ("without_suggestions", vec!["Wibble".to_string()]),
-    ];
-    for (group, packages) in packages {
-        let err = Error::RemovedPackageNamesInvalid {
-            packages,
-            dependencies: dependencies.clone(),
-        };
-        assert_snapshot!(
-            format!("removed_package_names_invalid_{group}"),
-            err.pretty_string(),
-        );
+fn removed_package_names_invalid_with_suggestion() {
+    let error = Error::RemovedPackageNamesInvalid {
+        packages: vec!["gleam_otp@1".to_string()],
+        dependencies: vec!["gleam_stdlib".into(), "gleam_otp".into(), "lustre".into()],
     }
+    .pretty_string();
+    assert_snapshot!(error);
+}
+
+#[test]
+fn removed_package_names_invalid_with_multiple_suggestions() {
+    let error = Error::RemovedPackageNamesInvalid {
+        packages: vec![
+            "gleam_otp@1".to_string(),
+            "lustre@4".to_string(),
+            "Wibble".to_string(),
+        ],
+        dependencies: vec!["gleam_stdlib".into(), "gleam_otp".into(), "lustre".into()],
+    }
+    .pretty_string();
+    assert_snapshot!(error);
+}
+
+#[test]
+fn removed_package_names_invalid_without_suggestions() {
+    let error = Error::RemovedPackageNamesInvalid {
+        packages: vec!["Wibble".to_string()],
+        dependencies: vec!["gleam_stdlib".into(), "gleam_otp".into(), "lustre".into()],
+    }
+    .pretty_string();
+    assert_snapshot!(error);
 }
 
 // There are 2 separate tests for Windows and for Unix, because on Windows note

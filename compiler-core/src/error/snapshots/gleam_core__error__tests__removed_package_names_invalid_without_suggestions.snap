@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/error/tests.rs
-expression: err.pretty_string()
+expression: error
 ---
 error: Invalid package name
 
-This is not a valid package:
+This is not a valid package name, so it could not be removed.
 
   - Wibble
 
