@@ -9,6 +9,10 @@
 
 ### Compiler
 
+- The compiler will now show "Unused variable" warning for each of alternative
+  patterns.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Build tool
 
 - `gleam remove` now rejects invalid package names with an error explaining
@@ -18,6 +22,10 @@
   ([Tom Voet](https://github.com/tomvoet))
 
 ### Language server
+
+- The language server will now offer "Discard unused variable" on each of
+  alternative patterns.
+  ([Andrey Kozhev](https://github.com/ankddev))
 
 ### Bug fixes
 
