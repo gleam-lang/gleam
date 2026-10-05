@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2021 The Gleam contributors
 
 use hexpm::version::Version;
-use rand::Rng;
+use rand::RngExt as _;
 use type_::{AccessorsMap, FieldMap, RecordAccessor};
 
 use super::*;
