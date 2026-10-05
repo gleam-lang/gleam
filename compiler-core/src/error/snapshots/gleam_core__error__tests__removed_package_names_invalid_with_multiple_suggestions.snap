@@ -1,14 +1,16 @@
 ---
 source: compiler-core/src/error/tests.rs
-expression: err.pretty_string()
+expression: error
 ---
 error: Invalid package names
 
-These are not valid package names:
+These are not valid package names, so they could not be removed.
 
-  - gleam_otp@1 (Did you mean `gleam_otp`?)
-  - lustre@4 (Did you mean `lustre`?)
+  - gleam_otp@1
+  - lustre@4
   - Wibble
 
 Package names must start with a lowercase letter and may only contain
 lowercase letters, numbers and underscores.
+
+Hint: Did you mean `gleam_otp` and `lustre`?
