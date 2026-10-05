@@ -15997,6 +15997,36 @@ fn discard_unused_variable_triggered_at_alternative_pattern_list() {
 
 // https://github.com/gleam-lang/gleam/issues/6121
 #[test]
+fn discard_unused_variable_triggered_at_alternative_pattern_list_2() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        r#"fn wobble(wibble) {
+  case wibble {
+    [0, x, y] | [1, x, y] | [2, x, y] -> x
+    _ -> 0
+  }
+}"#,
+        find_position_of("y").nth_occurrence(2).to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6121
+#[test]
+fn discard_unused_variable_triggered_at_alternative_pattern_list_3() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        r#"fn wobble(wibble) {
+  case wibble {
+    [0, x, y] | [1, x, y] | [2, x, y] -> x
+    _ -> 0
+  }
+}"#,
+        find_position_of("y").nth_occurrence(3).to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6121
+#[test]
 fn discard_unused_variable_triggered_at_alternative_pattern_string_prefix() {
     assert_code_action!(
         DISCARD_UNUSED_VARIABLE,
@@ -16007,6 +16037,21 @@ fn discard_unused_variable_triggered_at_alternative_pattern_string_prefix() {
   }
 }"#,
         find_position_of("name").to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6121
+#[test]
+fn discard_unused_variable_triggered_at_alternative_pattern_string_prefix_2() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        r#"fn wobble(wibble) {
+  case wibble {
+    "Hello, " as hello <> name | "Hey, " as hello <> name -> hello
+    _ -> "unknown"
+  }
+}"#,
+        find_position_of("name").nth_occurrence(2).to_selection()
     );
 }
 
@@ -16027,6 +16072,21 @@ fn discard_unused_variable_triggered_at_alternative_pattern_string_prefix_left_s
 
 // https://github.com/gleam-lang/gleam/issues/6121
 #[test]
+fn discard_unused_variable_triggered_at_alternative_pattern_string_prefix_left_side_2() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        r#"fn wobble(wibble) {
+  case wibble {
+    "Hello, " as hello <> name | "Hey, " as hello <> name -> name
+    _ -> "unknown"
+  }
+}"#,
+        find_position_of("hello").nth_occurrence(2).to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6121
+#[test]
 fn discard_unused_variable_triggered_at_alternative_pattern_multiple_mixed() {
     assert_code_action!(
         DISCARD_UNUSED_VARIABLE,
@@ -16037,6 +16097,36 @@ fn discard_unused_variable_triggered_at_alternative_pattern_multiple_mixed() {
   }
 }"#,
         find_position_of("y").to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6121
+#[test]
+fn discard_unused_variable_triggered_at_alternative_pattern_multiple_mixed_2() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        r#"fn wobble(wibble, wubble) {
+  case wibble, wubble {
+    0, [y] | y, [] | _, [1, 2, y] -> todo
+    _ -> todo
+  }
+}"#,
+        find_position_of("y").nth_occurrence(2).to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6121
+#[test]
+fn discard_unused_variable_triggered_at_alternative_pattern_multiple_mixed_3() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        r#"fn wobble(wibble, wubble) {
+  case wibble, wubble {
+    0, [y] | y, [] | _, [1, 2, y] -> todo
+    _ -> todo
+  }
+}"#,
+        find_position_of("y").nth_occurrence(3).to_selection()
     );
 }
 
@@ -16057,6 +16147,36 @@ fn discard_unused_variable_triggered_at_alternative_pattern_list_assignments() {
 
 // https://github.com/gleam-lang/gleam/issues/6121
 #[test]
+fn discard_unused_variable_triggered_at_alternative_pattern_list_assignments_2() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        r#"fn wobble(wibble) {
+  case wibble {
+    [0, ..y] | [0, 1, ..] as y | y -> todo
+    _ -> todo
+  }
+}"#,
+        find_position_of("y").nth_occurrence(2).to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6121
+#[test]
+fn discard_unused_variable_triggered_at_alternative_pattern_list_assignments_3() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        r#"fn wobble(wibble) {
+  case wibble {
+    [0, ..y] | [0, 1, ..] as y | y -> todo
+    _ -> todo
+  }
+}"#,
+        find_position_of("y").nth_occurrence(3).to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6121
+#[test]
 fn discard_unused_variable_triggered_at_list_pattern_assignment_with_alternative_patterns() {
     assert_code_action!(
         DISCARD_UNUSED_VARIABLE,
@@ -16067,6 +16187,21 @@ fn discard_unused_variable_triggered_at_list_pattern_assignment_with_alternative
   }
 }",
         find_position_of("tail").to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6121
+#[test]
+fn discard_unused_variable_triggered_at_list_pattern_assignment_with_alternative_patterns_2() {
+    assert_code_action!(
+        DISCARD_UNUSED_VARIABLE,
+        "fn wibble(wobble: List(Int)) -> Nil {
+  case wobble {
+    [1, 2, ..] as tail | [2, 1, ..] as tail -> Nil
+    _ -> Nil
+  }
+}",
+        find_position_of("tail").nth_occurrence(2).to_selection()
     );
 }
 
