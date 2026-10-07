@@ -27,8 +27,8 @@ error: Type mismatch
 
 Expected type:
 
-    Box(Bool)
+    Box(Int)
 
 Found type:
 
-    Box(Int)
+    Box(Bool)
