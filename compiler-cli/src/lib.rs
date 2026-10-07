@@ -653,12 +653,10 @@ impl Command {
                 export::hex_tarball(&paths)
             }
             Self::Export(ExportTarget::JavaScriptPrelude { output }) => {
-                let paths = find_project_paths(directory)?;
-                export::javascript_prelude(&paths, output)
+                export::javascript_prelude(output)
             }
             Self::Export(ExportTarget::TypeScriptPrelude { output }) => {
-                let paths = find_project_paths(directory)?;
-                export::typescript_prelude(&paths, output)
+                export::typescript_prelude(output)
             }
             Self::Export(ExportTarget::PackageInterface { output }) => {
                 let paths = find_project_paths(directory)?;
@@ -698,6 +696,7 @@ pub enum ExportTarget {
     /// The package bundled into a tarball, suitable for publishing to Hex
     HexTarball,
     /// The JavaScript prelude module
+    #[command(name = "javascript-prelude")]
     JavaScriptPrelude {
         /// (optional) The path to write the JavaScript file to.
         ///
@@ -706,6 +705,7 @@ pub enum ExportTarget {
         output: Option<Utf8PathBuf>,
     },
     /// The TypeScript prelude module
+    #[command(name = "typescript-prelude")]
     TypeScriptPrelude {
         /// (optional) The path to write the TypeScript file to.
         ///
@@ -818,20 +818,39 @@ fn parse_otp_app_names(input: &str) -> Result<HashMap<EcoString, EcoString>, Str
         .collect()
 }
 
-#[test]
-fn parse_otp_app_names_test() {
-    assert_eq!(parse_otp_app_names("").unwrap(), HashMap::new());
-    assert_eq!(
-        parse_otp_app_names("one=two").unwrap(),
-        HashMap::from([("one".into(), "two".into())])
-    );
-    assert_eq!(
-        parse_otp_app_names("one=two,three=four").unwrap(),
-        HashMap::from([
-            ("one".into(), "two".into()),
-            ("three".into(), "four".into()),
-        ])
-    );
+#[cfg(test)]
+mod tests {
+    use clap::CommandFactory;
+    use std::collections::HashMap;
+
+    #[test]
+    fn command_help_text() {
+        let mut command = super::Command::command().version("x.y.z");
+        let mut help = command.render_long_help();
+        for subcommand in command.get_subcommands_mut() {
+            help.push_str("\n\n=== Subcommand ");
+            help.push_str(subcommand.get_name());
+            help.push_str(" ===\n\n");
+            help.push_str(&subcommand.render_long_help().to_string().as_str());
+        }
+        insta::assert_snapshot!(help);
+    }
+
+    #[test]
+    fn parse_otp_app_names_test() {
+        assert_eq!(super::parse_otp_app_names("").unwrap(), HashMap::new());
+        assert_eq!(
+            super::parse_otp_app_names("one=two").unwrap(),
+            HashMap::from([("one".into(), "two".into())])
+        );
+        assert_eq!(
+            super::parse_otp_app_names("one=two,three=four").unwrap(),
+            HashMap::from([
+                ("one".into(), "two".into()),
+                ("three".into(), "four".into()),
+            ])
+        );
+    }
 }
 
 #[derive(Subcommand, Debug)]
