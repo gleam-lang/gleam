@@ -205,6 +205,11 @@
   them to their original name.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Fixed a bug where the compiler would silently ignore the `@deprecated` and
+  `@internal` attributes when they were used on an import, instead of emitting
+  an error.
+  ([Manas Ganesh Dasari](https://github.com/ManasDasri))
+
 ## v1.19.2 - 2026-10-12
 
 ### Bug fixes

@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\n@deprecated(\"reason\")\nimport gleam/io\n"
+---
+----- SOURCE CODE
+
+@deprecated("reason")
+import gleam/io
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:1
+  │
+2 │ @deprecated("reason")
+  │ ^^^^^^^^^^^^^^^^^^^^^ This attribute cannot be used on an import.
+
+Hint: Only the `@target` attribute can be used on an import.

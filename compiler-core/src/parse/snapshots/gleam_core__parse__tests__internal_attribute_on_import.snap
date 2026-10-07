@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\n@internal\nimport gleam/io\n"
+---
+----- SOURCE CODE
+
+@internal
+import gleam/io
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:1
+  │
+2 │ @internal
+  │ ^^^^^^^^^ This attribute cannot be used on an import.
+
+Hint: Only the `@target` attribute can be used on an import.
