@@ -1,0 +1,601 @@
+---
+source: compiler-cli/src/lib.rs
+expression: help
+---
+gleam x.y.z
+
+Usage: gleam <COMMAND>
+
+Commands:
+  add              Add new dependencies
+  build            Build the project
+  check            Type check the project
+  clean            Delete any build artefacts for this project
+  compile-package  A low-level API for compiling a single Gleam package
+  deps             Work with dependency packages
+  dev              Run the project development entrypoint
+  docs             Render HTML documentation for the package
+  export           Export something useful from the Gleam project
+  fix              Rewrite deprecated Gleam code
+  format           Format source code
+  help             Print this message or the help of the given subcommand(s)
+  hex              Work with the Hex package manager
+  lsp              Run the language server, to be used by editors
+  new              Create a new project
+  publish          Publish the project to the Hex package repository
+  remove           Remove project dependencies
+  run              Run the project
+  shell            Start an Erlang REPL with the Gleam code loaded
+  test             Run the project tests
+  update           Update dependency packages to their latest versions
+
+Options:
+  -h, --help
+          Print help
+
+  -V, --version
+          Print version
+
+
+=== Subcommand build ===
+
+Build the project
+
+This command optionally accepts the environment variable
+`HEXPM_READ_API_KEY`, which can hold a Hex API key to authenticate
+with Hex with a higher rate limit.
+
+Usage: build [OPTIONS]
+
+Options:
+      --warnings-as-errors
+          Consider the build failed if the package contains any warnings
+
+  -t, --target <TARGET>
+          The platform to target
+          
+          [possible values: erlang, javascript]
+
+      --no-print-progress
+          Don't print progress information
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+
+=== Subcommand check ===
+
+Type check the project
+
+Usage: check [OPTIONS]
+
+Options:
+  -t, --target <TARGET>
+          The platform to target
+          
+          [possible values: erlang, javascript]
+
+  -h, --help
+          Print help
+
+
+=== Subcommand publish ===
+
+Publish the project to the Hex package repository
+
+Please ensure your package is suitable for production use before
+publishing. If you have a prototype package that you wish to use
+in another project then use git dependencies instead of publishing
+to the package repository.
+
+This command optionally accepts the environment variable
+`HEXPM_API_KEY`, which can hold a Hex API key to authenticate
+with Hex.
+
+Usage: publish [OPTIONS]
+
+Options:
+      --replace
+          Replace the latest release with this one
+
+  -y, --yes
+          Automatically accept confirmation prompts
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+
+=== Subcommand docs ===
+
+Render HTML documentation for the package
+
+There are several options in `gleam.toml` that can be used to
+configure the output.
+
+   repository = { type = "github", user = "lpil", repo = "wibble" }
+
+Specify the location of the source code repository for the package.
+This will add a link to the side bar, and add "view code" links for
+the documented types and values.
+
+   links = [
+     { title = "Home page", href = "https://example.com" },
+     { title = "Other site", href = "https://another.example.com" },
+   ]
+
+Specify some additional links to include in the sidebar.
+
+   [documentation]
+   pages = [
+     { title = "My Page", path = "my-page.html", source = "./path/to/my-page.md" },
+   ]
+
+Specify additional markdown pages to include in the documentation,
+with links for each added to the sidebar.
+
+Usage: docs <COMMAND>
+
+Commands:
+  build    Render HTML docs locally
+  publish  Publish HTML docs to HexDocs
+  remove   Remove HTML docs from HexDocs
+  help     Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h')
+
+
+=== Subcommand deps ===
+
+Work with dependency packages
+
+The packages and the acceptable version ranges are specified in
+`gleam.toml`. You can edit this file manually, or use the `gleam add`
+and `gleam remove` commands.
+
+Package versions follow semantic versioning: MAJOR.MINOR.PATCH.
+- Major updates include breaking changes, either type changes or
+  semantic changes.
+- Minor updates include new functionality, but no breaking changes.
+- Patch updates include only bug fixes.
+
+Dependency resolution will be performed automatically by any command
+that builds your project. Once versions have been selected they are
+written to `manifest.toml`, which locks the package to those versions,
+making your build deterministic. You should not edit this file manually.
+
+To upgrade the dependencies you can use the `gleam update` command,
+which will select the newest versions compatible with the requirements
+in `gleam.toml`.
+
+The `[dependencies]` section of `gleam.toml` holds the production
+dependencies. These are included in your production application, or
+are used as the dependencies when published as a library. The
+`[dev_dependencies]` section holds dependencies that are only used
+during development, e.g. code used for testing the package.
+
+## Syntax examples:
+
+   [dependencies]
+   wibble = ">= 1.2.0 and < 2.0.0"
+
+Require the package `wibble`, permitting versions greater than or
+equal to 1.2.0, but lower than 2.0.0.
+
+   [dependencies]
+   wibble = ">= 1.2.0 and < 2.0.0 and != 1.4.1"
+
+Permit a range, but deny a specific version within that range. This
+could be useful if there is a version known to have a bug.
+
+   [dependencies]
+   wibble = { git = "https://example.com/wibble.git", ref = "a8b3c5d82" }
+
+A dependency fetched from Git instead of from Hex. This is useful
+for using packages of yours that are not-yet production-ready, or
+for bug fixes that have not yet been published to Hex.
+
+   [dependencies]
+   wibble = { path = "../wibble" }
+
+A local dependency, on your computer. This is useful for testing and
+and for applications made of multiple packages in a single version
+control repository.
+
+This command optionally accepts the environment variable
+`HEXPM_READ_API_KEY`, which can hold a Hex API key to authenticate
+with Hex with a higher rate limit.
+
+Usage: deps <COMMAND>
+
+Commands:
+  list      List all dependency packages
+  download  Download all dependency packages
+  outdated  List all outdated dependencies
+  update    Update dependency packages to their latest versions
+  tree      Tree of all the dependency packages
+  help      Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h')
+
+
+=== Subcommand update ===
+
+Update dependency packages to their latest versions
+
+This command optionally accepts the environment variable
+`HEXPM_READ_API_KEY`, which can hold a Hex API key to authenticate
+with Hex with a higher rate limit.
+
+Usage: update [PACKAGES]...
+
+Arguments:
+  [PACKAGES]...
+          (optional) Names of the packages to update.
+          
+          If omitted, all dependencies will be updated.
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h')
+
+
+=== Subcommand hex ===
+
+Work with the Hex package manager
+
+Usage: hex <COMMAND>
+
+Commands:
+  retire        Retire a release from Hex
+  unretire      Un-retire a release from Hex
+  revert        Revert a release, removing it from Hex.
+  owner         Deal with package ownership
+  authenticate  Log in to Hex. Replaces the credentials with new ones if already logged in
+  help          Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help
+          Print help
+
+
+=== Subcommand new ===
+
+Create a new project
+
+Usage: new [OPTIONS] <PROJECT_ROOT>
+
+Arguments:
+  <PROJECT_ROOT>
+          Location of the project root
+
+Options:
+      --name <NAME>
+          Name of the project
+
+      --template <TEMPLATE>
+          The template to use
+          
+          [default: erlang]
+          [possible values: erlang, javascript]
+
+      --skip-git
+          Skip git initialization and creation of .gitignore, .git/* and .github/* files
+
+      --skip-github
+          Skip creation of .github/* files
+
+  -h, --help
+          Print help
+
+
+=== Subcommand format ===
+
+Format source code
+
+Usage: format [OPTIONS] [FILES]...
+
+Arguments:
+  [FILES]...
+          The files or directories to format
+          
+          [default: .]
+
+Options:
+      --stdin
+          Read source from standard-input
+
+      --check
+          Only check if inputs are formatted correctly, erroring if they are not
+
+  -h, --help
+          Print help
+
+
+=== Subcommand fix ===
+
+Rewrite deprecated Gleam code
+
+Usage: fix
+
+Options:
+  -h, --help
+          Print help
+
+
+=== Subcommand shell ===
+
+Start an Erlang REPL with the Gleam code loaded
+
+Usage: shell
+
+Options:
+  -h, --help
+          Print help
+
+
+=== Subcommand run ===
+
+Run the project
+
+This command runs the `main` function from the `<PROJECT_NAME>` module.
+
+Usage: run [OPTIONS] [ARGUMENTS]...
+
+Arguments:
+  [ARGUMENTS]...
+          
+
+Options:
+  -t, --target <TARGET>
+          The platform to target
+          
+          [possible values: erlang, javascript]
+
+      --runtime <RUNTIME>
+          The JavaScript runtime to target. This is only available on the JavaScript target
+          
+          [possible values: nodejs, deno, bun]
+
+  -m, --module <MODULE>
+          The module to run
+
+      --no-print-progress
+          Don't print progress information
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+
+=== Subcommand test ===
+
+Run the project tests
+
+This command runs the `main` function from the `<PROJECT_NAME>_test` module.
+
+Usage: test [OPTIONS] [ARGUMENTS]...
+
+Arguments:
+  [ARGUMENTS]...
+          
+
+Options:
+  -t, --target <TARGET>
+          The platform to target
+          
+          [possible values: erlang, javascript]
+
+      --runtime <RUNTIME>
+          The JavaScript runtime to target. This is only available on the JavaScript target
+          
+          [possible values: nodejs, deno, bun]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+
+=== Subcommand dev ===
+
+Run the project development entrypoint
+
+This command runs the `main` function from the `<PROJECT_NAME>_dev` module.
+
+Usage: dev [OPTIONS] [ARGUMENTS]...
+
+Arguments:
+  [ARGUMENTS]...
+          
+
+Options:
+  -t, --target <TARGET>
+          The platform to target
+          
+          [possible values: erlang, javascript]
+
+      --runtime <RUNTIME>
+          The JavaScript runtime to target. This is only available on the JavaScript target
+          
+          [possible values: nodejs, deno, bun]
+
+      --no-print-progress
+          Don't print progress information
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+
+=== Subcommand compile-package ===
+
+A low-level API for compiling a single Gleam package
+
+This is to be used by other build tools to implement support for Gleam
+code. It is not used directly by humans.
+
+Usage: compile-package [OPTIONS] --target <TARGET> --package <PACKAGE_DIRECTORY> --out <OUTPUT_DIRECTORY> --lib <LIBRARIES_DIRECTORY>
+
+Options:
+      --target <TARGET>
+          The platform to target
+          
+          [possible values: erlang, javascript]
+
+      --package <PACKAGE_DIRECTORY>
+          The directory of the Gleam package
+
+      --out <OUTPUT_DIRECTORY>
+          A directory to write compiled package to
+
+      --lib <LIBRARIES_DIRECTORY>
+          A directories of packages already compiled with the same version of Gleam
+
+      --javascript-prelude <JAVASCRIPT_PRELUDE>
+          The location of the JavaScript prelude module, relative to the `out`
+          directory.
+          
+          Required when compiling to JavaScript.
+          
+          This likely wants to be a `.mjs` file as NodeJS does not permit
+          importing of other JavaScript file extensions.
+
+      --no-beam
+          Skip Erlang to BEAM bytecode compilation
+
+      --no-dev
+          Skip development code such as the `dev/` and `test/` directories, and the `dev_dependencies` packages
+
+      --otp-app-names <OTP_APP_NAMES>
+          OTP application names for dependencies, in the form
+          `package=otp_app`, separated by commas.
+          
+          Required for any dependency whose OTP application name differs from
+          its package name. For example:
+          `--otp-app-names package1=some_app,package2=another_app`
+          
+          [default: ""]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+
+=== Subcommand print-config ===
+
+Read and print gleam.toml for debugging
+
+Usage: print-config
+
+Options:
+  -h, --help
+          Print help
+
+
+=== Subcommand add ===
+
+Add new dependencies
+
+The newest compatible version of the package is determined, and then
+`gleam.toml` is updated to require at least that version, with a range
+permitting future patch and minor updates.
+
+Add the package "wibble":
+    gleam add wibble
+
+Add the package "wibble", requiring version >= v2.0.0 and < v3.0.0:
+    gleam add wibble@2
+
+Add the package "wibble", requiring version >= v2.5.1 and < v3.0.0:
+    gleam add wibble@2.5.1
+
+Add multiple packages:
+    gleam add wibble@2 warble@1
+
+Add a package as a non-production dependency:
+    gleam add --dev wibble
+
+You can also edit `gleam.toml` directly, for further control over your
+package dependencies. Run `gleam help deps` for documentation on the
+format.
+
+Usage: add [OPTIONS] <PACKAGES>...
+
+Arguments:
+  <PACKAGES>...
+          The names of Hex packages to add
+
+Options:
+      --dev
+          Add the packages as dev-only dependencies
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+
+=== Subcommand remove ===
+
+Remove project dependencies
+
+Usage: remove <PACKAGES>...
+
+Arguments:
+  <PACKAGES>...
+          The names of packages to remove
+
+Options:
+  -h, --help
+          Print help
+
+
+=== Subcommand clean ===
+
+Delete any build artefacts for this project
+
+Usage: clean
+
+Options:
+  -h, --help
+          Print help
+
+
+=== Subcommand lsp ===
+
+Run the language server, to be used by editors
+
+Usage: lsp
+
+Options:
+  -h, --help
+          Print help
+
+
+=== Subcommand export ===
+
+Export something useful from the Gleam project
+
+Usage: export <COMMAND>
+
+Commands:
+  escript              Precompiled Erlang in a single file, suitable for CLIs
+  erlang-shipment      Precompiled Erlang, suitable for deployment
+  hex-tarball          The package bundled into a tarball, suitable for publishing to Hex
+  javascript-prelude   The JavaScript prelude module
+  typescript-prelude   The TypeScript prelude module
+  package-interface    Information on the modules, functions, and types in the project in JSON format
+  package-information  Package information (gleam.toml) in JSON format
+  help                 Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help
+          Print help
+
+
+=== Subcommand help ===
+
+Print this message or the help of the given subcommand(s)
+
+Usage: help [COMMAND]...
+
+Arguments:
+  [COMMAND]...
+          Print help for the subcommand(s)
