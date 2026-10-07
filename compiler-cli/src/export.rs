@@ -233,7 +233,7 @@ Your hex tarball has been generated in {}.
     Ok(())
 }
 
-fn write_path_or_stdout(
+fn write_scoped_path_or_stdout(
     paths: &ProjectPaths,
     out: Option<Utf8PathBuf>,
     content: String,
@@ -248,12 +248,22 @@ fn write_path_or_stdout(
     Ok(())
 }
 
-pub fn javascript_prelude(paths: &ProjectPaths, out: Option<Utf8PathBuf>) -> Result<()> {
-    write_path_or_stdout(paths, out, gleam_core::javascript::PRELUDE.into())
+fn write_path_or_stdout(out: Option<Utf8PathBuf>, content: &str) -> Result<()> {
+    match out {
+        Some(out) => {
+            fs::write(&out, content)?;
+        }
+        None => print!("{}", content),
+    }
+    Ok(())
 }
 
-pub fn typescript_prelude(paths: &ProjectPaths, out: Option<Utf8PathBuf>) -> Result<()> {
-    write_path_or_stdout(paths, out, gleam_core::javascript::PRELUDE_TS_DEF.into())
+pub fn javascript_prelude(out: Option<Utf8PathBuf>) -> Result<()> {
+    write_path_or_stdout(out, gleam_core::javascript::PRELUDE)
+}
+
+pub fn typescript_prelude(out: Option<Utf8PathBuf>) -> Result<()> {
+    write_path_or_stdout(out, gleam_core::javascript::PRELUDE_TS_DEF)
 }
 
 pub fn package_interface(paths: &ProjectPaths, out: Option<Utf8PathBuf>) -> Result<()> {
@@ -274,11 +284,11 @@ pub fn package_interface(paths: &ProjectPaths, out: Option<Utf8PathBuf>) -> Resu
     )?;
     built.root_package.attach_doc_and_module_comments();
     let interface = docs::package_interface(&built.root_package, &built.module_interfaces);
-    write_path_or_stdout(paths, out, interface)
+    write_scoped_path_or_stdout(paths, out, interface)
 }
 
 pub fn package_information(paths: &ProjectPaths, out: Option<Utf8PathBuf>) -> Result<()> {
     let config = crate::config::root_config(paths)?;
     let information = docs::package_information_as_json(config);
-    write_path_or_stdout(paths, out, information)
+    write_scoped_path_or_stdout(paths, out, information)
 }
