@@ -2193,6 +2193,26 @@ type Wibble {
 }
 
 #[test]
+fn external_attribute_on_import() {
+    assert_module_error!(
+        r#"
+@external(erlang, "one", "two")
+import gleam/io
+"#
+    );
+}
+
+#[test]
+fn target_attribute_on_import() {
+    assert_parse_module!(
+        r#"
+@target(erlang)
+import gleam/io
+"#
+    );
+}
+
+#[test]
 fn target_attribute_on_type_variant() {
     assert_module_error!(
         r#"

@@ -130,6 +130,7 @@ enum InternalAttribute {
 struct Attributes {
     target: Option<Target>,
     deprecated: Deprecation,
+    deprecated_location: Option<SrcSpan>,
     external_erlang: Option<(EcoString, EcoString, SrcSpan)>,
     external_javascript: Option<(EcoString, EcoString, SrcSpan)>,
     internal: InternalAttribute,
@@ -326,6 +327,16 @@ where
         let def = match (self.token0.take(), self.token1.as_ref()) {
             // Imports
             (Some((start, Token::Import, _)), _) => {
+                // `@deprecated` and `@internal` have no effect on imports, but
+                // were accepted in the past, so we warn instead of erroring.
+                if let Some(location) = attributes.deprecated_location {
+                    self.warnings
+                        .push(DeprecatedSyntaxWarning::DeprecatedImportAttribute { location });
+                }
+                if let InternalAttribute::Present(location) = attributes.internal {
+                    self.warnings
+                        .push(DeprecatedSyntaxWarning::DeprecatedImportAttribute { location });
+                }
                 self.advance();
                 self.parse_import(start)
             }
@@ -4861,6 +4872,7 @@ functions are declared separately from types.";
         })?;
         let (_, end) = self.expect_one(&Token::RightParen)?;
         attributes.deprecated = Deprecation::Deprecated { message };
+        attributes.deprecated_location = Some(SrcSpan::new(start, end));
         Ok(end)
     }
 
