@@ -14,3 +14,8 @@
 ### Language server
 
 ### Bug fixes
+
+- Fixed a bug where the `export javascript-prelude` and `export
+  typescript-prelude` commands would not run.
+  ([Louis Pilfold](https://github.com/lpil))
+
