@@ -5,13 +5,7 @@
 
 # Changelog
 
-## Unreleased
-
-### Compiler
-
-### Build tool
-
-### Language server
+## v1.19.1 - 2026-10-07
 
 ### Bug fixes
 
