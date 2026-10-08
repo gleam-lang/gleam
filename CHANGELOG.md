@@ -33,6 +33,10 @@
   duplicate module name when triggered on qualified values.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The language server will now remove imports of prelude items when renaming
+  them to original name.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## v1.19.1 - 2026-10-07
 
 ### Bug fixes
