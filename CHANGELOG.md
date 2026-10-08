@@ -13,6 +13,10 @@
   patterns.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The error message for top-level function calls is now the same as top-level 
+  function calls on the right-hand of const assignment.
+  ([jamesdolan16](https://github.com/jamesdolan16))
+
 ### Build tool
 
 - `gleam remove` now rejects invalid package names with an error explaining
