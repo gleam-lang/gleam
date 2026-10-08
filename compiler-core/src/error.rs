@@ -3686,7 +3686,8 @@ a label or use a record constructor.",
         } => {
             let label_text = match hint {
                 UnknownTypeHint::AlternativeTypes(types) => did_you_mean(name, types),
-                UnknownTypeHint::ValueInScopeWithSameName => None,
+                UnknownTypeHint::ValueInScopeWithSameName
+                | UnknownTypeHint::TypesWithSameNameFromImportedModules(_) => None,
             };
 
             let mut text =
@@ -3701,8 +3702,24 @@ but no type in scope with that name."
                     text.push('\n');
                     text.push_str(hint.as_str());
                 }
+                UnknownTypeHint::TypesWithSameNameFromImportedModules(possible_modules) => {
+                    let message = if possible_modules.len() == 1 {
+                        "\nDid you mean:\n\n"
+                    } else {
+                        "\nDid you mean one of these:\n\n"
+                    };
+
+                    text.push_str(message);
+                    for module_name in possible_modules {
+                        text.push_str("  - ");
+                        text.push_str(module_name);
+                        text.push('.');
+                        text.push_str(name);
+                        text.push('\n');
+                    }
+                }
                 UnknownTypeHint::AlternativeTypes(_) => {}
-            }
+            };
 
             Diagnostic {
                 title: "Unknown type".into(),

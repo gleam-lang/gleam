@@ -1634,6 +1634,7 @@ pub enum RecordField {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum UnknownTypeHint {
     AlternativeTypes(Vec<EcoString>),
+    TypesWithSameNameFromImportedModules(Vec<EcoString>),
     ValueInScopeWithSameName,
 }
 

@@ -3400,11 +3400,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 module,
                 name: value_name,
                 ..
-            } if let Some(UnqualifiedImport { has_alias, .. }) = self
+            } if let Some(UnqualifiedImport { alias: Some(_), .. }) = self
                 .environment
                 .unqualified_imported_names
-                .get(referenced_name)
-                && *has_alias =>
+                .get(referenced_name) =>
             {
                 self.environment.references.register_value_reference(
                     module.clone(),
