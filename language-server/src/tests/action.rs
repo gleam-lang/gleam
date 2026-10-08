@@ -16292,3 +16292,117 @@ pub fn wibble() -> woo.Wibble {
         find_position_of("Wobble").to_selection()
     );
 }
+
+#[test]
+fn pattern_match_on_value_use_discard() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VALUE,
+        "
+pub type Wibble {
+  Wibble(String, Int)
+}
+
+pub fn main(x: fn(fn(Wibble) -> Wibble) -> Wibble) {
+  use _ <- x
+}",
+        find_position_of("_").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_value_use_discard_two_assignments() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VALUE,
+        "
+pub type Wibble {
+  Wibble(String, Int)
+}
+
+pub fn main(x: fn(fn(Wibble, Wibble) -> Wibble) -> Wibble) {
+  use _, _ <- x
+}",
+        find_position_of("_").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_value_use_discard_with_annotation() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VALUE,
+        "
+pub type Wibble {
+  Wibble(String, Int)
+}
+
+pub fn main(x) {
+  use _: Wibble <- x
+}",
+        find_position_of("_").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_value_use_discard_complex_pattern() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VALUE,
+        "
+pub type Wibble {
+  Wibble(Wibble, Int)
+}
+
+pub fn main(x: fn(fn(Wibble, Wibble) -> Wibble) -> Wibble) {
+  use Wibble(_, _), _ <- x
+}",
+        find_position_of("_").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_value_use_named_complex_pattern() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub type Wibble {
+  Wibble(Wibble, Int)
+}
+
+pub fn main(x: fn(fn(Wibble, Wibble) -> Wibble) -> Wibble) {
+  use Wibble(woo, _), _ <- x
+}",
+        find_position_of("woo").to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6381
+#[test]
+fn no_pattern_match_on_argument_use_on_pattern_assignment() {
+    assert_no_code_actions!(
+        PATTERN_MATCH_ON_ARGUMENT,
+        "
+pub type Wibble {
+  Wibble(Wibble, Int)
+}
+
+pub fn main(x: fn(fn(Wibble, Wibble) -> Wibble) -> Wibble) {
+  use Wibble(_, _), _ <- x
+}",
+        find_position_of("_").to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6381
+#[test]
+fn no_pattern_match_on_argument_use_on_pattern() {
+    assert_no_code_actions!(
+        PATTERN_MATCH_ON_ARGUMENT,
+        "
+pub type Wibble {
+  Wibble(Int)
+}
+
+pub fn main(x: fn(fn(Wibble) -> Wibble) -> Wibble) {
+  use Wibble(_) <- x
+}",
+        find_position_of("Wibble").nth_occurrence(6).to_selection()
+    );
+}
