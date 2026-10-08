@@ -4893,7 +4893,7 @@ impl UseAssignments {
                             name: name.clone(),
                             location,
                         },
-                        annotation: None,
+                        annotation: annotation.clone(),
                         type_: (),
                     });
                     let assignment = Assignment {
