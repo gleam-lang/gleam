@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- MAJOR
+
+== the_module ==
+- pub type OkOrError(a, b) = Result(a, b)
++ pub type OkOrError(a, b) = Result(b, a)

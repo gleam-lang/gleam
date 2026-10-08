@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- MINOR
+
+== the_module ==
+- pub type Wibble {
+-   Wibble
+-   Wobble
+- }
++ pub type Wibble {
++   @deprecated(...)
++   Wibble
++   Wobble
++ }
