@@ -34,7 +34,7 @@ impl<'a> EnvironmentArguments<'a> {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct UnqualifiedImport {
     /// The location of the import. For example:
     /// ```gleam
@@ -42,8 +42,13 @@ pub struct UnqualifiedImport {
     /// //                   ^^^^^^^^^^^^^^^^^^^^^^^
     /// ```
     pub location: SrcSpan,
-    /// Whether the unqualified import has been aliased.
-    pub has_alias: bool,
+    /// Information about import alias if an item was imported with one.
+    pub alias: Option<UnqualifiedImportAlias>,
+}
+
+#[derive(Debug, Clone)]
+pub struct UnqualifiedImportAlias {
+    pub original_name: EcoString,
 }
 
 #[derive(Debug)]
@@ -516,7 +521,10 @@ impl Environment<'_> {
     fn unknown_type_hint(&self, type_name: &EcoString) -> UnknownTypeHint {
         match self.scope.contains_key(type_name) {
             true => UnknownTypeHint::ValueInScopeWithSameName,
-            false => UnknownTypeHint::AlternativeTypes(self.module_types.keys().cloned().collect()),
+            false => UnknownTypeHint::AlternativeTypes {
+                possible_modules: self.get_possible_modules_with_type(type_name),
+                types_in_current_module: self.module_types.keys().cloned().collect(),
+            },
         }
     }
 
@@ -610,6 +618,24 @@ impl Environment<'_> {
                     module.get_importable_value(name).map(|_| module_name)
                 } else {
                     module.get_public_value(name).map(|_| module_name)
+                }
+            })
+            .cloned()
+            .sorted()
+            .collect_vec()
+    }
+
+    /// Get the name of modules with a type that can be suggested and matches
+    /// the given `name`
+    ///
+    pub fn get_possible_modules_with_type(&self, name: &EcoString) -> Vec<EcoString> {
+        self.imported_modules
+            .iter()
+            .filter_map(|(module_name, (_, module))| {
+                if module.package == self.current_package {
+                    module.get_importable_type(name).map(|_| module_name)
+                } else {
+                    module.get_public_type(name).map(|_| module_name)
                 }
             })
             .cloned()
