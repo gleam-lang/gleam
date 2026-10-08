@@ -13,6 +13,10 @@
   patterns.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The compiler is now fault tolerant when providing an error for a redundant list
+  prepend like `[..wobble]`.
+  ([0xda157](https://github.com/0xda157))
+
 ### Build tool
 
 - `gleam remove` now rejects invalid package names with an error explaining
@@ -151,6 +155,24 @@
   If this feature is enabled in your editor, hovering any of denoted places will
   highlight all of them.
   ([Andrey Kozhev](https://github.com/ankddev))
+
+- The language server can now offer a "Remove redundant list prepend" code
+  action, for example:
+
+  ```gleam
+  const wibble = [1, 2]
+  const wobble = [..wibble]
+               // ^^^^^^^^ Trigger code action here
+  ```
+
+  becomes
+
+  ```gleam
+  const wibble = [1, 2]
+  const wobble = wibble
+  ```
+
+  ([0xda157](https://github.com/0xda157))
 
 ### Bug fixes
 

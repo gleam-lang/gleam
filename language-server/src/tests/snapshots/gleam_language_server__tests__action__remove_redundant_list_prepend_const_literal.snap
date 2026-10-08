@@ -1,0 +1,11 @@
+---
+source: language-server/src/tests/action.rs
+expression: "const wobble = [..[1]]"
+---
+----- BEFORE ACTION
+const wobble = [..[1]]
+                ↑     
+
+
+----- AFTER ACTION
+const wobble = [1]

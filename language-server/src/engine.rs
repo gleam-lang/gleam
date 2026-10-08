@@ -40,8 +40,9 @@ use std::{
 
 use crate::{
     code_action::{
-        ConvertIntToDifferentBase, DiscardUnusedVariable, RemoveRedundantRecordUpdate,
-        ReplaceUnderscoreWithType, code_action_fix_deprecated_pipe, type_errors_for_module,
+        ConvertIntToDifferentBase, DiscardUnusedVariable, RemoveRedundantListPrepend,
+        RemoveRedundantRecordUpdate, ReplaceUnderscoreWithType, code_action_fix_deprecated_pipe,
+        type_errors_for_module,
     },
     reference::{
         find_echo_references, find_echo_references_in_module, find_module_references_in_module,
@@ -476,6 +477,9 @@ where
                 .extend(RemoveUnreachableCaseClauses::new(module, &lines, &params).code_actions());
             actions
                 .extend(RemoveRedundantRecordUpdate::new(module, &lines, &params).code_actions());
+            actions.extend(
+                RemoveRedundantListPrepend::new(&params, &this.error, &lines).code_action(),
+            );
             actions.extend(CollapseNestedCase::new(module, &lines, &params).code_actions());
             actions.extend(FixBinaryOperation::new(module, &lines, &params).code_actions());
             actions
