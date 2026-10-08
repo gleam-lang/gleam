@@ -4046,10 +4046,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         //   becomes
         // {attribute,ANNO,doc,Content}
         self.attribute_tuple("doc");
-        match content {
-            DocContent::String(content) => self.etf.binary(content.len() as u32, content.bytes()),
-            DocContent::False => self.etf.atom("false"),
-        }
+        self.doc_content(content);
     }
 
     fn moduledoc_attribute(&mut self, content: DocContent<'_>) {
@@ -4059,10 +4056,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
         //   becomes
         // {attribute,ANNO,moduledoc,Content}
         self.attribute_tuple("moduledoc");
-        match content {
-            DocContent::String(content) => self.etf.binary(content.len() as u32, content.bytes()),
-            DocContent::False => self.etf.atom("false"),
-        }
+        self.doc_content(content);
     }
 
     fn compile_attribute<'a>(&mut self, arguments: impl IntoIterator<Item = &'a str>) {
@@ -5351,6 +5345,13 @@ impl<'line_numbers> ErlangBinaryBuilder<'line_numbers> {
             BinaryBuilderPosition::CaseClause {
                 expected: expected @ ExpectedBinaryCaseClauseItem::Pattern,
             } => *expected = ExpectedBinaryCaseClauseItem::Guards { guard: false },
+        }
+    }
+
+    fn doc_content(&mut self, content: DocContent<'_>) {
+        match content {
+            DocContent::String(content) => self.etf.binary(content.len() as u32, content.bytes()),
+            DocContent::False => self.etf.atom("false"),
         }
     }
 
