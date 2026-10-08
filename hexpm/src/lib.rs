@@ -795,7 +795,7 @@ pub enum ApiError {
     ExpiredToken,
 
     #[error("The oauth refresh token was expired, revoked, or already used")]
-    OAuthRefreshTokenRejected,
+    OAuthRefreshTokenRejected { code: String, description: String },
 
     #[error("The supplied one-time-password was not correct")]
     IncorrectOneTimePassword,
@@ -1415,7 +1415,22 @@ pub fn oauth_refresh_token_response(
     match parts.status {
         StatusCode::OK => (),
         StatusCode::TOO_MANY_REQUESTS => return Err(ApiError::RateLimited),
-        StatusCode::BAD_REQUEST => return Err(ApiError::OAuthRefreshTokenRejected),
+        StatusCode::BAD_REQUEST => {
+            let body = serde_json::from_slice::<serde_json::Value>(&body).ok();
+            let code = body
+                .as_ref()
+                .and_then(|body| body.get("error"))
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("unknown")
+                .to_string();
+            let description = body
+                .as_ref()
+                .and_then(|body| body.get("error_description"))
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("unknown")
+                .to_string();
+            return Err(ApiError::OAuthRefreshTokenRejected { code, description });
+        }
         status => return Err(ApiError::unexpected_response(status, body)),
     };
 

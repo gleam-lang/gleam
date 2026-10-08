@@ -21,6 +21,10 @@
   `gleam_otp`, if there is one.
   ([Tom Voet](https://github.com/tomvoet))
 
+- The package manager now logs the Hex OAuth error code and description at
+  trace level when a stored session is rejected while refreshing credentials.
+  ([John Downey](https://github.com/jtdowney))
+
 ### Language server
 
 - The language server will now offer "Discard unused variable" on each of
