@@ -10,11 +10,9 @@ pub fn main(f, _) {
 
 
 ----- COMPILED JAVASCRIPT
-export function main(loop$f, _) {
+export function main(f, _) {
   while (true) {
-    let f = loop$f;
     f();
-    loop$f = f;
     1;
   }
 }

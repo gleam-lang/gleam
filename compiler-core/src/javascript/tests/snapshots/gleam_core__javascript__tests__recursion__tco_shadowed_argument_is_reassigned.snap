@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/javascript/tests/recursion.rs
+expression: "\npub fn main(x) {\n  let x = x - 1\n  main(x)\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(x) {
+  let x = x - 1
+  main(x)
+}
+
+
+----- COMPILED JAVASCRIPT
+export function main(x) {
+  while (true) {
+    let x$1 = x - 1;
+    x = x$1;
+  }
+}
