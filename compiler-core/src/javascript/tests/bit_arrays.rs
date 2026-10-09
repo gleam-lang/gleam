@@ -2921,3 +2921,33 @@ pub fn go(bits: BitArray, flag: Bool) -> Int {
 "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/6220
+#[test]
+fn segment_shadowing_variable_used_in_its_own_size() {
+    assert_js!(
+        r#"
+pub fn go(data) {
+  let prefix = 8
+  case data {
+    <<prefix:bits-size(prefix), rest:bits>> -> #(prefix, rest)
+    _ -> #(data, <<>>)
+  }
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6220
+#[test]
+fn segment_shadowing_variable_used_in_its_own_size_let_assert() {
+    assert_js!(
+        r#"
+pub fn go(data) {
+  let prefix = 8
+  let assert <<prefix:bits-size(prefix), rest:bits>> = data
+  #(prefix, rest)
+}
+"#
+    );
+}
