@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n@internal\nimport wibble\n\npub fn main() {\n  wibble.wobble()\n}\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+pub fn wobble() { 1 }
+
+-- main.gleam
+
+@internal
+import wibble
+
+pub fn main() {
+  wibble.wobble()
+}
+
+
+----- WARNING
+warning: Ineffective attribute on import
+  ┌─ test/path:2:1
+  │
+2 │ @internal
+  │ ^^^^^^^^^ This can be removed.
+
+This attribute has no effect on an import. Only the `@target` attribute can
+be used on imports.

@@ -5283,3 +5283,64 @@ pub fn go(a) {
 "
     );
 }
+
+#[test]
+fn deprecated_attribute_on_import() {
+    assert_warning!(
+        ("wibble", "pub fn wobble() { 1 }"),
+        r#"
+@deprecated("reason")
+import wibble
+
+pub fn main() {
+  wibble.wobble()
+}
+"#
+    );
+}
+
+#[test]
+fn internal_attribute_on_import() {
+    assert_warning!(
+        ("wibble", "pub fn wobble() { 1 }"),
+        r#"
+@internal
+import wibble
+
+pub fn main() {
+  wibble.wobble()
+}
+"#
+    );
+}
+
+#[test]
+fn target_and_deprecated_attributes_on_import() {
+    assert_warning!(
+        ("wibble", "pub fn wobble() { 1 }"),
+        r#"
+@target(erlang)
+@deprecated("reason")
+import wibble
+
+pub fn main() {
+  wibble.wobble()
+}
+"#
+    );
+}
+
+#[test]
+fn target_attribute_on_import_has_no_warning() {
+    assert_no_warnings!(
+        ("wibble", "pub fn wobble() { 1 }"),
+        r#"
+@target(erlang)
+import wibble
+
+pub fn main() {
+  wibble.wobble()
+}
+"#
+    );
+}

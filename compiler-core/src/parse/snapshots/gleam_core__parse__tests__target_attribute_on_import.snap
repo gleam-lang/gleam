@@ -1,0 +1,56 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\n@target(erlang)\nimport gleam/io\n"
+---
+Parsed {
+    module: Module {
+        name: "",
+        documentation: [],
+        type_info: (),
+        definitions: [
+            TargetedDefinition {
+                definition: Import(
+                    Import {
+                        documentation: None,
+                        location: SrcSpan {
+                            start: 17,
+                            end: 32,
+                        },
+                        module_location: SrcSpan {
+                            start: 24,
+                            end: 32,
+                        },
+                        module: "gleam/io",
+                        as_name: None,
+                        unqualified_values: [],
+                        unqualified_types: [],
+                        package: (),
+                    },
+                ),
+                target: Some(
+                    Erlang,
+                ),
+            },
+        ],
+        names: Names {
+            local_types: {},
+            imported_modules: {},
+            type_variables: {},
+            local_value_constructors: {},
+            reexport_aliases: {},
+        },
+        unused_definition_positions: {},
+    },
+    extra: ModuleExtra {
+        module_comments: [],
+        doc_comments: [],
+        comments: [],
+        empty_lines: [],
+        new_lines: [
+            0,
+            16,
+            32,
+        ],
+        trailing_commas: [],
+    },
+}

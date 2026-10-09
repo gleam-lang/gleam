@@ -265,6 +265,16 @@ pub enum DeprecatedSyntaxWarning {
         target: Target,
         location: SrcSpan,
     },
+
+    /// If someone uses an attribute that has no effect on an import:
+    /// ```gleam
+    /// @deprecated("wibble")
+    /// ^^^^^^^^^^^^^^^^^^^^^ This can be removed.
+    /// import wobble
+    /// ```
+    DeprecatedImportAttribute {
+        location: SrcSpan,
+    },
 }
 
 impl Warning {
@@ -450,6 +460,29 @@ Use the full name: `{full_name}` instead."
                     }),
                 }
             }
+
+            Warning::DeprecatedSyntax {
+                path,
+                src,
+                warning: DeprecatedSyntaxWarning::DeprecatedImportAttribute { location },
+            } => Diagnostic {
+                title: "Ineffective attribute on import".into(),
+                text: wrap(
+                    "This attribute has no effect on an import. \
+Only the `@target` attribute can be used on imports.",
+                ),
+                hint: None,
+                level: diagnostic::Level::Warning,
+                location: Some(Location {
+                    label: diagnostic::Label {
+                        text: Some("This can be removed.".into()),
+                        span: *location,
+                    },
+                    path: path.clone(),
+                    src: src.clone(),
+                    extra_labels: vec![],
+                }),
+            },
 
             Warning::DetachedDocComment {
                 path,

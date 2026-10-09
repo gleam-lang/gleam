@@ -162,6 +162,11 @@
   package with no README on Windows.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The compiler now emits a warning when the `@deprecated` or `@internal`
+  attributes are used on an import, as they have no effect there. Previously
+  they were silently ignored.
+  ([Manas Ganesh Dasari](https://github.com/ManasDasri))
+
 ## v1.19.1 - 2026-10-07
 
 ### Bug fixes
