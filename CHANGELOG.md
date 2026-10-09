@@ -220,6 +220,7 @@
   if one is returned by the Hex API.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Fixed an outdated link to the "gleam.toml" reference in newly generated projects. ([Leonuraht](https://github.com/Leonuraht))
 
 ## v1.19.1 - 2026-10-07
 
@@ -228,4 +229,3 @@
 - Fixed a bug where the `export javascript-prelude` and
   `export typescript-prelude` commands would not run.
   ([Louis Pilfold](https://github.com/lpil))
-
