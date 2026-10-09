@@ -4611,3 +4611,42 @@ const b = Wibble(..a, wobble: 8)
 "
     );
 }
+
+#[test]
+fn unknown_type_suggests_types_from_imported_module() {
+    assert_module_error!(
+        ("woo", "pub type Wibble"),
+        "
+import woo
+
+pub const wibble: Wibble = todo
+"
+    );
+}
+
+#[test]
+fn unknown_type_suggests_types_from_imported_modules() {
+    assert_module_error!(
+        ("woo", "pub type Wibble"),
+        ("another_woo", "pub type Wibble"),
+        ("another_another_woo", "pub type Wibble"),
+        "
+import woo
+import another_woo
+
+pub const wibble: Wibble = todo
+"
+    );
+}
+
+#[test]
+fn unknown_type_doesnt_suggest_private_types_from_imported_module() {
+    assert_module_error!(
+        ("woo", "type Wibble"),
+        "
+import woo
+
+pub const wibble: Wibble = todo
+"
+    );
+}
