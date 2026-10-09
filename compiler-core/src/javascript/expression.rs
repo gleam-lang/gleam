@@ -223,6 +223,17 @@ impl Scope {
     }
 }
 
+/// The name a local variable has in the generated code, given the number of
+/// times it has been shadowed: the first one keeps its own name, while the
+/// following ones get a numeric suffix.
+pub(crate) fn local_var_name(name: &EcoString, counter: usize) -> EcoString {
+    match counter {
+        0 => maybe_escape_identifier(name),
+        n if name == "$" => eco_format!("${n}"),
+        n => eco_format!("{name}${n}"),
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct Generator<'module, 'ast, 'doc> {
     module_name: EcoString,
@@ -322,9 +333,7 @@ impl<'module, 'a, 'doc> Generator<'module, 'a, 'doc> {
                 self.current_scope.set_counter(name, 0);
                 maybe_escape_identifier(name)
             }
-            Some(0) => maybe_escape_identifier(name),
-            Some(n) if name == "$" => eco_format!("${n}"),
-            Some(n) => eco_format!("{name}${n}"),
+            Some(counter) => local_var_name(name, counter),
         }
     }
 
