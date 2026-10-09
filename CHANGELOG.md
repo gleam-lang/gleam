@@ -157,6 +157,7 @@
 - Fixed a bug where the language server "Generate variant" code action would
   duplicate module name when triggered on qualified values.
   ([Andrey Kozhev](https://github.com/ankddev))
+- Fixed an outdated link to the "gleam.toml" reference in newly generated projects. ([Leonuraht](https://github.com/Leonuraht))
 
 - Fixed a bug where bad error message would be shown when trying to publish
   package with no README on Windows.
