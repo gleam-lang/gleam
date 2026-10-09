@@ -3280,18 +3280,33 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .references
                     .register_module_reference_by_alias(module_name.clone());
 
-                module
-                    .values
-                    .get(name)
-                    .cloned()
-                    .ok_or_else(|| Error::UnknownModuleValue {
-                        location: *location,
-                        module_name: module_name.clone(),
-                        name: name.clone(),
-                        value_constructors: module.public_value_names(),
-                        type_with_same_name: module.get_importable_type(name).is_some(),
-                        context: ModuleValueUsageContext::ModuleAccess,
-                    })?
+                match module.values.get(name) {
+                    Some(constructor) if constructor.publicity.is_importable() => {
+                        constructor.clone()
+                    }
+                    // If the value belongs to current package, but isn't importable,
+                    // then we produce error message about usage of private value.
+                    Some(_) if self.environment.current_package == module.package => {
+                        return Err(Error::PrivateValueUse {
+                            location: *location,
+                            name: name.clone(),
+                            module_name: module.name.clone(),
+                        });
+                    }
+                    // Otherwise, the value either doesn't exist or is from another
+                    // package, where we do not want to expose information, we produce
+                    // error message about usage of unknown value.
+                    Some(_) | None => {
+                        return Err(Error::UnknownModuleValue {
+                            location: *location,
+                            module_name: module_name.clone(),
+                            name: name.clone(),
+                            value_constructors: module.public_value_names(),
+                            type_with_same_name: module.get_importable_type(name).is_some(),
+                            context: ModuleValueUsageContext::ModuleAccess,
+                        });
+                    }
+                }
             }
         };
 
