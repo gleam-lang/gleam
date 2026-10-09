@@ -12,7 +12,7 @@ expression: "./cases/variable_or_module"
 <68 byte binary>
 
 //// variable_or_module/_gleam_artefacts/power.abstr
-<738 byte binary>
+<743 byte binary>
 
 //// variable_or_module/_gleam_artefacts/power.cache
 <.cache binary>
