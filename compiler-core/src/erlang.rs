@@ -20,7 +20,8 @@ use crate::{
 use camino::Utf8Path;
 use ecow::{EcoString, eco_format};
 use erlang_generation::{
-    BitArraySegmentSpecifier, DocContent, ErlangBuilder, ErlangModuleName, ErlangSourceBuilder,
+    BitArraySegmentSpecifier, DocContent, ErlangBuilder, ErlangBuiltInType, ErlangModuleName,
+    ErlangSourceBuilder,
 };
 use itertools::Itertools;
 use num_bigint::BigInt;
@@ -333,7 +334,7 @@ impl<'a> Generator<'a> {
             // This is an external type with no external annotation and no
             // phantom type variables. It is just `any()`.
             ([], false) => {
-                let any = builder.start_named_type("any");
+                let any = builder.start_built_in_named_type(ErlangBuiltInType::Any);
                 builder.end_named_type(any);
             }
             // This is an external type with no external annotation and some
@@ -341,7 +342,7 @@ impl<'a> Generator<'a> {
             // them: `any() | {gleam_phantom, A, B, ...}`
             ([], true) => {
                 let union = builder.start_union_type();
-                let any = builder.start_named_type("any");
+                let any = builder.start_built_in_named_type(ErlangBuiltInType::Any);
                 builder.end_named_type(any);
                 self.phantom_type(builder, phantom_type_variables);
                 builder.end_union_type(union);
@@ -4266,7 +4267,7 @@ impl<'a> TypeGenerator<'a> {
             TypeVar::Link { type_ } => self.type_(builder, type_),
             TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => {
                 if self.var_as_any || self.type_variable_is_used_exactly_once(*id) {
-                    let any = builder.start_named_type("any");
+                    let any = builder.start_built_in_named_type(ErlangBuiltInType::Any);
                     builder.end_named_type(any);
                 } else {
                     builder.type_variable(&id_to_type_var_str(*id));
@@ -4295,27 +4296,27 @@ impl<'a> TypeGenerator<'a> {
         match name {
             "Nil" => builder.literal_atom_type("nil"),
             "Int" | "UtfCodepoint" => {
-                let integer = builder.start_named_type("integer");
+                let integer = builder.start_built_in_named_type(ErlangBuiltInType::Integer);
                 builder.end_named_type(integer);
             }
             "String" => {
-                let string = builder.start_named_type("binary");
+                let string = builder.start_built_in_named_type(ErlangBuiltInType::Binary);
                 builder.end_named_type(string);
             }
             "Bool" => {
-                let boolean = builder.start_named_type("boolean");
+                let boolean = builder.start_built_in_named_type(ErlangBuiltInType::Boolean);
                 builder.end_named_type(boolean);
             }
             "Float" => {
-                let float = builder.start_named_type("float");
+                let float = builder.start_built_in_named_type(ErlangBuiltInType::Float);
                 builder.end_named_type(float);
             }
             "BitArray" => {
-                let bitstring = builder.start_named_type("bitstring");
+                let bitstring = builder.start_built_in_named_type(ErlangBuiltInType::Bitstring);
                 builder.end_named_type(bitstring);
             }
             "List" => {
-                let list = builder.start_named_type("list");
+                let list = builder.start_built_in_named_type(ErlangBuiltInType::List);
                 let list_item = arguments
                     .first()
                     .expect("prelude type list with no argument");
@@ -4357,7 +4358,7 @@ impl<'a> TypeGenerator<'a> {
     ) {
         let name = erl_safe_type_name(to_snake_case(name));
         if self.current_module == module {
-            let type_ = builder.start_named_type(&name);
+            let type_ = builder.start_custom_named_type(&name);
             for argument in arguments {
                 self.type_(builder, argument);
             }
