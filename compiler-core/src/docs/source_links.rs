@@ -85,7 +85,7 @@ impl SourceLinker {
                     "https://hex.pm/packages/{}/{}/files/{path_in_repo}#L",
                     project_config.name, project_config.version,
                 ),
-                "-L".into(),
+                "".into(),
             ),
         };
 
@@ -99,7 +99,7 @@ impl SourceLinker {
         let (base, line_sep) = &self.url_pattern;
         let start_line = self.line_numbers.line_number(span.start);
         let end_line = self.line_numbers.line_number(span.end);
-        if start_line == end_line {
+        if start_line == end_line || line_sep.is_empty() {
             format!("{base}{start_line}")
         } else {
             format!("{base}{start_line}{line_sep}{end_line}")

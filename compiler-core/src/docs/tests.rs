@@ -674,6 +674,22 @@ fn source_link_for_no_repository_uses_hex_files() {
 }
 
 #[test]
+fn source_link_for_hex_backup_uses_only_the_start_line() {
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
+    config.version = Version::parse("1.2.3").unwrap();
+    config.repository = None;
+
+    let modules = vec![("app.gleam", "pub type Wibble \n\n= Int")];
+    let html = compile(config, modules);
+
+    assert!(
+        html.contains("https://hex.pm/packages/test_project_name/1.2.3/files/src/app.gleam#L1\"")
+    );
+    assert!(!html.contains("#L1-L3"));
+}
+
+#[test]
 fn canonical_link() {
     let mut config = PackageConfig::default();
     config.name = EcoString::from("test_project_name");
