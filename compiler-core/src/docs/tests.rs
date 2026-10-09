@@ -641,7 +641,6 @@ fn source_link_for_github_repository_with_path_and_tag_prefix() {
         "https://github.com/wibble/wobble/blob/subdir-v0.1.0/path/to/package/src/app.gleam#L1"
     ));
 }
-// tests for building URL with custom repository.
 // https://github.com/gleam-lang/gleam/issues/6359
 #[test]
 fn source_link_for_custom_repository_uses_hex_files() {
@@ -659,7 +658,6 @@ fn source_link_for_custom_repository_uses_hex_files() {
     ));
 }
 
-// test for if repository is unset.
 // https://github.com/gleam-lang/gleam/issues/6359
 #[test]
 fn source_link_for_no_repository_uses_hex_files() {
@@ -669,9 +667,10 @@ fn source_link_for_no_repository_uses_hex_files() {
     config.repository = None;
 
     let modules = vec![("app.gleam", "pub type Wibble = Int")];
-    assert!(compile(config, modules).contains(
-        "https://hex.pm/packages/test_project_name/1.2.3/files/src/app.gleam#L1"
-    ));
+    assert!(
+        compile(config, modules)
+            .contains("https://hex.pm/packages/test_project_name/1.2.3/files/src/app.gleam#L1")
+    );
 }
 
 #[test]

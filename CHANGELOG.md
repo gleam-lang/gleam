@@ -9,8 +9,9 @@
 
 ### Build tool
 
-- If the source repo when building HexDocs is unset or an unknown forge, fall 
-  back to using Hex links for the source.
+- The Hex files page will now be used for the view-source link in generated
+  documentation when the package's source repository uses an unknown forge or
+  is not set.
   ([Alex Hinde](https://github.com/apex-hinde))
 
 ## 1.19.0-rc2 - 2026-09-26
