@@ -162,10 +162,14 @@
   package with no README on Windows.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Fixed a bug where the compiler would generate invalid Erlang code for user
+  defined types, causing external tools like Dyalizer to crash.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.19.1 - 2026-10-07
 
 ### Bug fixes
 
-- Fixed a bug where the `export javascript-prelude` and `export
-  typescript-prelude` commands would not run.
+- Fixed a bug where the `export javascript-prelude` and
+  `export typescript-prelude` commands would not run.
   ([Louis Pilfold](https://github.com/lpil))

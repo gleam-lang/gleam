@@ -3,7 +3,7 @@ source: test-package-compiler/src/tests.rs
 expression: "./cases/imported_record_constructors"
 ---
 //// imported_record_constructors/_gleam_artefacts/one@one.abstr
-<595 byte binary>
+<605 byte binary>
 
 //// imported_record_constructors/_gleam_artefacts/one@one.cache
 <.cache binary>
@@ -12,7 +12,7 @@ expression: "./cases/imported_record_constructors"
 <39 byte binary>
 
 //// imported_record_constructors/_gleam_artefacts/one@two.abstr
-<595 byte binary>
+<605 byte binary>
 
 //// imported_record_constructors/_gleam_artefacts/one@two.cache
 <.cache binary>
