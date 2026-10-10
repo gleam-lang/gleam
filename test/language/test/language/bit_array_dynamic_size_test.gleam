@@ -96,3 +96,21 @@ pub fn dynamic_size_6_test() {
   let assert <<value:size(size)>> = <<61:6>>
   assert value == 61
 }
+
+// https://github.com/gleam-lang/gleam/issues/6220
+pub fn segment_shadowing_variable_used_in_its_own_size_test() {
+  let size = 8
+  let assert <<size:bits-size(size), rest:bits>> = <<35, 36>>
+  assert size == <<35>>
+  assert rest == <<36>>
+}
+
+// https://github.com/gleam-lang/gleam/issues/6220
+pub fn segment_shadowing_variable_used_in_its_own_size_case_test() {
+  let size = 8
+  let result = case <<35, 36>> {
+    <<size:bits-size(size), rest:bits>> -> Ok(#(size, rest))
+    _ -> Error(Nil)
+  }
+  assert result == Ok(#(<<35>>, <<36>>))
+}

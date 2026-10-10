@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 2928
+expression: "\npub fn go(data) {\n  let prefix = 8\n  case data {\n    <<prefix:bits-size(prefix), rest:bits>> -> #(prefix, rest)\n    _ -> #(data, <<>>)\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(data) {
+  let prefix = 8
+  case data {
+    <<prefix:bits-size(prefix), rest:bits>> -> #(prefix, rest)
+    _ -> #(data, <<>>)
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { toBitArray, bitArraySlice } from "../gleam.mjs";
+
+export function go(data) {
+  let prefix = 8;
+  if (prefix >= 0 && data.bitSize >= prefix) {
+    let prefix$1 = bitArraySlice(data, 0, prefix);
+    let rest = bitArraySlice(data, prefix);
+    return [prefix$1, rest];
+  } else {
+    return [data, toBitArray([])];
+  }
+}
