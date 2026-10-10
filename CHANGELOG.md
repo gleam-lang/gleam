@@ -17,6 +17,10 @@
   prepend like `[..wobble]`.
   ([0xda157](https://github.com/0xda157))
 
+- The compiler will now suggest types from imported modules with same name as
+  unknown type.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Build tool
 
 - `gleam remove` now rejects invalid package names with an error explaining
