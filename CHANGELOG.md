@@ -209,6 +209,10 @@
   defined types, causing external tools like Dyalizer to crash.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the build tool would not reject invalid application names
+  if one is returned by the Hex API.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ## v1.19.1 - 2026-10-07
 
 ### Bug fixes
