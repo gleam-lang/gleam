@@ -3,3 +3,9 @@
 
 [target.x86_64-unknown-linux-musl]
 image = "clux/muslrust:stable"
+
+# The last release of cross is years old and outputs noise on stderr which
+# causes build warnings during linking. This is fixed on main but unreleased.
+# Pin the image built from main@74e99b2223de06166f8cdcc1af7f1308ec52baf4.
+[target.aarch64-unknown-linux-musl]
+image = "ghcr.io/cross-rs/aarch64-unknown-linux-musl:main@sha256:ca0f4a798b756bba34c9cd2f7ceafc1d665daa6c70349a95e2eb06fb687a1ea6"
