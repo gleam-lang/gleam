@@ -1187,3 +1187,49 @@ fn poll_token_response_unexpected_status() {
         ))
     );
 }
+
+#[test]
+fn get_package_release_response_requirement_invalid_app_name() {
+    let response_body = json!({
+        "version": "0.0.1",
+        "checksum": "41C6781B5F4B986BCE14C3578D39C497BCB8427F1D36D8CDE5FCAA6E03CAE2B1",
+        "requirements": {
+            "plug": {
+                "requirement": "~>0.11.0",
+                "optional": false,
+                "app": "../invalid/package/name"
+            },
+        },
+        "security_advisories": [],
+        "meta": {
+            "app": "clint",
+            "build_tools": ["mix"]
+        }
+    });
+    let response = make_json_response(200, response_body);
+    let error = crate::api_get_package_release_response(response).unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "not a valid package name at line 1 column 179"
+    );
+}
+
+#[test]
+fn get_package_release_response_meta_invalid_app_name() {
+    let response_body = json!({
+        "version": "0.0.1",
+        "checksum": "41C6781B5F4B986BCE14C3578D39C497BCB8427F1D36D8CDE5FCAA6E03CAE2B1",
+        "requirements": {},
+        "security_advisories": [],
+        "meta": {
+            "app": "../invalid/package/name",
+            "build_tools": ["mix"]
+        }
+    });
+    let response = make_json_response(200, response_body);
+    let error = crate::api_get_package_release_response(response).unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "not a valid package name at line 1 column 118"
+    );
+}

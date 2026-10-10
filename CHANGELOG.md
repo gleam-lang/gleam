@@ -171,6 +171,10 @@
   package with no README on Windows.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Fixed a bug where the build tool would not reject invalid application names
+  if one is returned by the Hex API.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ## v1.19.1 - 2026-10-07
 
 ### Bug fixes
