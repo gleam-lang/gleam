@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/type_/tests/guards.rs
+expression: "\npub type Wibble {\n  Wibble(String)\n}\n\npub const constant = Wibble(\"Hi\")\n\npub fn main() {\n  let wibble = \"wibble\"\n  case 1 {\n    _ if wibble == constant -> Nil\n    _ -> Nil\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(String)
+}
+
+pub const constant = Wibble("Hi")
+
+pub fn main() {
+  let wibble = "wibble"
+  case 1 {
+    _ if wibble == constant -> Nil
+    _ -> Nil
+  }
+}
+
+
+----- ERROR
+error: Type mismatch
+   ┌─ /src/one/two.gleam:11:20
+   │
+11 │     _ if wibble == constant -> Nil
+   │                    ^^^^^^^^
+
+Expected type:
+
+    String
+
+Found type:
+
+    Wibble

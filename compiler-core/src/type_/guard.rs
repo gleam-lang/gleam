@@ -320,7 +320,8 @@ impl<'expression_typer, 'env, 'module> GuardTyper<'expression_typer, 'env, 'modu
             }
 
             ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                return Ok(ClauseGuard::Constant(literal.clone()));
+                let literal = literal.clone().with_location(location);
+                return Ok(ClauseGuard::Constant(literal));
             }
         };
 
