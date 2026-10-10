@@ -262,6 +262,10 @@ expression: "compile(config, modules)"
         </a>
       </h2>
       
+      <a class="member-source" alt="View Source" title="View Source" href="https://hex.pm/packages/test_project_name/0.1.0/files/src/app.gleam#L7">
+        &lt;/&gt;
+      </a>
+      
     </div>
 
     <pre><code class="hljs hljs-ignore"><span class="hljs-keyword">pub fn </span><span class="hljs-title">one</span>() -> <span class="hljs-title">Int</span></code></pre>

@@ -25,6 +25,11 @@
   diff on Hex, making it easier to review and audit dependency updates.
   ([Manas Ganesh Dasari](https://github.com/ManasDasri))
 
+- The Hex files page will now be used for the view-source link in generated
+  documentation when the package's source repository uses an unknown forge or
+  is not set.
+  ([Alex Hinde](https://github.com/apex-hinde))
+
 ### Language server
 
 - The language server will now offer "Discard unused variable" on each of
