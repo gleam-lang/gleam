@@ -19,6 +19,7 @@ use gleam_core::{
     },
     build::{Located, Module, Origin},
     config::PackageConfig,
+    error::select_suggestion,
     exhaustiveness::CompiledCase,
     parse::{extra::ModuleExtra, lexer::string_to_keyword},
     paths::ProjectPaths,
@@ -13496,7 +13497,8 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
 }
 
 /// Code action to fix `Unknown variable` and `Unknown type` errors when there
-/// are items with same name from imported modules:
+/// are items with same name from imported modules or with similar name in in
+/// current module:
 ///
 /// ```gleam
 /// import gleam/io
@@ -13547,8 +13549,11 @@ impl<'a> UseItem<'a> {
                     location,
                     name,
                     possible_modules,
+                    variables,
                     ..
-                } => self.maybe_use_value(*location, name, possible_modules, &mut actions),
+                } => {
+                    self.maybe_use_value(*location, name, possible_modules, variables, &mut actions)
+                }
                 TypeError::UnknownType {
                     location,
                     name,
@@ -13643,23 +13648,37 @@ impl<'a> UseItem<'a> {
         location: SrcSpan,
         name: &str,
         possible_modules: &[EcoString],
+        variables: &[EcoString],
         actions: &mut Vec<CodeAction>,
     ) {
-        if possible_modules.is_empty() {
-            return;
-        }
-
         let error_range = src_span_to_lsp_range(location, self.lines);
         if !within(self.params.range, error_range) {
             return;
         }
 
+        // Suggest using value from each imported module with importable value
+        // with same name.
         for module in possible_modules {
             // We only need to prefix value with the module name, because
             // module list includes only imported modules.
             self.edits.insert(location.start, format!("{module}."));
 
             CodeActionBuilder::new(&format!("Use `{}.{}`", module, name))
+                .kind(CodeActionKind::QuickFix)
+                .preferred(false)
+                .changes(
+                    self.params.text_document.uri.clone(),
+                    std::mem::take(&mut self.edits.edits),
+                )
+                .push_to(actions);
+        }
+
+        // If there's some value with similar name in current module, suggest
+        // using it.
+        if let Some(value) = select_suggestion(name, variables) {
+            self.edits.replace(location, value.to_string());
+
+            CodeActionBuilder::new(&format!("Use `{}`", value))
                 .kind(CodeActionKind::QuickFix)
                 .preferred(false)
                 .changes(
