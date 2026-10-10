@@ -1,0 +1,18 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub const wibble: Wobble = todo\n\npub type Wibble\n        "
+---
+----- BEFORE ACTION
+
+pub const wibble: Wobble = todo
+                  ↑            
+
+pub type Wibble
+        
+
+
+----- AFTER ACTION
+
+pub const wibble: Wibble = todo
+
+pub type Wibble
