@@ -11,7 +11,8 @@ use camino::{Utf8Component, Utf8Path, Utf8PathBuf};
 
 pub struct SourceLinker {
     line_numbers: LineNumbers,
-    url_pattern: (String, String),
+    url_base: String,
+    line_separator: Option<&'static str>,
 }
 
 impl SourceLinker {
@@ -40,30 +41,30 @@ impl SourceLinker {
 
         let tag = project_config.tag_for_version(&project_config.version);
 
-        let url_pattern = match project_config.repository.as_ref() {
+        let (url_base, line_separator) = match project_config.repository.as_ref() {
             Some(Repository::GitHub { user, repo, .. }) => (
                 format!("https://github.com/{user}/{repo}/blob/{tag}/{path_in_repo}#L"),
-                "-L".into(),
+                Some("-L"),
             ),
             Some(Repository::GitLab { user, repo, .. }) => (
                 format!("https://gitlab.com/{user}/{repo}/-/blob/{tag}/{path_in_repo}#L"),
-                "-".into(),
+                Some("-"),
             ),
             Some(Repository::BitBucket { user, repo, .. }) => (
                 format!("https://bitbucket.com/{user}/{repo}/src/{tag}/{path_in_repo}#lines-"),
-                ":".into(),
+                Some(":"),
             ),
             Some(Repository::Codeberg { user, repo, .. }) => (
                 format!("https://codeberg.org/{user}/{repo}/src/tag/{tag}/{path_in_repo}#L"),
-                "-".into(),
+                Some("-"),
             ),
             Some(Repository::SourceHut { user, repo, .. }) => (
                 format!("https://git.sr.ht/~{user}/{repo}/tree/{tag}/item/{path_in_repo}#L"),
-                "-".into(),
+                Some("-"),
             ),
             Some(Repository::Tangled { user, repo, .. }) => (
                 format!("https://tangled.org/{user}/{repo}/blob/{tag}/{path_in_repo}#L"),
-                "-".into(),
+                Some("-"),
             ),
             Some(
                 Repository::Gitea {
@@ -76,8 +77,8 @@ impl SourceLinker {
                 let string_host = host.to_string();
                 let cleaned_host = string_host.trim_end_matches('/');
                 (
-                    format!("{cleaned_host}/{user}/{repo}/src/tag/{tag}/{path_in_repo}#L",),
-                    "-L".into(),
+                    format!("{cleaned_host}/{user}/{repo}/src/tag/{tag}/{path_in_repo}#L"),
+                    Some("-L"),
                 )
             }
             Some(Repository::Custom { .. }) | None => (
@@ -85,24 +86,25 @@ impl SourceLinker {
                     "https://hex.pm/packages/{}/{}/files/{path_in_repo}#L",
                     project_config.name, project_config.version,
                 ),
-                "".into(),
+                None,
             ),
         };
 
         SourceLinker {
             line_numbers: LineNumbers::new(&module.code),
-            url_pattern,
+            url_base,
+            line_separator,
         }
     }
 
     pub fn url(&self, span: SrcSpan) -> String {
-        let (base, line_sep) = &self.url_pattern;
         let start_line = self.line_numbers.line_number(span.start);
         let end_line = self.line_numbers.line_number(span.end);
-        if start_line == end_line || line_sep.is_empty() {
-            format!("{base}{start_line}")
-        } else {
-            format!("{base}{start_line}{line_sep}{end_line}")
+        match self.line_separator {
+            Some(separator) if start_line != end_line => {
+                format!("{}{start_line}{separator}{end_line}", self.url_base)
+            }
+            _ => format!("{}{start_line}", self.url_base),
         }
     }
 }
