@@ -639,6 +639,25 @@ impl<A> Constant<A> {
     }
 
     #[must_use]
+    pub fn with_location(mut self, new_location: SrcSpan) -> Self {
+        match &mut self {
+            Constant::Int { location, .. }
+            | Constant::List { location, .. }
+            | Constant::Float { location, .. }
+            | Constant::Tuple { location, .. }
+            | Constant::String { location, .. }
+            | Constant::Record { location, .. }
+            | Constant::RecordUpdate { location, .. }
+            | Constant::BitArray { location, .. }
+            | Constant::Var { location, .. }
+            | Constant::Invalid { location, .. }
+            | Constant::Todo { location, .. }
+            | Constant::BinaryOperator { location, .. } => *location = new_location,
+        }
+        self
+    }
+
+    #[must_use]
     pub fn can_have_multiple_per_line(&self) -> bool {
         match self {
             Constant::Int { .. }
