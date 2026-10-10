@@ -27,7 +27,7 @@ use gleam_core::{
     type_::{
         self, Error as TypeError, FieldMap, ModuleValueConstructor, Opaque, Type, TypeVar,
         TypedCallArg, ValueConstructor,
-        error::{ModuleSuggestion, VariableDeclaration, VariableOrigin},
+        error::{ModuleSuggestion, UnknownTypeHint, VariableDeclaration, VariableOrigin},
         printer::Printer,
     },
 };
@@ -13693,11 +13693,12 @@ impl<'a> UseItem<'a> {
         &mut self,
         location: SrcSpan,
         name: &str,
-        hint: &type_::error::UnknownTypeHint,
+        hint: &UnknownTypeHint,
         actions: &mut Vec<CodeAction>,
     ) {
-        let type_::error::UnknownTypeHint::AlternativeTypes {
-            possible_modules, ..
+        let UnknownTypeHint::AlternativeTypes {
+            possible_modules,
+            types_in_current_module,
         } = hint
         else {
             return;
@@ -13708,14 +13709,31 @@ impl<'a> UseItem<'a> {
             return;
         }
 
+        // Suggest using type from each imported module with importable
+        // type with same name.
         for module in possible_modules {
-            // We only need to prefix value with the module name, because
-            // module list includes only imported modules.
+            // We only need to prefix value with the module name,
+            // because module list includes only imported modules.
             self.edits.insert(location.start, format!("{module}."));
 
             CodeActionBuilder::new(&format!("Use `{}.{}`", module, name))
                 .kind(CodeActionKind::QuickFix)
-                .preferred(true)
+                .preferred(false)
+                .changes(
+                    self.params.text_document.uri.clone(),
+                    std::mem::take(&mut self.edits.edits),
+                )
+                .push_to(actions);
+        }
+
+        // If there's some type with similar name in current module,
+        // suggest using it.
+        if let Some(alternative) = select_suggestion(name, types_in_current_module) {
+            self.edits.replace(location, alternative.to_string());
+
+            CodeActionBuilder::new(&format!("Use `{}`", alternative))
+                .kind(CodeActionKind::QuickFix)
+                .preferred(false)
                 .changes(
                     self.params.text_document.uri.clone(),
                     std::mem::take(&mut self.edits.edits),
