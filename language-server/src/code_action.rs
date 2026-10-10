@@ -26,7 +26,7 @@ use gleam_core::{
     type_::{
         self, Error as TypeError, FieldMap, ModuleValueConstructor, Opaque, Type, TypeVar,
         TypedCallArg, ValueConstructor,
-        error::{ModuleSuggestion, VariableDeclaration, VariableOrigin},
+        error::{ModuleSuggestion, UnknownTypeHint, VariableDeclaration, VariableOrigin},
         printer::Printer,
     },
 };
@@ -13589,33 +13589,46 @@ impl<'a> UseItem<'a> {
         &mut self,
         location: SrcSpan,
         name: &str,
-        hint: &type_::error::UnknownTypeHint,
+        hint: &UnknownTypeHint,
         actions: &mut Vec<CodeAction>,
     ) {
-        let type_::error::UnknownTypeHint::TypesWithSameNameFromImportedModules(possible_modules) =
-            hint
-        else {
-            return;
-        };
-
         let error_range = src_span_to_lsp_range(location, self.lines);
         if !within(self.params.range, error_range) {
             return;
         }
 
-        for module in possible_modules {
-            // We only need to prefix value with the module name, because
-            // module list includes only imported modules.
-            self.edits.insert(location.start, format!("{module}."));
+        match hint {
+            UnknownTypeHint::TypesWithSameNameFromImportedModules(possible_modules) => {
+                for module in possible_modules {
+                    // We only need to prefix value with the module name, because
+                    // module list includes only imported modules.
+                    self.edits.insert(location.start, format!("{module}."));
 
-            CodeActionBuilder::new(&format!("Use `{}.{}`", module, name))
-                .kind(CodeActionKind::QuickFix)
-                .preferred(true)
-                .changes(
-                    self.params.text_document.uri.clone(),
-                    std::mem::take(&mut self.edits.edits),
-                )
-                .push_to(actions);
+                    CodeActionBuilder::new(&format!("Use `{}.{}`", module, name))
+                        .kind(CodeActionKind::QuickFix)
+                        .preferred(true)
+                        .changes(
+                            self.params.text_document.uri.clone(),
+                            std::mem::take(&mut self.edits.edits),
+                        )
+                        .push_to(actions);
+                }
+            }
+            UnknownTypeHint::AlternativeTypes(alternatives) if !alternatives.is_empty() => {
+                for alternative in alternatives {
+                    self.edits.replace(location, alternative.to_string());
+
+                    CodeActionBuilder::new(&format!("Use `{}`", alternative))
+                        .kind(CodeActionKind::QuickFix)
+                        .preferred(true)
+                        .changes(
+                            self.params.text_document.uri.clone(),
+                            std::mem::take(&mut self.edits.edits),
+                        )
+                        .push_to(actions);
+                }
+            }
+            UnknownTypeHint::ValueInScopeWithSameName | UnknownTypeHint::AlternativeTypes(_) => (),
         }
     }
 }
