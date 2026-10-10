@@ -41,7 +41,8 @@ use std::{
 use crate::{
     code_action::{
         ConvertIntToDifferentBase, DiscardUnusedVariable, RemoveRedundantRecordUpdate,
-        ReplaceUnderscoreWithType, code_action_fix_deprecated_pipe, type_errors_for_module,
+        ReplaceUnderscoreWithType, UseItem, code_action_fix_deprecated_pipe,
+        type_errors_for_module,
     },
     reference::{
         find_echo_references, find_echo_references_in_module, find_module_references_in_module,
@@ -567,6 +568,7 @@ where
                 ConvertBetweenDocAndRegularComment::new(module, &lines, &params).code_actions(),
             );
             actions.extend(ConvertIntToDifferentBase::new(module, &lines, &params).code_actions());
+            actions.extend(UseItem::new(module, &lines, &params, &this.error).code_actions());
 
             actions.sort_by_key(|one| {
                 let preferred_key = if one.is_preferred == Some(true) { 0 } else { 1 };

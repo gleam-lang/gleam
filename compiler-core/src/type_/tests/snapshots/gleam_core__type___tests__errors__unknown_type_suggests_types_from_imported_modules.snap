@@ -1,0 +1,44 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport woo\nimport another_woo\n\npub const wibble: Wibble = todo\n"
+---
+----- SOURCE CODE
+-- woo.gleam
+pub type Wibble
+
+-- another_woo.gleam
+pub type Wibble
+
+-- another_another_woo.gleam
+pub type Wibble
+
+-- main.gleam
+
+import woo
+import another_woo
+
+pub const wibble: Wibble = todo
+
+
+----- ERROR
+error: Unknown type
+  ┌─ /src/one/two.gleam:5:19
+  │
+5 │ pub const wibble: Wibble = todo
+  │                   ^^^^^^
+
+The type `Wibble` is not defined or imported in this module.
+Did you mean one of these:
+
+  - another_woo.Wibble
+  - woo.Wibble
+
+
+error: Constant todo found
+  ┌─ /src/one/two.gleam:5:28
+  │
+5 │ pub const wibble: Wibble = todo
+  │                            ^^^^ This code is incomplete
+
+This code will crash if it is run. Be sure to finish it before running your
+program.

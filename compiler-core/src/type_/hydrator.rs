@@ -186,9 +186,8 @@ impl Hydrator {
                             module_alias: module_alias.clone(),
                             module_location: *module_location,
                         }
-                    } else if let Some(UnqualifiedImport { has_alias, .. }) =
+                    } else if let Some(UnqualifiedImport { alias: Some(_), .. }) =
                         &environment.unqualified_imported_types.get(name)
-                        && *has_alias
                     {
                         ReferenceKind::Alias
                     } else {
@@ -314,10 +313,41 @@ impl Hydrator {
                     }
 
                     None => {
+                        let possible_modules = environment.get_possible_modules_with_type(name);
                         let hint = match environment.scope.contains_key(name) {
                             true => UnknownTypeHint::ValueInScopeWithSameName,
-                            false => UnknownTypeHint::AlternativeTypes(
-                                environment.module_types.keys().cloned().collect(),
+                            // In case there's imported type with same original name, but with import alias,
+                            // we want to suggest it:
+                            //
+                            // ```gleam
+                            // import woo.{type Wibble as Wobble}
+                            //
+                            // pub const wibble: Wibble = todo
+                            // //                ^^^^^^ We want to suggest imported type `Wobble`, not `woo.Wibble`
+                            // ```
+                            //
+                            // We also show types with similar names in case there are no types with
+                            // same name from other modules.
+                            false
+                                if environment
+                                    .unqualified_imported_types
+                                    .iter()
+                                    .find(|type_| {
+                                        type_
+                                            .1
+                                            .alias
+                                            .as_ref()
+                                            .is_some_and(|alias| alias.original_name == *name)
+                                    })
+                                    .is_some()
+                                    || possible_modules.is_empty() =>
+                            {
+                                UnknownTypeHint::AlternativeTypes(
+                                    environment.module_types.keys().cloned().collect(),
+                                )
+                            }
+                            false => UnknownTypeHint::TypesWithSameNameFromImportedModules(
+                                possible_modules,
                             ),
                         };
 

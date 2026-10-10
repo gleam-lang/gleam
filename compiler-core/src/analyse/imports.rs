@@ -155,7 +155,13 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             imported_name.clone(),
             environment::UnqualifiedImport {
                 location: import_location,
-                has_alias: import.as_name.is_some(),
+                alias: if import.as_name.is_some() {
+                    Some(environment::UnqualifiedImportAlias {
+                        original_name: import.name.clone(),
+                    })
+                } else {
+                    None
+                },
             },
         );
 
@@ -303,7 +309,13 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             used_name.clone(),
             environment::UnqualifiedImport {
                 location,
-                has_alias: import.as_name.is_some(),
+                alias: if import.as_name.is_some() {
+                    Some(environment::UnqualifiedImportAlias {
+                        original_name: import.name.clone(),
+                    })
+                } else {
+                    None
+                },
             },
         );
     }

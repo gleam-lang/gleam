@@ -34,7 +34,7 @@ impl<'a> EnvironmentArguments<'a> {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct UnqualifiedImport {
     /// The location of the import. For example:
     /// ```gleam
@@ -42,8 +42,13 @@ pub struct UnqualifiedImport {
     /// //                   ^^^^^^^^^^^^^^^^^^^^^^^
     /// ```
     pub location: SrcSpan,
-    /// Whether the unqualified import has been aliased.
-    pub has_alias: bool,
+    /// Information about import alias if an item was imported with one.
+    pub alias: Option<UnqualifiedImportAlias>,
+}
+
+#[derive(Debug, Clone)]
+pub struct UnqualifiedImportAlias {
+    pub original_name: EcoString,
 }
 
 #[derive(Debug)]
@@ -514,9 +519,38 @@ impl Environment<'_> {
     }
 
     fn unknown_type_hint(&self, type_name: &EcoString) -> UnknownTypeHint {
+        let possible_modules = self.get_possible_modules_with_type(type_name);
         match self.scope.contains_key(type_name) {
             true => UnknownTypeHint::ValueInScopeWithSameName,
-            false => UnknownTypeHint::AlternativeTypes(self.module_types.keys().cloned().collect()),
+            // In case there's imported type with same original name, but with
+            // import alias, we want to suggest it:
+            //
+            // ```gleam
+            // import woo.{type Wibble as Wobble}
+            //
+            // pub const wibble: Wibble = todo
+            // //                ^^^^^^ We want to suggest imported type `Wobble`, not `woo.Wibble`
+            // ```
+            //
+            // We also show types with similar names in case there are no types
+            // with same name from other modules.
+            false
+                if self
+                    .unqualified_imported_types
+                    .iter()
+                    .find(|type_| {
+                        type_
+                            .1
+                            .alias
+                            .as_ref()
+                            .is_some_and(|alias| alias.original_name == *type_name)
+                    })
+                    .is_some()
+                    || possible_modules.is_empty() =>
+            {
+                UnknownTypeHint::AlternativeTypes(self.module_types.keys().cloned().collect())
+            }
+            false => UnknownTypeHint::TypesWithSameNameFromImportedModules(possible_modules),
         }
     }
 
@@ -610,6 +644,24 @@ impl Environment<'_> {
                     module.get_importable_value(name).map(|_| module_name)
                 } else {
                     module.get_public_value(name).map(|_| module_name)
+                }
+            })
+            .cloned()
+            .sorted()
+            .collect_vec()
+    }
+
+    /// Get the name of modules with a type that can be suggested and matches
+    /// the given `name`
+    ///
+    pub fn get_possible_modules_with_type(&self, name: &EcoString) -> Vec<EcoString> {
+        self.imported_modules
+            .iter()
+            .filter_map(|(module_name, (_, module))| {
+                if module.package == self.current_package {
+                    module.get_importable_type(name).map(|_| module_name)
+                } else {
+                    module.get_public_type(name).map(|_| module_name)
                 }
             })
             .cloned()
