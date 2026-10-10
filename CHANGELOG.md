@@ -175,6 +175,10 @@
   if one is returned by the Hex API.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Fixed a bug where a type error caused by a constant used in a clause guard
+  would point to the definition of the constant instead of the guard.
+  ([DualFroz](https://github.com/dualfroz))
+
 ## v1.19.1 - 2026-10-07
 
 ### Bug fixes
