@@ -386,14 +386,14 @@ pub fn write_private(path: &Utf8Path, text: &str) -> Result<(), Error> {
         action: FileIoAction::FindParent,
         kind: FileKind::Directory,
         path: path.to_path_buf(),
-        err: None,
+        cause: FileIoCause::NotFound,
     })?;
 
     std::fs::create_dir_all(dir_path).map_err(|e| Error::FileIo {
         action: FileIoAction::Create,
         kind: FileKind::Directory,
         path: dir_path.to_path_buf(),
-        err: Some(e.to_string()),
+        cause: FileIoCause::std_io(e),
     })?;
 
     let mut f = std::fs::OpenOptions::new()
@@ -406,14 +406,14 @@ pub fn write_private(path: &Utf8Path, text: &str) -> Result<(), Error> {
             action: FileIoAction::Create,
             kind: FileKind::File,
             path: path.to_path_buf(),
-            err: Some(e.to_string()),
+            cause: FileIoCause::std_io(e),
         })?;
 
     f.write_all(text.as_bytes()).map_err(|e| Error::FileIo {
         action: FileIoAction::WriteTo,
         kind: FileKind::File,
         path: path.to_path_buf(),
-        err: Some(e.to_string()),
+        cause: FileIoCause::std_io(e),
     })?;
     Ok(())
 }
