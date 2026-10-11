@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 2944
+expression: "\npub fn go(data) {\n  let prefix = 8\n  let assert <<prefix:bits-size(prefix), rest:bits>> = data\n  #(prefix, rest)\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go(data) {
+  let prefix = 8
+  let assert <<prefix:bits-size(prefix), rest:bits>> = data
+  #(prefix, rest)
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, bitArraySlice } from "../gleam.mjs";
+
+const FILEPATH = "src/module.gleam";
+
+export function go(data) {
+  let prefix = 8;
+  let prefix$1;
+  let rest;
+  if (prefix >= 0 && data.bitSize >= prefix) {
+    prefix$1 = bitArraySlice(data, 0, prefix);
+    rest = bitArraySlice(data, prefix);
+  } else {
+    throw makeError(
+      "let_assert",
+      FILEPATH,
+      "my/mod",
+      4,
+      "go",
+      "Pattern match failed, no pattern matched the value.",
+      { value: data, start: 38, end: 95, pattern_start: 49, pattern_end: 88 }
+    )
+  }
+  return [prefix$1, rest];
+}

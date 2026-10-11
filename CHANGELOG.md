@@ -162,6 +162,10 @@
   package with no README on Windows.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Fixed a bug where the compiler would generate invalid JavaScript code for a
+  bit array pattern whose segment shadows a variable used in its own size.
+  ([Daniele Scaratti](https://github.com/lupodevelop))
+
 ## v1.19.1 - 2026-10-07
 
 ### Bug fixes

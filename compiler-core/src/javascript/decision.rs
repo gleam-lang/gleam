@@ -1273,6 +1273,12 @@ struct Variables<'generator, 'module, 'a, 'doc> {
     /// difference that a segment is identified by its name.
     ///
     scoped_segment_names: HashMap<EcoString, EcoString>,
+
+    /// The user variables in scope before the pattern. The pattern can shadow
+    /// them, as in `<<size:bits-size(size)>>`, so variables from outside the
+    /// pattern are looked up here rather than in the current scope.
+    ///
+    outside_variables: imbl::HashMap<EcoString, usize>,
 }
 
 impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
@@ -1280,6 +1286,8 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
         expression_generator: &'generator mut Generator<'module, 'a, 'doc>,
         variable_assignment: VariableAssignment,
     ) -> Self {
+        let outside_variables = expression_generator.current_scope.user_variables().clone();
+
         Variables {
             expression_generator,
             variable_assignment,
@@ -1287,6 +1295,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
             scoped_variable_names: HashMap::new(),
             segment_values: HashMap::new(),
             scoped_segment_names: HashMap::new(),
+            outside_variables,
         }
     }
 
@@ -1346,6 +1355,15 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
 
     fn next_local_var(&mut self, name: &EcoString) -> EcoString {
         self.expression_generator.next_local_var(name)
+    }
+
+    /// Returns the name of a variable defined outside of the pattern.
+    ///
+    fn outside_var(&mut self, name: &EcoString) -> EcoString {
+        match self.outside_variables.get(name) {
+            Some(counter) => expression::local_var_name(name, *counter),
+            None => self.local_var(name),
+        }
     }
 
     /// Records that a given pattern `variable` has been assigned a runtime
@@ -1834,7 +1852,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
                 VariableUsage::PatternSegment(segment_name, _) => self
                     .get_segment_value(arena, segment_name)
                     .expect("segment referenced in a check before being created"),
-                VariableUsage::OutsideVariable(name) => self.local_var(name).to_doc(arena),
+                VariableUsage::OutsideVariable(name) => self.outside_var(name).to_doc(arena),
             };
             if *times != 1 {
                 variable = variable
@@ -1887,7 +1905,10 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
         match size {
             ReadSize::ConstantBits(value) => Some(value.clone().to_doc(arena)),
             ReadSize::VariableBits { variable, unit } => {
-                let variable = self.local_var(variable.name());
+                let variable = match variable.as_ref() {
+                    VariableUsage::PatternSegment(name, _) => self.local_var(name),
+                    VariableUsage::OutsideVariable(name) => self.outside_var(name),
+                };
                 Some(if *unit == 1 {
                     variable.to_doc(arena)
                 } else {
