@@ -162,6 +162,10 @@
   package with no README on Windows.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Fixed a bug where constants could reference private values, private
+  constructors, and constructors of opaque types from other modules.
+  ([Manas Ganesh Dasari](https://github.com/ManasDasri))
+
 ## v1.19.1 - 2026-10-07
 
 ### Bug fixes

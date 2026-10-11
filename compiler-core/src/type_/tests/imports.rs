@@ -77,6 +77,78 @@ pub fn main() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/6404
+#[test]
+fn const_using_opaque_constructor() {
+    assert_module_error!(
+        ("one", "pub opaque type Two { Two(Int) }"),
+        "import one
+
+pub const two = one.Two(2)",
+    );
+}
+
+#[test]
+fn const_using_opaque_constructor_without_arguments() {
+    assert_module_error!(
+        ("one", "pub opaque type Two { Two }"),
+        "import one
+
+pub const two = one.Two",
+    );
+}
+
+#[test]
+fn const_using_private_constructor() {
+    assert_module_error!(
+        ("one", "type Two { Two }"),
+        "import one
+
+pub const two = one.Two",
+    );
+}
+
+#[test]
+fn const_using_private_constant() {
+    assert_module_error!(
+        ("one", "const two = 2"),
+        "import one
+
+pub const two = one.two",
+    );
+}
+
+#[test]
+fn const_using_private_function() {
+    assert_module_error!(
+        ("one", "fn two() { 2 }"),
+        "import one
+
+pub const two = one.two",
+    );
+}
+
+#[test]
+fn const_using_opaque_constructor_from_other_package() {
+    assert_module_error!(
+        ("other_package", "one", "pub opaque type Two { Two(Int) }"),
+        "import one
+
+pub const two = one.Two(2)",
+    );
+}
+
+#[test]
+fn const_using_public_constant() {
+    assert_module_infer!(
+        ("one", "pub const two = 2"),
+        "import one
+
+pub const two = one.two",
+        vec![("two", "Int")],
+    );
+}
+
 #[test]
 fn using_private_type_alias() {
     assert_module_error!(

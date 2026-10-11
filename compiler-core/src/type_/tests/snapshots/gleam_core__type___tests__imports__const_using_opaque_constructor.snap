@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/type_/tests/imports.rs
+expression: "import one\n\npub const two = one.Two(2)"
+---
+----- SOURCE CODE
+-- one.gleam
+pub opaque type Two { Two(Int) }
+
+-- main.gleam
+import one
+
+pub const two = one.Two(2)
+
+----- ERROR
+error: Use of private value
+  ┌─ /src/one/two.gleam:3:17
+  │
+3 │ pub const two = one.Two(2)
+  │                 ^^^^^^^
+
+`one` does define `Two`, but it is private and cannot be accessed by other
+modules.
