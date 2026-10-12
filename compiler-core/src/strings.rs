@@ -183,7 +183,7 @@ pub fn length_utf32(string: &str) -> usize {
 }
 
 /// Check if a module name is a valid Gleam module name.
-pub fn is_gleam_module(module: &str) -> bool {
+pub fn is_valid_gleam_module_name(module: &str) -> bool {
     use regex::Regex;
     static RE: OnceLock<Regex> = OnceLock::new();
 
@@ -193,7 +193,7 @@ pub fn is_gleam_module(module: &str) -> bool {
             module = "[a-z][_a-z0-9]*",
             slash = "/",
         ))
-        .expect("is_gleam_module() regex")
+        .expect("is_valid_gleam_module_name() regex")
     })
     .is_match(module)
 }
@@ -205,59 +205,59 @@ mod tests {
     #[test]
     fn valid_module_names() {
         // Single segment names
-        assert!(is_gleam_module("valid"));
-        assert!(is_gleam_module("my_module"));
-        assert!(is_gleam_module("module_123"));
-        assert!(is_gleam_module("a"));
-        assert!(is_gleam_module("z"));
-        assert!(is_gleam_module("my_mod_ule"));
+        assert!(is_valid_gleam_module_name("valid"));
+        assert!(is_valid_gleam_module_name("my_module"));
+        assert!(is_valid_gleam_module_name("module_123"));
+        assert!(is_valid_gleam_module_name("a"));
+        assert!(is_valid_gleam_module_name("z"));
+        assert!(is_valid_gleam_module_name("my_mod_ule"));
 
         // Multi-segment names
-        assert!(is_gleam_module("valid/name"));
-        assert!(is_gleam_module("my/nested/module"));
-        assert!(is_gleam_module("my_mod/sub_mod"));
-        assert!(is_gleam_module("valid/mod/name"));
+        assert!(is_valid_gleam_module_name("valid/name"));
+        assert!(is_valid_gleam_module_name("my/nested/module"));
+        assert!(is_valid_gleam_module_name("my_mod/sub_mod"));
+        assert!(is_valid_gleam_module_name("valid/mod/name"));
 
         // Edge cases
-        assert!(is_gleam_module("a/b"));
-        assert!(is_gleam_module("mod1/mod2/mod3"));
+        assert!(is_valid_gleam_module_name("a/b"));
+        assert!(is_valid_gleam_module_name("mod1/mod2/mod3"));
     }
 
     #[test]
     fn invalid_module_names() {
         // Empty string
-        assert!(!is_gleam_module(""));
+        assert!(!is_valid_gleam_module_name(""));
 
         // Starting with uppercase
-        assert!(!is_gleam_module("MyModule"));
-        assert!(!is_gleam_module("MYMODULE"));
+        assert!(!is_valid_gleam_module_name("MyModule"));
+        assert!(!is_valid_gleam_module_name("MYMODULE"));
 
         // Starting with digit
-        assert!(!is_gleam_module("123module"));
-        assert!(!is_gleam_module("1module"));
+        assert!(!is_valid_gleam_module_name("123module"));
+        assert!(!is_valid_gleam_module_name("1module"));
 
         // Invalid characters
-        assert!(!is_gleam_module("my-module"));
-        assert!(!is_gleam_module("my.module"));
-        assert!(!is_gleam_module("my@module"));
+        assert!(!is_valid_gleam_module_name("my-module"));
+        assert!(!is_valid_gleam_module_name("my.module"));
+        assert!(!is_valid_gleam_module_name("my@module"));
 
         // Trailing slash
-        assert!(!is_gleam_module("my/module/"));
+        assert!(!is_valid_gleam_module_name("my/module/"));
 
         // Leading slash
-        assert!(!is_gleam_module("/mod/name"));
-        assert!(!is_gleam_module("/mod/name/"));
+        assert!(!is_valid_gleam_module_name("/mod/name"));
+        assert!(!is_valid_gleam_module_name("/mod/name/"));
 
         // Double slashes
-        assert!(!is_gleam_module("my//module"));
+        assert!(!is_valid_gleam_module_name("my//module"));
 
         // Slash only
-        assert!(!is_gleam_module("/"));
-        assert!(!is_gleam_module("//"));
+        assert!(!is_valid_gleam_module_name("/"));
+        assert!(!is_valid_gleam_module_name("//"));
 
         // Only invalid segments
-        assert!(!is_gleam_module("my/MyModule"));
-        assert!(!is_gleam_module("MyModule/nested"));
-        assert!(!is_gleam_module("valid/123invalid/sub"));
+        assert!(!is_valid_gleam_module_name("my/MyModule"));
+        assert!(!is_valid_gleam_module_name("MyModule/nested"));
+        assert!(!is_valid_gleam_module_name("valid/123invalid/sub"));
     }
 }

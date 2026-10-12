@@ -13,7 +13,7 @@ use gleam_core::{
     error::Error,
     io::{Command, CommandExecutor, Stdio},
     paths::ProjectPaths,
-    strings::is_gleam_module,
+    strings::is_valid_gleam_module_name,
     type_::ModuleFunction,
     version::COMPILER_VERSION,
 };
@@ -62,7 +62,7 @@ pub fn setup(
 ) -> Result<Command, Error> {
     // Validate the module path
     if let Some(mod_path) = &module
-        && !is_gleam_module(mod_path)
+        && !is_valid_gleam_module_name(mod_path)
     {
         return Err(Error::InvalidModuleName {
             module: mod_path.to_owned(),
@@ -401,13 +401,13 @@ fn invalid_module_names() {
         "mod/",
         "common-invalid-character",
     ] {
-        assert!(!is_gleam_module(mod_name));
+        assert!(!is_valid_gleam_module_name(mod_name));
     }
 }
 
 #[test]
 fn valid_module_names() {
     for mod_name in ["valid", "valid/name", "valid/mod/name"] {
-        assert!(is_gleam_module(mod_name));
+        assert!(is_valid_gleam_module_name(mod_name));
     }
 }
