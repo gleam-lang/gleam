@@ -258,7 +258,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     deprecation: NotDeprecated,
                     documentation: None,
                 };
-                let _ = prelude.types.insert(BIT_ARRAY.into(), v.clone());
+                let _ = prelude.types.insert(BIT_ARRAY.into(), v);
             }
 
             PreludeType::Bool => {

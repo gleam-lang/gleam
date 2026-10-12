@@ -3022,7 +3022,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     type_: type_.clone(),
                 };
 
-                unify(variant.arg_type(index), type_.clone()).map_err(|error| {
+                unify(variant.arg_type(index), type_).map_err(|error| {
                     convert_incompatible_fields_error(error, RecordField::Unlabelled(index))
                 })?;
 

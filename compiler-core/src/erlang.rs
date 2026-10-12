@@ -3346,7 +3346,7 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                         location,
                         &self.new_erlang_variable(&gleam_name, location),
                     );
-                    builder.int_expression(location, value.clone());
+                    builder.int_expression(location, value);
                 }
             }
         }
