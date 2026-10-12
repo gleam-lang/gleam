@@ -5283,3 +5283,18 @@ pub fn go(a) {
 "
     );
 }
+
+#[test]
+fn target_attribute_on_import_has_no_warning() {
+    assert_no_warnings!(
+        ("wibble", "pub fn wobble() { 1 }"),
+        r#"
+@target(erlang)
+import wibble
+
+pub fn main() {
+  wibble.wobble()
+}
+"#
+    );
+}

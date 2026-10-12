@@ -326,6 +326,14 @@ where
         let def = match (self.token0.take(), self.token1.as_ref()) {
             // Imports
             (Some((start, Token::Import, _)), _) => {
+                // The only attribute supported on imports is @target
+                if let Some(attr_span) = location
+                    && (attributes.has_function_only()
+                        || attributes.deprecated.is_deprecated()
+                        || attributes.internal != InternalAttribute::Missing)
+                {
+                    return parse_error(ParseErrorType::UnknownAttributeImport, attr_span);
+                }
                 self.advance();
                 self.parse_import(start)
             }

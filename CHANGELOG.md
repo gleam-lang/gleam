@@ -171,6 +171,11 @@
   package with no README on Windows.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Fixed a bug where the compiler would silently ignore the `@deprecated` and
+  `@internal` attributes when they were used on an import, instead of emitting
+  an error.
+  ([Manas Ganesh Dasari](https://github.com/ManasDasri))
+
 ## v1.19.1 - 2026-10-07
 
 ### Bug fixes
