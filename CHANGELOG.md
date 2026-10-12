@@ -175,6 +175,10 @@
   if one is returned by the Hex API.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Fixed a bug where the compiler would crash when renaming a project directory
+  due to a broken symlink.
+  ([Rafael Epplée](https://github.com/raffomania))
+
 ## v1.19.1 - 2026-10-07
 
 ### Bug fixes
