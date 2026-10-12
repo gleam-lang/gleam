@@ -65,7 +65,6 @@ erlang-generation = { path = "../erlang-generation" }
 http.workspace = true
 imbl.workspace = true
 itertools.workspace = true
-lsp-server.workspace = true
 lsp-types.workspace = true
 regex.workspace = true
 serde.workspace = true
@@ -87,7 +86,3 @@ rand = "0.10"
 # Time types
 time = "0.3"
 ignore.workspace = true
-
-[build-dependencies]
-# Data (de)serialisation
-serde_derive = "1"

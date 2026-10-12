@@ -15,8 +15,6 @@ keywords = ["erlang", "gleam", "elixir", "hex", "api-client"]
 categories = ["api-bindings"]
 
 [dependencies]
-# HTTP types
-url = "2.2"
 # Byte collections
 bytes = "1"
 # gzip (de)compression
@@ -25,8 +23,6 @@ flate2 = "1.1"
 ring = "0.17"
 # PEM -> DER conversion
 x509-parser = "0.18"
-# Basic auth HTTP helper
-http-auth-basic = "0.3"
 # Protobuf runtime
 prost = "0.13.5"
 
