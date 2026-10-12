@@ -1586,7 +1586,6 @@ dependencies = [
  "indexmap",
  "insta",
  "itertools 0.13.0",
- "lsp-server",
  "num-bigint 0.5.1",
  "num-traits",
  "pathdiff",
@@ -1599,7 +1598,6 @@ dependencies = [
  "rand 0.10.3",
  "regex",
  "serde",
- "serde_derive",
  "serde_json",
  "sourcemap",
  "spdx",
@@ -1669,7 +1667,6 @@ dependencies = [
  "imbl",
  "itertools 0.13.0",
  "serde",
- "serde-wasm-bindgen",
  "termcolor",
  "tracing",
  "tracing-wasm",
@@ -1750,7 +1747,6 @@ dependencies = [
  "ecow",
  "flate2",
  "http",
- "http-auth-basic",
  "prost 0.13.5",
  "prost-build",
  "pubgrub",
@@ -1760,7 +1756,6 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.21",
  "toml 1.1.4+spec-1.1.0",
- "url",
  "x509-parser",
 ]
 
@@ -1821,15 +1816,6 @@ checksum = "918d3568bebf352712bc2ef3d46a8bcf1a75b373be6539de198e9105cbbf9ce0"
 dependencies = [
  "bytes",
  "itoa",
-]
-
-[[package]]
-name = "http-auth-basic"
-version = "0.3.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e92637d714ad90b81c91bce86e8c1f98fb32ca79bddf8d69e9d83fee3966946"
-dependencies = [
- "base64 0.22.1",
 ]
 
 [[package]]
@@ -3686,17 +3672,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde-wasm-bindgen"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8302e169f0eddcc139c70f139d19d6467353af16f9fce27e8c30158036a1e16b"
-dependencies = [
- "js-sys",
- "serde",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "serde_core"
 version = "1.0.229"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4019,7 +3994,6 @@ dependencies = [
  "gleam-core",
  "insta",
  "tempfile",
- "test-helpers-rs",
 ]
 
 [[package]]
@@ -4044,7 +4018,6 @@ dependencies = [
  "gleam-cli",
  "gleam-core",
  "insta",
- "test-helpers-rs",
 ]
 
 [[package]]
