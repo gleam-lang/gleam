@@ -233,7 +233,18 @@ It will be used to locally encrypt your Hex API tokens.
             &self.hex_config,
         );
         let response = self.runtime.block_on(self.http.send(request))?;
-        let tokens = hexpm::oauth_refresh_token_response(response).map_err(Error::hex)?;
+        let tokens = match hexpm::oauth_refresh_token_response(response) {
+            Ok(tokens) => tokens,
+            Err(hexpm::ApiError::OAuthRefreshTokenRejected { code, description }) => {
+                tracing::trace!(
+                    oauth_error_code = %code,
+                    oauth_error_description = %description,
+                    "Hex OAuth refresh token rejected"
+                );
+                return Err(Error::HexSessionRevoked);
+            }
+            Err(error) => return Err(Error::hex(error)),
+        };
 
         // Store the refresh token for future use.
         self.encrypt_and_store_oauth_refresh_token(&tokens)?;
