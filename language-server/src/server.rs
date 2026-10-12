@@ -1,7 +1,7 @@
 use super::{
     DownloadDependencies, MakeLocker,
     engine::{self, LanguageServerEngine},
-    feedback::{Feedback, FeedbackBookKeeper},
+    feedback::{DiagnosticCache, Feedback, FeedbackBookKeeper},
     files::FileSystemProxy,
     messages::{Message, MessageBuffer, Next, Notification, Request},
     progress::ConnectionProgressReporter,
@@ -16,7 +16,7 @@ use gleam_core::{
     diagnostic::{Diagnostic, ExtraLabel, Label, Level, Location},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
-    strings::is_gleam_module,
+    strings::is_valid_gleam_module_name,
 };
 use lsp_server::ResponseError;
 use lsp_types::{
@@ -41,6 +41,7 @@ pub struct LanguageServer<'a, IO> {
     initialise_params: InitializeParams,
     connection: DebugIgnore<&'a lsp_server::Connection>,
     outside_of_project_feedback: FeedbackBookKeeper,
+    diagnostic_cache: DiagnosticCache,
     router: Router<IO, ConnectionProgressReporter<'a>>,
     changed_projects: HashSet<Utf8PathBuf>,
     io: FileSystemProxy<IO>,
@@ -66,6 +67,7 @@ where
             initialise_params,
             changed_projects: HashSet::new(),
             outside_of_project_feedback: FeedbackBookKeeper::default(),
+            diagnostic_cache: DiagnosticCache::default(),
             router,
             io,
         })
@@ -148,8 +150,9 @@ where
         self.publish_feedback(feedback);
     }
 
-    fn publish_feedback(&self, feedback: Feedback) {
-        self.publish_diagnostics(feedback.diagnostics);
+    fn publish_feedback(&mut self, feedback: Feedback) {
+        let diagnostics = self.diagnostic_cache.update(&feedback);
+        self.publish_diagnostics(diagnostics);
         self.publish_messages(feedback.messages);
     }
 
@@ -446,11 +449,12 @@ where
         if let Err(error) = self.io.write_mem_cache(&path, &text) {
             return self.outside_of_project_feedback.error(error);
         }
-        // Validate the module filename and emit a diagnostic if invalid.
+        // Update only filename diagnostics, preserving compilation diagnostics.
         let mut feedback = Feedback::none();
-        if let Some(diagnostic) = self.validate_module_filename(&path, &text) {
-            feedback.append_diagnostic(path.clone(), diagnostic);
-        }
+        let diagnostic = self.validate_module_filename(&path, &text);
+        _ = feedback
+            .module_filename_diagnostics
+            .insert(path, diagnostic);
         feedback
     }
 
@@ -500,75 +504,64 @@ where
         feedback
     }
 
-    fn validate_module_filename(&self, path: &Utf8Path, src: &str) -> Option<Diagnostic> {
-        // Only validate .gleam files
-        if path.extension() != Some("gleam") {
-            return None;
-        }
-
-        // Only validate inside a Gleam project.
-        // Outside projects the LS may only provide formatting.
+    fn validate_module_filename(&self, path: &Utf8Path, source: &str) -> Option<Diagnostic> {
+        // Outside projects the language server may only provide formatting.
         let project_root = self.router.project_path(path)?;
-
-        let relative = match path.strip_prefix(&project_root) {
-            Ok(path) => path,
-            Err(_) => return None,
-        };
-        let relative_path = relative.as_str();
-        // Trim the leading project area (src/test/dev)
-        let module_relative = if let Some(rest) = relative_path.strip_prefix("src/") {
-            rest
-        } else if let Some(rest) = relative_path.strip_prefix("test/") {
-            rest
-        } else if let Some(rest) = relative_path.strip_prefix("dev/") {
-            rest
-        } else {
-            return None;
-        };
-        let module_name = module_relative.strip_suffix(".gleam")?;
-
-        // Check if the module name is valid
-        let is_valid_format = is_gleam_module(module_name);
-
-        // "gleam" is a reserved module name for the standard library
-        let is_reserved = module_name == "gleam";
-
-        if is_valid_format && !is_reserved {
-            return None;
-        }
-
-        // Determine the error message based on what's wrong
-        let error_message = if is_reserved {
-            format!(
-                "The module name \"{module_name}\" is reserved for the \
-                 Gleam standard library. Please choose a different name."
-            )
-        } else {
-            "Module names must be snake_case, starting with a lowercase \
-             letter and containing only lowercase letters, numbers, and \
-             underscores."
-                .to_string()
-        };
-
-        // Highlight the first line to ensure the diagnostic is visible in editors
-        let first_line_end = src.find('\n').unwrap_or(src.len());
-        let span_end: u32 = first_line_end.max(1).try_into().unwrap_or(1);
-        Some(Diagnostic {
-            title: format!("{module_name} is not a valid module name"),
-            text: error_message,
-            level: Level::Error,
-            location: Some(Location {
-                src: src.into(),
-                path: path.to_path_buf(),
-                label: Label {
-                    text: None,
-                    span: SrcSpan::new(0, span_end),
-                },
-                extra_labels: vec![],
-            }),
-            hint: None,
-        })
+        module_filename_diagnostic(&project_root, path, source)
     }
+}
+
+fn module_filename_diagnostic(
+    project_root: &Utf8Path,
+    path: &Utf8Path,
+    source: &str,
+) -> Option<Diagnostic> {
+    let module_filename = path.file_name()?.strip_suffix(".gleam")?;
+    let relative = path.strip_prefix(project_root).ok()?;
+    let module = relative
+        .strip_prefix("src")
+        .or_else(|_| relative.strip_prefix("test"))
+        .or_else(|_| relative.strip_prefix("dev"))
+        .ok()?;
+    // Module names use forward slashes on every platform. Path iteration
+    // recognises the native separators before we construct the module name.
+    let module_name = module
+        .parent()?
+        .iter()
+        .chain(std::iter::once(module_filename))
+        .collect::<Vec<_>>()
+        .join("/");
+    let is_reserved = module_name == "gleam";
+    if is_valid_gleam_module_name(&module_name) && !is_reserved {
+        return None;
+    }
+
+    let error_message = if is_reserved {
+        "The `gleam` is the name of Gleam's prelude module so \
+         it cannot be used for a new module."
+    } else {
+        "Module names must be snake_case, starting with a lowercase letter \
+         and containing only lowercase letters, numbers, and underscores."
+    };
+
+    // Highlight the first line to ensure the diagnostic is visible in editors.
+    let first_line_end = source.find('\n').unwrap_or(source.len());
+    let span_end: u32 = first_line_end.try_into().unwrap_or(0);
+    Some(Diagnostic {
+        title: format!("{module_name} is not a valid module name"),
+        text: error_message.into(),
+        level: Level::Error,
+        location: Some(Location {
+            src: source.into(),
+            path: path.to_path_buf(),
+            label: Label {
+                text: None,
+                span: SrcSpan::new(0, span_end),
+            },
+            extra_labels: vec![],
+        }),
+        hint: None,
+    })
 }
 
 fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializeParams {
@@ -772,4 +765,120 @@ fn path_to_uri(path: Utf8PathBuf) -> Url {
     let mut file: String = "file://".into();
     file.push_str(&path.as_os_str().to_string_lossy());
     Url::parse(&file).expect("path_to_uri URL parse")
+}
+
+#[cfg(test)]
+mod filename_tests {
+    use super::*;
+
+    #[test]
+    fn valid_module_filenames() {
+        let project_root = Utf8Path::new("project");
+        for relative in [
+            "src/valid.gleam",
+            "test/my_module.gleam",
+            "dev/module_123.gleam",
+            "src/nested/module.gleam",
+            "src/nested/gleam.gleam",
+            "src/gleam/list.gleam",
+        ] {
+            let path = project_root.join(relative);
+            assert!(
+                module_filename_diagnostic(project_root, &path, "").is_none(),
+                "{path}"
+            );
+        }
+    }
+
+    #[test]
+    fn invalid_module_filenames() {
+        let project_root = Utf8Path::new("project");
+        for relative in [
+            "src/Invalid.gleam",
+            "test/my-module.gleam",
+            "dev/123module.gleam",
+            "src/my.module.gleam",
+            "src/Invalid/valid.gleam",
+            "src/.gleam",
+            "src/nested/.gleam",
+        ] {
+            let path = project_root.join(relative);
+            assert!(
+                module_filename_diagnostic(project_root, &path, "").is_some(),
+                "{path}"
+            );
+        }
+    }
+
+    #[test]
+    fn invalid_filename_diagnostic() {
+        let project_root = Utf8Path::new("project");
+        let path = project_root.join("src/Invalid.gleam");
+        let source = "pub fn main() {\n  Nil\n}";
+        let diagnostic = module_filename_diagnostic(project_root, &path, source).unwrap();
+        assert_eq!(diagnostic.title, "Invalid is not a valid module name");
+        assert_eq!(diagnostic.level, Level::Error);
+        assert_eq!(
+            diagnostic.text,
+            concat!(
+                "Module names must be snake_case, starting with a lowercase letter ",
+                "and containing only lowercase letters, numbers, and underscores.",
+            )
+        );
+        let location = diagnostic.location.unwrap();
+        assert_eq!(location.path, path);
+        assert_eq!(location.src.as_str(), source);
+        assert_eq!(location.label.span, SrcSpan::new(0, 15));
+    }
+
+    #[test]
+    fn prelude_module_name_is_reserved() {
+        let project_root = Utf8Path::new("project");
+        for directory in ["src", "test", "dev"] {
+            let path = project_root.join(directory).join("gleam.gleam");
+            let diagnostic = module_filename_diagnostic(project_root, &path, "").unwrap();
+            assert_eq!(
+                diagnostic.text,
+                concat!(
+                    "The `gleam` is the name of Gleam's prelude module so ",
+                    "it cannot be used for a new module.",
+                )
+            );
+            assert_eq!(diagnostic.location.unwrap().label.span, SrcSpan::new(0, 0));
+        }
+    }
+
+    #[test]
+    fn ignores_files_outside_source_directories() {
+        let project_root = Utf8Path::new("project");
+        for relative in [
+            "Invalid.gleam",
+            "other/Invalid.gleam",
+            "src_extra/Invalid.gleam",
+            "src/Invalid.txt",
+            "src/Invalid.gleam.bak",
+        ] {
+            let path = project_root.join(relative);
+            assert!(
+                module_filename_diagnostic(project_root, &path, "").is_none(),
+                "{path}"
+            );
+        }
+        let path = Utf8Path::new("other-project/src/Invalid.gleam");
+        assert!(module_filename_diagnostic(project_root, path, "").is_none());
+    }
+
+    #[test]
+    fn native_path_separators_are_normalised_in_module_names() {
+        let project_root = Utf8Path::new("project");
+        let path = project_root
+            .join("src")
+            .join("nested")
+            .join("Invalid.gleam");
+        let diagnostic = module_filename_diagnostic(project_root, &path, "").unwrap();
+        assert_eq!(
+            diagnostic.title,
+            "nested/Invalid is not a valid module name"
+        );
+    }
 }

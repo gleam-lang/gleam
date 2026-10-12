@@ -9,11 +9,14 @@ use super::engine::Compilation;
 pub struct Feedback {
     pub diagnostics: HashMap<Utf8PathBuf, Vec<Diagnostic>>,
     pub messages: Vec<Diagnostic>,
+    /// Filename updates are independent of compilation diagnostics. `None`
+    /// removes a previously published filename diagnostic for the path.
+    pub module_filename_diagnostics: HashMap<Utf8PathBuf, Option<Diagnostic>>,
 }
 
 impl Feedback {
-    /// Set the diagnostics for a file to an empty vector. This will overwrite
-    /// any existing diagnostics on the client.
+    /// Clear the compilation diagnostics for a file. Independently tracked
+    /// filename diagnostics are preserved when publishing.
     pub fn unset_existing_diagnostics(&mut self, path: Utf8PathBuf) {
         _ = self.diagnostics.insert(path, vec![]);
     }
@@ -35,6 +38,8 @@ impl Feedback {
             // Any new diagnostics for a file will overwrite any existing ones.
             _ = self.diagnostics.insert(path, diagnostics);
         }
+        self.module_filename_diagnostics
+            .extend(feedback.module_filename_diagnostics);
         for diagnostic in feedback.messages {
             self.append_message(diagnostic);
         }
@@ -42,6 +47,50 @@ impl Feedback {
 
     fn append_message(&mut self, diagnostic: Diagnostic) {
         self.messages.push(diagnostic);
+    }
+}
+
+/// Retain diagnostics from both sources when either source changes.
+#[derive(Debug, Default)]
+pub struct DiagnosticCache {
+    compilation: HashMap<Utf8PathBuf, Vec<Diagnostic>>,
+    module_filenames: HashMap<Utf8PathBuf, Diagnostic>,
+}
+
+impl DiagnosticCache {
+    pub fn update(&mut self, feedback: &Feedback) -> HashMap<Utf8PathBuf, Vec<Diagnostic>> {
+        let mut changed = HashSet::new();
+        for (path, diagnostics) in &feedback.diagnostics {
+            if diagnostics.is_empty() {
+                _ = self.compilation.remove(path);
+            } else {
+                _ = self.compilation.insert(path.clone(), diagnostics.clone());
+            }
+            _ = changed.insert(path.clone());
+        }
+        for (path, diagnostic) in &feedback.module_filename_diagnostics {
+            match diagnostic {
+                Some(diagnostic) => {
+                    _ = self
+                        .module_filenames
+                        .insert(path.clone(), diagnostic.clone());
+                    _ = changed.insert(path.clone());
+                }
+                None => {
+                    if self.module_filenames.remove(path).is_some() {
+                        _ = changed.insert(path.clone());
+                    }
+                }
+            }
+        }
+        changed
+            .into_iter()
+            .map(|path| {
+                let mut diagnostics = self.compilation.get(&path).cloned().unwrap_or_default();
+                diagnostics.extend(self.module_filenames.get(&path).cloned());
+                (path, diagnostics)
+            })
+            .collect()
     }
 }
 
@@ -216,6 +265,90 @@ mod tests {
         type_,
     };
 
+    fn diagnostic(title: &str, level: Level) -> Diagnostic {
+        Diagnostic {
+            title: title.into(),
+            text: title.into(),
+            level,
+            location: None,
+            hint: None,
+        }
+    }
+
+    #[test]
+    fn filename_updates_preserve_compilation_diagnostics() {
+        let path = Utf8PathBuf::from("src/Invalid.gleam");
+        let error = diagnostic("Compilation error", Level::Error);
+        let warning = diagnostic("Compilation warning", Level::Warning);
+        let filename = diagnostic("Invalid module name", Level::Error);
+        let mut cache = DiagnosticCache::default();
+        let mut feedback = Feedback::none();
+        feedback.append_diagnostic(path.clone(), error.clone());
+        feedback.append_diagnostic(path.clone(), warning.clone());
+        _ = cache.update(&feedback);
+
+        let mut feedback = Feedback::none();
+        _ = feedback
+            .module_filename_diagnostics
+            .insert(path.clone(), Some(filename.clone()));
+        assert_eq!(
+            cache.update(&feedback)[&path],
+            vec![error.clone(), warning.clone(), filename]
+        );
+
+        _ = feedback
+            .module_filename_diagnostics
+            .insert(path.clone(), None);
+        assert_eq!(cache.update(&feedback)[&path], vec![error, warning]);
+        assert!(cache.update(&feedback).is_empty());
+    }
+
+    #[test]
+    fn compilation_updates_preserve_filename_diagnostics() {
+        let path = Utf8PathBuf::from("src/Invalid.gleam");
+        let filename = diagnostic("Invalid module name", Level::Error);
+        let warning = diagnostic("Compilation warning", Level::Warning);
+        let mut cache = DiagnosticCache::default();
+        let mut feedback = Feedback::none();
+        _ = feedback
+            .module_filename_diagnostics
+            .insert(path.clone(), Some(filename.clone()));
+        _ = cache.update(&feedback);
+
+        let mut feedback = Feedback::none();
+        feedback.append_diagnostic(path.clone(), warning.clone());
+        assert_eq!(
+            cache.update(&feedback)[&path],
+            vec![warning, filename.clone()]
+        );
+        feedback.unset_existing_diagnostics(path.clone());
+        assert_eq!(cache.update(&feedback)[&path], vec![filename]);
+
+        let mut feedback = Feedback::none();
+        _ = feedback
+            .module_filename_diagnostics
+            .insert(path.clone(), None);
+        assert!(cache.update(&feedback)[&path].is_empty());
+    }
+
+    #[test]
+    fn append_feedback_keeps_filename_updates() {
+        let path = Utf8PathBuf::from("src/Invalid.gleam");
+        let filename = diagnostic("Invalid module name", Level::Error);
+        let warning = diagnostic("Compilation warning", Level::Warning);
+        let mut feedback = Feedback::none();
+        _ = feedback
+            .module_filename_diagnostics
+            .insert(path.clone(), Some(filename.clone()));
+        let mut compilation = Feedback::none();
+        compilation.append_diagnostic(path.clone(), warning.clone());
+        feedback.append_feedback(compilation);
+        assert_eq!(
+            DiagnosticCache::default().update(&feedback)[&path],
+            vec![warning, filename]
+        );
+    }
+
     #[test]
     fn feedback() {
         let mut book_keeper = FeedbackBookKeeper::default();
@@ -245,6 +378,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
+                module_filename_diagnostics: HashMap::new(),
                 diagnostics: HashMap::from([
                     (
                         file1.clone(),
@@ -264,6 +398,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
+                module_filename_diagnostics: HashMap::new(),
                 diagnostics: HashMap::from([
                     // File 1 and 2 had diagnostics before so they have been unset
                     (file1, vec![]),
@@ -302,6 +437,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
+                module_filename_diagnostics: HashMap::new(),
                 diagnostics: HashMap::from([(file1, vec![warning1.to_diagnostic()])]),
                 messages: locationless_error.to_diagnostics(),
             },
@@ -342,6 +478,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
+                module_filename_diagnostics: HashMap::new(),
                 diagnostics: HashMap::from([
                     (file1, vec![warning1.to_diagnostic()]),
                     (file3.clone(), error.to_diagnostics()),
@@ -357,6 +494,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
+                module_filename_diagnostics: HashMap::new(),
                 diagnostics: HashMap::from([(file3, vec![])]),
                 messages: vec![],
             },
@@ -399,6 +537,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
+                module_filename_diagnostics: HashMap::new(),
                 diagnostics: HashMap::from([(file1.clone(), error.to_diagnostics())]),
                 messages: vec![],
             },
@@ -412,6 +551,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
+                module_filename_diagnostics: HashMap::new(),
                 diagnostics: HashMap::from([(file1, vec![])]),
                 messages: vec![],
             },
@@ -440,6 +580,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
+                module_filename_diagnostics: HashMap::new(),
                 diagnostics: HashMap::from([(file1.clone(), error(&file1).to_diagnostics())]),
                 messages: vec![],
             },
@@ -451,6 +592,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
+                module_filename_diagnostics: HashMap::new(),
                 diagnostics: HashMap::from([
                     // Unset the previous error
                     (file1, vec![]),
@@ -483,6 +625,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
+                module_filename_diagnostics: HashMap::new(),
                 diagnostics: HashMap::from([(file1, error.to_diagnostics())]),
                 messages: vec![],
             },
@@ -496,6 +639,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
+                module_filename_diagnostics: HashMap::new(),
                 diagnostics: HashMap::new(),
                 messages: vec![],
             },
@@ -506,6 +650,7 @@ mod tests {
     #[test]
     fn append_feedback_new_file() {
         let mut feedback = Feedback {
+            module_filename_diagnostics: HashMap::new(),
             diagnostics: HashMap::from([(
                 Utf8PathBuf::from("src/file1.gleam"),
                 vec![Diagnostic {
@@ -525,6 +670,7 @@ mod tests {
             }],
         };
         feedback.append_feedback(Feedback {
+            module_filename_diagnostics: HashMap::new(),
             diagnostics: HashMap::from([(
                 Utf8PathBuf::from("src/file2.gleam"),
                 vec![Diagnostic {
@@ -540,6 +686,7 @@ mod tests {
         assert_eq!(
             feedback,
             Feedback {
+                module_filename_diagnostics: HashMap::new(),
                 diagnostics: HashMap::from([
                     (
                         Utf8PathBuf::from("src/file1.gleam"),
@@ -576,6 +723,7 @@ mod tests {
     #[test]
     fn append_feedback_same_file() {
         let mut feedback = Feedback {
+            module_filename_diagnostics: HashMap::new(),
             diagnostics: HashMap::from([(
                 Utf8PathBuf::from("src/file1.gleam"),
                 vec![Diagnostic {
@@ -595,6 +743,7 @@ mod tests {
             }],
         };
         feedback.append_feedback(Feedback {
+            module_filename_diagnostics: HashMap::new(),
             diagnostics: HashMap::from([(
                 Utf8PathBuf::from("src/file1.gleam"),
                 vec![Diagnostic {
@@ -610,6 +759,7 @@ mod tests {
         assert_eq!(
             feedback,
             Feedback {
+                module_filename_diagnostics: HashMap::new(),
                 diagnostics: HashMap::from([(
                     Utf8PathBuf::from("src/file1.gleam"),
                     vec![Diagnostic {
@@ -634,6 +784,7 @@ mod tests {
     #[test]
     fn append_feedback_new_message() {
         let mut feedback = Feedback {
+            module_filename_diagnostics: HashMap::new(),
             diagnostics: HashMap::from([(
                 Utf8PathBuf::from("src/file1.gleam"),
                 vec![Diagnostic {
@@ -653,6 +804,7 @@ mod tests {
             }],
         };
         feedback.append_feedback(Feedback {
+            module_filename_diagnostics: HashMap::new(),
             diagnostics: HashMap::from([]),
             messages: vec![Diagnostic {
                 location: None,
@@ -665,6 +817,7 @@ mod tests {
         assert_eq!(
             feedback,
             Feedback {
+                module_filename_diagnostics: HashMap::new(),
                 diagnostics: HashMap::from([(
                     Utf8PathBuf::from("src/file1.gleam"),
                     vec![Diagnostic {
@@ -698,6 +851,7 @@ mod tests {
     #[test]
     fn append_feedback_new_file_blank() {
         let mut feedback = Feedback {
+            module_filename_diagnostics: HashMap::new(),
             diagnostics: HashMap::from([(
                 Utf8PathBuf::from("src/file1.gleam"),
                 vec![Diagnostic {
@@ -717,12 +871,14 @@ mod tests {
             }],
         };
         feedback.append_feedback(Feedback {
+            module_filename_diagnostics: HashMap::new(),
             diagnostics: HashMap::from([(Utf8PathBuf::from("src/file2.gleam"), vec![])]),
             messages: vec![],
         });
         assert_eq!(
             feedback,
             Feedback {
+                module_filename_diagnostics: HashMap::new(),
                 diagnostics: HashMap::from([
                     (
                         Utf8PathBuf::from("src/file1.gleam"),
@@ -750,6 +906,7 @@ mod tests {
     #[test]
     fn append_feedback_existing_file_blank() {
         let mut feedback = Feedback {
+            module_filename_diagnostics: HashMap::new(),
             diagnostics: HashMap::from([(
                 Utf8PathBuf::from("src/file1.gleam"),
                 vec![Diagnostic {
@@ -769,12 +926,14 @@ mod tests {
             }],
         };
         feedback.append_feedback(Feedback {
+            module_filename_diagnostics: HashMap::new(),
             diagnostics: HashMap::from([(Utf8PathBuf::from("src/file1.gleam"), vec![])]),
             messages: vec![],
         });
         assert_eq!(
             feedback,
             Feedback {
+                module_filename_diagnostics: HashMap::new(),
                 diagnostics: HashMap::from([(Utf8PathBuf::from("src/file1.gleam"), vec![],),]),
                 messages: vec![Diagnostic {
                     location: None,
