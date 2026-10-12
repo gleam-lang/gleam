@@ -267,7 +267,7 @@ impl DirWalker {
 
             // If we have already processed this directory then we don't need to do it again.
             // This could be due to symlinks.
-            let already_seen = self.dirs_walked.insert(real_path.clone()).is_some();
+            let already_seen = self.dirs_walked.insert(real_path).is_some();
             if already_seen {
                 continue;
             }

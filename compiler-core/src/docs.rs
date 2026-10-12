@@ -177,7 +177,7 @@ pub fn generate_html<IO: FileSystemReader>(
             _other => format!("{} · {} · v{}", page.title, config.name, config.version),
         };
         let page_meta_description = match page_path_without_extension.as_str() {
-            "index" => config.description.to_string().clone(),
+            "index" => config.description.to_string(),
             _other => "".to_owned(),
         };
         let path = Utf8PathBuf::from(&page.path);

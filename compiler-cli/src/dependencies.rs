@@ -209,7 +209,7 @@ fn list_dependencies_tree(
             tree.clone(),
             dependency.clone(),
             packages.clone(),
-            accum.clone(),
+            accum,
             invert,
         );
     }
