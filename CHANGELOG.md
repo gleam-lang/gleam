@@ -5,7 +5,7 @@
 
 # Changelog
 
-## Unreleased
+## v1.19.2 - 2026-10-12
 
 ### Bug fixes
 
