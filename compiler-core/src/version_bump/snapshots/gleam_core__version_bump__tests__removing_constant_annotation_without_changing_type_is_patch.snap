@@ -2,4 +2,12 @@
 source: compiler-core/src/version_bump/tests.rs
 expression: bump
 ---
+-- BEFORE
+---- the_module
+pub const list: List(Int) = [1]
+
+-- AFTER
+---- the_module
+pub const list = [1]
+
 -- PATCH

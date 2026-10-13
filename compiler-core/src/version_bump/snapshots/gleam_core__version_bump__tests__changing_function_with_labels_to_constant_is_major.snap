@@ -2,6 +2,17 @@
 source: compiler-core/src/version_bump/tests.rs
 expression: bump
 ---
+-- BEFORE
+---- the_module
+pub fn add(a, addend b) { a + b }
+
+-- AFTER
+---- the_module
+
+pub const add = do_add
+
+fn do_add(a, addend b) { a + b }
+
 -- MAJOR
 
 == the_module ==

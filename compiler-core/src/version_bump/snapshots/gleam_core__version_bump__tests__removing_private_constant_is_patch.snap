@@ -2,4 +2,12 @@
 source: compiler-core/src/version_bump/tests.rs
 expression: bump
 ---
+-- BEFORE
+---- the_module
+const max_size = 512
+
+-- AFTER
+---- the_module
+
+
 -- PATCH

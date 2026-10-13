@@ -2,6 +2,14 @@
 source: compiler-core/src/version_bump/tests.rs
 expression: bump
 ---
+-- BEFORE
+---- the_module
+
+
+-- AFTER
+---- the_module
+pub type Wibble { Wibble }
+
 -- MINOR
 
 == the_module ==

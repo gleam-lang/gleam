@@ -2,6 +2,14 @@
 source: compiler-core/src/version_bump/tests.rs
 expression: bump
 ---
+-- BEFORE
+---- the_module
+pub type MyResult = Result(Int, String)
+
+-- AFTER
+---- the_module
+pub type MyResult = Result(String, Int)
+
 -- MAJOR
 
 == the_module ==

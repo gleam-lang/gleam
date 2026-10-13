@@ -601,7 +601,6 @@ impl<'a, 'doc> Printer<'a> {
         }
     }
 
-    // Copied from the `next_letter` method of the `type_::printer`.
     fn next_letter(&mut self) -> EcoString {
         let result = number_to_letters(self.next_type_variable_id);
         self.next_type_variable_id += 1;

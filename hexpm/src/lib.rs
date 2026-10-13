@@ -514,7 +514,7 @@ pub fn repository_get_package_interface_response(
             return Err(ApiError::unexpected_response(status, body));
         }
     };
-    Ok(String::try_from(body).expect("TODO: fixme"))
+    Ok(String::try_from(body).expect("valid UTF-8 from Hex"))
 }
 
 /// API Docs:

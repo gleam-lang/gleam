@@ -7,12 +7,13 @@ mod tests;
 use crate::{
     ast::Layer,
     package_interface::{
-        self, ImplementationsInterface, PackageInterface, TypeDefinitionInterface, TypeInterface,
+        self, ConstantInterface, DeprecationInterface, ImplementationsInterface, PackageInterface,
+        TypeDefinitionInterface, TypeInterface,
     },
     strings::number_to_letters,
     type_::{
         Deprecation, ModuleInterface, Type, TypeConstructor, TypeVar, TypeVariantConstructors,
-        ValueConstructorVariant, expression::Implementations,
+        ValueConstructor, ValueConstructorVariant, expression::Implementations,
     },
 };
 use ecow::{EcoString, eco_format};
@@ -22,24 +23,14 @@ use std::{
     sync::Arc,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
 pub enum VersionBump {
-    Major,
-    Minor,
     Patch,
+    Minor,
+    Major,
 }
 
 impl VersionBump {
-    /// Combines two bumps, returning the stronger of the two. (Major is stronger than minor which is
-    /// stronger than patch).
-    fn combine(self, other: VersionBump) -> Self {
-        match (self, other) {
-            (VersionBump::Major, _) | (_, VersionBump::Major) => VersionBump::Major,
-            (VersionBump::Minor, _) | (_, VersionBump::Minor) => VersionBump::Minor,
-            (VersionBump::Patch, VersionBump::Patch) => VersionBump::Patch,
-        }
-    }
-
     pub fn to_string(&self) -> &'static str {
         match self {
             VersionBump::Major => "major",
@@ -54,13 +45,23 @@ impl VersionBump {
 #[derive(Debug, Clone)]
 pub enum VersionChanges {
     /// A breaking change, meaning old code may break in this version
-    Major(HashSet<Change>),
+    Major(HashSet<ApiChange>),
     /// A non-breaking change, meaning old code will continue to function but some
     /// new features was introduced
-    Minor(HashSet<Change>),
+    Minor(HashSet<ApiChange>),
     /// A patch change, meaning nothing has been added or removed from the public
     /// API, though bug-fixing behavioural changes may have occurred
     Patch,
+}
+
+impl VersionChanges {
+    pub fn bump(&self) -> VersionBump {
+        match self {
+            VersionChanges::Major(_) => VersionBump::Major,
+            VersionChanges::Minor(_) => VersionBump::Minor,
+            VersionChanges::Patch => VersionBump::Patch,
+        }
+    }
 }
 
 /// A single change that constitutes either a minor or major version bump. The
@@ -68,7 +69,7 @@ pub enum VersionChanges {
 /// signature to display in order to communicate this to the user. Further details
 /// are not needed, due to how changes are printed.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum Change {
+pub enum ApiChange {
     /// A change in a function or constant's type signature
     Signature { module: EcoString, name: EcoString },
     /// A change in a function or constant's target support
@@ -106,21 +107,30 @@ pub enum Change {
 
 /// Detect the changes to the public API of a package between two versions.
 pub fn detect_changes(
-    package_interface: &PackageInterface,
-    modules: &imbl::HashMap<EcoString, ModuleInterface>,
+    previous_version_interface: &PackageInterface,
+    new_version_modules: &imbl::HashMap<EcoString, ModuleInterface>,
 ) -> VersionChanges {
-    VersionChecker::new(modules).detect_changes(package_interface)
+    VersionChecker::new(new_version_modules).detect_changes(previous_version_interface)
 }
 
+/// The name of a type and the module it originates from. This is enough to
+/// uniquely identify any custom type or type alias in a project without errors.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 struct TypeNames {
     module: EcoString,
     name: EcoString,
 }
 
+/// Contains the necessary state for comparing two versions of a package to
+/// determine what version bump occurred between them based on API changes.
 struct VersionChecker<'a> {
+    /// The changes that have been detected so far
     changes: VersionChanges,
+    /// The modules of the newer version of the package
     modules: &'a imbl::HashMap<EcoString, ModuleInterface>,
+    /// Types which have been "moved", that is, the name of the type has changed
+    /// but an alias with the old type name has remained. This maps the new type's
+    /// name to the name of the alias pointing to it where the type used to be.
     moved_types: HashMap<TypeNames, TypeNames>,
 }
 
@@ -133,7 +143,7 @@ impl<'a> VersionChecker<'a> {
         }
     }
 
-    fn minor_change(&mut self, change: Change) {
+    fn minor_change(&mut self, change: ApiChange) {
         match &mut self.changes {
             VersionChanges::Major(_) => {}
             VersionChanges::Minor(changes) => _ = changes.insert(change),
@@ -141,7 +151,7 @@ impl<'a> VersionChecker<'a> {
         }
     }
 
-    fn major_change(&mut self, change: Change) {
+    fn major_change(&mut self, change: ApiChange) {
         match &mut self.changes {
             VersionChanges::Major(changes) => _ = changes.insert(change),
             VersionChanges::Minor(_) | VersionChanges::Patch => {
@@ -154,421 +164,421 @@ impl<'a> VersionChecker<'a> {
         self.find_moved_types(package_interface);
 
         for module in self.modules.values() {
-            // Internal modules aren't part of the public API
-            if module.is_internal {
-                continue;
-            }
-
-            if let Some(previous_module) = package_interface.modules.get(&module.name) {
-                for (name, type_) in module.types.iter() {
-                    // Private and internal types aren't part of the public API
-                    if !type_.publicity.is_public() {
-                        continue;
-                    }
-
-                    // Like with modules, we remove the type aliases from the old
-                    // interface so we know that any left over at the end have
-                    // been removed and are a major change.
-                    if let Some(alias) = previous_module.type_aliases.get(name) {
-                        // Changing the number of type parameters breaks any type
-                        // annotations.
-                        if type_.parameters.len() != alias.parameters {
-                            self.major_change(Change::TypeParameters {
-                                module: module.name.clone(),
-                                name: name.clone(),
-                            });
-                            continue;
-                        }
-
-                        let remapped_ids = remap_type_ids(type_);
-
-                        match (&alias.deprecation, &type_.deprecation) {
-                            (None, Deprecation::NotDeprecated)
-                            | (Some(_), Deprecation::Deprecated { .. }) => {}
-                            // Changing the deprecation of something is a minor change.
-                            (None, Deprecation::Deprecated { .. })
-                            | (Some(_), Deprecation::NotDeprecated) => {
-                                self.minor_change(Change::Deprecation {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                    layer: Layer::Type,
-                                });
-                            }
-                        }
-
-                        // Now we actually need to compare the type that is being
-                        // aliased between the two versions.
-                        match self.compare_types(
-                            &alias.alias,
-                            &type_.type_,
-                            &mut TypeComparisonContext::Constructor(remapped_ids),
-                        ) {
-                            VersionBump::Major => {
-                                self.major_change(Change::TypeBody {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                });
-                            }
-                            VersionBump::Minor => {
-                                self.minor_change(Change::TypeBody {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                });
-                            }
-                            VersionBump::Patch => {}
-                        }
-                    } else if let Some(custom_type) = previous_module.types.get(name) {
-                        match (&custom_type.deprecation, &type_.deprecation) {
-                            (None, Deprecation::NotDeprecated)
-                            | (Some(_), Deprecation::Deprecated { .. }) => {}
-                            // Changing the deprecation of something is a minor change.
-                            (None, Deprecation::Deprecated { .. })
-                            | (Some(_), Deprecation::NotDeprecated) => {
-                                self.minor_change(Change::Deprecation {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                    layer: Layer::Type,
-                                });
-                            }
-                        }
-
-                        match self.compare_custom_type(module, name, custom_type, type_) {
-                            CustomTypeChanges::TypeParameters => {
-                                self.major_change(Change::TypeParameters {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                });
-                            }
-                            CustomTypeChanges::MajorBody => {
-                                self.major_change(Change::TypeBody {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                });
-                            }
-                            CustomTypeChanges::MinorBody => {
-                                self.minor_change(Change::TypeBody {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                });
-                            }
-                            CustomTypeChanges::Patch => {}
-                        }
-                    } else {
-                        // If the type was neither a type alias nor a custom type
-                        // in the previous version, it has been added this version,
-                        // which constitutes a minor change.
-                        self.minor_change(Change::Added {
-                            module: module.name.clone(),
-                            name: name.clone(),
-                            layer: Layer::Type,
-                        });
-                    }
-                }
-
-                // As with modules and types, we remove the values from the
-                // old interface so we know that any left over at the end have
-                // been removed and are a major change.
-                for (name, value) in module.values.iter() {
-                    // Private and internal values aren't part of the public API
-                    if !value.publicity.is_public() {
-                        continue;
-                    }
-
-                    // Custom type variants are handled along with custom types,
-                    // so we can skip over them here.
-                    if let ValueConstructorVariant::Record { .. } = &value.variant {
-                        continue;
-                    }
-
-                    if let Some(function) = previous_module.functions.get(name) {
-                        match (&function.deprecation, &value.deprecation) {
-                            (None, Deprecation::NotDeprecated)
-                            | (Some(_), Deprecation::Deprecated { .. }) => {}
-                            // Changing the deprecation of something is a minor change.
-                            (None, Deprecation::Deprecated { .. })
-                            | (Some(_), Deprecation::NotDeprecated) => {
-                                self.minor_change(Change::Deprecation {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                    layer: Layer::Value,
-                                });
-                            }
-                        }
-
-                        let old_labels: HashMap<_, _> = function
-                            .parameters
-                            .iter()
-                            .enumerate()
-                            .filter_map(|(index, parameter)| {
-                                parameter
-                                    .label
-                                    .as_ref()
-                                    .map(|label| (index as u32, label.clone()))
-                            })
-                            .collect();
-
-                        if let ValueConstructorVariant::ModuleFn {
-                            field_map: Some(field_map),
-                            ..
-                        } = &value.variant
-                            && !field_map.fields.is_empty()
-                        {
-                            let new_labels = field_map.indices_to_labels();
-                            for i in 0..function.parameters.len() as u32 {
-                                match (old_labels.get(&i), new_labels.get(&i)) {
-                                    // If the old function didn't have a label for the parameter and
-                                    // the new one does, it is a minor change.
-                                    (None, Some(_)) => self.minor_change(Change::Signature {
-                                        module: module.name.clone(),
-                                        name: name.clone(),
-                                    }),
-                                    // If the label has been removed, it's a major change.
-                                    (Some(_), None) => {
-                                        self.major_change(Change::Signature {
-                                            module: module.name.clone(),
-                                            name: name.clone(),
-                                        });
-                                        break;
-                                    }
-                                    // If there is still a label but it's different, it's also a major
-                                    // change.
-                                    (Some(old_label), Some(new_label))
-                                        if old_label != *new_label =>
-                                    {
-                                        self.major_change(Change::Signature {
-                                            module: module.name.clone(),
-                                            name: name.clone(),
-                                        });
-                                        break;
-                                    }
-                                    (None, None) | (Some(_), Some(_)) => {}
-                                }
-                            }
-                        } else if !old_labels.is_empty() {
-                            // If there are no labels now but there were some in the older version,
-                            // they've all been removed and it's a major change.
-                            self.major_change(Change::Signature {
-                                module: module.name.clone(),
-                                name: name.clone(),
-                            });
-                        }
-
-                        // The `FunctionInterface` doesn't directly contain the
-                        // type of the function value, so we need to construct
-                        // that so we can compare it with the new value.
-                        let old_type = TypeInterface::Fn {
-                            parameters: function
-                                .parameters
-                                .iter()
-                                .map(|parameter| parameter.type_.clone())
-                                .collect(),
-                            return_: Box::new(function.return_.clone()),
-                        };
-
-                        match self.compare_types(
-                            &old_type,
-                            &value.type_,
-                            &mut TypeComparisonContext::FunctionOrConstant(HashMap::new()),
-                        ) {
-                            VersionBump::Major => {
-                                self.major_change(Change::Signature {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                });
-                                continue;
-                            }
-                            VersionBump::Minor => {
-                                self.minor_change(Change::Signature {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                });
-                            }
-                            VersionBump::Patch => {}
-                        }
-
-                        let new_implementations = match &value.variant {
-                            ValueConstructorVariant::LocalVariable { .. }
-                            | ValueConstructorVariant::Record { .. } => continue,
-                            ValueConstructorVariant::ModuleConstant {
-                                implementations, ..
-                            } => implementations,
-                            ValueConstructorVariant::ModuleFn {
-                                implementations, ..
-                            } => implementations,
-                        };
-                        match self
-                            .compare_implementations(&function.implementations, new_implementations)
-                        {
-                            VersionBump::Major => {
-                                self.major_change(Change::TargetSupport {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                });
-                            }
-                            VersionBump::Minor => {
-                                self.minor_change(Change::TargetSupport {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                });
-                            }
-                            VersionBump::Patch => {}
-                        }
-                    } else if let Some(constant) = previous_module.constants.get(name) {
-                        match (&constant.deprecation, &value.deprecation) {
-                            (None, Deprecation::NotDeprecated)
-                            | (Some(_), Deprecation::Deprecated { .. }) => {}
-                            // Changing the deprecation of something is a minor change.
-                            (None, Deprecation::Deprecated { .. })
-                            | (Some(_), Deprecation::NotDeprecated) => {
-                                self.minor_change(Change::Deprecation {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                    layer: Layer::Value,
-                                });
-                            }
-                        }
-
-                        match self.compare_types(
-                            &constant.type_,
-                            &value.type_,
-                            &mut TypeComparisonContext::FunctionOrConstant(HashMap::new()),
-                        ) {
-                            VersionBump::Major => {
-                                self.major_change(Change::Signature {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                });
-                            }
-                            VersionBump::Minor => {
-                                self.minor_change(Change::Signature {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                });
-                            }
-                            VersionBump::Patch => {}
-                        }
-
-                        let new_implementations = match &value.variant {
-                            ValueConstructorVariant::LocalVariable { .. }
-                            | ValueConstructorVariant::Record { .. } => continue,
-                            ValueConstructorVariant::ModuleConstant {
-                                implementations, ..
-                            } => implementations,
-                            ValueConstructorVariant::ModuleFn {
-                                implementations, ..
-                            } => implementations,
-                        };
-                        match self
-                            .compare_implementations(&constant.implementations, new_implementations)
-                        {
-                            VersionBump::Major => {
-                                self.major_change(Change::TargetSupport {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                });
-                            }
-                            VersionBump::Minor => {
-                                self.minor_change(Change::TargetSupport {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                });
-                            }
-                            VersionBump::Patch => {}
-                        }
-
-                        // If what was a constant in the old version is now a function with labels,
-                        // and they are the same type (checked above), this is effectively adding
-                        // labels to a label-less function, which is a minor change.
-                        if let ValueConstructorVariant::ModuleFn {
-                            field_map: Some(field_map),
-                            ..
-                        } = &value.variant
-                            && !field_map.fields.is_empty()
-                        {
-                            self.minor_change(Change::Signature {
-                                module: module.name.clone(),
-                                name: name.clone(),
-                            });
-                        }
-                    } else {
-                        // If the value was neither a function nor a constant in
-                        // the previous version, it is new in this version, which
-                        // is a minor change.
-                        self.minor_change(Change::Added {
-                            module: module.name.clone(),
-                            name: name.clone(),
-                            layer: Layer::Value,
-                        });
-                    }
-                }
-
-                // Iterate over all of the types and values from the old module and check if any of
-                // them are missing or non-public in the new version. If they are, they have been
-                // removed from the public API, which is a major change.
-                for type_ in previous_module
-                    .types
-                    .keys()
-                    .chain(previous_module.type_aliases.keys())
-                {
-                    if module
-                        .types
-                        .get(type_)
-                        .is_none_or(|type_| !type_.publicity.is_public())
-                    {
-                        self.major_change(Change::Removed {
-                            module: module.name.clone(),
-                            name: type_.clone(),
-                            layer: Layer::Type,
-                        });
-                    }
-                }
-
-                for value in previous_module
-                    .functions
-                    .keys()
-                    .chain(previous_module.constants.keys())
-                {
-                    if module
-                        .values
-                        .get(value)
-                        .is_none_or(|value| !value.publicity.is_public())
-                    {
-                        self.major_change(Change::Removed {
-                            module: module.name.clone(),
-                            name: value.clone(),
-                            layer: Layer::Value,
-                        });
-                    }
-                }
-            } else {
-                // This module is new in this version, which constitutes a minor change.
-                // We don't care about what types/values are in this module, since they
-                // are all new.
-                self.minor_change(Change::ModuleAdded {
-                    name: module.name.clone(),
-                });
-            }
+            self.detect_module_changes(package_interface, module);
         }
 
-        // Iterate through all of the modules in the old version and check if any are absent or
-        // internal in the new version. If they are, they have been removed from the public API,
-        // which is a major change.
+        // Iterate through all of the modules in the old version and check if any
+        // are absent or internal in the new version. If they are, they have been
+        // removed from the public API, which is a major change.
         for module in package_interface.modules.keys() {
             if self
                 .modules
                 .get(module)
-                // Since `self.modules` contains all importable modules in the project, we need to
-                // check that the module is in this package, as if it isn't, it's still a major
-                // change.
+                // Since `self.modules` contains all importable modules in the
+                // project, we need to check that the module is in this package,
+                // as if it isn't, it's still a major change.
                 .is_none_or(|module| module.is_internal || module.package != package_interface.name)
             {
-                self.major_change(Change::ModuleRemoved {
+                self.major_change(ApiChange::ModuleRemoved {
                     name: module.clone(),
                 });
             }
         }
 
         self.changes
+    }
+
+    fn detect_module_changes(
+        &mut self,
+        old_package: &PackageInterface,
+        new_module: &ModuleInterface,
+    ) {
+        // Internal modules aren't part of the public API
+        if new_module.is_internal {
+            return;
+        }
+
+        if let Some(old_module) = old_package.modules.get(&new_module.name) {
+            for (name, type_) in new_module.types.iter() {
+                self.detect_type_changes(new_module, old_module, type_, name);
+            }
+
+            for (name, value) in new_module.values.iter() {
+                self.detect_value_changes(old_module, new_module, name, value);
+            }
+
+            // Iterate over all of the types and values from the old module
+            // and check if any of them are missing or non-public in the new
+            // version. If they are, they have been removed from the public
+            // API, which is a major change.
+            for type_ in old_module
+                .types
+                .keys()
+                .chain(old_module.type_aliases.keys())
+            {
+                if new_module
+                    .types
+                    .get(type_)
+                    .is_none_or(|type_| !type_.publicity.is_public())
+                {
+                    self.major_change(ApiChange::Removed {
+                        module: new_module.name.clone(),
+                        name: type_.clone(),
+                        layer: Layer::Type,
+                    });
+                }
+            }
+
+            for value in old_module
+                .functions
+                .keys()
+                .chain(old_module.constants.keys())
+            {
+                if new_module
+                    .values
+                    .get(value)
+                    .is_none_or(|value| !value.publicity.is_public())
+                {
+                    self.major_change(ApiChange::Removed {
+                        module: new_module.name.clone(),
+                        name: value.clone(),
+                        layer: Layer::Value,
+                    });
+                }
+            }
+        } else {
+            // This module is new in this version, which constitutes a minor
+            // change. We don't care about what types/values are in this
+            // module, since they are all new.
+            self.minor_change(ApiChange::ModuleAdded {
+                name: new_module.name.clone(),
+            });
+        }
+    }
+
+    fn detect_value_changes(
+        &mut self,
+        old_module: &package_interface::ModuleInterface,
+        new_module: &ModuleInterface,
+        name: &EcoString,
+        new_value: &ValueConstructor,
+    ) {
+        // Private and internal values aren't part of the public API
+        if !new_value.publicity.is_public() {
+            return;
+        }
+
+        // Custom type variants are handled along with custom types,
+        // so we can skip over them here.
+        if let ValueConstructorVariant::Record { .. } = &new_value.variant {
+            return;
+        }
+
+        if let Some(function) = old_module.functions.get(name) {
+            self.detect_function_changes(new_value, function, &new_module.name, name);
+        } else if let Some(constant) = old_module.constants.get(name) {
+            self.detect_constant_changes(new_value, constant, &new_module.name, name);
+        } else {
+            // If the value was neither a function nor a constant in the previous
+            // version, it is new in this version, which is a minor change.
+            self.minor_change(ApiChange::Added {
+                module: new_module.name.clone(),
+                name: name.clone(),
+                layer: Layer::Value,
+            });
+        }
+    }
+
+    fn detect_function_changes(
+        &mut self,
+        value: &ValueConstructor,
+        function: &package_interface::FunctionInterface,
+        module: &EcoString,
+        name: &EcoString,
+    ) {
+        // The `FunctionInterface` doesn't directly contain the type of the
+        // function value, so we need to construct that so we can compare it
+        // with the new value.
+        let old_type = TypeInterface::Fn {
+            parameters: function
+                .parameters
+                .iter()
+                .map(|parameter| parameter.type_.clone())
+                .collect(),
+            return_: Box::new(function.return_.clone()),
+        };
+
+        self.detect_common_value_changes(
+            &old_type,
+            &function.implementations,
+            &function.deprecation,
+            value,
+            module,
+            name,
+        );
+
+        let old_labels: HashMap<_, _> = function
+            .parameters
+            .iter()
+            .enumerate()
+            .filter_map(|(index, parameter)| {
+                parameter
+                    .label
+                    .as_ref()
+                    .map(|label| (index as u32, label.clone()))
+            })
+            .collect();
+
+        if let ValueConstructorVariant::ModuleFn {
+            field_map: Some(field_map),
+            ..
+        } = &value.variant
+            && !field_map.fields.is_empty()
+        {
+            let new_labels = field_map.indices_to_labels();
+            for i in 0..function.parameters.len() as u32 {
+                match (old_labels.get(&i), new_labels.get(&i)) {
+                    // If the old function didn't have a label for the parameter
+                    // and the new one does, it is a minor change.
+                    (None, Some(_)) => self.minor_change(ApiChange::Signature {
+                        module: module.clone(),
+                        name: name.clone(),
+                    }),
+                    // If the label has been removed, it's a major change.
+                    (Some(_), None) => {
+                        self.major_change(ApiChange::Signature {
+                            module: module.clone(),
+                            name: name.clone(),
+                        });
+                        break;
+                    }
+                    // If there is still a label but it's different, it's also a
+                    // major change.
+                    (Some(old_label), Some(new_label)) if old_label != *new_label => {
+                        self.major_change(ApiChange::Signature {
+                            module: module.clone(),
+                            name: name.clone(),
+                        });
+                        break;
+                    }
+                    (None, None) | (Some(_), Some(_)) => {}
+                }
+            }
+        } else if !old_labels.is_empty() {
+            // If there are no labels now but there were some in the older
+            // version, they've all been removed and it's a major change.
+            self.major_change(ApiChange::Signature {
+                module: module.clone(),
+                name: name.clone(),
+            });
+        }
+    }
+
+    fn detect_constant_changes(
+        &mut self,
+        value: &ValueConstructor,
+        constant: &ConstantInterface,
+        module: &EcoString,
+        name: &EcoString,
+    ) {
+        self.detect_common_value_changes(
+            &constant.type_,
+            &constant.implementations,
+            &constant.deprecation,
+            value,
+            module,
+            name,
+        );
+
+        // If what was a constant in the old version is now a function with
+        // labels, and they are the same type (checked above), this is effectively
+        // adding labels to a label-less function, which is a minor change.
+        if let ValueConstructorVariant::ModuleFn {
+            field_map: Some(field_map),
+            ..
+        } = &value.variant
+            && !field_map.fields.is_empty()
+        {
+            self.minor_change(ApiChange::Signature {
+                module: module.clone(),
+                name: name.clone(),
+            });
+        }
+    }
+
+    /// Detect changes between values across versions, detecting the changes that
+    /// are relevant for both functions and constants, since that accounts for
+    /// most of the possible API changes (the only difference is labels).
+    fn detect_common_value_changes(
+        &mut self,
+        old_type: &TypeInterface,
+        old_implementations: &ImplementationsInterface,
+        old_deprecation: &Option<DeprecationInterface>,
+        new_value: &ValueConstructor,
+        module: &EcoString,
+        name: &EcoString,
+    ) {
+        match (old_deprecation, &new_value.deprecation) {
+            (None, Deprecation::NotDeprecated) | (Some(_), Deprecation::Deprecated { .. }) => {}
+            // Changing the deprecation of something is a minor change.
+            (None, Deprecation::Deprecated { .. }) | (Some(_), Deprecation::NotDeprecated) => {
+                self.minor_change(ApiChange::Deprecation {
+                    module: module.clone(),
+                    name: name.clone(),
+                    layer: Layer::Value,
+                });
+            }
+        }
+        match self.compare_types(
+            old_type,
+            &new_value.type_,
+            &mut TypeComparisonContext::FunctionOrConstant(HashMap::new()),
+        ) {
+            VersionBump::Major => {
+                self.major_change(ApiChange::Signature {
+                    module: module.clone(),
+                    name: name.clone(),
+                });
+                return;
+            }
+            VersionBump::Minor => {
+                self.minor_change(ApiChange::Signature {
+                    module: module.clone(),
+                    name: name.clone(),
+                });
+            }
+            VersionBump::Patch => {}
+        }
+        let new_implementations = match &new_value.variant {
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::Record { .. } => return,
+            ValueConstructorVariant::ModuleConstant {
+                implementations, ..
+            } => implementations,
+            ValueConstructorVariant::ModuleFn {
+                implementations, ..
+            } => implementations,
+        };
+
+        match self.compare_implementations(old_implementations, new_implementations) {
+            VersionBump::Major => {
+                self.major_change(ApiChange::TargetSupport {
+                    module: module.clone(),
+                    name: name.clone(),
+                });
+            }
+            VersionBump::Minor => {
+                self.minor_change(ApiChange::TargetSupport {
+                    module: module.clone(),
+                    name: name.clone(),
+                });
+            }
+            VersionBump::Patch => {}
+        }
+    }
+
+    fn detect_type_changes(
+        &mut self,
+        new_module: &ModuleInterface,
+        old_module: &package_interface::ModuleInterface,
+        type_: &TypeConstructor,
+        name: &EcoString,
+    ) {
+        // Private and internal types aren't part of the public API
+        if !type_.publicity.is_public() {
+            return;
+        }
+
+        if let Some(alias) = old_module.type_aliases.get(name) {
+            // Changing the number of type parameters breaks any type
+            // annotations.
+            if type_.parameters.len() != alias.parameters {
+                self.major_change(ApiChange::TypeParameters {
+                    module: new_module.name.clone(),
+                    name: name.clone(),
+                });
+                return;
+            }
+
+            let remapped_ids = remap_type_ids(type_);
+
+            match (&alias.deprecation, &type_.deprecation) {
+                (None, Deprecation::NotDeprecated) | (Some(_), Deprecation::Deprecated { .. }) => {}
+                // Changing the deprecation of something is a minor change.
+                (None, Deprecation::Deprecated { .. }) | (Some(_), Deprecation::NotDeprecated) => {
+                    self.minor_change(ApiChange::Deprecation {
+                        module: new_module.name.clone(),
+                        name: name.clone(),
+                        layer: Layer::Type,
+                    });
+                }
+            }
+
+            // Now we actually need to compare the type that is being aliased
+            // between the two versions.
+            match self.compare_types(
+                &alias.alias,
+                &type_.type_,
+                &mut TypeComparisonContext::Constructor(remapped_ids),
+            ) {
+                VersionBump::Major => {
+                    self.major_change(ApiChange::TypeBody {
+                        module: new_module.name.clone(),
+                        name: name.clone(),
+                    });
+                }
+                VersionBump::Minor => {
+                    self.minor_change(ApiChange::TypeBody {
+                        module: new_module.name.clone(),
+                        name: name.clone(),
+                    });
+                }
+                VersionBump::Patch => {}
+            }
+        } else if let Some(custom_type) = old_module.types.get(name) {
+            match (&custom_type.deprecation, &type_.deprecation) {
+                (None, Deprecation::NotDeprecated) | (Some(_), Deprecation::Deprecated { .. }) => {}
+                // Changing the deprecation of something is a minor change.
+                (None, Deprecation::Deprecated { .. }) | (Some(_), Deprecation::NotDeprecated) => {
+                    self.minor_change(ApiChange::Deprecation {
+                        module: new_module.name.clone(),
+                        name: name.clone(),
+                        layer: Layer::Type,
+                    });
+                }
+            }
+
+            match self.compare_custom_type(new_module, name, custom_type, type_) {
+                CustomTypeChanges::TypeParameters => {
+                    self.major_change(ApiChange::TypeParameters {
+                        module: new_module.name.clone(),
+                        name: name.clone(),
+                    });
+                }
+                CustomTypeChanges::MajorBody => {
+                    self.major_change(ApiChange::TypeBody {
+                        module: new_module.name.clone(),
+                        name: name.clone(),
+                    });
+                }
+                CustomTypeChanges::MinorBody => {
+                    self.minor_change(ApiChange::TypeBody {
+                        module: new_module.name.clone(),
+                        name: name.clone(),
+                    });
+                }
+                CustomTypeChanges::Patch => {}
+            }
+        } else {
+            // If the type was neither a type alias nor a custom type in the
+            // previous version, it has been added this version, which
+            // constitutes a minor change.
+            self.minor_change(ApiChange::Added {
+                module: new_module.name.clone(),
+                name: name.clone(),
+                layer: Layer::Type,
+            });
+        }
     }
 
     /// Detect types which have been "moved", that is, the name of the type has
@@ -597,31 +607,50 @@ impl<'a> VersionChecker<'a> {
                 if !alias.publicity.is_public() {
                     continue;
                 }
-                if let Some(custom_type) = previous_module.types.get(name)
-                    && let Some(type_) = module.types.get(name)
-                    && let Some((new_module, new_name)) = alias.type_.named_type_name()
-                {
-                    match self.compare_custom_type(module, name, custom_type, type_) {
-                        CustomTypeChanges::MajorBody | CustomTypeChanges::TypeParameters => {}
 
-                        // If it's compatible, record it as a moved type. This type is now effectively
-                        // interchangeable with the one it aliases, even though they are different types.
-                        CustomTypeChanges::Patch | CustomTypeChanges::MinorBody => {
-                            _ = self.moved_types.insert(
-                                TypeNames {
-                                    module: new_module,
-                                    name: new_name,
-                                },
-                                TypeNames {
-                                    module: module.name.clone(),
-                                    name: name.clone(),
-                                },
-                            )
-                        }
+                let Some(custom_type) = previous_module.types.get(name) else {
+                    continue;
+                };
+
+                let Some(type_) = module.types.get(name) else {
+                    continue;
+                };
+
+                let Some((new_module, new_name)) = alias.type_.named_type_name() else {
+                    continue;
+                };
+
+                match self.compare_custom_type(module, name, custom_type, type_) {
+                    CustomTypeChanges::MajorBody | CustomTypeChanges::TypeParameters => {}
+
+                    // If it's compatible, record it as a moved type. This type
+                    // is now effectively interchangeable with the one it aliases,
+                    // even though they are different types.
+                    CustomTypeChanges::Patch | CustomTypeChanges::MinorBody => {
+                        self.register_moved_type(&module.name, name, new_module, new_name)
                     }
                 }
             }
         }
+    }
+
+    fn register_moved_type(
+        &mut self,
+        old_module: &EcoString,
+        old_name: &EcoString,
+        new_module: EcoString,
+        new_name: EcoString,
+    ) {
+        _ = self.moved_types.insert(
+            TypeNames {
+                module: new_module,
+                name: new_name,
+            },
+            TypeNames {
+                module: old_module.clone(),
+                name: old_name.clone(),
+            },
+        )
     }
 
     /// Compares a custom type in the old version of the package to the new type.
@@ -662,13 +691,15 @@ impl<'a> VersionChecker<'a> {
             && let Some(type_) = type_module.types.get(name)
             && let Some(new_constructors) = type_module.types_value_constructors.get(name)
         {
-            // The new type is a type alias to a custom type. We need to check if the custom type is
-            // compatible with the old type; if it is, the type is "moved", and it is a minor change,
-            // since all type annotations still work correctly.
+            // The new type is a type alias to a custom type. We need to check
+            // if the custom type is compatible with the old type; if it is, the
+            // type is "moved", and it is a minor change, since all type
+            // annotations still work correctly.
 
-            // If the old type had public constructors, and the new type is either being made internal
-            // or being moved to a different module, that is a major change, since the constructors
-            // are no longer available as the public API of this module (even if they are still
+            // If the old type had public constructors, and the new type is
+            // either being made internal/ or being moved to a different module,
+            // that is a major change, since the constructors are no longer
+            // available as the public API of this module (even if they are still
             // accessible elsewhere in the package).
             if !custom_type.constructors.is_empty()
                 && (type_.publicity.is_internal() || type_module.name != module.name)
@@ -676,8 +707,9 @@ impl<'a> VersionChecker<'a> {
                 return CustomTypeChanges::MajorBody;
             }
 
-            // Even if the custom type changes its type parameters, the alias can still be made in a
-            // way to avoid breaking changes. For example, if we have a type like this:
+            // Even if the custom type changes its type parameters, the alias can
+            // still be made in a way to avoid breaking changes. For example, if
+            // we have a type like this:
             //
             // ```gleam
             // pub type Wibble(a, b) {
@@ -697,19 +729,20 @@ impl<'a> VersionChecker<'a> {
             // }
             // ```
             //
-            // The new type isn't directly compatible with the old type. However, if an aliases is
-            // added like this:
+            // The new type isn't directly compatible with the old type.
+            // However, if an aliases is added like this:
             //
             // ```gleam
             // pub type Wibble(a, b) = Wobble(a, b, Int)
             // ```
             //
-            // All times that `Wibble` is referenced in type annotations, it refers to the same set
-            // of values, which means it's a minor change.
+            // All times that `Wibble` is referenced in type annotations, it
+            // refers to the same set of values, which means it's a minor change.
             //
-            // In order to correctly compute this, we need to create a list of the type parameters
-            // of the custom type and what the type alias assigns to each one, so that we can use
-            // that to compare instead of the generic.
+            // In order to correctly compute this, we need to create a list of
+            // the type parameters of the custom type and what the type alias
+            // assigns to each one, so that we can use that to compare instead
+            // of the generic.
             //
             let remapped_parameters = type_
                 .parameters
@@ -718,26 +751,30 @@ impl<'a> VersionChecker<'a> {
                 .zip(arguments.iter().cloned())
                 .collect();
 
-            // Compare the aliased custom type with the old type to see if they match.
+            // Compare the aliased custom type with the old type to see if they
+            // match.
             match self.do_compare_custom_type(
                 custom_type,
                 new_constructors,
                 remapped_ids,
                 &remapped_parameters,
             ) {
-                // Moving a custom type is a minor change, even if no changes are made to the type itself.
+                // Moving a custom type is a minor change, even if no changes
+                // are made to the type itself.
                 CustomTypeChanges::Patch => CustomTypeChanges::MinorBody,
                 changes @ (CustomTypeChanges::MinorBody
                 | CustomTypeChanges::MajorBody
                 | CustomTypeChanges::TypeParameters) => changes,
             }
         } else {
-            // If the new type is an alias to something other than a custom type, it's a major change.
+            // If the new type is an alias to something other than a custom type,
+            // it's a major change.
             CustomTypeChanges::MajorBody
         }
     }
 
-    /// Compares the actual constructors of two custom types, checking if they are compatible.
+    /// Compares the actual constructors of two custom types, checking if they
+    /// are compatible.
     fn do_compare_custom_type(
         &mut self,
         custom_type: &TypeDefinitionInterface,
@@ -747,20 +784,21 @@ impl<'a> VersionChecker<'a> {
     ) -> CustomTypeChanges {
         let mut bump = CustomTypeChanges::Patch;
 
-        // If there were previously no constructors (the type was an external type or was opaque)
-        // and we have added non-opaque constructors, it's a minor change.
+        // If there were previously no constructors (the type was an external
+        // type or was opaque) and we have added non-opaque constructors, it's a
+        // minor change.
         if custom_type.constructors.is_empty() {
             if !new_constructors.variants.is_empty() && !new_constructors.opaque.is_opaque() {
                 bump = CustomTypeChanges::MinorBody;
             }
         } else {
-            // If there were previously public constructors and we made them opaque, it's a
-            // major change.
+            // If there were previously public constructors and we made them
+            // opaque, it's a major change.
             if new_constructors.opaque.is_opaque() {
                 return CustomTypeChanges::MajorBody;
             }
-            // Adding a constructor is a major change as well as removing one, as it breaks any
-            // pattern matching on the type.
+            // Adding a constructor is a major change as well as removing one,
+            // as it breaks any pattern matching on the type.
             if custom_type.constructors.len() != new_constructors.variants.len() {
                 return CustomTypeChanges::MajorBody;
             }
@@ -811,11 +849,13 @@ impl<'a> VersionChecker<'a> {
                     };
 
                     match self.compare_types(&old.type_, new_type, &mut context) {
-                        // Once we've found a major bump there's no use continuing to check, since we
-                        // know that the whole custom type has had a major bump.
+                        // Once we've found a major bump there's no use continuing
+                        // to check, since we/ know that the whole custom type
+                        // has had a major bump.
                         VersionBump::Major => return CustomTypeChanges::MajorBody,
-                        // Since we always return as soon as we encounter a major bump, we can assign a
-                        // minor bump to `bump`, as it will only ever be `Minor` or `Patch`.
+                        // Since we always return as soon as we encounter a major
+                        // bump, we can assign a minor bump to `bump`, as it will
+                        // only ever be `Minor` or `Patch`.
                         VersionBump::Minor => bump = CustomTypeChanges::MinorBody,
                         VersionBump::Patch => {}
                     }
@@ -826,9 +866,10 @@ impl<'a> VersionChecker<'a> {
         bump
     }
 
-    /// Compares two types to see if they are compatible. Has slightly different behaviour for types
-    /// and values, as generics are treated differently, meaning some changes in a constructor's type
-    /// is a breaking change, whereas it isn't for a function's type signature.
+    /// Compares two types to see if they are compatible. Has slightly different
+    /// behaviour for types and values, as generics are treated differently,
+    /// meaning some changes in a constructor's type is a breaking change,
+    /// whereas it isn't for a function's type signature.
     fn compare_types<'b>(
         &mut self,
         old_type: &'b TypeInterface,
@@ -838,19 +879,22 @@ impl<'a> VersionChecker<'a> {
         match (old_type, new_type) {
             (old_type, Type::Var { type_ }) => match (&*type_.borrow(), context) {
                 (TypeVar::Link { type_ }, context) => self.compare_types(old_type, type_, context),
-                // We treat this case differently depending on whether this we are comparing
-                // this type inside a custom type (constructor), or constant/function. In a
-                // constructor, changing a concrete to a generic type is always a breaking
-                // change, since the type annotation would affect the constructor differently.
-                // However, for constants and functions, since generic parameters are implicit,
-                // a concrete type can be turned generic without breaking usage.
+                // We treat this case differently depending on whether this we
+                // are comparing this type inside a custom type (constructor),
+                // or constant/function. In a constructor, changing a concrete
+                // to a generic type is always a breaking change, since the type
+                // annotation would affect the constructor differently. However,
+                // for constants and functions, since generic parameters are
+                // implicit, a concrete type can be turned generic without
+                // breaking usage.
                 (
                     TypeVar::Unbound { id } | TypeVar::Generic { id },
                     TypeComparisonContext::Constructor(remapped_ids),
                 ) => {
                     match old_type {
-                        // If the old type was also a generic type, we need to find what the remapped ID
-                        // of the new generic is, and compare those.
+                        // If the old type was also a generic type, we need to
+                        // ind what the remapped ID of the new generic is, and
+                        // compare those.
                         TypeInterface::Variable { id: old_id } => {
                             let new_id = if let Some(id) = remapped_ids.get(id) {
                                 *id
@@ -873,33 +917,39 @@ impl<'a> VersionChecker<'a> {
                     TypeVar::Unbound { id } | TypeVar::Generic { id },
                     TypeComparisonContext::FunctionOrConstant(generic_replacements),
                 ) => {
-                    // Generics are a little more complex with functions/constants than constructors.
-                    // Here, not every concrete to generic type is a minor change. If a single
-                    // generic replaces what used to be two different types, that is a major
-                    // change.
+                    // Generics are a little more complex with functions/constants
+                    // than constructors. Here, not every concrete to generic
+                    // type is a minor change. If a single generic replaces what
+                    // used to be two different types, that is a major change.
                     //
-                    // For example, going from `fn(Int, Int) -> Int` to `fn(a, a) -> a` is
-                    // fine, but `fn(Int, Float) -> String` to `fn(a, a) -> a` is not. The
-                    // types must all be the same for the change to be minor.
+                    // For example, going from `fn(Int, Int) -> Int` to
+                    // `fn(a, a) -> a` is fine, but `fn(Int, Float) -> String`
+                    // to `fn(a, a) -> a` is not. The types must all be the same
+                    // for the change to be minor.
                     //
-                    // Generic IDs are also not stable, since there is no explicit type parameter list,
-                    // so introducing a new non-breaking generic shifts the IDs of all the other type
-                    // variables, meaning we need to treat generics the same as any other type here.
+                    // Generic IDs are also not stable, since there is no explicit
+                    // type parameter list, so introducing a new non-breaking
+                    // generic shifts the IDs of all the other type variables,
+                    // meaning we need to treat generics the same as any other
+                    // type here.
                     if let Some(replacement) = generic_replacements.get(id) {
                         if replacement.same_as(old_type) {
                             VersionBump::Patch
                         } else {
-                            // If this generic is replacing a two different types, it's a major change.
+                            // If this generic is replacing a two different types
+                            // it's a major change.
                             VersionBump::Major
                         }
                     } else {
-                        // If this is the first usage of the generic, keep track of what it was
-                        // previously so we can detect major changes as above.
+                        // If this is the first usage of the generic, keep track
+                        // of what it was previously so we can detect major
+                        // changes as above.
                         _ = generic_replacements.insert(*id, old_type);
                         match old_type {
-                            // If we are changing a generic to a generic, that is not actually a
-                            // minor change. Since we can't keep track of generic IDs, we can't
-                            // handle this case separately so it must be done here.
+                            // If we are changing a generic to a generic, that
+                            // is not actually a minor change. Since we can't
+                            // keep track of generic IDs, we can't handle this
+                            // case separately so it must be done here.
                             TypeInterface::Variable { .. } => VersionBump::Patch,
                             TypeInterface::Tuple { .. }
                             | TypeInterface::Fn { .. }
@@ -924,8 +974,9 @@ impl<'a> VersionChecker<'a> {
                     ..
                 },
             ) => {
-                // Two named types are compatible if they are the same type by name, or one of them
-                // has been "moved", and all of their generic arguments are compatible.
+                // Two named types are compatible if they are the same type by
+                // name, or one of them has been "moved", and all of their
+                // generic arguments are compatible.
                 if old_package != new_package
                     || !self.compatible_type(old_module, old_name, new_module, new_name)
                     || old_arguments.len() != new_arguments.len()
@@ -935,8 +986,7 @@ impl<'a> VersionChecker<'a> {
                     old_arguments.iter().zip(new_arguments.iter()).fold(
                         VersionBump::Patch,
                         |bump, (old_type, new_type)| {
-                            self.compare_types(old_type, new_type, context)
-                                .combine(bump)
+                            self.compare_types(old_type, new_type, context).max(bump)
                         },
                     )
                 }
@@ -950,13 +1000,12 @@ impl<'a> VersionChecker<'a> {
                     elements: new_elements,
                 },
             ) if old_elements.len() == new_elements.len() => {
-                // Two tuples are compatible if they are the same length and all of their elements are
-                // compatible.
+                // Two tuples are compatible if they are the same length and all
+                // of their elements are compatible.
                 old_elements.iter().zip(new_elements.iter()).fold(
                     VersionBump::Patch,
                     |bump, (old_type, new_type)| {
-                        self.compare_types(old_type, new_type, context)
-                            .combine(bump)
+                        self.compare_types(old_type, new_type, context).max(bump)
                     },
                 )
             }
@@ -971,14 +1020,14 @@ impl<'a> VersionChecker<'a> {
                     return_: new_return,
                 },
             ) if old_parameters.len() == new_parameters.len() => {
-                // Two function types are compatible if they have the same number of parameters and all
-                // of their parameters and their return types are compatible.
+                // Two function types are compatible if they have the same number
+                // of parameters and all of their parameters and their return
+                // types are compatible.
                 let bump = self.compare_types(old_return, new_return, context);
                 old_parameters.iter().zip(new_parameters.iter()).fold(
                     bump,
                     |bump, (old_type, new_type)| {
-                        self.compare_types(old_type, new_type, context)
-                            .combine(bump)
+                        self.compare_types(old_type, new_type, context).max(bump)
                     },
                 )
             }
@@ -994,8 +1043,9 @@ impl<'a> VersionChecker<'a> {
         }
     }
 
-    /// Checks whether two types are "compatible", that is, if they are either the same type, or one
-    /// is an alias which points to the type, which has been moved.
+    /// Checks whether two types are "compatible", that is, if they are either
+    /// the same type, or one is an alias which points to the type, which has
+    /// been moved.
     fn compatible_type(
         &self,
         old_module: &EcoString,
@@ -1019,8 +1069,8 @@ impl<'a> VersionChecker<'a> {
         }
     }
 
-    /// Compares the `Implementations` of two values (their target support) to see if any minor or
-    /// major changes have been made.
+    /// Compares the `Implementations` of two values (their target support) to
+    /// see if any minor or major changes have been made.
     fn compare_implementations(
         &mut self,
         old_implementations: &ImplementationsInterface,
@@ -1051,11 +1101,12 @@ enum CustomTypeChanges {
     TypeParameters,
 }
 
-/// Creates a mapping between the type variable IDs used in the Gleam compiler and those used in the
-/// package interface JSON.
+/// Creates a mapping between the type variable IDs used in the Gleam compiler
+/// and those used in the package interface JSON.
 fn remap_type_ids(type_: &TypeConstructor) -> HashMap<u64, u64> {
-    // The JSON file uses incrementing IDs in the order they appear in the type parameter list. They
-    // are only unique to a specific type rather than the whole module, and always start from 0.
+    // The JSON file uses incrementing IDs in the order they appear in the type
+    // parameter list. They are only unique to a specific type rather than the
+    // whole module, and always start from 0.
     type_
         .parameters
         .iter()
@@ -1064,22 +1115,23 @@ fn remap_type_ids(type_: &TypeConstructor) -> HashMap<u64, u64> {
         .collect()
 }
 
-/// The place where we are comparing two different types to see if any minor or major changes have
-/// been made.
+/// The place where we are comparing two different types to see if any minor or
+/// major changes have been made.
 enum TypeComparisonContext<'a> {
-    /// In a constructor, the comparison is more rigid. We keep track of a mapping of new type variable
-    /// IDs to old ones to ensure all generic remain the same.
+    /// In a constructor, the comparison is more rigid. We keep track of a mapping
+    /// of new type variable/ IDs to old ones to ensure all generic remain the same.
     Constructor(HashMap<u64, u64>),
-    /// In a function or constant, generics are more flexible. Since there is no explicit generic list
-    /// given, concrete types can become generic without a breaking change. We need to keep track of
-    /// which generics replace which types, since a single generic replacing multiple different types
-    /// is still a breaking change.
+    /// In a function or constant, generics are more flexible. Since there is no
+    /// explicit generic list given, concrete types can become generic without a
+    /// breaking change. We need to keep track of which generics replace which
+    /// types, since a single generic replacing multiple different types is still
+    /// a breaking change.
     FunctionOrConstant(HashMap<u64, &'a TypeInterface>),
 }
 
 /// Pretty-print the changes between two versions.
 pub fn show_diffs(
-    changes: HashSet<Change>,
+    changes: HashSet<ApiChange>,
     package_interface: &PackageInterface,
     modules: &imbl::HashMap<EcoString, ModuleInterface>,
 ) -> EcoString {
@@ -1091,30 +1143,30 @@ pub fn show_diffs(
     // organised, coherent way rather than randomly.
     for change in changes {
         let (module, name, layer) = match &change {
-            Change::Signature { module, name } => (module, name, Layer::Value),
-            Change::TargetSupport { module, name } => (module, name, Layer::Value),
-            Change::TypeParameters { module, name } => (module, name, Layer::Type),
-            Change::TypeBody { module, name } => (module, name, Layer::Type),
-            Change::Deprecation {
+            ApiChange::Signature { module, name } => (module, name, Layer::Value),
+            ApiChange::TargetSupport { module, name } => (module, name, Layer::Value),
+            ApiChange::TypeParameters { module, name } => (module, name, Layer::Type),
+            ApiChange::TypeBody { module, name } => (module, name, Layer::Type),
+            ApiChange::Deprecation {
                 module,
                 name,
                 layer,
             } => (module, name, *layer),
-            Change::Added {
+            ApiChange::Added {
                 module,
                 name,
                 layer,
             } => (module, name, *layer),
-            Change::Removed {
+            ApiChange::Removed {
                 module,
                 name,
                 layer,
             } => (module, name, *layer),
-            Change::ModuleAdded { name } => {
+            ApiChange::ModuleAdded { name } => {
                 added_modules.push(name.clone());
                 continue;
             }
-            Change::ModuleRemoved { name } => {
+            ApiChange::ModuleRemoved { name } => {
                 removed_modules.push(name.clone());
                 continue;
             }
@@ -1187,19 +1239,19 @@ struct ValueChanges {
 }
 
 impl ValueChanges {
-    fn from_changes(changes: &[Change]) -> Self {
+    fn from_changes(changes: &[ApiChange]) -> Self {
         let mut value_changes = Self::default();
         for change in changes {
             match change {
-                Change::Signature { .. } => value_changes.signature = true,
-                Change::TargetSupport { .. } => value_changes.target_support = true,
-                Change::Deprecation { .. } => value_changes.deprecation = true,
-                Change::Added { .. } => value_changes.added = true,
-                Change::Removed { .. } => value_changes.removed = true,
-                Change::TypeParameters { .. }
-                | Change::TypeBody { .. }
-                | Change::ModuleAdded { .. }
-                | Change::ModuleRemoved { .. } => {}
+                ApiChange::Signature { .. } => value_changes.signature = true,
+                ApiChange::TargetSupport { .. } => value_changes.target_support = true,
+                ApiChange::Deprecation { .. } => value_changes.deprecation = true,
+                ApiChange::Added { .. } => value_changes.added = true,
+                ApiChange::Removed { .. } => value_changes.removed = true,
+                ApiChange::TypeParameters { .. }
+                | ApiChange::TypeBody { .. }
+                | ApiChange::ModuleAdded { .. }
+                | ApiChange::ModuleRemoved { .. } => {}
             }
         }
         value_changes
@@ -1218,19 +1270,19 @@ struct TypeChanges {
 }
 
 impl TypeChanges {
-    fn from_changes(changes: &[Change]) -> Self {
+    fn from_changes(changes: &[ApiChange]) -> Self {
         let mut type_changes = Self::default();
         for change in changes {
             match change {
-                Change::TypeParameters { .. } => type_changes.type_parameters = true,
-                Change::TypeBody { .. } => type_changes.type_body = true,
-                Change::Deprecation { .. } => type_changes.deprecation = true,
-                Change::Added { .. } => type_changes.added = true,
-                Change::Removed { .. } => type_changes.removed = true,
-                Change::Signature { .. }
-                | Change::TargetSupport { .. }
-                | Change::ModuleAdded { .. }
-                | Change::ModuleRemoved { .. } => {}
+                ApiChange::TypeParameters { .. } => type_changes.type_parameters = true,
+                ApiChange::TypeBody { .. } => type_changes.type_body = true,
+                ApiChange::Deprecation { .. } => type_changes.deprecation = true,
+                ApiChange::Added { .. } => type_changes.added = true,
+                ApiChange::Removed { .. } => type_changes.removed = true,
+                ApiChange::Signature { .. }
+                | ApiChange::TargetSupport { .. }
+                | ApiChange::ModuleAdded { .. }
+                | ApiChange::ModuleRemoved { .. } => {}
             }
         }
         type_changes
@@ -1261,9 +1313,10 @@ fn diff_type(
 
         out.push_str(&eco_format!("- pub type {name}"));
 
-        // We need to print the type parameters if either the parameters themselves have changed, or
-        // if we're printing the type body so the user has a reference to the parameters to be able
-        // to see any difference in the body relating to them.
+        // We need to print the type parameters if either the parameters
+        // themselves have changed, or if we're printing the type body so the
+        // user has a reference to the parameters to be able to see any
+        // difference in the body relating to them.
         //
         // For example, changing:
         // ```gleam
@@ -1277,7 +1330,8 @@ fn diff_type(
         // ```gleam
         // pub type Output(a, b) = Result(b, a)
         // ```
-        // Is. The type parameters must be present to infer the context of the change.
+        // Is. The type parameters must be present to infer the context of the
+        // change.
         if alias.parameters > 0 && (changes.type_parameters || changes.type_body) {
             out.push_str(&eco_format!(
                 "({})",
@@ -1310,35 +1364,7 @@ fn diff_type(
         }
 
         if changes.type_body && !custom_type.constructors.is_empty() {
-            out.push_str(" {");
-            for constructor in custom_type.constructors.iter() {
-                if constructor.deprecation.is_some() {
-                    out.push_str("\n-   @deprecated(...)");
-                }
-                out.push_str("\n-   ");
-                out.push_str(&constructor.name);
-                if !constructor.parameters.is_empty() {
-                    out.push('(');
-                    out.push_str(
-                        &constructor
-                            .parameters
-                            .iter()
-                            .map(|parameter| {
-                                if let Some(label) = &parameter.label {
-                                    eco_format!(
-                                        "{label}: {}",
-                                        print_type_interface(&parameter.type_)
-                                    )
-                                } else {
-                                    print_type_interface(&parameter.type_)
-                                }
-                            })
-                            .join(", "),
-                    );
-                    out.push(')');
-                }
-            }
-            out.push_str("\n- }");
+            print_old_constructors(&mut out, custom_type);
         }
     };
 
@@ -1369,43 +1395,7 @@ fn diff_type(
         if let Some(constructors) = new_module.types_value_constructors.get(name) {
             // Opaque type's constructors are not part of the public API.
             if !constructors.variants.is_empty() && !constructors.opaque.is_opaque() {
-                out.push_str(" {");
-                for constructor in constructors.variants.iter() {
-                    if constructor.deprecation.is_deprecated() {
-                        out.push_str("\n+   @deprecated(...)");
-                    }
-                    out.push_str("\n+   ");
-                    out.push_str(&constructor.name);
-                    if !constructor.parameters.is_empty() {
-                        out.push('(');
-                        out.push_str(
-                            &constructor
-                                .parameters
-                                .iter()
-                                .map(|parameter| {
-                                    if let Some(label) = &parameter.label {
-                                        eco_format!(
-                                            "{label}: {}",
-                                            print_type(
-                                                &parameter.type_,
-                                                &mut next_id,
-                                                &mut type_variables
-                                            )
-                                        )
-                                    } else {
-                                        print_type(
-                                            &parameter.type_,
-                                            &mut next_id,
-                                            &mut type_variables,
-                                        )
-                                    }
-                                })
-                                .join(", "),
-                        );
-                        out.push(')');
-                    }
-                }
-                out.push_str("\n+ }");
+                print_new_constructors(&mut out, &mut type_variables, &mut next_id, constructors);
             }
         } else {
             out.push_str(&eco_format!(
@@ -1416,6 +1406,88 @@ fn diff_type(
     }
 
     Some(out)
+}
+
+/// Print the constructors of a custom type from the older version
+fn print_old_constructors(out: &mut EcoString, custom_type: &TypeDefinitionInterface) {
+    out.push_str(" {");
+
+    for constructor in custom_type.constructors.iter() {
+        if constructor.deprecation.is_some() {
+            out.push_str("\n-   @deprecated(...)");
+        }
+
+        out.push_str("\n-   ");
+        out.push_str(&constructor.name);
+
+        if constructor.parameters.is_empty() {
+            continue;
+        }
+
+        out.push('(');
+
+        let parameters = constructor
+            .parameters
+            .iter()
+            .map(|parameter| {
+                if let Some(label) = &parameter.label {
+                    eco_format!("{label}: {}", print_type_interface(&parameter.type_))
+                } else {
+                    print_type_interface(&parameter.type_)
+                }
+            })
+            .join(", ");
+        out.push_str(&parameters);
+
+        out.push(')');
+    }
+
+    out.push_str("\n- }");
+}
+
+/// Print the constructors of a custom type from the newer version
+fn print_new_constructors(
+    out: &mut EcoString,
+    type_variables: &mut HashMap<u64, EcoString>,
+    next_id: &mut u64,
+    constructors: &TypeVariantConstructors,
+) {
+    out.push_str(" {");
+
+    for constructor in constructors.variants.iter() {
+        if constructor.deprecation.is_deprecated() {
+            out.push_str("\n+   @deprecated(...)");
+        }
+
+        out.push_str("\n+   ");
+        out.push_str(&constructor.name);
+
+        if constructor.parameters.is_empty() {
+            continue;
+        }
+
+        out.push('(');
+
+        let parameters = constructor
+            .parameters
+            .iter()
+            .map(|parameter| {
+                if let Some(label) = &parameter.label {
+                    eco_format!(
+                        "{label}: {}",
+                        print_type(&parameter.type_, next_id, type_variables)
+                    )
+                } else {
+                    print_type(&parameter.type_, next_id, type_variables)
+                }
+            })
+            .join(", ");
+
+        out.push_str(&parameters);
+        out.push(')');
+    }
+
+    out.push_str("\n+ }");
 }
 
 /// Shows the difference between two versions of a constant or function.
@@ -1446,10 +1518,11 @@ fn diff_value(
         };
     }
 
-    // We don't have any syntax for changing target support, so we need to use words to show it.
-    // Because of this, it must be displayed separately from the main function/constant signature.
-    // If target support is the only change, we don't need to display any other information and can
-    // just print the text instead.
+    // We don't have any syntax for changing target support, so we need to use
+    // words to show it. Because of this, it must be displayed separately from
+    // the main function/constant signature. If target support is the only
+    // change, we don't need to display any other information and can just print
+    // the text instead.
     if changes.target_support && !changes.signature && !changes.deprecation {
         return diff_target_support(old_module, new_module, name);
     }

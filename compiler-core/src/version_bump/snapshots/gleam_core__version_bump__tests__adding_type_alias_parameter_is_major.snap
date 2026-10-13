@@ -2,6 +2,14 @@
 source: compiler-core/src/version_bump/tests.rs
 expression: bump
 ---
+-- BEFORE
+---- the_module
+pub type Maybe(a) = Result(a, Nil)
+
+-- AFTER
+---- the_module
+pub type Maybe(a, b) = Result(a, b)
+
 -- MAJOR
 
 == the_module ==

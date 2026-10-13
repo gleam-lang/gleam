@@ -2,4 +2,15 @@
 source: compiler-core/src/version_bump/tests.rs
 expression: bump
 ---
+-- BEFORE
+---- wibble
+pub type Wibble
+
+---- thepackage/internal
+pub type Wobble
+
+-- AFTER
+---- wibble
+pub type Wibble
+
 -- PATCH

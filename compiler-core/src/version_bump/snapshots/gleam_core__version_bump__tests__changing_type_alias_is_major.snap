@@ -2,6 +2,14 @@
 source: compiler-core/src/version_bump/tests.rs
 expression: bump
 ---
+-- BEFORE
+---- the_module
+pub type Number = Int
+
+-- AFTER
+---- the_module
+pub type Number = Float
+
 -- MAJOR
 
 == the_module ==

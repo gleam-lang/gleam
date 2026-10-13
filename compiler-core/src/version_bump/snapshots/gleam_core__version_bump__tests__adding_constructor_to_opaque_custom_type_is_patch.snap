@@ -2,4 +2,19 @@
 source: compiler-core/src/version_bump/tests.rs
 expression: bump
 ---
+-- BEFORE
+---- the_module
+
+pub opaque type Wibble {
+  Wibble
+}
+
+-- AFTER
+---- the_module
+
+pub opaque type Wibble {
+  Wibble
+  Wobble
+}
+
 -- PATCH

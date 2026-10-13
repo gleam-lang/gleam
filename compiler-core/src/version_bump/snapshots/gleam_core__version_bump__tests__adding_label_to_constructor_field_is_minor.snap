@@ -2,6 +2,20 @@
 source: compiler-core/src/version_bump/tests.rs
 expression: bump
 ---
+-- BEFORE
+---- the_module
+
+pub type Wibble {
+  Wibble(Int, String)
+}
+
+-- AFTER
+---- the_module
+
+pub type Wibble {
+  Wibble(int: Int, string: String)
+}
+
 -- MINOR
 
 == the_module ==

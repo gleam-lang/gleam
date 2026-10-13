@@ -2,6 +2,26 @@
 source: compiler-core/src/version_bump/tests.rs
 expression: bump
 ---
+-- BEFORE
+---- the_module
+
+pub type Custom {
+  Wibble
+  Wobble
+}
+
+pub type Alias = Custom
+
+-- AFTER
+---- the_module
+
+pub type Alias {
+  Wibble
+  Wobble
+}
+
+pub type Custom = Alias
+
 -- MINOR
 
 == the_module ==
