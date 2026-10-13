@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/javascript/tests/recursion.rs
+expression: "\npub fn main(x, unchanged) {\n  case x {\n    0 -> unchanged\n    _ -> main(x - 1, unchanged)\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(x, unchanged) {
+  case x {
+    0 -> unchanged
+    _ -> main(x - 1, unchanged)
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+export function main(x, unchanged) {
+  while (true) {
+    if (x === 0) {
+      return unchanged;
+    } else {
+      x = x - 1;
+    }
+  }
+}

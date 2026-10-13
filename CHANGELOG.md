@@ -13,6 +13,10 @@
   patterns.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The compiler now generates slightly smaller code for tail-recursive functions
+  JavaScript target.
+  ([rebecca](https://tangled.org/becca.monster))
+
 ### Build tool
 
 - `gleam remove` now rejects invalid package names with an error explaining

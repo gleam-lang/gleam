@@ -15,20 +15,18 @@ expression: "\npub fn wibble(lon, acc) {\n  case lon {\n    [] -> 0\n    [n, ..r
 0 |//# sourceMappingURL=mod.mjs.map
 1 |import { Empty as $Empty } from "../gleam.mjs";
 2 |
-3 |export function wibble(loop$lon, loop$acc) {
+3 |export function wibble(lon, acc) {
 4 |  while (true) {
-5 |    let lon = loop$lon;
-6 |    let acc = loop$acc;
-7 |    if (lon instanceof $Empty) {
-8 |      return 0;
-9 |    } else {
-10 |      let n = lon.head;
-11 |      let rest = lon.tail;
-12 |      loop$lon = rest;
-13 |      loop$acc = acc + n;
-14 |    }
-15 |  }
-16 |}
+5 |    if (lon instanceof $Empty) {
+6 |      return 0;
+7 |    } else {
+8 |      let n = lon.head;
+9 |      let rest = lon.tail;
+10 |      lon = rest;
+11 |      acc = acc + n;
+12 |    }
+13 |  }
+14 |}
 
 ----- SOURCE MAP
 File: my/mod.mjs
@@ -43,21 +41,11 @@ import { Empty as $Empty } from "../gleam.mjs";
 
 
 ----- 
-pub fn wibble(
-⏷
-export function wibble(loop$lon, loop$acc) {
-  while (true) {
-    
------ 
-lon, 
-⏷
-let lon = loop$lon;
-    
------ 
-acc) {
+pub fn wibble(lon, acc) {
   
 ⏷
-let acc = loop$acc;
+export function wibble(lon, acc) {
+  while (true) {
     
 ----- 
 case 
@@ -85,12 +73,12 @@ let n = lon.head;
 ----- 
 wibble(
 ⏷
-loop$lon = 
+lon = 
 ----- 
 rest, 
 ⏷
 rest;
-      loop$acc = 
+      acc = 
 ----- 
 acc + 
 ⏷
