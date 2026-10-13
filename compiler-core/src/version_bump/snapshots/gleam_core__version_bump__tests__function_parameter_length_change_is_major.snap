@@ -2,6 +2,14 @@
 source: compiler-core/src/version_bump/tests.rs
 expression: bump
 ---
+-- BEFORE
+---- the_module
+pub fn x() { fn(a, b) { a + b } }
+
+-- AFTER
+---- the_module
+pub fn x() { fn(a, b, c) { a + b + c } }
+
 -- MAJOR
 
 == the_module ==

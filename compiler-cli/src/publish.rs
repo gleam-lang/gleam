@@ -417,34 +417,21 @@ fn check_version_changes(
 
     // Find the latest non-pre-release version which is less than this one, i.e.
     // the version that this is updating.
-    let Some(previous_version) = hex_package
-        .releases
-        .iter()
-        .map(|release| &release.version)
-        // Sort in reverse, so that we iterate backwards through the versions
-        // until we find the most recent which is before the current one.
-        .sorted_by(|first, second| second.cmp(first))
-        .filter(|version| !version.is_pre())
-        .find(|version| *version < current_version)
-    else {
+    let Some(previous_version) = previous_version(
+        current_version,
+        hex_package
+            .releases
+            .iter()
+            .map(|release| &release.version)
+            .collect(),
+    ) else {
         // The package has no versions or only pre-release versions, which means
         // there's nothing to compare to. Versions can have breaking changes compared
         // to pre-releases, so we shouldn't compare those here.
         return Ok(true);
     };
 
-    let version_bump = if previous_version.major != current_version.major {
-        VersionBump::Major
-    } else if previous_version.minor != current_version.minor {
-        VersionBump::Minor
-    } else if previous_version.patch != current_version.patch {
-        VersionBump::Patch
-    } else {
-        // The branch cannot actually happen, because we're only comparing versions
-        // before the current published one, not ones that are equal. In a case
-        // where the versions were equal, that error would be caught elsewhere.
-        return Ok(true);
-    };
+    let version_bump = version_difference(previous_version, current_version);
 
     let request = hexpm::repository_get_package_interface_request(
         &config.name,
@@ -477,49 +464,33 @@ fn check_version_changes(
         .filter(|(_, module)| module.package == config.name && !module.is_internal)
         .collect();
 
-    let suggested_bump = detect_changes(&parsed, &modules);
+    let api_changes = detect_changes(&parsed, &modules);
+    let api_bump = api_changes.bump();
 
-    let bump_is_sufficient = match (version_bump, &suggested_bump) {
-        (VersionBump::Major, _) => true,
-        (VersionBump::Minor, VersionChanges::Major(_)) => false,
-        (VersionBump::Minor, _) => true,
-        (VersionBump::Patch, VersionChanges::Major(_) | VersionChanges::Minor(_)) => false,
-        (VersionBump::Patch, VersionChanges::Patch) => true,
-    };
+    let bump_is_sufficient = version_bump >= api_bump;
 
     if bump_is_sufficient {
         return Ok(true);
     }
 
-    let suggested_version = match &suggested_bump {
-        VersionChanges::Major(_) => Version::new(previous_version.major + 1, 0, 0),
-        VersionChanges::Minor(_) => {
-            Version::new(previous_version.major, previous_version.minor + 1, 0)
-        }
-        VersionChanges::Patch => Version::new(
-            previous_version.major,
-            previous_version.minor,
-            previous_version.patch + 1,
-        ),
-    };
+    let suggested_version = apply_bump(previous_version, api_bump);
 
-    let (suggested_bump_name, diffs) = match suggested_bump {
-        VersionChanges::Major(changed) => ("major", show_diffs(changed, &parsed, &modules)),
-        VersionChanges::Minor(changed) => ("minor", show_diffs(changed, &parsed, &modules)),
-        VersionChanges::Patch => ("patch", EcoString::new()),
+    let diffs = match api_changes {
+        VersionChanges::Major(changed) => show_diffs(changed, &parsed, &modules),
+        VersionChanges::Minor(changed) => show_diffs(changed, &parsed, &modules),
+        VersionChanges::Patch => EcoString::new(),
     };
 
     println!(
         "You are about to publish a release which makes a {} version bump.
 
-Based on what I can see, the changes you've made indicate that this version
-should be a {} version bump instead, meaning the next version should be v{}.
-Unless you have a very good reason, you should follow semantic versioning
-in your package versioning.
+Based on changes to the public API in this version, this should be a {} version
+bump instead, meaning the next version should be v{}. Unless you have a very
+good reason, you should follow semantic versioning for your package.
 
 Changes:\n\n{}",
         version_bump.to_string(),
-        suggested_bump_name,
+        api_bump.to_string(),
         suggested_version,
         diffs,
     );
@@ -528,6 +499,35 @@ Changes:\n\n{}",
         cli::confirm_with_text("I have a good reason to not use semantic versioning")?;
     println!();
     Ok(should_publish)
+}
+
+/// Finds the most recent version which is before the current one.
+fn previous_version<'a>(
+    current_version: &Version,
+    versions: Vec<&'a Version>,
+) -> Option<&'a Version> {
+    versions
+        .into_iter()
+        .filter(|version| !version.is_pre() && *version < current_version)
+        .max()
+}
+
+fn apply_bump(version: &Version, bump: VersionBump) -> Version {
+    match bump {
+        VersionBump::Major => Version::new(version.major + 1, 0, 0),
+        VersionBump::Minor => Version::new(version.major, version.minor + 1, 0),
+        VersionBump::Patch => Version::new(version.major, version.minor, version.patch + 1),
+    }
+}
+
+fn version_difference(previous_version: &Version, current_version: &Version) -> VersionBump {
+    if previous_version.major != current_version.major {
+        VersionBump::Major
+    } else if previous_version.minor != current_version.minor {
+        VersionBump::Minor
+    } else {
+        VersionBump::Patch
+    }
 }
 
 /// Ask for confirmation if the package name if `gleam_*`
@@ -1411,4 +1411,101 @@ fn find_missing_git_repo_root_at_lower_level() {
 
     let repository_root = fs::get_git_repository_root(current_path);
     assert!(repository_root.is_none());
+}
+
+#[test]
+fn previous_version_is_patch() {
+    assert_eq!(
+        previous_version(
+            &Version::new(1, 2, 2),
+            vec![
+                &Version::new(1, 0, 0),
+                &Version::new(1, 1, 0),
+                &Version::new(1, 2, 0),
+                &Version::new(1, 2, 1),
+                &Version::new(1, 3, 0)
+            ]
+        ),
+        Some(&Version::new(1, 2, 1))
+    );
+}
+
+#[test]
+fn previous_version_is_minor() {
+    assert_eq!(
+        previous_version(
+            &Version::new(1, 3, 0),
+            vec![
+                &Version::new(1, 0, 0),
+                &Version::new(1, 1, 0),
+                &Version::new(1, 2, 0),
+                &Version::new(1, 2, 1),
+            ]
+        ),
+        Some(&Version::new(1, 2, 1))
+    );
+}
+
+#[test]
+fn previous_version_is_major() {
+    assert_eq!(
+        previous_version(
+            &Version::new(2, 0, 0),
+            vec![
+                &Version::new(1, 0, 0),
+                &Version::new(1, 1, 0),
+                &Version::new(1, 2, 0),
+                &Version::new(1, 2, 1),
+            ]
+        ),
+        Some(&Version::new(1, 2, 1))
+    );
+}
+
+#[test]
+fn apply_patch_bump() {
+    assert_eq!(
+        apply_bump(&Version::new(1, 2, 1), VersionBump::Patch),
+        Version::new(1, 2, 2)
+    );
+}
+
+#[test]
+fn apply_minor_bump() {
+    assert_eq!(
+        apply_bump(&Version::new(1, 2, 1), VersionBump::Minor),
+        Version::new(1, 3, 0)
+    );
+}
+
+#[test]
+fn apply_major_bump() {
+    assert_eq!(
+        apply_bump(&Version::new(1, 2, 1), VersionBump::Major),
+        Version::new(2, 0, 0)
+    );
+}
+
+#[test]
+fn patch_version_difference() {
+    assert_eq!(
+        version_difference(&Version::new(1, 2, 1), &Version::new(1, 2, 2)),
+        VersionBump::Patch,
+    )
+}
+
+#[test]
+fn minor_version_difference() {
+    assert_eq!(
+        version_difference(&Version::new(1, 2, 1), &Version::new(1, 3, 2)),
+        VersionBump::Minor,
+    )
+}
+
+#[test]
+fn major_version_difference() {
+    assert_eq!(
+        version_difference(&Version::new(1, 2, 1), &Version::new(2, 0, 0)),
+        VersionBump::Major,
+    )
 }

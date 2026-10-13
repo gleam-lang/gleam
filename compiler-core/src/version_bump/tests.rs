@@ -13,7 +13,7 @@ use crate::{
     warning::{TypeWarningEmitter, VectorWarningEmitterIO, WarningEmitter},
 };
 use camino::Utf8PathBuf;
-use ecow::{EcoString, eco_format};
+use ecow::EcoString;
 use src_span::LineNumbers;
 use std::{
     collections::{HashMap, HashSet},
@@ -25,6 +25,28 @@ fn get_bump(old: &str, new: &str) -> EcoString {
 }
 
 fn get_bumps(old_modules: Vec<(&str, &str)>, new_modules: Vec<(&str, &str)>) -> EcoString {
+    let mut output = EcoString::new();
+
+    output.push_str("-- BEFORE\n");
+
+    for (name, src) in old_modules.iter() {
+        output.push_str("---- ");
+        output.push_str(name);
+        output.push_str("\n");
+        output.push_str(src);
+        output.push_str("\n\n");
+    }
+
+    output.push_str("-- AFTER\n");
+
+    for (name, src) in new_modules.iter() {
+        output.push_str("---- ");
+        output.push_str(name);
+        output.push_str("\n");
+        output.push_str(src);
+        output.push_str("\n\n");
+    }
+
     let old_modules = compile_modules(old_modules)
         .into_iter()
         .filter(|(_, module)| !module.is_internal)
@@ -41,16 +63,18 @@ fn get_bumps(old_modules: Vec<(&str, &str)>, new_modules: Vec<(&str, &str)>) -> 
     };
 
     match detect_changes(&package_interface, &new_modules) {
-        VersionChanges::Major(changes) => eco_format!(
-            "-- MAJOR\n\n{}",
-            show_diffs(changes, &package_interface, &new_modules),
-        ),
-        VersionChanges::Minor(changes) => eco_format!(
-            "-- MINOR\n\n{}",
-            show_diffs(changes, &package_interface, &new_modules),
-        ),
-        VersionChanges::Patch => "-- PATCH".into(),
+        VersionChanges::Major(changes) => {
+            output.push_str("-- MAJOR\n\n");
+            output.push_str(&show_diffs(changes, &package_interface, &new_modules))
+        }
+        VersionChanges::Minor(changes) => {
+            output.push_str("-- MINOR\n\n");
+            output.push_str(&show_diffs(changes, &package_interface, &new_modules))
+        }
+        VersionChanges::Patch => output.push_str("-- PATCH"),
     }
+
+    output
 }
 
 fn compile_modules(

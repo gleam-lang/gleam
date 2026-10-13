@@ -2,6 +2,14 @@
 source: compiler-core/src/version_bump/tests.rs
 expression: bump
 ---
+-- BEFORE
+---- the_module
+@internal pub const max_size = 512
+
+-- AFTER
+---- the_module
+pub const max_size = 512
+
 -- MINOR
 
 == the_module ==

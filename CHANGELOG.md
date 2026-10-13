@@ -41,7 +41,38 @@
 - When running `gleam publish`, the build tool will compare the published version
   with the previous version of the library and print a warning if the change in
   package version (major, minor, or patch) does not reflect the change in the
-  package's API.
+  package's API. For example:
+
+  ```txt
+  $ gleam publish
+
+  You are about to publish a release which makes a minor version bump.
+
+  Based on what I can see, the changes you've made indicate that this version
+  should be a major version bump instead, meaning the next version should be v2.0.0.
+  Unless you have a very good reason, you should follow semantic versioning
+  in your package versioning.
+
+  Changes:
+
+  - pub type Error {
+  -   InvalidInput
+  -   FileNotFound
+  - }
+  + pub type Error {
+  +   InvalidInput
+  +   FileNotFound
+  +   ApiError
+  + }
+
+  - pub fn get_value(String) -> Result(String, Nil)
+  + pub fn get_value(String, Int) ->  Result(String, Nil)
+
+  The target support for initialise has changed:
+  - Erlang, JavaScript
+  + JavaScript
+  ```
+
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 ### Language server

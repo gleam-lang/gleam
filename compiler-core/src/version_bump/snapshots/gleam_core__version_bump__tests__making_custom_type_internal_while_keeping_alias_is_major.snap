@@ -2,6 +2,25 @@
 source: compiler-core/src/version_bump/tests.rs
 expression: bump
 ---
+-- BEFORE
+---- the_module
+
+pub type OldType {
+  Wibble
+  Wobble
+}
+
+-- AFTER
+---- the_module
+
+@internal
+pub type NewType {
+  Wibble
+  Wobble
+}
+
+pub type OldType = NewType
+
 -- MAJOR
 
 == the_module ==

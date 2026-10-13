@@ -2,6 +2,20 @@
 source: compiler-core/src/version_bump/tests.rs
 expression: bump
 ---
+-- BEFORE
+---- the_module
+
+@external(erlang, "wibble_ffi", "something")
+pub fn wibble() -> Nil {
+  Nil
+}
+
+-- AFTER
+---- the_module
+
+@external(erlang, "wibble_ffi", "something")
+pub fn wibble() -> Nil
+
 -- MAJOR
 
 == the_module ==
