@@ -5392,24 +5392,21 @@ and cannot be accessed by other modules."
             location,
             tail_location,
         } => {
-            let list_text = src
-                .get(location.start as usize..location.end as usize)
-                .expect("list location must be valid");
-            let tail_text = src
-                .get(tail_location.start as usize..tail_location.end as usize)
-                .expect("list tail location must be valid");
+            let text = wrap(
+                "The list prepend syntax is being used here, but \
+no elements are being prepended. Remove the `[..` and the `]` and use the \
+original list directly.",
+            );
 
             Diagnostic {
                 title: "Redundant list prepend".to_string(),
-                text: "See: https://tour.gleam.run/basics/lists/".to_string(),
-                hint: Some(format!(
-                    "`{tail_text}` can be used directly instead of `{list_text}`"
-                )),
+                text,
+                hint: None,
                 level: Level::Error,
                 location: Some(Location {
                     label: Label {
                         text: Some("This prepend does nothing".into()),
-                        span: *location,
+                        span: SrcSpan::new(location.start, tail_location.start),
                     },
                     path: path.clone(),
                     src: src.clone(),

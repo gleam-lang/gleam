@@ -11,8 +11,7 @@ error: Redundant list prepend
   ┌─ /src/one/two.gleam:2:16
   │
 2 │ const wobble = [..wibble]
-  │                ^^^^^^^^^^ This prepend does nothing
+  │                ^^^ This prepend does nothing
 
-See: https://tour.gleam.run/basics/lists/
-
-Hint: `wibble` can be used directly instead of `[..wibble]`
+The list prepend syntax is being used here, but no elements are being
+prepended. Remove the `[..` and the `]` and use the original list directly.
