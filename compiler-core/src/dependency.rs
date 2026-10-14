@@ -164,7 +164,7 @@ fn resolve_versions_diffs(
     versions
         .iter()
         .filter_map(|(package, version)| {
-            let Ok(hex_package) = package_fetcher.get_dependencies(package) else {
+            let Ok(hex_package) = package_fetcher.get_package(package) else {
                 return None;
             };
 
@@ -228,7 +228,7 @@ pub fn check_for_major_version_updates(
 
 /// Check for version updates for direct and transitive dependencies that are
 /// being blocked by some version constraints.
-pub fn check_for_version_updates(
+pub fn get_available_updates(
     manifest: &manifest::Manifest,
     package_fetcher: &impl PackageFetcher,
 ) -> PackageVersionDiffs {
@@ -245,6 +245,79 @@ pub fn check_for_version_updates(
         .collect();
 
     resolve_versions_diffs(package_fetcher, versions, false)
+}
+
+pub fn get_audit(
+    manifest: &manifest::Manifest,
+    package_fetcher: &impl PackageFetcher,
+) -> Result<Audit, PackageFetchError> {
+    let mut advisories = Audit::default();
+
+    for package in &manifest.packages {
+        let name = &package.name;
+        let version = &package.version;
+
+        // We can only look-up advisories information for dependencies from Hex.
+        if !package.is_hex() {
+            continue;
+        }
+
+        let hex_package = package_fetcher.get_package(&package.name)?;
+
+        let Some(release) = hex_package
+            .releases
+            .iter()
+            .find(|release| release.version == package.version)
+        else {
+            let package = format!("{name}@{version}");
+            return Err(PackageFetchError::NotFoundError(package));
+        };
+
+        advisories.record_problems(name, version, release);
+    }
+
+    Ok(advisories)
+}
+
+#[derive(Debug, Default)]
+pub struct Audit {
+    pub packages: Vec<AuditPackage>,
+}
+
+impl Audit {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.packages.is_empty()
+    }
+
+    pub fn record_problems(
+        &mut self,
+        package: &EcoString,
+        version: &Version,
+        release: &Release<()>,
+    ) {
+        if !release.retirement_status.is_some() && release.security_advisories.is_empty() {
+            return;
+        }
+
+        self.packages.push(AuditPackage {
+            name: package.clone(),
+            version: version.clone(),
+            retirement: release.retirement_status.clone(),
+            advisories: release.security_advisories.clone(),
+        });
+    }
+}
+
+#[derive(Debug)]
+pub struct AuditPackage {
+    pub name: EcoString,
+    pub version: Version,
+    pub retirement: Option<hexpm::RetirementStatus>,
+    pub advisories: Vec<hexpm::SecurityAdvisory>,
 }
 
 // If the string would parse to an exact version then return the version
@@ -321,7 +394,7 @@ but it is locked to {locked_version}, which is incompatible.",
 }
 
 pub trait PackageFetcher {
-    fn get_dependencies(&self, package: &str) -> Result<Rc<hexpm::Package>, PackageFetchError>;
+    fn get_package(&self, package: &str) -> Result<Rc<hexpm::Package>, PackageFetchError>;
 }
 
 #[derive(Debug, Error)]
@@ -333,6 +406,7 @@ pub enum PackageFetchError {
     #[error("{0}")]
     FetchError(String),
 }
+
 impl PackageFetchError {
     pub fn fetch_error<T: std::error::Error>(err: T) -> Self {
         Self::FetchError(err.to_string())
@@ -414,7 +488,7 @@ where
     ) -> Result<(), PackageFetchError> {
         let mut packages = self.packages.borrow_mut();
         if packages.get(name).is_none() {
-            let package = self.remote.get_dependencies(name)?;
+            let package = self.remote.get_package(name)?;
             // mut (therefore clone) is required here in order to sort the releases
             let mut package = (*package).clone();
             // Sort the packages from newest to oldest, pres after all others
@@ -584,7 +658,7 @@ mod tests {
     }
 
     impl PackageFetcher for Remote {
-        fn get_dependencies(&self, package: &str) -> Result<Rc<hexpm::Package>, PackageFetchError> {
+        fn get_package(&self, package: &str) -> Result<Rc<hexpm::Package>, PackageFetchError> {
             self.deps
                 .get(package)
                 .map(Rc::clone)
@@ -817,7 +891,7 @@ mod tests {
 
     #[test]
     fn resolution_with_optional_deps_not_pulled_in_by_provided_package() {
-        let gleam_stdlib = (*make_remote().get_dependencies("gleam_stdlib").unwrap()).clone();
+        let gleam_stdlib = (*make_remote().get_package("gleam_stdlib").unwrap()).clone();
         let provided = vec![(EcoString::from("gleam_stdlib"), gleam_stdlib)]
             .into_iter()
             .collect();
