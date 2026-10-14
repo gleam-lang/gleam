@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 The Gleam contributors
 
+#[cfg(test)]
+mod tests;
+
 use ecow::EcoString;
 use itertools::Itertools;
 use num_bigint::BigInt;
@@ -4334,7 +4337,7 @@ impl<'line_numbers> ErlangBuilder<Vec<u8>> for ErlangBinaryBuilder<'line_numbers
 
         // N(T_1, ..., T_k)
         //   becomes
-        // {type,ANNO,N,[Rep(T_1), ..., Rep(T_k)]}
+        // {user_type,ANNO,N,[Rep(T_1), ..., Rep(T_k)]}
         self.etf.small_tuple(4);
         self.etf.atom("user_type");
         self.annotation(None);
