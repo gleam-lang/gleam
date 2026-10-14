@@ -365,7 +365,7 @@ fn alias_references_in_module(
             }
             ReferenceKind::Import {
                 location,
-                alias_start_position,
+                name_end_position: alias_start_position,
             } => {
                 let alias_location = SrcSpan::new(alias_start_position, location.end);
                 if name == &params.new_name {

@@ -1948,7 +1948,7 @@ fn module_with_references() {
                             location: SrcSpan::new(6, 9),
                             kind: ReferenceKind::Import {
                                 location: SrcSpan::new(6, 9),
-                                alias_start_position: 9,
+                                name_end_position: 9,
                             },
                         },
                         Reference {

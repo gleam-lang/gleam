@@ -84,8 +84,7 @@ pub enum ReferenceKind {
         /// //                   ^^^^^^^^^^^^^^
         /// ```
         location: SrcSpan,
-        /// Start position of the alias, if it exists, otherwise it will be at
-        /// the end of the import location:
+        /// End position of the name:
         ///
         /// ```gleam
         /// import gleam/option.{type Option as Wibble}
@@ -93,7 +92,7 @@ pub enum ReferenceKind {
         /// import gleam/option.{type Option}
         /// //                             ^
         /// ```
-        alias_start_position: u32,
+        name_end_position: u32,
     },
     /// The original definition location of a type or value. This also counts as
     /// a reference for renaming and "find references" purposes. For example:
