@@ -1961,7 +1961,7 @@ struct FakeFetcher {
 }
 
 impl PackageFetcher for FakeFetcher {
-    fn get_dependencies(&self, package: &str) -> Result<Rc<hexpm::Package>, PackageFetchError> {
+    fn get_package(&self, package: &str) -> Result<Rc<hexpm::Package>, PackageFetchError> {
         self.packages
             .get(package)
             .map(Rc::clone)
