@@ -143,7 +143,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             import.name_location(),
             ReferenceKind::Import {
                 location: import.location,
-                alias_start_position: import.name_location().end,
+                name_end_position: import.name_location().end,
             },
         );
 
@@ -248,7 +248,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     import.name_location(),
                     ReferenceKind::Import {
                         location: import.location,
-                        alias_start_position: import.name_location().end,
+                        name_end_position: import.name_location().end,
                     },
                 );
             }
@@ -270,7 +270,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     import.name_location(),
                     ReferenceKind::Import {
                         location: import.location,
-                        alias_start_position: import.name_location().end,
+                        name_end_position: import.name_location().end,
                     },
                 );
             }
