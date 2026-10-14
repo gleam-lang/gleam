@@ -98,7 +98,7 @@ pub fn tree(paths: &ProjectPaths, options: TreeOptions) -> Result<()> {
 fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest)> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let config = crate::config::root_config(paths)?;
-    let package_fetcher = PackageFetcher::new(runtime.handle().clone());
+    let package_fetcher = HttpPackageFetcher::new(runtime.handle().clone());
     let dependency_manager = DependencyManagerConfig {
         use_manifest: UseManifest::Yes,
         check_major_versions: CheckMajorVersions::No,
@@ -223,13 +223,13 @@ pub fn outdated(paths: &ProjectPaths) -> Result<()> {
     let total_packages = manifest
         .packages
         .iter()
-        .filter(|package| matches!(package.source, ManifestPackageSource::Hex { .. }))
+        .filter(|package| package.is_hex())
         .count();
 
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let package_fetcher = PackageFetcher::new(runtime.handle().clone());
+    let package_fetcher = HttpPackageFetcher::new(runtime.handle().clone());
 
-    let version_updates = dependency::check_for_version_updates(&manifest, &package_fetcher);
+    let version_updates = dependency::get_available_updates(&manifest, &package_fetcher);
 
     print!(
         "{}",
@@ -237,6 +237,68 @@ pub fn outdated(paths: &ProjectPaths) -> Result<()> {
     );
 
     Ok(())
+}
+
+pub fn audit(paths: &ProjectPaths) -> Result<i32> {
+    let (_, manifest) = get_manifest_details(paths)?;
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let package_fetcher = HttpPackageFetcher::new(runtime.handle().clone());
+    let audit = dependency::get_audit(&manifest, &package_fetcher).unwrap();
+
+    if audit.is_empty() {
+        Ok(0)
+    } else {
+        print!("{}", pretty_print_audit(audit));
+        Ok(1)
+    }
+}
+
+fn pretty_print_audit(advisories: dependency::Audit) -> String {
+    let mut out = String::new();
+
+    for package in advisories.packages {
+        out.push_str(&package.name);
+        out.push(' ');
+        out.push_str(&package.version.to_string().as_str());
+        out.push('\n');
+
+        if let Some(retirement) = package.retirement {
+            out.push_str("  Retired: ");
+            out.push_str(retirement.reason.to_str());
+            out.push(' ');
+            out.push_str(retirement.message.as_str());
+            out.push('\n');
+        }
+
+        for advisory in package.advisories {
+            out.push_str("\n  ");
+            out.push_str(&advisory.id);
+            if let Some(rating) = advisory.cvss_rating {
+                out.push_str(" (");
+                out.push_str(rating.to_str());
+                out.push(')');
+            }
+            if !advisory.aliases.is_empty() {
+                let mut first = true;
+                for alias in &advisory.aliases {
+                    if first {
+                        first = false;
+                        out.push_str("\n  aliases: ");
+                    } else {
+                        out.push_str(", ");
+                    }
+                    out.push_str(alias);
+                }
+            }
+            out.push_str("\n  ");
+            out.push_str(&advisory.summary);
+            out.push_str("\n  ");
+            out.push_str(&advisory.html_url);
+            out.push('\n');
+        }
+    }
+
+    out
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -424,7 +486,7 @@ pub fn resolve_and_download<Telem: Telemetry>(
 ) -> Result<Manifest> {
     // Start event loop so we can run async functions to call the Hex API
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let package_fetcher = PackageFetcher::new(runtime.handle().clone());
+    let package_fetcher = HttpPackageFetcher::new(runtime.handle().clone());
 
     let dependency_manager = config.into_dependency_manager(
         runtime.handle().clone(),
@@ -1691,7 +1753,7 @@ fn verified_releases(
         .filter(|(name, _)| !provided.contains_key(name.as_str()))
         .map(|(name, version)| {
             let package = package_fetcher
-                .get_dependencies(name)
+                .get_package(name)
                 .map_err(|error| Error::DependencyResolutionError(error.to_string()))?;
             let release = package
                 .releases
@@ -1758,14 +1820,14 @@ fn hex_manifest_package(
     }
 }
 
-struct PackageFetcher {
+struct HttpPackageFetcher {
     runtime_cache: RefCell<HashMap<String, Rc<hexpm::Package>>>,
     runtime: tokio::runtime::Handle,
     http: HttpClient,
     credentials: Option<hexpm::Credentials>,
 }
 
-impl PackageFetcher {
+impl HttpPackageFetcher {
     pub fn new(runtime: tokio::runtime::Handle) -> Self {
         Self {
             runtime_cache: RefCell::new(HashMap::new()),
@@ -1781,6 +1843,37 @@ impl PackageFetcher {
     fn cache_package(&self, package: &str, result: Rc<hexpm::Package>) {
         let mut runtime_cache = self.runtime_cache.borrow_mut();
         let _ = runtime_cache.insert(package.to_string(), result);
+    }
+}
+
+impl dependency::PackageFetcher for HttpPackageFetcher {
+    fn get_package(&self, package_name: &str) -> Result<Rc<hexpm::Package>, PackageFetchError> {
+        {
+            let runtime_cache = self.runtime_cache.borrow();
+            let result = runtime_cache.get(package_name);
+
+            if let Some(result) = result {
+                return Ok(result.clone());
+            }
+        }
+
+        tracing::debug!(package = package_name, "looking_up_hex_package");
+        let config = hexpm::Config::new();
+        let request = hexpm::repository_v2_get_package_request(
+            package_name,
+            self.credentials.as_ref(),
+            &config,
+        );
+        let response = self
+            .runtime
+            .block_on(self.http.send(request))
+            .map_err(PackageFetchError::fetch_error)?;
+
+        let package = hexpm::repository_v2_get_package_response(response, HEXPM_PUBLIC_KEY)
+            .map_err(|error| PackageFetchError::from_api_error(error, package_name))?;
+        let package = Rc::new(package);
+        self.cache_package(package_name, Rc::clone(&package));
+        Ok(package)
     }
 }
 
@@ -1807,34 +1900,5 @@ impl TarUnpacker for Untar {
         mut archive: tar::Archive<GzDecoder<tar::Entry<'_, WrappedReader>>>,
     ) -> std::io::Result<()> {
         archive.unpack(path)
-    }
-}
-
-impl dependency::PackageFetcher for PackageFetcher {
-    fn get_dependencies(&self, package: &str) -> Result<Rc<hexpm::Package>, PackageFetchError> {
-        {
-            let runtime_cache = self.runtime_cache.borrow();
-            let result = runtime_cache.get(package);
-
-            if let Some(result) = result {
-                return Ok(result.clone());
-            }
-        }
-
-        tracing::debug!(package = package, "looking_up_hex_package");
-        let config = hexpm::Config::new();
-        let request =
-            hexpm::repository_v2_get_package_request(package, self.credentials.as_ref(), &config);
-        let response = self
-            .runtime
-            .block_on(self.http.send(request))
-            .map_err(PackageFetchError::fetch_error)?;
-
-        let pkg = hexpm::repository_v2_get_package_response(response, HEXPM_PUBLIC_KEY)
-            .map_err(|error| PackageFetchError::from_api_error(error, package))?;
-        let pkg = Rc::new(pkg);
-        let pkg_ref = Rc::clone(&pkg);
-        self.cache_package(package, pkg);
-        Ok(pkg_ref)
     }
 }
