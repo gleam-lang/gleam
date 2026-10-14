@@ -1,0 +1,41 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn wibble(x) {\n  case x {\n    0 | 1 | 2 | 3 -> {\n      // Here, x is either of 0, 1, 2 or 3.\n      todo\n    }\n    _ -> todo\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn wibble(x) {
+  case x {
+    0 | 1 | 2 | 3 -> {
+    ▔▔▔▔▔▔▔▔▔▔▔▔↑     
+      // Here, x is either of 0, 1, 2 or 3.
+      todo
+    }
+    _ -> todo
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn wibble(x) {
+  case x {
+    0 -> {
+      // Here, x is either of 0, 1, 2 or 3.
+      todo
+    }
+    1 -> {
+      // Here, x is either of 0, 1, 2 or 3.
+      todo
+    }
+    2 -> {
+      // Here, x is either of 0, 1, 2 or 3.
+      todo
+    }
+    3 -> {
+      // Here, x is either of 0, 1, 2 or 3.
+      todo
+    }
+    _ -> todo
+  }
+}

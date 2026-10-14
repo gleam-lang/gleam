@@ -210,6 +210,7 @@ const ADD_EXTRA_PARENTHESES: &str = "Add extra parentheses";
 const CONVERT_TO_DOCUMENTATION_COMMENT: &str = "Convert to documentation comment";
 const CONVERT_TO_REGULAR_COMMENT: &str = "Convert to regular comment";
 const REMOVE_REDUNDANT_LIST_PREPEND: &str = "Remove redundant list prepend";
+const SPLIT_ALTERNATIVE_PATTERNS: &str = "Split alternative patterns";
 
 fn generate_variant_message(type_name: &str) -> String {
     format!("Generate `{type_name}` variant")
@@ -16417,5 +16418,365 @@ fn no_remove_list_prepend_no_prepend() {
   let wibble = [1, 2]
 }",
         find_position_of("[1, 2]").to_selection()
+    );
+}
+
+#[test]
+fn split_alternative_patterns_four_patterns() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    0 | 1 | 2 | 3 -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("0").select_until(find_position_of("3"))
+    );
+}
+
+#[test]
+fn split_alternative_patterns_two_patterns() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    0 | 1 -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("0").select_until(find_position_of("1"))
+    );
+}
+
+#[test]
+fn split_alternative_patterns_partial_first_pattern() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("0").to_selection()
+    );
+}
+
+#[test]
+fn split_alternative_patterns_partial_second_pattern() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("1").to_selection()
+    );
+}
+
+#[test]
+fn split_alternative_patterns_partial_last_pattern() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("7").to_selection()
+    );
+}
+
+#[test]
+fn split_alternative_patterns_partial_mid_pattern() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("4").to_selection()
+    );
+}
+
+#[test]
+fn split_alternative_patterns_partial_first_patterns() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("1").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
+fn split_alternative_patterns_partial_mid_patterns() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("2").select_until(find_position_of("5"))
+    );
+}
+
+#[test]
+fn split_alternative_patterns_partial_last_patterns() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("4").select_until(find_position_of("7"))
+    );
+}
+
+#[test]
+fn split_alternative_patterns_four_patterns_over_multiple_lines() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    0
+    | 1
+    | 2
+    | 3 -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("0").select_until(find_position_of("3"))
+    );
+}
+
+#[test]
+fn split_alternative_patterns_partial_first_patterns_over_multiple_lines() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    0
+    | 1
+    | 2
+    | 3 -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("0").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
+fn split_alternative_patterns_partial_last_patterns_over_multiple_lines() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    0
+    | 1
+    | 2
+    | 3 -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("2").select_until(find_position_of("3"))
+    );
+}
+
+#[test]
+fn split_alternative_patterns_four_patterns_with_guard() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    0 | 1 | 2 | 3 if True -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("0").select_until(find_position_of("3"))
+    );
+}
+
+#[test]
+fn split_alternative_patterns_partial_first_pattern_with_guard() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    0 | 1 | 2 | 3 if True -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("0").to_selection()
+    );
+}
+
+#[test]
+fn split_alternative_patterns_four_patterns_with_block_body() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    0 | 1 | 2 | 3 -> {
+      // Here, x is either of 0, 1, 2 or 3.
+      todo
+    }
+    _ -> todo
+  }
+}
+",
+        find_position_of("0").select_until(find_position_of("3"))
+    );
+}
+
+#[test]
+fn split_alternative_patterns_partial_first_patterns_with_block_body() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    0 | 1 | 2 | 3 -> {
+      // Here, x is either of 0, 1, 2 or 3.
+      todo
+    }
+    _ -> todo
+  }
+}
+",
+        find_position_of("0").select_until(find_position_of("1"))
+    );
+}
+
+#[test]
+fn split_alternative_patterns_partial_first_pattern_with_block_body() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    0 | 1 | 2 | 3 -> {
+      // Here, x is either of 0, 1, 2 or 3.
+      todo
+    }
+    _ -> todo
+  }
+}
+",
+        find_position_of("0").to_selection()
+    );
+}
+
+#[test]
+fn split_alternative_patterns_with_nested_case_outer() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    [n] | [0, n] | [0, 1, n, ..] -> case n {
+      0 | 1 | 2 | 3 -> todo
+      _ -> todo
+    }
+    _ -> todo
+  }
+}
+",
+        find_position_of("[n]").select_until(find_position_of("[0, 1, n, ..]"))
+    );
+}
+
+#[test]
+fn split_alternative_patterns_with_nested_case_inner() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x) {
+  case x {
+    [n] | [0, n] | [0, 1, n, ..] -> case n {
+      0 | 1 | 2 | 3 -> todo
+      _ -> todo
+    }
+    _ -> todo
+  }
+}
+",
+        find_position_of("0 | 1 | 2 | 3").to_selection()
+    );
+}
+
+#[test]
+fn split_alternative_patterns_four_patterns_with_multiple_subjects() {
+    assert_code_action!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x, y) {
+  case x, y {
+    0, 0 | 1, 1 | 2, 2 | 3, 3 -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("0").select_until(find_position_of("3"))
+    );
+}
+
+#[test]
+fn no_split_alternative_patterns_single_pattern() {
+    assert_no_code_actions!(
+        SPLIT_ALTERNATIVE_PATTERNS,
+        "
+pub fn wibble(x, y) {
+  case x, y {
+    0, 0 -> todo
+    _ -> todo
+  }
+}
+",
+        find_position_of("0, 0").to_selection()
     );
 }
