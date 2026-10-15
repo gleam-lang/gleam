@@ -2790,3 +2790,47 @@ pub type Wibble {
     );
     insta::assert_snapshot!(insta::internals::AutoName, output, code);
 }
+fn attribute_completion_items(src: &str, position: Position) -> Vec<CompletionItem> {
+    // Compile valid code before requesting completions for an incomplete attribute.
+    TestProject::for_source("pub fn main() {}").at(position, |engine, params, _src| {
+        engine
+            .completion(params, src.into())
+            .result
+            .unwrap()
+            .unwrap_or_default()
+    })
+}
+
+#[test]
+fn completions_for_attribute_names() {
+    for (src, position) in [
+        ("@", Position::new(0, 1)),
+        ("  @\npub fn main() {}", Position::new(0, 3)),
+        ("\n@\npub fn main() {}", Position::new(1, 1)),
+    ] {
+        let items = attribute_completion_items(src, position);
+        let mut labels: Vec<_> = items.iter().map(|item| item.label.as_str()).collect();
+        labels.sort();
+
+        assert_eq!(labels, vec!["deprecated", "external", "internal"], "{src}");
+    }
+}
+
+#[test]
+fn completions_for_partial_attribute_names() {
+    for (prefix, expected) in [
+        ("dep", "deprecated"),
+        ("ext", "external"),
+        ("int", "internal"),
+    ] {
+        let src = format!("@{prefix}\npub fn main() {{}}");
+        let items = attribute_completion_items(&src, Position::new(0, 4));
+        let labels: Vec<_> = items.iter().map(|item| item.label.as_str()).collect();
+
+        assert_eq!(labels, vec![expected]);
+        assert_eq!(
+            apply_completion(&src, items, expected),
+            format!("@{expected}\npub fn main() {{}}")
+        );
+    }
+}

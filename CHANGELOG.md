@@ -309,6 +309,10 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The language server now offers autocompletion for the `@deprecated`,
+  `@external`, and `@internal` attribute names.
+  ([Max Wilhelmsson](https://github.com/Maoxen))
+
 ### Formatter
 
 - The formatter now inserts `todo`s after comments in an empty function body,

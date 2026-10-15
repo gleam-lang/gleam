@@ -490,6 +490,41 @@ impl<'a, IO> Completer<'a, IO> {
         })
     }
 
+    // Checks if the line being edited is an attribute line and provides completions if it is.
+    pub fn attribute_completions(&'a self) -> Option<Result<Option<Vec<CompletionItem>>>> {
+        let cursor_offset = self.src_line_numbers.byte_index(*self.cursor_position);
+
+        let start_of_line = self.src_line_numbers.byte_index(Position {
+            line: self.cursor_position.line,
+            character: 0,
+        });
+        let src = self
+            .src
+            .get(start_of_line as usize..cursor_offset as usize)?;
+        let text = src.trim_start();
+
+        let prefix = text.strip_prefix('@')?;
+
+        if !prefix.chars().all(|c| c.is_ascii_alphabetic() || c == '_') {
+            return None;
+        }
+
+        let surroundings =
+            self.get_phrase_surrounding_for_completion(&|c| c.is_ascii_alphanumeric() || c == '_');
+
+        let mut suggestions = vec![];
+
+        for name in ["deprecated", "external", "internal"] {
+            if name.starts_with(prefix) {
+                let item = self.keyword_completion(name, &surroundings);
+
+                suggestions.push(item);
+            }
+        }
+
+        Some(Ok(Some(suggestions)))
+    }
+
     /// Checks if the line being edited is an import line and provides completions if it is.
     /// If the line includes a dot then it provides unqualified import completions.
     /// Otherwise it provides direct module import completions.
