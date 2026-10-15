@@ -152,6 +152,10 @@
   highlight all of them.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The language server now offers autocompletion for the `@deprecated`,
+  `@external`, and `@internal` attribute names.
+  ([Max Wilhelmsson](https://github.com/Maoxen))
+
 ### Bug fixes
 
 - Fixed a bug where the language server "Generate variant" code action would
