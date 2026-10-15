@@ -3533,13 +3533,13 @@ being used as a type constructor."
             }
         }
 
-        TypeError::UnnecessarySpreadOperator { location, arity } => {
+        TypeError::RecordUpdateWithoutChanges { location, arity } => {
             let text = wrap_format!(
                 "This record has {arity} fields and you have already \
 assigned variables to all of them."
             );
             Diagnostic {
-                title: "Unnecessary spread operator".into(),
+                title: "Record update without changes".into(),
                 text,
                 hint: None,
                 level: Level::Error,
@@ -4713,10 +4713,7 @@ The missing patterns are:\n",
             let text = wrap_format!(
                 "This value is not available as it is defined using externals, \
 and there is no implementation for the {} target.",
-                match current_target {
-                    Target::Erlang => "Erlang",
-                    Target::JavaScript => "JavaScript",
-                }
+                current_target.as_presentable_str()
             );
             let hint = wrap("Did you mean to build for a different target?");
             Diagnostic {
@@ -4741,10 +4738,7 @@ and there is no implementation for the {} target.",
             name,
             target,
         } => {
-            let target = match target {
-                Target::Erlang => "Erlang",
-                Target::JavaScript => "JavaScript",
-            };
+            let target = target.as_presentable_str();
             let text = wrap_format!(
                 "The `{name}` function is public but doesn't have an \
 implementation for the {target} target. All public functions of a package \
@@ -5394,6 +5388,32 @@ and cannot be accessed by other modules."
                 extra_labels: vec![],
             }),
         },
+        TypeError::ListPrependWithoutElements {
+            location,
+            tail_location,
+        } => {
+            let text = wrap(
+                "The list prepend syntax is being used here, but \
+no elements are being prepended. Remove the `[..` and the `]` and use the \
+original list directly.",
+            );
+
+            Diagnostic {
+                title: "Redundant list prepend".to_string(),
+                text,
+                hint: None,
+                level: Level::Error,
+                location: Some(Location {
+                    label: Label {
+                        text: Some("This prepend does nothing".into()),
+                        span: SrcSpan::new(location.start, tail_location.start),
+                    },
+                    path: path.clone(),
+                    src: src.clone(),
+                    extra_labels: vec![],
+                }),
+            }
+        }
     })
 }
 

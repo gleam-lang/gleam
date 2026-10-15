@@ -13,6 +13,10 @@
   patterns.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The compiler is now fault tolerant when providing an error for a redundant list
+  prepend like `[..wobble]`.
+  ([0xda157](https://github.com/0xda157))
+
 ### Build tool
 
 - `gleam remove` now rejects invalid package names with an error explaining
@@ -24,6 +28,15 @@
 - When Hex dependencies change version the build tool now prints a link to the
   diff on Hex, making it easier to review and audit dependency updates.
   ([Manas Ganesh Dasari](https://github.com/ManasDasri))
+
+- The Hex files page will now be used for the view-source link in generated
+  documentation when the package's source repository uses an unknown forge or
+  is not set.
+  ([Alex Hinde](https://github.com/apex-hinde))
+
+- The Hex credentials file is now written with read-write permissions for the
+  owner only (0600 on Unix), preventing other users from reading it.
+  ([bala-bhargav](https://github.com/bala-bhargav))
 
 ### Language server
 
@@ -155,6 +168,24 @@
 - The language server now offers autocompletion for the `@deprecated`,
   `@external`, and `@internal` attribute names.
   ([Max Wilhelmsson](https://github.com/Maoxen))
+  
+- The language server can now offer a "Remove redundant list prepend" code
+  action, for example:
+
+  ```gleam
+  const wibble = [1, 2]
+  const wobble = [..wibble]
+               // ^^^^^^^^ Trigger code action here
+  ```
+
+  becomes
+
+  ```gleam
+  const wibble = [1, 2]
+  const wobble = wibble
+  ```
+
+  ([0xda157](https://github.com/0xda157))
 
 ### Bug fixes
 
@@ -164,6 +195,18 @@
 
 - Fixed a bug where bad error message would be shown when trying to publish
   package with no README on Windows.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+- Fixed a bug where the build tool would not reject invalid application names
+  if one is returned by the Hex API.
+  ([Louis Pilfold](https://github.com/lpil))
+
+- Fixed a bug where a type error caused by a constant used in a clause guard
+  would point to the definition of the constant instead of the guard.
+  ([DualFroz](https://github.com/dualfroz))
+
+- The language server will now remove imports of prelude items when renaming
+  them to original name.
   ([Andrey Kozhev](https://github.com/ankddev))
 
 ## v1.19.1 - 2026-10-07

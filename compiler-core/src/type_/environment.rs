@@ -909,7 +909,7 @@ impl Environment<'_> {
                     }
                 }
                 EntityKind::ImportedModule { module_name } => {
-                    let _ = unused_modules.insert(module_name.clone());
+                    let _ = unused_modules.insert(module_name);
                     Warning::UnusedImportedModule { name, location }
                 }
                 EntityKind::ImportedType { module } => {
@@ -943,7 +943,7 @@ impl Environment<'_> {
                     unused_imported_items.push((
                         module.clone(),
                         Warning::UnusedImportedModuleAlias {
-                            module_name: module.clone(),
+                            module_name: module,
                             alias: name,
                             location,
                         },

@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "const wibble = [1, 2]\nconst wobble = [..wibble]"
+---
+----- SOURCE CODE
+const wibble = [1, 2]
+const wobble = [..wibble]
+
+----- ERROR
+error: Redundant list prepend
+  ┌─ /src/one/two.gleam:2:16
+  │
+2 │ const wobble = [..wibble]
+  │                ^^^ This prepend does nothing
+
+The list prepend syntax is being used here, but no elements are being
+prepended. Remove the `[..` and the `]` and use the original list directly.

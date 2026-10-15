@@ -29,9 +29,9 @@ use printer::Names;
 
 use crate::{
     ast::{
-        ArgNames, BitArraySegment, CallArg, Constant, DefinitionLocation, Pattern, Publicity,
-        TypedConstant, TypedExpr, TypedPattern, TypedPatternBitArraySegment, UntypedMultiPattern,
-        UntypedPattern, UntypedRecordUpdateArg,
+        ArgNames, BitArraySegment, CallArg, Constant, DefinitionLocation, Layer, Pattern,
+        Publicity, TypedConstant, TypedExpr, TypedPattern, TypedPatternBitArraySegment,
+        UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg,
     },
     bit_array,
     build::{Origin, Target},
@@ -1063,6 +1063,16 @@ pub struct References {
     pub panic_usages: Vec<SrcSpan>,
 }
 
+impl References {
+    /// The references to the entities in the given layer.
+    pub fn in_layer(&self, layer: Layer) -> &ReferenceMap {
+        match layer {
+            Layer::Value => &self.value_references,
+            Layer::Type => &self.type_references,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Opaque {
     Opaque,
@@ -1513,6 +1523,14 @@ impl Deprecation {
     #[must_use]
     pub fn is_deprecated(&self) -> bool {
         matches!(self, Self::Deprecated { .. })
+    }
+
+    /// The deprecation message, if it's deprecated.
+    pub fn message(&self) -> Option<&str> {
+        match self {
+            Deprecation::NotDeprecated => None,
+            Deprecation::Deprecated { message } => Some(message),
+        }
     }
 }
 

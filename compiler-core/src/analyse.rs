@@ -1250,7 +1250,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 variants_count: constructors.len() as u16,
                 name: constructor.name.clone(),
                 arity: constructor.arguments.len() as u16,
-                field_map: field_map.clone(),
+                field_map,
                 location: constructor.location,
                 module: self.module_name.clone(),
                 variant_index: index as u16,

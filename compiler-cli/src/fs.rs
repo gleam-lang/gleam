@@ -377,6 +377,52 @@ pub fn make_executable(_path: impl AsRef<Utf8Path>) -> Result<(), Error> {
     Ok(())
 }
 
+#[cfg(target_family = "unix")]
+pub fn write_private(path: &Utf8Path, text: &str) -> Result<(), Error> {
+    use std::os::unix::fs::OpenOptionsExt;
+    tracing::debug!(path=?path, "writing_private_file");
+
+    let dir_path = path.parent().ok_or_else(|| Error::FileIo {
+        action: FileIoAction::FindParent,
+        kind: FileKind::Directory,
+        path: path.to_path_buf(),
+        cause: FileIoCause::NotFound,
+    })?;
+
+    std::fs::create_dir_all(dir_path).map_err(|e| Error::FileIo {
+        action: FileIoAction::Create,
+        kind: FileKind::Directory,
+        path: dir_path.to_path_buf(),
+        cause: FileIoCause::std_io(e),
+    })?;
+
+    let mut f = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(path)
+        .map_err(|e| Error::FileIo {
+            action: FileIoAction::Create,
+            kind: FileKind::File,
+            path: path.to_path_buf(),
+            cause: FileIoCause::std_io(e),
+        })?;
+
+    f.write_all(text.as_bytes()).map_err(|e| Error::FileIo {
+        action: FileIoAction::WriteTo,
+        kind: FileKind::File,
+        path: path.to_path_buf(),
+        cause: FileIoCause::std_io(e),
+    })?;
+    Ok(())
+}
+
+#[cfg(not(target_family = "unix"))]
+pub fn write_private(path: &Utf8Path, text: &str) -> Result<(), Error> {
+    write(path, text)
+}
+
 pub fn write_bytes(path: &Utf8Path, bytes: &[u8]) -> Result<(), Error> {
     tracing::debug!(path=?path, "writing_file");
 

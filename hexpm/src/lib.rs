@@ -19,7 +19,7 @@ use regex::Regex;
 use ring::digest::{Context, SHA256};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::sync::OnceLock;
+use std::sync::{LazyLock, OnceLock};
 use std::time::{Duration, Instant};
 use std::{
     collections::HashMap,
@@ -1000,8 +1000,41 @@ impl<Meta> Release<Meta> {
 
 #[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
 pub struct ReleaseMeta {
+    #[serde(deserialize_with = "deserialize_package_name")]
     pub app: String,
     pub build_tools: Vec<String>,
+}
+
+static PACKAGE_NAME_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("^[a-z][a-z0-9_]*$").expect("name regex"));
+
+fn deserialize_package_name<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = String::deserialize(deserializer)?;
+    if PACKAGE_NAME_PATTERN.is_match(&value) {
+        Ok(value)
+    } else {
+        Err(serde::de::Error::custom("not a valid package name"))
+    }
+}
+
+fn deserialise_optional_package_name<'de, D>(deserialiser: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value: Option<&str> = Deserialize::deserialize(deserialiser)?;
+    match value {
+        Some(name) => {
+            if PACKAGE_NAME_PATTERN.is_match(name) {
+                Ok(Some(name.into()))
+            } else {
+                Err(serde::de::Error::custom("not a valid package name"))
+            }
+        }
+        None => Ok(None),
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
@@ -1112,6 +1145,7 @@ pub struct Dependency {
     /// If true the package is optional and does not need to be resolved
     /// unless another package has specified it as a non-optional dependency.
     pub optional: bool,
+    #[serde(deserialize_with = "deserialise_optional_package_name")]
     /// If set is the OTP application name of the dependency, if not set the
     /// application name is the same as the package name
     pub app: Option<String>,

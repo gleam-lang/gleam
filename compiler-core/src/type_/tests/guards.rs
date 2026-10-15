@@ -87,3 +87,42 @@ pub fn main(wibble: wibble.Wibble) {
         vec![("main", "fn(Wibble) -> Bool")]
     );
 }
+
+#[test]
+fn constant_with_wrong_type_in_guard() {
+    assert_module_error!(
+        r#"
+pub type Wibble {
+  Wibble(String)
+}
+
+pub const constant = Wibble("Hi")
+
+pub fn main() {
+  let wibble = "wibble"
+  case 1 {
+    _ if wibble == constant -> Nil
+    _ -> Nil
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn unqualified_imported_constant_with_wrong_type_in_guard() {
+    assert_module_error!(
+        ("wibble", "pub const constant = 1"),
+        r#"
+import wibble.{constant}
+
+pub fn main() {
+  let wibble = "wibble"
+  case 1 {
+    _ if wibble == constant -> Nil
+    _ -> Nil
+  }
+}
+"#
+    );
+}

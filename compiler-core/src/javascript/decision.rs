@@ -13,7 +13,7 @@ use crate::{
         SizeOperator, SizeTest, Variable, VariableUsage,
     },
     javascript::{
-        TypeVariant,
+        TypeVariant, bool,
         expression::{eco_string_int, string},
         maybe_escape_property,
     },
@@ -1956,15 +1956,8 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
             .tracker
             .bit_array_slice_to_int_used = true;
 
-        let endianness = match endianness {
-            Endianness::Big => TRUE_LOWERCASE_DOCUMENT,
-            Endianness::Little => FALSE_LOWERCASE_DOCUMENT,
-        };
-        let signed = if signed {
-            TRUE_LOWERCASE_DOCUMENT
-        } else {
-            FALSE_LOWERCASE_DOCUMENT
-        };
+        let endianness = bool(endianness.is_big());
+        let signed = bool(signed);
         let arguments = arena.join(
             [
                 bit_array.to_doc(arena),
@@ -1998,10 +1991,7 @@ impl<'generator, 'module, 'a, 'doc> Variables<'generator, 'module, 'a, 'doc> {
             .tracker
             .bit_array_slice_to_float_used = true;
 
-        let endianness = match endianness {
-            Endianness::Big => TRUE_LOWERCASE_DOCUMENT,
-            Endianness::Little => FALSE_LOWERCASE_DOCUMENT,
-        };
+        let endianness = bool(endianness.is_big());
         let arguments = arena.join(
             [
                 bit_array.to_doc(arena),

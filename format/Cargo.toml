@@ -16,4 +16,6 @@ itertools.workspace = true
 vec1.workspace = true
 camino.workspace = true
 ecow.workspace = true
+
+[dev-dependencies]
 pretty_assertions.workspace = true

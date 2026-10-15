@@ -285,3 +285,22 @@ fn create_tar_archive_sets_proper_permissions() {
         assert_eq!(mode, 0o600, "entry {path_str} has unexpected mode")
     }
 }
+
+#[cfg(target_family = "unix")]
+#[test]
+fn write_private_sets_owner_only_permissions() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let tmp_dir = tempfile::tempdir().unwrap();
+    let path = Utf8Path::from_path(tmp_dir.path()).expect("Non Utf-8 Path");
+    let file_path = path.join("secret.toml");
+
+    super::write_private(&file_path, "secret content").unwrap();
+
+    let metadata = std::fs::metadata(file_path.as_std_path()).unwrap();
+    let mode = metadata.permissions().mode() & 0o777;
+    assert_eq!(mode, 0o600);
+
+    let content = std::fs::read_to_string(file_path.as_std_path()).unwrap();
+    assert_eq!(content, "secret content");
+}
