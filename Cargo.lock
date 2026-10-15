@@ -1485,7 +1485,7 @@ checksum = "fc148d4ddd3930c52f9e5ae79b89805c6f07e9ff417e7b083e0348cea60a5aba"
 
 [[package]]
 name = "gleam"
-version = "1.19.1"
+version = "1.19.2"
 dependencies = [
  "gleam-cli",
  "static_vcruntime",
@@ -1493,7 +1493,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-benches"
-version = "1.19.1"
+version = "1.19.2"
 dependencies = [
  "camino",
  "criterion",
@@ -1504,7 +1504,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-cli"
-version = "1.19.1"
+version = "1.19.2"
 dependencies = [
  "async-trait",
  "base16",
@@ -1529,7 +1529,7 @@ dependencies = [
  "ignore",
  "imbl",
  "insta",
- "itertools 0.15.0",
+ "itertools 0.13.0",
  "lsp-server",
  "opener",
  "pretty_assertions",
@@ -1541,7 +1541,7 @@ dependencies = [
  "same-file",
  "serde",
  "serde_json",
- "sha2 0.11.1",
+ "sha2 0.10.9",
  "strum",
  "tar",
  "tempfile",
@@ -1557,7 +1557,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-core"
-version = "1.19.1"
+version = "1.19.2"
 dependencies = [
  "age",
  "askama",
@@ -1584,7 +1584,7 @@ dependencies = [
  "imbl",
  "indexmap",
  "insta",
- "itertools 0.15.0",
+ "itertools 0.13.0",
  "num-bigint 0.5.1",
  "num-traits",
  "pathdiff",
@@ -1616,12 +1616,12 @@ dependencies = [
 
 [[package]]
 name = "gleam-format"
-version = "1.19.1"
+version = "1.19.2"
 dependencies = [
  "camino",
  "ecow",
  "gleam-core",
- "itertools 0.15.0",
+ "itertools 0.13.0",
  "pretty-arena",
  "pretty_assertions",
  "src-span",
@@ -1630,7 +1630,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-language-server"
-version = "1.19.1"
+version = "1.19.2"
 dependencies = [
  "camino",
  "debug-ignore",
@@ -1641,7 +1641,7 @@ dependencies = [
  "hexpm",
  "imbl",
  "insta",
- "itertools 0.15.0",
+ "itertools 0.13.0",
  "lsp-server",
  "num-bigint 0.5.1",
  "serde",
@@ -1655,7 +1655,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-wasm"
-version = "1.19.1"
+version = "1.19.2"
 dependencies = [
  "camino",
  "console_error_panic_hook",
@@ -1664,7 +1664,7 @@ dependencies = [
  "gleam-format",
  "hexpm",
  "imbl",
- "itertools 0.15.0",
+ "itertools 0.13.0",
  "serde",
  "termcolor",
  "tracing",
@@ -1738,7 +1738,7 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "hexpm"
-version = "1.19.1"
+version = "1.19.2"
 dependencies = [
  "base16",
  "bytes",
@@ -4006,7 +4006,7 @@ dependencies = [
 
 [[package]]
 name = "test-commands"
-version = "1.19.1"
+version = "1.19.2"
 dependencies = [
  "camino",
  "gleam-cli",
@@ -4031,7 +4031,7 @@ dependencies = [
 
 [[package]]
 name = "test-output"
-version = "1.19.1"
+version = "1.19.2"
 dependencies = [
  "camino",
  "gleam-cli",
@@ -4041,14 +4041,14 @@ dependencies = [
 
 [[package]]
 name = "test-package-compiler"
-version = "1.19.1"
+version = "1.19.2"
 dependencies = [
  "camino",
  "ecow",
  "gleam-core",
  "imbl",
  "insta",
- "itertools 0.15.0",
+ "itertools 0.13.0",
  "regex",
  "test-helpers-rs",
  "toml 1.1.8+spec-1.1.0",
@@ -4056,13 +4056,13 @@ dependencies = [
 
 [[package]]
 name = "test-project-compiler"
-version = "1.19.1"
+version = "1.19.2"
 dependencies = [
  "camino",
  "gleam-core",
  "imbl",
  "insta",
- "itertools 0.15.0",
+ "itertools 0.13.0",
  "regex",
  "test-helpers-rs",
  "toml 1.1.8+spec-1.1.0",
