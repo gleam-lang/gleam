@@ -303,11 +303,23 @@ impl Audit {
             return;
         }
 
+        let advisories = release
+            .security_advisories
+            .iter()
+            .map(|advisory| SecurityAdvisory {
+                id: advisory.id.clone(),
+                summary: advisory.summary.clone(),
+                html_url: advisory.html_url.clone(),
+                cvss_rating: advisory.cvss_rating.clone(),
+                aliases: advisory.aliases.clone(),
+            })
+            .collect();
+
         self.packages.push(AuditPackage {
             name: package.clone(),
             version: version.clone(),
             retirement: release.retirement_status.clone(),
-            advisories: release.security_advisories.clone(),
+            advisories,
         });
     }
 }
@@ -317,7 +329,16 @@ pub struct AuditPackage {
     pub name: EcoString,
     pub version: Version,
     pub retirement: Option<hexpm::RetirementStatus>,
-    pub advisories: Vec<hexpm::SecurityAdvisory>,
+    pub advisories: Vec<SecurityAdvisory>,
+}
+
+#[derive(Debug)]
+pub struct SecurityAdvisory {
+    pub id: String,
+    pub summary: String,
+    pub html_url: String,
+    pub cvss_rating: Option<hexpm::AdvisorySeverity>,
+    pub aliases: Vec<String>,
 }
 
 // If the string would parse to an exact version then return the version
