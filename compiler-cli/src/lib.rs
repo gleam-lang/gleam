@@ -876,7 +876,7 @@ pub enum Dependencies {
     /// Tree of all the dependency packages
     Tree(TreeOptions),
 
-    /// Check the dependencies for security advisories and retirements
+    /// Check for security advisories and retirements
     Audit,
 }
 
