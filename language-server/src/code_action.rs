@@ -13630,9 +13630,7 @@ impl<'ast> ast::visit::Visit<'ast> for InlineConstantValue<'ast> {
             return;
         };
 
-        let value_location = literal.location();
-
-        self.maybe_inline_constant(module, value_location, *location);
+        self.maybe_inline_constant(module, literal.location(), *location);
     }
 
     fn visit_typed_constant_var(
@@ -13656,9 +13654,8 @@ impl<'ast> ast::visit::Visit<'ast> for InlineConstantValue<'ast> {
         else {
             return;
         };
-        let value_location = literal.location();
 
-        self.maybe_inline_constant(module, value_location, *location);
+        self.maybe_inline_constant(module, literal.location(), *location);
     }
 
     fn visit_typed_bit_array_size_variable(
@@ -13681,9 +13678,8 @@ impl<'ast> ast::visit::Visit<'ast> for InlineConstantValue<'ast> {
         else {
             return;
         };
-        let value_location = literal.location();
 
-        self.maybe_inline_constant(module, value_location, *location);
+        self.maybe_inline_constant(module, literal.location(), *location);
     }
 
     fn visit_typed_clause_guard_var(
