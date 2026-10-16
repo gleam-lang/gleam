@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- the_module
+
+fn add_private(a, b) { a + b }
+
+pub const add = add_private
+
+-- AFTER
+---- the_module
+pub fn add(a, b) { a + b }
+
+-- PATCH
