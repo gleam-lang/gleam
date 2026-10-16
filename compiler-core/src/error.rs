@@ -3685,7 +3685,10 @@ a label or use a record constructor.",
             ..
         } => {
             let label_text = match hint {
-                UnknownTypeHint::AlternativeTypes(types) => did_you_mean(name, types),
+                UnknownTypeHint::AlternativeTypes {
+                    types_in_current_module,
+                    ..
+                } => did_you_mean(name, types_in_current_module),
                 UnknownTypeHint::ValueInScopeWithSameName => None,
             };
 
@@ -3701,8 +3704,28 @@ but no type in scope with that name."
                     text.push('\n');
                     text.push_str(hint.as_str());
                 }
-                UnknownTypeHint::AlternativeTypes(_) => {}
-            }
+                // We want to suggest types from imported modules with same
+                // name.
+                UnknownTypeHint::AlternativeTypes {
+                    possible_modules, ..
+                } if !possible_modules.is_empty() => {
+                    let message = if possible_modules.len() == 1 {
+                        "\nDid you mean:\n\n"
+                    } else {
+                        "\nDid you mean one of these:\n\n"
+                    };
+
+                    text.push_str(message);
+                    for module_name in possible_modules {
+                        text.push_str("  - ");
+                        text.push_str(module_name);
+                        text.push('.');
+                        text.push_str(name);
+                        text.push('\n');
+                    }
+                }
+                UnknownTypeHint::AlternativeTypes { .. } => {}
+            };
 
             Diagnostic {
                 title: "Unknown type".into(),

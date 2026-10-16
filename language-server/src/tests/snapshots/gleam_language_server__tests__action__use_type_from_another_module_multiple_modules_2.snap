@@ -1,0 +1,19 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\nimport woo\nimport another_woo\n\npub const wobble: Wibble = todo\n"
+---
+----- BEFORE ACTION
+
+import woo
+import another_woo
+
+pub const wobble: Wibble = todo
+                  ↑            
+
+
+----- AFTER ACTION
+
+import woo
+import another_woo
+
+pub const wobble: another_woo.Wibble = todo

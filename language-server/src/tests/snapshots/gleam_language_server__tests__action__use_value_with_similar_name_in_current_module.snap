@@ -1,0 +1,26 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  wobble()\n}\n\npub fn wibble() {\n  todo\n}\n        "
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  wobble()
+  ↑       
+}
+
+pub fn wibble() {
+  todo
+}
+        
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  wibble()
+}
+
+pub fn wibble() {
+  todo
+}
