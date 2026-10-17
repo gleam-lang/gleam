@@ -183,6 +183,49 @@
 
   ([0xda157](https://github.com/0xda157))
 
+- The language server's "Generate type" code action now places generated
+  types below the location of the "Unknown type" error for type aliases
+  and custom types, and above for functions and constants. For example:
+
+  ```gleam
+  type Wibble {
+    Wibble(Wobble(Int))
+        // ^^^^^^^^^^^ Trigger code action here
+  }
+  ```
+
+  becomes
+
+  ```gleam
+  type Wibble {
+    Wibble(Wobble)
+  }
+
+  type Wobble(a)
+  ```
+
+  whereas
+
+  ```gleam
+  fn wibble(argument: Wobble(Int)) {
+                   // ^^^^^^^^^^^ Trigger code action here
+    todo
+  }
+  ```
+
+  becomes
+
+  ```gleam
+  type Wobble(a)
+
+  fn wibble(argument: Wobble(Int)) {
+                   // ^^^^^^^^^^^ Trigger code action here
+    todo
+  }
+  ```
+
+  ([Oscar Stevens](https://github.com/ostev))
+
 ### Bug fixes
 
 - Fixed a bug where the language server "Generate variant" code action would
