@@ -313,6 +313,51 @@
   `@external`, and `@internal` attribute names.
   ([Max Wilhelmsson](https://github.com/Maoxen))
 
+- The language server's "Generate type" code action now places generated
+  types below the location of the "Unknown type" error for type aliases
+  and custom types, and above for functions and constants. For example:
+
+  ```gleam
+  type Wibble {
+    Wibble(Wobble(Int))
+        // ^^^^^^^^^^^ Trigger code action here
+  }
+  ```
+
+  becomes
+
+  ```gleam
+  type Wibble {
+    Wibble(Wobble)
+  }
+
+  type Wobble(a)
+  ```
+
+  whereas
+
+  ```gleam
+  fn wibble(argument: Wobble(Int)) {
+                   // ^^^^^^^^^^^ Trigger code action here
+    todo
+  }
+  ```
+
+  becomes
+
+  ```gleam
+  type Wobble(a)
+
+  fn wibble(argument: Wobble(Int)) {
+                   // ^^^^^^^^^^^ Trigger code action here
+    todo
+  }
+  ```
+
+  ([Oscar Stevens](https://github.com/ostev))
+
+  > > > > > > > ce8152425 (Update changelog)
+
 ### Formatter
 
 - The formatter now inserts `todo`s after comments in an empty function body,
