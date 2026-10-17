@@ -1996,7 +1996,14 @@ where
                 match self.parse_const_value_unit()? {
                     Some(const_val) => {
                         // Constant
-                        Ok(Some(ClauseGuard::Constant(const_val)))
+                        Ok(Some(ClauseGuard::Constant {
+                            location: const_val.location(),
+                            definition_location: const_val.location(),
+                            literal: const_val,
+                            // We don't know modul name before inference, so
+                            // use this as a placeholder.
+                            module: None,
+                        }))
                     }
                     _ => Ok(None),
                 }
@@ -2054,7 +2061,12 @@ where
             name,
             end,
         )? {
-            Some(record) => Ok(Some(ClauseGuard::Constant(record))),
+            Some(record) => Ok(Some(ClauseGuard::Constant {
+                module: Some(module.clone()),
+                location: record.location(),
+                definition_location: record.location(),
+                literal: record,
+            })),
             _ => Ok(None),
         }
     }

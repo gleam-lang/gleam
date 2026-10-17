@@ -471,6 +471,16 @@ pub trait Visit<'ast> {
         );
     }
 
+    fn visit_typed_clause_guard_constant(
+        &mut self,
+        location: &'ast SrcSpan,
+        definition_location: &'ast SrcSpan,
+        module: &'ast Option<EcoString>,
+        literal: &'ast TypedConstant,
+    ) {
+        visit_typed_clause_guard_constant(self, location, definition_location, module, literal);
+    }
+
     fn visit_typed_expr_bit_array_segment(&mut self, segment: &'ast TypedExprBitArraySegment) {
         visit_typed_expr_bit_array_segment(self, segment);
     }
@@ -1909,7 +1919,12 @@ where
             module_alias,
             literal,
         ),
-        super::ClauseGuard::Constant(constant) => v.visit_typed_constant(constant),
+        super::ClauseGuard::Constant {
+            location,
+            definition_location,
+            module,
+            literal,
+        } => v.visit_typed_clause_guard_constant(location, definition_location, module, literal),
         super::ClauseGuard::Invalid { .. } => (),
     }
 }
@@ -1979,6 +1994,18 @@ pub fn visit_typed_clause_guard_module_select<'a, V>(
 ) where
     V: Visit<'a> + ?Sized,
 {
+}
+
+pub fn visit_typed_clause_guard_constant<'a, V>(
+    v: &mut V,
+    _location: &'a SrcSpan,
+    _definition_location: &'a SrcSpan,
+    _module: &'a Option<EcoString>,
+    literal: &'a TypedConstant,
+) where
+    V: Visit<'a> + ?Sized,
+{
+    v.visit_typed_constant(literal);
 }
 
 pub fn visit_typed_expr_bit_array_segment<'a, V>(v: &mut V, segment: &'a TypedExprBitArraySegment)
