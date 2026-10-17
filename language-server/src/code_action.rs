@@ -1391,9 +1391,10 @@ impl<'a> ModuleLocalTypedDefinition<'a> {
 
     fn generate_type_insertion_position(&self) -> GenerateTypeInsertionPosition {
         match self {
-            ModuleLocalTypedDefinition::Function(_) => GenerateTypeInsertionPosition::Above,
-            ModuleLocalTypedDefinition::Constant(_)
-            | ModuleLocalTypedDefinition::CustomType(_)
+            ModuleLocalTypedDefinition::Function(_) | ModuleLocalTypedDefinition::Constant(_) => {
+                GenerateTypeInsertionPosition::Above
+            }
+            ModuleLocalTypedDefinition::CustomType(_)
             | ModuleLocalTypedDefinition::TypeAlias(_) => GenerateTypeInsertionPosition::Below,
         }
     }
