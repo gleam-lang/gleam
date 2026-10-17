@@ -625,3 +625,18 @@ pub fn main() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/5254
+#[test]
+fn wrong_precedence_with_case_guard() {
+    assert_js!(
+        r#"
+pub fn wibble(x) {
+  case x {
+    Ok(_) if False || True -> "Ok"
+    _ -> "Error"
+  }
+}
+"#
+    );
+}

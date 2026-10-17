@@ -605,3 +605,16 @@ pub fn guard_binding_in_directly_matching_case_is_not_redeclared_test() {
   let b = 5
   assert b == 5
 }
+
+// https://github.com/gleam-lang/gleam/issues/5254
+pub fn correct_precedence_of_bool_guard_test() {
+  assert correct_precedence_of_bool_guard(Ok(1)) == "Ok"
+  assert correct_precedence_of_bool_guard(Error(Nil)) == "Error"
+}
+
+pub fn correct_precedence_of_bool_guard(x) {
+  case x {
+    Ok(_) if False || True -> "Ok"
+    _ -> "Error"
+  }
+}
