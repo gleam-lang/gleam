@@ -1529,7 +1529,7 @@ dependencies = [
  "ignore",
  "imbl",
  "insta",
- "itertools 0.13.0",
+ "itertools 0.15.0",
  "lsp-server",
  "opener",
  "pretty_assertions",
@@ -1541,7 +1541,7 @@ dependencies = [
  "same-file",
  "serde",
  "serde_json",
- "sha2 0.10.9",
+ "sha2 0.11.1",
  "strum",
  "tar",
  "tempfile",
@@ -1584,7 +1584,7 @@ dependencies = [
  "imbl",
  "indexmap",
  "insta",
- "itertools 0.13.0",
+ "itertools 0.15.0",
  "num-bigint 0.5.1",
  "num-traits",
  "pathdiff",
@@ -1621,7 +1621,7 @@ dependencies = [
  "camino",
  "ecow",
  "gleam-core",
- "itertools 0.13.0",
+ "itertools 0.15.0",
  "pretty-arena",
  "pretty_assertions",
  "src-span",
@@ -1641,7 +1641,7 @@ dependencies = [
  "hexpm",
  "imbl",
  "insta",
- "itertools 0.13.0",
+ "itertools 0.15.0",
  "lsp-server",
  "num-bigint 0.5.1",
  "serde",
@@ -1664,7 +1664,7 @@ dependencies = [
  "gleam-format",
  "hexpm",
  "imbl",
- "itertools 0.13.0",
+ "itertools 0.15.0",
  "serde",
  "termcolor",
  "tracing",
@@ -4048,7 +4048,7 @@ dependencies = [
  "gleam-core",
  "imbl",
  "insta",
- "itertools 0.13.0",
+ "itertools 0.15.0",
  "regex",
  "test-helpers-rs",
  "toml 1.1.8+spec-1.1.0",
@@ -4062,7 +4062,7 @@ dependencies = [
  "gleam-core",
  "imbl",
  "insta",
- "itertools 0.13.0",
+ "itertools 0.15.0",
  "regex",
  "test-helpers-rs",
  "toml 1.1.8+spec-1.1.0",
@@ -5023,14 +5023,15 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "8.6.0"
+version = "9.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d04a6b5381502aa6087c94c669499eb1602eb9c5e8198e534de571f7154809b"
+checksum = "a954114b47a54df49f83d2722814e86b23d4bb1b54a1b90fb7d92b41619ddc22"
 dependencies = [
  "crc32fast",
  "flate2",
  "indexmap",
  "memchr",
+ "nix",
  "typed-path",
  "zopfli",
 ]
