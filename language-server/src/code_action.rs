@@ -1363,16 +1363,22 @@ pub fn code_action_generate_type(
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// Whether the "Generate type" code action should insert the missing type above
+/// or below the definition.
+enum GenerateTypeInsertionPosition {
+    Above,
+    Below,
+}
+
+/// Module-local definitions are defined within the current module, and can have
+/// code actions performed to alter them within this file.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ModuleLocalTypedDefinition<'a> {
     Constant(&'a TypedModuleConstant),
     CustomType(&'a TypedCustomType),
     TypeAlias(&'a TypedTypeAlias),
     Function(&'a TypedFunction),
-}
-
-enum GenerateTypeInsertionPosition {
-    Above,
-    Below,
 }
 
 impl<'a> ModuleLocalTypedDefinition<'a> {
@@ -1408,7 +1414,9 @@ impl<'a> ModuleLocalTypedDefinition<'a> {
         }
     }
 
-    fn generate_type_insertion_position(&self) -> GenerateTypeInsertionPosition {
+    /// Returns whether the "Generate type" code action should insert the missing type above
+    /// or below the definition.
+    const fn generate_type_insertion_position(&self) -> GenerateTypeInsertionPosition {
         match self {
             ModuleLocalTypedDefinition::Function(_) | ModuleLocalTypedDefinition::Constant(_) => {
                 GenerateTypeInsertionPosition::Above
@@ -1418,6 +1426,8 @@ impl<'a> ModuleLocalTypedDefinition<'a> {
         }
     }
 
+    /// Creates an iterator of module-local definitions out of a reference to a set of typed
+    /// definitions. This includes everything except imports.
     fn from_definitions(definitions: &'a TypedDefinitions) -> impl Iterator<Item = Self> {
         let constants = definitions
             .constants
@@ -1446,7 +1456,7 @@ impl<'a> ModuleLocalTypedDefinition<'a> {
     }
 }
 
-/// TODO
+/// Finds the module-local definition that contains the provided position.
 fn definition_containing_position<'a>(
     definitions: &'a TypedDefinitions,
     position: u32,
