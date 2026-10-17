@@ -205,7 +205,8 @@
   them to their original name.
   ([Andrey Kozhev](https://github.com/ankddev))
 
-- Fixed an outdated link to the "gleam.toml" reference in newly generated projects. 
+- Fixed an outdated link to the "gleam.toml" reference in newly generated
+  projects.
   ([Leonuraht](https://github.com/Leonuraht))
 
 ## v1.19.2 - 2026-10-12
@@ -219,8 +220,6 @@
 - Fixed a bug where the build tool would not reject invalid application names
   if one is returned by the Hex API.
   ([Louis Pilfold](https://github.com/lpil))
-
-- Fixed an outdated link to the "gleam.toml" reference in newly generated projects. ([Leonuraht](https://github.com/Leonuraht))
 
 ## v1.19.1 - 2026-10-07
 
