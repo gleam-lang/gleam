@@ -4673,7 +4673,7 @@ impl<'a, IO> GenerateDynamicDecoder<'a, IO> {
     fn constructor_decoder(
         &mut self,
         mode: EncodingMode,
-        custom_type: &ast::TypedCustomType,
+        custom_type: &TypedCustomType,
         constructor: &TypedRecordConstructor,
         nesting: usize,
     ) -> Option<EcoString> {
@@ -4773,7 +4773,7 @@ impl<'a, IO> GenerateDynamicDecoder<'a, IO> {
 }
 
 impl<'ast, IO> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast, IO> {
-    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast TypedCustomType) {
         let range = self
             .edits
             .src_span_to_lsp_range(custom_type.full_location());
@@ -5424,7 +5424,7 @@ fn is_nil_like(type_: &Type) -> bool {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
-    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast TypedCustomType) {
         let range = self
             .edits
             .src_span_to_lsp_range(custom_type.full_location());
@@ -9821,7 +9821,7 @@ impl<'a> RemovePrivateOpaque<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for RemovePrivateOpaque<'ast> {
-    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast TypedCustomType) {
         let custom_type_range = self.edits.src_span_to_lsp_range(custom_type.location);
         if !within(self.params.range, custom_type_range) {
             return;
@@ -12451,7 +12451,7 @@ impl<'a> AddMissingTypeParameter<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for AddMissingTypeParameter<'ast> {
-    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast TypedCustomType) {
         let custom_type_range = self
             .edits
             .src_span_to_lsp_range(custom_type.full_location());
