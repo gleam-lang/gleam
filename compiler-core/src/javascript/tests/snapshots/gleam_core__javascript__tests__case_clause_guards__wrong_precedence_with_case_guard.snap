@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/javascript/tests/case_clause_guards.rs
+expression: "\npub fn wibble(x) {\n  case x {\n    Ok(_) if False || True -> \"Ok\"\n    _ -> \"Error\"\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn wibble(x) {
+  case x {
+    Ok(_) if False || True -> "Ok"
+    _ -> "Error"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { Ok } from "../gleam.mjs";
+
+export function wibble(x) {
+  if (x instanceof Ok && (false || true)) {
+    return "Ok";
+  } else {
+    return "Error";
+  }
+}
