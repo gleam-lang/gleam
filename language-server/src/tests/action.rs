@@ -8893,6 +8893,41 @@ type Wibble {
 }
 
 #[test]
+fn generate_type_works_for_unknown_type_in_alias() {
+    assert_code_action!(
+        GENERATE_TYPE,
+        "
+type Wibble = Wobble
+",
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn generate_type_works_for_unknown_type_in_custom_type() {
+    assert_code_action!(
+        GENERATE_TYPE,
+        "
+type Wibble {
+  Wibble(Wobble)
+}
+",
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn generate_type_works_for_unknown_type_in_constant() {
+    assert_code_action!(
+        GENERATE_TYPE,
+        "
+const wibble: Wobble = todo
+",
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
 fn generate_type_works_for_unknown_type_in_argument_annotation() {
     assert_code_action!(
         GENERATE_TYPE,

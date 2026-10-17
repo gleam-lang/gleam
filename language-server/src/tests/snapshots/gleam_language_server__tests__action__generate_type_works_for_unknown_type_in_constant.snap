@@ -1,0 +1,15 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\nconst wibble: Wobble = todo\n"
+---
+----- BEFORE ACTION
+
+const wibble: Wobble = todo
+              ↑            
+
+
+----- AFTER ACTION
+
+type Wobble
+
+const wibble: Wobble = todo
