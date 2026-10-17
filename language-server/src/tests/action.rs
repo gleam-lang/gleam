@@ -16419,3 +16419,47 @@ fn no_remove_list_prepend_no_prepend() {
         find_position_of("[1, 2]").to_selection()
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/6386
+#[test]
+fn no_add_annotation_on_annotated_complex_use_argument() {
+    assert_no_code_actions!(
+        ADD_ANNOTATION | ADD_ANNOTATIONS,
+        "
+pub fn main() {
+  use Wibble(_): Wibble <- wibble
+  todo
+}
+
+pub type Wibble {
+  Wibble(Int)
+}
+fn wibble(x) {
+  x(Wibble(1))
+}
+",
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/6386
+#[test]
+fn no_add_annotation_inside_annotated_complex_use_argument() {
+    assert_no_code_actions!(
+        ADD_ANNOTATION | ADD_ANNOTATIONS,
+        "
+pub fn main() {
+  use Wibble(_): Wibble <- wibble
+  todo
+}
+
+pub type Wibble {
+  Wibble(Int)
+}
+fn wibble(x) {
+  x(Wibble(1))
+}
+",
+        find_position_of("_").to_selection()
+    );
+}
