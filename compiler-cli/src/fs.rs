@@ -1003,7 +1003,7 @@ impl<W: Write + io::Seek> ZipArchive<W> {
         Ok(())
     }
 
-    fn options(&self) -> zip::write::FileOptions<'static, ()> {
+    fn options(&self) -> zip::write::FileOptions<'static, 'static, ()> {
         zip::write::SimpleFileOptions::default()
     }
 }
