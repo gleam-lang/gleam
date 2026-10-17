@@ -13,9 +13,9 @@ use gleam_core::{
         InvalidExpression, PIPE_PRECEDENCE, Pattern, PatternUnusedArguments,
         PipelineAssignmentKind, Publicity, RecordConstructor, StringPrefixLeftSideAssignment,
         TodoKind, TypeAstConstructorName, TypedArg, TypedAssignment, TypedClauseGuard,
-        TypedDefinitions, TypedExpr, TypedFunction, TypedModuleConstant, TypedPattern,
-        TypedPipelineAssignment, TypedRecordConstructor, TypedStatement, TypedTailPattern,
-        TypedUse, visit::Visit as _,
+        TypedCustomType, TypedDefinitions, TypedExpr, TypedFunction, TypedModuleConstant,
+        TypedPattern, TypedPipelineAssignment, TypedRecordConstructor, TypedStatement,
+        TypedTailPattern, TypedTypeAlias, TypedUse, visit::Visit as _,
     },
     build::{Located, Module, Origin},
     config::PackageConfig,
@@ -1314,11 +1314,21 @@ pub fn code_action_generate_type(
             continue;
         }
 
-        // Insert the new type stub before the top-level definition that
-        // contains the error, so it appears close to where it is used.
-        let (insert_at, is_public) =
-            definition_start_and_publicity_containing(&module.ast.definitions, location.start)
-                .unwrap_or((module.code.len() as u32, false));
+        let maybe_definition =
+            definition_containing_position(&module.ast.definitions, location.start);
+
+        let is_public = maybe_definition
+            .as_ref()
+            .map_or(false, |definition| definition.publicity().is_public());
+        let (insert_at, prefix_newline) =
+            maybe_definition.map_or((module.code.len() as u32, ""), |definition| {
+                let span = definition.span();
+                match definition.generate_type_insertion_position() {
+                    GenerateTypeInsertionPosition::Above => (span.start, ""),
+                    GenerateTypeInsertionPosition::Below => (span.end, "\n\n"),
+                }
+            });
+
         let insert_range = src_span_to_lsp_range(
             SrcSpan {
                 start: insert_at,
@@ -1329,10 +1339,10 @@ pub fn code_action_generate_type(
 
         let pub_prefix = if is_public { "pub " } else { "" };
         let new_text = if parameter_names.is_empty() {
-            format!("{pub_prefix}type {name}\n\n")
+            format!("{prefix_newline}{pub_prefix}type {name}\n\n")
         } else {
             let parameters = parameter_names.join(", ");
-            format!("{pub_prefix}type {name}({parameters})\n\n")
+            format!("{prefix_newline}{pub_prefix}type {name}({parameters})\n\n")
         };
 
         let edit = TextEdit {
@@ -1348,37 +1358,86 @@ pub fn code_action_generate_type(
     }
 }
 
-/// Returns the source offset and publicity of the top-level definition that
-/// contains `position`, so the caller can insert code before it.
-fn definition_start_and_publicity_containing(
-    definitions: &TypedDefinitions,
-    position: u32,
-) -> Option<(u32, bool)> {
-    let functions = definitions
-        .functions
-        .iter()
-        .map(|function| (function.full_location(), function.publicity.is_public()));
-    let custom_types = definitions.custom_types.iter().map(|custom_type| {
-        (
-            custom_type.full_location(),
-            custom_type.publicity.is_public(),
-        )
-    });
-    let type_aliases = definitions
-        .type_aliases
-        .iter()
-        .map(|type_alias| (type_alias.location, type_alias.publicity.is_public()));
-    let constants = definitions
-        .constants
-        .iter()
-        .map(|constant| (constant.location, constant.publicity.is_public()));
+enum ModuleLocalTypedDefinition<'a> {
+    Constant(&'a TypedModuleConstant),
+    CustomType(&'a TypedCustomType),
+    TypeAlias(&'a TypedTypeAlias),
+    Function(&'a TypedFunction),
+}
 
-    functions
-        .chain(custom_types)
-        .chain(type_aliases)
-        .chain(constants)
-        .filter(|(span, _)| span.start <= position && position <= span.end)
-        .map(|(span, is_public)| (span.start, is_public))
+enum GenerateTypeInsertionPosition {
+    Above,
+    Below,
+}
+
+impl<'a> ModuleLocalTypedDefinition<'a> {
+    const fn publicity(&self) -> Publicity {
+        match self {
+            ModuleLocalTypedDefinition::Constant(constant) => constant.publicity,
+            ModuleLocalTypedDefinition::CustomType(custom_type) => custom_type.publicity,
+            ModuleLocalTypedDefinition::TypeAlias(type_alias) => type_alias.publicity,
+            ModuleLocalTypedDefinition::Function(function) => function.publicity,
+        }
+    }
+
+    fn span(&self) -> SrcSpan {
+        match self {
+            ModuleLocalTypedDefinition::Constant(module_constant) => module_constant.location,
+            ModuleLocalTypedDefinition::CustomType(custom_type) => custom_type.full_location(),
+            ModuleLocalTypedDefinition::TypeAlias(type_alias) => type_alias.location,
+            ModuleLocalTypedDefinition::Function(function) => function.full_location(),
+        }
+    }
+
+    fn generate_type_insertion_position(&self) -> GenerateTypeInsertionPosition {
+        match self {
+            ModuleLocalTypedDefinition::Function(_) => GenerateTypeInsertionPosition::Above,
+            ModuleLocalTypedDefinition::Constant(_)
+            | ModuleLocalTypedDefinition::CustomType(_)
+            | ModuleLocalTypedDefinition::TypeAlias(_) => GenerateTypeInsertionPosition::Below,
+        }
+    }
+
+    fn from_definitions(definitions: &'a TypedDefinitions) -> impl Iterator<Item = Self> {
+        let constants = definitions
+            .constants
+            .iter()
+            .map(ModuleLocalTypedDefinition::Constant);
+
+        let functions = definitions
+            .functions
+            .iter()
+            .map(ModuleLocalTypedDefinition::Function);
+
+        let custom_types = definitions
+            .custom_types
+            .iter()
+            .map(ModuleLocalTypedDefinition::CustomType);
+
+        let type_aliases = definitions
+            .type_aliases
+            .iter()
+            .map(ModuleLocalTypedDefinition::TypeAlias);
+
+        constants
+            .chain(functions)
+            .chain(custom_types)
+            .chain(type_aliases)
+    }
+}
+
+/// TODO
+fn definition_containing_position<'a>(
+    definitions: &'a TypedDefinitions,
+    position: u32,
+) -> Option<ModuleLocalTypedDefinition<'a>> {
+    let local_definitions = ModuleLocalTypedDefinition::from_definitions(definitions);
+
+    local_definitions
+        .filter(|definition| {
+            let span = definition.span();
+            span.start <= position && position <= span.end
+        })
         .next()
 }
 
