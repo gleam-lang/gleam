@@ -10,7 +10,7 @@ use gleam_core::{
     ast::{
         self, ArgNames, AssignName, AssignmentKind, BitArraySegmentTruncation, BoundVariable,
         BoundVariableName, CallArg, CustomType, FunctionLiteralKind, ImplicitCallArgOrigin, Import,
-        InvalidExpression, PIPE_PRECEDENCE, Pattern, PatternUnusedArguments,
+        InvalidExpression, MultiPattern, PIPE_PRECEDENCE, Pattern, PatternUnusedArguments,
         PipelineAssignmentKind, Publicity, RecordConstructor, StringPrefixLeftSideAssignment,
         TodoKind, TypeAstConstructorName, TypedArg, TypedAssignment, TypedClauseGuard,
         TypedDefinitions, TypedExpr, TypedFunction, TypedModuleConstant, TypedPattern,
@@ -10398,12 +10398,12 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveUnreachableCaseClauses<'ast> {
 
 /// Given a pattern with possibly many subjects, this returns the location
 /// spanning the whole thing.
-fn multi_pattern_location(alternative: &[Pattern<Arc<Type>>]) -> SrcSpan {
-    let start = alternative
+pub fn multi_pattern_location<T>(pattern: &MultiPattern<T>) -> SrcSpan {
+    let start = pattern
         .first()
         .map(|pattern| pattern.location().start)
         .unwrap_or_default();
-    let end = alternative
+    let end = pattern
         .last()
         .map(|pattern| pattern.location().end)
         .unwrap_or_default();
@@ -13492,5 +13492,241 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
         }
 
         self.insert_int(string_value, int_value, location);
+    }
+}
+
+pub struct SplitAlternativePatterns<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    lines: &'a LineNumbers,
+    edits: TextEdits<'a>,
+    splittable_patterns: Option<SplittablePatterns<'a>>,
+}
+
+struct SplittablePatterns<'a> {
+    clause_location: SrcSpan,
+    body_location: SrcSpan,
+    selected_patterns: Vec<SrcSpan>,
+    unselected_patterns: Vec<SrcSpan>,
+    /// Whether first pattern is selected:
+    ///
+    /// ```gleam
+    /// case x {
+    ///   0 | 1 | 2 | 3 -> todo
+    /// //^ true
+    /// //^^^^^^^^^ true
+    /// //  ^^^^^^^ false
+    /// //            ^ false
+    /// }
+    /// ```
+    first_pattern_selected: bool,
+    guard: Option<&'a TypedClauseGuard>,
+}
+
+impl<'a> SplitAlternativePatterns<'a> {
+    pub fn new(module: &'a Module, lines: &'a LineNumbers, params: &'a CodeActionParams) -> Self {
+        Self {
+            module,
+            lines,
+            params,
+            edits: TextEdits::new(lines),
+            splittable_patterns: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        let mut actions = Vec::with_capacity(1);
+
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(SplittablePatterns {
+            clause_location,
+            body_location,
+            selected_patterns,
+            unselected_patterns,
+            first_pattern_selected,
+            guard,
+        }) = self.splittable_patterns
+        else {
+            return actions;
+        };
+
+        let body = code_at(self.module, body_location);
+        let guard = guard
+            .as_ref()
+            .map(|guard| format!(" if {}", code_at(self.module, guard.location())))
+            .unwrap_or_default();
+        let indentation = " ".repeat(count_indentation(
+            &self.module.code,
+            self.lines,
+            self.edits.src_span_to_lsp_range(clause_location).start.line,
+        ));
+
+        // Produce dedicated clause for each extracted pattern.
+        let extracted_clauses = selected_patterns
+            .iter()
+            .map(|&location| format!("{}{} -> {}", code_at(self.module, location), guard, body));
+
+        // If there's any patterns left, produce single clause for all of them.
+        let grouped_clause = if unselected_patterns.is_empty() {
+            None
+        } else {
+            let patterns = unselected_patterns
+                .iter()
+                .map(|&location| code_at(self.module, location))
+                .join(" | ");
+            Some(format!("{}{} -> {}", patterns, guard, body))
+        };
+
+        // If first pattern was selected, then we want to generate extracted
+        // clauses first:
+        //
+        // ```gleam
+        // case wibble {
+        //   0 | 1 | 2 | 3 -> todo
+        // //^^^^^ This is selection
+        //   _ -> todo
+        // }
+        // ```
+        //
+        // Becomes:
+        //
+        // ```gleam
+        // case wibble {
+        //   0 | 1 -> todo
+        //   2 | 3 -> todo
+        //   _ -> todo
+        // }
+        // ```
+        //
+        // But if first pattern was not selected, we want to generate grouped
+        // clause first, because it contains that first pattern:
+        //
+        // ```gleam
+        // case wibble {
+        //   0 | 1 | 2 | 3 -> todo
+        // //    ^^^^^ This is selection
+        //   _ -> todo
+        // }
+        // ```
+        //
+        // Becomes:
+        //
+        // ```gleam
+        // case wibble {
+        //   0 | 3 -> todo
+        //   1 | 2 -> todo
+        //   _ -> todo
+        // }
+        // ```
+        let new_text = if first_pattern_selected {
+            extracted_clauses
+                .into_iter()
+                .chain(grouped_clause)
+                .join(&format!("\n{}", indentation))
+        } else {
+            grouped_clause
+                .into_iter()
+                .chain(extracted_clauses)
+                .join(&format!("\n{}", indentation))
+        };
+
+        self.edits.replace(clause_location, new_text);
+
+        CodeActionBuilder::new("Split alternative patterns")
+            .kind(CodeActionKind::RefactorRewrite)
+            .preferred(false)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .push_to(&mut actions);
+
+        actions
+    }
+
+    /// Find splittable patterns in clause
+    fn maybe_select_splittable_patterns(&mut self, clause: &'a ast::TypedClause) {
+        // We don't want to suggest this code action when there's no alternative
+        // patterns.
+        if clause.alternative_patterns.is_empty() {
+            return;
+        }
+
+        let first_pattern_location = multi_pattern_location(&clause.pattern);
+        let first_pattern_selected = overlaps(
+            self.params.range,
+            self.edits.src_span_to_lsp_range(first_pattern_location),
+        );
+
+        let all_patterns = clause.patterns().map(multi_pattern_location);
+
+        let (selected_patterns, unselected_patterns): (Vec<_>, Vec<_>) =
+            all_patterns.partition(|&location| {
+                overlaps(
+                    self.params.range,
+                    self.edits.src_span_to_lsp_range(location),
+                )
+            });
+
+        // We don't want to show this code action if no patterns are selected.
+        if selected_patterns.is_empty() {
+            return;
+        }
+
+        self.splittable_patterns = Some(SplittablePatterns {
+            selected_patterns,
+            unselected_patterns,
+            first_pattern_selected,
+            clause_location: clause.location,
+            body_location: clause.then.location(),
+            guard: clause.guard.as_ref(),
+        });
+    }
+}
+
+impl<'a> ast::visit::Visit<'a> for SplitAlternativePatterns<'a> {
+    fn visit_typed_function(&mut self, fun: &'a TypedFunction) {
+        // We skip all the functions the cursor is not inside of.
+        let fun_range = self.edits.src_span_to_lsp_range(fun.full_location());
+        if within(self.params.range, fun_range) {
+            ast::visit::visit_typed_function(self, fun);
+        }
+    }
+
+    fn visit_typed_expr(&mut self, node: &'a TypedExpr) {
+        // We skip all the expressions the cursor is not inside of.
+        let expression_range = self.edits.src_span_to_lsp_range(node.location());
+        if within(self.params.range, expression_range) {
+            ast::visit::visit_typed_expr(self, node);
+        }
+    }
+
+    fn visit_typed_expr_case(
+        &mut self,
+        location: &'a SrcSpan,
+        type_: &'a Arc<Type>,
+        subjects: &'a [TypedExpr],
+        clauses: &'a [ast::TypedClause],
+        compiled_case: &'a CompiledCase,
+    ) {
+        // We skip all the `case`s the cursor is not inside of.
+        let case_range = self.edits.src_span_to_lsp_range(*location);
+        if within(self.params.range, case_range) {
+            ast::visit::visit_typed_expr_case(
+                self,
+                location,
+                type_,
+                subjects,
+                clauses,
+                compiled_case,
+            );
+        }
+    }
+
+    fn visit_typed_clause(&mut self, clause: &'a ast::TypedClause) {
+        let clause_range = self.edits.src_span_to_lsp_range(clause.location);
+        if within(self.params.range, clause_range) {
+            self.maybe_select_splittable_patterns(clause);
+
+            ast::visit::visit_typed_clause(self, clause);
+        }
     }
 }

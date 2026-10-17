@@ -1,0 +1,29 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn wibble(x) {\n  case x {\n    0\n    | 1\n    | 2\n    | 3 -> todo\n    _ -> todo\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn wibble(x) {
+  case x {
+    0
+    | 1
+    | 2
+      ▔
+    | 3 -> todo
+▔▔▔▔▔▔↑        
+    _ -> todo
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn wibble(x) {
+  case x {
+    0 | 1 -> todo
+    2 -> todo
+    3 -> todo
+    _ -> todo
+  }
+}
