@@ -165,6 +165,10 @@
   highlight all of them.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The language server now offers autocompletion for the `@deprecated`,
+  `@external`, and `@internal` attribute names.
+  ([Max Wilhelmsson](https://github.com/Maoxen))
+  
 - The language server can now offer a "Remove redundant list prepend" code
   action, for example:
 
