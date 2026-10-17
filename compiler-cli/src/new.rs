@@ -157,6 +157,8 @@ on:
       - main
   pull_request:
 
+permissions: {{}}
+
 jobs:
   test:
     runs-on: ubuntu-latest
