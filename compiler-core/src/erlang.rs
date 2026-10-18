@@ -2103,13 +2103,13 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 // }
                 // ```
                 Type::Named { .. } | Type::Var { .. } | Type::Tuple { .. } => {
-                    builder.atom_expression(variable_location, &to_snake_case(record_name));
+                    builder.atom_expression(variable_location, &to_snake_case(&record_name));
                 }
                 Type::Fn { arguments, .. } => {
                     self.record_builder_anonymous_function(
                         builder,
                         variable_location,
-                        record_name,
+                        &record_name,
                         arguments.len(),
                     );
                 }
@@ -2128,13 +2128,13 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 external_erlang: Some((module, name)),
                 ..
             } => {
-                let name = escape_erlang_existing_name(name);
+                let name = escape_erlang_existing_name(&name);
                 if *module == self.module_generator.module.name {
                     builder.function_reference(variable_location, None, name, *arity);
                 } else {
                     builder.function_reference(
                         variable_location,
-                        Some(ErlangModuleName::new(module)),
+                        Some(ErlangModuleName::new(&module)),
                         name,
                         *arity,
                     );
@@ -2159,8 +2159,8 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
                 ..
             } => builder.function_reference(
                 variable_location,
-                Some(ErlangModuleName::new(module)),
-                escape_erlang_existing_name(name),
+                Some(ErlangModuleName::new(&module)),
+                escape_erlang_existing_name(&name),
                 *arity,
             ),
         }
@@ -3253,27 +3253,44 @@ impl<'a, 'generator> FunctionGenerator<'a, 'generator> {
 
             // Only local variables are supported and the typer ensures that all
             // ClauseGuard::Vars are local variables
+            // todo)
             ClauseGuard::Var {
                 name,
-                definition_location,
                 location,
-                ..
+                constructor,
             } => {
-                // If we're referencing a variable introduced by an alias pattern
-                // we need to replace it with its actual literal value: in the
-                // generated code the variable is only defined later, so just
-                // referencing its name would result in an error.
-                match assignments.get(name) {
-                    Some(AliasedLiteral::String { value, .. }) => builder.string(*location, value),
-                    Some(AliasedLiteral::Int { value, .. }) => {
-                        builder.int_expression(*location, value.clone())
+                match constructor.variant {
+                    ValueConstructorVariant::ModuleConstant { ref literal, .. } => {
+                        self.inlined_constant(builder, literal)
                     }
-                    Some(AliasedLiteral::Float { value, .. }) => {
-                        builder.float_expression(*location, value.value())
+                    ValueConstructorVariant::LocalVariable {
+                        location: definition_location,
+                        ..
+                    } => {
+                        // If we're referencing a variable introduced by an alias pattern
+                        // we need to replace it with its actual literal value: in the
+                        // generated code the variable is only defined later, so just
+                        // referencing its name would result in an error.
+                        match assignments.get(name) {
+                            Some(AliasedLiteral::String { value, .. }) => {
+                                builder.string(*location, value)
+                            }
+                            Some(AliasedLiteral::Int { value, .. }) => {
+                                builder.int_expression(*location, value.clone())
+                            }
+                            Some(AliasedLiteral::Float { value, .. }) => {
+                                builder.float_expression(*location, value.value())
+                            }
+                            None => {
+                                builder.variable(
+                                    *location,
+                                    &self.local_var_name(&definition_location),
+                                );
+                            }
+                        }
                     }
-                    None => {
-                        builder.variable(*location, &self.local_var_name(definition_location));
-                    }
+                    ValueConstructorVariant::ModuleFn { .. }
+                    | ValueConstructorVariant::Record { .. } => todo!(),
                 }
             }
         }
@@ -3811,6 +3828,17 @@ fn guard_produces_literal_string(guard: &ClauseGuard<Arc<Type>>) -> bool {
 
         ClauseGuard::ModuleSelect {
             literal: constant, ..
+        }
+        | ClauseGuard::Var {
+            constructor:
+                ValueConstructor {
+                    variant:
+                        ValueConstructorVariant::ModuleConstant {
+                            literal: constant, ..
+                        },
+                    ..
+                },
+            ..
         }
         | ClauseGuard::Constant(constant) => constant_produces_literal_string(constant),
 

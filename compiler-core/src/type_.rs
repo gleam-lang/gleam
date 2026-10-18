@@ -718,7 +718,7 @@ pub struct RecordAccessor {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub enum ValueConstructorVariant {
+pub enum ValueConstructorVariant<T = Arc<Type>> {
     /// A locally defined variable or function parameter
     LocalVariable {
         location: SrcSpan,
@@ -731,7 +731,7 @@ pub enum ValueConstructorVariant {
         location: SrcSpan,
         module: EcoString,
         name: EcoString,
-        literal: Constant<Arc<Type>>,
+        literal: Constant<T>,
         implementations: Implementations,
     },
 
@@ -1500,11 +1500,11 @@ impl TypeConstructor {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct ValueConstructor {
+pub struct ValueConstructor<T = Arc<Type>> {
     pub publicity: Publicity,
     pub deprecation: Deprecation,
-    pub variant: ValueConstructorVariant,
-    pub type_: Arc<Type>,
+    pub variant: ValueConstructorVariant<T>,
+    pub type_: T,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]

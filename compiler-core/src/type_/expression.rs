@@ -3096,7 +3096,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         // It must be a record with a field map for us to be able to update it
-        let (field_map, variants_count, variant_index, name) = match &value_constructor.variant {
+        let (ref field_map, variants_count, variant_index, name) = match &value_constructor.variant
+        {
             ValueConstructorVariant::Record {
                 field_map: Some(field_map),
                 variants_count,

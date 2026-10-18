@@ -19,3 +19,4 @@ pub fn main() {
 ```gleam
 Bool
 ```
+A locally defined variable.
