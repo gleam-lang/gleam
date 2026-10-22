@@ -245,6 +245,24 @@
 
   ([0xda157](https://github.com/0xda157))
 
+- Previously, running the "Generate to-JSON function" code action on
+  an `Option` type would have generated something like this:
+
+  ```gleam
+  #("wibble", case wibble {
+    option.None -> json.null()
+    option.Some(value) -> json.int(value)
+  })
+  ```
+
+  Now, it generates:
+
+  ```gleam
+  #("wibble", json.nullable(wibble, json.int))
+  ```
+
+  ([Lucy McPhail](https://github.com/lucymcphail))
+
 ### Formatter
 
 - The formatter now inserts `todo`s after comments in an empty function body,
