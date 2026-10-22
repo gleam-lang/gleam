@@ -40,10 +40,7 @@ pub type Wibble(value) {
 fn wibble_to_json(wibble: Wibble(value)) -> json.Json {
   let Wibble(maybe:, something:, map:, unknown:) = wibble
   json.object([
-    #("maybe", case maybe {
-      option.None -> json.null()
-      option.Some(value) -> json.int(value)
-    }),
+    #("maybe", json.nullable(maybe, json.int)),
     #("something", todo as "Encoder for Something"),
     #("map", json.dict(map, fn(string) { string }, json.array(_, json.float))),
     #("unknown", json.array(unknown, todo as "Encoder for value")),
