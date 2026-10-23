@@ -2100,7 +2100,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .warning(Warning::RedundantComparison { location, outcome });
     }
 
-    fn check_case_as_if_statement(clauses: Vec<UntypedClause>) -> bool {
+    fn check_case_as_if_statement(
+        subject_types: Vec<Arc<Type>>,
+        clauses: Vec<UntypedClause>,
+    ) -> bool {
         // A case statement is sometimes used like an if: that is all its
         // patterns are discarded and there's at least one guard. For example:
         // ```gleam
@@ -2110,8 +2113,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         //   _ -> todo
         // }
         // ```
+        // In the special case of Nil, it's not required that all patterns are discards. That is,
+        // you can also pattern match on Nil:
+        // ```gleam
+        // case Nil {
+        //   Nil if condition -> todo
+        //   Nil if other_condition -> todo
+        //   Nil -> todo
+        // }
+        // ```
+
         let mut has_a_guard = false;
         let mut all_patterns_are_discards = true;
+        let is_nil_expression = subject_types.len() == 1 && subject_types[0].is_nil();
 
         for clause in clauses {
             has_a_guard = has_a_guard || clause.guard.is_some();
@@ -2119,7 +2133,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 all_patterns_are_discards && clause.pattern.iter().all(|p| p.is_discard());
         }
 
-        return all_patterns_are_discards && has_a_guard;
+        return (all_patterns_are_discards || is_nil_expression) && has_a_guard;
     }
 
     fn infer_assignment(&mut self, assignment: UntypedAssignment) -> TypedAssignment {
@@ -2398,7 +2412,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // This is the only case where it actually makes sense to match on a
         // constant value so when checking, we won't emit warnings for matching
         // on a literal value in this case.
-        let case_used_like_if = Self::check_case_as_if_statement(clauses);
+        let case_used_like_if = Self::check_case_as_if_statement(subject_types, clauses);
         typed_subjects
             .iter()
             .filter_map(|subject| check_subject_for_redundant_match(subject, case_used_like_if))
