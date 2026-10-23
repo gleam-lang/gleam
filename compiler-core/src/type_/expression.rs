@@ -2100,6 +2100,28 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .warning(Warning::RedundantComparison { location, outcome });
     }
 
+    fn check_case_as_if_statement(clauses: Vec<UntypedClause>) -> bool {
+        // A case statement is sometimes used like an if: that is all its
+        // patterns are discarded and there's at least one guard. For example:
+        // ```gleam
+        // case True {
+        //   _ if condition -> todo
+        //   _ if other_condition -> todo
+        //   _ -> todo
+        // }
+        // ```
+        let mut has_a_guard = false;
+        let mut all_patterns_are_discards = true;
+
+        for clause in clauses {
+            has_a_guard = has_a_guard || clause.guard.is_some();
+            all_patterns_are_discards =
+                all_patterns_are_discards && clause.pattern.iter().all(|p| p.is_discard());
+        }
+
+        return all_patterns_are_discards && has_a_guard;
+    }
+
     fn infer_assignment(&mut self, assignment: UntypedAssignment) -> TypedAssignment {
         let Assignment {
             pattern,
@@ -2330,17 +2352,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         let mut typed_clauses = Vec::with_capacity(clauses.len());
-        let mut has_a_guard = false;
-        let mut all_patterns_are_discards = true;
+
         // NOTE: if there are 0 clauses then there are 0 panics
         let mut all_clauses_panic = !clauses.is_empty();
         let mut patterns_typechecked_successfully = true;
 
-        for clause in clauses {
-            has_a_guard = has_a_guard || clause.guard.is_some();
-            all_patterns_are_discards =
-                all_patterns_are_discards && clause.pattern.iter().all(|p| p.is_discard());
-
+        for clause in clauses.clone() {
             self.previous_panics = false;
             let (typed_clause, error_typing_patterns) = self.infer_clause(clause, &typed_subjects);
             if error_typing_patterns {
@@ -2370,7 +2387,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         // We track if the case expression is used like an if: that is all its
-        // patterns are discarded and there's at least a guard. For example:
+        // patterns are discarded and there's at least one guard. For example:
         // ```gleam
         // case True {
         //   _ if condition -> todo
@@ -2378,10 +2395,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         //   _ -> todo
         // }
         // ```
-        // This is the only case were it actually makes sense to match on a
+        // This is the only case where it actually makes sense to match on a
         // constant value so when checking, we won't emit warnings for matching
         // on a literal value in this case.
-        let case_used_like_if = all_patterns_are_discards && has_a_guard;
+        let case_used_like_if = Self::check_case_as_if_statement(clauses);
         typed_subjects
             .iter()
             .filter_map(|subject| check_subject_for_redundant_match(subject, case_used_like_if))
