@@ -76,10 +76,10 @@ use crate::error::wrap;
 use crate::exhaustiveness::CompiledCase;
 use crate::parse::error::IncorrectNamePosition;
 use crate::parse::extra::ModuleExtra;
-use crate::type_::Deprecation;
 use crate::type_::error::{VariableDeclaration, VariableOrigin, VariableSyntax};
 use crate::type_::expression::{Implementations, Purity};
 use crate::type_::printer::Names;
+use crate::type_::{Deprecation, ValueConstructor, ValueConstructorVariant};
 use crate::warning::{DeprecatedSyntaxWarning, WarningEmitter};
 use camino::Utf8PathBuf;
 use ecow::EcoString;
@@ -1908,14 +1908,22 @@ where
                         Some(record) => record,
                         _ => ClauseGuard::Var {
                             location: SrcSpan { start, end },
-                            type_: (),
                             name,
-                            definition_location: SrcSpan::default(),
-                            // We don't know the origin until type analysis, so
-                            // we just put `Generated` here as a placeholder.
-                            origin: VariableOrigin {
-                                syntax: VariableSyntax::Generated,
-                                declaration: VariableDeclaration::Generated,
+                            constructor: ValueConstructor {
+                                type_: (),
+                                deprecation: Deprecation::NotDeprecated,
+                                variant: ValueConstructorVariant::LocalVariable {
+                                    location: SrcSpan { start, end },
+                                    // We don't know the origin until type analysis, so
+                                    // we just put `Generated` here as a placeholder.
+                                    origin: VariableOrigin {
+                                        syntax: VariableSyntax::Generated,
+                                        declaration: VariableDeclaration::Generated,
+                                    },
+                                },
+                                // We don't know about its publicity, so we just
+                                // put `Private` here as a placeholder.
+                                publicity: Publicity::Private,
                             },
                         },
                     };
@@ -1966,6 +1974,7 @@ where
                                     end: name_end,
                                 },
                                 index: None,
+                                documentation: None,
                                 label,
                                 type_: (),
                                 container: Box::new(unit),

@@ -14,7 +14,7 @@ use crate::{
         Statement, UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedFunction,
         UntypedModuleConstant, UntypedPattern, UntypedStatement,
     },
-    type_::Error,
+    type_::{Error, ValueConstructor, ValueConstructorVariant},
 };
 use itertools::Itertools;
 use petgraph::{Directed, stable_graph::NodeIndex, stable_graph::StableGraph};
@@ -444,6 +444,15 @@ impl<'a> CallGraphBuilder<'a> {
             ClauseGuard::Block { value, .. } => self.guard(value),
 
             ClauseGuard::Not { expression, .. } => self.guard(expression),
+
+            ClauseGuard::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::ModuleConstant { literal, .. },
+                        ..
+                    },
+                ..
+            } => self.constant(literal),
 
             ClauseGuard::Var { name, .. } => self.referenced(name),
 
