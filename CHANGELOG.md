@@ -323,6 +323,11 @@
   `@external`, and `@internal` attribute names.
   ([Max Wilhelmsson](https://github.com/Maoxen))
 
+- The language server will now discard projects when all project files have
+  been closed.
+
+  ([TrippleCCC](https://github.com/TrippleCCC))
+
 ### Formatter
 
 - The formatter now inserts `todo`s after comments in an empty function body,
