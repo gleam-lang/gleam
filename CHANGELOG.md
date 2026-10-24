@@ -205,6 +205,10 @@
   them to their original name.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Fixed an outdated link to the "gleam.toml" reference in newly generated
+  projects.
+  ([Leonuraht](https://github.com/Leonuraht))
+
 ## v1.19.2 - 2026-10-12
 
 ### Bug fixes
