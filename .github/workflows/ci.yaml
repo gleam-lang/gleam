@@ -247,6 +247,13 @@ jobs:
         env:
           GLEAM_COMMAND: gleam
 
+      - name: test/erlang_shipment_otp_version
+        run: ./test.sh
+        working-directory: ./test/erlang_shipment_otp_version
+        if: ${{ matrix.run-integration-tests }}
+        env:
+          GLEAM_COMMAND: gleam
+
       - name: test/project_javascript
         run: |
           gleam run
