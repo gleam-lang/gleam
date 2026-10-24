@@ -2188,6 +2188,47 @@ type Wibble {
 }
 
 #[test]
+fn deprecation_attribute_on_import() {
+    assert_module_error!(
+        r#"
+@deprecated("reason")
+import gleam/io
+"#
+    );
+}
+
+#[test]
+fn internal_attribute_on_import() {
+    assert_module_error!(
+        r#"
+@internal
+import gleam/io
+"#
+    );
+}
+
+#[test]
+fn external_attribute_on_import() {
+    assert_module_error!(
+        r#"
+@external(erlang, "one", "two")
+import gleam/io
+"#
+    );
+}
+
+#[test]
+fn target_and_deprecation_attributes_on_import() {
+    assert_module_error!(
+        r#"
+@target(erlang)
+@deprecated("reason")
+import gleam/io
+"#
+    );
+}
+
+#[test]
 fn target_attribute_on_type_variant() {
     assert_module_error!(
         r#"
