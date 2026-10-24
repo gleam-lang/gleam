@@ -183,6 +183,12 @@
 
   ([0xda157](https://github.com/0xda157))
 
+- The language server will now discard projects when all project files have
+  been closed.
+
+  ([TrippleCCC](https://github.com/TrippleCCC))
+
+
 ### Bug fixes
 
 - Fixed a bug where the language server "Generate variant" code action would
