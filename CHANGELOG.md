@@ -183,6 +183,33 @@
 
   ([0xda157](https://github.com/0xda157))
 
+- The language server now supports "Split alternative patterns code action". For
+  example,
+
+  ```gleam
+  pub fn wibble(x, y) {
+    case x {
+      0 | 1 | 2 | 3 | 4 if y > 0 -> todo
+      //  ^^^^^ Select this and trigger "Split alternative patterns" code action
+      _x -> todo
+    }
+  }
+  ```
+
+  Triggering code action will result in this code:
+
+  ```gleam
+  pub fn wibble(x, y) {
+    case x {
+      0 | 3 | 4 if y > 0 -> todo
+      1 | 2 if y > 0 -> todo
+      _x -> todo
+    }
+  }
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Bug fixes
 
 - Fixed a bug where the language server "Generate variant" code action would
