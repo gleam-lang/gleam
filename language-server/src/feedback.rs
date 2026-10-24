@@ -204,6 +204,22 @@ impl FeedbackBookKeeper {
         }
         feedback
     }
+
+    pub fn clear_warning_and_error_diagnostics(&self) -> Feedback {
+        let mut feedback = Feedback::none();
+        for file in self
+            .files_with_warnings
+            .iter()
+            .chain(self.files_with_errors.iter())
+        {
+            feedback.unset_existing_diagnostics(file.clone());
+        }
+        feedback
+    }
+
+    pub fn all_files_closed(&self) -> bool {
+        self.open_files.is_empty()
+    }
 }
 
 #[cfg(test)]
