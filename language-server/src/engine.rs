@@ -305,6 +305,11 @@ where
                 return value;
             }
 
+            // Check if an attribute is being written
+            if let Some(value) = completer.attribute_completions() {
+                return value;
+            }
+
             let Some(found) = module.find_node(byte_index) else {
                 return Ok(None);
             };
