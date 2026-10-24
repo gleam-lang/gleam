@@ -2030,8 +2030,11 @@ pub fn main() {
 fn hover_for_record_from_guard() {
     assert_hover!(
         "
+/// Wibble
 type Wibble {
+  /// Wibble variant
   Wibble
+  /// Wobble variant
   Wobble
 }
 
@@ -2064,8 +2067,36 @@ pub fn main() {
 }
 ";
     assert_hover!(
-        TestProject::for_source(src).add_module("mod", "pub const wibble = 10"),
+        TestProject::for_source(src).add_module(
+            "mod",
+            "/// Wibble
+            pub const wibble = 10"
+        ),
         find_position_of("mod.wibble").under_char('w')
+    );
+}
+
+#[test]
+fn hover_for_unqualified_constant_from_guard() {
+    let src = "
+import mod.{wibble}
+
+pub fn main() {
+  let wobble = True
+  case wobble {
+    True if wibble < 5 -> !wobble
+    False if wibble != 10 -> wobble
+    _ -> wibble + 1
+  }
+}
+";
+    assert_hover!(
+        TestProject::for_source(src).add_module(
+            "mod",
+            "/// Wibble
+            pub const wibble = 10"
+        ),
+        find_position_of("wibble").under_char('w')
     );
 }
 

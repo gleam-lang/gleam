@@ -183,6 +183,40 @@
 
   ([0xda157](https://github.com/0xda157))
 
+- The langauge server will now show proper hovers and support go-to-definition,
+  find-references and renaming for unqualified constants in clause guards.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
+- The language server now provides "Inline constant value" code action. For
+  example:
+
+  ```gleam
+  pub const wibble = "Hello"
+  pub const wobble = wibble <> " world"
+  //                 ^^^^^^
+
+  pub fn main() {
+    echo wibble
+    //   ^^^^^^
+    echo wobble
+    //   ^^^^^^
+  }
+  ```
+
+  Triggering this code action in all denoted places will result in following:
+
+  ```gleam
+  pub const wibble = "Hello"
+  pub const wobble = "Hello" <> " world"
+
+  pub fn main() {
+    echo "Hello"
+    echo "Hello" <> " world"
+  }
+  ```
+
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ### Bug fixes
 
 - Fixed a bug where the language server "Generate variant" code action would
