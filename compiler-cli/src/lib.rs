@@ -676,6 +676,9 @@ impl Command {
                 let paths = find_project_paths(directory)?;
                 export::package_information(&paths, output).map(|()| 0)
             }
+            Self::Export(ExportTarget::SystemInformation) => {
+                export::system_information()
+            }
         }
     }
 }
@@ -739,6 +742,8 @@ pub enum ExportTarget {
         #[arg(verbatim_doc_comment, long = "out")]
         output: Option<Utf8PathBuf>,
     },
+    /// System information on available/installed tooling
+    SystemInformation,
 }
 
 #[derive(Args, Debug, Clone)]
