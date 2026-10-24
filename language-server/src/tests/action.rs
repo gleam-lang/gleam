@@ -215,6 +215,10 @@ fn generate_variant_message(type_name: &str) -> String {
     format!("Generate `{type_name}` variant")
 }
 
+fn use_item_message(item_name: &str) -> String {
+    format!("Use `{item_name}`")
+}
+
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range_selector:expr $(,)?) => {
         let project = TestProject::for_source($code);
@@ -16417,5 +16421,411 @@ fn no_remove_list_prepend_no_prepend() {
   let wibble = [1, 2]
 }",
         find_position_of("[1, 2]").to_selection()
+    );
+}
+
+#[test]
+fn use_value_from_another_module() {
+    let source = "
+import woo
+
+pub fn main() {
+  wibble()
+}
+";
+    assert_code_action!(
+        &use_item_message("woo.wibble"),
+        TestProject::for_source(source).add_module(
+            "woo",
+            "
+pub fn wibble() {
+  todo
+}
+"
+        ),
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn use_value_from_another_module_multiple_modules_1() {
+    let source = "
+import woo
+import another_woo
+
+pub fn main() {
+  wibble()
+}
+";
+    assert_code_action!(
+        &use_item_message("woo.wibble"),
+        TestProject::for_source(source)
+            .add_module(
+                "woo",
+                "
+pub fn wibble() {
+  todo
+}
+"
+            )
+            .add_module(
+                "another_woo",
+                "
+pub fn wibble() {
+  todo
+}
+"
+            )
+            .add_module(
+                "yet_another_woo",
+                "
+pub fn wibble() {
+  todo
+}
+"
+            ),
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn use_value_from_another_module_multiple_modules_2() {
+    let source = "
+import woo
+import another_woo
+
+pub fn main() {
+  wibble()
+}
+";
+    assert_code_action!(
+        &use_item_message("another_woo.wibble"),
+        TestProject::for_source(source)
+            .add_module(
+                "woo",
+                "
+pub fn wibble() {
+  todo
+}
+"
+            )
+            .add_module(
+                "another_woo",
+                "
+pub fn wibble() {
+  todo
+}
+"
+            )
+            .add_module(
+                "yet_another_woo",
+                "
+pub fn wibble() {
+  todo
+}
+"
+            ),
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn no_use_value_from_unimported_module() {
+    let source = "
+pub fn main() {
+  wibble()
+}
+";
+    assert_no_code_actions!(
+        &use_item_message("woo.wibble"),
+        TestProject::for_source(source).add_module(
+            "woo",
+            "
+pub fn wibble() {
+  todo
+}
+"
+        ),
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn use_value_from_another_package() {
+    let source = "
+import woo
+
+pub fn main() {
+  wibble()
+}
+";
+    assert_code_action!(
+        &use_item_message("woo.wibble"),
+        &TestProject::for_source(source).add_package_module(
+            "another_package",
+            "woo",
+            "
+pub fn wibble() {
+  todo
+}
+"
+        ),
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn no_use_value_from_unimported_package() {
+    let source = "
+pub fn main() {
+  wibble()
+}
+";
+    assert_no_code_actions!(
+        &use_item_message("woo.wibble"),
+        &TestProject::for_source(source).add_package_module(
+            "another_package",
+            "woo",
+            "
+pub fn wibble() {
+  todo
+}
+"
+        ),
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn use_type_from_another_module() {
+    let source = "
+import woo
+
+pub const wobble: Wibble = todo
+";
+    assert_code_action!(
+        &use_item_message("woo.Wibble"),
+        TestProject::for_source(source).add_module(
+            "woo",
+            "
+pub type Wibble
+"
+        ),
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+#[test]
+fn use_type_from_another_module_multiple_modules_1() {
+    let source = "
+import woo
+import another_woo
+
+pub const wobble: Wibble = todo
+";
+    assert_code_action!(
+        &use_item_message("woo.Wibble"),
+        TestProject::for_source(source)
+            .add_module(
+                "woo",
+                "
+pub type Wibble
+"
+            )
+            .add_module(
+                "another_woo",
+                "
+pub type Wibble
+"
+            )
+            .add_module(
+                "yet_another_woo",
+                "
+pub type Wibble
+"
+            ),
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+#[test]
+fn use_type_from_another_module_multiple_modules_2() {
+    let source = "
+import woo
+import another_woo
+
+pub const wobble: Wibble = todo
+";
+    assert_code_action!(
+        &use_item_message("another_woo.Wibble"),
+        TestProject::for_source(source)
+            .add_module(
+                "woo",
+                "
+pub type Wibble
+"
+            )
+            .add_module(
+                "another_woo",
+                "
+pub type Wibble
+"
+            )
+            .add_module(
+                "yet_another_woo",
+                "
+pub type Wibble
+"
+            ),
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+#[test]
+fn no_use_type_from_unimported_module() {
+    let source = "
+pub const wobble: Wibble = todo
+";
+    assert_no_code_actions!(
+        &use_item_message("woo.Wibble"),
+        TestProject::for_source(source).add_module(
+            "woo",
+            "
+pub type Wibble
+"
+        ),
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+#[test]
+fn use_type_from_another_package() {
+    let source = "
+import woo
+
+pub const wobble: Wibble = todo
+";
+    assert_code_action!(
+        &use_item_message("woo.Wibble"),
+        &TestProject::for_source(source).add_package_module(
+            "another_package",
+            "woo",
+            "
+pub type Wibble
+"
+        ),
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+#[test]
+fn no_use_type_from_unimported_package() {
+    let source = "
+pub const wobble: Wibble = todo
+";
+    assert_no_code_actions!(
+        &use_item_message("woo.Wibble"),
+        &TestProject::for_source(source).add_package_module(
+            "another_package",
+            "woo",
+            "
+pub type Wibble
+"
+        ),
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+#[test]
+fn use_value_with_similar_name_in_current_module() {
+    assert_code_action!(
+        &use_item_message("wibble"),
+        "
+pub fn main() {
+  wobble()
+}
+
+pub fn wibble() {
+  todo
+}
+        ",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn use_value_with_similar_name_in_current_module_with_multiple_candidates() {
+    assert_code_action!(
+        &use_item_message("wibble"),
+        "
+pub fn main() {
+  wobble()
+}
+
+pub fn wibble() {
+  todo
+}
+
+pub fn weeble() {
+  todo
+}
+
+pub fn woo() {
+  todo
+}
+        ",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn no_use_value_with_similar_name_in_current_module_without_candidates() {
+    assert_no_code_actions!(
+        &use_item_message("wibble"),
+        "
+pub fn main() {
+  wobble()
+}
+        ",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn use_type_with_similar_name_in_current_module() {
+    assert_code_action!(
+        &use_item_message("Wibble"),
+        "
+pub const wibble: Wobble = todo
+
+pub type Wibble
+        ",
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn use_type_with_similar_name_in_current_module_with_multiple_candidates() {
+    assert_code_action!(
+        &use_item_message("Wibble"),
+        "
+pub const wibble: Wobble = todo
+
+pub type Wibble
+pub type Woo
+pub type Weeble
+        ",
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn no_use_type_with_similar_name_in_current_module_without_candidates() {
+    assert_no_code_actions!(
+        &use_item_message("Wibble"),
+        "
+pub const wibble: Wobble = todo
+        ",
+        find_position_of("Wobble").to_selection()
     );
 }

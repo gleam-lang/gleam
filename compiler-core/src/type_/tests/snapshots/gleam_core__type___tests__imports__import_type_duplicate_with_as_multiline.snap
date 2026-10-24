@@ -34,3 +34,6 @@ error: Unknown type
   │              ^^^ Did you mean `MyOne`?
 
 The type `One` is not defined or imported in this module.
+Did you mean:
+
+  - one.One
