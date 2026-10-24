@@ -5518,18 +5518,7 @@ impl<'a, 'b> JsonEncoderPrinter<'a, 'b> {
                         }
                         Some(("gleam/option", "Option", [some])) => {
                             eco_format!(
-                                "case {encoded_value} {{
-{indent}  {none} -> {module_name}.null()
-{indent}  {some}({value}) -> {encoder}
-{indent}}}",
-                                indent = " ".repeat(indent),
-                                none = self
-                                    .printer
-                                    .print_constructor(&"gleam/option".into(), &"None".into()),
-                                some = self
-                                    .printer
-                                    .print_constructor(&"gleam/option".into(), &"Some".into()),
-                                value = if is_nil_like(some) { "_" } else { "value" },
+                                "{module_name}.nullable({encoded_value}, {encoder})",
                                 encoder = self.encoder_for("value", some, indent + 2)
                             )
                         }
