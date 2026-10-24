@@ -217,6 +217,14 @@ impl FeedbackBookKeeper {
         feedback
     }
 
+    pub fn clear_skipped_file_diagnostics(&self) -> Feedback {
+        let mut feedback = Feedback::none();
+        for file in self.skipped_files_diagnostics.keys() {
+            feedback.unset_existing_diagnostics(file.clone());
+        }
+        feedback
+    }
+
     pub fn all_files_closed(&self) -> bool {
         self.open_files.is_empty()
     }

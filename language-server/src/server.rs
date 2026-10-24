@@ -543,6 +543,7 @@ where
 
             if project.feedback.all_files_closed() {
                 feedback.append_feedback(project.feedback.clear_warning_and_error_diagnostics());
+                feedback.append_feedback(project.feedback.clear_skipped_file_diagnostics());
                 Some(project.engine.paths.root().into())
             } else {
                 None
