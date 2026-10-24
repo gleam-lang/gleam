@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/version_bump/tests.rs
+expression: bump
+---
+-- BEFORE
+---- the_module
+pub const old_name = 10
+
+-- AFTER
+---- the_module
+
+pub const new_name = 10
+pub const old_name = new_name
+
+-- MINOR
+
+== the_module ==
++ pub const new_name
