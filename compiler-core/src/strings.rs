@@ -3,6 +3,7 @@
 
 use ecow::EcoString;
 use itertools::Itertools;
+use std::sync::OnceLock;
 
 use crate::ast::Endianness;
 
@@ -179,4 +180,84 @@ pub fn length_utf16(string: &str) -> usize {
 /// Gets the number of UTF-32 codepoints in a string
 pub fn length_utf32(string: &str) -> usize {
     string.chars().count()
+}
+
+/// Check if a module name is a valid Gleam module name.
+pub fn is_valid_gleam_module_name(module: &str) -> bool {
+    use regex::Regex;
+    static RE: OnceLock<Regex> = OnceLock::new();
+
+    RE.get_or_init(|| {
+        Regex::new(&format!(
+            "^({module}{slash})*{module}$",
+            module = "[a-z][_a-z0-9]*",
+            slash = "/",
+        ))
+        .expect("is_valid_gleam_module_name() regex")
+    })
+    .is_match(module)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn valid_module_names() {
+        // Single segment names
+        assert!(is_valid_gleam_module_name("valid"));
+        assert!(is_valid_gleam_module_name("my_module"));
+        assert!(is_valid_gleam_module_name("module_123"));
+        assert!(is_valid_gleam_module_name("a"));
+        assert!(is_valid_gleam_module_name("z"));
+        assert!(is_valid_gleam_module_name("my_mod_ule"));
+
+        // Multi-segment names
+        assert!(is_valid_gleam_module_name("valid/name"));
+        assert!(is_valid_gleam_module_name("my/nested/module"));
+        assert!(is_valid_gleam_module_name("my_mod/sub_mod"));
+        assert!(is_valid_gleam_module_name("valid/mod/name"));
+
+        // Edge cases
+        assert!(is_valid_gleam_module_name("a/b"));
+        assert!(is_valid_gleam_module_name("mod1/mod2/mod3"));
+    }
+
+    #[test]
+    fn invalid_module_names() {
+        // Empty string
+        assert!(!is_valid_gleam_module_name(""));
+
+        // Starting with uppercase
+        assert!(!is_valid_gleam_module_name("MyModule"));
+        assert!(!is_valid_gleam_module_name("MYMODULE"));
+
+        // Starting with digit
+        assert!(!is_valid_gleam_module_name("123module"));
+        assert!(!is_valid_gleam_module_name("1module"));
+
+        // Invalid characters
+        assert!(!is_valid_gleam_module_name("my-module"));
+        assert!(!is_valid_gleam_module_name("my.module"));
+        assert!(!is_valid_gleam_module_name("my@module"));
+
+        // Trailing slash
+        assert!(!is_valid_gleam_module_name("my/module/"));
+
+        // Leading slash
+        assert!(!is_valid_gleam_module_name("/mod/name"));
+        assert!(!is_valid_gleam_module_name("/mod/name/"));
+
+        // Double slashes
+        assert!(!is_valid_gleam_module_name("my//module"));
+
+        // Slash only
+        assert!(!is_valid_gleam_module_name("/"));
+        assert!(!is_valid_gleam_module_name("//"));
+
+        // Only invalid segments
+        assert!(!is_valid_gleam_module_name("my/MyModule"));
+        assert!(!is_valid_gleam_module_name("MyModule/nested"));
+        assert!(!is_valid_gleam_module_name("valid/123invalid/sub"));
+    }
 }
