@@ -47,11 +47,7 @@ pub fn make_relative(source_path: &Utf8Path, target_path: &Utf8Path) -> Utf8Path
     // Input target will always be canonicalised whereas source will not
     // This causes problems with diffing on windows since canonicalised paths have a special root
     // As such we are attempting to strip the target path
-    // Based on https://github.com/rust-lang/rust/issues/42869#issuecomment-1712317081
-    #[cfg(target_family = "windows")]
-    let binding = target_path.to_string();
-    #[cfg(target_family = "windows")]
-    let target_path = Utf8Path::new(binding.trim_start_matches(r"\\?\"));
+    let target_path = strip_windows_verbatim_prefix(target_path);
 
     match target_path.is_absolute() {
         true => pathdiff::diff_utf8_paths(target_path, source_path)
@@ -59,6 +55,26 @@ pub fn make_relative(source_path: &Utf8Path, target_path: &Utf8Path) -> Utf8Path
 
         false => target_path.into(),
     }
+}
+
+/// Strips the `\\?\` verbatim prefix that canonicalising a path adds on
+/// Windows, so the path matches ones that were not canonicalised.
+/// Based on https://github.com/rust-lang/rust/issues/42869#issuecomment-1712317081
+pub fn strip_windows_verbatim_prefix(path: &Utf8Path) -> &Utf8Path {
+    #[cfg(target_family = "windows")]
+    if let Some(stripped) = path.as_str().strip_prefix(r"\\?\") {
+        return Utf8Path::new(stripped);
+    }
+    path
+}
+
+#[cfg(windows)]
+#[test]
+fn strip_windows_verbatim_prefix_removes_prefix() {
+    assert_eq!(
+        strip_windows_verbatim_prefix(Utf8Path::new(r"\\?\C:\app\src\app.gleam")),
+        Utf8Path::new(r"C:\app\src\app.gleam")
+    );
 }
 
 pub trait Reader: io::Read {
@@ -349,13 +365,23 @@ impl Stdio {
     }
 }
 
+/// A module to be compiled to BEAM bytecode.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum CompileUnit {
+    Native(Utf8PathBuf),
+    Gleam {
+        path: Utf8PathBuf,
+        source: Utf8PathBuf,
+    },
+}
+
 /// A trait used to compile Erlang and Elixir modules to BEAM bytecode.
 pub trait BeamCompilerIO {
     fn compile_beam(
         &self,
         out: &Utf8Path,
         lib: &Utf8Path,
-        modules: &HashSet<Utf8PathBuf>,
+        modules: &HashSet<CompileUnit>,
         stdio: Stdio,
     ) -> Result<(), Error>;
 }

@@ -17,6 +17,10 @@
   prepend like `[..wobble]`.
   ([0xda157](https://github.com/0xda157))
 
+- The compiler now records the absolute path of their original Gleam source file
+  in their compile info, so debuggers and other BEAM tools can find it.
+  ([John Downey](https://github.com/jtdowney))
+
 ### Build tool
 
 - `gleam remove` now rejects invalid package names with an error explaining

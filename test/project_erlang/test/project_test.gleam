@@ -4,6 +4,7 @@
 import gleam/dynamic.{type Dynamic}
 import gleam/erlang/atom.{from_string as atom_from_string}
 import gleam/io
+import gleam/string
 import gleeunit
 import project
 
@@ -37,8 +38,15 @@ fn elixir_function() -> String
 @external(erlang, "Elixir.Countries", "all")
 fn mix_dep_function() -> Dynamic
 
+@external(erlang, "erlang_test_file", "project_source")
+fn project_source() -> String
+
 // Testing for this bug in metadata encoding.
 // https://github.com/gleam-lang/gleam/commit/c8f3bd0ddbf61c27ea35f37297058ecca7515f6c
 pub fn name_test() {
   let assert True = atom.from_string("ok") == atom_from_string("ok")
+}
+
+pub fn compile_info_source_test() {
+  assert string.ends_with(project_source(), "/src/project.gleam")
 }

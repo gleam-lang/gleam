@@ -5,8 +5,8 @@ use camino::{Utf8Path, Utf8PathBuf};
 use gleam_core::{
     Error, Result,
     io::{
-        BeamCompilerIO, Command, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
-        Stdio, WrappedReader, memory::InMemoryFileSystem,
+        BeamCompilerIO, Command, CommandExecutor, CompileUnit, FileSystemReader, FileSystemWriter,
+        ReadDir, Stdio, WrappedReader, memory::InMemoryFileSystem,
     },
 };
 use std::collections::HashSet;
@@ -33,7 +33,7 @@ impl BeamCompilerIO for WasmFileSystem {
         &self,
         _out: &Utf8Path,
         _lib: &Utf8Path,
-        _modules: &HashSet<Utf8PathBuf>,
+        _modules: &HashSet<CompileUnit>,
         _stdio: Stdio,
     ) -> Result<(), Error> {
         Ok(()) // Always succeed.
