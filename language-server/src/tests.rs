@@ -32,8 +32,8 @@ use gleam_core::{
     build::Origin,
     config::PackageConfig,
     io::{
-        BeamCompilerIO, Command, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
-        WrappedReader, memory::InMemoryFileSystem,
+        BeamCompilerIO, Command, CommandExecutor, CompileUnit, FileSystemReader, FileSystemWriter,
+        ReadDir, WrappedReader, memory::InMemoryFileSystem,
     },
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
@@ -261,7 +261,7 @@ impl BeamCompilerIO for LanguageServerTestIO {
         &self,
         out: &Utf8Path,
         lib: &Utf8Path,
-        modules: &HashSet<Utf8PathBuf>,
+        modules: &HashSet<CompileUnit>,
         stdio: gleam_core::io::Stdio,
     ) -> Result<()> {
         panic!("compile_beam({out:?}, {lib:?}, {modules:?}, {stdio:?}) is not implemented")

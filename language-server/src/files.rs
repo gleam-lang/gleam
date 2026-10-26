@@ -10,8 +10,8 @@ use gleam_core::{
     Result,
     error::Error,
     io::{
-        BeamCompilerIO, Command, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
-        Stdio, WrappedReader, memory::InMemoryFileSystem,
+        BeamCompilerIO, Command, CommandExecutor, CompileUnit, FileSystemReader, FileSystemWriter,
+        ReadDir, Stdio, WrappedReader, memory::InMemoryFileSystem,
     },
 };
 
@@ -177,7 +177,7 @@ where
         &self,
         _out: &Utf8Path,
         _lib: &Utf8Path,
-        _modules: &HashSet<Utf8PathBuf>,
+        _modules: &HashSet<CompileUnit>,
         _stdio: Stdio,
     ) -> Result<(), Error> {
         panic!("The language server is not permitted to create subprocesses")

@@ -4,7 +4,7 @@
 use gleam_core::{
     Result,
     error::{Error, ShellCommandFailureReason},
-    io::{FileSystemWriter, Stdio},
+    io::{CompileUnit, FileSystemWriter, Stdio},
     paths,
 };
 
@@ -33,7 +33,7 @@ impl BeamCompilerInstance {
         &mut self,
         out: &Utf8Path,
         lib: &Utf8Path,
-        modules: &HashSet<Utf8PathBuf>,
+        modules: &HashSet<CompileUnit>,
         stdio: Stdio,
     ) -> Result<(), Error> {
         // Check that the BEAM instance is still alive before attempting to use it.
@@ -46,15 +46,7 @@ impl BeamCompilerInstance {
         }
 
         // Prepare work to send to the BEAM instance.
-        let args = format!(
-            "{{\"{}\", \"{}\", [\"{}\"]}}",
-            escape_path(lib),
-            escape_path(out.join("ebin")),
-            modules
-                .iter()
-                .map(|module| escape_path(out.join(paths::ARTEFACT_DIRECTORY_NAME).join(module)))
-                .join("\", \"")
-        );
+        let args = compile_request(lib, out, modules);
 
         tracing::debug!(args=?args, "call_beam_compiler");
 
@@ -142,13 +134,38 @@ impl Drop for BeamCompilerInstance {
     }
 }
 
+/// Builds the Erlang term sent to the BEAM instance for one compilation.
+fn compile_request(lib: &Utf8Path, out: &Utf8Path, modules: &HashSet<CompileUnit>) -> String {
+    let modules = modules
+        .iter()
+        .map(|module| match module {
+            CompileUnit::Native(path) => {
+                let path = escape_path(out.join(paths::ARTEFACT_DIRECTORY_NAME).join(path));
+                format!("\"{path}\"")
+            }
+            CompileUnit::Gleam { path, source } => {
+                let path = escape_path(out.join(paths::ARTEFACT_DIRECTORY_NAME).join(path));
+                format!("{{\"{path}\", \"{}\"}}", escape_path(source))
+            }
+        })
+        .join(", ");
+    format!(
+        "{{\"{}\", \"{}\", [{modules}]}}",
+        escape_path(lib),
+        escape_path(out.join("ebin")),
+    )
+}
+
 fn escape_path<T: AsRef<str>>(path: T) -> String {
     path.as_ref().replace('\\', "\\\\").replace('"', "\\\"")
 }
 
 #[cfg(test)]
 mod tests {
-    use super::escape_path;
+    use super::{compile_request, escape_path};
+    use camino::{Utf8Path, Utf8PathBuf};
+    use gleam_core::io::CompileUnit;
+    use std::collections::HashSet;
 
     #[test]
     fn escape_path_plain() {
@@ -183,6 +200,37 @@ mod tests {
         assert!(
             !escaped.contains("\", \""),
             "unescaped quote still present: {escaped}"
+        );
+    }
+
+    #[test]
+    fn compile_request_sends_gleam_source() {
+        let out = Utf8Path::new("/out");
+        let modules = HashSet::from([CompileUnit::Gleam {
+            path: Utf8PathBuf::from("app.abstr"),
+            source: Utf8PathBuf::from(r#"/a "b"/src/app.gleam"#),
+        }]);
+        assert_eq!(
+            compile_request(Utf8Path::new("/lib"), out, &modules),
+            format!(
+                r#"{{"/lib", "{}", [{{"{}", "/a \"b\"/src/app.gleam"}}]}}"#,
+                escape_path(out.join("ebin")),
+                escape_path(out.join("_gleam_artefacts").join("app.abstr")),
+            )
+        );
+    }
+
+    #[test]
+    fn compile_request_sends_native_path_only() {
+        let out = Utf8Path::new("/out");
+        let modules = HashSet::from([CompileUnit::Native(Utf8PathBuf::from("ffi.erl"))]);
+        assert_eq!(
+            compile_request(Utf8Path::new("/lib"), out, &modules),
+            format!(
+                r#"{{"/lib", "{}", ["{}"]}}"#,
+                escape_path(out.join("ebin")),
+                escape_path(out.join("_gleam_artefacts").join("ffi.erl")),
+            )
         );
     }
 }

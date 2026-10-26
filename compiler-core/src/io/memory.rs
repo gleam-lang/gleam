@@ -457,14 +457,18 @@ impl BeamCompilerIO for InMemoryFileSystem {
         &self,
         out: &Utf8Path,
         _lib: &Utf8Path,
-        modules: &HashSet<Utf8PathBuf>,
+        modules: &HashSet<CompileUnit>,
         _stdio: Stdio,
     ) -> Result<(), Error> {
         // Always succeed, pretending to have compiled every given module. We
         // write out an (empty) `.beam` file per module, mirroring the real
         // compiler, since callers may look for these in `ebin` afterwards.
         let ebin = out.join("ebin");
-        for path in modules {
+        for module in modules {
+            let path = match module {
+                CompileUnit::Native(path) => path,
+                CompileUnit::Gleam { path, .. } => path,
+            };
             let name = if path.extension() == Some("ex") {
                 // Real Elixir names the module after its `defmodule`, which
                 // we don't parse, so we follow the path convention instead:
@@ -495,9 +499,9 @@ fn test_empty_in_memory_fs_has_root() {
 fn test_compile_beam_names_modules() -> Result<(), Error> {
     let imfs = InMemoryFileSystem::new();
     let modules = HashSet::from([
-        Utf8PathBuf::from("app/login/user.ex"),
-        Utf8PathBuf::from("wibble.ex"),
-        Utf8PathBuf::from("nested/thing.erl"),
+        CompileUnit::Native(Utf8PathBuf::from("app/login/user.ex")),
+        CompileUnit::Native(Utf8PathBuf::from("wibble.ex")),
+        CompileUnit::Native(Utf8PathBuf::from("nested/thing.erl")),
     ]);
     imfs.compile_beam(
         Utf8Path::new("/out"),

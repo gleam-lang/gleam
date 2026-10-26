@@ -26,7 +26,7 @@ use crate::{
     },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
-    io::{BeamCompilerIO, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
+    io::{BeamCompilerIO, CommandExecutor, CompileUnit, FileSystemReader, FileSystemWriter, Stdio},
     parse::extra::ModuleExtra,
     paths, type_,
     uid::UniqueIdGenerator,
@@ -231,7 +231,7 @@ where
         })
     }
 
-    fn compile_erlang_to_beam(&mut self, modules: &HashSet<Utf8PathBuf>) -> Result<(), Error> {
+    fn compile_erlang_to_beam(&mut self, modules: &HashSet<CompileUnit>) -> Result<(), Error> {
         if modules.is_empty() {
             tracing::debug!("no_erlang_to_compile");
             return Ok(());
@@ -247,7 +247,7 @@ where
         &mut self,
         destination_dir: &Utf8Path,
         precompiled_erlang_file_names: HashSet<EcoString>,
-        to_compile_modules: &mut HashSet<Utf8PathBuf>,
+        to_compile_modules: &mut HashSet<CompileUnit>,
     ) -> Result<(), Error> {
         tracing::debug!("copying_native_source_files");
 
@@ -268,7 +268,7 @@ where
         );
         let copied = copier.run()?;
 
-        to_compile_modules.extend(copied.to_compile);
+        to_compile_modules.extend((copied.to_compile.into_iter()).map(CompileUnit::Native));
 
         // If there are any Elixir files then we need to locate Elixir
         // installed on this system for use in compilation.
@@ -404,9 +404,13 @@ where
         Erlang::new(&build_dir, &include_dir).render(output, io.clone(), modules, self.root)?;
 
         if let Some(config) = app_file_config {
-            written.extend(modules.iter().map(match output {
-                ErlangOutput::Binary => Module::compiled_erlang_path,
-                ErlangOutput::Textual => Module::compiled_textual_erlang_path,
+            written.extend(modules.iter().map(|module| {
+                let path = match output {
+                    ErlangOutput::Binary => module.compiled_erlang_path(),
+                    ErlangOutput::Textual => module.compiled_textual_erlang_path(),
+                };
+                let source = crate::io::strip_windows_verbatim_prefix(&module.input_path).into();
+                CompileUnit::Gleam { path, source }
             }));
             self.compile_erlang_to_beam(&written)?;
 
@@ -514,7 +518,7 @@ where
     fn render_erlang_entrypoint_module(
         &mut self,
         out: &Utf8Path,
-        modules_to_compile: &mut HashSet<Utf8PathBuf>,
+        modules_to_compile: &mut HashSet<CompileUnit>,
     ) -> Result<(), Error> {
         let name = format!("{name}@@main.erl", name = self.config.name);
         let path = out.join(&name);
@@ -531,7 +535,7 @@ where
         };
         let module = template.render().expect("Erlang entrypoint rendering");
         self.io.write(&path, &module)?;
-        let _ = modules_to_compile.insert(name.into());
+        let _ = modules_to_compile.insert(CompileUnit::Native(name.into()));
         tracing::debug!("erlang_entrypoint_written");
         Ok(())
     }

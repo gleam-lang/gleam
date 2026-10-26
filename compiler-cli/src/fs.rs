@@ -6,7 +6,7 @@ use gleam_core::{
     build::{NullTelemetry, Target},
     error::{Error, FileIoAction, FileIoCause, FileKind, OS, ShellCommandFailureReason, parse_os},
     io::{
-        BeamCompilerIO, Command, CommandExecutor, Content, DirEntry, FileSystemReader,
+        BeamCompilerIO, Command, CommandExecutor, CompileUnit, Content, DirEntry, FileSystemReader,
         FileSystemWriter, OutputFile, ReadDir, Stdio, WrappedReader, is_native_file_extension,
     },
     manifest::Manifest,
@@ -261,7 +261,7 @@ impl BeamCompilerIO for ProjectIO {
         &self,
         out: &Utf8Path,
         lib: &Utf8Path,
-        modules: &HashSet<Utf8PathBuf>,
+        modules: &HashSet<CompileUnit>,
         stdio: Stdio,
     ) -> Result<(), Error> {
         let mut guard = self

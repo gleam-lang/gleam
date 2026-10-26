@@ -26,8 +26,9 @@ compile_package_loop() ->
     end.
 
 compile_package(Lib, Out, Modules) ->
-    IsElixirModule = fun(Module) ->
-        filename:extension(Module) =:= ".ex"
+    IsElixirModule = fun
+        ({_Module, _Source}) -> false;
+        (Module) -> filename:extension(Module) =:= ".ex"
     end,
     {ElixirModules, ErlangModules} = lists:partition(IsElixirModule, Modules),
     ok = filelib:ensure_dir([Out, $/]),
@@ -78,12 +79,19 @@ worker_loop(Parent, Out) ->
     Options = [report_errors, report_warnings, debug_info, {outdir, Out}],
     erlang:send(Parent, {work_please, self()}),
     receive
-        {module, Module} ->
+        {module, Work} ->
+            % Modules generated from Gleam come with their original source
+            % file, which is recorded in the module's compile info.
+            {Module, ModuleOptions} =
+                case Work of
+                    {Path, Source} -> {Path, [{source, Source} | Options]};
+                    Path -> {Path, Options}
+                end,
             log({compiling, Module}),
             Outcome =
                 case filename:extension(Module) of
-                    ".erl" -> compile_erlang_file(Options, Module);
-                    ".abstr" -> compile_abstr_file(Options, Module, Out);
+                    ".erl" -> compile_erlang_file(ModuleOptions, Module);
+                    ".abstr" -> compile_abstr_file(ModuleOptions, Module, Out);
                     _ -> {error, unknown_extension}
                 end,
             case Outcome of
