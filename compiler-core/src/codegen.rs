@@ -62,6 +62,16 @@ impl<'a> Erlang<'a> {
     ) -> Result<()> {
         let line_numbers = LineNumbers::new(&module.code);
 
+        // {
+        // let name = format!("{erl_name}.erl");
+        // let path = self.build_directory.join(&name);
+        //
+        // let builder = ErlangSourceBuilder::default();
+        // let output = erlang::module(builder, &module.ast, &line_numbers, root);
+        // tracing::debug!(name = ?name, "Generated Erlang module");
+        // let _ = writer.write(&path, &output);
+        // }
+
         match output {
             ErlangOutput::Binary => {
                 let name = format!("{erl_name}.abstr");
