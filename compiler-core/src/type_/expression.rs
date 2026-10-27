@@ -1116,12 +1116,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         .expect("capture hole not found")
                         .location;
 
-                    let tmp_str: EcoString = "tmp".into();
-                    let capture_val_str: EcoString = CAPTURE_VARIABLE.into();
+                    let tmp_value_name: EcoString = "tmp".into();
+                    let capture_value_name: EcoString = CAPTURE_VARIABLE.into();
 
                     let tmp = Pattern::Variable {
                         location: *call_location,
-                        name: tmp_str.clone(),
+                        name: tmp_value_name.clone(),
                         type_: (),
                         origin: VariableOrigin {
                             syntax: VariableSyntax::Generated,
@@ -1133,7 +1133,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         location: *call_location,
                         fun: Box::new(UntypedExpr::Var {
                             location: *call_location,
-                            name: tmp_str,
+                            name: tmp_value_name,
                         }),
                         arguments: call_arguments.clone(),
                         open_parenthesis: *open_parenthesis,
@@ -1145,7 +1145,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         end_of_head_byte_index: call_location.end,
                         arguments: vec![Arg {
                             names: ArgNames::Named {
-                                name: capture_val_str,
+                                name: capture_value_name,
                                 location: capture_location,
                             },
                             type_: (),
