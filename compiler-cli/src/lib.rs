@@ -743,6 +743,10 @@ pub struct NewOptions {
     #[arg(long, ignore_case = true, default_value = "erlang", help = template_doc())]
     pub template: new::Template,
 
+    /// Skip creation of README.md file
+    #[arg(long)]
+    pub skip_readme: bool,
+
     /// Skip git initialization and creation of .gitignore, .git/* and .github/* files
     #[arg(long)]
     pub skip_git: bool,

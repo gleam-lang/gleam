@@ -282,6 +282,9 @@ Options:
           [default: erlang]
           [possible values: erlang, javascript]
 
+      --skip-readme
+          Skip creation of README.md file
+
       --skip-git
           Skip git initialization and creation of .gitignore, .git/* and .github/* files
 
