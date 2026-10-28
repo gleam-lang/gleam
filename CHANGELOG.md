@@ -205,6 +205,25 @@
   them to their original name.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The compiler will no longer emit warnings when pattern matching on `Nil` if Nil is used in the patterns and guard clauses are present. This is useful when using a case statement as a multi way if statement using guard clauses:
+  ```gleam
+  case Nil {
+    Nil if x > y -> todo
+    Nil if z <= x -> todo
+    Nil -> todo
+  }
+  ```
+  The case where all patterns were discard patterns was already legal and wil remain so:
+  ```gleam
+  case Nil {
+    _ if x > y -> todo
+    _ if z <= x -> todo
+    _ -> todo
+  }
+  ```
+  Pattern matching on any other literal (`True`,`123`,`"Lucy"`, etc) will be only legal with discard patterns.
+  ([Wander Hillen](https://github.com/WJWH/))
+
 ## v1.19.2 - 2026-10-12
 
 ### Bug fixes

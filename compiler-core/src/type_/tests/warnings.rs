@@ -2195,6 +2195,35 @@ fn no_warnings_for_matches_used_like_ifs_2() {
 }
 
 #[test]
+fn no_warnings_for_matches_used_like_ifs_3() {
+    assert_no_warnings!(
+        r#"
+    pub fn main() {
+        case Nil {
+          Nil if True -> 1
+          Nil -> 2
+        }
+    }
+        "#
+    );
+}
+
+#[test]
+fn warnings_for_matches_improperly_used_like_ifs() {
+    assert_warning!(
+        r#"
+    pub fn main() {
+        case 123 {
+          123 if True -> 1
+          123 -> 2
+          _ -> 3
+        }
+    }
+        "#
+    );
+}
+
+#[test]
 fn warnings_for_matches_on_literal_values_that_are_not_like_an_if_1() {
     assert_warning!(
         r#"
