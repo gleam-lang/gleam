@@ -31,6 +31,10 @@
   can still be set if needed.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- `gleam new` now has an option to skip the creation of a README file, through
+  the `--skip-readme` option.
+  ([Pedro Francisco](https://github.com/mine-tech-oficial))
+
 - `gleam remove` now rejects invalid package names with an error explaining
   naming rules, instead of stating that the package is not a dependency.
   Trying to remove `gleam_otp@1` now suggests the matching dependency

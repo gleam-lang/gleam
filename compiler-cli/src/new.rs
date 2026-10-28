@@ -78,6 +78,7 @@ impl FileToCreate {
 
     pub fn contents(&self, creator: &Creator) -> Option<String> {
         let project_name = &creator.project_name;
+        let skip_readme = creator.options.skip_readme;
         let skip_git = creator.options.skip_git;
         let skip_github = creator.options.skip_github;
         let gleam_version = creator.gleam_version;
@@ -87,7 +88,7 @@ impl FileToCreate {
         };
 
         match self {
-            Self::Readme => Some(default_readme(project_name)),
+            Self::Readme if !skip_readme => Some(default_readme(project_name)),
             Self::Gitignore if !skip_git => Some(
                 "*.beam
 *.ez
@@ -175,7 +176,7 @@ jobs:
       - run: gleam format --check src test
 "#,
             )),
-            Self::GithubCi | Self::Gitignore => None,
+            Self::GithubCi | Self::Gitignore | Self::Readme => None,
         }
     }
 }
