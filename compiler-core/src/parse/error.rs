@@ -171,6 +171,7 @@ pub enum ParseErrorType {
     IfExpression,
     TypeDefinitionNoArguments,     // pub type Wibble() { ... }
     UnknownAttributeRecordVariant, // an attribute was used that is not know for a custom type variant
+    UnknownAttributeImport,        // an attribute other than `@target` was used on an import
     // a Python-like import was written, such as `import gleam.io`, instead of `import gleam/io`
     IncorrectImportModuleSeparator {
         module: EcoString,
@@ -768,6 +769,13 @@ See: https://tour.gleam.run/flow-control/case-expressions/"
                 text: "".into(),
                 hint: Some("Did you mean `@deprecated`?".into()),
                 label_text: "This attribute cannot be used on a variant.".into(),
+                extra_labels: vec![],
+            },
+
+            ParseErrorType::UnknownAttributeImport => ParseErrorDetails {
+                text: "".into(),
+                hint: Some("Only the `@target` attribute can be used on an import.".into()),
+                label_text: "This attribute cannot be used on an import.".into(),
                 extra_labels: vec![],
             },
 
