@@ -1,0 +1,17 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main(_x) {\n  x\n}"
+---
+----- BEFORE ACTION
+
+pub fn main(_x) {
+  x
+  ↑
+}
+
+
+----- AFTER ACTION
+
+pub fn main(x) {
+  x
+}

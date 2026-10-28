@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main(_x, y) {\n  case y {\n    [_x] | [_, _x, ..] | _x -> x\n    _ -> todo\n  }\n}"
+---
+----- BEFORE ACTION
+
+pub fn main(_x, y) {
+  case y {
+    [_x] | [_, _x, ..] | _x -> x
+                               ↑
+    _ -> todo
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn main(_x, y) {
+  case y {
+    [x] | [_, x, ..] | x -> x
+    _ -> todo
+  }
+}

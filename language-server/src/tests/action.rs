@@ -2791,9 +2791,8 @@ pub fn main() {
 }
 
 #[test]
-#[should_panic(expected = "No action with the given title")]
 fn test_assign_unused_result_inside_block() {
-    assert_code_action!(
+    assert_no_code_actions!(
         ASSIGN_UNUSED_RESULT,
         r#"
 pub fn main() {
@@ -2825,9 +2824,8 @@ pub fn main() {
 }
 
 #[test]
-#[should_panic(expected = "No action with the given title")]
 fn test_assign_unused_result_not_on_return_value() {
-    assert_code_action!(
+    assert_no_code_actions!(
         ASSIGN_UNUSED_RESULT,
         r#"
 pub fn main() {
@@ -2840,9 +2838,8 @@ pub fn main() {
 }
 
 #[test]
-#[should_panic(expected = "No action with the given title")]
 fn test_assign_unused_result_not_on_return_value_in_block() {
-    assert_code_action!(
+    assert_no_code_actions!(
         ASSIGN_UNUSED_RESULT,
         r#"
 pub fn main() {
@@ -16473,5 +16470,44 @@ fn no_remove_list_prepend_no_prepend() {
   let wibble = [1, 2]
 }",
         find_position_of("[1, 2]").to_selection()
+    );
+}
+
+#[test]
+fn undiscard_variable_on_discarded_argument() {
+    assert_code_action!(
+        "Change `_x` to `x`",
+        "
+pub fn main(_x) {
+  x
+}",
+        find_position_of("_x").to_selection()
+    );
+}
+
+#[test]
+fn undiscard_variable_on_used_value() {
+    assert_code_action!(
+        "Change `_x` to `x`",
+        "
+pub fn main(_x) {
+  x
+}",
+        find_position_of("x").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn undiscard_variable_with_multiple_patterns() {
+    assert_code_action!(
+        "Change `_x` to `x`",
+        "
+pub fn main(_x, y) {
+  case y {
+    [_x] | [_, _x, ..] | _x -> x
+    _ -> todo
+  }
+}",
+        find_position_of("-> x").under_last_char().to_selection()
     );
 }
