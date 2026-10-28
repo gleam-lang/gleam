@@ -42,7 +42,7 @@ use crate::{
     code_action::{
         ConvertIntToDifferentBase, DiscardUnusedVariable, RemoveRedundantListPrepend,
         RemoveRedundantRecordUpdate, ReplaceUnderscoreWithType, code_action_fix_deprecated_pipe,
-        type_errors_for_module,
+        code_action_undiscard_value, type_errors_for_module,
     },
     reference::{
         find_echo_references, find_echo_references_in_module, find_module_references_in_module,
@@ -566,6 +566,7 @@ where
                 .code_actions(),
             );
             actions.extend(DiscardUnusedVariable::new(module, &lines, &params).code_actions());
+            code_action_undiscard_value(module, &lines, &params, &this.error, &mut actions);
             code_action_fix_deprecated_pipe(module, &lines, &params, &mut actions);
             actions.extend(
                 ConvertBetweenDocAndRegularComment::new(module, &lines, &params).code_actions(),

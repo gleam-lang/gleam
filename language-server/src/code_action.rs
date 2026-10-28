@@ -13508,3 +13508,71 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertIntToDifferentBase<'ast> {
         self.insert_int(string_value, int_value, location);
     }
 }
+
+/// Code action to not discard ignored values if we can tell they are needed.
+/// For example:
+///
+/// ```gleam
+/// case x {
+///   [_y] | [_, _y, ..] | _y -> y
+/// // ^^        ^^        ^^    ^ triggering the code action on any of these
+/// //                             would produce the following code:
+/// //[y] | [_, y, ..] | y -> y
+///   _ -> todo
+/// }
+/// ```
+///
+///
+pub fn code_action_undiscard_value(
+    module: &Module,
+    line_numbers: &LineNumbers,
+    params: &CodeActionParams,
+    error: &Option<Error>,
+    actions: &mut Vec<CodeAction>,
+) {
+    let uri = &params.text_document.uri;
+    let Some(errors) = type_errors_for_module(error, module) else {
+        return;
+    };
+
+    let mut edits = TextEdits::new(line_numbers);
+    let cursor_is_within = |position: &SrcSpan| {
+        let range = edits.src_span_to_lsp_range(*position);
+        within(params.range, range)
+    };
+
+    let discarded_locations = errors.into_iter().find_map(|error| {
+        if let type_::Error::UnknownVariable {
+            location,
+            discarded_locations: Some(discarded_locations),
+            name,
+            ..
+        } = error
+            && iter::once(location)
+                .chain(discarded_locations)
+                .any(cursor_is_within)
+        {
+            Some((name, discarded_locations))
+        } else {
+            None
+        }
+    });
+
+    let Some((name, discarded_locations)) = discarded_locations else {
+        return;
+    };
+
+    for discarded_location in discarded_locations {
+        // We need to undiscard the variable: remove the leading `_`.
+        edits.delete(SrcSpan::new(
+            discarded_location.start,
+            discarded_location.start + 1,
+        ));
+    }
+
+    CodeActionBuilder::new(&format!("Change `_{name}` to `{name}`"))
+        .kind(CodeActionKind::QuickFix)
+        .changes(uri.clone(), edits.edits)
+        .preferred(false)
+        .push_to(actions);
+}
