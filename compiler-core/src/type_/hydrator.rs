@@ -186,9 +186,8 @@ impl Hydrator {
                             module_alias: module_alias.clone(),
                             module_location: *module_location,
                         }
-                    } else if let Some(UnqualifiedImport { has_alias, .. }) =
+                    } else if let Some(UnqualifiedImport { alias: Some(_), .. }) =
                         &environment.unqualified_imported_types.get(name)
-                        && *has_alias
                     {
                         ReferenceKind::Alias
                     } else {
@@ -316,9 +315,14 @@ impl Hydrator {
                     None => {
                         let hint = match environment.scope.contains_key(name) {
                             true => UnknownTypeHint::ValueInScopeWithSameName,
-                            false => UnknownTypeHint::AlternativeTypes(
-                                environment.module_types.keys().cloned().collect(),
-                            ),
+                            false => UnknownTypeHint::AlternativeTypes {
+                                possible_modules: environment.get_possible_modules_with_type(name),
+                                types_in_current_module: environment
+                                    .module_types
+                                    .keys()
+                                    .cloned()
+                                    .collect(),
+                            },
                         };
 
                         Err(Error::UnknownType {

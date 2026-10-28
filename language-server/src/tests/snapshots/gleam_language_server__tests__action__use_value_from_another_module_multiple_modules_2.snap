@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\nimport woo\nimport another_woo\n\npub fn main() {\n  wibble()\n}\n"
+---
+----- BEFORE ACTION
+
+import woo
+import another_woo
+
+pub fn main() {
+  wibble()
+  ↑       
+}
+
+
+----- AFTER ACTION
+
+import woo
+import another_woo
+
+pub fn main() {
+  another_woo.wibble()
+}
