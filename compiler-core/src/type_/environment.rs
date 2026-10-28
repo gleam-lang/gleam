@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2020 The Gleam contributors
 
 use pubgrub::Range;
+use vec1::{Vec1, vec1};
 
 use crate::{
     analyse::TargetSupport,
@@ -75,7 +76,7 @@ pub struct Environment<'a> {
 
     // The names of all the ignored variables and arguments in scope:
     // `let _var = 10` `pub fn main(_var) { todo }`.
-    pub discarded_names: imbl::HashMap<EcoString, SrcSpan>,
+    pub discarded_names: imbl::HashMap<EcoString, Vec1<SrcSpan>>,
 
     /// Types defined in the current module (or the prelude)
     pub module_types: HashMap<EcoString, TypeConstructor>,
@@ -213,12 +214,41 @@ impl<'a> Environment<'a> {
 
         names
     }
+
+    /// Keep track of a new discarded name, shadowing existing discarded names
+    /// with the same name.
+    pub fn new_discarded_name(&mut self, name: EcoString, location: SrcSpan) {
+        let _ = self.discarded_names.insert(name, vec1![location]);
+    }
+
+    /// This adds an alternative discarded name to the existing ones, without
+    /// shadowing them. This is meant to be used with alternative patterns where
+    /// each new discarded pattern is not a new name shadowing the previous one:
+    ///
+    /// ```gleam
+    ///    [_x] | [_x, ..] | _x -> x
+    /// // ^^     ^^        ^^ We want to deal with all of these, not just the
+    /// //                     last one
+    /// ```
+    ///
+    pub fn new_alternative_discarded_name(&mut self, name: EcoString, location: SrcSpan) {
+        self.discarded_names = self.discarded_names.alter(
+            |locations| match locations {
+                None => Some(vec1![location]),
+                Some(mut locations) => {
+                    locations.push(location);
+                    Some(locations)
+                }
+            },
+            name,
+        );
+    }
 }
 
 #[derive(Debug)]
 pub struct ScopeResetData {
     local_values: imbl::HashMap<EcoString, ValueConstructor>,
-    discarded_names: imbl::HashMap<EcoString, SrcSpan>,
+    discarded_names: imbl::HashMap<EcoString, Vec1<SrcSpan>>,
 }
 
 impl Environment<'_> {

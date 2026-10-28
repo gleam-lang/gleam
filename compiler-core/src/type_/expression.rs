@@ -1163,10 +1163,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         match &names {
             ArgNames::Named { .. } | ArgNames::NamedLabelled { .. } => (),
             ArgNames::Discard { name, .. } | ArgNames::LabelledDiscard { name, .. } => {
-                let _ = self
-                    .environment
-                    .discarded_names
-                    .insert(name.clone(), location);
+                self.environment.new_discarded_name(name.clone(), location);
             }
         }
 
@@ -3476,7 +3473,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     location: *location,
                     name: name.clone(),
                     variables: self.environment.local_value_names(),
-                    discarded_location: self
+                    discarded_locations: self
                         .environment
                         .discarded_names
                         .get(&eco_format!("_{name}"))

@@ -692,10 +692,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         match pattern {
             Pattern::Discard { name, location, .. } => {
                 self.check_name_case(location, &name, Named::Discard);
-                let _ = self
-                    .environment
-                    .discarded_names
-                    .insert(name.clone(), location);
+                self.new_discarded_name(&name, location);
                 Pattern::Discard {
                     type_,
                     name,
@@ -786,10 +783,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         );
                     }
                     AssignName::Discard(right) => {
-                        let _ = self
-                            .environment
-                            .discarded_names
-                            .insert(right.clone(), right_location);
+                        self.new_discarded_name(right, right_location);
                         self.check_name_case(right_location, right, Named::Discard);
                     }
                 }
@@ -1336,6 +1330,15 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         }
     }
 
+    fn new_discarded_name(&mut self, name: &EcoString, location: SrcSpan) {
+        if let PatternMode::Alternative(_) = self.mode {
+            self.environment
+                .new_alternative_discarded_name(name.clone(), location);
+        } else {
+            self.environment.new_discarded_name(name.clone(), location);
+        }
+    }
+
     fn infer_pattern_call_arguments(
         &mut self,
         pattern_arguments: Vec<CallArg<UntypedPattern>>,
@@ -1426,7 +1429,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 location,
                                 name: name.clone(),
                                 variables: self.environment.local_value_names(),
-                                discarded_location: self
+                                discarded_locations: self
                                     .environment
                                     .discarded_names
                                     .get(&eco_format!("_{name}"))

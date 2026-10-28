@@ -3724,14 +3724,33 @@ but no type in scope with that name."
         TypeError::UnknownVariable {
             location,
             variables,
-            discarded_location,
+            discarded_locations,
             name,
             type_with_name_in_scope,
             possible_modules,
         } => {
             let title = String::from("Unknown variable");
 
-            if let Some(ignored_location) = discarded_location {
+            if let Some(discarded_locations) = discarded_locations {
+                let mut extra_labels = Vec::with_capacity(discarded_locations.len());
+                for (i, label) in discarded_locations.iter().enumerate() {
+                    // If there's more than a label (this happens if we're
+                    // dealing with alternative patterns) we only want to add
+                    // some text to the last one!
+                    let is_last = i == discarded_locations.len() - 1;
+                    extra_labels.push(ExtraLabel {
+                        src_info: None,
+                        label: Label {
+                            span: *label,
+                            text: if is_last {
+                                Some("This value is discarded".into())
+                            } else {
+                                None
+                            },
+                        },
+                    });
+                }
+
                 let location = Location {
                     label: Label {
                         text: Some("So this is not in scope".into()),
@@ -3739,13 +3758,7 @@ but no type in scope with that name."
                     },
                     path: path.clone(),
                     src: src.clone(),
-                    extra_labels: vec![ExtraLabel {
-                        src_info: None,
-                        label: Label {
-                            text: Some("This value is discarded".into()),
-                            span: *ignored_location,
-                        },
-                    }],
+                    extra_labels,
                 };
                 Diagnostic {
                     title,

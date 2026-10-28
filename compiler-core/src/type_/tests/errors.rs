@@ -3286,6 +3286,51 @@ pub fn go() {
     );
 }
 
+#[test]
+fn discarded_argument_suggestion_is_given_for_alternative_patterns() {
+    assert_module_error!(
+        "
+pub fn main(y) {
+  case y {
+    [_x] | [_, _x] | _x -> x
+    _ -> todo
+  }
+}
+"
+    );
+}
+
+#[test]
+fn discarded_argument_suggestion_only_points_to_closest_discarded_values() {
+    assert_module_error!(
+        "
+pub fn main(_x, y) {
+//          ^^ This should have no label pointing to it!
+  case y {
+    [_x] | [_, _x] | _x -> x
+    _ -> todo
+  }
+}
+"
+    );
+}
+
+#[test]
+fn discarded_argument_suggestion_only_points_to_closest_discarded_values_2() {
+    assert_module_error!(
+        "
+pub fn main(y) {
+  case y {
+    _x -> todo
+//  ^^ This should have no label pointing to it!
+    [_x] | [_, _x] | _x -> x
+    _ -> todo
+  }
+}
+"
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/4693
 #[test]
 fn pattern_with_incorrect_arity() {
