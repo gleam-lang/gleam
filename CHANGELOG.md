@@ -205,6 +205,10 @@
   them to their original name.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- Fixed a bug where the language server "Add type annotation" code action would
+  be shown when hovering complex already annotated assignments of `use`.
+  ([Andrey Kozhev](https://github.com/ankddev))
+
 ## v1.19.2 - 2026-10-12
 
 ### Bug fixes
