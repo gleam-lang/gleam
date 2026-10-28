@@ -44,6 +44,20 @@
   alternative patterns.
   ([Andrey Kozhev](https://github.com/ankddev))
 
+- The language now offers a code action to undiscrd discarded variables to fix
+  one's code:
+
+  ```gleam
+  pub fn greet(_name: String) {
+    io.println(name)
+  }
+  ```
+
+  Using `name` here produces an error: the `_name` argument is discarded!
+  Triggering the code action on `name` will automatically change `_name` to
+  `name`.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server now allows to find references of `echo`. For example,
 
   ```gleam
