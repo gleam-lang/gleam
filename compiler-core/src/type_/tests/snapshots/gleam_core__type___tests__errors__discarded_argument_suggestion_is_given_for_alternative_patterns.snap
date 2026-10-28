@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main(y) {\n  case y {\n    [_x] | [_, _x] | _x -> x\n    _ -> todo\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main(y) {
+  case y {
+    [_x] | [_, _x] | _x -> x
+    _ -> todo
+  }
+}
+
+
+----- ERROR
+error: Unknown variable
+  ┌─ /src/one/two.gleam:4:28
+  │
+4 │     [_x] | [_, _x] | _x -> x
+  │      --        --    --    ^ So this is not in scope
+  │                      │      
+  │                      This value is discarded
+
+Hint: Change `_x` to `x` or reference another variable

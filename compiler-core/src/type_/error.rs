@@ -20,6 +20,7 @@ use num_bigint::BigInt;
 use pretty_assertions::assert_eq;
 use src_span::SrcSpan;
 use std::sync::Arc;
+use vec1::Vec1;
 
 /// Errors and warnings discovered when compiling a module.
 ///
@@ -169,7 +170,7 @@ pub enum Error {
         variables: Vec<EcoString>,
         /// If there's a discarded variable with the same name in the same scope
         /// this will contain its location.
-        discarded_location: Option<SrcSpan>,
+        discarded_locations: Option<Vec1<SrcSpan>>,
         type_with_name_in_scope: bool,
         /// Filled with the name of imported modules when the module has public value
         /// with the same name as this variable
@@ -1606,7 +1607,7 @@ pub fn convert_get_value_constructor_error(
             location,
             name,
             variables,
-            discarded_location: None,
+            discarded_locations: None,
             type_with_name_in_scope,
             possible_modules,
         },
