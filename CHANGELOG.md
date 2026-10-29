@@ -209,6 +209,10 @@
   projects.
   ([Leonuraht](https://github.com/Leonuraht))
 
+- Fixed a bug where the "Generate type" code action would put the generated type
+  in between a function and its documentation.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.19.2 - 2026-10-12
 
 ### Bug fixes

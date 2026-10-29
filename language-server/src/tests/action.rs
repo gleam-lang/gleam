@@ -8950,6 +8950,35 @@ pub fn main() {
 }
 
 #[test]
+fn generate_type_puts_type_before_a_doc_comment_of_the_preceding_function() {
+    assert_code_action!(
+        GENERATE_TYPE,
+        "
+/// Some doc comment for the function
+pub fn main() {
+  let x: Wobble = todo
+}
+",
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
+fn generate_type_puts_type_before_a_doc_comment_of_the_preceding_function_even_with_whitespace() {
+    assert_code_action!(
+        GENERATE_TYPE,
+        "
+/// Some doc comment for the function
+
+pub fn main() {
+  let x: Wobble = todo
+}
+",
+        find_position_of("Wobble").to_selection()
+    );
+}
+
+#[test]
 fn generate_function_works_with_constants() {
     assert_code_action!(
         GENERATE_FUNCTION,
