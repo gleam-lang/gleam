@@ -5519,7 +5519,7 @@ impl<'a, 'b> JsonEncoderPrinter<'a, 'b> {
                         Some(("gleam/option", "Option", [some])) => {
                             eco_format!(
                                 "{module_name}.nullable({encoded_value}, {encoder})",
-                                encoder = self.encoder_for("value", some, indent + 2)
+                                encoder = self.encoder_for("_", some, indent)
                             )
                         }
                         Some(("gleam/dict", "Dict", [key, value])) => {

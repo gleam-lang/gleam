@@ -196,7 +196,7 @@
   Now, it generates:
 
   ```gleam
-  #("wibble", json.nullable(wibble, json.int(value)))
+  #("wibble", json.nullable(wibble, json.int))
   ```
 
   ([Lucy McPhail](https://github.com/lucymcphail))

@@ -25,6 +25,6 @@ fn linked_list_to_json(linked_list: LinkedList) -> json.Json {
   let LinkedList(value:, next:) = linked_list
   json.object([
     #("value", json.int(value)),
-    #("next", json.nullable(next, linked_list_to_json(value))),
+    #("next", json.nullable(next, linked_list_to_json)),
   ])
 }
