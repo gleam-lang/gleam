@@ -9,6 +9,10 @@
 
 ### Compiler
 
+- The compiler now provides a clearer error message and hint when a comma is
+  missing between type constructor arguments.
+  ([dwaddle](https://github.com/dwaddle))
+
 - The compiler will now show "Unused variable" warning for each of alternative
   patterns.
   ([Andrey Kozhev](https://github.com/ankddev))

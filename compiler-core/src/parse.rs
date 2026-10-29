@@ -2806,12 +2806,26 @@ where
         &mut self,
     ) -> Result<(Vec<RecordConstructorArg<()>>, u32), ParseError> {
         if self.maybe_one(&Token::LeftParen).is_some() {
-            let arguments = self.series_of(
+            let (arguments, has_trailing_comma) = self.series_of_has_trailing_separator(
                 &|this| this.parse_record_constructor_field(),
                 Some(&Token::Comma),
             )?;
-            let (_, end) = self
-                .expect_one_following_series(&Token::RightParen, "a constructor argument name")?;
+            let (_, end) = if arguments.is_empty() || has_trailing_comma {
+                self.expect_one_following_series(&Token::RightParen, "a constructor argument name")?
+            } else {
+                match self.maybe_one(&Token::RightParen) {
+                    Some((start, end)) => (start, end),
+                    None => {
+                        return self.next_token_unexpected_with_hint(
+                            vec![
+                                Token::RightParen.to_string().into(),
+                                Token::Comma.to_string().into(),
+                            ],
+                            Some("Did you forget a comma between fields?".into()),
+                        );
+                    }
+                }
+            };
             Ok((arguments, end))
         } else {
             Ok((vec![], 0))
@@ -4589,13 +4603,21 @@ functions are declared separately from types.";
 
     // Unexpected token error on the next token or EOF
     fn next_token_unexpected<A>(&mut self, expected: Vec<EcoString>) -> Result<A, ParseError> {
+        self.next_token_unexpected_with_hint(expected, None)
+    }
+
+    fn next_token_unexpected_with_hint<A>(
+        &mut self,
+        expected: Vec<EcoString>,
+        hint: Option<EcoString>,
+    ) -> Result<A, ParseError> {
         match self.next_token() {
             None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
             Some((start, token, end)) => parse_error(
                 ParseErrorType::UnexpectedToken {
                     token,
                     expected,
-                    hint: None,
+                    hint,
                 },
                 SrcSpan { start, end },
             ),

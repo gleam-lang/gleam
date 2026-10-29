@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\ntype Wobble {\n  Wobble(\n    Nil,\n    Nil\n    Nil\n  )\n}\n"
+---
+----- SOURCE CODE
+
+type Wobble {
+  Wobble(
+    Nil,
+    Nil
+    Nil
+  )
+}
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:6:5
+  │
+6 │     Nil
+  │     ^^^ I was not expecting this
+
+Found a name, expected one of: 
+- `)`
+- `,`
+
+Hint: Did you forget a comma between fields?

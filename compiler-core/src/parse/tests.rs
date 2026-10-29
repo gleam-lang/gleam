@@ -1486,6 +1486,36 @@ type User {
 }
 
 #[test]
+fn type_record_constructor_missing_comma_between_fields() {
+    assert_module_error!(
+        "
+type Wobble {
+  Wobble(
+    a: Nil,
+    b: Nil
+    c: Nil
+  )
+}
+"
+    );
+}
+
+#[test]
+fn type_record_constructor_missing_comma_between_unlabeled_fields() {
+    assert_module_error!(
+        "
+type Wobble {
+  Wobble(
+    Nil,
+    Nil
+    Nil
+  )
+}
+"
+    );
+}
+
+#[test]
 fn type_invalid_type_name() {
     assert_module_error!(
         "
