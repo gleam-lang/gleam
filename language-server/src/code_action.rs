@@ -1354,20 +1354,34 @@ fn definition_start_and_publicity_containing(
     definitions: &TypedDefinitions,
     position: u32,
 ) -> Option<(u32, bool)> {
-    let functions = definitions
-        .functions
-        .iter()
-        .map(|function| (function.full_location(), function.publicity.is_public()));
+    let functions = definitions.functions.iter().map(|function| {
+        // If the function has any doc comments we want the generated type to
+        // end up above the doc comment too! So we consider the documentation's
+        // start as the start of the function definition.
+        let full_location_with_docs = match function.documentation {
+            None => function.full_location(),
+            Some((documentation_start, _)) => {
+                // The `documentation_start` we track here is the start of the
+                // written content right after the `///`, so we also need to
+                // subtract 3 here to make sure we start before the `///`.
+                SrcSpan::new(documentation_start - 3, function.full_location().end)
+            }
+        };
+        (full_location_with_docs, function.publicity.is_public())
+    });
+
     let custom_types = definitions.custom_types.iter().map(|custom_type| {
         (
             custom_type.full_location(),
             custom_type.publicity.is_public(),
         )
     });
+
     let type_aliases = definitions
         .type_aliases
         .iter()
         .map(|type_alias| (type_alias.location, type_alias.publicity.is_public()));
+
     let constants = definitions
         .constants
         .iter()
