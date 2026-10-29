@@ -6,6 +6,29 @@
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
 
+# The `FIX-DEADLINE` lines are used by the test suite, and once the date
+# they specify has passed they will cause a deadline check test to fail. This
+# is to ensure that we do not forget to fix these.
+#
+[[advisories.ignore]]
+id = "RUSTSEC-2026-0374"
+reason = """
+basic-toml (used by askama): Unmaintained.
+
+https://github.com/askama-rs/askama/issues/794
+
+FIX-DEADLINE: 2027-01-29
+"""
+
+[[advisories.ignore]]
+id = "RUSTSEC-2026-0387"
+reason = """
+crypto-bigint (used by age): Multiple timing variability issues in operations
+intended to be constant-time
+
+FIX-DEADLINE: 2027-01-29
+"""
+
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
 allow = [
