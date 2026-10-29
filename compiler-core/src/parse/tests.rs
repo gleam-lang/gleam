@@ -1508,6 +1508,21 @@ type A {
 }
 
 #[test]
+fn type_constructor_missing_comma_between_fields() {
+    assert_module_error!(
+        "
+type Wobble {
+  Wobble(
+    a: Nil,
+    b: Nil
+    c: Nil
+  )
+}
+"
+    );
+}
+
+#[test]
 fn type_invalid_record() {
     assert_module_error!(
         "
