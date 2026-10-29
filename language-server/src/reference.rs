@@ -399,15 +399,39 @@ pub fn reference_for_ast_node(
 
         Located::ClauseGuard(ClauseGuard::Var {
             location,
-            type_: _,
             name,
-            definition_location,
-            origin,
+            constructor:
+                ValueConstructor {
+                    variant:
+                        ValueConstructorVariant::LocalVariable {
+                            location: definition_location,
+                            origin,
+                        },
+                    ..
+                },
         }) => Some(Referenced::LocalVariable {
             definition_location: *definition_location,
             location: *location,
             origin: Some(origin.clone()),
             name: name.clone(),
+        }),
+
+        Located::ClauseGuard(ClauseGuard::Var {
+            name,
+            location,
+            constructor:
+                ValueConstructor {
+                    variant: ValueConstructorVariant::ModuleConstant { module, .. },
+                    ..
+                },
+            ..
+        }) => Some(Referenced::ModuleValue {
+            module: module.clone(),
+            name: name.clone(),
+            location: *location,
+            name_start: location.start,
+            name_kind: Named::Constant,
+            target_kind: RenameTarget::Unqualified,
         }),
 
         Located::ClauseGuard(ClauseGuard::ModuleSelect {
@@ -1045,15 +1069,22 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
         &mut self,
         location: &'ast SrcSpan,
         _name: &'ast EcoString,
-        _type_: &'ast std::sync::Arc<Type>,
-        definition_location: &'ast SrcSpan,
-        _origin: &'ast VariableOrigin,
+        constructor: &'ast ValueConstructor,
     ) {
-        if *definition_location == self.definition_origin_location() {
-            _ = self.references.insert(VariableReference {
-                location: *location,
-                kind: VariableReferenceKind::Variable,
-            });
+        match constructor.variant {
+            ValueConstructorVariant::LocalVariable {
+                location: definition_location,
+                ..
+            } if definition_location == self.definition_origin_location() => {
+                _ = self.references.insert(VariableReference {
+                    location: *location,
+                    kind: VariableReferenceKind::Variable,
+                });
+            }
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::ModuleConstant { .. }
+            | ValueConstructorVariant::ModuleFn { .. }
+            | ValueConstructorVariant::Record { .. } => {}
         }
     }
 

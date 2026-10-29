@@ -2535,10 +2535,8 @@ pub enum ClauseGuard<Type> {
 
     Var {
         location: SrcSpan,
-        type_: Type,
         name: EcoString,
-        definition_location: SrcSpan,
-        origin: VariableOrigin,
+        constructor: ValueConstructor<Type>,
     },
 
     TupleIndex {
@@ -2554,6 +2552,7 @@ pub enum ClauseGuard<Type> {
         label: EcoString,
         type_: Type,
         container: Box<Self>,
+        documentation: Option<EcoString>,
     },
 
     ModuleSelect {
@@ -2565,6 +2564,7 @@ pub enum ClauseGuard<Type> {
         module_name: EcoString,
         module_alias: EcoString,
         literal: Constant<Type>,
+        documentation: Option<EcoString>,
     },
 
     Constant(Constant<Type>),
@@ -2621,7 +2621,7 @@ impl<A> ClauseGuard<A> {
 impl TypedClauseGuard {
     pub fn type_(&self) -> Arc<Type> {
         match self {
-            ClauseGuard::Var { type_, .. } => type_.clone(),
+            ClauseGuard::Var { constructor, .. } => constructor.type_.clone(),
             ClauseGuard::TupleIndex { type_, .. } => type_.clone(),
             ClauseGuard::FieldAccess { type_, .. } => type_.clone(),
             ClauseGuard::ModuleSelect { type_, .. } => type_.clone(),
@@ -2704,6 +2704,15 @@ impl TypedClauseGuard {
 
     pub(crate) fn referenced_variables(&self) -> imbl::HashSet<&EcoString> {
         match self {
+            ClauseGuard::Var {
+                constructor:
+                    ValueConstructor {
+                        variant: ValueConstructorVariant::ModuleConstant { literal, .. },
+                        ..
+                    },
+                ..
+            } => literal.referenced_variables(),
+
             ClauseGuard::Var { name, .. } => imbl::hashset![name],
 
             ClauseGuard::Block { value, .. } => value.referenced_variables(),
@@ -2812,13 +2821,7 @@ impl TypedClauseGuard {
             | ClauseGuard::Invalid { .. }
             | ClauseGuard::FieldAccess { .. } => None,
             ClauseGuard::Constant(constant) => constant.definition_location(),
-            ClauseGuard::Var {
-                definition_location,
-                ..
-            } => Some(DefinitionLocation {
-                module: None,
-                span: *definition_location,
-            }),
+            ClauseGuard::Var { constructor, .. } => Some(constructor.definition_location()),
             ClauseGuard::ModuleSelect {
                 module_name,
                 definition_location,
@@ -2827,6 +2830,20 @@ impl TypedClauseGuard {
                 module: Some(module_name.clone()),
                 span: *definition_location,
             }),
+        }
+    }
+
+    pub fn get_documentation(&self) -> Option<&str> {
+        match self {
+            TypedClauseGuard::Var { constructor, .. } => constructor.get_documentation(),
+            TypedClauseGuard::ModuleSelect { documentation, .. } => documentation.as_deref(),
+            TypedClauseGuard::FieldAccess { documentation, .. } => documentation.as_deref(),
+            TypedClauseGuard::Block { .. }
+            | TypedClauseGuard::Not { .. }
+            | TypedClauseGuard::Invalid { .. }
+            | TypedClauseGuard::Constant(_)
+            | TypedClauseGuard::BinaryOperator { .. }
+            | TypedClauseGuard::TupleIndex { .. } => None,
         }
     }
 }
