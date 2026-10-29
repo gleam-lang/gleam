@@ -214,6 +214,7 @@ const REMOVE_REDUNDANT_LIST_PREPEND: &str = "Remove redundant list prepend";
 fn generate_variant_message(type_name: &str) -> String {
     format!("Generate `{type_name}` variant")
 }
+const EXTRACT_RECORD: &str = "Extract record";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range_selector:expr $(,)?) => {
@@ -16473,5 +16474,168 @@ fn no_remove_list_prepend_no_prepend() {
   let wibble = [1, 2]
 }",
         find_position_of("[1, 2]").to_selection()
+    );
+}
+
+#[test]
+fn extract_record() {
+    assert_code_action!(
+        EXTRACT_RECORD,
+        "
+pub type NewsPost {
+  NewsPost(
+    title: String,
+    subtitle: String,
+    author_name: String,
+    author_url: String,
+  )
+}
+",
+        find_position_of("author_name")
+            .select_until(find_position_of("author_url: String,").under_char(','))
+    );
+}
+
+#[test]
+fn extract_record_with_function_referencing_field() {
+    assert_code_action!(
+        EXTRACT_RECORD,
+        r#"
+pub type NewsPost {
+  NewsPost(
+    title: String,
+    subtitle: String,
+    author_name: String,
+    author_url: String,
+  )
+}
+
+pub fn display_post(post: NewsPost) -> String {
+  post.title <> " - " <> post.author_name
+}
+"#,
+        find_position_of("author_name")
+            .select_until(find_position_of("author_url: String,").under_char(','))
+    );
+}
+
+#[test]
+fn extract_record_with_multi_word_fields() {
+    assert_code_action!(
+        EXTRACT_RECORD,
+        r#"
+pub type NewsPost {
+  NewsPost(
+    title: String,
+    subtitle: String,
+    author_first_name: String,
+    author_last_name: String,
+    author_url: String,
+  )
+}
+
+pub fn display_post(post: NewsPost) -> String {
+  post.title <> " - " <> post.author_last_name <> ", " <> post.author_first_name
+}
+"#,
+        find_position_of("author_first_name")
+            .select_until(find_position_of("author_url: String,").under_char(','))
+    );
+}
+
+#[test]
+fn extract_record_with_multi_word_shared_prefix() {
+    assert_code_action!(
+        EXTRACT_RECORD,
+        r#"
+pub type City {
+  City(
+    name: String,
+    population: Int,
+    train_station_name: String,
+    train_station_code: String,
+  )
+}
+
+pub fn info(city: City) -> String {
+  city.name
+  <> " has train station "
+  <> city.train_station_name
+  <> " - "
+  <> city.train_station_code
+}
+"#,
+        find_position_of("train_station_name")
+            .select_until(find_position_of("train_station_code: String,").under_char(','))
+    );
+}
+
+#[test]
+fn extract_record_with_no_shared_prefix() {
+    assert_code_action!(
+        EXTRACT_RECORD,
+        r#"
+pub type City {
+  City(
+    name: String,
+    population: Int,
+    train_station: String,
+    station_code: String,
+  )
+}
+
+pub fn info(city: City) -> String {
+  city.name
+  <> " has train station "
+  <> city.train_station
+  <> " - "
+  <> city.station_code
+}
+"#,
+        find_position_of("train_station")
+            .select_until(find_position_of("station_code: String,").under_char(','))
+    );
+}
+
+#[test]
+fn extract_record_with_whole_field_shared_prefix() {
+    assert_code_action!(
+        EXTRACT_RECORD,
+        r#"
+pub type City {
+  City(
+    name: String,
+    population: Int,
+    population_density: Float,
+  )
+}
+
+pub fn info(city: City) -> #(Int, Float) {
+  #(city.population, city.population_density)
+}
+"#,
+        find_position_of("population")
+            .select_until(find_position_of("population_density: Float,").under_char(','))
+    );
+}
+
+#[test]
+fn extract_record_with_non_word_shared_prefix() {
+    // Ensure it doesn't pick up `cop` as a shared prefix, since it's not a
+    // full word
+    assert_code_action!(
+        EXTRACT_RECORD,
+        r#"
+pub type Book {
+  Book(
+    name: String,
+    author: String,
+    copies_sold: Int,
+    copyright_year: Int,
+  )
+}
+"#,
+        find_position_of("copies_sold")
+            .select_until(find_position_of("copyright_year: Int,").under_char(','))
     );
 }

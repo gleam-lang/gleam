@@ -1,0 +1,15 @@
+name = "argv"
+version = "1.1.0"
+description = "A cross platform library for getting the command line arguments"
+licences = ["Apache-2.0"]
+repository = { type = "github", user = "lpil", repo = "argv" }
+links = [
+  { title = "Website", href = "https://gleam.run" },
+  { title = "Sponsor", href = "https://github.com/sponsors/lpil" },
+]
+
+[javascript.deno]
+allow_read = true
+
+[dev-dependencies]
+gleam_stdlib = ">= 0.0.0 and < 2.0.0"

@@ -183,6 +183,42 @@
 
   ([0xda157](https://github.com/0xda157))
 
+- The language server now offers a new code action to extract a group of fields
+  from a custom type variant into a new type. For example:
+
+  ```gleam
+  pub type NewsPost {
+    NewsPost(
+      title: String,
+      subtitle: String,
+      published: calendar.Date,
+      author_name: String,
+    //^^^^^^^^^^^^^^^^^^^^
+      author_url: String,
+    //^^^^^^^^^^^^^^^^^^^ Trigger code action on these fields
+    )
+  }
+  ```
+
+  Becomes:
+
+  ```gleam
+  pub type NewsPost {
+    NewsPost(
+      title: String,
+      subtitle: String,
+      published: calendar.Date,
+      author: Author,
+    )
+  }
+
+  pub type Author {
+    Author(name: String, url: String)
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Bug fixes
 
 - Fixed a bug where the language server "Generate variant" code action would

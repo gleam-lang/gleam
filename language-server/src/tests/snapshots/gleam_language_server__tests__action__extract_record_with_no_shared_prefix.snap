@@ -1,0 +1,47 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub type City {\n  City(\n    name: String,\n    population: Int,\n    train_station: String,\n    station_code: String,\n  )\n}\n\npub fn info(city: City) -> String {\n  city.name\n  <> \" has train station \"\n  <> city.train_station\n  <> \" - \"\n  <> city.station_code\n}\n"
+---
+----- BEFORE ACTION
+
+pub type City {
+  City(
+    name: String,
+    population: Int,
+    train_station: String,
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+    station_code: String,
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑
+  )
+}
+
+pub fn info(city: City) -> String {
+  city.name
+  <> " has train station "
+  <> city.train_station
+  <> " - "
+  <> city.station_code
+}
+
+
+----- AFTER ACTION
+
+pub type City {
+  City(
+    name: String,
+    population: Int,
+    record: Record,
+  )
+}
+
+pub type Record {
+  Record(train_station: String, station_code: String)
+}
+
+pub fn info(city: City) -> String {
+  city.name
+  <> " has train station "
+  <> city.record.train_station
+  <> " - "
+  <> city.record.station_code
+}
