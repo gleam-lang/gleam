@@ -12819,6 +12819,33 @@ pub fn main() {
 }
 
 #[test]
+fn extract_function_selecting_space_in_between_let_and_value_does_not_extract_assignment() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  let basically_pi =
+    echo 3.15
+}
+"#,
+        find_position_of("    echo 3.15").select_until(find_position_of("5"))
+    );
+}
+
+#[test]
+fn extract_function_selecting_space_in_between_let_and_value_does_not_extract_assignment_2() {
+    assert_code_action!(
+        EXTRACT_FUNCTION,
+        r#"
+pub fn main() {
+  let basically_pi = echo 3.15
+}
+"#,
+        find_position_of(" echo 3.15").select_until(find_position_of("5"))
+    );
+}
+
+#[test]
 fn no_extract_function_selecting_multiple_case_branches() {
     assert_no_code_actions!(
         EXTRACT_FUNCTION,

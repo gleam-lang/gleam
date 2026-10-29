@@ -1,0 +1,23 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn main() {\n  let basically_pi =\n    echo 3.15\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let basically_pi =
+    echo 3.15
+▔▔▔▔▔▔▔▔▔▔▔▔↑
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let basically_pi =
+    function()
+}
+
+fn function() -> Float {
+  echo 3.15
+}
