@@ -1,0 +1,37 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn wibble(x) {\n  case x {\n    [n] | [0, n] | [0, 1, n, ..] -> case n {\n      0 | 1 | 2 | 3 -> todo\n      _ -> todo\n    }\n    _ -> todo\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn wibble(x) {
+  case x {
+    [n] | [0, n] | [0, 1, n, ..] -> case n {
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑                        
+      0 | 1 | 2 | 3 -> todo
+      _ -> todo
+    }
+    _ -> todo
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn wibble(x) {
+  case x {
+    [n] -> case n {
+      0 | 1 | 2 | 3 -> todo
+      _ -> todo
+    }
+    [0, n] -> case n {
+      0 | 1 | 2 | 3 -> todo
+      _ -> todo
+    }
+    [0, 1, n, ..] -> case n {
+      0 | 1 | 2 | 3 -> todo
+      _ -> todo
+    }
+    _ -> todo
+  }
+}

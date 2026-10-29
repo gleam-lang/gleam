@@ -1,0 +1,26 @@
+---
+source: language-server/src/tests/action.rs
+expression: "\npub fn wibble(x, y) {\n  case x, y {\n    0, 0 | 1, 1 | 2, 2 | 3, 3 -> todo\n    _ -> todo\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn wibble(x, y) {
+  case x, y {
+    0, 0 | 1, 1 | 2, 2 | 3, 3 -> todo
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑           
+    _ -> todo
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn wibble(x, y) {
+  case x, y {
+    0, 0 -> todo
+    1, 1 -> todo
+    2, 2 -> todo
+    3, 3 -> todo
+    _ -> todo
+  }
+}
