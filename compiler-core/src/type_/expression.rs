@@ -1173,7 +1173,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         return_annotation: None,
                     };
 
-                    let typed_block = self.infer_block(
+                    
+                    self.infer_block(
                         vec1![
                             Statement::Assignment(Box::new(Assignment {
                                 location: *call_location,
@@ -1186,8 +1187,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             Statement::Expression(fn_)
                         ],
                         *call_location,
-                    );
-                    typed_block
+                    )
                 }
 
                 UntypedExpr::Int { .. }
