@@ -214,6 +214,12 @@ pub struct Arg<T> {
     pub type_: T,
 }
 
+impl<A> HasLocation for Arg<A> {
+    fn location(&self) -> SrcSpan {
+        self.location
+    }
+}
+
 impl HasType for Arg<Arc<Type>> {
     fn type_(&self) -> Arc<Type> {
         self.type_.clone()
