@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "pub fn go(x) {\n  case x {\n    <<1:32 11:32>> -> todo\n    _ -> todo\n  }\n}"
+---
+----- SOURCE CODE
+pub fn go(x) {
+  case x {
+    <<1:32 11:32>> -> todo
+    _ -> todo
+  }
+}
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:12
+  │
+3 │     <<1:32 11:32>> -> todo
+  │           -^^ I was not expecting this
+  │           │ 
+  │           Did you forget a `,` here?
+
+Found an Int, expected one of: 
+- `>>`
+- `,`
