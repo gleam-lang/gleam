@@ -3019,3 +3019,13 @@ fn suggest_missing_comma_for_invalid_generic_in_type_definition() {
 fn suggest_missing_comma_for_invalid_function_type() {
     assert_module_error!("fn wibble() -> fn(a b) -> Int {}");
 }
+
+#[test]
+fn suggest_missing_comma_for_invalid_tuple_type() {
+    assert_module_error!("fn wibble() -> #(Int second)");
+}
+
+#[test]
+fn suggest_missing_comma_for_custom_type() {
+    assert_module_error!("fn wibble() -> Wibble(Int second)");
+}
