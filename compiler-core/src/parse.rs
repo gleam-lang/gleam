@@ -618,9 +618,12 @@ where
                 let _ = self
                     .expect_one(&Token::LeftParen)
                     .map_err(|error| self.add_comment_style_hint(error))?;
-                let elements = self.series_of(&Parser::parse_expression, Some(&Token::Comma))?;
-                let (_, end) =
-                    self.expect_one_following_series(&Token::RightParen, "an expression")?;
+                let (elements, end) = self.series_of_terminated_by(
+                    &Parser::parse_expression,
+                    Token::Comma,
+                    Token::RightParen,
+                    "an expression",
+                )?;
                 UntypedExpr::Tuple {
                     location: SrcSpan { start, end },
                     elements,
