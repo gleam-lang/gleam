@@ -81,12 +81,12 @@ fn int_tests() {
     assert_error!(
         "0b012",
         ParseError {
-            error: ParseErrorType::LexError {
+            error: Box::new(ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::DigitOutOfRadix,
                     location: SrcSpan { start: 4, end: 4 },
                 }
-            },
+            }),
             location: SrcSpan { start: 4, end: 4 },
         }
     );
@@ -94,12 +94,12 @@ fn int_tests() {
     assert_error!(
         "0o12345678",
         ParseError {
-            error: ParseErrorType::LexError {
+            error: Box::new(ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::DigitOutOfRadix,
                     location: SrcSpan { start: 9, end: 9 },
                 }
-            },
+            }),
             location: SrcSpan { start: 9, end: 9 },
         }
     );
@@ -107,12 +107,12 @@ fn int_tests() {
     assert_error!(
         "0x",
         ParseError {
-            error: ParseErrorType::LexError {
+            error: Box::new(ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::RadixIntNoValue,
                     location: SrcSpan { start: 1, end: 1 },
                 }
-            },
+            }),
             location: SrcSpan { start: 1, end: 1 },
         }
     );
@@ -120,12 +120,12 @@ fn int_tests() {
     assert_error!(
         "1_000_",
         ParseError {
-            error: ParseErrorType::LexError {
+            error: Box::new(ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::NumTrailingUnderscore,
                     location: SrcSpan { start: 5, end: 5 },
                 }
-            },
+            }),
             location: SrcSpan { start: 5, end: 5 },
         }
     );
@@ -136,12 +136,12 @@ fn string_bad_character_escape() {
     assert_error!(
         r#""\g""#,
         ParseError {
-            error: ParseErrorType::LexError {
+            error: Box::new(ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::BadStringEscape,
                     location: SrcSpan { start: 1, end: 2 },
                 }
-            },
+            }),
             location: SrcSpan { start: 1, end: 2 },
         }
     );
@@ -152,12 +152,12 @@ fn string_bad_character_escape_leading_backslash() {
     assert_error!(
         r#""\\\g""#,
         ParseError {
-            error: ParseErrorType::LexError {
+            error: Box::new(ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::BadStringEscape,
                     location: SrcSpan { start: 3, end: 4 },
                 }
-            },
+            }),
             location: SrcSpan { start: 3, end: 4 },
         }
     );
@@ -168,14 +168,14 @@ fn string_freestanding_unicode_escape_sequence() {
     assert_error!(
         r#""\u""#,
         ParseError {
-            error: ParseErrorType::LexError {
+            error: Box::new(ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::InvalidUnicodeEscape(
                         InvalidUnicodeEscapeError::MissingOpeningBrace,
                     ),
                     location: SrcSpan { start: 2, end: 3 },
                 }
-            },
+            }),
             location: SrcSpan { start: 2, end: 3 },
         }
     );
@@ -186,14 +186,14 @@ fn string_unicode_escape_sequence_no_braces() {
     assert_error!(
         r#""\u65""#,
         ParseError {
-            error: ParseErrorType::LexError {
+            error: Box::new(ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::InvalidUnicodeEscape(
                         InvalidUnicodeEscapeError::MissingOpeningBrace,
                     ),
                     location: SrcSpan { start: 2, end: 3 },
                 }
-            },
+            }),
             location: SrcSpan { start: 2, end: 3 },
         }
     );
@@ -204,14 +204,14 @@ fn string_unicode_escape_sequence_invalid_hex() {
     assert_error!(
         r#""\u{z}""#,
         ParseError {
-            error: ParseErrorType::LexError {
+            error: Box::new(ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::InvalidUnicodeEscape(
                         InvalidUnicodeEscapeError::ExpectedHexDigitOrCloseBrace,
                     ),
                     location: SrcSpan { start: 4, end: 5 },
                 }
-            },
+            }),
             location: SrcSpan { start: 4, end: 5 },
         }
     );
@@ -222,14 +222,14 @@ fn string_unclosed_unicode_escape_sequence() {
     assert_error!(
         r#""\u{039a""#,
         ParseError {
-            error: ParseErrorType::LexError {
+            error: Box::new(ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::InvalidUnicodeEscape(
                         InvalidUnicodeEscapeError::ExpectedHexDigitOrCloseBrace,
                     ),
                     location: SrcSpan { start: 8, end: 9 },
                 }
-            },
+            }),
             location: SrcSpan { start: 8, end: 9 },
         }
     );
@@ -240,14 +240,14 @@ fn string_empty_unicode_escape_sequence() {
     assert_error!(
         r#""\u{}""#,
         ParseError {
-            error: ParseErrorType::LexError {
+            error: Box::new(ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::InvalidUnicodeEscape(
                         InvalidUnicodeEscapeError::InvalidNumberOfHexDigits,
                     ),
                     location: SrcSpan { start: 1, end: 5 },
                 }
-            },
+            }),
             location: SrcSpan { start: 1, end: 5 },
         }
     );
@@ -258,14 +258,14 @@ fn string_overlong_unicode_escape_sequence() {
     assert_error!(
         r#""\u{0011f601}""#,
         ParseError {
-            error: ParseErrorType::LexError {
+            error: Box::new(ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::InvalidUnicodeEscape(
                         InvalidUnicodeEscapeError::InvalidNumberOfHexDigits,
                     ),
                     location: SrcSpan { start: 1, end: 13 },
                 }
-            },
+            }),
             location: SrcSpan { start: 1, end: 13 },
         }
     );
@@ -276,14 +276,14 @@ fn string_invalid_unicode_escape_sequence() {
     assert_error!(
         r#""\u{110000}""#,
         ParseError {
-            error: ParseErrorType::LexError {
+            error: Box::new(ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::InvalidUnicodeEscape(
                         InvalidUnicodeEscapeError::InvalidCodepoint,
                     ),
                     location: SrcSpan { start: 1, end: 11 },
                 }
-            },
+            }),
             location: SrcSpan { start: 1, end: 11 },
         }
     );
@@ -295,7 +295,7 @@ fn bit_array() {
     assert_error!(
         "let x = <<1:unit(0)>> x",
         ParseError {
-            error: ParseErrorType::InvalidBitArrayUnit,
+            error: Box::new(ParseErrorType::InvalidBitArrayUnit),
             location: SrcSpan { start: 17, end: 18 }
         }
     );
@@ -306,7 +306,7 @@ fn bit_array1() {
     assert_error!(
         "let x = <<1:unit(257)>> x",
         ParseError {
-            error: ParseErrorType::InvalidBitArrayUnit,
+            error: Box::new(ParseErrorType::InvalidBitArrayUnit),
             location: SrcSpan { start: 17, end: 20 }
         }
     );
@@ -318,7 +318,7 @@ fn bit_array2() {
     assert_error!(
         "case <<>> { <<<<1>>:bits>> -> 1 }",
         ParseError {
-            error: ParseErrorType::NestedBitArrayPattern,
+            error: Box::new(ParseErrorType::NestedBitArrayPattern),
             location: SrcSpan { start: 14, end: 19 }
         }
     );
@@ -331,12 +331,12 @@ fn triple_equals() {
         "let wobble:Int = 32
         wobble === 42",
         ParseError {
-            error: ParseErrorType::LexError {
+            error: Box::new(ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::InvalidTripleEqual,
                     location: SrcSpan { start: 35, end: 38 },
                 }
-            },
+            }),
             location: SrcSpan { start: 35, end: 38 },
         }
     );
@@ -348,7 +348,7 @@ fn triple_equals_with_whitespace() {
         "let wobble:Int = 32
         wobble ==     = 42",
         ParseError {
-            error: ParseErrorType::OpNakedRight,
+            error: Box::new(ParseErrorType::OpNakedRight),
             location: SrcSpan { start: 35, end: 37 },
         }
     );
@@ -525,7 +525,7 @@ fn anonymous_function_labeled_arguments() {
 }",
         ParseError {
             location: SrcSpan { start: 24, end: 31 },
-            error: ParseErrorType::UnexpectedLabel
+            error: Box::new(ParseErrorType::UnexpectedLabel)
         }
     );
 }
@@ -536,7 +536,7 @@ fn no_let_binding() {
         "wibble = 32",
         ParseError {
             location: SrcSpan { start: 7, end: 8 },
-            error: ParseErrorType::NoLetBinding
+            error: Box::new(ParseErrorType::NoLetBinding)
         }
     );
 }
@@ -547,7 +547,7 @@ fn no_let_binding1() {
         "wibble:Int = 32",
         ParseError {
             location: SrcSpan { start: 6, end: 7 },
-            error: ParseErrorType::NoLetBinding
+            error: Box::new(ParseErrorType::NoLetBinding)
         }
     );
 }
@@ -559,7 +559,7 @@ fn no_let_binding2() {
         wobble = 42",
         ParseError {
             location: SrcSpan { start: 35, end: 36 },
-            error: ParseErrorType::NoLetBinding
+            error: Box::new(ParseErrorType::NoLetBinding)
         }
     );
 }
@@ -570,7 +570,7 @@ fn no_let_binding3() {
         "[x] = [2]",
         ParseError {
             location: SrcSpan { start: 4, end: 5 },
-            error: ParseErrorType::NoLetBinding
+            error: Box::new(ParseErrorType::NoLetBinding)
         }
     );
 }
@@ -592,7 +592,7 @@ fn no_eq_after_binding() {
         "let wibble",
         ParseError {
             location: SrcSpan { start: 4, end: 10 },
-            error: ParseErrorType::ExpectedEqual
+            error: Box::new(ParseErrorType::ExpectedEqual)
         }
     );
 }
@@ -604,7 +604,7 @@ fn no_eq_after_binding1() {
         wibble = 4",
         ParseError {
             location: SrcSpan { start: 4, end: 10 },
-            error: ParseErrorType::ExpectedEqual
+            error: Box::new(ParseErrorType::ExpectedEqual)
         }
     );
 }

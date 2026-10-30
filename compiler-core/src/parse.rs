@@ -996,14 +996,14 @@ where
                                 {
                                     return match self.parse_const_value() {
                                         Ok(None) | Err(_) => Err(ParseError {
-                                            error: ParseErrorType::UnexpectedToken {
+                                            error: Box::new(ParseErrorType::UnexpectedToken {
                                                 token: Token::DotDot,
                                                 expected: vec![
                                                     Token::RightParen.to_string().into(),
                                                 ],
                                                 hint: None,
                                                 missing_token: None,
-                                            },
+                                            }),
                                             location: SrcSpan {
                                                 start: dot_dot_start,
                                                 end: dot_dot_end,
@@ -1019,7 +1019,9 @@ where
 
                                             Err(ParseError {
                                                 location: update_location,
-                                                error: ParseErrorType::RecordUpdateAfterFields,
+                                                error: Box::new(
+                                                    ParseErrorType::RecordUpdateAfterFields,
+                                                ),
                                             })
                                         }
                                     };
@@ -1041,7 +1043,7 @@ where
     }
 
     fn add_comment_style_hint(&self, mut err: ParseError) -> ParseError {
-        if let ParseErrorType::UnexpectedToken { ref mut hint, .. } = err.error {
+        if let ParseErrorType::UnexpectedToken { ref mut hint, .. } = *err.error {
             let text =
                 "Maybe you meant to create a comment?\nComments in Gleam start with `//`, not `#`";
             *hint = Some(text.into());
@@ -1098,7 +1100,7 @@ where
         let pattern = self
             .parse_pattern(PatternPosition::UsePattern)?
             .ok_or_else(|| ParseError {
-                error: ParseErrorType::ExpectedPattern,
+                error: Box::new(ParseErrorType::ExpectedPattern),
                 location: SrcSpan { start, end: start },
             })?;
 
@@ -1134,7 +1136,7 @@ where
                 Some(constant) => Some(Box::new(constant)),
                 None => {
                     return Err(ParseError {
-                        error: ParseErrorType::MissingConstantAsMessage,
+                        error: Box::new(ParseErrorType::MissingConstantAsMessage),
                         location: SrcSpan::new(as_start, as_end),
                     });
                 }
@@ -1168,7 +1170,7 @@ where
         };
         let annotation = self.parse_type_annotation(&Token::Colon)?;
         let (eq_s, eq_e) = self.maybe_one(&Token::Equal).ok_or(ParseError {
-            error: ParseErrorType::ExpectedEqual,
+            error: Box::new(ParseErrorType::ExpectedEqual),
             location: SrcSpan {
                 start: pattern.location().start,
                 end: pattern.location().end,
@@ -1178,14 +1180,14 @@ where
             .parse_expression_inner(true)?
             .ok_or(match self.token0 {
                 Some((start, Token::DiscardName { .. }, end)) => ParseError {
-                    error: ParseErrorType::IncorrectName {
+                    error: Box::new(ParseErrorType::IncorrectName {
                         kind: IncorrectNamePosition::Variable,
-                    },
+                    }),
                     location: SrcSpan { start, end },
                 },
 
                 _ => ParseError {
-                    error: ParseErrorType::ExpectedValue,
+                    error: Box::new(ParseErrorType::ExpectedValue),
                     location: SrcSpan {
                         start: eq_s,
                         end: eq_e,
@@ -1716,7 +1718,7 @@ where
     }
 
     fn add_multi_line_clause_hint(&self, mut err: ParseError) -> ParseError {
-        if let ParseErrorType::UnexpectedToken { ref mut hint, .. } = err.error {
+        if let ParseErrorType::UnexpectedToken { ref mut hint, .. } = *err.error {
             *hint = Some("Did you mean to wrap a multi line clause in curly braces?".into());
         }
         err
@@ -2264,7 +2266,7 @@ where
         }
         if let Some((less_start, less_end)) = self.maybe_one(&Token::Less) {
             return Err(ParseError {
-                error: ParseErrorType::FunctionDefinitionAngleGenerics,
+                error: Box::new(ParseErrorType::FunctionDefinitionAngleGenerics),
                 location: SrcSpan {
                     start: less_start,
                     end: less_end,
@@ -2284,12 +2286,12 @@ where
         // Check for TypeScript-style return type annotation (:) instead of arrow (->)
         if let Some((colon_start, colon_end)) = self.maybe_one(&Token::Colon) {
             return Err(ParseError {
-                error: ParseErrorType::UnexpectedToken {
+                error: Box::new(ParseErrorType::UnexpectedToken {
                     token: Token::Colon,
                     expected: vec![Token::RArrow.to_string().into()],
                     hint: Some("Return type annotations are written using `->`, not `:`".into()),
                     missing_token: None,
-                },
+                }),
                 location: SrcSpan {
                     start: colon_start,
                     end: colon_end,
@@ -2357,7 +2359,7 @@ where
             ref mut hint,
             token: Token::Name { .. },
             ..
-        } = err.error
+        } = *err.error
         {
             *hint = Some("Only module-level functions can be named.".into());
         }
@@ -2376,7 +2378,7 @@ where
                 attribute_location: Some(location),
             }),
             (InternalAttribute::Present(location), false) => Err(ParseError {
-                error: ParseErrorType::RedundantInternalAttribute,
+                error: Box::new(ParseErrorType::RedundantInternalAttribute),
                 location,
             }),
         }
@@ -2797,18 +2799,18 @@ where
                         .map_or(name_start, |field| field.location.start),
                     end: fields.last().map_or(name_end, |field| field.location.end),
                 },
-                error: ParseErrorType::ExpectedRecordConstructor {
+                error: Box::new(ParseErrorType::ExpectedRecordConstructor {
                     type_name,
                     public,
                     opaque,
                     fields,
-                },
+                }),
             },
 
             // Otherwise we fall back to telling them the lowercase name should
             // be uppercased!
             Ok(_) | Err(_) => ParseError {
-                error: ParseErrorType::IncorrectUpName,
+                error: Box::new(ParseErrorType::IncorrectUpName),
                 location: SrcSpan {
                     start: name_start,
                     end: name_end,
@@ -2926,10 +2928,10 @@ where
             }
 
             Err(ParseError {
-                error: ParseErrorType::TypeDefinitionAngleGenerics {
+                error: Box::new(ParseErrorType::TypeDefinitionAngleGenerics {
                     name: upname,
                     arguments,
-                },
+                }),
                 location: SrcSpan {
                     start: less_start,
                     end: less_end,
@@ -3085,7 +3087,7 @@ where
             // expecting a type name instead:
             if name.name().is_none() {
                 return Err(ParseError {
-                    error: ParseErrorType::ExpectedUpName,
+                    error: Box::new(ParseErrorType::ExpectedUpName),
                     location: SrcSpan::new(left_paren_start, left_paren_end),
                 });
             }
@@ -3119,7 +3121,7 @@ where
                 // error saying we were expecting an uppercase name
                 TypeAstConstructorName::Qualified { name: None, .. } => {
                     return Err(ParseError {
-                        error: ParseErrorType::ExpectedUpName,
+                        error: Box::new(ParseErrorType::ExpectedUpName),
                         location,
                     });
                 }
@@ -3130,11 +3132,11 @@ where
             let arguments = self.series_of(&|this| this.parse_type(), Some(&Token::Comma))?;
             Err(ParseError {
                 location,
-                error: ParseErrorType::TypeUsageAngleGenerics {
+                error: Box::new(ParseErrorType::TypeUsageAngleGenerics {
                     name,
                     module,
                     arguments,
-                },
+                }),
             })
         } else {
             Ok(Some(TypeAst::Constructor(TypeAstConstructor {
@@ -3208,16 +3210,16 @@ where
                 let ParseErrorType::UnexpectedToken {
                     token: Token::Name { name } | Token::UpName { name },
                     ..
-                } = &e.error
+                } = *e.error
                 else {
                     return Err(e);
                 };
 
                 return Err(ParseError {
-                    error: ParseErrorType::IncorrectImportModuleSeparator {
+                    error: Box::new(ParseErrorType::IncorrectImportModuleSeparator {
                         module,
-                        item: name.clone(),
-                    },
+                        item: name,
+                    }),
                     location: SrcSpan::new(dot_start, dot_end),
                 });
             }
@@ -3774,12 +3776,12 @@ where
                     if let Some((dot_dot_start, dot_dot_end)) = self.maybe_one(&Token::DotDot) {
                         return match self.parse_const_value() {
                             Ok(None) | Err(_) => Err(ParseError {
-                                error: ParseErrorType::UnexpectedToken {
+                                error: Box::new(ParseErrorType::UnexpectedToken {
                                     token: Token::DotDot,
                                     expected: vec![Token::RightParen.to_string().into()],
                                     hint: None,
                                     missing_token: None,
-                                },
+                                }),
                                 location: SrcSpan {
                                     start: dot_dot_start,
                                     end: dot_dot_end,
@@ -3798,7 +3800,7 @@ where
 
                                 Err(ParseError {
                                     location: update_location,
-                                    error: ParseErrorType::RecordUpdateAfterFields,
+                                    error: Box::new(ParseErrorType::RecordUpdateAfterFields),
                                 })
                             }
                         };
@@ -4044,7 +4046,7 @@ where
                                     })),
 
                                     _ => Err(ParseError {
-                                        error: ParseErrorType::InvalidBitArrayUnit,
+                                        error: Box::new(ParseErrorType::InvalidBitArrayUnit),
                                         location: SrcSpan {
                                             start: int_s,
                                             end: int_e,
@@ -4075,7 +4077,7 @@ where
                 } else {
                     str_to_bit_array_option(&name, SrcSpan { start, end })
                         .ok_or(ParseError {
-                            error: ParseErrorType::InvalidBitArraySegment,
+                            error: Box::new(ParseErrorType::InvalidBitArraySegment),
                             location: SrcSpan { start, end },
                         })
                         .map(Some)
@@ -4852,7 +4854,7 @@ functions are declared separately from types.";
         let end = match name.as_str() {
             "external" => {
                 let _ = self.maybe_one(&Token::LeftParen).ok_or(ParseError {
-                    error: ParseErrorType::ExpectedExternalArguments,
+                    error: Box::new(ParseErrorType::ExpectedExternalArguments),
                     location: SrcSpan { start, end },
                 })?;
                 self.parse_external_attribute(start, end, attributes)
@@ -4921,14 +4923,14 @@ functions are declared separately from types.";
         attributes: &mut Attributes,
     ) -> Result<u32, ParseError> {
         let _ = self.expect_one(&Token::LeftParen).map_err(|_| ParseError {
-            error: ParseErrorType::ExpectedDeprecationMessage,
+            error: Box::new(ParseErrorType::ExpectedDeprecationMessage),
             location: SrcSpan { start, end },
         })?;
         if attributes.deprecated.is_deprecated() {
             return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan::new(start, end));
         }
         let (_, message, _) = self.expect_string().map_err(|_| ParseError {
-            error: ParseErrorType::ExpectedDeprecationMessage,
+            error: Box::new(ParseErrorType::ExpectedDeprecationMessage),
             location: SrcSpan { start, end },
         })?;
         let (_, end) = self.expect_one(&Token::RightParen)?;
@@ -4959,7 +4961,7 @@ functions are declared separately from types.";
 
 fn concat_pattern_variable_left_hand_side_error<T>(start: u32, end: u32) -> Result<T, ParseError> {
     Err(ParseError {
-        error: ParseErrorType::ConcatPatternVariableLeftHandSide,
+        error: Box::new(ParseErrorType::ConcatPatternVariableLeftHandSide),
         location: SrcSpan::new(start, end),
     })
 }
@@ -4970,7 +4972,7 @@ fn concat_pattern_variable_with_suffix<T>(
     end: u32,
 ) -> Result<T, ParseError> {
     Err(ParseError {
-        error: ParseErrorType::ConcatPatternVariableWithSuffix { name },
+        error: Box::new(ParseErrorType::ConcatPatternVariableWithSuffix { name }),
         location: SrcSpan::new(start, end),
     })
 }
@@ -5389,7 +5391,10 @@ fn str_to_bit_array_option<A>(lit: &str, location: SrcSpan) -> Option<BitArrayOp
 // Error Helpers
 //
 fn parse_error<T>(error: ParseErrorType, location: SrcSpan) -> Result<T, ParseError> {
-    Err(ParseError { error, location })
+    Err(ParseError {
+        error: Box::new(error),
+        location,
+    })
 }
 
 //

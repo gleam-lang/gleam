@@ -62,7 +62,7 @@ pub enum LexicalErrorType {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParseError {
-    pub error: ParseErrorType,
+    pub error: Box<ParseErrorType>,
     pub location: SrcSpan,
 }
 
@@ -607,7 +607,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     Some((span, token)) => vec![ExtraLabel {
                         src_info: None,
                         label: Label {
-                            text: Some(format!("Did you forget a {} here?", token.to_string())),
+                            text: Some(format!("Did you forget a {token} here?")),
                             span: *span,
                         },
                     }],
