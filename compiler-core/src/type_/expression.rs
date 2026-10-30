@@ -1088,18 +1088,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         return_annotation: Option<TypeAst>,
         location: SrcSpan,
     ) -> TypedExpr {
+        // Normally, a function capture like:
         // ```
-        // <fun>(_)
+        // <function>(a, _, b)
+        // ```
+        // is compiled as:
+        // ```
+        // fn(_capture) { <function>(a, _capture, b) }
         // ```
         //
-        // fn (arguments) { <fun> (arguments) }
-        //
-        // ---
-        //
+        // However, if `<function>` is an `UntypedExpr::Call`, `UntypedExpr::TupleIndex`,
+        // or `UntypedExpr::FieldAccess`, we want to capture the function returned by
+        // that expression. To avoid re-evaluating `<function>` on every call, it is
+        // compiled into a block that binds the result to a temporary variable first:
+        // ```
         // {
-        //   let tmp = <fun>
-        //   fn (_capture) { tmp(_capture) }
+        //   let tmp = <function> // Evaluate <function> and assign it to `tmp`
+        //   fn(_capture) { tmp(a, _capture, b) }
         // }
+        // ```
+        //
+        // Note: Variables are distinguished by their `location` (`SrcSpan`), so they
+        // must be set carefully. In particular, the location of the compiler-generated
+        // variable `tmp` and the location of the anonymous function argument `_capture`
+        // must be distinct.
         if let Statement::Expression(UntypedExpr::Call {
             location: call_location,
             fun,

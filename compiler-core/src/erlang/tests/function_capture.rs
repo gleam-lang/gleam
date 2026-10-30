@@ -64,3 +64,48 @@ pub fn main() {
 }"#,
     );
 }
+
+#[test]
+fn capture_does_not_collide_with_tmp_variable_0
+() {
+    assert_erl!(
+r#"
+pub fn main() {
+  let func = fn() {
+    fn(x) { x }
+  }
+  let tmp = func()(_)
+
+  tmp(0)
+}"#,
+);
+}
+
+#[test]
+fn capture_does_not_collide_with_tmp_variable_1() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  let tmp = fn() {
+    fn(x) { x }
+  }
+  let f = tmp()(_)
+
+  f(0)
+}"#,
+    );
+}
+
+#[test]
+fn capture_does_not_collide_with_tmp_variable_2() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  let tmp = fn(x, y) { x + y }
+  let func = fn() { tmp }
+  let tmp = func()(1, _)
+
+  tmp(2)
+}"#,
+    );
+}
