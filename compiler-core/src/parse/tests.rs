@@ -2944,3 +2944,41 @@ pub const invalid = wibble(1)
 "
     );
 }
+
+#[test]
+fn error_message_for_missing_comma_after_record_field() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(Int String)
+}
+"
+    );
+}
+
+#[test]
+fn error_message_for_missing_comma_after_record_field_on_multiple_lines() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(
+    wibble: Int
+    wobble: String
+  )
+}
+"
+    );
+}
+
+#[test]
+fn do_not_suggest_comma_for_totally_invalid_record_definition() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(
+    wibble: Int
+  }
+}
+"
+    );
+}

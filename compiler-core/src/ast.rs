@@ -339,6 +339,12 @@ pub struct RecordConstructorArg<T> {
     pub doc: Option<(u32, EcoString)>,
 }
 
+impl<A> HasLocation for RecordConstructorArg<A> {
+    fn location(&self) -> SrcSpan {
+        self.location
+    }
+}
+
 impl<T: PartialEq> RecordConstructorArg<T> {
     pub fn put_doc(&mut self, new_doc: (u32, EcoString)) {
         self.doc = Some(new_doc);
