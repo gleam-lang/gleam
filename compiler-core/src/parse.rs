@@ -2882,8 +2882,12 @@ where
     ) -> Result<(u32, EcoString, Vec<SpannedString>, u32, u32), ParseError> {
         let (start, upname, end) = self.expect_upname()?;
         if let Some((par_s, _)) = self.maybe_one(&Token::LeftParen) {
-            let arguments = self.series_of(&|this| Ok(this.maybe_name()), Some(&Token::Comma))?;
-            let (_, par_e) = self.expect_one_following_series(&Token::RightParen, "a name")?;
+            let (arguments, par_e) = self.series_of_terminated_by(
+                &|this| Ok(this.maybe_name()),
+                Token::Comma,
+                Token::RightParen,
+                "a name",
+            )?;
             if arguments.is_empty() {
                 return parse_error(
                     ParseErrorType::TypeDefinitionNoArguments,

@@ -3009,3 +3009,8 @@ fn suggest_missing_comma_for_invalid_tuple_pattern_element() {
 fn suggest_missing_comma_for_invalid_function_param() {
     assert_module_error!("pub fn go(wibble: Int wobble: String) {}");
 }
+
+#[test]
+fn suggest_missing_comma_for_invalid_generic_in_type_definition() {
+    assert_module_error!("type Wibble(first second)");
+}
