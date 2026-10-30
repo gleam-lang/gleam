@@ -1059,12 +1059,20 @@ where
     fn parse_use(&mut self, start: u32, end: u32) -> Result<UntypedStatement, ParseError> {
         let assignments = match self.token0 {
             Some((_, Token::LArrow, _)) => {
+                self.advance();
                 vec![]
             }
-            _ => self.series_of(&Parser::parse_use_assignment, Some(&Token::Comma))?,
+            _ => {
+                let (assignments, _) = self.series_of_terminated_by(
+                    &Parser::parse_use_assignment,
+                    Token::Comma,
+                    Token::LArrow,
+                    "a use variable assignment",
+                )?;
+                assignments
+            }
         };
 
-        _ = self.expect_one_following_series(&Token::LArrow, "a use variable assignment")?;
         let call = self.expect_expression()?;
 
         let assignments_location = match (assignments.first(), assignments.last()) {
