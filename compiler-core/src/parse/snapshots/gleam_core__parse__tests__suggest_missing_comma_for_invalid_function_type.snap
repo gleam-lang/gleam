@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "fn wibble() -> fn(a b) -> Int {}"
+---
+----- SOURCE CODE
+fn wibble() -> fn(a b) -> Int {}
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:21
+  │
+1 │ fn wibble() -> fn(a b) -> Int {}
+  │                    -^ I was not expecting this
+  │                    │ 
+  │                    Did you forget a `,` here?
+
+Found a name, expected one of: 
+- `)`
+- `,`

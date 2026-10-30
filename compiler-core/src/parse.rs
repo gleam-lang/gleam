@@ -2980,8 +2980,12 @@ where
             Some((start, Token::Fn, _)) => {
                 self.advance();
                 let _ = self.expect_one(&Token::LeftParen)?;
-                let arguments = self.series_of(&|this| this.parse_type(), Some(&Token::Comma))?;
-                let _ = self.expect_one_following_series(&Token::RightParen, "a type")?;
+                let (arguments, _) = self.series_of_terminated_by(
+                    &Parser::parse_type,
+                    Token::Comma,
+                    Token::RightParen,
+                    "a type",
+                )?;
                 let (arr_s, arr_e) = self.expect_one(&Token::RArrow)?;
                 let return_ = self.parse_type()?;
                 match return_ {

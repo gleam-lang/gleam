@@ -508,8 +508,8 @@ pub enum TypeAst {
     Hole(TypeAstHole),
 }
 
-impl TypeAst {
-    pub fn location(&self) -> SrcSpan {
+impl HasLocation for TypeAst {
+    fn location(&self) -> SrcSpan {
         match self {
             TypeAst::Fn(TypeAstFn { location, .. })
             | TypeAst::Var(TypeAstVar { location, .. })
@@ -518,7 +518,9 @@ impl TypeAst {
             | TypeAst::Constructor(TypeAstConstructor { location, .. }) => *location,
         }
     }
+}
 
+impl TypeAst {
     pub fn is_logically_equal(&self, other: &TypeAst) -> bool {
         match self {
             TypeAst::Constructor(TypeAstConstructor {
