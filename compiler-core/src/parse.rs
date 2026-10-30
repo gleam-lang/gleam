@@ -1521,9 +1521,12 @@ where
             Some((start, Token::Hash, _)) => {
                 self.advance();
                 let _ = self.expect_one(&Token::LeftParen)?;
-                let elements =
-                    self.series_of(&|this| this.parse_pattern(position), Some(&Token::Comma))?;
-                let (_, end) = self.expect_one_following_series(&Token::RightParen, "a pattern")?;
+                let (elements, end) = self.series_of_terminated_by(
+                    &|this| this.parse_pattern(position),
+                    Token::Comma,
+                    Token::RightParen,
+                    "a pattern",
+                )?;
                 Pattern::Tuple {
                     location: SrcSpan { start, end },
                     elements,
