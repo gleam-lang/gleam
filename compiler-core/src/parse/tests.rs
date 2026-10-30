@@ -3014,3 +3014,8 @@ fn suggest_missing_comma_for_invalid_function_param() {
 fn suggest_missing_comma_for_invalid_generic_in_type_definition() {
     assert_module_error!("type Wibble(first second)");
 }
+
+#[test]
+fn suggest_missing_comma_for_invalid_function_type() {
+    assert_module_error!("fn wibble() -> fn(a b) -> Int {}");
+}

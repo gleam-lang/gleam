@@ -7,9 +7,9 @@ use gleam_core::{
     Error, Result, Warning,
     analyse::name::correct_name_case,
     ast::{
-        self, Constant, CustomType, DefinitionLocation, ModuleConstant, PatternUnusedArguments,
-        TypedArg, TypedClauseGuard, TypedConstant, TypedExpr, TypedFunction, TypedModule,
-        TypedPattern, TypedRecordConstructor,
+        self, Constant, CustomType, DefinitionLocation, HasLocation, ModuleConstant,
+        PatternUnusedArguments, TypedArg, TypedClauseGuard, TypedConstant, TypedExpr,
+        TypedFunction, TypedModule, TypedPattern, TypedRecordConstructor,
     },
     build::{
         ExpressionPosition, Located, Module, UnqualifiedImport, type_constructor_from_modules,
