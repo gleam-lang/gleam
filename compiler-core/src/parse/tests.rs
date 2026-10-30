@@ -3029,3 +3029,25 @@ fn suggest_missing_comma_for_invalid_tuple_type() {
 fn suggest_missing_comma_for_custom_type() {
     assert_module_error!("fn wibble() -> Wibble(Int second)");
 }
+
+#[test]
+fn suggest_missing_comma_for_bit_array_expression() {
+    assert_error!("<<1:32 11:32>>");
+}
+
+#[test]
+fn suggest_missing_comma_for_bit_array_constant() {
+    assert_module_error!("const wibble = <<1:32 11:32>>");
+}
+
+#[test]
+fn suggest_missing_comma_for_bit_array_pattern() {
+    assert_module_error!(
+        "pub fn go(x) {
+  case x {
+    <<1:32 11:32>> -> todo
+    _ -> todo
+  }
+}"
+    );
+}

@@ -729,7 +729,7 @@ where
             // BitArray
             Some((start, Token::LtLt, _)) => {
                 self.advance();
-                let segments = self.series_of(
+                let (segments, end) = self.series_of_terminated_by(
                     &|this| {
                         this.parse_bit_array_segment(
                             &(|this| this.parse_expression_unit(ExpressionUnitContext::Other)),
@@ -737,10 +737,10 @@ where
                             &bit_array_expression_int,
                         )
                     },
-                    Some(&Token::Comma),
+                    Token::Comma,
+                    Token::GtGt,
+                    "a bit array segment",
                 )?;
-                let (_, end) =
-                    self.expect_one_following_series(&Token::GtGt, "a bit array segment")?;
                 UntypedExpr::BitArray {
                     location: SrcSpan { start, end },
                     segments,
@@ -1535,7 +1535,7 @@ where
             // BitArray
             Some((start, Token::LtLt, _)) => {
                 self.advance();
-                let segments = self.series_of(
+                let (segments, end) = self.series_of_terminated_by(
                     &|this| {
                         this.parse_bit_array_segment(
                             &|this| match this.parse_pattern(position) {
@@ -1548,10 +1548,10 @@ where
                             &bit_array_size_int,
                         )
                     },
-                    Some(&Token::Comma),
+                    Token::Comma,
+                    Token::GtGt,
+                    "a bit array segment pattern",
                 )?;
-                let (_, end) =
-                    self.expect_one_following_series(&Token::GtGt, "a bit array segment pattern")?;
                 Pattern::BitArray {
                     location: SrcSpan { start, end },
                     segments,
@@ -3609,7 +3609,7 @@ where
             // BitArray
             Some((start, Token::LtLt, _)) => {
                 self.advance();
-                let segments = self.series_of(
+                let (segments, end) = self.series_of_terminated_by(
                     &|this| {
                         this.parse_bit_array_segment(
                             &Parser::parse_const_value,
@@ -3617,10 +3617,10 @@ where
                             &bit_array_const_int,
                         )
                     },
-                    Some(&Token::Comma),
+                    Token::Comma,
+                    Token::GtGt,
+                    "a bit array segment",
                 )?;
-                let (_, end) =
-                    self.expect_one_following_series(&Token::GtGt, "a bit array segment")?;
                 Ok(Some(Constant::BitArray {
                     location: SrcSpan { start, end },
                     segments,
