@@ -3051,3 +3051,13 @@ fn suggest_missing_comma_for_bit_array_pattern() {
 }"
     );
 }
+
+#[test]
+fn suggest_missing_comma_for_invalid_use_assignment() {
+    assert_module_error!(
+        "pub fn go(x) {
+  use first second <- wibble
+  todo
+}"
+    );
+}

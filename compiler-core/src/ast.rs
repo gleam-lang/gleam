@@ -4555,6 +4555,12 @@ pub struct UseAssignment<TypeT> {
     pub annotation: Option<TypeAst>,
 }
 
+impl<A> HasLocation for UseAssignment<A> {
+    fn location(&self) -> SrcSpan {
+        self.location
+    }
+}
+
 impl TypedUse {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         for assignment in self.assignments.iter() {
