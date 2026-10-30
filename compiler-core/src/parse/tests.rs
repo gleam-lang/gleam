@@ -3004,3 +3004,8 @@ fn suggest_missing_comma_for_invalid_tuple_pattern_element() {
 }"
     );
 }
+
+#[test]
+fn suggest_missing_comma_for_invalid_function_param() {
+    assert_module_error!("pub fn go(wibble: Int wobble: String) {}");
+}

@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "pub fn go(wibble: Int wobble: String) {}"
+---
+----- SOURCE CODE
+pub fn go(wibble: Int wobble: String) {}
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:1:23
+  │
+1 │ pub fn go(wibble: Int wobble: String) {}
+  │                      -^^^^^^ I was not expecting this
+  │                      │ 
+  │                      Did you forget a `,` here?
+
+Found a name, expected one of: 
+- `)`
+- `,`

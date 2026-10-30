@@ -2266,10 +2266,12 @@ where
         let _ = self
             .expect_one(&Token::LeftParen)
             .map_err(|error| self.add_anonymous_fn_hint(error))?;
-        let arguments =
-            self.series_of(&|this| this.parse_fn_param(is_anon), Some(&Token::Comma))?;
-        let (_, rpar_e) =
-            self.expect_one_following_series(&Token::RightParen, "a function parameter")?;
+        let (arguments, rpar_e) = self.series_of_terminated_by(
+            &|this| this.parse_fn_param(is_anon),
+            Token::Comma,
+            Token::RightParen,
+            "a function parameter",
+        )?;
 
         // Check for TypeScript-style return type annotation (:) instead of arrow (->)
         if let Some((colon_start, colon_end)) = self.maybe_one(&Token::Colon) {
