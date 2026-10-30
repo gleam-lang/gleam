@@ -2108,7 +2108,7 @@ Is your editor still running and connected to the language server?"
                 .collect_vec(),
 
             Error::Parse { path, src, error } => {
-                let location = if error.error == ParseErrorType::UnexpectedEof {
+                let location = if *error.error == ParseErrorType::UnexpectedEof {
                     SrcSpan {
                         start: (src.len() - 1) as u32,
                         end: (src.len() - 1) as u32,
