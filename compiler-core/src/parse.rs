@@ -2968,8 +2968,12 @@ where
             Some((start, Token::Hash, _)) => {
                 self.advance();
                 let _ = self.expect_one(&Token::LeftParen)?;
-                let elements = self.parse_types()?;
-                let (_, end) = self.expect_one(&Token::RightParen)?;
+                let (elements, end) = self.series_of_terminated_by(
+                    &Parser::parse_type,
+                    Token::Comma,
+                    Token::RightParen,
+                    "a type",
+                )?;
                 Ok(Some(TypeAst::Tuple(TypeAstTuple {
                     location: SrcSpan { start, end },
                     elements,
@@ -3078,8 +3082,12 @@ where
                 });
             }
 
-            let arguments = self.parse_types()?;
-            let (_, right_paren_end) = self.expect_one(&Token::RightParen)?;
+            let (arguments, right_paren_end) = self.series_of_terminated_by(
+                &Parser::parse_type,
+                Token::Comma,
+                Token::RightParen,
+                "a type",
+            )?;
             Ok(Some(TypeAst::Constructor(TypeAstConstructor {
                 location: SrcSpan::new(start, right_paren_end),
                 name,
@@ -3111,7 +3119,7 @@ where
 
             // Otherwise we try and report a nicer error, suggesting one should
             // use `(a, b)` instead of `<a, b>`.
-            let arguments = self.parse_types()?;
+            let arguments = self.series_of(&|this| this.parse_type(), Some(&Token::Comma))?;
             Err(ParseError {
                 location,
                 error: ParseErrorType::TypeUsageAngleGenerics {
@@ -3128,12 +3136,6 @@ where
                 start_parentheses: None,
             })))
         }
-    }
-
-    // For parsing a comma separated "list" of types, for tuple, constructor, and function
-    fn parse_types(&mut self) -> Result<Vec<TypeAst>, ParseError> {
-        let elements = self.series_of(&|this| this.parse_type(), Some(&Token::Comma))?;
-        Ok(elements)
     }
 
     //
