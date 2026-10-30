@@ -2982,3 +2982,13 @@ pub type Wibble {
 "
     );
 }
+
+#[test]
+fn suggest_missing_comma_for_invalid_tuple_element() {
+    assert_error!("#(1, 2 3)");
+}
+
+#[test]
+fn do_not_suggest_missing_comma_for_totally_invalid_tuple_element() {
+    assert_error!("#(1, 2 pub");
+}
