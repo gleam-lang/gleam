@@ -11958,11 +11958,20 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractFunction<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         name: &'ast EcoString,
-        type_: &'ast Arc<Type>,
-        definition_location: &'ast SrcSpan,
-        _origin: &'ast VariableOrigin,
+        constructor: &'ast ValueConstructor,
     ) {
-        self.register_referenced_variable(name, type_, *location, *definition_location);
+        if let type_::ValueConstructorVariant::LocalVariable {
+            location: definition_location,
+            ..
+        } = &constructor.variant
+        {
+            self.register_referenced_variable(
+                name,
+                &constructor.type_,
+                *location,
+                *definition_location,
+            );
+        }
     }
 
     fn visit_typed_expr_case(

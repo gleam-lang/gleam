@@ -85,15 +85,21 @@ expression: "\ncase 2, 3 {\n    x, y if x + y == 1 -> True\n}"
                                             start: 25,
                                             end: 26,
                                         },
-                                        type_: (),
                                         name: "x",
-                                        definition_location: SrcSpan {
-                                            start: 0,
-                                            end: 0,
-                                        },
-                                        origin: VariableOrigin {
-                                            syntax: Generated,
-                                            declaration: Generated,
+                                        constructor: ValueConstructor {
+                                            publicity: Private,
+                                            deprecation: NotDeprecated,
+                                            variant: LocalVariable {
+                                                location: SrcSpan {
+                                                    start: 25,
+                                                    end: 26,
+                                                },
+                                                origin: VariableOrigin {
+                                                    syntax: Generated,
+                                                    declaration: Generated,
+                                                },
+                                            },
+                                            type_: (),
                                         },
                                     },
                                     right: Var {
@@ -101,15 +107,21 @@ expression: "\ncase 2, 3 {\n    x, y if x + y == 1 -> True\n}"
                                             start: 29,
                                             end: 30,
                                         },
-                                        type_: (),
                                         name: "y",
-                                        definition_location: SrcSpan {
-                                            start: 0,
-                                            end: 0,
-                                        },
-                                        origin: VariableOrigin {
-                                            syntax: Generated,
-                                            declaration: Generated,
+                                        constructor: ValueConstructor {
+                                            publicity: Private,
+                                            deprecation: NotDeprecated,
+                                            variant: LocalVariable {
+                                                location: SrcSpan {
+                                                    start: 29,
+                                                    end: 30,
+                                                },
+                                                origin: VariableOrigin {
+                                                    syntax: Generated,
+                                                    declaration: Generated,
+                                                },
+                                            },
+                                            type_: (),
                                         },
                                     },
                                 },

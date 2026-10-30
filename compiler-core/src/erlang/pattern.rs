@@ -353,7 +353,7 @@ impl<'a, 'generator, 'module> PatternGenerator<'a, 'generator, 'module> {
                             self.generator.inlined_constant(builder, literal);
                         }
                         ValueConstructorVariant::LocalVariable { location, .. } => {
-                            builder.variable(*location, &self.generator.local_var_name(location));
+                            builder.variable(*location, &self.generator.local_var_name(&location));
                         }
                         ValueConstructorVariant::ModuleFn { .. }
                         | ValueConstructorVariant::Record { .. } => panic!("invalid segment"),
