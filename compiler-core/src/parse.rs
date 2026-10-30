@@ -290,6 +290,7 @@ where
                     token,
                     expected,
                     hint: None,
+                    missing_token: None,
                 },
                 SrcSpan { start, end },
             );
@@ -727,8 +728,7 @@ where
                 self.advance();
                 let segments = self.series_of(
                     &|this| {
-                        Parser::parse_bit_array_segment(
-                            this,
+                        this.parse_bit_array_segment(
                             &(|this| this.parse_expression_unit(ExpressionUnitContext::Other)),
                             &Parser::expect_expression,
                             &bit_array_expression_int,
@@ -999,6 +999,7 @@ where
                                                     Token::RightParen.to_string().into(),
                                                 ],
                                                 hint: None,
+                                                missing_token: None,
                                             },
                                             location: SrcSpan {
                                                 start: dot_dot_start,
@@ -1861,6 +1862,7 @@ where
                     token: Token::LeftParen,
                     expected: vec![Token::RArrow.to_string().into()],
                     hint: None,
+                    missing_token: None,
                 },
                 SrcSpan {
                     start: l_paren_start,
@@ -2270,6 +2272,7 @@ where
                     token: Token::Colon,
                     expected: vec![Token::RArrow.to_string().into()],
                     hint: Some("Return type annotations are written using `->`, not `:`".into()),
+                    missing_token: None,
                 },
                 location: SrcSpan {
                     start: colon_start,
@@ -2688,7 +2691,7 @@ where
         let attr_loc = self.parse_attributes(&mut attributes)?;
 
         if let Some(attr_span) = attr_loc {
-            // Expecting all but the deprecated atterbutes to be default
+            // Expecting all but the deprecated attributes to be default
             if attributes.external_erlang.is_some()
                 || attributes.external_javascript.is_some()
                 || attributes.target.is_some()
@@ -2806,13 +2809,12 @@ where
         &mut self,
     ) -> Result<(Vec<RecordConstructorArg<()>>, u32), ParseError> {
         if self.maybe_one(&Token::LeftParen).is_some() {
-            let arguments = self.series_of(
+            self.series_of_terminated_by(
                 &|this| this.parse_record_constructor_field(),
-                Some(&Token::Comma),
-            )?;
-            let (_, end) = self
-                .expect_one_following_series(&Token::RightParen, "a constructor argument name")?;
-            Ok((arguments, end))
+                Token::Comma,
+                Token::RightParen,
+                "a constructor argument name",
+            )
         } else {
             Ok((vec![], 0))
         }
@@ -3412,6 +3414,7 @@ where
                         token: operator,
                         expected: vec!["<>".into(), "A new definition".into()],
                         hint: Some("Pipelines are not allowed in constants".into()),
+                        missing_token: None,
                     },
                     SrcSpan::new(operator_start, operator_end),
                 );
@@ -3649,6 +3652,7 @@ where
                             token,
                             expected: vec!["A lowercase name".into(), "An uppercase name".into()],
                             hint: None,
+                            missing_token: None,
                         },
                         SrcSpan { start, end },
                     ),
@@ -3748,6 +3752,7 @@ where
                                     token: Token::DotDot,
                                     expected: vec![Token::RightParen.to_string().into()],
                                     hint: None,
+                                    missing_token: None,
                                 },
                                 location: SrcSpan {
                                     start: dot_dot_start,
@@ -4228,6 +4233,7 @@ functions are declared separately from types.";
                                 "a record constructor".into(),
                             ],
                             hint,
+                            missing_token: None,
                         },
                         SrcSpan { start, end },
                     )
@@ -4510,6 +4516,67 @@ functions are declared separately from types.";
         Ok(res)
     }
 
+    fn series_of_terminated_by<A: HasLocation>(
+        &mut self,
+        parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
+        separator: Token,
+        close: Token,
+        description_of_series_element: &'static str,
+    ) -> Result<(Vec<A>, u32), ParseError> {
+        let (series, has_trailing_separator) =
+            self.series_of_has_trailing_separator(parser, Some(&separator))?;
+
+        match self.maybe_one(&close) {
+            // All is good: we've parsed the sequence and the closing token
+            Some((_, close_end)) => Ok((series, close_end)),
+            // Otherwise, we can try and produce a nice error message if we can
+            // tell there'a missing separator in a series of elements:
+            // - if we could parse at least one item in the series
+            // - if there's no separator at the end of the series
+            // - if the next item looks like something that could keep the
+            //   sequence going
+            //
+            // For example:
+            //
+            // ```gleam
+            // #(Wibble, Wobble  Woo)
+            // //              ^^ We stop the sequence here and see that the
+            // //                 next item might fit in, since the separator is
+            // //                 missing we produce a special error message!
+            // ```
+            //
+            None if let Some((next_token_start, next_token, next_token_end)) =
+                self.token0.clone()
+                && let Some(last) = series.last()
+                && !has_trailing_separator
+                && let Ok(Some(_)) = parser(self) =>
+            {
+                let last_location = last.location();
+                let last_end = SrcSpan::new(last_location.end, last_location.end);
+                parse_error(
+                    ParseErrorType::UnexpectedToken {
+                        token: next_token,
+                        expected: vec![close.to_string().into(), separator.to_string().into()],
+                        hint: None,
+                        missing_token: Some((last_end, separator)),
+                    },
+                    SrcSpan::new(next_token_start, next_token_end),
+                )
+            }
+            // If we end with a trailing separator, or couldn't parse a single
+            // element of the series, then we suggest an item of the series
+            // was expected.
+            None if has_trailing_separator || series.is_empty() => {
+                self.next_token_unexpected(vec![
+                    close.to_string().into(),
+                    description_of_series_element.into(),
+                ])
+            }
+            // Otherwise the only missing element must be the closing token.
+            None => self.next_token_unexpected(vec![close.to_string().into()]),
+        }
+    }
+
     /// Parse a series by repeating a parser, and a separator. Returns true if
     /// the series ends with the trailing separator.
     fn series_of_has_trailing_separator<A>(
@@ -4596,6 +4663,7 @@ functions are declared separately from types.";
                     token,
                     expected,
                     hint: None,
+                    missing_token: None,
                 },
                 SrcSpan { start, end },
             ),
@@ -5346,6 +5414,7 @@ pub fn make_call(
                             token: Token::Name { name },
                             expected: vec!["An expression".into(), "An underscore".into()],
                             hint: None,
+                            missing_token: None,
                         },
                         arg_location,
                     );

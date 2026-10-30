@@ -135,6 +135,16 @@ pub enum ParseErrorType {
         token: Token,
         expected: Vec<EcoString>,
         hint: Option<EcoString>,
+        /// A token, and the position where it could be added, to probably fix
+        /// the error. For example, when we run into an unexpected token while
+        /// parsing a tuple we might be able to tell that adding a "," somewhere
+        /// could fix the issue!
+        ///
+        /// ```gleam
+        /// #(1 2)
+        /// // ^ Maybe they forgot to add a comma here!
+        /// ```
+        missing_token: Option<(SrcSpan, Token)>,
     },
     UnexpectedFunction, // a function was used called outside of another function
     /// A variable was assigned or discarded on the left hand side of a <> pattern
@@ -509,6 +519,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 token,
                 expected,
                 hint,
+                missing_token,
             } => {
                 let found = match token {
                     Token::Int { .. } => "an Int".to_string(),
@@ -591,11 +602,22 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 let mut messages = std::iter::once(format!("Found {found}, expected one of: "))
                     .chain(expected.iter().map(|s| format!("- {s}")));
 
+                let extra_labels = match missing_token {
+                    None => vec![],
+                    Some((span, token)) => vec![ExtraLabel {
+                        src_info: None,
+                        label: Label {
+                            text: Some(format!("Did you forget a {} here?", token.to_string())),
+                            span: *span,
+                        },
+                    }],
+                };
+
                 ParseErrorDetails {
                     text: messages.join("\n"),
                     hint: hint.as_ref().map(|hint| hint.to_string()),
                     label_text: "I was not expecting this".into(),
-                    extra_labels: vec![],
+                    extra_labels,
                 }
             }
 
