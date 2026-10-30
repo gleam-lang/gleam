@@ -487,12 +487,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 body,
                 return_annotation,
                 ..
-            } =>
-                Ok(self.infer_function_capture(arguments, body, kind, return_annotation, location)),
+            } => {
+                Ok(self.infer_function_capture(arguments, body, kind, return_annotation, location))
+            }
 
             UntypedExpr::Fn {
                 location,
-                kind: kind @ (FunctionLiteralKind::Use { .. } | FunctionLiteralKind::Anonymous { .. }),
+                kind:
+                    kind @ (FunctionLiteralKind::Use { .. } | FunctionLiteralKind::Anonymous { .. }),
                 arguments,
                 body,
                 return_annotation,
@@ -1117,7 +1119,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             fun,
             arguments: call_arguments,
             open_parenthesis,
-        }) = body.first() {
+        }) = body.first()
+        {
             match &**fun {
                 UntypedExpr::Call { .. }
                 | UntypedExpr::TupleIndex { .. }
@@ -1153,7 +1156,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                     let fn_ = UntypedExpr::Fn {
                         location: *call_location,
-                        kind: FunctionLiteralKind::Anonymous { head: *call_location },
+                        kind: FunctionLiteralKind::Anonymous {
+                            head: *call_location,
+                        },
                         end_of_head_byte_index: call_location.end,
                         arguments: vec![Arg {
                             names: ArgNames::Named {
@@ -1186,7 +1191,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
 
                 UntypedExpr::Int { .. }
-                | UntypedExpr::Var { ..}
+                | UntypedExpr::Var { .. }
                 | UntypedExpr::List { .. }
                 | UntypedExpr::Case { .. }
                 | UntypedExpr::Todo { .. }
@@ -1201,9 +1206,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 | UntypedExpr::NegateInt { .. }
                 | UntypedExpr::NegateBool { .. }
                 | UntypedExpr::RecordUpdate { .. }
-                | UntypedExpr::Tuple{ .. }
-                | UntypedExpr::Fn { .. } =>
+                | UntypedExpr::Tuple { .. }
+                | UntypedExpr::Fn { .. } => {
                     self.infer_fn(arguments, &[], body, kind, return_annotation, location)
+                }
             }
         } else {
             self.infer_fn(arguments, &[], body, kind, return_annotation, location)

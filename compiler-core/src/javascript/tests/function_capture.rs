@@ -66,10 +66,9 @@ pub fn main() {
 }
 
 #[test]
-fn capture_does_not_collide_with_tmp_variable_0
-() {
+fn capture_does_not_collide_with_tmp_variable_0() {
     assert_js!(
-r#"
+        r#"
 pub fn main() {
   let func = fn() {
     fn(x) { x }
@@ -78,7 +77,7 @@ pub fn main() {
 
   tmp(0)
 }"#,
-);
+    );
 }
 
 #[test]
