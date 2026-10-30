@@ -53,6 +53,12 @@ pub trait HasLocation {
     fn location(&self) -> SrcSpan;
 }
 
+impl<A> HasLocation for (u32, A, u32) {
+    fn location(&self) -> SrcSpan {
+        SrcSpan::new(self.0, self.2)
+    }
+}
+
 pub type UntypedModule = Module<(), Vec<TargetedDefinition>>;
 pub type TypedModule = Module<type_::ModuleInterface, TypedDefinitions>;
 
