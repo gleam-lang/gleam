@@ -16,11 +16,12 @@ struct Remote {
 }
 
 impl PackageFetcher for Remote {
-    fn get_package(&self, package: &str) -> Result<Rc<hexpm::Package>, PackageFetchError> {
-        self.deps
-            .get(package)
-            .map(Rc::clone)
-            .ok_or(PackageFetchError::NotFoundError(package.to_string()))
+    fn get_package(&self, package: &str) -> Result<Rc<hexpm::Package>, Error> {
+        self.deps.get(package).map(Rc::clone).ok_or_else(|| {
+            Error::Http(format!(
+                "the package {package} was not found in the package repository"
+            ))
+        })
     }
 }
 
