@@ -96,8 +96,8 @@ use clap::{
 use ecow::EcoString;
 use gleam_core::{
     analyse::TargetSupport,
+    audit::AuditOutputFormat,
     build::{Codegen, Compile, ErlangOutput, Mode, NullTelemetry, Options, Runtime, Target},
-    dependency::AuditOutputFormat,
     hex::RetirementReason,
     paths::ProjectPaths,
     version::COMPILER_VERSION,
@@ -452,6 +452,13 @@ pub enum Command {
     /// Export something useful from the Gleam project
     #[command(subcommand)]
     Export(ExportTarget),
+
+    /// Check for security advisories and retirements
+    Audit {
+        /// The format for showing the print the information using
+        #[arg(long, default_value = "text")]
+        format: AuditOutputFormat,
+    },
 }
 
 impl Command {
@@ -509,7 +516,7 @@ impl Command {
                 dependencies::outdated(&paths).map(|()| 0)
             }
 
-            Self::Deps(Dependencies::Audit { format }) => {
+            Self::Audit { format } => {
                 let paths = find_project_paths(directory)?;
                 dependencies::audit(&paths, format)
             }
@@ -876,13 +883,6 @@ pub enum Dependencies {
 
     /// Tree of all the dependency packages
     Tree(TreeOptions),
-
-    /// Check for security advisories and retirements
-    Audit {
-        /// The format for showing the print the information using
-        #[arg(long)]
-        format: AuditOutputFormat,
-    },
 }
 
 #[derive(Subcommand, Debug)]
