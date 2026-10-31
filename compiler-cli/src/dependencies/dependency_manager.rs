@@ -5,6 +5,7 @@ use ecow::EcoString;
 use futures::future;
 use gleam_core::{
     Error, Result,
+    audit::Audit,
     build::{Mode, Telemetry},
     config::PackageConfig,
     dependency,
@@ -269,6 +270,19 @@ where
                 );
             }
         }
+
+        // Hex also provides information about security advisories.
+        // If any of the resolved package versions have advisories then
+        // print a message to the user so they know to review them.
+        let audit = Audit::audit_manifest(&resolved.manifest, &self.package_fetcher)?;
+        if !audit.is_empty() {
+            let (count, prefix) = match audit.packages.len() {
+                1 => (1, "dependency has"),
+                n => (n, "dependencies have"),
+            };
+            eprintln!("{count} {prefix} security advisories. Run `gleam audit` for details.",);
+        }
+
         Ok(resolved.manifest)
     }
 

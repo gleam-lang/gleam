@@ -17,9 +17,10 @@ use ecow::{EcoString, eco_format};
 use flate2::read::GzDecoder;
 use gleam_core::{
     Error, Result,
+    audit::{Audit, AuditOutputFormat},
     build::{Mode, SourceFingerprint, Target, Telemetry},
     config::PackageConfig,
-    dependency,
+    dependency::{self},
     error::{FileIoAction, FileIoCause, FileKind, ShellCommandFailureReason, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, WrappedReader},
@@ -239,11 +240,11 @@ pub fn outdated(paths: &ProjectPaths) -> Result<()> {
     Ok(())
 }
 
-pub fn audit(paths: &ProjectPaths, format: dependency::AuditOutputFormat) -> Result<i32> {
+pub fn audit(paths: &ProjectPaths, format: AuditOutputFormat) -> Result<i32> {
     let (_, manifest) = get_manifest_details(paths)?;
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let package_fetcher = HttpPackageFetcher::new(runtime.handle().clone());
-    let audit = dependency::get_audit(&manifest, &package_fetcher)?;
+    let audit = Audit::audit_manifest(&manifest, &package_fetcher)?;
 
     if audit.is_empty() {
         return Ok(0);
