@@ -321,12 +321,11 @@ impl Audit {
             out.push_str(&package.name);
             out.push(' ');
             out.push_str(&package.version.to_string().as_str());
-            out.push('\n');
 
             if let Some(retirement) = package.retirement.as_ref() {
-                out.push_str("  Retired: ");
+                out.push_str("\n  Retired (");
                 out.push_str(retirement.reason.to_str());
-                out.push(' ');
+                out.push_str(")\n  ");
                 out.push_str(retirement.message.as_str());
                 out.push('\n');
             }
@@ -357,6 +356,8 @@ impl Audit {
                 out.push_str(&advisory.html_url);
                 out.push('\n');
             }
+
+            out.push('\n');
         }
 
         out
