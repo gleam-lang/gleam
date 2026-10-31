@@ -1,0 +1,60 @@
+---
+source: compiler-core/src/dependency/tests.rs
+expression: "example_audit().as_output(AuditOutputFormat::Text)"
+---
+{
+  "packages": [
+    {
+      "name": "retired_package",
+      "version": "1.2.3",
+      "retirement": {
+        "reason": "security",
+        "message": "whoops! oh dear!"
+      },
+      "advisories": []
+    },
+    {
+      "name": "advisory_package",
+      "version": "2.1.2",
+      "retirement": null,
+      "advisories": [
+        {
+          "id": "CVE-1234-5678",
+          "summary": "summary 1",
+          "html_url": "https://example.com/1",
+          "cvss_rating": null,
+          "aliases": [
+            "ALIAS-1234-5678"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "both_package",
+      "version": "4.3.4",
+      "retirement": {
+        "reason": "invalid",
+        "message": "retired!"
+      },
+      "advisories": [
+        {
+          "id": "CVE-5364-6353",
+          "summary": "summary 2",
+          "html_url": "https://example.com/2",
+          "cvss_rating": "high",
+          "aliases": []
+        },
+        {
+          "id": "CVE-9876-9999",
+          "summary": "summary 3",
+          "html_url": "https://example.com/2",
+          "cvss_rating": "critical",
+          "aliases": [
+            "ALIAS-6554-3677",
+            "OTHER-3558-9935"
+          ]
+        }
+      ]
+    }
+  ]
+}
