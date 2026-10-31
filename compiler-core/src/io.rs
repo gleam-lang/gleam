@@ -77,6 +77,32 @@ fn strip_windows_verbatim_prefix_removes_prefix() {
     );
 }
 
+#[test]
+fn test_make_relative_normal_case() {
+    let result = make_relative(
+        "/home/user/gleam_project/build/dev/erlang/lustre".into(),
+        "/home/user/gleam_project/build/packages/lustre/priv".into(),
+    );
+
+    assert_eq!(result, Utf8PathBuf::from("../../../packages/lustre/priv"));
+}
+
+#[test]
+fn test_make_relative_dest_relative_does_nothing() {
+    let result = make_relative(
+        "/home/user/gleam_project/build/dev/erlang/lustre".into(),
+        "../../target".into(),
+    );
+
+    assert_eq!(result, Utf8PathBuf::from("../../target"));
+}
+
+#[test]
+#[should_panic]
+fn test_make_relative_source_relative_panics() {
+    let _ = make_relative("../dev/erlang/lustre".into(), "/".into());
+}
+
 pub trait Reader: io::Read {
     /// A wrapper around `std::io::Read` that has Gleam's error handling.
     fn read_bytes(&mut self, buffer: &mut [u8]) -> Result<usize> {
