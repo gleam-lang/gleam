@@ -196,6 +196,8 @@ pub enum ParseErrorType {
     // `const x = todo as` with no message after the `as`.
     MissingConstantAsMessage,
     RecordUpdateAfterFields,
+    // type Wibble { Wibble(a: Int b: Int) }
+    ExpectedCommaBetweenConstructorFields,
 }
 
 pub(crate) struct ParseErrorDetails {
@@ -888,6 +890,13 @@ See: https://tour.gleam.run/data-types/record-updates/"
                 label_text: "I wasn't expecting a record update here".into(),
                 extra_labels: vec![],
                 hint: None,
+            },
+
+            ParseErrorType::ExpectedCommaBetweenConstructorFields => ParseErrorDetails {
+                text: "".into(),
+                label_text: "I was expecting a comma after this".into(),
+                extra_labels: vec![],
+                hint: Some("Record constructor fields must be separated by commas.".into()),
             },
         }
     }

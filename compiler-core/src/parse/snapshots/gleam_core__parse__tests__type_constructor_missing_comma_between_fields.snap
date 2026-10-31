@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\ntype Wobble {\n  Wobble(\n    a: Nil,\n    b: Nil\n    c: Nil\n  )\n}\n"
+---
+----- SOURCE CODE
+
+type Wobble {
+  Wobble(
+    a: Nil,
+    b: Nil
+    c: Nil
+  )
+}
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:5:5
+  │
+5 │     b: Nil
+  │     ^^^^^^ I was expecting a comma after this
+
+Hint: Record constructor fields must be separated by commas.

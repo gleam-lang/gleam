@@ -2810,6 +2810,26 @@ where
                 &|this| this.parse_record_constructor_field(),
                 Some(&Token::Comma),
             )?;
+
+            // If another field follows the last one without a separating
+            // comma, the developer has most likely forgotten to add it:
+            //
+            // ```gleam
+            // Wibble(a: Int b: Int)
+            // ```
+            //
+            // So we want to produce a specialised error message.
+            if let (
+                Some(last_argument),
+                Some((_, Token::Name { .. } | Token::UpName { .. } | Token::Hash, _)),
+            ) = (arguments.last(), &self.token0)
+            {
+                return parse_error(
+                    ParseErrorType::ExpectedCommaBetweenConstructorFields,
+                    last_argument.location,
+                );
+            }
+
             let (_, end) = self
                 .expect_one_following_series(&Token::RightParen, "a constructor argument name")?;
             Ok((arguments, end))
