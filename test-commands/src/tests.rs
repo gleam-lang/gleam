@@ -107,6 +107,9 @@ fn typescript_prelude() {
 }
 
 #[test]
+fn system_information() {}
+
+#[test]
 fn package_information() {
     let out = tempfile::NamedTempFile::new().unwrap();
     let path = Utf8PathBuf::from(out.path().as_os_str().to_str().unwrap());
