@@ -12,7 +12,7 @@ use gleam_core::{
     Error,
     build::Runtime,
     config::{DenoConfig, DenoFlag, Docs, ErlangConfig, JavaScriptConfig},
-    dependency::{PackageFetchError, PackageFetcher},
+    dependency::PackageFetcher,
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
     requirement::Requirement,
@@ -1961,11 +1961,11 @@ struct FakeFetcher {
 }
 
 impl PackageFetcher for FakeFetcher {
-    fn get_dependencies(&self, package: &str) -> Result<Rc<hexpm::Package>, PackageFetchError> {
+    fn get_package(&self, package: &str) -> Result<Rc<hexpm::Package>, Error> {
         self.packages
             .get(package)
             .map(Rc::clone)
-            .ok_or_else(|| PackageFetchError::NotFoundError(package.to_string()))
+            .ok_or_else(|| panic!("{package} not found"))
     }
 }
 

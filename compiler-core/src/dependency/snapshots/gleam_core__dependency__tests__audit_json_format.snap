@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/dependency/tests.rs
+expression: "example_audit().as_output(AuditOutputFormat::Json)"
+---
+retired_package 1.2.3
+  Retired (security)
+  whoops! oh dear!
+
+advisory_package 2.1.2
+  CVE-1234-5678
+  aliases: ALIAS-1234-5678
+  summary 1
+  https://example.com/1
+
+both_package 4.3.4
+  Retired (invalid)
+  retired!
+
+  CVE-5364-6353 (high)
+  summary 2
+  https://example.com/2
+
+  CVE-9876-9999 (critical)
+  aliases: ALIAS-6554-3677, OTHER-3558-9935
+  summary 3
+  https://example.com/2

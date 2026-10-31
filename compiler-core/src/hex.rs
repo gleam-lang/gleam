@@ -253,9 +253,9 @@ impl Downloader {
         let response = self.http.send(request).await?;
 
         let tarball = hexpm::repository_get_package_tarball_response(response, &outer_checksum.0)
-            .map_err(|error| Error::DownloadPackageError {
-            package_name: package.name.to_string(),
-            package_version: package.version.to_string(),
+            .map_err(|error| Error::FailedToDownloadPackageVersionFromHex {
+            name: package.name.to_string(),
+            version: package.version.to_string(),
             error: error.to_string(),
         })?;
         self.fs_writer.write_bytes(&tarball_path, &tarball)?;
