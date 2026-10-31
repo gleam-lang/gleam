@@ -97,6 +97,7 @@ use ecow::EcoString;
 use gleam_core::{
     analyse::TargetSupport,
     build::{Codegen, Compile, ErlangOutput, Mode, NullTelemetry, Options, Runtime, Target},
+    dependency::AuditOutputFormat,
     hex::RetirementReason,
     paths::ProjectPaths,
     version::COMPILER_VERSION,
@@ -508,9 +509,9 @@ impl Command {
                 dependencies::outdated(&paths).map(|()| 0)
             }
 
-            Self::Deps(Dependencies::Audit) => {
+            Self::Deps(Dependencies::Audit { format }) => {
                 let paths = find_project_paths(directory)?;
-                dependencies::audit(&paths)
+                dependencies::audit(&paths, format)
             }
 
             Self::Deps(Dependencies::Update(options)) => {
@@ -877,7 +878,11 @@ pub enum Dependencies {
     Tree(TreeOptions),
 
     /// Check for security advisories and retirements
-    Audit,
+    Audit {
+        /// The format for showing the print the information using
+        #[arg(long)]
+        format: AuditOutputFormat,
+    },
 }
 
 #[derive(Subcommand, Debug)]
