@@ -1173,7 +1173,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         return_annotation: None,
                     };
 
-                    
                     self.infer_block(
                         vec1![
                             Statement::Assignment(Box::new(Assignment {
