@@ -22,7 +22,6 @@ use std::{
     rc::Rc,
 };
 use strum::{EnumString, VariantNames};
-use thiserror::Error;
 
 pub type PackageVersions = HashMap<String, Version>;
 
@@ -254,7 +253,7 @@ pub fn get_available_updates(
 pub fn get_audit(
     manifest: &manifest::Manifest,
     package_fetcher: &impl PackageFetcher,
-) -> Result<Audit, PackageFetchError> {
+) -> Result<Audit, Error> {
     let mut advisories = Audit::default();
 
     for package in &manifest.packages {
@@ -273,8 +272,10 @@ pub fn get_audit(
             .iter()
             .find(|release| release.version == package.version)
         else {
-            let package = format!("{name}@{version}");
-            return Err(PackageFetchError::NotFoundError(package));
+            return Err(Error::CouldNotFindPackageVersionInHexRepo {
+                package: name.clone(),
+                version: version.clone(),
+            });
         };
 
         advisories.record_problems(name, version, release);
@@ -320,7 +321,7 @@ impl Audit {
         for package in &self.packages {
             out.push_str(&package.name);
             out.push(' ');
-            out.push_str(&package.version.to_string().as_str());
+            out.push_str(package.version.to_string().as_str());
 
             if let Some(retirement) = package.retirement.as_ref() {
                 out.push_str("\n  Retired (");
@@ -485,50 +486,7 @@ but it is locked to {locked_version}, which is incompatible.",
 }
 
 pub trait PackageFetcher {
-    fn get_package(&self, package: &str) -> Result<Rc<hexpm::Package>, PackageFetchError>;
-}
-
-#[derive(Debug, Error)]
-pub enum PackageFetchError {
-    #[error("the package {0} was not found in the package repository")]
-    NotFoundError(String),
-    #[error("{0}")]
-    ApiError(hexpm::ApiError),
-    #[error("{0}")]
-    FetchError(String),
-}
-
-impl PackageFetchError {
-    pub fn fetch_error<T: std::error::Error>(err: T) -> Self {
-        Self::FetchError(err.to_string())
-    }
-
-    pub fn from_api_error(api_error: hexpm::ApiError, package: &str) -> Self {
-        match &api_error {
-            hexpm::ApiError::NotFound => Self::NotFoundError(package.to_string()),
-
-            hexpm::ApiError::Json(_)
-            | hexpm::ApiError::IncorrectOneTimePassword
-            | hexpm::ApiError::OAuthRefreshTokenRejected
-            | hexpm::ApiError::OAuthAccessDenied
-            | hexpm::ApiError::OAuthTimeout
-            | hexpm::ApiError::ExpiredToken
-            | hexpm::ApiError::Io(_)
-            | hexpm::ApiError::InvalidProtobuf(_)
-            | hexpm::ApiError::UnexpectedResponse(_, _)
-            | hexpm::ApiError::RateLimited
-            | hexpm::ApiError::InvalidCredentials
-            | hexpm::ApiError::InvalidPackageNameFormat(_)
-            | hexpm::ApiError::IncorrectPayloadSignature
-            | hexpm::ApiError::InvalidVersionFormat(_)
-            | hexpm::ApiError::InvalidVersionRequirementFormat(_)
-            | hexpm::ApiError::IncorrectChecksum
-            | hexpm::ApiError::Forbidden
-            | hexpm::ApiError::NotReplacing
-            | hexpm::ApiError::LateDeletion
-            | hexpm::ApiError::LateModification => Self::ApiError(api_error),
-        }
-    }
+    fn get_package(&self, package: &str) -> Result<Rc<hexpm::Package>, Error>;
 }
 
 #[derive(Debug)]
@@ -576,7 +534,7 @@ where
         // `&self` with interop mutability.
         &self,
         name: &str,
-    ) -> Result<(), PackageFetchError> {
+    ) -> Result<(), Error> {
         let mut packages = self.packages.borrow_mut();
         if packages.get(name).is_none() {
             let package = self.remote.get_package(name)?;
@@ -609,6 +567,13 @@ impl<T> pubgrub::DependencyProvider for DependencyProvider<'_, T>
 where
     T: PackageFetcher,
 {
+    type P = PackageName;
+    type V = Presence;
+    type VS = PubgrubRange;
+    type Priority = Reverse<usize>;
+    type M = String;
+    type Err = Error;
+
     fn get_dependencies(
         &self,
         package: &Self::P,
@@ -723,11 +688,4 @@ where
             None => Ok(potential_versions.max().map(Presence::Present)),
         }
     }
-
-    type P = PackageName;
-    type V = Presence;
-    type VS = PubgrubRange;
-    type Priority = Reverse<usize>;
-    type M = String;
-    type Err = PackageFetchError;
 }
