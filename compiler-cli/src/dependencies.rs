@@ -19,7 +19,7 @@ use gleam_core::{
     Error, Result,
     build::{Mode, SourceFingerprint, Target, Telemetry},
     config::PackageConfig,
-    dependency::{self, PackageFetchError},
+    dependency,
     error::{FileIoAction, FileIoCause, FileKind, ShellCommandFailureReason, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, WrappedReader},
@@ -243,7 +243,7 @@ pub fn audit(paths: &ProjectPaths, format: dependency::AuditOutputFormat) -> Res
     let (_, manifest) = get_manifest_details(paths)?;
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let package_fetcher = HttpPackageFetcher::new(runtime.handle().clone());
-    let audit = dependency::get_audit(&manifest, &package_fetcher).unwrap();
+    let audit = dependency::get_audit(&manifest, &package_fetcher)?;
 
     if audit.is_empty() {
         return Ok(0);
@@ -1797,7 +1797,7 @@ impl HttpPackageFetcher {
 }
 
 impl dependency::PackageFetcher for HttpPackageFetcher {
-    fn get_package(&self, package_name: &str) -> Result<Rc<hexpm::Package>, PackageFetchError> {
+    fn get_package(&self, package_name: &str) -> Result<Rc<hexpm::Package>, Error> {
         {
             let runtime_cache = self.runtime_cache.borrow();
             let result = runtime_cache.get(package_name);
@@ -1814,13 +1814,10 @@ impl dependency::PackageFetcher for HttpPackageFetcher {
             self.credentials.as_ref(),
             &config,
         );
-        let response = self
-            .runtime
-            .block_on(self.http.send(request))
-            .map_err(PackageFetchError::fetch_error)?;
+        let response = self.runtime.block_on(self.http.send(request))?;
 
         let package = hexpm::repository_v2_get_package_response(response, HEXPM_PUBLIC_KEY)
-            .map_err(|error| PackageFetchError::from_api_error(error, package_name))?;
+            .map_err(Error::hex)?;
         let package = Rc::new(package);
         self.cache_package(package_name, Rc::clone(&package));
         Ok(package)
