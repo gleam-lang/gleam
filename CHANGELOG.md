@@ -54,6 +54,15 @@
   owner only (0600 on Unix), preventing other users from reading it.
   ([bala-bhargav](https://github.com/bala-bhargav))
 
+- The `gleam add` command now supports a `--git` flag that allows the user to
+  add Git dependencies without manually editing `gleam.toml`. Optional `--ref`
+  and `--path` flags can be provided; these behave the same as `path` and `ref`
+  in the `gleam.toml` Git dependency syntax. When `--ref` is omitted,
+  `gleam add` pins the dependency to the commit at the tip of the default
+  branch; the user may opt in to tracking a branch instead by explicitly
+  providing `--ref <branch_name>`.
+  ([Hari Mohan](https://github.com/seafoamteal))
+
 ### Language server
 
 - The language server will now offer "Discard unused variable" on each of
