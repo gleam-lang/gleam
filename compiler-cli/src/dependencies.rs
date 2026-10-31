@@ -239,66 +239,18 @@ pub fn outdated(paths: &ProjectPaths) -> Result<()> {
     Ok(())
 }
 
-pub fn audit(paths: &ProjectPaths) -> Result<i32> {
+pub fn audit(paths: &ProjectPaths, format: dependency::AuditOutputFormat) -> Result<i32> {
     let (_, manifest) = get_manifest_details(paths)?;
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let package_fetcher = HttpPackageFetcher::new(runtime.handle().clone());
     let audit = dependency::get_audit(&manifest, &package_fetcher).unwrap();
 
     if audit.is_empty() {
-        Ok(0)
-    } else {
-        print!("{}", pretty_print_audit(audit));
-        Ok(1)
-    }
-}
-
-fn pretty_print_audit(advisories: dependency::Audit) -> String {
-    let mut out = String::new();
-
-    for package in advisories.packages {
-        out.push_str(&package.name);
-        out.push(' ');
-        out.push_str(&package.version.to_string().as_str());
-        out.push('\n');
-
-        if let Some(retirement) = package.retirement {
-            out.push_str("  Retired: ");
-            out.push_str(retirement.reason.to_str());
-            out.push(' ');
-            out.push_str(retirement.message.as_str());
-            out.push('\n');
-        }
-
-        for advisory in package.advisories {
-            out.push_str("\n  ");
-            out.push_str(&advisory.id);
-            if let Some(rating) = advisory.cvss_rating {
-                out.push_str(" (");
-                out.push_str(rating.to_str());
-                out.push(')');
-            }
-            if !advisory.aliases.is_empty() {
-                let mut first = true;
-                for alias in &advisory.aliases {
-                    if first {
-                        first = false;
-                        out.push_str("\n  aliases: ");
-                    } else {
-                        out.push_str(", ");
-                    }
-                    out.push_str(alias);
-                }
-            }
-            out.push_str("\n  ");
-            out.push_str(&advisory.summary);
-            out.push_str("\n  ");
-            out.push_str(&advisory.html_url);
-            out.push('\n');
-        }
+        return Ok(0);
     }
 
-    out
+    print!("{}", audit.as_output(format));
+    Ok(1)
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -609,7 +561,6 @@ fn remove_extra_packages<Telem: Telemetry>(
     let _guard = BuildLock::lock_all_build(paths, telemetry)?;
 
     for (package_name, version) in local.extra_local_packages(manifest) {
-        // TODO: test
         // Delete the package source
         let path = paths.build_packages_package(&package_name);
         if path.exists() {
@@ -617,7 +568,6 @@ fn remove_extra_packages<Telem: Telemetry>(
             fs::delete_directory(&path)?;
         }
 
-        // TODO: test
         // Delete any build artefacts for the package
         for mode in Mode::iter() {
             for target in Target::iter() {
