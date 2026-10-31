@@ -290,6 +290,7 @@ where
                     token,
                     expected,
                     hint: None,
+                    missing_token: None,
                 },
                 SrcSpan { start, end },
             );
@@ -617,9 +618,12 @@ where
                 let _ = self
                     .expect_one(&Token::LeftParen)
                     .map_err(|error| self.add_comment_style_hint(error))?;
-                let elements = self.series_of(&Parser::parse_expression, Some(&Token::Comma))?;
-                let (_, end) =
-                    self.expect_one_following_series(&Token::RightParen, "an expression")?;
+                let (elements, end) = self.series_of_terminated_by(
+                    &Parser::parse_expression,
+                    Token::Comma,
+                    Token::RightParen,
+                    "an expression",
+                )?;
                 UntypedExpr::Tuple {
                     location: SrcSpan { start, end },
                     elements,
@@ -725,19 +729,18 @@ where
             // BitArray
             Some((start, Token::LtLt, _)) => {
                 self.advance();
-                let segments = self.series_of(
+                let (segments, end) = self.series_of_terminated_by(
                     &|this| {
-                        Parser::parse_bit_array_segment(
-                            this,
+                        this.parse_bit_array_segment(
                             &(|this| this.parse_expression_unit(ExpressionUnitContext::Other)),
                             &Parser::expect_expression,
                             &bit_array_expression_int,
                         )
                     },
-                    Some(&Token::Comma),
+                    Token::Comma,
+                    Token::GtGt,
+                    "a bit array segment",
                 )?;
-                let (_, end) =
-                    self.expect_one_following_series(&Token::GtGt, "a bit array segment")?;
                 UntypedExpr::BitArray {
                     location: SrcSpan { start, end },
                     segments,
@@ -993,13 +996,14 @@ where
                                 {
                                     return match self.parse_const_value() {
                                         Ok(None) | Err(_) => Err(ParseError {
-                                            error: ParseErrorType::UnexpectedToken {
+                                            error: Box::new(ParseErrorType::UnexpectedToken {
                                                 token: Token::DotDot,
                                                 expected: vec![
                                                     Token::RightParen.to_string().into(),
                                                 ],
                                                 hint: None,
-                                            },
+                                                missing_token: None,
+                                            }),
                                             location: SrcSpan {
                                                 start: dot_dot_start,
                                                 end: dot_dot_end,
@@ -1015,7 +1019,9 @@ where
 
                                             Err(ParseError {
                                                 location: update_location,
-                                                error: ParseErrorType::RecordUpdateAfterFields,
+                                                error: Box::new(
+                                                    ParseErrorType::RecordUpdateAfterFields,
+                                                ),
                                             })
                                         }
                                     };
@@ -1037,7 +1043,7 @@ where
     }
 
     fn add_comment_style_hint(&self, mut err: ParseError) -> ParseError {
-        if let ParseErrorType::UnexpectedToken { ref mut hint, .. } = err.error {
+        if let ParseErrorType::UnexpectedToken { ref mut hint, .. } = *err.error {
             let text =
                 "Maybe you meant to create a comment?\nComments in Gleam start with `//`, not `#`";
             *hint = Some(text.into());
@@ -1055,12 +1061,20 @@ where
     fn parse_use(&mut self, start: u32, end: u32) -> Result<UntypedStatement, ParseError> {
         let assignments = match self.token0 {
             Some((_, Token::LArrow, _)) => {
+                self.advance();
                 vec![]
             }
-            _ => self.series_of(&Parser::parse_use_assignment, Some(&Token::Comma))?,
+            _ => {
+                let (assignments, _) = self.series_of_terminated_by(
+                    &Parser::parse_use_assignment,
+                    Token::Comma,
+                    Token::LArrow,
+                    "a use variable assignment",
+                )?;
+                assignments
+            }
         };
 
-        _ = self.expect_one_following_series(&Token::LArrow, "a use variable assignment")?;
         let call = self.expect_expression()?;
 
         let assignments_location = match (assignments.first(), assignments.last()) {
@@ -1086,7 +1100,7 @@ where
         let pattern = self
             .parse_pattern(PatternPosition::UsePattern)?
             .ok_or_else(|| ParseError {
-                error: ParseErrorType::ExpectedPattern,
+                error: Box::new(ParseErrorType::ExpectedPattern),
                 location: SrcSpan { start, end: start },
             })?;
 
@@ -1122,7 +1136,7 @@ where
                 Some(constant) => Some(Box::new(constant)),
                 None => {
                     return Err(ParseError {
-                        error: ParseErrorType::MissingConstantAsMessage,
+                        error: Box::new(ParseErrorType::MissingConstantAsMessage),
                         location: SrcSpan::new(as_start, as_end),
                     });
                 }
@@ -1156,7 +1170,7 @@ where
         };
         let annotation = self.parse_type_annotation(&Token::Colon)?;
         let (eq_s, eq_e) = self.maybe_one(&Token::Equal).ok_or(ParseError {
-            error: ParseErrorType::ExpectedEqual,
+            error: Box::new(ParseErrorType::ExpectedEqual),
             location: SrcSpan {
                 start: pattern.location().start,
                 end: pattern.location().end,
@@ -1166,14 +1180,14 @@ where
             .parse_expression_inner(true)?
             .ok_or(match self.token0 {
                 Some((start, Token::DiscardName { .. }, end)) => ParseError {
-                    error: ParseErrorType::IncorrectName {
+                    error: Box::new(ParseErrorType::IncorrectName {
                         kind: IncorrectNamePosition::Variable,
-                    },
+                    }),
                     location: SrcSpan { start, end },
                 },
 
                 _ => ParseError {
-                    error: ParseErrorType::ExpectedValue,
+                    error: Box::new(ParseErrorType::ExpectedValue),
                     location: SrcSpan {
                         start: eq_s,
                         end: eq_e,
@@ -1517,9 +1531,12 @@ where
             Some((start, Token::Hash, _)) => {
                 self.advance();
                 let _ = self.expect_one(&Token::LeftParen)?;
-                let elements =
-                    self.series_of(&|this| this.parse_pattern(position), Some(&Token::Comma))?;
-                let (_, end) = self.expect_one_following_series(&Token::RightParen, "a pattern")?;
+                let (elements, end) = self.series_of_terminated_by(
+                    &|this| this.parse_pattern(position),
+                    Token::Comma,
+                    Token::RightParen,
+                    "a pattern",
+                )?;
                 Pattern::Tuple {
                     location: SrcSpan { start, end },
                     elements,
@@ -1528,7 +1545,7 @@ where
             // BitArray
             Some((start, Token::LtLt, _)) => {
                 self.advance();
-                let segments = self.series_of(
+                let (segments, end) = self.series_of_terminated_by(
                     &|this| {
                         this.parse_bit_array_segment(
                             &|this| match this.parse_pattern(position) {
@@ -1541,10 +1558,10 @@ where
                             &bit_array_size_int,
                         )
                     },
-                    Some(&Token::Comma),
+                    Token::Comma,
+                    Token::GtGt,
+                    "a bit array segment pattern",
                 )?;
-                let (_, end) =
-                    self.expect_one_following_series(&Token::GtGt, "a bit array segment pattern")?;
                 Pattern::BitArray {
                     location: SrcSpan { start, end },
                     segments,
@@ -1701,7 +1718,7 @@ where
     }
 
     fn add_multi_line_clause_hint(&self, mut err: ParseError) -> ParseError {
-        if let ParseErrorType::UnexpectedToken { ref mut hint, .. } = err.error {
+        if let ParseErrorType::UnexpectedToken { ref mut hint, .. } = *err.error {
             *hint = Some("Did you mean to wrap a multi line clause in curly braces?".into());
         }
         err
@@ -1861,6 +1878,7 @@ where
                     token: Token::LeftParen,
                     expected: vec![Token::RArrow.to_string().into()],
                     hint: None,
+                    missing_token: None,
                 },
                 SrcSpan {
                     start: l_paren_start,
@@ -2248,7 +2266,7 @@ where
         }
         if let Some((less_start, less_end)) = self.maybe_one(&Token::Less) {
             return Err(ParseError {
-                error: ParseErrorType::FunctionDefinitionAngleGenerics,
+                error: Box::new(ParseErrorType::FunctionDefinitionAngleGenerics),
                 location: SrcSpan {
                     start: less_start,
                     end: less_end,
@@ -2258,19 +2276,22 @@ where
         let _ = self
             .expect_one(&Token::LeftParen)
             .map_err(|error| self.add_anonymous_fn_hint(error))?;
-        let arguments =
-            self.series_of(&|this| this.parse_fn_param(is_anon), Some(&Token::Comma))?;
-        let (_, rpar_e) =
-            self.expect_one_following_series(&Token::RightParen, "a function parameter")?;
+        let (arguments, rpar_e) = self.series_of_terminated_by(
+            &|this| this.parse_fn_param(is_anon),
+            Token::Comma,
+            Token::RightParen,
+            "a function parameter",
+        )?;
 
         // Check for TypeScript-style return type annotation (:) instead of arrow (->)
         if let Some((colon_start, colon_end)) = self.maybe_one(&Token::Colon) {
             return Err(ParseError {
-                error: ParseErrorType::UnexpectedToken {
+                error: Box::new(ParseErrorType::UnexpectedToken {
                     token: Token::Colon,
                     expected: vec![Token::RArrow.to_string().into()],
                     hint: Some("Return type annotations are written using `->`, not `:`".into()),
-                },
+                    missing_token: None,
+                }),
                 location: SrcSpan {
                     start: colon_start,
                     end: colon_end,
@@ -2338,7 +2359,7 @@ where
             ref mut hint,
             token: Token::Name { .. },
             ..
-        } = err.error
+        } = *err.error
         {
             *hint = Some("Only module-level functions can be named.".into());
         }
@@ -2357,7 +2378,7 @@ where
                 attribute_location: Some(location),
             }),
             (InternalAttribute::Present(location), false) => Err(ParseError {
-                error: ParseErrorType::RedundantInternalAttribute,
+                error: Box::new(ParseErrorType::RedundantInternalAttribute),
                 location,
             }),
         }
@@ -2688,7 +2709,7 @@ where
         let attr_loc = self.parse_attributes(&mut attributes)?;
 
         if let Some(attr_span) = attr_loc {
-            // Expecting all but the deprecated atterbutes to be default
+            // Expecting all but the deprecated attributes to be default
             if attributes.external_erlang.is_some()
                 || attributes.external_javascript.is_some()
                 || attributes.target.is_some()
@@ -2778,18 +2799,18 @@ where
                         .map_or(name_start, |field| field.location.start),
                     end: fields.last().map_or(name_end, |field| field.location.end),
                 },
-                error: ParseErrorType::ExpectedRecordConstructor {
+                error: Box::new(ParseErrorType::ExpectedRecordConstructor {
                     type_name,
                     public,
                     opaque,
                     fields,
-                },
+                }),
             },
 
             // Otherwise we fall back to telling them the lowercase name should
             // be uppercased!
             Ok(_) | Err(_) => ParseError {
-                error: ParseErrorType::IncorrectUpName,
+                error: Box::new(ParseErrorType::IncorrectUpName),
                 location: SrcSpan {
                     start: name_start,
                     end: name_end,
@@ -2806,13 +2827,12 @@ where
         &mut self,
     ) -> Result<(Vec<RecordConstructorArg<()>>, u32), ParseError> {
         if self.maybe_one(&Token::LeftParen).is_some() {
-            let arguments = self.series_of(
+            self.series_of_terminated_by(
                 &|this| this.parse_record_constructor_field(),
-                Some(&Token::Comma),
-            )?;
-            let (_, end) = self
-                .expect_one_following_series(&Token::RightParen, "a constructor argument name")?;
-            Ok((arguments, end))
+                Token::Comma,
+                Token::RightParen,
+                "a constructor argument name",
+            )
         } else {
             Ok((vec![], 0))
         }
@@ -2872,8 +2892,12 @@ where
     ) -> Result<(u32, EcoString, Vec<SpannedString>, u32, u32), ParseError> {
         let (start, upname, end) = self.expect_upname()?;
         if let Some((par_s, _)) = self.maybe_one(&Token::LeftParen) {
-            let arguments = self.series_of(&|this| Ok(this.maybe_name()), Some(&Token::Comma))?;
-            let (_, par_e) = self.expect_one_following_series(&Token::RightParen, "a name")?;
+            let (arguments, par_e) = self.series_of_terminated_by(
+                &|this| Ok(this.maybe_name()),
+                Token::Comma,
+                Token::RightParen,
+                "a name",
+            )?;
             if arguments.is_empty() {
                 return parse_error(
                     ParseErrorType::TypeDefinitionNoArguments,
@@ -2904,10 +2928,10 @@ where
             }
 
             Err(ParseError {
-                error: ParseErrorType::TypeDefinitionAngleGenerics {
+                error: Box::new(ParseErrorType::TypeDefinitionAngleGenerics {
                     name: upname,
                     arguments,
-                },
+                }),
                 location: SrcSpan {
                     start: less_start,
                     end: less_end,
@@ -2954,8 +2978,12 @@ where
             Some((start, Token::Hash, _)) => {
                 self.advance();
                 let _ = self.expect_one(&Token::LeftParen)?;
-                let elements = self.parse_types()?;
-                let (_, end) = self.expect_one(&Token::RightParen)?;
+                let (elements, end) = self.series_of_terminated_by(
+                    &Parser::parse_type,
+                    Token::Comma,
+                    Token::RightParen,
+                    "a type",
+                )?;
                 Ok(Some(TypeAst::Tuple(TypeAstTuple {
                     location: SrcSpan { start, end },
                     elements,
@@ -2966,8 +2994,12 @@ where
             Some((start, Token::Fn, _)) => {
                 self.advance();
                 let _ = self.expect_one(&Token::LeftParen)?;
-                let arguments = self.series_of(&|this| this.parse_type(), Some(&Token::Comma))?;
-                let _ = self.expect_one_following_series(&Token::RightParen, "a type")?;
+                let (arguments, _) = self.series_of_terminated_by(
+                    &Parser::parse_type,
+                    Token::Comma,
+                    Token::RightParen,
+                    "a type",
+                )?;
                 let (arr_s, arr_e) = self.expect_one(&Token::RArrow)?;
                 let return_ = self.parse_type()?;
                 match return_ {
@@ -3055,13 +3087,17 @@ where
             // expecting a type name instead:
             if name.name().is_none() {
                 return Err(ParseError {
-                    error: ParseErrorType::ExpectedUpName,
+                    error: Box::new(ParseErrorType::ExpectedUpName),
                     location: SrcSpan::new(left_paren_start, left_paren_end),
                 });
             }
 
-            let arguments = self.parse_types()?;
-            let (_, right_paren_end) = self.expect_one(&Token::RightParen)?;
+            let (arguments, right_paren_end) = self.series_of_terminated_by(
+                &Parser::parse_type,
+                Token::Comma,
+                Token::RightParen,
+                "a type",
+            )?;
             Ok(Some(TypeAst::Constructor(TypeAstConstructor {
                 location: SrcSpan::new(start, right_paren_end),
                 name,
@@ -3085,7 +3121,7 @@ where
                 // error saying we were expecting an uppercase name
                 TypeAstConstructorName::Qualified { name: None, .. } => {
                     return Err(ParseError {
-                        error: ParseErrorType::ExpectedUpName,
+                        error: Box::new(ParseErrorType::ExpectedUpName),
                         location,
                     });
                 }
@@ -3093,14 +3129,14 @@ where
 
             // Otherwise we try and report a nicer error, suggesting one should
             // use `(a, b)` instead of `<a, b>`.
-            let arguments = self.parse_types()?;
+            let arguments = self.series_of(&|this| this.parse_type(), Some(&Token::Comma))?;
             Err(ParseError {
                 location,
-                error: ParseErrorType::TypeUsageAngleGenerics {
+                error: Box::new(ParseErrorType::TypeUsageAngleGenerics {
                     name,
                     module,
                     arguments,
-                },
+                }),
             })
         } else {
             Ok(Some(TypeAst::Constructor(TypeAstConstructor {
@@ -3110,12 +3146,6 @@ where
                 start_parentheses: None,
             })))
         }
-    }
-
-    // For parsing a comma separated "list" of types, for tuple, constructor, and function
-    fn parse_types(&mut self) -> Result<Vec<TypeAst>, ParseError> {
-        let elements = self.series_of(&|this| this.parse_type(), Some(&Token::Comma))?;
-        Ok(elements)
     }
 
     //
@@ -3180,16 +3210,16 @@ where
                 let ParseErrorType::UnexpectedToken {
                     token: Token::Name { name } | Token::UpName { name },
                     ..
-                } = &e.error
+                } = *e.error
                 else {
                     return Err(e);
                 };
 
                 return Err(ParseError {
-                    error: ParseErrorType::IncorrectImportModuleSeparator {
+                    error: Box::new(ParseErrorType::IncorrectImportModuleSeparator {
                         module,
-                        item: name.clone(),
-                    },
+                        item: name,
+                    }),
                     location: SrcSpan::new(dot_start, dot_end),
                 });
             }
@@ -3412,6 +3442,7 @@ where
                         token: operator,
                         expected: vec!["<>".into(), "A new definition".into()],
                         hint: Some("Pipelines are not allowed in constants".into()),
+                        missing_token: None,
                     },
                     SrcSpan::new(operator_start, operator_end),
                 );
@@ -3588,7 +3619,7 @@ where
             // BitArray
             Some((start, Token::LtLt, _)) => {
                 self.advance();
-                let segments = self.series_of(
+                let (segments, end) = self.series_of_terminated_by(
                     &|this| {
                         this.parse_bit_array_segment(
                             &Parser::parse_const_value,
@@ -3596,10 +3627,10 @@ where
                             &bit_array_const_int,
                         )
                     },
-                    Some(&Token::Comma),
+                    Token::Comma,
+                    Token::GtGt,
+                    "a bit array segment",
                 )?;
-                let (_, end) =
-                    self.expect_one_following_series(&Token::GtGt, "a bit array segment")?;
                 Ok(Some(Constant::BitArray {
                     location: SrcSpan { start, end },
                     segments,
@@ -3649,6 +3680,7 @@ where
                             token,
                             expected: vec!["A lowercase name".into(), "An uppercase name".into()],
                             hint: None,
+                            missing_token: None,
                         },
                         SrcSpan { start, end },
                     ),
@@ -3744,11 +3776,12 @@ where
                     if let Some((dot_dot_start, dot_dot_end)) = self.maybe_one(&Token::DotDot) {
                         return match self.parse_const_value() {
                             Ok(None) | Err(_) => Err(ParseError {
-                                error: ParseErrorType::UnexpectedToken {
+                                error: Box::new(ParseErrorType::UnexpectedToken {
                                     token: Token::DotDot,
                                     expected: vec![Token::RightParen.to_string().into()],
                                     hint: None,
-                                },
+                                    missing_token: None,
+                                }),
                                 location: SrcSpan {
                                     start: dot_dot_start,
                                     end: dot_dot_end,
@@ -3767,7 +3800,7 @@ where
 
                                 Err(ParseError {
                                     location: update_location,
-                                    error: ParseErrorType::RecordUpdateAfterFields,
+                                    error: Box::new(ParseErrorType::RecordUpdateAfterFields),
                                 })
                             }
                         };
@@ -4013,7 +4046,7 @@ where
                                     })),
 
                                     _ => Err(ParseError {
-                                        error: ParseErrorType::InvalidBitArrayUnit,
+                                        error: Box::new(ParseErrorType::InvalidBitArrayUnit),
                                         location: SrcSpan {
                                             start: int_s,
                                             end: int_e,
@@ -4044,7 +4077,7 @@ where
                 } else {
                     str_to_bit_array_option(&name, SrcSpan { start, end })
                         .ok_or(ParseError {
-                            error: ParseErrorType::InvalidBitArraySegment,
+                            error: Box::new(ParseErrorType::InvalidBitArraySegment),
                             location: SrcSpan { start, end },
                         })
                         .map(Some)
@@ -4228,6 +4261,7 @@ functions are declared separately from types.";
                                 "a record constructor".into(),
                             ],
                             hint,
+                            missing_token: None,
                         },
                         SrcSpan { start, end },
                     )
@@ -4510,6 +4544,67 @@ functions are declared separately from types.";
         Ok(res)
     }
 
+    fn series_of_terminated_by<A: HasLocation>(
+        &mut self,
+        parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
+        separator: Token,
+        close: Token,
+        description_of_series_element: &'static str,
+    ) -> Result<(Vec<A>, u32), ParseError> {
+        let (series, has_trailing_separator) =
+            self.series_of_has_trailing_separator(parser, Some(&separator))?;
+
+        match self.maybe_one(&close) {
+            // All is good: we've parsed the sequence and the closing token
+            Some((_, close_end)) => Ok((series, close_end)),
+            // Otherwise, we can try and produce a nice error message if we can
+            // tell there'a missing separator in a series of elements:
+            // - if we could parse at least one item in the series
+            // - if there's no separator at the end of the series
+            // - if the next item looks like something that could keep the
+            //   sequence going
+            //
+            // For example:
+            //
+            // ```gleam
+            // #(Wibble, Wobble  Woo)
+            // //              ^^ We stop the sequence here and see that the
+            // //                 next item might fit in, since the separator is
+            // //                 missing we produce a special error message!
+            // ```
+            //
+            None if let Some((next_token_start, next_token, next_token_end)) =
+                self.token0.clone()
+                && let Some(last) = series.last()
+                && !has_trailing_separator
+                && let Ok(Some(_)) = parser(self) =>
+            {
+                let last_location = last.location();
+                let last_end = SrcSpan::new(last_location.end, last_location.end);
+                parse_error(
+                    ParseErrorType::UnexpectedToken {
+                        token: next_token,
+                        expected: vec![close.to_string().into(), separator.to_string().into()],
+                        hint: None,
+                        missing_token: Some((last_end, separator)),
+                    },
+                    SrcSpan::new(next_token_start, next_token_end),
+                )
+            }
+            // If we end with a trailing separator, or couldn't parse a single
+            // element of the series, then we suggest an item of the series
+            // was expected.
+            None if has_trailing_separator || series.is_empty() => {
+                self.next_token_unexpected(vec![
+                    close.to_string().into(),
+                    description_of_series_element.into(),
+                ])
+            }
+            // Otherwise the only missing element must be the closing token.
+            None => self.next_token_unexpected(vec![close.to_string().into()]),
+        }
+    }
+
     /// Parse a series by repeating a parser, and a separator. Returns true if
     /// the series ends with the trailing separator.
     fn series_of_has_trailing_separator<A>(
@@ -4596,6 +4691,7 @@ functions are declared separately from types.";
                     token,
                     expected,
                     hint: None,
+                    missing_token: None,
                 },
                 SrcSpan { start, end },
             ),
@@ -4758,7 +4854,7 @@ functions are declared separately from types.";
         let end = match name.as_str() {
             "external" => {
                 let _ = self.maybe_one(&Token::LeftParen).ok_or(ParseError {
-                    error: ParseErrorType::ExpectedExternalArguments,
+                    error: Box::new(ParseErrorType::ExpectedExternalArguments),
                     location: SrcSpan { start, end },
                 })?;
                 self.parse_external_attribute(start, end, attributes)
@@ -4827,14 +4923,14 @@ functions are declared separately from types.";
         attributes: &mut Attributes,
     ) -> Result<u32, ParseError> {
         let _ = self.expect_one(&Token::LeftParen).map_err(|_| ParseError {
-            error: ParseErrorType::ExpectedDeprecationMessage,
+            error: Box::new(ParseErrorType::ExpectedDeprecationMessage),
             location: SrcSpan { start, end },
         })?;
         if attributes.deprecated.is_deprecated() {
             return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan::new(start, end));
         }
         let (_, message, _) = self.expect_string().map_err(|_| ParseError {
-            error: ParseErrorType::ExpectedDeprecationMessage,
+            error: Box::new(ParseErrorType::ExpectedDeprecationMessage),
             location: SrcSpan { start, end },
         })?;
         let (_, end) = self.expect_one(&Token::RightParen)?;
@@ -4865,7 +4961,7 @@ functions are declared separately from types.";
 
 fn concat_pattern_variable_left_hand_side_error<T>(start: u32, end: u32) -> Result<T, ParseError> {
     Err(ParseError {
-        error: ParseErrorType::ConcatPatternVariableLeftHandSide,
+        error: Box::new(ParseErrorType::ConcatPatternVariableLeftHandSide),
         location: SrcSpan::new(start, end),
     })
 }
@@ -4876,7 +4972,7 @@ fn concat_pattern_variable_with_suffix<T>(
     end: u32,
 ) -> Result<T, ParseError> {
     Err(ParseError {
-        error: ParseErrorType::ConcatPatternVariableWithSuffix { name },
+        error: Box::new(ParseErrorType::ConcatPatternVariableWithSuffix { name }),
         location: SrcSpan::new(start, end),
     })
 }
@@ -5295,7 +5391,10 @@ fn str_to_bit_array_option<A>(lit: &str, location: SrcSpan) -> Option<BitArrayOp
 // Error Helpers
 //
 fn parse_error<T>(error: ParseErrorType, location: SrcSpan) -> Result<T, ParseError> {
-    Err(ParseError { error, location })
+    Err(ParseError {
+        error: Box::new(error),
+        location,
+    })
 }
 
 //
@@ -5346,6 +5445,7 @@ pub fn make_call(
                             token: Token::Name { name },
                             expected: vec!["An expression".into(), "An underscore".into()],
                             hint: None,
+                            missing_token: None,
                         },
                         arg_location,
                     );

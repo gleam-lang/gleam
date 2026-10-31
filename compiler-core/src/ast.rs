@@ -53,6 +53,12 @@ pub trait HasLocation {
     fn location(&self) -> SrcSpan;
 }
 
+impl<A> HasLocation for (u32, A, u32) {
+    fn location(&self) -> SrcSpan {
+        SrcSpan::new(self.0, self.2)
+    }
+}
+
 pub type UntypedModule = Module<(), Vec<TargetedDefinition>>;
 pub type TypedModule = Module<type_::ModuleInterface, TypedDefinitions>;
 
@@ -214,6 +220,12 @@ pub struct Arg<T> {
     pub type_: T,
 }
 
+impl<A> HasLocation for Arg<A> {
+    fn location(&self) -> SrcSpan {
+        self.location
+    }
+}
+
 impl HasType for Arg<Arc<Type>> {
     fn type_(&self) -> Arc<Type> {
         self.type_.clone()
@@ -337,6 +349,12 @@ pub struct RecordConstructorArg<T> {
     pub location: SrcSpan,
     pub type_: T,
     pub doc: Option<(u32, EcoString)>,
+}
+
+impl<A> HasLocation for RecordConstructorArg<A> {
+    fn location(&self) -> SrcSpan {
+        self.location
+    }
 }
 
 impl<T: PartialEq> RecordConstructorArg<T> {
@@ -490,8 +508,8 @@ pub enum TypeAst {
     Hole(TypeAstHole),
 }
 
-impl TypeAst {
-    pub fn location(&self) -> SrcSpan {
+impl HasLocation for TypeAst {
+    fn location(&self) -> SrcSpan {
         match self {
             TypeAst::Fn(TypeAstFn { location, .. })
             | TypeAst::Var(TypeAstVar { location, .. })
@@ -500,7 +518,9 @@ impl TypeAst {
             | TypeAst::Constructor(TypeAstConstructor { location, .. }) => *location,
         }
     }
+}
 
+impl TypeAst {
     pub fn is_logically_equal(&self, other: &TypeAst) -> bool {
         match self {
             TypeAst::Constructor(TypeAstConstructor {
@@ -4533,6 +4553,12 @@ pub struct UseAssignment<TypeT> {
     pub location: SrcSpan,
     pub pattern: Pattern<TypeT>,
     pub annotation: Option<TypeAst>,
+}
+
+impl<A> HasLocation for UseAssignment<A> {
+    fn location(&self) -> SrcSpan {
+        self.location
+    }
 }
 
 impl TypedUse {

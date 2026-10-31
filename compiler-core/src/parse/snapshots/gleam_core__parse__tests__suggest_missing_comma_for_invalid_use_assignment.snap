@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "pub fn go(x) {\n  use first second <- wibble\n  todo\n}"
+---
+----- SOURCE CODE
+pub fn go(x) {
+  use first second <- wibble
+  todo
+}
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:13
+  │
+2 │   use first second <- wibble
+  │            -^^^^^^ I was not expecting this
+  │            │ 
+  │            Did you forget a `,` here?
+
+Found a name, expected one of: 
+- `<-`
+- `,`
