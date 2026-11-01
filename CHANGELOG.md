@@ -60,8 +60,8 @@
   alternative patterns.
   ([Andrey Kozhev](https://github.com/ankddev))
 
-- The language now offers a code action to undiscrd discarded variables to fix
-  one's code:
+- The language now offers a code action to undiscard discarded variables to fix
+  invalid code:
 
   ```gleam
   pub fn greet(_name: String) {
