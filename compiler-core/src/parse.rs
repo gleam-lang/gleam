@@ -2893,7 +2893,14 @@ where
         let (start, upname, end) = self.expect_upname()?;
         if let Some((par_s, _)) = self.maybe_one(&Token::LeftParen) {
             let (arguments, par_e) = self.series_of_terminated_by(
-                &|this| Ok(this.maybe_name()),
+                &|this| {
+                    Ok(this
+                        .maybe_name()
+                        .map(|(start, name, end)| NameWithLocation {
+                            name,
+                            location: SrcSpan { start, end },
+                        }))
+                },
                 Token::Comma,
                 Token::RightParen,
                 "a name",
@@ -2906,7 +2913,7 @@ where
             }
             let arguments2 = arguments
                 .into_iter()
-                .map(|(start, name, end)| (SrcSpan { start, end }, name))
+                .map(|NameWithLocation { name, location }| (location, name))
                 .collect();
             Ok((start, upname, arguments2, par_e, end))
         } else if let Some((less_start, less_end)) = self.maybe_one(&Token::Less) {
@@ -5494,6 +5501,17 @@ pub fn make_call(
             body: vec1![Statement::Expression(call)],
             return_annotation: None,
         }),
+    }
+}
+
+struct NameWithLocation {
+    name: EcoString,
+    location: SrcSpan,
+}
+
+impl HasLocation for NameWithLocation {
+    fn location(&self) -> SrcSpan {
+        self.location
     }
 }
 
