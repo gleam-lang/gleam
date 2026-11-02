@@ -408,3 +408,19 @@ fn do_menu_items(acc: Queue(MenuItem), from tasks: List(Task)) -> List(MenuItem)
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/6485
+#[test]
+fn todo_in_function_body_is_added_after_comments() {
+    assert_format_rewrite!(
+        "fn wibble() {
+  // Wobble!
+}
+",
+        "fn wibble() {
+  // Wobble!
+  todo
+}
+"
+    );
+}

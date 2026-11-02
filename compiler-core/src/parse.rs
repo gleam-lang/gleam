@@ -2286,7 +2286,7 @@ where
                 let (_, right_brace_end) = self.expect_one(&Token::RightBrace)?;
                 let end = return_annotation
                     .as_ref()
-                    .map(|l| l.location().end)
+                    .map(|type_ast| type_ast.location().end)
                     .unwrap_or(rpar_e);
                 let body = match some_body {
                     None => vec![Statement::Expression(UntypedExpr::Todo {
@@ -2294,7 +2294,7 @@ where
                             function_location: SrcSpan { start, end },
                         },
                         location: SrcSpan {
-                            start: left_brace_start + 1,
+                            start: right_brace_end - 1,
                             end: right_brace_end,
                         },
                         message: None,

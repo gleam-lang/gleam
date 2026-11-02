@@ -213,6 +213,12 @@
 
   ([0xda157](https://github.com/0xda157))
 
+### Formatter
+
+- The formatter now inserts `todo`s after comments in an empty function body,
+  instead of placing it before the comments.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - Fixed a bug where the language server "Generate variant" code action would
