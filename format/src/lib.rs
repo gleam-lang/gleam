@@ -2245,43 +2245,90 @@ impl<'a, 'doc> Formatter<'a> {
                 attributes.append(arena, constructor.name.as_str().to_doc(arena))
             }
         } else {
-            let arguments = constructor
-                .arguments
-                .iter()
-                .map(
-                    |RecordConstructorArg {
-                         label,
-                         ast,
-                         location,
-                         ..
-                     }| {
-                        let arg_comments = self.pop_comments(location.start);
-                        let argument = match label {
-                            Some((_, label)) => label
-                                .to_doc(arena)
-                                .append(arena, COLON_SPACE_DOCUMENT)
-                                .append(arena, self.type_ast(arena, ast)),
-                            None => self.type_ast(arena, ast),
-                        };
+            let mut doc = OPEN_PAREN_BREAK_DOCUMENT;
+            for (i, argument) in constructor.arguments.iter().enumerate() {
+                let RecordConstructorArg {
+                    label,
+                    ast,
+                    location,
+                    ..
+                } = argument;
 
-                        commented(
-                            arena,
-                            self.doc_comments(arena, location.start)
-                                .append(arena, argument)
-                                .group(arena),
-                            arg_comments,
-                        )
-                    },
-                )
-                .collect_vec();
+                let is_first = i == 0;
+                let has_empty_lines_before = self.pop_empty_lines(location.start);
+                let needs_empty_line_before = !is_first && has_empty_lines_before;
+
+                let arg_comments = self.pop_comments(location.start);
+                let argument = match label {
+                    Some((_, label)) => label
+                        .to_doc(arena)
+                        .append(arena, COLON_SPACE_DOCUMENT)
+                        .append(arena, self.type_ast(arena, ast)),
+                    None => self.type_ast(arena, ast),
+                };
+                let commented_argument = commented(
+                    arena,
+                    self.doc_comments(arena, location.start)
+                        .append(arena, argument)
+                        .group(arena),
+                    arg_comments,
+                );
+
+                if is_first {
+                    // If the document is first we don't have to add anything
+                    // before it. The open parentheses is already a possible
+                    // break point so there's nothing left to do besides
+                    // appending the document itself.
+                } else if needs_empty_line_before {
+                    // If there's an empty line before this we want to make sure
+                    // that is kept there:
+                    //
+                    // ```gleam
+                    // Wibble(
+                    //   a: Int,
+                    //
+                    //   b: Int  // <- we need an empty line before this!
+                    // )
+                    // ```
+                    doc = docvec![
+                        arena,
+                        doc,
+                        // So we want to make sure the comma separating the
+                        // previous element from this one does not have any
+                        // extra nesting (or we'd have an empty line with
+                        // whitespace).
+                        COMMA_BREAK_DOCUMENT
+                            .set_nesting(arena, 0)
+                            // We're forcing a break so the entire thing is kept
+                            // on multiple lines.
+                            .force_break(arena),
+                        LINE_DOCUMENT,
+                    ];
+                } else {
+                    doc = doc.append(arena, COMMA_BREAK_DOCUMENT)
+                };
+
+                doc = doc.append(arena, commented_argument);
+            }
+
+            let comments = self.pop_comments(constructor.location.end);
+            let arguments = match printed_comments(arena, comments, false) {
+                Some(comments) => doc
+                    .append(arena, TRAILING_COMMA_BREAK_DOCUMENT)
+                    .append(arena, comments)
+                    .nest_if_broken(arena, INDENT)
+                    .force_break(arena)
+                    .append(arena, EMPTY_BREAK_DOCUMENT)
+                    .append(arena, CLOSE_PAREN_DOCUMENT),
+                None => doc
+                    .nest_if_broken(arena, INDENT)
+                    .append(arena, TRAILING_COMMA_BREAK_DOCUMENT)
+                    .append(arena, CLOSE_PAREN_DOCUMENT),
+            };
 
             attributes
                 .append(arena, constructor.name.as_str().to_doc(arena))
-                .append(
-                    arena,
-                    self.wrap_arguments(arena, arguments, constructor.location.end)
-                        .group(arena),
-                )
+                .append(arena, arguments.group(arena))
         };
 
         commented(
@@ -2355,13 +2402,13 @@ impl<'a, 'doc> Formatter<'a> {
         }
         let doc = doc.append(arena, SPACE_OPEN_CURLY_DOCUMENT);
 
-        let inner = arena.concat(constructors.iter().map(|c| {
-            if self.pop_empty_lines(c.location.start) {
+        let inner = arena.concat(constructors.iter().map(|constructor| {
+            if self.pop_empty_lines(constructor.location.start) {
                 TWO_LINES_DOCUMENT
             } else {
                 LINE_DOCUMENT
             }
-            .append(arena, self.record_constructor(arena, c))
+            .append(arena, self.record_constructor(arena, constructor))
         }));
 
         // Add any trailing comments
