@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2024 The Gleam contributors
 
-use crate::assert_format;
+use crate::{assert_format, assert_format_rewrite};
 
 #[test]
 fn custom_type_0() {
@@ -362,6 +362,79 @@ fn external_custom_type() {
         r#"@external(erlang, "erlang", "map")
 @external(javascript, "../dict.d.mts", "Dict")
 pub type Dict(key, value)
+"#
+    );
+}
+
+#[test]
+fn formatter_respects_empty_line_in_between_constructor_fields() {
+    assert_format!(
+        r#"pub type Wibble {
+  Wibble(
+    one_very_long_field: Int,
+
+    another_long_field_so_we_go_over_the_80_char_limit: Int,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn formatter_respects_empty_line_in_between_constructor_fields_2() {
+    assert_format!(
+        r#"pub type Wibble {
+  Wibble(
+    one: Int,
+
+    // Hello!
+    two: Int,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn empty_lines_are_not_kept_before_a_field() {
+    assert_format_rewrite!(
+        r#"pub type Wibble {
+  Wibble(
+
+    one: Int,
+    two: Int
+  )
+}
+"#,
+        r#"pub type Wibble {
+  Wibble(one: Int, two: Int)
+}
+"#
+    );
+}
+
+#[test]
+fn multiple_empty_lines_between_record_fields_are_collapsed_into_a_single_empty_line() {
+    assert_format_rewrite!(
+        r#"pub type Wibble {
+  Wibble(
+    one: Int,
+
+
+
+    // Hello!
+    two: Int,
+  )
+}
+"#,
+        r#"pub type Wibble {
+  Wibble(
+    one: Int,
+
+    // Hello!
+    two: Int,
+  )
+}
 "#
     );
 }

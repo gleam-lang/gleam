@@ -256,6 +256,10 @@
   instead of placing it before the comments.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The formatter now allows leaving an empty line in between the fields of a
+  record constructor rather than getting rid of all empty lines.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - Fixed a bug where the language server "Generate variant" code action would
