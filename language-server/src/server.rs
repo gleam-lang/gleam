@@ -535,9 +535,30 @@ where
 
     fn source_file_closed(&mut self, path: Utf8PathBuf) -> Feedback {
         let mut feedback = self.discard_in_memory_cache(path.clone());
-        if let Ok(Some(project)) = self.router.project_for_path(path.clone()) {
+
+        let project_to_delete: Option<Utf8PathBuf> = if let Ok(Some(project)) =
+            self.router.project_for_path(path.clone())
+        {
             feedback.append_feedback(project.feedback.close_file(&path));
+
+            if project.feedback.all_files_closed() {
+                feedback.append_feedback(project.feedback.clear_warning_and_error_diagnostics());
+                feedback.append_feedback(project.feedback.clear_skipped_file_diagnostics());
+                Some(project.engine.paths.root().into())
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        if let Some(project_path) = project_to_delete {
+            self.router.delete_engine_for_path(&project_path);
+            // We no longer consider the project as "changed" since we are
+            // deleting it.
+            let _ = self.changed_projects.remove(&project_path);
         }
+
         feedback
     }
 }
