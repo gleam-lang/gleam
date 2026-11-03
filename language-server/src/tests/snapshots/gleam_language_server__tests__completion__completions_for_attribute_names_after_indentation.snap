@@ -1,0 +1,24 @@
+---
+source: language-server/src/tests/completion.rs
+expression: "  @\npub fn main() {}"
+---
+  @|
+pub fn main() {}
+
+
+----- Completion content -----
+deprecated
+  kind:   Keyword
+  sort:   00_deprecated
+  edits:
+    [0:3-0:3]: "deprecated"
+external
+  kind:   Keyword
+  sort:   00_external
+  edits:
+    [0:3-0:3]: "external"
+internal
+  kind:   Keyword
+  sort:   00_internal
+  edits:
+    [0:3-0:3]: "internal"
